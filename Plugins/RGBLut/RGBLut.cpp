@@ -49,13 +49,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class RGBLutBase : public OFX::ImageProcessor {
 protected :
   OFX::Image *_srcImg;
-  bool _applyLUT;
 public :
-  RGBLutBase(OFX::ImageEffect &instance): OFX::ImageProcessor(instance), _srcImg(0), _applyLUT(false)
+  RGBLutBase(OFX::ImageEffect &instance): OFX::ImageProcessor(instance), _srcImg(0)
   {        
   }
   void setSrcImg(OFX::Image *v) {_srcImg = v;}
-  void setApplyLUT(bool v) {_applyLUT = v;}
 };
 
 template <class PIX, int nComponents, int max>
@@ -199,18 +197,15 @@ class RGBLutPlugin : public OFX::ImageEffect
 protected :
   OFX::Clip *dstClip_;
   OFX::Clip *srcClip_;
-  OFX::BooleanParam *applyLUT_;
 
 public :
   RGBLutPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClip_(0)
-    , applyLUT_(0)
   {
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    applyLUT_ = fetchBooleanParam("applyLUT");
   }
 
   virtual void render(const OFX::RenderArguments &args);
@@ -238,9 +233,6 @@ void RGBLutPlugin::setupAndProcess(RGBLutBase &processor, const OFX::RenderArgum
   processor.setDstImg(dst.get());
   processor.setSrcImg(src.get());
   processor.setRenderWindow(args.renderWindow);
-  if (applyLUT_) {
-    processor.setApplyLUT(applyLUT_->getValueAtTime(args.time));
-  }
   processor.process();
 }
 
@@ -343,49 +335,47 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
   dstClip->addSupportedComponent(ePixelComponentAlpha);
   dstClip->setSupportsTiles(true);
 
-    if (OFX::getImageEffectHostDescription()->supportsParametricParameter) {
-        // define it
-        OFX::ParametricParamDescriptor* lookupTable = desc.defineParametricParam("lookupTable");
-        assert(lookupTable);
-        lookupTable->setLabel("Lookup Table");
-        lookupTable->setHint("Colour lookup table");
-        lookupTable->setScriptName("lookupTable");
+  if (OFX::getImageEffectHostDescription()->supportsParametricParameter) {
+    // define it
+    OFX::ParametricParamDescriptor* lookupTable = desc.defineParametricParam("lookupTable");
+    assert(lookupTable);
+    lookupTable->setLabel("Lookup Table");
+    lookupTable->setHint("Colour lookup table");
+    lookupTable->setScriptName("lookupTable");
 
-        // define it as three dimensional
-        lookupTable->setDimension(3);
+    // define it as three dimensional
+    lookupTable->setDimension(3);
 
-        // label our dimensions are r/g/b
-        lookupTable->setDimensionLabel("red", 0);
-        lookupTable->setDimensionLabel("green", 1);
-        lookupTable->setDimensionLabel("blue", 2);
+    // label our dimensions are r/g/b
+    lookupTable->setDimensionLabel("red", 0);
+    lookupTable->setDimensionLabel("green", 1);
+    lookupTable->setDimensionLabel("blue", 2);
 
-        // set the UI colour for each dimension
-		const OfxRGBColourD red   = {1,0,0};		//set red color to red curve
-		const OfxRGBColourD green = {0,1,0};		//set green color to green curve
-		const OfxRGBColourD blue  = {0,0,1};		//set blue color to blue curve
-		lookupTable->setUIColour( 0, red );
-		lookupTable->setUIColour( 1, green );
-		lookupTable->setUIColour( 2, blue );
+    // set the UI colour for each dimension
+    const OfxRGBColourD red   = {1,0,0};		//set red color to red curve
+    const OfxRGBColourD green = {0,1,0};		//set green color to green curve
+    const OfxRGBColourD blue  = {0,0,1};		//set blue color to blue curve
+    lookupTable->setUIColour( 0, red );
+    lookupTable->setUIColour( 1, green );
+    lookupTable->setUIColour( 2, blue );
 
-        // set the min/max parametric range to 0..1
-        lookupTable->setRange(0.0, 1.0);
+    // set the min/max parametric range to 0..1
+    lookupTable->setRange(0.0, 1.0);
 
-        // set a default curve, this example sets an invert
-        //OfxParamHandle descriptor;
-        //gParamHost->paramGetHandle(paramSet, "lookupTable", &descriptor, NULL);
-        for(int component = 0; component < 3; ++component) {
-            // add a control point at 0, value is 1
-            lookupTable->addControlPoint(component, // curve to set
-                                         0.0,   // time, ignored in this case, as we are not adding a ket
-                                         0.0,   // parametric position, zero
-                                         1.0,   // value to be, 1
-                                         false);   // don't add a key
-            // add a control point at 1, value is 0
-            lookupTable->addControlPoint(component, 0.0, 1.0, 0.0, false);
-        }
-        BooleanParamDescriptor* applyLUT = desc.defineBooleanParam("applyLUT");
-        applyLUT->setLabels("Apply Lookup Table", "Apply Lookup Table", "Apply Lookup Table");
+    // set a default curve, this example sets an invert
+    //OfxParamHandle descriptor;
+    //gParamHost->paramGetHandle(paramSet, "lookupTable", &descriptor, NULL);
+    for(int component = 0; component < 3; ++component) {
+      // add a control point at 0, value is 1
+      lookupTable->addControlPoint(component, // curve to set
+                                   0.0,   // time, ignored in this case, as we are not adding a ket
+                                   0.0,   // parametric position, zero
+                                   1.0,   // value to be, 1
+                                   false);   // don't add a key
+      // add a control point at 1, value is 0
+      lookupTable->addControlPoint(component, 0.0, 1.0, 0.0, false);
     }
+  }
 }
 
 OFX::ImageEffect* RGBLutPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
