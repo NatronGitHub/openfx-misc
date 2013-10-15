@@ -150,7 +150,7 @@
 				1E3E3D3817996112005F2132 /* ofxsParam.h */,
 			);
 			name = Headers;
-			path = include;
+			path = openfx/Support/include;
 			sourceTree = "<group>";
 		};
 		1E551EB817994D4000A4135C = {
