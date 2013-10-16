@@ -69,6 +69,7 @@ public :
   {
     // build the LUT
     OFX::ParametricParam  *lookupTable = instance.fetchParametricParam("lookupTable");
+    assert(lookupTable);
     for(int component = 0; component < 3; ++component) {
       for(PIX position = 0; position < nValues; ++position) {
         // position to evaluate the param at
@@ -85,6 +86,7 @@ public :
   // and do some processing
   void multiThreadProcessImages(OfxRectI procWindow)
   {
+    assert(_dstImg);
     for(int y = procWindow.y1; y < procWindow.y2; y++) 
     {
       if(_effect.abort()) 
@@ -138,13 +140,14 @@ public :
         //value = clamp(value, 0, nValues-1);
 
         // set that in the lut
-        _lookupTable[component][position] = (PIX)value;
+        _lookupTable[component][position] = std::max(PIX(0),std::min(PIX(value),PIX(nValues-1)));
       }
     }
   }
   // and do some processing
   void multiThreadProcessImages(OfxRectI procWindow)
   {
+    assert(_dstImg);
     for(int y = procWindow.y1; y < procWindow.y2; y++) 
     {
       if(_effect.abort()) 
@@ -213,15 +216,17 @@ public :
 
 void RGBLutPlugin::setupAndProcess(RGBLutBase &processor, const OFX::RenderArguments &args)
 {
+  assert(dstClip_);
   std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
-  OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-  OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+  assert(srcClip_);
   std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
 
-  if(src.get()) 
+  if(src.get() && dst.get()) 
   {
     OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
     OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
     // see if they have the same depths and bytes and all
     if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
@@ -237,6 +242,7 @@ void RGBLutPlugin::setupAndProcess(RGBLutBase &processor, const OFX::RenderArgum
 
 void RGBLutPlugin::render(const OFX::RenderArguments &args)
 {
+  assert(dstClip_);
   OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
   OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
 
@@ -246,21 +252,21 @@ void RGBLutPlugin::render(const OFX::RenderArguments &args)
     {
     case OFX::eBitDepthUByte : 
       {      
-        ImageRGBLutProcessor<unsigned char, 4, 255> fred(*this, args);
+        ImageRGBLutProcessor<unsigned char, 4, 256> fred(*this, args);
         setupAndProcess(fred, args);
       }
       break;
 
     case OFX::eBitDepthUShort : 
       {
-        ImageRGBLutProcessor<unsigned short, 4, 65535> fred(*this, args);
+        ImageRGBLutProcessor<unsigned short, 4, 65536> fred(*this, args);
         setupAndProcess(fred, args);
       }                          
       break;
 
     case OFX::eBitDepthFloat : 
       {
-        ImageRGBLutProcessorFloat<4,100> fred(*this, args);
+        ImageRGBLutProcessorFloat<4,1000> fred(*this, args);
         setupAndProcess(fred, args);
       }
       break;
@@ -271,21 +277,21 @@ void RGBLutPlugin::render(const OFX::RenderArguments &args)
     {
     case OFX::eBitDepthUByte : 
       {
-        ImageRGBLutProcessor<unsigned char, 1, 255> fred(*this, args);
+        ImageRGBLutProcessor<unsigned char, 1, 256> fred(*this, args);
         setupAndProcess(fred, args);
       }
       break;
 
     case OFX::eBitDepthUShort : 
       {
-        ImageRGBLutProcessor<unsigned short, 1, 65535> fred(*this, args);
+        ImageRGBLutProcessor<unsigned short, 1, 65536> fred(*this, args);
         setupAndProcess(fred, args);
       }                          
       break;
 
     case OFX::eBitDepthFloat : 
       {
-        ImageRGBLutProcessorFloat<1,100> fred(*this, args);
+        ImageRGBLutProcessorFloat<1,1000> fred(*this, args);
         setupAndProcess(fred, args);
       }                          
       break;
@@ -322,6 +328,7 @@ void RGBLutPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
   ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+  assert(srcClip);
   srcClip->addSupportedComponent(ePixelComponentRGBA);
   srcClip->addSupportedComponent(ePixelComponentAlpha);
   srcClip->setTemporalClipAccess(false);
@@ -329,6 +336,7 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
   srcClip->setIsMask(false);
 
   ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
+  assert(dstClip);
   dstClip->addSupportedComponent(ePixelComponentRGBA);
   dstClip->addSupportedComponent(ePixelComponentAlpha);
   dstClip->setSupportsTiles(true);
@@ -360,18 +368,16 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     // set the min/max parametric range to 0..1
     lookupTable->setRange(0.0, 1.0);
 
-    // set a default curve, this example sets an invert
-    //OfxParamHandle descriptor;
-    //gParamHost->paramGetHandle(paramSet, "lookupTable", &descriptor, NULL);
+    // set a default curve, this example sets identity
     for(int component = 0; component < 3; ++component) {
-      // add a control point at 0, value is 1
+      // add a control point at 0, value is 0
       lookupTable->addControlPoint(component, // curve to set
-                                   0.0,   // time, ignored in this case, as we are not adding a ket
+                                   0.0,   // time, ignored in this case, as we are not adding a key
                                    0.0,   // parametric position, zero
-                                   1.0,   // value to be, 1
+                                   0.0,   // value to be, 0
                                    false);   // don't add a key
-      // add a control point at 1, value is 0
-      lookupTable->addControlPoint(component, 0.0, 1.0, 0.0, false);
+      // add a control point at 1, value is 1
+      lookupTable->addControlPoint(component, 0.0, 1.0, 1.0, false);
     }
   }
 }

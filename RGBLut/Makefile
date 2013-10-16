@@ -1,6 +1,6 @@
-PLUGINOBJECTS = Tester.o
-PLUGINNAME = tester
-PATHTOROOT = ../../
+PLUGINOBJECTS = RGBLut.o
+PLUGINNAME = RGBLut
+PATHTOROOT = ../openfx/Support
 
-include ../Makefile.master
+include $(PATHTOROOT)/Plugins/Makefile.master
 
