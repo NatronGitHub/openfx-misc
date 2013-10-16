@@ -56,29 +56,33 @@ public :
   void setSrcImg(OFX::Image *v) {_srcImg = v;}
 };
 
-template <class PIX, int nComponents, int max>
+// template to do the RGBA processing for discrete types
+template <class PIX, int nComponents, int nValues>
 class ImageRGBLutProcessor : public RGBLutBase 
 {
 protected:
-    PIX _lookupTable[3][max];
+    PIX _lookupTable[3][nValues];
 public :
+  // ctor
   ImageRGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args)
-    : RGBLutBase(instance) {
-        // build the LUT
-        OFX::ParametricParam  *lookupTable = instance.fetchParametricParam("lookupTable");
-        for(int component = 0; component < 3; ++component) {
-            for(int position = 0; position < max; ++position) {
-                // position to evaluate the param at
-                float parametricPos = float(position)/(max-1);
+    : RGBLutBase(instance)
+  {
+    // build the LUT
+    OFX::ParametricParam  *lookupTable = instance.fetchParametricParam("lookupTable");
+    for(int component = 0; component < 3; ++component) {
+      for(PIX position = 0; position < nValues; ++position) {
+        // position to evaluate the param at
+        float parametricPos = float(position)/(nValues-1);
 
-                // evaluate the parametric param
-                double value = lookupTable->getValue(component, args.time, parametricPos);
+        // evaluate the parametric param
+        double value = lookupTable->getValue(component, args.time, parametricPos);
 
-                // set that in the lut
-                _lookupTable[component][position] = std::max(PIX(0),std::min(PIX(value*(max-1)+0.5), PIX(max-1)));
-            }
-        }
+        // set that in the lut
+        _lookupTable[component][position] = std::max(PIX(0),std::min(PIX(value*(nValues-1)+0.5), PIX(nValues-1)));
+      }
+    }
   }
+  // and do some processing
   void multiThreadProcessImages(OfxRectI procWindow)
   {
     for(int y = procWindow.y1; y < procWindow.y2; y++) 
@@ -91,62 +95,54 @@ public :
         PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
         if(srcPix)
         {
-          for(int c = 0; c < nComponents; c++)
-            dstPix[c] = max - srcPix[c];
+          for(int c = 0; c < nComponents; c++) {
+            assert(0 <= srcPix[c] && srcPix[c] < nValues);
+            dstPix[c] = _lookupTable[c][srcPix[c]];
+          }
         }
         else 
         {
+          // no src pixel here, be black and transparent
           for(int c = 0; c < nComponents; c++)
             dstPix[c] = 0;
         }
+        // increment the dst pixel
         dstPix += nComponents;
       }
     }
   }
 };
 
-template <int nComponents, int max>
+// template to do the RGBA processing for floating-point types
+template <int nComponents, int nValues>
 class ImageRGBLutProcessorFloat : public RGBLutBase
 {
 protected:
     typedef float PIX;
-    PIX _lookupTable[3][max];
+    PIX _lookupTable[3][nValues];
 public :
+  // ctor
   ImageRGBLutProcessorFloat(OFX::ImageEffect &instance, const OFX::RenderArguments &args)
     : RGBLutBase(instance)
   {
     // build the LUT
     OFX::ParametricParam  *lookupTable = instance.fetchParametricParam("lookupTable");
     for(int component = 0; component < 3; ++component) {
-      for(int position = 0; position < max; ++position) {
+      for(int position = 0; position < nValues; ++position) {
         // position to evaluate the param at
-        double parametricPos = float(position)/(max-1);
+        double parametricPos = float(position)/(nValues-1);
 
         // evaluate the parametric param
         double value = lookupTable->getValue(component, args.time, parametricPos);
-        //value = value * (max-1);
-        //value = clamp(value, 0, max-1);
+        //value = value * (nValues-1);
+        //value = clamp(value, 0, nValues-1);
 
         // set that in the lut
         _lookupTable[component][position] = (PIX)value;
       }
     }
   }
-  float interpolate(int component, float value) {
-      if (component == 3) { // alpha
-          return value;
-      }
-      if (value < 0.) {
-          return _lookupTable[component][0];
-      } else if (value >= 1.) {
-          return _lookupTable[component][max-1];
-      } else {
-          int i = (int)(value * (max-1));
-          assert(i < max-1);
-          float alpha = value - (float)i / (max-1);
-          return _lookupTable[component][i] * (1.-alpha) + _lookupTable[component][i] * alpha;
-      }
-  }
+  // and do some processing
   void multiThreadProcessImages(OfxRectI procWindow)
   {
     for(int y = procWindow.y1; y < procWindow.y2; y++) 
@@ -159,33 +155,35 @@ public :
         PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
         if(srcPix) 
         {
-          for(int c = 0; c < nComponents; c++)
-            dstPix[c] = 1. - srcPix[c];
+          for(int c = 0; c < nComponents; c++) {
+            dstPix[c] = interpolate(c, srcPix[c]);
+          }
         }
         else 
         {
+          // no src pixel here, be black and transparent
           for(int c = 0; c < nComponents; c++)
             dstPix[c] = 0;
         }
+        // increment the dst pixel
         dstPix += nComponents;
       }
     }
   }
-};
-
-
-
-template<class TypeCarrier, int kComponents, int kMax>
-class Analyser
-{
-public:
-  Analyser(OFX::Clip* srcClip, OFX::DoubleParam* dbl)
-  {
-    OfxRangeD range = srcClip->getFrameRange();
-    for(double d = range.min; d< range.max; ++d)
-    {
-      std::auto_ptr<OFX::Image> src(srcClip->fetchImage(d));
-      dbl->setValueAtTime(d, d);
+private:
+  float interpolate(int component, float value) {
+    if (component == 3) { // alpha
+      return value;
+    }
+    if (value < 0.) {
+      return _lookupTable[component][0];
+    } else if (value >= 1.) {
+      return _lookupTable[component][nValues-1];
+    } else {
+      int i = (int)(value * (nValues-1));
+      assert(i < nValues-1);
+      float alpha = value - (float)i / (nValues-1);
+      return _lookupTable[component][i] * (1.-alpha) + _lookupTable[component][i] * alpha;
     }
   }
 };
