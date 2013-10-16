@@ -81,7 +81,7 @@
 		1E551F5A179950EC00A4135C /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		1E9FC1CE180BF74400EFE0F9 /* camera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = camera.h; sourceTree = "<group>"; };
 		1E9FC1CF180BF74400EFE0F9 /* fnPublicOfxExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fnPublicOfxExtensions.h; sourceTree = "<group>"; };
-		1EB0C41E180DCAB500C25D1E /* RGBLut.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RGBLut.cpp; path = RGBLut/RGBLut.cpp; sourceTree = "<group>"; };
+		1EB0C41E180DCAB500C25D1E /* RGBLut.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RGBLut.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -96,12 +96,12 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		1E3E3CB117995CB1005F2132 /* Plugins */ = {
+		1E3E3CB117995CB1005F2132 /* RGBLut */ = {
 			isa = PBXGroup;
 			children = (
 				1EB0C41E180DCAB500C25D1E /* RGBLut.cpp */,
 			);
-			path = Plugins;
+			path = RGBLut;
 			sourceTree = "<group>";
 		};
 		1E3E3CB417995D15005F2132 /* Library */ = {
@@ -176,7 +176,7 @@
 			isa = PBXGroup;
 			children = (
 				1E3E3CB417995D15005F2132 /* Library */,
-				1E3E3CB117995CB1005F2132 /* Plugins */,
+				1E3E3CB117995CB1005F2132 /* RGBLut */,
 			);
 			name = Sources;
 			sourceTree = "<group>";
@@ -288,7 +288,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = Plugins/RGBLut/Info.plist;
+				INFOPLIST_FILE = RGBLut/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;
@@ -299,7 +299,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = Plugins/RGBLut/Info.plist;
+				INFOPLIST_FILE = RGBLut/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;
