@@ -211,6 +211,44 @@ public :
 
   virtual void render(const OFX::RenderArguments &args);
   void setupAndProcess(RGBLutBase &, const OFX::RenderArguments &args);
+  void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+  {
+    if (paramName=="addCtrlPts") {
+      OFX::ParametricParam  *lookupTable = fetchParametricParam("lookupTable");
+      for(int component = 0; component < 3; ++component) {
+        int n = lookupTable->getNControlPoints(component, args.time);
+        if (n <= 1) {
+          // clear all control points
+          lookupTable->deleteControlPoint(component);
+          // add a control point at 0, value is 0
+          lookupTable->addControlPoint(component, // curve to set
+                                       args.time,   // time, ignored in this case, as we are not adding a key
+                                       0.0,   // parametric position, zero
+                                       0.0,   // value to be, 0
+                                       false);   // don't add a key
+          // add a control point at 1, value is 1
+          lookupTable->addControlPoint(component, args.time, 1.0, 1.0, false);
+        } else {
+          std::pair<double, double> prev = lookupTable->getNthControlPoint(component, args.time, 0);
+          for (int i = 1; i < n; ++i) {
+            // note that getNthControlPoint is buggy in Nuke 6, and always returns point 1 for nthCtl > 0
+            std::pair<double, double> next = lookupTable->getNthControlPoint(component, args.time, i);
+            if (prev != next) { // don't create additional points if we encounter the Nuke bug
+              // create a new control point between two existing control points
+              double parametricPos = (prev.first + next.first)/2.;
+              double parametricVal = lookupTable->getValue(component, args.time, parametricPos);
+              lookupTable->addControlPoint(component, // curve to set
+                                           args.time,   // time, ignored in this case, as we are not adding a key
+                                           parametricPos,   // parametric position
+                                           parametricVal,   // value to be, 0
+                                           false);
+            }
+            prev = next;
+          }
+        }
+      }
+    }
+  }
 };
 
 
@@ -379,6 +417,8 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
       // add a control point at 1, value is 1
       lookupTable->addControlPoint(component, 0.0, 1.0, 1.0, false);
     }
+    OFX::PushButtonParamDescriptor* addCtrlPts = desc.definePushButtonParam("addCtrlPts");
+    addCtrlPts->setLabels("Add Control Points", "Add Control Points", "Add Control Points");
   }
 }
 
