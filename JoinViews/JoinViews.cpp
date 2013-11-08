@@ -301,20 +301,20 @@ void JoinViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void JoinViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
-  // create the source clips
-  ClipDescriptor *srcLeftClip = desc.defineClip("Left");
-  srcLeftClip->addSupportedComponent(ePixelComponentRGBA);
-  srcLeftClip->addSupportedComponent(ePixelComponentAlpha);
-  srcLeftClip->setTemporalClipAccess(false);
-  srcLeftClip->setSupportsTiles(true);
-  srcLeftClip->setIsMask(false);
-
+  // create the source clips from the rightmost one (in Nuke's GUI) to the leftmost
   ClipDescriptor *srcRightClip = desc.defineClip("Right");
   srcRightClip->addSupportedComponent(ePixelComponentRGBA);
   srcRightClip->addSupportedComponent(ePixelComponentAlpha);
   srcRightClip->setTemporalClipAccess(false);
   srcRightClip->setSupportsTiles(true);
   srcRightClip->setIsMask(false);
+
+  ClipDescriptor *srcLeftClip = desc.defineClip("Left");
+  srcLeftClip->addSupportedComponent(ePixelComponentRGBA);
+  srcLeftClip->addSupportedComponent(ePixelComponentAlpha);
+  srcLeftClip->setTemporalClipAccess(false);
+  srcLeftClip->setSupportsTiles(true);
+  srcLeftClip->setIsMask(false);
 
   // create the mandated output clip
   ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
