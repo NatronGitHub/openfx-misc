@@ -216,6 +216,10 @@ OneViewPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArguments
 void
 OneViewPlugin::render(const OFX::RenderArguments &args)
 {
+  if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+    OFX::throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+  }
+
   // instantiate the render code based on the pixel depth of the dst clip
   OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
   OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
@@ -265,9 +269,17 @@ OneViewPlugin::render(const OFX::RenderArguments &args)
   } 
 }
 
-mDeclarePluginFactory(OneViewPluginFactory, {}, {});
+mDeclarePluginFactory(OneViewPluginFactory, ;, {});
 
 using namespace OFX;
+void OneViewPluginFactory::load()
+{
+    // we can't be used on hosts that don't support the stereoscopic suite
+    if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+        throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+    }
+}
+
 void OneViewPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels

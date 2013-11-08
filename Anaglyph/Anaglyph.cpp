@@ -285,6 +285,10 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor, const OFX::RenderArgume
 void
 AnaglyphPlugin::render(const OFX::RenderArguments &args)
 {
+  if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+    OFX::throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+  }
+
   // instantiate the render code based on the pixel depth of the dst clip
   OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
   OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
@@ -313,9 +317,17 @@ AnaglyphPlugin::render(const OFX::RenderArguments &args)
   }
 }
 
-mDeclarePluginFactory(AnaglyphPluginFactory, {}, {});
+mDeclarePluginFactory(AnaglyphPluginFactory, ;, {});
 
 using namespace OFX;
+void AnaglyphPluginFactory::load()
+{
+    // we can't be used on hosts that don't support the stereoscopic suite
+    if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+        throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+    }
+}
+
 void AnaglyphPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels

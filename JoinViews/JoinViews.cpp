@@ -216,6 +216,10 @@ JoinViewsPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArgumen
 void
 JoinViewsPlugin::render(const OFX::RenderArguments &args)
 {
+  if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+    OFX::throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+  }
+
   // instantiate the render code based on the pixel depth of the dst clip
   OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
   OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
@@ -265,9 +269,18 @@ JoinViewsPlugin::render(const OFX::RenderArguments &args)
   } 
 }
 
-mDeclarePluginFactory(JoinViewsPluginFactory, {}, {});
+mDeclarePluginFactory(JoinViewsPluginFactory, ;, {});
 
 using namespace OFX;
+
+void JoinViewsPluginFactory::load()
+{
+  // we can't be used on hosts that don't support the stereoscopic suite
+  if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+  }
+}
+
 void JoinViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels
