@@ -57,11 +57,11 @@ public :
 };
 
 // template to do the RGBA processing for discrete types
-template <class PIX, int nComponents, int nValues>
+template <class PIX, int nComponents, int maxValue>
 class ImageRGBLutProcessor : public RGBLutBase 
 {
 protected:
-    PIX _lookupTable[3][nValues];
+    PIX _lookupTable[3][maxValue+1];
 public :
   // ctor
   ImageRGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args)
@@ -71,15 +71,15 @@ public :
     OFX::ParametricParam  *lookupTable = instance.fetchParametricParam("lookupTable");
     assert(lookupTable);
     for(int component = 0; component < 3; ++component) {
-      for(PIX position = 0; position < nValues; ++position) {
+      for(PIX position = 0; position <= maxValue; ++position) {
         // position to evaluate the param at
-        float parametricPos = float(position)/(nValues-1);
+        float parametricPos = float(position)/maxValue;
 
         // evaluate the parametric param
         double value = lookupTable->getValue(component, args.time, parametricPos);
 
         // set that in the lut
-        _lookupTable[component][position] = std::max(PIX(0),std::min(PIX(value*(nValues-1)+0.5), PIX(nValues-1)));
+        _lookupTable[component][position] = std::max(PIX(0),std::min(PIX(value*maxValue+0.5), PIX(maxValue)));
       }
     }
   }
@@ -98,7 +98,7 @@ public :
         if(srcPix)
         {
           for(int c = 0; c < nComponents; c++) {
-            assert(0 <= srcPix[c] && srcPix[c] < nValues);
+            assert(0 <= srcPix[c] && srcPix[c] <= maxValue);
             dstPix[c] = _lookupTable[c][srcPix[c]];
           }
         }
@@ -116,12 +116,12 @@ public :
 };
 
 // template to do the RGBA processing for floating-point types
-template <int nComponents, int nValues>
+template <int nComponents, int maxValue>
 class ImageRGBLutProcessorFloat : public RGBLutBase
 {
 protected:
     typedef float PIX;
-    PIX _lookupTable[3][nValues];
+    PIX _lookupTable[3][maxValue+1];
 public :
   // ctor
   ImageRGBLutProcessorFloat(OFX::ImageEffect &instance, const OFX::RenderArguments &args)
@@ -130,17 +130,17 @@ public :
     // build the LUT
     OFX::ParametricParam  *lookupTable = instance.fetchParametricParam("lookupTable");
     for(int component = 0; component < 3; ++component) {
-      for(int position = 0; position < nValues; ++position) {
+      for(int position = 0; position <= maxValue; ++position) {
         // position to evaluate the param at
-        double parametricPos = float(position)/(nValues-1);
+        double parametricPos = float(position)/maxValue;
 
         // evaluate the parametric param
         double value = lookupTable->getValue(component, args.time, parametricPos);
-        //value = value * (nValues-1);
-        //value = clamp(value, 0, nValues-1);
+        //value = value * maxValue;
+        //value = clamp(value, 0, maxValue);
 
         // set that in the lut
-        _lookupTable[component][position] = std::max(PIX(0),std::min(PIX(value),PIX(nValues-1)));
+        _lookupTable[component][position] = std::max(PIX(0),std::min(PIX(value),PIX(maxValue)));
       }
     }
   }
@@ -181,11 +181,11 @@ private:
     if (value < 0.) {
       return _lookupTable[component][0];
     } else if (value >= 1.) {
-      return _lookupTable[component][nValues-1];
+      return _lookupTable[component][maxValue];
     } else {
-      int i = (int)(value * (nValues-1));
-      assert(i < nValues-1);
-      float alpha = value - (float)i / (nValues-1);
+      int i = (int)(value * maxValue);
+      assert(i < maxValue);
+      float alpha = value - (float)i / maxValue;
       return _lookupTable[component][i] * (1.-alpha) + _lookupTable[component][i] * alpha;
     }
   }
@@ -290,21 +290,21 @@ void RGBLutPlugin::render(const OFX::RenderArguments &args)
     {
     case OFX::eBitDepthUByte : 
       {      
-        ImageRGBLutProcessor<unsigned char, 4, 256> fred(*this, args);
+        ImageRGBLutProcessor<unsigned char, 4, 255> fred(*this, args);
         setupAndProcess(fred, args);
       }
       break;
 
     case OFX::eBitDepthUShort : 
       {
-        ImageRGBLutProcessor<unsigned short, 4, 65536> fred(*this, args);
+        ImageRGBLutProcessor<unsigned short, 4, 65535> fred(*this, args);
         setupAndProcess(fred, args);
       }                          
       break;
 
     case OFX::eBitDepthFloat : 
       {
-        ImageRGBLutProcessorFloat<4,1000> fred(*this, args);
+        ImageRGBLutProcessorFloat<4,999> fred(*this, args);
         setupAndProcess(fred, args);
       }
       break;
@@ -315,21 +315,21 @@ void RGBLutPlugin::render(const OFX::RenderArguments &args)
     {
     case OFX::eBitDepthUByte : 
       {
-        ImageRGBLutProcessor<unsigned char, 1, 256> fred(*this, args);
+        ImageRGBLutProcessor<unsigned char, 1, 255> fred(*this, args);
         setupAndProcess(fred, args);
       }
       break;
 
     case OFX::eBitDepthUShort : 
       {
-        ImageRGBLutProcessor<unsigned short, 1, 65536> fred(*this, args);
+        ImageRGBLutProcessor<unsigned short, 1, 65535> fred(*this, args);
         setupAndProcess(fred, args);
       }                          
       break;
 
     case OFX::eBitDepthFloat : 
       {
-        ImageRGBLutProcessorFloat<1,1000> fred(*this, args);
+        ImageRGBLutProcessorFloat<1,999> fred(*this, args);
         setupAndProcess(fred, args);
       }                          
       break;
