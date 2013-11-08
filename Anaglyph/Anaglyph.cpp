@@ -270,10 +270,10 @@ AnaglyphPlugin::render(const OFX::RenderArguments &args)
   }
 }
 
-mDeclarePluginFactory(AnaglyphExamplePluginFactory, {}, {});
+mDeclarePluginFactory(AnaglyphPluginFactory, {}, {});
 
 using namespace OFX;
-void AnaglyphExamplePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void AnaglyphPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels
   desc.setLabels("Anaglyph", "Anaglyph", "Anaglyph");
@@ -302,7 +302,7 @@ void AnaglyphExamplePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
   }
 }
 
-void AnaglyphExamplePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
   // Source clip only in the filter context
   // create the mandated source clip
@@ -354,7 +354,7 @@ void AnaglyphExamplePluginFactory::describeInContext(OFX::ImageEffectDescriptor 
   page->addChild(*offset);
 }
 
-OFX::ImageEffect* AnaglyphExamplePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* AnaglyphPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
   return new AnaglyphPlugin(handle);
 }
@@ -365,7 +365,7 @@ namespace OFX
   {  
     void getPluginIDs(OFX::PluginFactoryArray &ids)
     {
-      static AnaglyphExamplePluginFactory p("net.sf.openfx:anaglyphPlugin", 1, 0);
+      static AnaglyphPluginFactory p("net.sf.openfx:anaglyphPlugin", 1, 0);
       ids.push_back(&p);
     }
   }
