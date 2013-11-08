@@ -142,7 +142,7 @@
 		1EDE1B91182D0552002392CB /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EDE1B95182D056A002392CB /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EDE1B96182D056A002392CB /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		1EDE1BAD182D3985002392CB /* Anaglyph.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Anaglyph.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EDE1BAD182D3985002392CB /* JoinViews.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JoinViews.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EDE1BB0182D39FA002392CB /* JoinViews.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JoinViews.cpp; sourceTree = "<group>"; };
 		1EDE1BB2182D3A03002392CB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EDE1BB3182D3A03002392CB /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -263,7 +263,7 @@
 			children = (
 				1E3E3CA417995BEE005F2132 /* RGBLut.ofx.bundle */,
 				1EDE1B8C182D04D9002392CB /* Anaglyph.ofx.bundle */,
-				1EDE1BAD182D3985002392CB /* Anaglyph.ofx.bundle */,
+				1EDE1BAD182D3985002392CB /* JoinViews.ofx.bundle */,
 				1EDE1BC6182D3F38002392CB /* OneView.ofx.bundle */,
 			);
 			name = Products;
@@ -377,7 +377,7 @@
 			);
 			name = JoinViews.ofx;
 			productName = basic.ofx;
-			productReference = 1EDE1BAD182D3985002392CB /* Anaglyph.ofx.bundle */;
+			productReference = 1EDE1BAD182D3985002392CB /* JoinViews.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
 		1EDE1BB6182D3F38002392CB /* OneView.ofx */ = {
@@ -639,9 +639,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = Anaglyph/Info.plist;
+				INFOPLIST_FILE = JoinViews/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = Anaglyph.ofx;
+				PRODUCT_NAME = JoinViews.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Debug;
@@ -650,9 +650,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = Anaglyph/Info.plist;
+				INFOPLIST_FILE = JoinViews/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = Anaglyph.ofx;
+				PRODUCT_NAME = JoinViews.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
