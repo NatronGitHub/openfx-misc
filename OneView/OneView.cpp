@@ -292,6 +292,9 @@ void OneViewPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
   desc.setRenderTwiceAlways(false);
   desc.setSupportsMultipleClipPARs(false);
 
+  if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+  }
 }
 
 void OneViewPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
