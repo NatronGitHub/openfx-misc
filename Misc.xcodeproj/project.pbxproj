@@ -13,6 +13,7 @@
 			buildPhases = (
 			);
 			dependencies = (
+				1EDE1B9A182D05D1002392CB /* PBXTargetDependency */,
 				1EFC1702180DCEA000AD7B86 /* PBXTargetDependency */,
 			);
 			name = all;
@@ -30,10 +31,27 @@
 		1E3E3CC417995D5C005F2132 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1E3E3CC517995D5C005F2132 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E3E3CC617995D8C005F2132 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1EDE1B7E182D04D9002392CB /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1EDE1B7F182D04D9002392CB /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1EDE1B80182D04D9002392CB /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1EDE1B81182D04D9002392CB /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1EDE1B82182D04D9002392CB /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1EDE1B83182D04D9002392CB /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1EDE1B84182D04D9002392CB /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1EDE1B85182D04D9002392CB /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1EDE1B87182D04D9002392CB /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1EDE1B92182D0552002392CB /* Anaglyph.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDE1B8F182D0552002392CB /* Anaglyph.cpp */; };
 		1EFC1700180DCE6500AD7B86 /* RGBLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0C41E180DCAB500C25D1E /* RGBLut.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		1EDE1B99182D05D1002392CB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1EDE1B7B182D04D9002392CB;
+			remoteInfo = Anaglyph.ofx;
+		};
 		1EFC1701180DCEA000AD7B86 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
@@ -82,6 +100,12 @@
 		1E9FC1CE180BF74400EFE0F9 /* camera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = camera.h; sourceTree = "<group>"; };
 		1E9FC1CF180BF74400EFE0F9 /* fnPublicOfxExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fnPublicOfxExtensions.h; sourceTree = "<group>"; };
 		1EB0C41E180DCAB500C25D1E /* RGBLut.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RGBLut.cpp; sourceTree = "<group>"; };
+		1EDE1B8C182D04D9002392CB /* Anaglyph.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Anaglyph.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EDE1B8F182D0552002392CB /* Anaglyph.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Anaglyph.cpp; sourceTree = "<group>"; };
+		1EDE1B90182D0552002392CB /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1EDE1B91182D0552002392CB /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EDE1B95182D056A002392CB /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1EDE1B96182D056A002392CB /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -93,6 +117,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1EDE1B86182D04D9002392CB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EDE1B87182D04D9002392CB /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -100,6 +132,8 @@
 			isa = PBXGroup;
 			children = (
 				1EB0C41E180DCAB500C25D1E /* RGBLut.cpp */,
+				1EDE1B95182D056A002392CB /* Info.plist */,
+				1EDE1B96182D056A002392CB /* Makefile */,
 			);
 			path = RGBLut;
 			sourceTree = "<group>";
@@ -168,6 +202,7 @@
 			isa = PBXGroup;
 			children = (
 				1E3E3CA417995BEE005F2132 /* RGBLut.ofx.bundle */,
+				1EDE1B8C182D04D9002392CB /* Anaglyph.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -176,6 +211,7 @@
 			isa = PBXGroup;
 			children = (
 				1E3E3CB417995D15005F2132 /* Library */,
+				1EDE1B8E182D0511002392CB /* Anaglyph */,
 				1E3E3CB117995CB1005F2132 /* RGBLut */,
 			);
 			name = Sources;
@@ -199,6 +235,16 @@
 			path = ../../include/nuke;
 			sourceTree = "<group>";
 		};
+		1EDE1B8E182D0511002392CB /* Anaglyph */ = {
+			isa = PBXGroup;
+			children = (
+				1EDE1B8F182D0552002392CB /* Anaglyph.cpp */,
+				1EDE1B90182D0552002392CB /* Info.plist */,
+				1EDE1B91182D0552002392CB /* Makefile */,
+			);
+			path = Anaglyph;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -208,7 +254,6 @@
 			buildPhases = (
 				1E3E3CA017995BEE005F2132 /* Sources */,
 				1E3E3CA117995BEE005F2132 /* Frameworks */,
-				1E3E3CA217995BEE005F2132 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -217,6 +262,22 @@
 			name = RGBLut.ofx;
 			productName = basic.ofx;
 			productReference = 1E3E3CA417995BEE005F2132 /* RGBLut.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
+		1EDE1B7B182D04D9002392CB /* Anaglyph.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1EDE1B89182D04D9002392CB /* Build configuration list for PBXNativeTarget "Anaglyph.ofx" */;
+			buildPhases = (
+				1EDE1B7C182D04D9002392CB /* Sources */,
+				1EDE1B86182D04D9002392CB /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Anaglyph.ofx;
+			productName = basic.ofx;
+			productReference = 1EDE1B8C182D04D9002392CB /* Anaglyph.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
 /* End PBXNativeTarget section */
@@ -241,20 +302,11 @@
 			projectRoot = "";
 			targets = (
 				1E551F461799509100A4135C /* all */,
+				1EDE1B7B182D04D9002392CB /* Anaglyph.ofx */,
 				1E3E3CA317995BEE005F2132 /* RGBLut.ofx */,
 			);
 		};
 /* End PBXProject section */
-
-/* Begin PBXResourcesBuildPhase section */
-		1E3E3CA217995BEE005F2132 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		1E3E3CA017995BEE005F2132 /* Sources */ = {
@@ -273,9 +325,30 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1EDE1B7C182D04D9002392CB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EDE1B7E182D04D9002392CB /* ofxsCore.cpp in Sources */,
+				1EDE1B7F182D04D9002392CB /* ofxsImageEffect.cpp in Sources */,
+				1EDE1B80182D04D9002392CB /* ofxsInteract.cpp in Sources */,
+				1EDE1B81182D04D9002392CB /* ofxsLog.cpp in Sources */,
+				1EDE1B82182D04D9002392CB /* ofxsMultiThread.cpp in Sources */,
+				1EDE1B83182D04D9002392CB /* ofxsParams.cpp in Sources */,
+				1EDE1B84182D04D9002392CB /* ofxsProperty.cpp in Sources */,
+				1EDE1B85182D04D9002392CB /* ofxsPropertyValidation.cpp in Sources */,
+				1EDE1B92182D0552002392CB /* Anaglyph.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		1EDE1B9A182D05D1002392CB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1EDE1B7B182D04D9002392CB /* Anaglyph.ofx */;
+			targetProxy = 1EDE1B99182D05D1002392CB /* PBXContainerItemProxy */;
+		};
 		1EFC1702180DCEA000AD7B86 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 1E3E3CA317995BEE005F2132 /* RGBLut.ofx */;
@@ -380,6 +453,28 @@
 			};
 			name = Release;
 		};
+		1EDE1B8A182D04D9002392CB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Anaglyph/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = Anaglyph.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1EDE1B8B182D04D9002392CB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Anaglyph/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = Anaglyph.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -406,6 +501,15 @@
 			buildConfigurations = (
 				1E551F481799509100A4135C /* Debug */,
 				1E551F491799509100A4135C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1EDE1B89182D04D9002392CB /* Build configuration list for PBXNativeTarget "Anaglyph.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1EDE1B8A182D04D9002392CB /* Debug */,
+				1EDE1B8B182D04D9002392CB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

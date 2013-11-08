@@ -1,4 +1,5 @@
-SUBDIRS = RGBLut
+SUBDIRS = RGBLut Anaglyph
+#SUBDIRS = RGBLut JoinViews OneView Anaglyph MixViews SideBySide ReConverge
 
 default : 
 	@ echo making sub projects... $(SUBDIRS)
