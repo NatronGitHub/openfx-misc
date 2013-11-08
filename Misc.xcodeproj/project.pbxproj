@@ -13,6 +13,8 @@
 			buildPhases = (
 			);
 			dependencies = (
+				1EDE1BCE182D415E002392CB /* PBXTargetDependency */,
+				1EDE1BB5182D3A20002392CB /* PBXTargetDependency */,
 				1EDE1B9A182D05D1002392CB /* PBXTargetDependency */,
 				1EFC1702180DCEA000AD7B86 /* PBXTargetDependency */,
 			);
@@ -41,6 +43,26 @@
 		1EDE1B85182D04D9002392CB /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1EDE1B87182D04D9002392CB /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1EDE1B92182D0552002392CB /* Anaglyph.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDE1B8F182D0552002392CB /* Anaglyph.cpp */; };
+		1EDE1B9F182D3985002392CB /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1EDE1BA0182D3985002392CB /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1EDE1BA1182D3985002392CB /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1EDE1BA2182D3985002392CB /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1EDE1BA3182D3985002392CB /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1EDE1BA4182D3985002392CB /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1EDE1BA5182D3985002392CB /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1EDE1BA6182D3985002392CB /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1EDE1BA9182D3985002392CB /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1EDE1BB1182D39FA002392CB /* JoinViews.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDE1BB0182D39FA002392CB /* JoinViews.cpp */; };
+		1EDE1BB9182D3F38002392CB /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1EDE1BBA182D3F38002392CB /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1EDE1BBB182D3F38002392CB /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1EDE1BBC182D3F38002392CB /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1EDE1BBD182D3F38002392CB /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1EDE1BBE182D3F38002392CB /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1EDE1BBF182D3F38002392CB /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1EDE1BC0182D3F38002392CB /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1EDE1BC2182D3F38002392CB /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1EDE1BCA182D3F90002392CB /* OneView.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDE1BC9182D3F90002392CB /* OneView.cpp */; };
 		1EFC1700180DCE6500AD7B86 /* RGBLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0C41E180DCAB500C25D1E /* RGBLut.cpp */; };
 /* End PBXBuildFile section */
 
@@ -51,6 +73,20 @@
 			proxyType = 1;
 			remoteGlobalIDString = 1EDE1B7B182D04D9002392CB;
 			remoteInfo = Anaglyph.ofx;
+		};
+		1EDE1BB4182D3A20002392CB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1EDE1B9D182D3985002392CB;
+			remoteInfo = JoinViews.ofx;
+		};
+		1EDE1BCD182D415E002392CB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1EDE1BB6182D3F38002392CB;
+			remoteInfo = OneView.ofx;
 		};
 		1EFC1701180DCEA000AD7B86 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -106,6 +142,14 @@
 		1EDE1B91182D0552002392CB /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EDE1B95182D056A002392CB /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EDE1B96182D056A002392CB /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EDE1BAD182D3985002392CB /* Anaglyph.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Anaglyph.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EDE1BB0182D39FA002392CB /* JoinViews.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JoinViews.cpp; sourceTree = "<group>"; };
+		1EDE1BB2182D3A03002392CB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1EDE1BB3182D3A03002392CB /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EDE1BC6182D3F38002392CB /* OneView.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OneView.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EDE1BC9182D3F90002392CB /* OneView.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OneView.cpp; sourceTree = "<group>"; };
+		1EDE1BCB182D3F98002392CB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1EDE1BCC182D3F98002392CB /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -122,6 +166,22 @@
 			buildActionMask = 2147483647;
 			files = (
 				1EDE1B87182D04D9002392CB /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EDE1BA8182D3985002392CB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EDE1BA9182D3985002392CB /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EDE1BC1182D3F38002392CB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EDE1BC2182D3F38002392CB /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -203,6 +263,8 @@
 			children = (
 				1E3E3CA417995BEE005F2132 /* RGBLut.ofx.bundle */,
 				1EDE1B8C182D04D9002392CB /* Anaglyph.ofx.bundle */,
+				1EDE1BAD182D3985002392CB /* Anaglyph.ofx.bundle */,
+				1EDE1BC6182D3F38002392CB /* OneView.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -210,9 +272,11 @@
 		1E551ED217994DEF00A4135C /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				1E3E3CB417995D15005F2132 /* Library */,
+				1EDE1BC8182D3F73002392CB /* OneView */,
+				1EDE1BAF182D39DA002392CB /* JoinViews */,
 				1EDE1B8E182D0511002392CB /* Anaglyph */,
 				1E3E3CB117995CB1005F2132 /* RGBLut */,
+				1E3E3CB417995D15005F2132 /* Library */,
 			);
 			name = Sources;
 			sourceTree = "<group>";
@@ -243,6 +307,26 @@
 				1EDE1B91182D0552002392CB /* Makefile */,
 			);
 			path = Anaglyph;
+			sourceTree = "<group>";
+		};
+		1EDE1BAF182D39DA002392CB /* JoinViews */ = {
+			isa = PBXGroup;
+			children = (
+				1EDE1BB0182D39FA002392CB /* JoinViews.cpp */,
+				1EDE1BB2182D3A03002392CB /* Info.plist */,
+				1EDE1BB3182D3A03002392CB /* Makefile */,
+			);
+			path = JoinViews;
+			sourceTree = "<group>";
+		};
+		1EDE1BC8182D3F73002392CB /* OneView */ = {
+			isa = PBXGroup;
+			children = (
+				1EDE1BCB182D3F98002392CB /* Info.plist */,
+				1EDE1BCC182D3F98002392CB /* Makefile */,
+				1EDE1BC9182D3F90002392CB /* OneView.cpp */,
+			);
+			path = OneView;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -280,6 +364,38 @@
 			productReference = 1EDE1B8C182D04D9002392CB /* Anaglyph.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
+		1EDE1B9D182D3985002392CB /* JoinViews.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1EDE1BAA182D3985002392CB /* Build configuration list for PBXNativeTarget "JoinViews.ofx" */;
+			buildPhases = (
+				1EDE1B9E182D3985002392CB /* Sources */,
+				1EDE1BA8182D3985002392CB /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JoinViews.ofx;
+			productName = basic.ofx;
+			productReference = 1EDE1BAD182D3985002392CB /* Anaglyph.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
+		1EDE1BB6182D3F38002392CB /* OneView.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1EDE1BC3182D3F38002392CB /* Build configuration list for PBXNativeTarget "OneView.ofx" */;
+			buildPhases = (
+				1EDE1BB7182D3F38002392CB /* Sources */,
+				1EDE1BC1182D3F38002392CB /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OneView.ofx;
+			productName = basic.ofx;
+			productReference = 1EDE1BC6182D3F38002392CB /* OneView.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -304,6 +420,8 @@
 				1E551F461799509100A4135C /* all */,
 				1EDE1B7B182D04D9002392CB /* Anaglyph.ofx */,
 				1E3E3CA317995BEE005F2132 /* RGBLut.ofx */,
+				1EDE1B9D182D3985002392CB /* JoinViews.ofx */,
+				1EDE1BB6182D3F38002392CB /* OneView.ofx */,
 			);
 		};
 /* End PBXProject section */
@@ -341,6 +459,38 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1EDE1B9E182D3985002392CB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EDE1BB1182D39FA002392CB /* JoinViews.cpp in Sources */,
+				1EDE1B9F182D3985002392CB /* ofxsCore.cpp in Sources */,
+				1EDE1BA0182D3985002392CB /* ofxsImageEffect.cpp in Sources */,
+				1EDE1BA1182D3985002392CB /* ofxsInteract.cpp in Sources */,
+				1EDE1BA2182D3985002392CB /* ofxsLog.cpp in Sources */,
+				1EDE1BA3182D3985002392CB /* ofxsMultiThread.cpp in Sources */,
+				1EDE1BA4182D3985002392CB /* ofxsParams.cpp in Sources */,
+				1EDE1BA5182D3985002392CB /* ofxsProperty.cpp in Sources */,
+				1EDE1BA6182D3985002392CB /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EDE1BB7182D3F38002392CB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EDE1BB9182D3F38002392CB /* ofxsCore.cpp in Sources */,
+				1EDE1BCA182D3F90002392CB /* OneView.cpp in Sources */,
+				1EDE1BBA182D3F38002392CB /* ofxsImageEffect.cpp in Sources */,
+				1EDE1BBB182D3F38002392CB /* ofxsInteract.cpp in Sources */,
+				1EDE1BBC182D3F38002392CB /* ofxsLog.cpp in Sources */,
+				1EDE1BBD182D3F38002392CB /* ofxsMultiThread.cpp in Sources */,
+				1EDE1BBE182D3F38002392CB /* ofxsParams.cpp in Sources */,
+				1EDE1BBF182D3F38002392CB /* ofxsProperty.cpp in Sources */,
+				1EDE1BC0182D3F38002392CB /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -348,6 +498,16 @@
 			isa = PBXTargetDependency;
 			target = 1EDE1B7B182D04D9002392CB /* Anaglyph.ofx */;
 			targetProxy = 1EDE1B99182D05D1002392CB /* PBXContainerItemProxy */;
+		};
+		1EDE1BB5182D3A20002392CB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1EDE1B9D182D3985002392CB /* JoinViews.ofx */;
+			targetProxy = 1EDE1BB4182D3A20002392CB /* PBXContainerItemProxy */;
+		};
+		1EDE1BCE182D415E002392CB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1EDE1BB6182D3F38002392CB /* OneView.ofx */;
+			targetProxy = 1EDE1BCD182D415E002392CB /* PBXContainerItemProxy */;
 		};
 		1EFC1702180DCEA000AD7B86 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -475,6 +635,50 @@
 			};
 			name = Release;
 		};
+		1EDE1BAB182D3985002392CB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Anaglyph/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = Anaglyph.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1EDE1BAC182D3985002392CB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Anaglyph/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = Anaglyph.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+		1EDE1BC4182D3F38002392CB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = OneView/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = OneView.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1EDE1BC5182D3F38002392CB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = OneView/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = OneView.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -510,6 +714,24 @@
 			buildConfigurations = (
 				1EDE1B8A182D04D9002392CB /* Debug */,
 				1EDE1B8B182D04D9002392CB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1EDE1BAA182D3985002392CB /* Build configuration list for PBXNativeTarget "JoinViews.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1EDE1BAB182D3985002392CB /* Debug */,
+				1EDE1BAC182D3985002392CB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1EDE1BC3182D3F38002392CB /* Build configuration list for PBXNativeTarget "OneView.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1EDE1BC4182D3F38002392CB /* Debug */,
+				1EDE1BC5182D3F38002392CB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
