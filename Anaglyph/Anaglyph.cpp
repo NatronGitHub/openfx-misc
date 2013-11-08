@@ -133,6 +133,9 @@ public :
     if (_swap) {
       std::swap(srcRedImg, srcCyanImg);
     }
+    OfxRectI srcRedBounds = srcRedImg->getBounds();
+    OfxRectI srcCyanBounds = srcCyanImg->getBounds();
+
 
     for(int y = procWindow.y1; y < procWindow.y2; y++) {
       if(_effect.abort()) break;
@@ -140,9 +143,12 @@ public :
       PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
       for(int x = procWindow.x1; x < procWindow.x2; x++) {
+        // clamp x to avoid black borders
+        int xRed = std::min(std::max(srcRedBounds.x1,x+(_offset+1)/2),srcRedBounds.x2-1);
+        int xCyan = std::min(std::max(srcRedBounds.x1,x-_offset/2),srcRedBounds.x2-1);
 
-        PIX *srcRedPix = (PIX *)(srcRedImg ? srcRedImg->getPixelAddress(x+(_offset+1)/2, y) : 0);
-        PIX *srcCyanPix = (PIX *)(srcCyanImg ? srcCyanImg->getPixelAddress(x-_offset/2, y) : 0);
+        PIX *srcRedPix = (PIX *)(srcRedImg ? srcRedImg->getPixelAddress(xRed, y) : 0);
+        PIX *srcCyanPix = (PIX *)(srcCyanImg ? srcCyanImg->getPixelAddress(xCyan, y) : 0);
 
         dstPix[3] = 0; // start with transparent
         if(srcRedPix) {
