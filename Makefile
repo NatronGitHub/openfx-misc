@@ -1,4 +1,4 @@
-SUBDIRS = RGBLut JoinViews OneView Anaglyph MixViews
+SUBDIRS = RGBLut JoinViews OneView Anaglyph MixViews SideBySide
 #SUBDIRS = RGBLut JoinViews OneView Anaglyph MixViews SideBySide ReConverge
 
 default : 
