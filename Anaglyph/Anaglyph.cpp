@@ -97,6 +97,9 @@ public :
     : OFX::ImageProcessor(instance)
     , _srcLeftImg(0)
     , _srcRightImg(0)
+    , _amtcolour(0.)
+    , _swap(false)
+    , _offset(0)
   {        
   }
 
@@ -145,7 +148,7 @@ public :
       for(int x = procWindow.x1; x < procWindow.x2; x++) {
         // clamp x to avoid black borders
         int xRed = std::min(std::max(srcRedBounds.x1,x+(_offset+1)/2),srcRedBounds.x2-1);
-        int xCyan = std::min(std::max(srcRedBounds.x1,x-_offset/2),srcRedBounds.x2-1);
+        int xCyan = std::min(std::max(srcCyanBounds.x1,x-_offset/2),srcCyanBounds.x2-1);
 
         PIX *srcRedPix = (PIX *)(srcRedImg ? srcRedImg->getPixelAddress(xRed, y) : 0);
         PIX *srcCyanPix = (PIX *)(srcCyanImg ? srcCyanImg->getPixelAddress(xCyan, y) : 0);
