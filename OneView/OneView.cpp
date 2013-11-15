@@ -99,7 +99,7 @@ public :
 };
 
 // template to do the RGBA processing
-template <class PIX, int nComponents, int max>
+template <class PIX, int nComponents>
 class ImageCopier : public CopierBase {
 public :
   // ctor
@@ -228,19 +228,19 @@ OneViewPlugin::render(const OFX::RenderArguments &args)
   if(dstComponents == OFX::ePixelComponentRGBA) {
     switch(dstBitDepth) {
       case OFX::eBitDepthUByte : {      
-        ImageCopier<unsigned char, 4, 255> fred(*this);
+        ImageCopier<unsigned char, 4> fred(*this);
         setupAndProcess(fred, args);
       }
         break;
 
       case OFX::eBitDepthUShort : {
-        ImageCopier<unsigned short, 4, 65535> fred(*this);
+        ImageCopier<unsigned short, 4> fred(*this);
         setupAndProcess(fred, args);
       }                          
         break;
 
       case OFX::eBitDepthFloat : {
-        ImageCopier<float, 4, 1> fred(*this);
+        ImageCopier<float, 4> fred(*this);
         setupAndProcess(fred, args);
       }
         break;
@@ -249,19 +249,19 @@ OneViewPlugin::render(const OFX::RenderArguments &args)
   else {
     switch(dstBitDepth) {
       case OFX::eBitDepthUByte : {
-        ImageCopier<unsigned char, 1, 255> fred(*this);
+        ImageCopier<unsigned char, 1> fred(*this);
         setupAndProcess(fred, args);
       }
         break;
 
       case OFX::eBitDepthUShort : {
-        ImageCopier<unsigned short, 1, 65535> fred(*this);
+        ImageCopier<unsigned short, 1> fred(*this);
         setupAndProcess(fred, args);
       }                          
         break;
 
       case OFX::eBitDepthFloat : {
-        ImageCopier<float, 1, 1> fred(*this);
+        ImageCopier<float, 1> fred(*this);
         setupAndProcess(fred, args);
       }                          
         break;
