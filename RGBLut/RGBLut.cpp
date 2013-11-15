@@ -385,7 +385,9 @@ using namespace OFX;
 void RGBLutPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   desc.setLabels("RGBLut", "RGBLut", "RGBLut");
-  desc.setPluginGrouping("OFX");
+  desc.setPluginGrouping("OFX/Color");
+  desc.setPluginDescription("Apply a parametric lookup curve to each channel separately.");
+
   desc.addSupportedContext(eContextFilter);
   desc.addSupportedBitDepth(eBitDepthUByte);
   desc.addSupportedBitDepth(eBitDepthUShort);
