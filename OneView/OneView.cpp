@@ -283,7 +283,7 @@ void OneViewPluginFactory::load()
 void OneViewPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels
-  desc.setLabels("OneView", "OneView", "OneView");
+  desc.setLabels("OneViewOFX", "OneViewOFX", "OneViewOFX");
   desc.setPluginGrouping("OFX/Views");
   desc.setPluginDescription("Takes one view from the input.");
 

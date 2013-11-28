@@ -338,7 +338,7 @@ void TimeOffsetPluginFactory::load()
 void TimeOffsetPluginFactory::describe(OFX::ImageEffectDescriptor &desc) 
 {
   // basic labels
-  desc.setLabels("TimeOffset", "TimeOffset", "TimeOffset");
+  desc.setLabels("TimeOffsetOFX", "TimeOffsetOFX", "TimeOffsetOFX");
   desc.setPluginGrouping("OFX/Time");
   desc.setPluginDescription("Move the input clip forward or backward in time. "
                             "This can also reverse the order of the input frames so that last one is first.");

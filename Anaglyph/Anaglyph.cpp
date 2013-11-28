@@ -334,7 +334,7 @@ void AnaglyphPluginFactory::load()
 void AnaglyphPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels
-  desc.setLabels("Anaglyph", "Anaglyph", "Anaglyph");
+  desc.setLabels("AnaglyphOFX", "AnaglyphOFX", "AnaglyphOFX");
   desc.setPluginGrouping("OFX/Views/Stereo");
   desc.setPluginDescription("Make an anaglyph image out of the inputs.");
 

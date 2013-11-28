@@ -296,7 +296,7 @@ void MixViewsPluginFactory::load()
 void MixViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels
-  desc.setLabels("MixViews", "MixViews", "MixViews");
+  desc.setLabels("MixViewsOFX", "MixViewsOFX", "MixViewsOFX");
   desc.setPluginGrouping("OFX/Views/Stereo");
   desc.setPluginDescription("Mix two views together.");
 

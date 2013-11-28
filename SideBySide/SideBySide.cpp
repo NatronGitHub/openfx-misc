@@ -403,7 +403,7 @@ void SideBySidePluginFactory::load()
 void SideBySidePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels
-  desc.setLabels("SideBySide", "SideBySide", "SideBySide");
+  desc.setLabels("SideBySideOFX", "SideBySideOFX", "SideBySideOFX");
   desc.setPluginGrouping("OFX/Views/Stereo");
   desc.setPluginDescription("Put the left and right view of the input next to each other.");
 
