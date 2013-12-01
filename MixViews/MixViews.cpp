@@ -258,6 +258,8 @@ MixViewsPlugin::render(const OFX::RenderArguments &args)
         setupAndProcess(fred, args);
       }
         break;
+      default :
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
   } else {
     switch(dstBitDepth) {
@@ -278,6 +280,8 @@ MixViewsPlugin::render(const OFX::RenderArguments &args)
         setupAndProcess(fred, args);
       }
         break;
+      default :
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
   }
 }

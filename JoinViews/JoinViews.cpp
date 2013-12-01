@@ -244,6 +244,8 @@ JoinViewsPlugin::render(const OFX::RenderArguments &args)
         setupAndProcess(fred, args);
       }
         break;
+      default :
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
   }
   else {
@@ -265,6 +267,8 @@ JoinViewsPlugin::render(const OFX::RenderArguments &args)
         setupAndProcess(fred, args);
       }                          
         break;
+      default :
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
   } 
 }

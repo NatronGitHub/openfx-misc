@@ -317,6 +317,8 @@ AnaglyphPlugin::render(const OFX::RenderArguments &args)
       setupAndProcess(fred, args);
     }
       break;
+    default :
+      OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
   }
 }
 
@@ -335,7 +337,7 @@ void AnaglyphPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels
   desc.setLabels("AnaglyphOFX", "AnaglyphOFX", "AnaglyphOFX");
-  desc.setPluginGrouping("OFX/Views/Stereo");
+  desc.setPluginGrouping("Views/Stereo");
   desc.setPluginDescription("Make an anaglyph image out of the inputs.");
 
   // add the supported contexts, only filter at the moment

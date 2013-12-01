@@ -286,6 +286,8 @@ TimeOffsetPlugin::render(const OFX::RenderArguments &args)
             setupAndProcess(fred, args);
         }
         break;
+        default :
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
     else {
@@ -307,6 +309,8 @@ TimeOffsetPlugin::render(const OFX::RenderArguments &args)
             setupAndProcess(fred, args);
         }                          
         break;
+        default :
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     } // switch
 }

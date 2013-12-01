@@ -124,10 +124,6 @@ public :
   void multiThreadProcessImages(OfxRectI procWindow)
   {
     assert(_offset != 0);
-    OfxRectI srcBounds1 = _srcImg1->getBounds();
-    OfxRectI srcBounds2 = _srcImg2->getBounds();
-
-
     for(int y = procWindow.y1; y < procWindow.y2; y++) {
       if(_effect.abort()) break;
 
@@ -364,6 +360,8 @@ SideBySidePlugin::render(const OFX::RenderArguments &args)
         setupAndProcess(fred, args);
       }
         break;
+      default :
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
   }
   else {
@@ -385,6 +383,8 @@ SideBySidePlugin::render(const OFX::RenderArguments &args)
         setupAndProcess(fred, args);
       }                          
         break;
+      default :
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
   }
 }

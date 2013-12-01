@@ -349,6 +349,8 @@ void RGBLutPlugin::render(const OFX::RenderArguments &args)
         setupAndProcess(fred, args);
       }
       break;
+    default :
+      OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
   }
   else {
@@ -374,6 +376,8 @@ void RGBLutPlugin::render(const OFX::RenderArguments &args)
         setupAndProcess(fred, args);
       }                          
       break;
+    default :
+      OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
   } 
 }
