@@ -289,7 +289,7 @@ void JoinViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels
   desc.setLabels("JoinViewsOFX", "JoinViewsOFX", "JoinViewsOFX");
-  desc.setPluginGrouping("OFX/Views");
+  desc.setPluginGrouping("Views");
   desc.setPluginDescription("JoinView inputs to make a stereo output. "
                             "The first view from each input is copied to the left and right views of the output.");
 

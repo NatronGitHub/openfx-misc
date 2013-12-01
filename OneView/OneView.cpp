@@ -288,7 +288,7 @@ void OneViewPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels
   desc.setLabels("OneViewOFX", "OneViewOFX", "OneViewOFX");
-  desc.setPluginGrouping("OFX/Views");
+  desc.setPluginGrouping("Views");
   desc.setPluginDescription("Takes one view from the input.");
 
   // add the supported contexts, only filter at the moment
