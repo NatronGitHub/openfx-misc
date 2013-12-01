@@ -210,7 +210,7 @@ TimeOffsetPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArgume
     OFX::PixelComponentEnum    dstComponents  = dst->getPixelComponents();
   
     // figure the frame we should be retiming from
-    double sourceTime = args.time + time_offset_->getValue(); // no animation
+    double sourceTime = args.time - time_offset_->getValue(); // no animation
     OfxRangeD range = srcClip_->getFrameRange();
     bool reverse_input = reverse_input_->getValue();
     if (reverse_input) {
@@ -398,7 +398,8 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
   time_offset->setHint("Offset in frames (frame f from the input will be at f+offset)");
   time_offset->setDefault(0);
   // keep default range (INT_MIN..INT_MAX)
-  // keep default display range (same as range)
+  // no display range
+  // time_offset->setDisplayRange(0, 0);
   time_offset->setAnimates(false); // no animation here!
 
   page->addChild(*time_offset);
