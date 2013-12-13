@@ -405,13 +405,18 @@ void RGBLutPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
   desc.setRenderTwiceAlways(false);
   desc.setSupportsMultipleClipPARs(false);
 
-  if (!OFX::getImageEffectHostDescription()->supportsParametricParameter) {
-	throwHostMissingSuiteException(kOfxParametricParameterSuite);
-  }
+  // returning an error here crashes Nuke
+  //if (!OFX::getImageEffectHostDescription()->supportsParametricParameter) {
+  //  throwHostMissingSuiteException(kOfxParametricParameterSuite);
+  //}
 }
 
 void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
+  if (!OFX::getImageEffectHostDescription()->supportsParametricParameter) {
+    throwHostMissingSuiteException(kOfxParametricParameterSuite);
+  }
+
   ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
   assert(srcClip);
   srcClip->addSupportedComponent(ePixelComponentRGBA);
