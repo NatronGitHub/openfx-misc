@@ -280,9 +280,10 @@ using namespace OFX;
 void JoinViewsPluginFactory::load()
 {
   // we can't be used on hosts that don't support the stereoscopic suite
-  if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
-    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
-  }
+  // returning an error here causes a blank menu entry in Nuke
+  //if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+  //    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+  //}
 }
 
 void JoinViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
@@ -311,13 +312,18 @@ void JoinViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
   desc.setRenderTwiceAlways(false);
   desc.setSupportsMultipleClipPARs(false);
 
-  if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
-    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
-  }
+  // returning an error here crashes Nuke
+  //if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+  //  throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+  //}
 }
 
 void JoinViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
+  if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+  }
+
   // create the source clips from the rightmost one (in Nuke's GUI) to the leftmost
   ClipDescriptor *srcRightClip = desc.defineClip("Right");
   srcRightClip->addSupportedComponent(ePixelComponentRGBA);

@@ -394,10 +394,11 @@ mDeclarePluginFactory(SideBySidePluginFactory, ;, {});
 using namespace OFX;
 void SideBySidePluginFactory::load()
 {
-    // we can't be used on hosts that don't support the stereoscopic suite
-    if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
-        throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
-    }
+  // we can't be used on hosts that don't support the stereoscopic suite
+  // returning an error here causes a blank menu entry in Nuke
+  //if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+  //    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+  //}
 }
 
 void SideBySidePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
@@ -424,13 +425,18 @@ void SideBySidePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
   desc.setRenderTwiceAlways(false);
   desc.setSupportsMultipleClipPARs(false);
 
-  if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
-    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
-  }
+  // returning an error here crashes Nuke
+  //if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+  //  throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+  //}
 }
 
 void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
+  if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+    throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+  }
+
   // Source clip only in the filter context
   // create the mandated source clip
   ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
