@@ -174,9 +174,15 @@ public :
     /* override the time domain action, only for the general context */
     virtual bool getTimeDomain(OfxRangeD &range);
     
+    /* override is identity */
+    virtual bool isIdentity(const OFX::RenderArguments &args, OFX::Clip * &identityClip, double &identityTime);
+
     /* set up and run a processor */
     void
     setupAndProcess(CopierBase &, const OFX::RenderArguments &args);
+
+private:
+    double getSourceTime(double time) const;
 };
 
 
@@ -200,6 +206,25 @@ checkComponents(const OFX::Image &src,
         throw int(1); // HACK!! need to throw an sensible exception here!        
 }
 
+// figure the frame we should be retiming from
+double
+TimeOffsetPlugin::getSourceTime(double t) const
+{
+    double sourceTime = t - time_offset_->getValue(); // no animation
+    OfxRangeD range = srcClip_->getFrameRange();
+    bool reverse_input = reverse_input_->getValue();
+    if (reverse_input) {
+        sourceTime = range.max - sourceTime + range.min;
+    }
+    // clip to min/max range
+    if (sourceTime < range.min) {
+        sourceTime = range.min;
+    } else if (sourceTime > range.max) {
+        sourceTime = range.max;
+    }
+    return sourceTime;
+}
+
 /* set up and run a processor */
 void
 TimeOffsetPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArguments &args)
@@ -210,18 +235,7 @@ TimeOffsetPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArgume
     OFX::PixelComponentEnum    dstComponents  = dst->getPixelComponents();
   
     // figure the frame we should be retiming from
-    double sourceTime = args.time - time_offset_->getValue(); // no animation
-    OfxRangeD range = srcClip_->getFrameRange();
-    bool reverse_input = reverse_input_->getValue();
-    if (reverse_input) {
-      sourceTime = range.max - sourceTime + range.min;
-    }
-    // clip to min/max range
-    if (sourceTime < range.min) {
-      sourceTime = range.min;
-    } else if (sourceTime > range.max) {
-      sourceTime = range.max;
-    }
+    double sourceTime = getSourceTime(args.time);
     // fetch the source image
     std::auto_ptr<OFX::Image> srcImg(srcClip_->fetchImage(sourceTime));
 
@@ -314,6 +328,16 @@ TimeOffsetPlugin::render(const OFX::RenderArguments &args)
         }
     } // switch
 }
+
+// overridden is identity
+bool
+TimeOffsetPlugin::isIdentity(const OFX::RenderArguments &args, OFX::Clip * &identityClip, double &identityTime)
+{
+    identityClip = srcClip_;
+    identityTime = getSourceTime(args.time);
+    return true;
+}
+
 
 using namespace OFX;
 mDeclarePluginFactory(TimeOffsetPluginFactory, ;, {});
