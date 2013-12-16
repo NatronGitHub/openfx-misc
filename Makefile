@@ -1,5 +1,4 @@
-SUBDIRS = RGBLut JoinViews OneView Anaglyph MixViews SideBySide
-#SUBDIRS = RGBLut JoinViews OneView Anaglyph MixViews SideBySide ReConverge
+SUBDIRS = RGBLut JoinViews OneView Anaglyph MixViews SideBySide Reconverge DebugProxy
 
 default : 
 	@ echo making sub projects... $(SUBDIRS)
