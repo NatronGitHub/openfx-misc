@@ -99,6 +99,35 @@ static int (*OfxGetNumberOfPlugins_binary)(void) = 0;
 static OfxPlugin* (*OfxGetPlugin_binary)(int) = 0;
 static std::vector<OfxSetHost*> gPluginsSetHost;
 
+// load the underlying binary
+struct Loader {
+    Loader()
+    {
+        if (gBinary) {
+            assert(OfxGetNumberOfPlugins_binary);
+            assert(OfxGetPlugin_binary);
+            return;
+        }
+        gBinary = new OFX::Binary(BINARY_PATH);
+        gBinary->load();
+        // fetch the binary entry points
+        OfxGetNumberOfPlugins_binary = (int(*)()) gBinary->findSymbol("OfxGetNumberOfPlugins");
+        OfxGetPlugin_binary = (OfxPlugin*(*)(int)) gBinary->findSymbol("OfxGetPlugin");
+        std::cout << "OFX DebugProxy: " << BINARY_PATH << " loaded" << std::endl;
+    }
+
+    ~Loader()
+    {
+        gBinary->unload();
+        delete gBinary;
+        gBinary = 0;
+        OfxGetNumberOfPlugins_binary = 0;
+        OfxGetPlugin_binary = 0;
+        std::cout << "OFX DebugProxy: " << BINARY_PATH << " unloaded" << std::endl;
+    }
+};
+
+static Loader load;
 
 /* fetch our host APIs from the host struct given us
  the plugin's set host function must have been already called
@@ -332,31 +361,19 @@ setHostNthFunc(int nth)
 }
 #undef NTHFUNC
 
-static void
-load()
-{
-    if (gBinary) {
-        assert(OfxGetNumberOfPlugins_binary);
-        assert(OfxGetPlugin_binary);
-        return;
-    }
-    gBinary = new OFX::Binary(BINARY_PATH);
-    gBinary->load();
-    // fetch the binary entry points
-    OfxGetNumberOfPlugins_binary = (int(*)()) gBinary->findSymbol("OfxGetNumberOfPlugins");
-    OfxGetPlugin_binary = (OfxPlugin*(*)(int)) gBinary->findSymbol("OfxGetPlugin");
-}
 
 // the two mandated functions
 OfxPlugin *
 OfxGetPlugin(int nth)
 {
-  load();
+  assert(gBinary);
+
   // get the OfxPlugin* from the underlying plugin
-  OfxPlugin* plugin = OfxGetPlugin_binary(nth);
+  OfxPlugin* plugin = OfxGetPlugin_binary ? OfxGetPlugin_binary(nth) : 0;
 
   if (plugin == 0) {
     std::cout << "OFX DebugProxy: Error: plugin " << nth << " is NULL" << std::endl;
+    return plugin;
   }
 
      
@@ -390,10 +407,9 @@ OfxGetPlugin(int nth)
 int
 OfxGetNumberOfPlugins(void)
 {
-  // load the underlying binary
-  load();
+  assert(gBinary);
 
-  if (OfxGetNumberOfPlugins_binary == 0 || OfxGetPlugin_binary == 0) {
+  if (OfxGetNumberOfPlugins_binary == 0) {
      std::cout << "OFX DebugProxy: cannot load plugin from " << BINARY_PATH << std::endl;
      gPluginsNb = 0;
   } else {
