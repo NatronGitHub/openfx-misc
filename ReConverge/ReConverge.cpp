@@ -417,7 +417,7 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor, const OFX::RenderArg
   // set the render window
   processor.setRenderWindow(args.renderWindow);
 
-#warning "TODO"
+#pragma message ("TODO")
   // set the parameters
   if (getContext() == OFX::eContextGeneral && convergepoint_ && dispClip_) {
     // fetch the disparity of the tracked point
@@ -443,7 +443,7 @@ ReConvergePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
   // set the ROI of the disp clip to the tracked point position (rounded to the nearest pixel)
   if(getContext() == OFX::eContextGeneral && convergepoint_ && dispClip_) {
     OfxRectD roi;
-#warning "TODO"
+#pragma message ("TODO")
     rois.setRegionOfInterest(*dispClip_, roi);
   }
 }
