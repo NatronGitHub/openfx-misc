@@ -6,4 +6,4 @@ before_install:
   - git submodule update --init --recursive
 script:
   - uname -a
-  - make DEBUGFLAGS=-O3
+  - make DEBUGFLAGS=-O3 BITS=64
