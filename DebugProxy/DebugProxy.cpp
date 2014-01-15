@@ -76,6 +76,7 @@
 #include <windows.h>
 #endif
  
+#include <cstring>
 #include <sstream>
 #include <stdexcept>
 #include <new>
