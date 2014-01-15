@@ -4,4 +4,6 @@ compiler:
   - clang
 before_install:
   - git submodule update --init --recursive
-script: make
+script:
+  - uname -a
+  - make DEBUGFLAGS=-O3
