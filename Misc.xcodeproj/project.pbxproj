@@ -235,7 +235,6 @@
 		1ECE5455185F2429001ED442 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1ECE5456185F2429001ED442 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1ECE546B185F2433001ED442 /* DebugProxy.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DebugProxy.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		1ECE546C185F2433001ED442 /* ReConverge.ofx copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "ReConverge.ofx copy-Info.plist"; path = "/Users/devernay/Development/openfx-misc/ReConverge.ofx copy-Info.plist"; sourceTree = "<absolute>"; };
 		1ECE546D185F24A1001ED442 /* ofxhBinary.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ofxhBinary.cpp; path = openfx/HostSupport/src/ofxhBinary.cpp; sourceTree = SOURCE_ROOT; };
 		1EDE1B8C182D04D9002392CB /* Anaglyph.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Anaglyph.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EDE1B8F182D0552002392CB /* Anaglyph.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Anaglyph.cpp; sourceTree = "<group>"; };
@@ -422,7 +421,6 @@
 				1E551ED217994DEF00A4135C /* Sources */,
 				1E551EDA17994E8100A4135C /* Frameworks */,
 				1E551EC217994D4000A4135C /* Products */,
-				1ECE546C185F2433001ED442 /* ReConverge.ofx copy-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1005,6 +1003,7 @@
 					"$(OFX_PATH)/Support/include",
 					"$(OFX_PATH)/Support/Plugins/include",
 				);
+				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks @loader_path/../Libraries";
 				OFX_PATH = openfx;
 				ONLY_ACTIVE_ARCH = YES;
 			};
@@ -1031,6 +1030,7 @@
 					"$(OFX_PATH)/Support/include",
 					"$(OFX_PATH)/Support/Plugins/include",
 				);
+				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks @loader_path/../Libraries";
 				OFX_PATH = openfx;
 			};
 			name = Release;

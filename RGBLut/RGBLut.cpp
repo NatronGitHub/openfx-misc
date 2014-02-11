@@ -288,6 +288,39 @@ public :
           }
         }
       }
+#if 0
+    } else if (paramName=="resetCtrlPts") {
+      OFX::Message::MessageReplyEnum reply = sendMessage(OFX::Message::eMessageQuestion, "", "Delete all control points for all components?");
+      // Nuke seems to always reply eMessageReplyOK, whatever the real answer was
+      switch(reply) {
+        case OFX::Message::eMessageReplyOK:
+          sendMessage(OFX::Message::eMessageMessage, "","OK");
+          break;
+        case OFX::Message::eMessageReplyYes:
+          sendMessage(OFX::Message::eMessageMessage, "","Yes");
+          break;
+        case OFX::Message::eMessageReplyNo:
+          sendMessage(OFX::Message::eMessageMessage, "","No");
+          break;
+        case OFX::Message::eMessageReplyFailed:
+          sendMessage(OFX::Message::eMessageMessage, "","Failed");
+          break;
+      }
+      if (reply == OFX::Message::eMessageReplyYes) {
+        OFX::ParametricParam  *lookupTable = fetchParametricParam("lookupTable");
+        for(int component = 0; component < 3; ++component) {
+          lookupTable->deleteControlPoint(component);
+          // add a control point at 0, value is 0
+          lookupTable->addControlPoint(component, // curve to set
+                                       args.time,   // time, ignored in this case, as we are not adding a key
+                                       0.0,   // parametric position, zero
+                                       0.0,   // value to be, 0
+                                       false);   // don't add a key
+          // add a control point at 1, value is 1
+          lookupTable->addControlPoint(component, args.time, 1.0, 1.0, false);
+        }
+      }
+#endif
     }
   }
 };
@@ -431,47 +464,60 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
   dstClip->addSupportedComponent(ePixelComponentAlpha);
   dstClip->setSupportsTiles(true);
 
-  if (OFX::getImageEffectHostDescription()->supportsParametricParameter) {
-    // define it
-    OFX::ParametricParamDescriptor* lookupTable = desc.defineParametricParam("lookupTable");
-    assert(lookupTable);
-    lookupTable->setLabel("Lookup Table");
-    lookupTable->setHint("Colour lookup table");
-    lookupTable->setScriptName("lookupTable");
+  // make some pages and to things in
+  PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    // define it as three dimensional
-    lookupTable->setDimension(3);
+  // define it
+  OFX::ParametricParamDescriptor* lookupTable = desc.defineParametricParam("lookupTable");
+  assert(lookupTable);
+  lookupTable->setLabel("Lookup Table");
+  lookupTable->setHint("Colour lookup table");
+  lookupTable->setScriptName("lookupTable");
 
-    // label our dimensions are r/g/b
-    lookupTable->setDimensionLabel("red", 0);
-    lookupTable->setDimensionLabel("green", 1);
-    lookupTable->setDimensionLabel("blue", 2);
+  // define it as three dimensional
+  lookupTable->setDimension(3);
 
-    // set the UI colour for each dimension
-    const OfxRGBColourD red   = {1,0,0};		//set red color to red curve
-    const OfxRGBColourD green = {0,1,0};		//set green color to green curve
-    const OfxRGBColourD blue  = {0,0,1};		//set blue color to blue curve
-    lookupTable->setUIColour( 0, red );
-    lookupTable->setUIColour( 1, green );
-    lookupTable->setUIColour( 2, blue );
+  // label our dimensions are r/g/b
+  lookupTable->setDimensionLabel("red", 0);
+  lookupTable->setDimensionLabel("green", 1);
+  lookupTable->setDimensionLabel("blue", 2);
 
-    // set the min/max parametric range to 0..1
-    lookupTable->setRange(0.0, 1.0);
+  // set the UI colour for each dimension
+  const OfxRGBColourD red   = {1,0,0};		//set red color to red curve
+  const OfxRGBColourD green = {0,1,0};		//set green color to green curve
+  const OfxRGBColourD blue  = {0,0,1};		//set blue color to blue curve
+  lookupTable->setUIColour( 0, red );
+  lookupTable->setUIColour( 1, green );
+  lookupTable->setUIColour( 2, blue );
 
-    // set a default curve, this example sets identity
-    for(int component = 0; component < 3; ++component) {
-      // add a control point at 0, value is 0
-      lookupTable->addControlPoint(component, // curve to set
-                                   0.0,   // time, ignored in this case, as we are not adding a key
-                                   0.0,   // parametric position, zero
-                                   0.0,   // value to be, 0
-                                   false);   // don't add a key
-      // add a control point at 1, value is 1
-      lookupTable->addControlPoint(component, 0.0, 1.0, 1.0, false);
-    }
-    OFX::PushButtonParamDescriptor* addCtrlPts = desc.definePushButtonParam("addCtrlPts");
-    addCtrlPts->setLabels("Add Control Points", "Add Control Points", "Add Control Points");
+  // set the min/max parametric range to 0..1
+  lookupTable->setRange(0.0, 1.0);
+
+  // set a default curve, this example sets identity
+  for(int component = 0; component < 3; ++component) {
+    // add a control point at 0, value is 0
+    lookupTable->addControlPoint(component, // curve to set
+                                 0.0,   // time, ignored in this case, as we are not adding a key
+                                 0.0,   // parametric position, zero
+                                 0.0,   // value to be, 0
+                                 false);   // don't add a key
+    // add a control point at 1, value is 1
+    lookupTable->addControlPoint(component, 0.0, 1.0, 1.0, false);
   }
+
+  page->addChild(*lookupTable);
+
+  OFX::PushButtonParamDescriptor* addCtrlPts = desc.definePushButtonParam("addCtrlPts");
+  addCtrlPts->setLabels("Add Control Points", "Add Control Points", "Add Control Points");
+
+  page->addChild(*addCtrlPts);
+
+#if 0
+  OFX::PushButtonParamDescriptor* resetCtrlPts = desc.definePushButtonParam("resetCtrlPts");
+  resetCtrlPts->setLabels("Reset", "Reset", "Reset");
+
+  page->addChild(*resetCtrlPts);
+#endif
 }
 
 OFX::ImageEffect* RGBLutPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
