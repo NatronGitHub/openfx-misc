@@ -77,6 +77,7 @@
 #endif
  
 #include <cstring>
+#include <cstdlib>
 #include <sstream>
 #include <stdexcept>
 #include <new>
@@ -88,6 +89,7 @@
 #include "ofxhUtilities.h"
 
 
+// the Plugin path can be set here in the source code, or at runtime via the OFX_DEBUGPROXY_BINARY environment variable
 #ifndef BINARY_PATH
 #if defined(WINDOWS)
 #define BINARY_PATH "C:\\Program Files\\Common Files\\OFX\\Plugins.disabled\\Sapphire.ofx.bundle\\Contents\\Win64\\Sapphire.ofx"
@@ -114,6 +116,7 @@ static std::vector<OfxInteractSuiteV1*>    gInteractHost;
 
 ////////////////////////////////////////////////////////////////////////////////
 // the plugin struct 
+static const char* gBinaryPath = 0;
 static OFX::Binary *gBinary = 0;
 static std::vector<OfxPlugin> gPlugins;
 static int gPluginsNb = 0;
@@ -132,22 +135,32 @@ struct Loader {
             assert(OfxGetPlugin_binary);
             return;
         }
-        gBinary = new OFX::Binary(BINARY_PATH);
-        gBinary->load();
-        // fetch the binary entry points
-        OfxGetNumberOfPlugins_binary = (int(*)()) gBinary->findSymbol("OfxGetNumberOfPlugins");
-        OfxGetPlugin_binary = (OfxPlugin*(*)(int)) gBinary->findSymbol("OfxGetPlugin");
-        std::cout << "OFX DebugProxy: " << BINARY_PATH << " loaded" << std::endl;
+        gBinaryPath = std::getenv("OFX_DEBUGPROXY_BINARY");
+        if (gBinaryPath == NULL) {
+            gBinaryPath = BINARY_PATH;
+        }
+        if (gBinaryPath) {
+            gBinary = new OFX::Binary(gBinaryPath);
+        }
+        if (gBinary) {
+            gBinary->load();
+            // fetch the binary entry points
+            OfxGetNumberOfPlugins_binary = (int(*)()) gBinary->findSymbol("OfxGetNumberOfPlugins");
+            OfxGetPlugin_binary = (OfxPlugin*(*)(int)) gBinary->findSymbol("OfxGetPlugin");
+            std::cout << "OFX DebugProxy: " << gBinaryPath << " loaded" << std::endl;
+        }
     }
 
     ~Loader()
     {
-        gBinary->unload();
-        delete gBinary;
+        if (gBinary) {
+            gBinary->unload();
+            delete gBinary;
+        }
         gBinary = 0;
         OfxGetNumberOfPlugins_binary = 0;
         OfxGetPlugin_binary = 0;
-        std::cout << "OFX DebugProxy: " << BINARY_PATH << " unloaded" << std::endl;
+        std::cout << "OFX DebugProxy: " << gBinaryPath << " unloaded" << std::endl;
     }
 };
 
@@ -575,7 +588,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
     }  
 
     std::cout << "OFX DebugProxy: " << ss.str() << std::endl;
-    
+
     assert(gPluginsMainEntry[nth]);
     st =  gPluginsMainEntry[nth](action, handle, inArgs, outArgs);
 
@@ -598,7 +611,9 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
 
         // set the property that is the overlay's main entry point for the plugin
         gPropHost[nth]->propGetPointer(effectProps,  kOfxImageEffectPluginPropOverlayInteractV1, 0, (void **) &gPluginsOverlayMain[nth]);
-        gPropHost[nth]->propSetPointer(effectProps, kOfxImageEffectPluginPropOverlayInteractV1, 0,  (void *) overlayMainNthFunc(nth));
+        if (gPluginsOverlayMain[nth] != 0) {
+          gPropHost[nth]->propSetPointer(effectProps, kOfxImageEffectPluginPropOverlayInteractV1, 0,  (void *) overlayMainNthFunc(nth));
+        }
 
       }
     }
@@ -684,8 +699,6 @@ setHostNthFunc(int nth)
 OfxPlugin *
 OfxGetPlugin(int nth)
 {
-  assert(gBinary);
-
   // get the OfxPlugin* from the underlying plugin
   OfxPlugin* plugin = OfxGetPlugin_binary ? OfxGetPlugin_binary(nth) : 0;
 
@@ -725,14 +738,12 @@ OfxGetPlugin(int nth)
 int
 OfxGetNumberOfPlugins(void)
 {
-  assert(gBinary);
-
   if (OfxGetNumberOfPlugins_binary == 0) {
-     std::cout << "OFX DebugProxy: cannot load plugin from " << BINARY_PATH << std::endl;
+     std::cout << "OFX DebugProxy: cannot load plugin from " << gBinaryPath << std::endl;
      gPluginsNb = 0;
   } else {
     gPluginsNb = (*OfxGetNumberOfPlugins_binary)();
-    std::cout << "OFX DebugProxy: found " << gPluginsNb << " plugins in " << BINARY_PATH << std::endl;
+    std::cout << "OFX DebugProxy: found " << gPluginsNb << " plugins in " << gBinaryPath << std::endl;
     assert(OfxGetPlugin_binary);
     gPlugins.reserve(gPluginsNb);
     gHost.reserve(gPluginsNb);
