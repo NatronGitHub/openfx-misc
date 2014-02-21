@@ -3,7 +3,7 @@
  Intercept and debug communication between an OFX host and an OFX plugin.
 
  Copyright (C) 2013 INRIA
- Author Frederic Devernay frederic.devernay@inria.fr
+ Author: Frederic Devernay <frederic.devernay@inria.fr>
 
  Redistribution and use in source and binary forms, with or without modification,
  are permitted provided that the following conditions are met:
