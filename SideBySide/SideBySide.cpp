@@ -3,7 +3,7 @@ OFX SideBySide plugin.
 Put the left and right view of the input next to each other.
 
 Copyright (C) 2013 INRIA
-Author Frederic Devernay frederic.devernay@inria.fr
+ Author: Frederic Devernay <frederic.devernay@inria.fr>
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
@@ -72,13 +72,11 @@ England
 
 */
 
+#include "SideBySide.h"
+
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
-
-#include <stdio.h>
-#include "ofxsImageEffect.h"
-#include "ofxsMultiThread.h"
 
 #include "../include/ofxsProcessing.H"
 
@@ -389,7 +387,6 @@ SideBySidePlugin::render(const OFX::RenderArguments &args)
   }
 }
 
-mDeclarePluginFactory(SideBySidePluginFactory, ;, {});
 
 using namespace OFX;
 void SideBySidePluginFactory::load()
@@ -487,16 +484,4 @@ void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 OFX::ImageEffect* SideBySidePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
   return new SideBySidePlugin(handle);
-}
-
-namespace OFX 
-{
-  namespace Plugin 
-  {  
-    void getPluginIDs(OFX::PluginFactoryArray &ids)
-    {
-      static SideBySidePluginFactory p("net.sf.openfx:sideBySidePlugin", 1, 0);
-      ids.push_back(&p);
-    }
-  }
 }

@@ -2,7 +2,7 @@
 OFX RGBLut plugin, a plugin that illustrates the use of the OFX Support library.
 
 Copyright (C) 2013 INRIA
-Author Frederic Devernay frederic.devernay@inria.fr
+Author: Frederic Devernay <frederic.devernay@inria.fr>
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
@@ -71,6 +71,8 @@ England
 
 */
 
+#include "RGBLut.h"
+
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -80,10 +82,6 @@ England
 #else
 #include <GL/gl.h>
 #endif
-
-#include <stdio.h>
-#include "ofxsImageEffect.h"
-#include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
 
@@ -415,9 +413,6 @@ void RGBLutPlugin::render(const OFX::RenderArguments &args)
   } 
 }
 
-
-mDeclarePluginFactory(RGBLutPluginFactory, {}, {});
-
 using namespace OFX;
 void RGBLutPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -525,14 +520,3 @@ OFX::ImageEffect* RGBLutPluginFactory::createInstance(OfxImageEffectHandle handl
   return new RGBLutPlugin(handle);
 }
 
-namespace OFX 
-{
-  namespace Plugin 
-  {  
-    void getPluginIDs(OFX::PluginFactoryArray &ids)
-    {
-      static RGBLutPluginFactory p("net.sf.openfx:RGBLutPlugin", 1, 0);
-      ids.push_back(&p);
-    }
-  }
-}

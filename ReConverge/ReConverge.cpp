@@ -4,7 +4,7 @@ Shift convergence so that tracked point appears at screen-depth.
 The ReConverge node only shifts views horizontally, not vertically.
 
 Copyright (C) 2013 INRIA
-Author Frederic Devernay frederic.devernay@inria.fr
+Author: Frederic Devernay <frederic.devernay@inria.fr>
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
@@ -73,6 +73,8 @@ England
 
 */
 
+#include "ReConverge.h"
+
 #include <cstdio>
 #include <cstdlib>
 
@@ -85,9 +87,6 @@ England
 #else
 #include <GL/gl.h>
 #endif
-
-#include "ofxsImageEffect.h"
-#include "ofxsMultiThread.h"
 
 #include "../include/ofxsProcessing.H"
 
@@ -506,7 +505,6 @@ ReConvergePlugin::render(const OFX::RenderArguments &args)
 
 class PositionOverlayDescriptor : public OFX::DefaultEffectOverlayDescriptor<PositionOverlayDescriptor, PositionInteract> {};
 
-mDeclarePluginFactory(ReConvergePluginFactory, {}, {});
 
 using namespace OFX;
 void ReConvergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
@@ -611,14 +609,3 @@ OFX::ImageEffect* ReConvergePluginFactory::createInstance(OfxImageEffectHandle h
   return new ReConvergePlugin(handle);
 }
 
-namespace OFX 
-{
-namespace Plugin 
-{  
-void getPluginIDs(OFX::PluginFactoryArray &ids)
-{
-  static ReConvergePluginFactory p("net.sf.openfx:reConvergePlugin", 1, 0);
-  ids.push_back(&p);
-}
-}
-}
