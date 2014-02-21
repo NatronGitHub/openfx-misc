@@ -1,4 +1,4 @@
-SUBDIRS = RGBLut JoinViews OneView Anaglyph MixViews SideBySide
+SUBDIRS = RGBLut JoinViews OneView Anaglyph MixViews SideBySide Switch
 ifneq ($(DEBUGFLAG),-O3)
   # DebugProxy is only useful to debug the communication between a host and a plugin
   SUBDIRS += DebugProxy
@@ -7,6 +7,9 @@ ifneq ($(DEBUGFLAG),-O3)
 endif
 
 all: subdirs
+
+multibundle:
+	$(MAKE) SUBDIRS=Misc
 
 .PHONY: subdirs clean $(SUBDIRS)
 
