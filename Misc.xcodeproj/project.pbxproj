@@ -215,7 +215,6 @@
 		1E3E3D3617996112005F2132 /* ofxsMessage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsMessage.h; sourceTree = "<group>"; };
 		1E3E3D3717996112005F2132 /* ofxsMultiThread.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsMultiThread.h; sourceTree = "<group>"; };
 		1E3E3D3817996112005F2132 /* ofxsParam.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsParam.h; sourceTree = "<group>"; };
-		1E3E3DA91799646E005F2132 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.8.sdk/System/Library/Frameworks/CoreFoundation.framework; sourceTree = DEVELOPER_DIR; };
 		1E551F5A179950EC00A4135C /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		1E8B5D4218B7658100C31FDC /* Switch.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Switch.h; sourceTree = "<group>"; };
 		1E8B5D4318B7684A00C31FDC /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
@@ -242,6 +241,9 @@
 		1E9FC1CE180BF74400EFE0F9 /* camera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = camera.h; sourceTree = "<group>"; };
 		1E9FC1CF180BF74400EFE0F9 /* fnPublicOfxExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fnPublicOfxExtensions.h; sourceTree = "<group>"; };
 		1EB0C41E180DCAB500C25D1E /* RGBLut.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RGBLut.cpp; sourceTree = "<group>"; };
+		1EC7C7F818BF4F4C002A246F /* ofxReadWrite.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxReadWrite.h; sourceTree = "<group>"; };
+		1EC7C7F918BF4F85002A246F /* ofxDialog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxDialog.h; path = openfx/include/ofxDialog.h; sourceTree = SOURCE_ROOT; };
+		1EC7C7FA18BF4F85002A246F /* ofxSonyVegas.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxSonyVegas.h; path = openfx/include/ofxSonyVegas.h; sourceTree = SOURCE_ROOT; };
 		1ECE544C185F2374001ED442 /* ReConverge.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ReConverge.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ECE544F185F23E3001ED442 /* ReConverge.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReConverge.cpp; sourceTree = "<group>"; };
 		1ECE5451185F23ED001ED442 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -433,8 +435,8 @@
 		1E3E3D30179960F9005F2132 /* Headers */ = {
 			isa = PBXGroup;
 			children = (
-				1E9FC1CC180BF70A00EFE0F9 /* nuke */,
 				1E009D5F17F44D70003071CC /* ofxCore.h */,
+				1EC7C7F918BF4F85002A246F /* ofxDialog.h */,
 				1E009D6017F44D70003071CC /* ofxImageEffect.h */,
 				1E009D6117F44D70003071CC /* ofxInteract.h */,
 				1E009D6217F44D70003071CC /* ofxKeySyms.h */,
@@ -447,7 +449,10 @@
 				1E009D6917F44D70003071CC /* ofxPixels.h */,
 				1E009D6A17F44D70003071CC /* ofxProgress.h */,
 				1E009D6B17F44D70003071CC /* ofxProperty.h */,
+				1EC7C7FA18BF4F85002A246F /* ofxSonyVegas.h */,
 				1E009D6C17F44D70003071CC /* ofxTimeLine.h */,
+				1E9FC1CC180BF70A00EFE0F9 /* nuke */,
+				1EC7C7F718BF4F28002A246F /* tuttle */,
 				1E3E3D3117996112005F2132 /* ofxsCore.h */,
 				1E009D5E17F44D5C003071CC /* ofxsHWNDInteract.h */,
 				1E3E3D3217996112005F2132 /* ofxsImageEffect.h */,
@@ -465,7 +470,6 @@
 		1E551EB817994D4000A4135C = {
 			isa = PBXGroup;
 			children = (
-				1E3E3DA91799646E005F2132 /* CoreFoundation.framework */,
 				1E3E3D30179960F9005F2132 /* Headers */,
 				1E551ED217994DEF00A4135C /* Sources */,
 				1E551EDA17994E8100A4135C /* Frameworks */,
@@ -537,6 +541,15 @@
 			);
 			name = nuke;
 			path = ../../include/nuke;
+			sourceTree = "<group>";
+		};
+		1EC7C7F718BF4F28002A246F /* tuttle */ = {
+			isa = PBXGroup;
+			children = (
+				1EC7C7F818BF4F4C002A246F /* ofxReadWrite.h */,
+			);
+			name = tuttle;
+			path = ../../include/tuttle;
 			sourceTree = "<group>";
 		};
 		1ECE544E185F23BD001ED442 /* ReConverge */ = {
