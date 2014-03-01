@@ -625,7 +625,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
     }
     else {
       // unknown OFX Action
-      ss << "(" << handle << ") - UNKNOWN ACTION";
+      ss << "(" << handle << ") [UNKNOWN ACTION]";
     }
 
     std::cout << "OFX DebugProxy: " << ss.str() << std::endl;
