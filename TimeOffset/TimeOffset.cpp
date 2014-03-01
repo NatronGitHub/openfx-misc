@@ -98,6 +98,9 @@ class TimeOffsetPlugin : public OFX::ImageEffect {
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
 
+    /** Override the get frames needed action */
+    virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames);
+
     /* override the time domain action, only for the general context */
     virtual bool getTimeDomain(OfxRangeD &range);
 
@@ -176,6 +179,17 @@ TimeOffsetPlugin::getTimeDomain(OfxRangeD &range)
     }
 
     return false;
+}
+
+void
+TimeOffsetPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
+                                  OFX::FramesNeededSetter &frames)
+{
+    double sourceTime = getSourceTime(args.time);
+    OfxRangeD range;
+    range.min = sourceTime;
+    range.max = sourceTime;
+    frames.setFramesNeeded(*srcClip_, range);
 }
 
 // the overridden render function
