@@ -334,9 +334,9 @@ overlayMain(int nth, const char *action, const void *handle, OfxPropertySetHandl
   }
   
   if (ssr.str().empty()) {
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "." << action << "->" << OFX::StatStr(st) << std::endl;
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".i." << action << "->" << OFX::StatStr(st) << std::endl;
   } else {
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "." << action << "->" << OFX::StatStr(st) << ": " << ssr.str() << std::endl;
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".i." << action << "->" << OFX::StatStr(st) << ": " << ssr.str() << std::endl;
   }
 
   return st;
