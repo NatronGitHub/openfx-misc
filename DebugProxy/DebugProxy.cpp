@@ -104,9 +104,15 @@
 
 typedef void     (OfxSetHost)(OfxHost *);
 
+typedef OfxStatus (*OfxImageEffectSuiteV1clipDefine)(OfxImageEffectHandle imageEffect, const char *name, OfxPropertySetHandle *propertySet);
+
+static OfxImageEffectSuiteV1clipDefine clipDefineNthFunc(int nth);
+
 // pointers to various bits of the host
 static std::vector<OfxHost*>               gHost;
+static std::vector<OfxHost>                gProxy;
 static std::vector<OfxImageEffectSuiteV1*> gEffectHost;
+static std::vector<OfxImageEffectSuiteV1>  gEffectProxy;
 static std::vector<OfxPropertySuiteV1*>    gPropHost;
 static std::vector<OfxParameterSuiteV1*>   gParamHost;
 static std::vector<OfxMemorySuiteV1*>      gMemoryHost;
@@ -178,6 +184,7 @@ fetchHostSuites(int nth)
 
     if (nth+1 > gEffectHost.size()) {
         gEffectHost.resize(nth+1);
+        gEffectProxy.resize(nth+1);
         gPropHost.resize(nth+1);
         gParamHost.resize(nth+1);
         gMemoryHost.resize(nth+1);
@@ -195,6 +202,9 @@ fetchHostSuites(int nth)
     gInteractHost[nth]   = (OfxInteractSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxInteractSuite, 1);
     if(!gEffectHost[nth] || !gPropHost[nth] || !gParamHost[nth] || !gMemoryHost[nth] || !gThreadHost[nth])
         return kOfxStatErrMissingHostFeature;
+    // setup proxies
+    gEffectProxy[nth] = *gEffectHost[nth];
+    gEffectProxy[nth].clipDefine = clipDefineNthFunc(nth);
     return kOfxStatOK;
 }
 
@@ -396,8 +406,33 @@ overlayMainNthFunc(int nth)
 static OfxStatus
 pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs)
 {
+  // fetch the host suites and setup proxies
+  if(strcmp(action, kOfxActionLoad) == 0) {
+    // fetch the host APIs
+    OfxStatus stat;
+    if((stat = fetchHostSuites(nth)) != kOfxStatOK)
+      return stat;
+
+    // see if the host supports overlays
+    int supportsOverlays;
+    gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropSupportsOverlays, 0, &supportsOverlays);
+    if(supportsOverlays != 0) {
+      OfxImageEffectHandle effect = (OfxImageEffectHandle ) handle;
+      // get the property handle for the plugin
+      OfxPropertySetHandle effectProps;
+      gEffectHost[nth]->getPropertySet(effect, &effectProps);
+
+      // set the property that is the overlay's main entry point for the plugin
+      gPropHost[nth]->propGetPointer(effectProps,  kOfxImageEffectPluginPropOverlayInteractV1, 0, (void **) &gPluginsOverlayMain[nth]);
+      if (gPluginsOverlayMain[nth] != 0) {
+        gPropHost[nth]->propSetPointer(effectProps, kOfxImageEffectPluginPropOverlayInteractV1, 0,  (void *) overlayMainNthFunc(nth));
+      }
+
+    }
+  }
+
   std::stringstream ss;
-    ss << gPlugins[nth].pluginIdentifier << "." << action;
+  ss << gPlugins[nth].pluginIdentifier << "." << action;
   std::stringstream ssr;
   OfxStatus st = kOfxStatErrUnknown;
   try {
@@ -635,30 +670,6 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
 
     
     // post-hooks on some actions (e.g. print or modify result)
-    if(strcmp(action, kOfxActionDescribe) == 0) {
-      // fetch the host APIs
-      OfxStatus stat;
-      if((stat = fetchHostSuites(nth)) != kOfxStatOK)
-        return stat;
-
-      // see if the host supports overlays
-      int supportsOverlays;
-      gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropSupportsOverlays, 0, &supportsOverlays);
-      if(supportsOverlays != 0) {
-        OfxImageEffectHandle effect = (OfxImageEffectHandle ) handle;
-        // get the property handle for the plugin
-        OfxPropertySetHandle effectProps;
-        gEffectHost[nth]->getPropertySet(effect, &effectProps);
-
-        // set the property that is the overlay's main entry point for the plugin
-        gPropHost[nth]->propGetPointer(effectProps,  kOfxImageEffectPluginPropOverlayInteractV1, 0, (void **) &gPluginsOverlayMain[nth]);
-        if (gPluginsOverlayMain[nth] != 0) {
-          gPropHost[nth]->propSetPointer(effectProps, kOfxImageEffectPluginPropOverlayInteractV1, 0,  (void *) overlayMainNthFunc(nth));
-        }
-
-      }
-    }
-
     // get the outargs
     if(strcmp(action, kOfxActionLoad) == 0) {
       // no outArgs
@@ -815,6 +826,58 @@ pluginMainNthFunc(int nth)
 }
 #undef NTHFUNC
 
+template<int nth>
+void* fetchSuiteNth(OfxPropertySetHandle host, const char *suiteName, int suiteVersion)
+{
+    void* suite = NULL;
+    try {
+        suite = gHost[nth]->fetchSuite(host, suiteName, suiteVersion);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".fetchSuite(" << suiteName << "," << suiteVersion << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".fetchSuite(" << suiteName << "," << suiteVersion << ")->" << suite << std::endl;
+    if (strcmp(suiteName, kOfxImageEffectSuite) == 0 && suiteVersion == 1) {
+        assert(nth < gEffectHost.size() && suite == gEffectHost[nth]);
+        return &gEffectProxy[nth];
+    }
+    return suite;
+}
+
+template<int nth>
+static OfxStatus
+clipDefineNth(OfxImageEffectHandle imageEffect,
+              const char *name,
+              OfxPropertySetHandle *propertySet)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gEffectHost[nth]->clipDefine(imageEffect, name, propertySet);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".clipDefine(" << imageEffect << ", " << name << ", " << propertySet << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".clipDefine(" << imageEffect << ", " << name << ")->" << OFX::StatStr(st) << ": " << *propertySet << std::endl;
+    return st;
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return clipDefineNth<nth>
+
+static OfxImageEffectSuiteV1clipDefine
+clipDefineNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create clipDefine for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
 
 // function to set the host structure
 template<int nth>
@@ -823,8 +886,10 @@ setHostNth(OfxHost *hostStruct)
 {
     assert(nth < gHost.size() && nth < gPluginsSetHost.size());
     gHost[nth] = hostStruct;
+    gProxy[nth] = *(gHost[nth]);
+    gProxy[nth].fetchSuite = fetchSuiteNth<nth>;
     assert(gPluginsSetHost[nth]);
-    gPluginsSetHost[nth](hostStruct);
+    gPluginsSetHost[nth](&gProxy[nth]);
 }
 
 #define NTHFUNC(nth) \
@@ -865,6 +930,7 @@ OfxGetPlugin(int nth)
     gPluginsOverlayMain.resize(nth+1);
     gPluginsSetHost.resize(nth+1);
     gHost.resize(nth+1);
+    gProxy.resize(nth+1);
   }
 
   gPlugins[nth].pluginApi = plugin->pluginApi;
@@ -879,8 +945,8 @@ OfxGetPlugin(int nth)
   gPlugins[nth].mainEntry = pluginMainNthFunc(nth);
   gPluginsOverlayMain[nth] = 0;
 
-  std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".OfxGetPlugin-> ("<< nth << ", v"
-            << plugin->pluginVersionMajor << "." << plugin->pluginVersionMinor << ")" << std::endl;
+  std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".OfxGetPlugin(" << nth << ") -> " << plugin << ", v"
+            << plugin->pluginVersionMajor << "." << plugin->pluginVersionMinor << std::endl;
 
   return &gPlugins[nth];
 }
@@ -897,6 +963,7 @@ OfxGetNumberOfPlugins(void)
     assert(OfxGetPlugin_binary);
     gPlugins.reserve(gPluginsNb);
     gHost.reserve(gPluginsNb);
+    gProxy.reserve(gPluginsNb);
     gEffectHost.reserve(gPluginsNb);
     gPropHost.reserve(gPluginsNb);
     gParamHost.reserve(gPluginsNb);
