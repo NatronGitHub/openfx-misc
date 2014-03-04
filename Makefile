@@ -6,8 +6,10 @@ ifneq ($(DEBUGFLAG),-O3)
   SUBDIRS += ReConverge
 endif
 
+HAVE_CIMG ?= 0
+
 # There's only one CImg-based plugin for now. Build it separately.
-ifdef HAVE_CIMG
+ifneq ($(HAVE_CIMG),0)
   SUBDIRS += GREYCstoration
 endif
 
