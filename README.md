@@ -3,6 +3,11 @@ OpenFX-Misc [![Build Status](https://api.travis-ci.org/devernay/openfx-misc.png?
 
 Miscellaneous OFX / OpenFX / Open Effects plugins
 
+Credits
+-------
+
+The Bl_Defocus, Bl_ZDefocus, and GREYCstoration plugins were originally by Esteban Tovagliari.
+
 
 
 

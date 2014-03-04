@@ -4,4 +4,7 @@ compiler:
   - clang
 before_install:
   - git submodule update --init --recursive
-script: make BITS=64
+  - sudo apt-get update
+install:
+  - sudo apt-get install cimg-dev
+script: make BITS=64 HAVE_CIMG=1 CIMG_INCLUDE=/usr/include

@@ -13,6 +13,8 @@
 			buildPhases = (
 			);
 			dependencies = (
+				1E85D2C718C5D5DC00060E71 /* PBXTargetDependency */,
+				1E85D2A918C5D57600060E71 /* PBXTargetDependency */,
 				1E8B5D5F18B76ACD00C31FDC /* PBXTargetDependency */,
 				1ECE5470185F24B7001ED442 /* PBXTargetDependency */,
 				1ECE5472185F24B7001ED442 /* PBXTargetDependency */,
@@ -62,6 +64,33 @@
 		1E3E3CC417995D5C005F2132 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1E3E3CC517995D5C005F2132 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E3E3CC617995D8C005F2132 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1E85D29018C5D3E500060E71 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1E85D29118C5D3E500060E71 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1E85D29318C5D3E500060E71 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1E85D29418C5D3E500060E71 /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1E85D29518C5D3E500060E71 /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1E85D29618C5D3E500060E71 /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1E85D29818C5D3E500060E71 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1E85D29918C5D3E500060E71 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1E85D29B18C5D3E500060E71 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1E85D2A118C5D42C00060E71 /* bl_defocus_plugin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E85D27318C5D3AA00060E71 /* bl_defocus_plugin.cpp */; };
+		1E85D2A218C5D42C00060E71 /* bl_defocus_processor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E85D27518C5D3AA00060E71 /* bl_defocus_processor.cpp */; };
+		1E85D2A318C5D42C00060E71 /* bl_zdefocus_plugin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E85D27718C5D3AA00060E71 /* bl_zdefocus_plugin.cpp */; };
+		1E85D2A418C5D42C00060E71 /* BLI_rand.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E85D27918C5D3AA00060E71 /* BLI_rand.cpp */; };
+		1E85D2A518C5D42C00060E71 /* CMP_defocus.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E85D27B18C5D3AA00060E71 /* CMP_defocus.cpp */; };
+		1E85D2A618C5D42C00060E71 /* ImathRandom.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E85D28018C5D3AA00060E71 /* ImathRandom.cpp */; };
+		1E85D2A718C5D43200060E71 /* register_plugins.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E85D28518C5D3AA00060E71 /* register_plugins.cpp */; };
+		1E85D2AC18C5D57E00060E71 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1E85D2AD18C5D57E00060E71 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1E85D2B318C5D57E00060E71 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1E85D2B418C5D57E00060E71 /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1E85D2B618C5D57E00060E71 /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1E85D2B818C5D57E00060E71 /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1E85D2BA18C5D57E00060E71 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1E85D2BC18C5D57E00060E71 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1E85D2BE18C5D57E00060E71 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1E85D2C418C5D5CD00060E71 /* greycstoration_plugin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E85D28618C5D3BA00060E71 /* greycstoration_plugin.cpp */; };
+		1E85D2C518C5D5CD00060E71 /* register_plugins.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E85D28D18C5D3BA00060E71 /* register_plugins.cpp */; };
 		1E8B5D4518B7684A00C31FDC /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E8B5D4318B7684A00C31FDC /* PluginRegistration.cpp */; };
 		1E8B5D4C18B76A7500C31FDC /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E8B5D4D18B76A7500C31FDC /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
@@ -146,6 +175,20 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		1E85D2A818C5D57600060E71 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E85D28E18C5D3E500060E71;
+			remoteInfo = Bl_Defocus.ofx;
+		};
+		1E85D2C618C5D5DC00060E71 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E85D2AA18C5D57E00060E71;
+			remoteInfo = GREYCstoration.ofx;
+		};
 		1E8B5D5E18B76ACD00C31FDC /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
@@ -216,6 +259,35 @@
 		1E3E3D3717996112005F2132 /* ofxsMultiThread.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsMultiThread.h; sourceTree = "<group>"; };
 		1E3E3D3817996112005F2132 /* ofxsParam.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsParam.h; sourceTree = "<group>"; };
 		1E551F5A179950EC00A4135C /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		1E85D27318C5D3AA00060E71 /* bl_defocus_plugin.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = bl_defocus_plugin.cpp; sourceTree = "<group>"; };
+		1E85D27418C5D3AA00060E71 /* bl_defocus_plugin.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = bl_defocus_plugin.hpp; sourceTree = "<group>"; };
+		1E85D27518C5D3AA00060E71 /* bl_defocus_processor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = bl_defocus_processor.cpp; sourceTree = "<group>"; };
+		1E85D27618C5D3AA00060E71 /* bl_defocus_processor.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = bl_defocus_processor.hpp; sourceTree = "<group>"; };
+		1E85D27718C5D3AA00060E71 /* bl_zdefocus_plugin.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = bl_zdefocus_plugin.cpp; sourceTree = "<group>"; };
+		1E85D27818C5D3AA00060E71 /* bl_zdefocus_plugin.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = bl_zdefocus_plugin.hpp; sourceTree = "<group>"; };
+		1E85D27918C5D3AA00060E71 /* BLI_rand.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = BLI_rand.cpp; sourceTree = "<group>"; };
+		1E85D27A18C5D3AA00060E71 /* BLI_rand.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BLI_rand.h; sourceTree = "<group>"; };
+		1E85D27B18C5D3AA00060E71 /* CMP_defocus.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CMP_defocus.cpp; sourceTree = "<group>"; };
+		1E85D27C18C5D3AA00060E71 /* CMP_defocus.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CMP_defocus.h; sourceTree = "<group>"; };
+		1E85D27D18C5D3AA00060E71 /* GPL-license.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "GPL-license.txt"; sourceTree = "<group>"; };
+		1E85D27E18C5D3AA00060E71 /* ImathInt64.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImathInt64.h; sourceTree = "<group>"; };
+		1E85D27F18C5D3AA00060E71 /* ImathLimits.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImathLimits.h; sourceTree = "<group>"; };
+		1E85D28018C5D3AA00060E71 /* ImathRandom.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ImathRandom.cpp; sourceTree = "<group>"; };
+		1E85D28118C5D3AA00060E71 /* ImathRandom.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImathRandom.h; sourceTree = "<group>"; };
+		1E85D28218C5D3AA00060E71 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1E85D28318C5D3AA00060E71 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1E85D28418C5D3AA00060E71 /* README_FIRST.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = README_FIRST.txt; sourceTree = "<group>"; };
+		1E85D28518C5D3AA00060E71 /* register_plugins.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = register_plugins.cpp; sourceTree = "<group>"; };
+		1E85D28618C5D3BA00060E71 /* greycstoration_plugin.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = greycstoration_plugin.cpp; sourceTree = "<group>"; };
+		1E85D28718C5D3BA00060E71 /* greycstoration_plugin.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = greycstoration_plugin.hpp; sourceTree = "<group>"; };
+		1E85D28818C5D3BA00060E71 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1E85D28918C5D3BA00060E71 /* Licence_CeCILL_V2-en.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Licence_CeCILL_V2-en.txt"; sourceTree = "<group>"; };
+		1E85D28A18C5D3BA00060E71 /* Licence_CeCILL-C_V1-en.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Licence_CeCILL-C_V1-en.txt"; sourceTree = "<group>"; };
+		1E85D28B18C5D3BA00060E71 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1E85D28C18C5D3BA00060E71 /* README.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.txt; sourceTree = "<group>"; };
+		1E85D28D18C5D3BA00060E71 /* register_plugins.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = register_plugins.cpp; sourceTree = "<group>"; };
+		1E85D29F18C5D3E500060E71 /* Bl_Defocus.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Bl_Defocus.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E85D2C218C5D57E00060E71 /* GREYCstoration.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GREYCstoration.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E8B5D4218B7658100C31FDC /* Switch.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Switch.h; sourceTree = "<group>"; };
 		1E8B5D4318B7684A00C31FDC /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1E8B5D4718B769CA00C31FDC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -304,6 +376,22 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E3E3CC617995D8C005F2132 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E85D29A18C5D3E500060E71 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E85D29B18C5D3E500060E71 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E85D2BD18C5D57E00060E71 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E85D2BE18C5D57E00060E71 /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -491,6 +579,8 @@
 				1ECE546B185F2433001ED442 /* DebugProxy.ofx.bundle */,
 				1E3AC8D618B6207600F228A6 /* Switch.ofx.bundle */,
 				1E8B5D5B18B76A7500C31FDC /* Misc.ofx.bundle */,
+				1E85D29F18C5D3E500060E71 /* Bl_Defocus.ofx.bundle */,
+				1E85D2C218C5D57E00060E71 /* GREYCstoration.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -498,6 +588,8 @@
 		1E551ED217994DEF00A4135C /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				1E85D27218C5D37100060E71 /* Bl_Defocus */,
+				1E85D27118C5D34C00060E71 /* GREYCstoration */,
 				1E8B5D4618B769B400C31FDC /* Misc */,
 				1E3AC8D818B6211800F228A6 /* Switch */,
 				1E235FF318369E2B0019C45F /* TimeOffset */,
@@ -521,6 +613,47 @@
 				1E551F5A179950EC00A4135C /* OpenGL.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		1E85D27118C5D34C00060E71 /* GREYCstoration */ = {
+			isa = PBXGroup;
+			children = (
+				1E85D28618C5D3BA00060E71 /* greycstoration_plugin.cpp */,
+				1E85D28718C5D3BA00060E71 /* greycstoration_plugin.hpp */,
+				1E85D28818C5D3BA00060E71 /* Info.plist */,
+				1E85D28918C5D3BA00060E71 /* Licence_CeCILL_V2-en.txt */,
+				1E85D28A18C5D3BA00060E71 /* Licence_CeCILL-C_V1-en.txt */,
+				1E85D28B18C5D3BA00060E71 /* Makefile */,
+				1E85D28C18C5D3BA00060E71 /* README.txt */,
+				1E85D28D18C5D3BA00060E71 /* register_plugins.cpp */,
+			);
+			path = GREYCstoration;
+			sourceTree = "<group>";
+		};
+		1E85D27218C5D37100060E71 /* Bl_Defocus */ = {
+			isa = PBXGroup;
+			children = (
+				1E85D27318C5D3AA00060E71 /* bl_defocus_plugin.cpp */,
+				1E85D27418C5D3AA00060E71 /* bl_defocus_plugin.hpp */,
+				1E85D27518C5D3AA00060E71 /* bl_defocus_processor.cpp */,
+				1E85D27618C5D3AA00060E71 /* bl_defocus_processor.hpp */,
+				1E85D27718C5D3AA00060E71 /* bl_zdefocus_plugin.cpp */,
+				1E85D27818C5D3AA00060E71 /* bl_zdefocus_plugin.hpp */,
+				1E85D27918C5D3AA00060E71 /* BLI_rand.cpp */,
+				1E85D27A18C5D3AA00060E71 /* BLI_rand.h */,
+				1E85D27B18C5D3AA00060E71 /* CMP_defocus.cpp */,
+				1E85D27C18C5D3AA00060E71 /* CMP_defocus.h */,
+				1E85D27D18C5D3AA00060E71 /* GPL-license.txt */,
+				1E85D27E18C5D3AA00060E71 /* ImathInt64.h */,
+				1E85D27F18C5D3AA00060E71 /* ImathLimits.h */,
+				1E85D28018C5D3AA00060E71 /* ImathRandom.cpp */,
+				1E85D28118C5D3AA00060E71 /* ImathRandom.h */,
+				1E85D28218C5D3AA00060E71 /* Info.plist */,
+				1E85D28318C5D3AA00060E71 /* Makefile */,
+				1E85D28418C5D3AA00060E71 /* README_FIRST.txt */,
+				1E85D28518C5D3AA00060E71 /* register_plugins.cpp */,
+			);
+			path = Bl_Defocus;
 			sourceTree = "<group>";
 		};
 		1E8B5D4618B769B400C31FDC /* Misc */ = {
@@ -689,6 +822,38 @@
 			productReference = 1E3E3CA417995BEE005F2132 /* RGBLut.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
+		1E85D28E18C5D3E500060E71 /* Bl_Defocus.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1E85D29C18C5D3E500060E71 /* Build configuration list for PBXNativeTarget "Bl_Defocus.ofx" */;
+			buildPhases = (
+				1E85D28F18C5D3E500060E71 /* Sources */,
+				1E85D29A18C5D3E500060E71 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Bl_Defocus.ofx;
+			productName = basic.ofx;
+			productReference = 1E85D29F18C5D3E500060E71 /* Bl_Defocus.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
+		1E85D2AA18C5D57E00060E71 /* GREYCstoration.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1E85D2BF18C5D57E00060E71 /* Build configuration list for PBXNativeTarget "GREYCstoration.ofx" */;
+			buildPhases = (
+				1E85D2AB18C5D57E00060E71 /* Sources */,
+				1E85D2BD18C5D57E00060E71 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GREYCstoration.ofx;
+			productName = basic.ofx;
+			productReference = 1E85D2C218C5D57E00060E71 /* GREYCstoration.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 		1E8B5D4A18B76A7500C31FDC /* Misc.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1E8B5D5818B76A7500C31FDC /* Build configuration list for PBXNativeTarget "Misc.ofx" */;
@@ -834,6 +999,8 @@
 				1ECE5459185F2433001ED442 /* DebugProxy.ofx */,
 				1E3AC8C618B6207600F228A6 /* Switch.ofx */,
 				1E8B5D4A18B76A7500C31FDC /* Misc.ofx */,
+				1E85D28E18C5D3E500060E71 /* Bl_Defocus.ofx */,
+				1E85D2AA18C5D57E00060E71 /* GREYCstoration.ofx */,
 			);
 		};
 /* End PBXProject section */
@@ -904,6 +1071,45 @@
 				1E3E3CC317995D5C005F2132 /* ofxsParams.cpp in Sources */,
 				1E3E3CC417995D5C005F2132 /* ofxsProperty.cpp in Sources */,
 				1E3E3CC517995D5C005F2132 /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E85D28F18C5D3E500060E71 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E85D29018C5D3E500060E71 /* ofxsCore.cpp in Sources */,
+				1E85D29118C5D3E500060E71 /* ofxsImageEffect.cpp in Sources */,
+				1E85D2A318C5D42C00060E71 /* bl_zdefocus_plugin.cpp in Sources */,
+				1E85D2A518C5D42C00060E71 /* CMP_defocus.cpp in Sources */,
+				1E85D2A618C5D42C00060E71 /* ImathRandom.cpp in Sources */,
+				1E85D2A118C5D42C00060E71 /* bl_defocus_plugin.cpp in Sources */,
+				1E85D29318C5D3E500060E71 /* ofxsInteract.cpp in Sources */,
+				1E85D29418C5D3E500060E71 /* ofxsLog.cpp in Sources */,
+				1E85D2A218C5D42C00060E71 /* bl_defocus_processor.cpp in Sources */,
+				1E85D29518C5D3E500060E71 /* ofxsMultiThread.cpp in Sources */,
+				1E85D2A718C5D43200060E71 /* register_plugins.cpp in Sources */,
+				1E85D29618C5D3E500060E71 /* ofxsParams.cpp in Sources */,
+				1E85D29818C5D3E500060E71 /* ofxsProperty.cpp in Sources */,
+				1E85D2A418C5D42C00060E71 /* BLI_rand.cpp in Sources */,
+				1E85D29918C5D3E500060E71 /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E85D2AB18C5D57E00060E71 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E85D2AC18C5D57E00060E71 /* ofxsCore.cpp in Sources */,
+				1E85D2C418C5D5CD00060E71 /* greycstoration_plugin.cpp in Sources */,
+				1E85D2AD18C5D57E00060E71 /* ofxsImageEffect.cpp in Sources */,
+				1E85D2C518C5D5CD00060E71 /* register_plugins.cpp in Sources */,
+				1E85D2B318C5D57E00060E71 /* ofxsInteract.cpp in Sources */,
+				1E85D2B418C5D57E00060E71 /* ofxsLog.cpp in Sources */,
+				1E85D2B618C5D57E00060E71 /* ofxsMultiThread.cpp in Sources */,
+				1E85D2B818C5D57E00060E71 /* ofxsParams.cpp in Sources */,
+				1E85D2BA18C5D57E00060E71 /* ofxsProperty.cpp in Sources */,
+				1E85D2BC18C5D57E00060E71 /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1028,6 +1234,16 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		1E85D2A918C5D57600060E71 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1E85D28E18C5D3E500060E71 /* Bl_Defocus.ofx */;
+			targetProxy = 1E85D2A818C5D57600060E71 /* PBXContainerItemProxy */;
+		};
+		1E85D2C718C5D5DC00060E71 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1E85D2AA18C5D57E00060E71 /* GREYCstoration.ofx */;
+			targetProxy = 1E85D2C618C5D5DC00060E71 /* PBXContainerItemProxy */;
+		};
 		1E8B5D5F18B76ACD00C31FDC /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 1E8B5D4A18B76A7500C31FDC /* Misc.ofx */;
@@ -1207,6 +1423,58 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		1E85D29D18C5D3E500060E71 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Bl_Defocus/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = Bl_Defocus.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1E85D29E18C5D3E500060E71 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Bl_Defocus/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = Bl_Defocus.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+		1E85D2C018C5D57E00060E71 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/opt/local/include,
+				);
+				INFOPLIST_FILE = GREYCstoration/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = GREYCstoration.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1E85D2C118C5D57E00060E71 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/opt/local/include,
+				);
+				INFOPLIST_FILE = GREYCstoration/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = GREYCstoration.ofx;
+				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
 		};
@@ -1431,6 +1699,24 @@
 			buildConfigurations = (
 				1E551F481799509100A4135C /* Debug */,
 				1E551F491799509100A4135C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1E85D29C18C5D3E500060E71 /* Build configuration list for PBXNativeTarget "Bl_Defocus.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E85D29D18C5D3E500060E71 /* Debug */,
+				1E85D29E18C5D3E500060E71 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1E85D2BF18C5D57E00060E71 /* Build configuration list for PBXNativeTarget "GREYCstoration.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E85D2C018C5D57E00060E71 /* Debug */,
+				1E85D2C118C5D57E00060E71 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

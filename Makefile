@@ -6,6 +6,11 @@ ifneq ($(DEBUGFLAG),-O3)
   SUBDIRS += ReConverge
 endif
 
+# There's only one CImg-based plugin for now. Build it separately.
+idef HAVE_CIMG
+  SUBDIRS += GREYCstoration
+endif
+
 all: subdirs
 
 multibundle:
