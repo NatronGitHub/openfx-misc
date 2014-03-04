@@ -7,7 +7,7 @@ ifneq ($(DEBUGFLAG),-O3)
 endif
 
 # There's only one CImg-based plugin for now. Build it separately.
-idef HAVE_CIMG
+ifdef HAVE_CIMG
   SUBDIRS += GREYCstoration
 endif
 
