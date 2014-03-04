@@ -288,6 +288,7 @@
 		1E85D28D18C5D3BA00060E71 /* register_plugins.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = register_plugins.cpp; sourceTree = "<group>"; };
 		1E85D29F18C5D3E500060E71 /* Bl_Defocus.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Bl_Defocus.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E85D2C218C5D57E00060E71 /* GREYCstoration.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GREYCstoration.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E85D2DA18C641FD00060E71 /* fnOfxExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fnOfxExtensions.h; sourceTree = "<group>"; };
 		1E8B5D4218B7658100C31FDC /* Switch.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Switch.h; sourceTree = "<group>"; };
 		1E8B5D4318B7684A00C31FDC /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1E8B5D4718B769CA00C31FDC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -670,6 +671,7 @@
 			isa = PBXGroup;
 			children = (
 				1E9FC1CE180BF74400EFE0F9 /* camera.h */,
+				1E85D2DA18C641FD00060E71 /* fnOfxExtensions.h */,
 				1E9FC1CF180BF74400EFE0F9 /* fnPublicOfxExtensions.h */,
 			);
 			name = nuke;
