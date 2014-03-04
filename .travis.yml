@@ -2,21 +2,18 @@ language: cpp
 compiler:
   - gcc
   - clang
-env:
-  - HAVE_CIMG=0
-  - HAVE_CIMG=1
 
-# The CImg.h on ubuntu precise 12.04 is too old to compile with clang
-matrix:
-  include:
-    - compiler: gcc
-      env: HAVE_CIMG=1
-    - compiler: clang
-      env: HAVE_CIMG=0
+# Travis CI has 1.5 cores per VM, take advantage of it
+env:
+  - MAKEFLAGS="-j 2"
+
 before_install:
   - git submodule update --init --recursive
   - sudo apt-get update
+
 install:
   - sudo apt-get install cimg-dev
+
+# The CImg.h on ubuntu precise 12.04 is too old to compile with clang
 script:
-  - make -j2 BITS=64 HAVE_CIMG=$HAVE_CIMG CIMG_INCLUDE=/usr/include
+  - if [ "$CC" = "gcc" ]; then make $(MAKEFLAGS) BITS=64 HAVE_CIMG=1 CIMG_INCLUDE=/usr/include; else make $(MAKEFLAGS) BITS=64; fi
