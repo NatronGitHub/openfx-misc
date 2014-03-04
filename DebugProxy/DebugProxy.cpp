@@ -72,6 +72,9 @@
  
  */
 
+// the clip support code may be wrong. in cas of crash, it can be easily disactivated
+#define OFX_DEBUG_PROXY_CLIPS
+
 #ifdef WIN32
 #include <windows.h>
 #endif
@@ -82,6 +85,9 @@
 #include <stdexcept>
 #include <new>
 #include <cassert>
+#include <map>
+#include <list>
+#include <string>
 
 #include "ofxImageEffect.h"
 
@@ -119,6 +125,14 @@ static std::vector<OfxMemorySuiteV1*>      gMemoryHost;
 static std::vector<OfxMultiThreadSuiteV1*> gThreadHost;
 static std::vector<OfxMessageSuiteV1*>     gMessageSuite;
 static std::vector<OfxInteractSuiteV1*>    gInteractHost;
+#ifdef OFX_DEBUG_PROXY_CLIPS
+// for each plugin, we store a map form the context to the list of defined clips
+// obviously, it should be made thread-safe by the use of a mutex.
+static std::vector<std::map<std::string, std::list<std::string> > > gClips;
+
+// maps context descriptors to contexts (set by OfxImageEffectActionDescribeInContext, used in clipDefine)
+static std::map<OfxImageEffectHandle, std::string> gContexts;
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // the plugin struct 
@@ -191,6 +205,9 @@ fetchHostSuites(int nth)
         gThreadHost.resize(nth+1);
         gMessageSuite.resize(nth+1);
         gInteractHost.resize(nth+1);
+#ifdef OFX_DEBUG_PROXY_CLIPS
+        gClips.resize(nth+1);
+#endif
     }
 
     gEffectHost[nth]   = (OfxImageEffectSuiteV1 *) gHost[nth]->fetchSuite(gHost[nth]->host, kOfxImageEffectSuite, 1);
@@ -400,6 +417,20 @@ overlayMainNthFunc(int nth)
 }
 #undef NTHFUNC
 
+#ifdef OFX_DEBUG_PROXY_CLIPS
+static std::string getContext(int nth, OfxImageEffectHandle handle)
+{
+    // fetch effect props
+    OfxPropertySetHandle propHandle;
+    OfxStatus st = gEffectHost[nth]->getPropertySet((OfxImageEffectHandle)handle, &propHandle);
+    assert(st == kOfxStatOK);
+    // get context
+    char *context;
+    st = gPropHost[nth]->propGetString(propHandle, kOfxImageEffectPropContext, 0, &context);
+    assert(st == kOfxStatOK);
+    return context;
+}
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // The main function
@@ -524,6 +555,9 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       gPropHost[nth]->propGetString(inArgs, kOfxImageEffectPropContext, 0, &context);
 
       ss << "(" << handle << "," << context << ")";
+#ifdef OFX_DEBUG_PROXY_CLIPS
+      gContexts[(OfxImageEffectHandle)handle] = context;
+#endif
     }
     else if(strcmp(action, kOfxImageEffectActionGetRegionOfDefinition) == 0) {
       // inArgs has the following properties...
@@ -718,17 +752,67 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
     }  
     else if(strcmp(action, kOfxImageEffectActionGetRegionsOfInterest) == 0) {
       // outArgs has a set of 4 dimensional double properties, one for each of the input clips to the effect. The properties are each named "OfxImageClipPropRoI_" with the clip name post pended, for example "OfxImageClipPropRoI_Source". These are initialised to the default RoI. 
-#warning "TODO"
       if (st == kOfxStatOK) {
-        ssr << "(TODO)";
+#ifdef OFX_DEBUG_PROXY_CLIPS
+        ssr << '(';
+        const std::list<std::string>& clips = gClips[nth][getContext(nth,(OfxImageEffectHandle)handle)];
+        bool first = true;
+        for (std::list<std::string>::const_iterator it = clips.begin(); it != clips.end(); ++it) {
+          const char* name = it->c_str();
+          std::string clipROIPropName = std::string("OfxImageClipPropRoI_") + name;
+          OfxRectD roi;
+          OfxStatus pst = gPropHost[nth]->propGetDoubleN(outArgs, clipROIPropName.c_str(), 4, &roi.x1);
+          if (pst == kOfxStatOK) {
+            if (!first) {
+              ssr << ',';
+            }
+            first = false;
+            ssr << name << ":(" << roi.x1 << "," << roi.y1 << "," << roi.x2 << "," << roi.y2 << ")";
+          }
+        }
+        ssr << ')';
+#else
+        ssr << "(N/A)";
+#endif
       }
     }  
     else if(strcmp(action, kOfxImageEffectActionGetFramesNeeded) == 0) {
       // outArgs has a set of properties, one for each input clip, named "OfxImageClipPropFrameRange_" with the name of the clip post-pended. For example "OfxImageClipPropFrameRange_Source". All these properties are multi-dimensional doubles, with the dimension is a multiple of two. Each pair of values indicates a continuous range of frames that is needed on the given input. They are all initalised to the default value. 
       if (st == kOfxStatOK) {
-        ssr << "(TODO)";
+#ifdef OFX_DEBUG_PROXY_CLIPS
+        ssr << '(';
+        const std::list<std::string>& clips = gClips[nth][getContext(nth,(OfxImageEffectHandle)handle)];
+        bool firstclip = true;
+        for (std::list<std::string>::const_iterator it = clips.begin(); it != clips.end(); ++it) {
+          const char* name = it->c_str();
+          double range[2];
+          std::string clipFrameRangePropName = std::string("OfxImageClipPropFrameRange_") + name;
+          int dim;
+          OfxStatus pst = gPropHost[nth]->propGetDimension(outArgs, clipFrameRangePropName.c_str(), &dim);
+          if (pst == kOfxStatOK) {
+            if (!firstclip) {
+              ssr << ',';
+            }
+            firstclip = false;
+            bool firstrange = true;
+            ssr << name << ":(";
+            for (int i = 0; i < dim; i += 2) {
+              gPropHost[nth]->propGetDoubleN(outArgs, clipFrameRangePropName.c_str(), i, &range[0]);
+              gPropHost[nth]->propGetDoubleN(outArgs, clipFrameRangePropName.c_str(), i+1, &range[1]);
+              if (!firstrange) {
+                ssr << ',';
+              }
+              firstrange = false;
+              ssr << name << '(' << range[0] << ',' << range[1] << ')';
+            }
+            ssr << ')';
+          }
+        }
+#else
+        ssr << "(N/A)";
+#endif
       }
-    }    
+    }
     else if(strcmp(action, kOfxImageEffectActionIsIdentity) == 0) {
       // outArgs has the following properties which the plugin can set...
       //    kOfxPropName this to the name of the clip that should be used if the effect is an identity transform, defaults to the empty string
@@ -760,9 +844,76 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       //  kOfxImageClipPropContinuousSamples, whether the output clip can produce different images at non-frame intervals, defaults to false,
       //  kOfxImageEffectFrameVarying, whether the output clip can produces different images at different times, even if all parameters and inputs are constant, defaults to false.
       if (st == kOfxStatOK) {
-        ssr << "(TODO)";
+#ifdef OFX_DEBUG_PROXY_CLIPS
+        OfxStatus pst;
+        ssr << '(';
+        const std::list<std::string>& clips = gClips[nth][getContext(nth,(OfxImageEffectHandle)handle)];
+        bool firstclip = true;
+        for (std::list<std::string>::const_iterator it = clips.begin(); it != clips.end(); ++it) {
+          const char* name = it ->c_str();
+          bool firstpref = true;
+
+          char* components;
+          std::string clipComponentsPropName = std::string("OfxImageClipPropComponents_") + name;
+          pst = gPropHost[nth]->propGetString(outArgs, clipComponentsPropName.c_str(), 0, &components);
+          if (pst == kOfxStatOK) {
+             if (firstpref && !firstclip) {
+              ssr << ',';
+            }
+            firstclip = false;
+            if (firstpref) {
+              ssr << name << ":(";
+            } else {
+              ssr << ',';
+            }
+            firstpref = false;
+            ssr << "components=" << components;
+          }
+
+          char *depth;
+          std::string clipDepthPropName = std::string("OfxImageClipPropDepth_") + name;
+          pst = gPropHost[nth]->propGetString(outArgs, clipDepthPropName.c_str(), 0, &depth);
+          if (pst == kOfxStatOK) {
+             if (firstpref && !firstclip) {
+              ssr << ',';
+            }
+            firstclip = false;
+            if (firstpref) {
+              ssr << name << ":(";
+            } else {
+              ssr << ',';
+            }
+            firstpref = false;
+            ssr << "depth=" << depth;
+          }
+
+          double par;
+          std::string clipPARPropName = std::string("OfxImageClipPropPAR_") + name;
+          pst = gPropHost[nth]->propGetDouble(outArgs, clipPARPropName.c_str(), 0, &par);
+          if (pst == kOfxStatOK) {
+             if (firstpref && !firstclip) {
+              ssr << ',';
+            }
+            firstclip = false;
+            if (firstpref) {
+              ssr << name << ":(";
+            } else {
+              ssr << ',';
+            }
+            firstpref = false;
+            ssr << "PAR=" << par;
+          }
+
+          if (!firstpref) {
+              ssr << ')';
+          }
+        }
+        ssr << ')';
+#else
+        ssr << "(N/A)";
+#endif
       }
-    }  
+    }
     else if(strcmp(action, kOfxImageEffectActionGetTimeDomain) == 0) {
       // outArgs has the following property
       //  kOfxImageEffectPropFrameRange - the frame range an effect can produce images for
@@ -859,6 +1010,10 @@ clipDefineNth(OfxImageEffectHandle imageEffect,
         throw;
     }
     std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".clipDefine(" << imageEffect << ", " << name << ")->" << OFX::StatStr(st) << ": " << *propertySet << std::endl;
+#ifdef OFX_DEBUG_PROXY_CLIPS
+    assert(!gContexts[imageEffect].empty());
+    gClips[nth][gContexts[imageEffect]].push_back(name);
+#endif
     return st;
 }
 
