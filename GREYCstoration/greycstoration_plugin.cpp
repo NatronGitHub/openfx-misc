@@ -93,9 +93,6 @@ public:
         assert(src->getBounds().y1 == dst->getBounds().y1);
         assert(src->getBounds().y2 == dst->getBounds().y2);
 
-        int width  = src->getBounds().x2 - src->getBounds().x1;
-        int height = src->getBounds().y2 - src->getBounds().y1;
-
         cimg_library::CImg<float> src_img;
 
         int iters;
