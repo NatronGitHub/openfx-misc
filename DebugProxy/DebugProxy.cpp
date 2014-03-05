@@ -110,9 +110,33 @@
 
 typedef void     (OfxSetHost)(OfxHost *);
 
+typedef OfxStatus (*OfxImageEffectSuiteV1getPropertySet)(OfxImageEffectHandle imageEffect, OfxPropertySetHandle *propHandle);
+typedef OfxStatus (*OfxImageEffectSuiteV1getParamSet)(OfxImageEffectHandle imageEffect, OfxParamSetHandle *paramSet);
 typedef OfxStatus (*OfxImageEffectSuiteV1clipDefine)(OfxImageEffectHandle imageEffect, const char *name, OfxPropertySetHandle *propertySet);
+typedef OfxStatus (*OfxImageEffectSuiteV1clipGetHandle)(OfxImageEffectHandle imageEffect, const char *name, OfxImageClipHandle *clip, OfxPropertySetHandle *propertySet);
+typedef OfxStatus (*OfxImageEffectSuiteV1clipGetPropertySet)(OfxImageClipHandle clip, OfxPropertySetHandle *propHandle);
+typedef OfxStatus (*OfxImageEffectSuiteV1clipGetImage)(OfxImageClipHandle clip, OfxTime time, OfxRectD *region, OfxPropertySetHandle *imageHandle);
+typedef OfxStatus (*OfxImageEffectSuiteV1clipReleaseImage)(OfxPropertySetHandle imageHandle);
+typedef OfxStatus (*OfxImageEffectSuiteV1clipGetRegionOfDefinition)(OfxImageClipHandle clip, OfxTime time, OfxRectD *bounds);
+typedef int (*OfxImageEffectSuiteV1abort)(OfxImageEffectHandle imageEffect);
+typedef OfxStatus (*OfxImageEffectSuiteV1imageMemoryAlloc)(OfxImageEffectHandle instanceHandle, size_t nBytes, OfxImageMemoryHandle *memoryHandle);
+typedef OfxStatus (*OfxImageEffectSuiteV1imageMemoryFree)(OfxImageMemoryHandle memoryHandle);
+typedef OfxStatus (*OfxImageEffectSuiteV1imageMemoryLock)(OfxImageMemoryHandle memoryHandle, void **returnedPtr);
+typedef OfxStatus (*OfxImageEffectSuiteV1imageMemoryUnlock)(OfxImageMemoryHandle memoryHandle);
 
+static OfxImageEffectSuiteV1getPropertySet getPropertySetNthFunc(int nth);
+static OfxImageEffectSuiteV1getParamSet getParamSetNthFunc(int nth);
 static OfxImageEffectSuiteV1clipDefine clipDefineNthFunc(int nth);
+static OfxImageEffectSuiteV1clipGetHandle clipGetHandleNthFunc(int nth);
+static OfxImageEffectSuiteV1clipGetPropertySet clipGetPropertySetNthFunc(int nth);
+static OfxImageEffectSuiteV1clipGetImage clipGetImageNthFunc(int nth);
+static OfxImageEffectSuiteV1clipReleaseImage clipReleaseImageNthFunc(int nth);
+static OfxImageEffectSuiteV1clipGetRegionOfDefinition clipGetRegionOfDefinitionNthFunc(int nth);
+static OfxImageEffectSuiteV1abort abortNthFunc(int nth);
+static OfxImageEffectSuiteV1imageMemoryAlloc imageMemoryAllocNthFunc(int nth);
+static OfxImageEffectSuiteV1imageMemoryFree imageMemoryFreeNthFunc(int nth);
+static OfxImageEffectSuiteV1imageMemoryLock imageMemoryLockNthFunc(int nth);
+static OfxImageEffectSuiteV1imageMemoryUnlock imageMemoryUnlockNthFunc(int nth);
 
 // pointers to various bits of the host
 static std::vector<OfxHost*>               gHost;
@@ -123,7 +147,7 @@ static std::vector<OfxPropertySuiteV1*>    gPropHost;
 static std::vector<OfxParameterSuiteV1*>   gParamHost;
 static std::vector<OfxMemorySuiteV1*>      gMemoryHost;
 static std::vector<OfxMultiThreadSuiteV1*> gThreadHost;
-static std::vector<OfxMessageSuiteV1*>     gMessageSuite;
+static std::vector<OfxMessageSuiteV1*>     gMessageHost;
 static std::vector<OfxInteractSuiteV1*>    gInteractHost;
 #ifdef OFX_DEBUG_PROXY_CLIPS
 // for each plugin, we store a map form the context to the list of defined clips
@@ -203,7 +227,7 @@ fetchHostSuites(int nth)
         gParamHost.resize(nth+1);
         gMemoryHost.resize(nth+1);
         gThreadHost.resize(nth+1);
-        gMessageSuite.resize(nth+1);
+        gMessageHost.resize(nth+1);
         gInteractHost.resize(nth+1);
 #ifdef OFX_DEBUG_PROXY_CLIPS
         gClips.resize(nth+1);
@@ -215,13 +239,25 @@ fetchHostSuites(int nth)
     gParamHost[nth]    = (OfxParameterSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxParameterSuite, 1);
     gMemoryHost[nth]   = (OfxMemorySuiteV1 *)      gHost[nth]->fetchSuite(gHost[nth]->host, kOfxMemorySuite, 1);
     gThreadHost[nth]   = (OfxMultiThreadSuiteV1 *) gHost[nth]->fetchSuite(gHost[nth]->host, kOfxMultiThreadSuite, 1);
-    gMessageSuite[nth]   = (OfxMessageSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxMessageSuite, 1);
+    gMessageHost[nth]   = (OfxMessageSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxMessageSuite, 1);
     gInteractHost[nth]   = (OfxInteractSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxInteractSuite, 1);
     if(!gEffectHost[nth] || !gPropHost[nth] || !gParamHost[nth] || !gMemoryHost[nth] || !gThreadHost[nth])
         return kOfxStatErrMissingHostFeature;
     // setup proxies
     gEffectProxy[nth] = *gEffectHost[nth];
+    gEffectProxy[nth].getPropertySet = getPropertySetNthFunc(nth);
+    gEffectProxy[nth].getParamSet = getParamSetNthFunc(nth);
     gEffectProxy[nth].clipDefine = clipDefineNthFunc(nth);
+    gEffectProxy[nth].clipGetHandle = clipGetHandleNthFunc(nth);
+    gEffectProxy[nth].clipGetPropertySet = clipGetPropertySetNthFunc(nth);
+    gEffectProxy[nth].clipGetImage = clipGetImageNthFunc(nth);
+    gEffectProxy[nth].clipReleaseImage = clipReleaseImageNthFunc(nth);
+    gEffectProxy[nth].clipGetRegionOfDefinition = clipGetRegionOfDefinitionNthFunc(nth);
+    gEffectProxy[nth].abort = abortNthFunc(nth);
+    gEffectProxy[nth].imageMemoryAlloc = imageMemoryAllocNthFunc(nth);
+    gEffectProxy[nth].imageMemoryFree = imageMemoryFreeNthFunc(nth);
+    gEffectProxy[nth].imageMemoryLock = imageMemoryLockNthFunc(nth);
+    gEffectProxy[nth].imageMemoryUnlock = imageMemoryUnlockNthFunc(nth);
     return kOfxStatOK;
 }
 
@@ -977,6 +1013,8 @@ pluginMainNthFunc(int nth)
 }
 #undef NTHFUNC
 
+//////////////// fetchSuite proxy
+
 template<int nth>
 void* fetchSuiteNth(OfxPropertySetHandle host, const char *suiteName, int suiteVersion)
 {
@@ -984,17 +1022,87 @@ void* fetchSuiteNth(OfxPropertySetHandle host, const char *suiteName, int suiteV
     try {
         suite = gHost[nth]->fetchSuite(host, suiteName, suiteVersion);
     } catch (...) {
-        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".fetchSuite(" << suiteName << "," << suiteVersion << "): host exception!" << std::endl;
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..fetchSuite(" << suiteName << "," << suiteVersion << "): host exception!" << std::endl;
         throw;
     }
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".fetchSuite(" << suiteName << "," << suiteVersion << ")->" << suite << std::endl;
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..fetchSuite(" << suiteName << "," << suiteVersion << ")->" << suite << std::endl;
     if (strcmp(suiteName, kOfxImageEffectSuite) == 0 && suiteVersion == 1) {
         assert(nth < gEffectHost.size() && suite == gEffectHost[nth]);
         return &gEffectProxy[nth];
     }
     return suite;
 }
+/////////////// getPropertySet proxy
+template<int nth>
+static OfxStatus
+getPropertySetNth(OfxImageEffectHandle imageEffect,
+              OfxPropertySetHandle *propHandle)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gEffectHost[nth]->getPropertySet(imageEffect, propHandle);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getPropertySet(" << imageEffect << ", " << propHandle << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getPropertySet(" << imageEffect << ")->" << OFX::StatStr(st) << ": " << *propHandle << std::endl;
+    return st;
+}
 
+#define NTHFUNC(nth) \
+case nth: \
+return getPropertySetNth<nth>
+
+static OfxImageEffectSuiteV1getPropertySet
+getPropertySetNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create getPropertySet for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
+/////////////// getParamSet proxy
+
+template<int nth>
+static OfxStatus
+getParamSetNth(OfxImageEffectHandle imageEffect,
+              OfxParamSetHandle *paramSet)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gEffectHost[nth]->getParamSet(imageEffect, paramSet);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getParamSet(" << imageEffect << ", " << paramSet << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getParamSet(" << imageEffect << ")->" << OFX::StatStr(st) << ": " << *paramSet << std::endl;
+    return st;
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return getParamSetNth<nth>
+
+static OfxImageEffectSuiteV1getParamSet
+getParamSetNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create getParamSet for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
+
+/////////////// clipDefine proxy
 template<int nth>
 static OfxStatus
 clipDefineNth(OfxImageEffectHandle imageEffect,
@@ -1006,10 +1114,10 @@ clipDefineNth(OfxImageEffectHandle imageEffect,
     try {
         st = gEffectHost[nth]->clipDefine(imageEffect, name, propertySet);
     } catch (...) {
-        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".clipDefine(" << imageEffect << ", " << name << ", " << propertySet << "): host exception!" << std::endl;
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipDefine(" << imageEffect << ", " << name << ", " << propertySet << "): host exception!" << std::endl;
         throw;
     }
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << ".clipDefine(" << imageEffect << ", " << name << ")->" << OFX::StatStr(st) << ": " << *propertySet << std::endl;
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipDefine(" << imageEffect << ", " << name << ")->" << OFX::StatStr(st) << ": " << *propertySet << std::endl;
 #ifdef OFX_DEBUG_PROXY_CLIPS
     assert(!gContexts[imageEffect].empty());
     gClips[nth][gContexts[imageEffect]].push_back(name);
@@ -1033,6 +1141,368 @@ clipDefineNthFunc(int nth)
     return 0;
 }
 #undef NTHFUNC
+
+/////////////// clipGetHandle proxy
+template<int nth>
+static OfxStatus
+clipGetHandleNth(OfxImageEffectHandle imageEffect,
+                 const char *name,
+			     OfxImageClipHandle *clip,
+			     OfxPropertySetHandle *propertySet)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gEffectHost[nth]->clipGetHandle(imageEffect, name, clip, propertySet);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetHandle(" << imageEffect << ", " << name << ", " << clip << ", " << propertySet << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetHandle(" << imageEffect << ", " << name << ")->" << OFX::StatStr(st) << ": (" << *clip << ", " << *propertySet << ")" << std::endl;
+    return st;
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return clipGetHandleNth<nth>
+
+static OfxImageEffectSuiteV1clipGetHandle
+clipGetHandleNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create clipGetHandle for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
+
+/////////////// clipGetPropertySet proxy
+template<int nth>
+static OfxStatus
+clipGetPropertySetNth(OfxImageClipHandle clip,
+                      OfxPropertySetHandle *propHandle)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gEffectHost[nth]->clipGetPropertySet(clip, propHandle);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetPropertySet(" << clip << ", " << propHandle << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetPropertySet(" << clip << ")->" << OFX::StatStr(st) << ": " << *propHandle << std::endl;
+    return st;
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return clipGetPropertySetNth<nth>
+
+static OfxImageEffectSuiteV1clipGetPropertySet
+clipGetPropertySetNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create clipGetPropertySet for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
+
+/////////////// clipGetImage proxy
+template<int nth>
+static OfxStatus
+clipGetImageNth(OfxImageClipHandle clip,
+			    OfxTime       time,
+			    OfxRectD     *region,
+			    OfxPropertySetHandle   *imageHandle)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gEffectHost[nth]->clipGetImage(clip, time, region, imageHandle);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetImage(" << clip << ", " << time << ", " << region << ", " << imageHandle << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetImage(" << clip << ", " << time << ")->" << OFX::StatStr(st) << ": (";
+    if (region) {
+        std::cout << "(" << region->x1 << "," << region->y1 << "," << region->x2 << "," << region->y2 << "), ";
+    }
+    std::cout << *imageHandle << ")" << std::endl;
+    return st;
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return clipGetImageNth<nth>
+
+static OfxImageEffectSuiteV1clipGetImage
+clipGetImageNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create clipGetImage for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
+
+/////////////// clipReleaseImage proxy
+template<int nth>
+static OfxStatus
+clipReleaseImageNth(OfxPropertySetHandle imageHandle)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gEffectHost[nth]->clipReleaseImage(imageHandle);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipReleaseImage(" << imageHandle << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipReleaseImage(" << imageHandle << ")->" << OFX::StatStr(st) << std::endl;
+    return st;
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return clipReleaseImageNth<nth>
+
+static OfxImageEffectSuiteV1clipReleaseImage
+clipReleaseImageNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create clipReleaseImage for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
+
+/////////////// clipGetRegionOfDefinition proxy
+template<int nth>
+static OfxStatus
+clipGetRegionOfDefinitionNth(OfxImageClipHandle clip,
+                             OfxTime time,
+                             OfxRectD *bounds)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gEffectHost[nth]->clipGetRegionOfDefinition(clip, time, bounds);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetRegionOfDefinition(" << clip << ", " << time << ", " << bounds << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetRegionOfDefinition(" << clip << ", " << time << ")->" << OFX::StatStr(st);
+    if (bounds) {
+        std::cout << ": (" << bounds->x1 << "," << bounds->y1 << "," << bounds->x2 << "," << bounds->y2 << ")";
+    }
+    std::cout << std::endl;
+    return st;
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return clipGetRegionOfDefinitionNth<nth>
+
+static OfxImageEffectSuiteV1clipGetRegionOfDefinition
+clipGetRegionOfDefinitionNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create clipGetRegionOfDefinition for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
+
+/////////////// abort proxy
+template<int nth>
+static int
+abortNth(OfxImageEffectHandle imageEffect)
+{
+    int st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gEffectHost[nth]->abort(imageEffect);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..abort(" << imageEffect << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..abort(" << imageEffect << ")->" << st << std::endl;
+    return st;
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return abortNth<nth>
+
+static OfxImageEffectSuiteV1abort
+abortNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create abort for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
+
+/////////////// imageMemoryAlloc proxy
+template<int nth>
+static OfxStatus
+imageMemoryAllocNth(OfxImageEffectHandle instanceHandle,
+                    size_t nBytes,
+                    OfxImageMemoryHandle *memoryHandle)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gEffectHost[nth]->imageMemoryAlloc(instanceHandle, nBytes, memoryHandle);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryAlloc(" << instanceHandle << ", " << nBytes << ", " << memoryHandle << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryAlloc(" << instanceHandle << ", " << nBytes << ")->" << OFX::StatStr(st) << ": " << *memoryHandle << std::endl;
+    return st;
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return imageMemoryAllocNth<nth>
+
+static OfxImageEffectSuiteV1imageMemoryAlloc
+imageMemoryAllocNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create imageMemoryAlloc for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
+
+/////////////// imageMemoryFree proxy
+template<int nth>
+static OfxStatus
+imageMemoryFreeNth(OfxImageMemoryHandle memoryHandle)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gEffectHost[nth]->imageMemoryFree(memoryHandle);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryFree(" << memoryHandle << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryFree(" << memoryHandle << ")->" << OFX::StatStr(st) << std::endl;
+    return st;
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return imageMemoryFreeNth<nth>
+
+static OfxImageEffectSuiteV1imageMemoryFree
+imageMemoryFreeNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create imageMemoryFree for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
+
+/////////////// imageMemoryLock proxy
+template<int nth>
+static OfxStatus
+imageMemoryLockNth(OfxImageMemoryHandle memoryHandle,
+			       void **returnedPtr)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gEffectHost[nth]->imageMemoryLock(memoryHandle, returnedPtr);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryLock(" << memoryHandle << ", " << returnedPtr << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryLock(" << memoryHandle << ")->" << OFX::StatStr(st) << ": " << *returnedPtr << std::endl;
+    return st;
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return imageMemoryLockNth<nth>
+
+static OfxImageEffectSuiteV1imageMemoryLock
+imageMemoryLockNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create imageMemoryLock for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
+
+/////////////// imageMemoryUnlock proxy
+template<int nth>
+static OfxStatus
+imageMemoryUnlockNth(OfxImageMemoryHandle memoryHandle)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gEffectHost[nth]->imageMemoryUnlock(memoryHandle);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryUnlock(" << memoryHandle << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..imageMemoryUnlock(" << memoryHandle << ")->" << OFX::StatStr(st) << std::endl;
+    return st;
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return imageMemoryUnlockNth<nth>
+
+static OfxImageEffectSuiteV1imageMemoryUnlock
+imageMemoryUnlockNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create imageMemoryUnlock for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
+
+//////////////// setHost proxy
 
 // function to set the host structure
 template<int nth>
@@ -1124,7 +1594,7 @@ OfxGetNumberOfPlugins(void)
     gParamHost.reserve(gPluginsNb);
     gMemoryHost.reserve(gPluginsNb);
     gThreadHost.reserve(gPluginsNb);
-    gMessageSuite.reserve(gPluginsNb);
+    gMessageHost.reserve(gPluginsNb);
     gInteractHost.reserve(gPluginsNb);
   }
 
