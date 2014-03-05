@@ -90,7 +90,17 @@
 #include <string>
 
 #include "ofxImageEffect.h"
-
+#include "ofxProgress.h"
+#include "ofxTimeLine.h"
+#include "ofxParametricParam.h"
+#ifdef OFX_EXTENSIONS_VEGAS
+#include "ofxSonyVegas.h"
+#endif
+#ifdef OFX_EXTENSIONS_NUKE
+#include "nuke/camera.h"
+#include "nuke/fnOfxExtensions.h"
+#include "nuke/fnPublicOfxExtensions.h"
+#endif
 #include "ofxhBinary.h"
 #include "ofxhUtilities.h"
 
@@ -138,17 +148,72 @@ static OfxImageEffectSuiteV1imageMemoryFree imageMemoryFreeNthFunc(int nth);
 static OfxImageEffectSuiteV1imageMemoryLock imageMemoryLockNthFunc(int nth);
 static OfxImageEffectSuiteV1imageMemoryUnlock imageMemoryUnlockNthFunc(int nth);
 
+/** @brief A class that lists all the properties of a host */
+struct ImageEffectHostDescription {
+ public :
+    std::vector<int> apiVersion; // TODO
+    std::string type;
+  std::string hostName;
+    std::string hostLabel;// TODO
+    std::vector<int> version;// TODO
+    std::string versionLabel;// TODO
+  bool hostIsBackground;
+  bool supportsOverlays;
+  bool supportsMultiResolution;
+  bool supportsTiles;
+  bool temporalClipAccess;
+  std::vector<std::string> _supportedComponents;
+  std::vector<std::string> _supportedContexts;
+  std::vector<std::string> _supportedPixelDepths;
+
+
+  bool supportsMultipleClipDepths;
+  bool supportsMultipleClipPARs;
+  bool supportsSetableFrameRate;
+  bool supportsSetableFielding;
+  bool supportsStringAnimation;
+  bool supportsCustomInteract;
+  bool supportsChoiceAnimation;
+  bool supportsBooleanAnimation;
+  bool supportsCustomAnimation;
+  bool supportsParametricAnimation;
+#ifdef OFX_EXTENSIONS_NUKE
+  bool canTransform;
+#endif
+  int maxParameters;
+  int maxPages;
+  int pageRowCount;
+  int pageColumnCount;
+};
+
 // pointers to various bits of the host
-static std::vector<OfxHost*>               gHost;
-static std::vector<OfxHost>                gProxy;
-static std::vector<OfxImageEffectSuiteV1*> gEffectHost;
-static std::vector<OfxImageEffectSuiteV1>  gEffectProxy;
-static std::vector<OfxPropertySuiteV1*>    gPropHost;
-static std::vector<OfxParameterSuiteV1*>   gParamHost;
-static std::vector<OfxMemorySuiteV1*>      gMemoryHost;
-static std::vector<OfxMultiThreadSuiteV1*> gThreadHost;
-static std::vector<OfxMessageSuiteV1*>     gMessageHost;
+static std::vector<OfxHost*>                          gHost;
+static std::vector<OfxHost>                           gProxy;
+static std::vector<ImageEffectHostDescription>        gHostDescription;
+static std::vector<OfxImageEffectSuiteV1*>            gEffectHost;
+static std::vector<OfxImageEffectSuiteV1>             gEffectProxy;
+static std::vector<OfxPropertySuiteV1*>               gPropHost;
+static std::vector<OfxParameterSuiteV1*>              gParamHost;
+static std::vector<OfxMemorySuiteV1*>                 gMemoryHost;
+static std::vector<OfxMultiThreadSuiteV1*>            gThreadHost;
+static std::vector<OfxMessageSuiteV1*>                gMessageHost;
+static std::vector<OfxMessageSuiteV2*>                gMessageV2Host;
+static std::vector<OfxProgressSuiteV1*>               gProgressHost;
+static std::vector<OfxTimeLineSuiteV1*>               gTimeLineHost;
+static std::vector<OfxParametricParameterSuiteV1*>    gParametricParameterHost;
+#ifdef OFX_EXTENSIONS_NUKE
+static std::vector<NukeOfxCameraSuiteV1*>             gCameraHost;
+static std::vector<FnOfxImageEffectPlaneSuiteV1*>     gImageEffectPlaneHost;
+static std::vector<FnOfxImageEffectPlaneSuiteV2*>     gImageEffectPlaneV2Host;
+#endif
+#ifdef OFX_EXTENSIONS_VEGAS
+static std::vector<OfxVegasProgressSuiteV1*>          gVegasProgressHost;
+static std::vector<OfxVegasStereoscopicImageSuiteV1*> gVegasStereoscopicImageHost;
+static std::vector<OfxVegasKeyframeSuiteV1*>          gVegasKeyframeHost;
+#endif
+
 static std::vector<OfxInteractSuiteV1*>    gInteractHost;
+
 #ifdef OFX_DEBUG_PROXY_CLIPS
 // for each plugin, we store a map form the context to the list of defined clips
 // obviously, it should be made thread-safe by the use of a mutex.
@@ -228,18 +293,47 @@ fetchHostSuites(int nth)
         gMemoryHost.resize(nth+1);
         gThreadHost.resize(nth+1);
         gMessageHost.resize(nth+1);
+        gMessageV2Host.resize(nth+1);
+        gProgressHost.resize(nth+1);
+        gTimeLineHost.resize(nth+1);
+        gParametricParameterHost.resize(nth+1);
+#ifdef OFX_EXTENSIONS_NUKE
+        gCameraHost.resize(nth+1);
+        gImageEffectPlaneHost.resize(nth+1);
+        gImageEffectPlaneV2Host.resize(nth+1);
+#endif
+#ifdef OFX_EXTENSIONS_VEGAS
+        gVegasProgressHost.resize(nth+1);
+        gVegasStereoscopicImageHost.resize(nth+1);
+        gVegasKeyframeHost.resize(nth+1);
+#endif
+
         gInteractHost.resize(nth+1);
 #ifdef OFX_DEBUG_PROXY_CLIPS
         gClips.resize(nth+1);
 #endif
     }
 
-    gEffectHost[nth]   = (OfxImageEffectSuiteV1 *) gHost[nth]->fetchSuite(gHost[nth]->host, kOfxImageEffectSuite, 1);
-    gPropHost[nth]     = (OfxPropertySuiteV1 *)    gHost[nth]->fetchSuite(gHost[nth]->host, kOfxPropertySuite, 1);
-    gParamHost[nth]    = (OfxParameterSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxParameterSuite, 1);
-    gMemoryHost[nth]   = (OfxMemorySuiteV1 *)      gHost[nth]->fetchSuite(gHost[nth]->host, kOfxMemorySuite, 1);
-    gThreadHost[nth]   = (OfxMultiThreadSuiteV1 *) gHost[nth]->fetchSuite(gHost[nth]->host, kOfxMultiThreadSuite, 1);
-    gMessageHost[nth]   = (OfxMessageSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxMessageSuite, 1);
+    gEffectHost[nth]                 = (OfxImageEffectSuiteV1 *) gHost[nth]->fetchSuite(gHost[nth]->host, kOfxImageEffectSuite, 1);
+    gPropHost[nth]                   = (OfxPropertySuiteV1 *)    gHost[nth]->fetchSuite(gHost[nth]->host, kOfxPropertySuite, 1);
+    gParamHost[nth]                  = (OfxParameterSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxParameterSuite, 1);
+    gMemoryHost[nth]                 = (OfxMemorySuiteV1 *)      gHost[nth]->fetchSuite(gHost[nth]->host, kOfxMemorySuite, 1);
+    gThreadHost[nth]                 = (OfxMultiThreadSuiteV1 *) gHost[nth]->fetchSuite(gHost[nth]->host, kOfxMultiThreadSuite, 1);
+    gMessageHost[nth]                = (OfxMessageSuiteV1 *)     gHost[nth]->fetchSuite(gHost[nth]->host, kOfxMessageSuite, 1);
+    gMessageV2Host[nth]              = (OfxMessageSuiteV2 *)     gHost[nth]->fetchSuite(gHost[nth]->host, kOfxMessageSuite, 2);
+    gProgressHost[nth]               = (OfxProgressSuiteV1 *)    gHost[nth]->fetchSuite(gHost[nth]->host, kOfxProgressSuite, 1);
+    gTimeLineHost[nth]               = (OfxTimeLineSuiteV1 *)    gHost[nth]->fetchSuite(gHost[nth]->host, kOfxTimeLineSuite, 1);
+    gParametricParameterHost[nth]    = (OfxParametricParameterSuiteV1 *) gHost[nth]->fetchSuite(gHost[nth]->host, kOfxParametricParameterSuite, 1);
+#ifdef OFX_EXTENSIONS_NUKE
+    gCameraHost[nth]                 = (NukeOfxCameraSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kNukeOfxCameraSuite, 1);
+    gImageEffectPlaneHost[nth]       = (FnOfxImageEffectPlaneSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kFnOfxImageEffectPlaneSuite, 1);
+    gImageEffectPlaneV2Host[nth]     = (FnOfxImageEffectPlaneSuiteV2 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kFnOfxImageEffectPlaneSuite, 2);
+#endif
+#ifdef OFX_EXTENSIONS_VEGAS
+    gVegasProgressHost[nth]          = (OfxVegasProgressSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxVegasProgressSuite, 1);
+    gVegasStereoscopicImageHost[nth] = (OfxVegasStereoscopicImageSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxVegasStereoscopicImageEffectSuite, 1);
+    gVegasKeyframeHost[nth]          = (OfxVegasKeyframeSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxVegasKeyframeSuite, 1);
+#endif
     gInteractHost[nth]   = (OfxInteractSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxInteractSuite, 1);
     if(!gEffectHost[nth] || !gPropHost[nth] || !gParamHost[nth] || !gMemoryHost[nth] || !gThreadHost[nth])
         return kOfxStatErrMissingHostFeature;
@@ -259,6 +353,260 @@ fetchHostSuites(int nth)
     gEffectProxy[nth].imageMemoryLock = imageMemoryLockNthFunc(nth);
     gEffectProxy[nth].imageMemoryUnlock = imageMemoryUnlockNthFunc(nth);
     return kOfxStatOK;
+}
+
+inline OfxStatus
+fetchHostDescription(int nth)
+{
+    assert(nth < gHost.size());
+    if(!gHost[nth])
+        return kOfxStatErrMissingHostFeature;
+
+    if (nth+1 > gHostDescription.size()) {
+        gHostDescription.resize(nth+1);
+    }
+
+    OfxPropertySetHandle host = gHost[nth]->host;
+    ImageEffectHostDescription &hostDesc = gHostDescription[nth];
+    OfxStatus st;
+    // and get some properties
+    char *name;
+    st = gPropHost[nth]->propGetString(host, kOfxPropName, 0, &name);
+    assert(st == kOfxStatOK);
+    hostDesc.hostName                   = name;
+
+    {
+        int hostIsBackground;
+        st = gPropHost[nth]->propGetInt(host, kOfxImageEffectHostPropIsBackground, 0, &hostIsBackground);
+        hostDesc.hostIsBackground = (st == kOfxStatOK) && hostIsBackground != 0;
+    }
+    {
+        int supportsOverlays;
+        st = gPropHost[nth]->propGetInt(host, kOfxImageEffectPropSupportsOverlays, 0, &supportsOverlays);
+        hostDesc.supportsOverlays = (st == kOfxStatOK) && supportsOverlays != 0;
+    }
+    {
+        int supportsMultiResolution;
+        st = gPropHost[nth]->propGetInt(host, kOfxImageEffectPropSupportsMultiResolution, 0, &supportsMultiResolution);
+        hostDesc.supportsMultiResolution = (st == kOfxStatOK) && supportsMultiResolution != 0;
+    }
+    {
+        int supportsTiles;
+        st = gPropHost[nth]->propGetInt(host, kOfxImageEffectPropSupportsTiles, 0, &supportsTiles);
+        hostDesc.supportsTiles = (st == kOfxStatOK) && supportsTiles != 0;
+    }
+    {
+        int temporalClipAccess;
+        st = gPropHost[nth]->propGetInt(host, kOfxImageEffectPropTemporalClipAccess, 0, &temporalClipAccess);
+        hostDesc.temporalClipAccess = (st == kOfxStatOK) && temporalClipAccess != 0;
+    }
+    int numComponents;
+    st = gPropHost[nth]->propGetDimension(host, kOfxImageEffectPropSupportedComponents, &numComponents);
+    assert (st == kOfxStatOK);
+    for(int i=0; i<numComponents; ++i) {
+        char *comp;
+        st = gPropHost[nth]->propGetString(host, kOfxImageEffectPropSupportedComponents, i, &comp);
+        assert (st == kOfxStatOK);
+        hostDesc._supportedComponents.push_back(comp);
+    }
+    int numContexts;
+    st = gPropHost[nth]->propGetDimension(host, kOfxImageEffectPropSupportedContexts, &numContexts);
+    assert (st == kOfxStatOK);
+    for(int i=0; i<numContexts; ++i) {
+        char* cont;
+        st = gPropHost[nth]->propGetString(host, kOfxImageEffectPropSupportedContexts, i, &cont);
+        assert (st == kOfxStatOK);
+        hostDesc._supportedContexts.push_back(cont);
+    }
+	int numPixelDepths;
+    st = gPropHost[nth]->propGetDimension(host, kOfxImageEffectPropSupportedPixelDepths, &numPixelDepths);
+    assert (st == kOfxStatOK);
+    for(int i=0; i<numPixelDepths; ++i) {
+        char *depth;
+        st = gPropHost[nth]->propGetString(host, kOfxImageEffectPropSupportedPixelDepths, i, &depth);
+        assert (st == kOfxStatOK);
+        hostDesc._supportedPixelDepths.push_back(depth);
+    }
+    {
+        int supportsMultipleClipDepths;
+        st = gPropHost[nth]->propGetInt(host, kOfxImageEffectHostPropIsBackground, 0, &supportsMultipleClipDepths);
+        hostDesc.supportsMultipleClipDepths = (st == kOfxStatOK) && supportsMultipleClipDepths != 0;
+    }
+    {
+        int supportsMultipleClipPARs;
+        st = gPropHost[nth]->propGetInt(host, kOfxImageEffectPropSupportsMultipleClipPARs, 0, &supportsMultipleClipPARs);
+        hostDesc.supportsMultipleClipPARs = (st == kOfxStatOK) && supportsMultipleClipPARs != 0;
+    }
+    {
+        int supportsSetableFrameRate;
+        st = gPropHost[nth]->propGetInt(host, kOfxImageEffectPropSetableFrameRate, 0, &supportsSetableFrameRate);
+        hostDesc.supportsSetableFrameRate = (st == kOfxStatOK) && supportsSetableFrameRate != 0;
+    }
+    {
+        int supportsSetableFielding;
+        st = gPropHost[nth]->propGetInt(host, kOfxImageEffectPropSetableFielding, 0, &supportsSetableFielding);
+        hostDesc.supportsSetableFielding = (st == kOfxStatOK) && supportsSetableFielding != 0;
+    }
+    {
+        int supportsStringAnimation;
+        st = gPropHost[nth]->propGetInt(host, kOfxParamHostPropSupportsStringAnimation, 0, &supportsStringAnimation);
+        hostDesc.supportsStringAnimation = (st == kOfxStatOK) && supportsStringAnimation != 0;
+    }
+    {
+        int supportsCustomInteract;
+        st = gPropHost[nth]->propGetInt(host, kOfxParamHostPropSupportsCustomInteract, 0, &supportsCustomInteract);
+        hostDesc.supportsCustomInteract = (st == kOfxStatOK) && supportsCustomInteract != 0;
+    }
+    {
+        int supportsChoiceAnimation;
+        st = gPropHost[nth]->propGetInt(host, kOfxParamHostPropSupportsChoiceAnimation, 0, &supportsChoiceAnimation);
+        hostDesc.supportsChoiceAnimation = (st == kOfxStatOK) && supportsChoiceAnimation != 0;
+    }
+    {
+        int supportsBooleanAnimation;
+        st = gPropHost[nth]->propGetInt(host, kOfxParamHostPropSupportsBooleanAnimation, 0, &supportsBooleanAnimation);
+        hostDesc.supportsBooleanAnimation = (st == kOfxStatOK) && supportsBooleanAnimation != 0;
+    }
+    {
+        int supportsCustomAnimation;
+        st = gPropHost[nth]->propGetInt(host, kOfxParamHostPropSupportsCustomAnimation, 0, &supportsCustomAnimation);
+        hostDesc.supportsCustomAnimation = (st == kOfxStatOK) && supportsCustomAnimation != 0;
+    }
+    {
+        int supportsParametricAnimation;
+        st = gPropHost[nth]->propGetInt(host, kOfxParamHostPropSupportsParametricAnimation, 0, &supportsParametricAnimation);
+        hostDesc.supportsParametricAnimation = (st == kOfxStatOK) && supportsParametricAnimation != 0;
+    }
+#ifdef OFX_EXTENSIONS_NUKE
+    {
+        int canTransform;
+        st = gPropHost[nth]->propGetInt(host, kFnOfxImageEffectCanTransform, 0, &canTransform);
+        hostDesc.canTransform = (st == kOfxStatOK) && canTransform != 0;
+    }
+
+#endif
+    st = gPropHost[nth]->propGetInt(host, kOfxParamHostPropMaxParameters, 0, &hostDesc.maxParameters);
+    assert (st == kOfxStatOK);
+    st = gPropHost[nth]->propGetInt(host, kOfxParamHostPropMaxPages, 0, &hostDesc.maxPages);
+    assert (st == kOfxStatOK);
+    st = gPropHost[nth]->propGetInt(host, kOfxParamHostPropPageRowColumnCount, 0, &hostDesc.pageRowCount);
+    assert (st == kOfxStatOK);
+    st = gPropHost[nth]->propGetInt(host, kOfxParamHostPropPageRowColumnCount, 1, &hostDesc.pageColumnCount);
+    assert (st == kOfxStatOK);
+
+    return kOfxStatOK;
+}
+
+inline void
+printHostDescription(int nth)
+{
+    const ImageEffectHostDescription &hostDesc = gHostDescription[nth];
+    std::cout << "OFX DebugProxy: host description follows" << std::endl;
+    std::cout << "hostName=" << hostDesc.hostName << std::endl;
+    std::cout << "hostIsBackground=" << hostDesc.hostIsBackground << std::endl;
+    std::cout << "supportsOverlays=" << hostDesc.supportsOverlays << std::endl;
+    std::cout << "supportsMultiResolution=" << hostDesc.supportsMultiResolution << std::endl;
+    std::cout << "supportsTiles=" << hostDesc.supportsTiles << std::endl;
+    std::cout << "temporalClipAccess=" << hostDesc.temporalClipAccess << std::endl;
+    bool first;
+    first = true;
+    std::cout << "supportedComponents=";
+    for (std::vector<std::string>::const_iterator it = hostDesc._supportedComponents.begin(); it != hostDesc._supportedComponents.end(); ++it) {
+        if (!first) {
+            std::cout << ",";
+        }
+        first = false;
+        std::cout << *it;
+    }
+    std::cout << std::endl;
+    first = true;
+    std::cout << "supportedContexts=";
+    for (std::vector<std::string>::const_iterator it = hostDesc._supportedContexts.begin(); it != hostDesc._supportedContexts.end(); ++it) {
+        if (!first) {
+            std::cout << ",";
+        }
+        first = false;
+        std::cout << *it;
+    }
+    std::cout << std::endl;
+    first = true;
+    std::cout << "supportedPixelDepths=";
+    for (std::vector<std::string>::const_iterator it = hostDesc._supportedPixelDepths.begin(); it != hostDesc._supportedPixelDepths.end(); ++it) {
+        if (!first) {
+            std::cout << ",";
+        }
+        first = false;
+        std::cout << *it;
+    }
+    std::cout << std::endl;
+    std::cout << "supportsMultipleClipDepths=" << hostDesc.supportsMultipleClipDepths << std::endl;
+    std::cout << "supportsMultipleClipPARs=" << hostDesc.supportsMultipleClipPARs << std::endl;
+    std::cout << "supportsSetableFrameRate=" << hostDesc.supportsSetableFrameRate << std::endl;
+    std::cout << "supportsSetableFielding=" << hostDesc.supportsSetableFielding << std::endl;
+    std::cout << "supportsStringAnimation=" << hostDesc.supportsStringAnimation << std::endl;
+    std::cout << "supportsCustomInteract=" << hostDesc.supportsCustomInteract << std::endl;
+    std::cout << "supportsChoiceAnimation=" << hostDesc.supportsChoiceAnimation << std::endl;
+    std::cout << "supportsBooleanAnimation=" << hostDesc.supportsBooleanAnimation << std::endl;
+    std::cout << "supportsCustomAnimation=" << hostDesc.supportsCustomAnimation << std::endl;
+    std::cout << "supportsParametricAnimation=" << hostDesc.supportsParametricAnimation << std::endl;
+#ifdef OFX_EXTENSIONS_NUKE
+    std::cout << "canTransform=" << hostDesc.canTransform << std::endl;
+#endif
+    std::cout << "maxParameters=" << hostDesc.maxParameters << std::endl;
+    std::cout << "pageRowCount=" << hostDesc.pageRowCount << std::endl;
+    std::cout << "pageColumnCount=" << hostDesc.pageColumnCount << std::endl;
+    std::cout << "suites=";
+    if (gEffectHost[nth]) {
+        std::cout << kOfxImageEffectSuite << ',';
+    }
+    if (gPropHost[nth]) {
+        std::cout << kOfxPropertySuite << ',';
+    }
+    if (gParamHost[nth]) {
+        std::cout << kOfxParameterSuite << ',';
+    }
+    if (gMemoryHost[nth]) {
+        std::cout << kOfxMemorySuite << ',';
+    }
+    if (gMessageHost[nth]) {
+        std::cout << kOfxMessageSuite << ',';
+    }
+    if (gMessageV2Host[nth]) {
+        std::cout << kOfxMessageSuite << "V2" << ',';
+    }
+    if (gProgressHost[nth]) {
+        std::cout << kOfxProgressSuite << ',';
+    }
+    if (gTimeLineHost[nth]) {
+        std::cout << kOfxTimeLineSuite << ',';
+    }
+    if (gParametricParameterHost[nth]) {
+        std::cout << kOfxParametricParameterSuite << ',';
+    }
+#ifdef OFX_EXTENSIONS_NUKE
+    if (gCameraHost[nth]) {
+        std::cout << kNukeOfxCameraSuite << ',';
+    }
+    if (gImageEffectPlaneHost[nth]) {
+        std::cout << kFnOfxImageEffectPlaneSuite << ',';
+    }
+    if (gImageEffectPlaneV2Host[nth]) {
+        std::cout << kFnOfxImageEffectPlaneSuite << "V2" << ',';
+    }
+#endif
+#ifdef OFX_EXTENSIONS_VEGAS
+    if (gVegasProgressHost[nth]) {
+        std::cout << kOfxVegasProgressSuite << ',';
+    }
+    if (gVegasStereoscopicImageHost[nth]) {
+        std::cout << kOfxVegasStereoscopicImageEffectSuite << ',';
+    }
+    if (gVegasKeyframeHost[nth]) {
+        std::cout << kOfxVegasKeyframeSuite << ',';
+    }
+#endif
+    std::cout << std::endl;
+    std::cout << "OFX DebugProxy: host description finished" << std::endl;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -475,25 +823,28 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
 {
   // fetch the host suites and setup proxies
   if(strcmp(action, kOfxActionLoad) == 0) {
-    // fetch the host APIs
-    OfxStatus stat;
-    if((stat = fetchHostSuites(nth)) != kOfxStatOK)
-      return stat;
+      // fetch the host APIs
+      OfxStatus stat;
+      if((stat = fetchHostSuites(nth)) != kOfxStatOK)
+          return stat;
+      if((stat = fetchHostDescription(nth)) != kOfxStatOK)
+          return stat;
+      printHostDescription(nth);
 
-    // see if the host supports overlays
-    int supportsOverlays;
-    gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropSupportsOverlays, 0, &supportsOverlays);
-    if(supportsOverlays != 0) {
-      OfxImageEffectHandle effect = (OfxImageEffectHandle ) handle;
-      // get the property handle for the plugin
-      OfxPropertySetHandle effectProps;
-      gEffectHost[nth]->getPropertySet(effect, &effectProps);
+      // see if the host supports overlays
+      int supportsOverlays;
+      gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropSupportsOverlays, 0, &supportsOverlays);
+      if(supportsOverlays != 0) {
+        OfxImageEffectHandle effect = (OfxImageEffectHandle ) handle;
+        // get the property handle for the plugin
+        OfxPropertySetHandle effectProps;
+        gEffectHost[nth]->getPropertySet(effect, &effectProps);
 
-      // set the property that is the overlay's main entry point for the plugin
-      gPropHost[nth]->propGetPointer(effectProps,  kOfxImageEffectPluginPropOverlayInteractV1, 0, (void **) &gPluginsOverlayMain[nth]);
-      if (gPluginsOverlayMain[nth] != 0) {
-        gPropHost[nth]->propSetPointer(effectProps, kOfxImageEffectPluginPropOverlayInteractV1, 0,  (void *) overlayMainNthFunc(nth));
-      }
+        // set the property that is the overlay's main entry point for the plugin
+        gPropHost[nth]->propGetPointer(effectProps,  kOfxImageEffectPluginPropOverlayInteractV1, 0, (void **) &gPluginsOverlayMain[nth]);
+        if (gPluginsOverlayMain[nth] != 0) {
+          gPropHost[nth]->propSetPointer(effectProps, kOfxImageEffectPluginPropOverlayInteractV1, 0,  (void *) overlayMainNthFunc(nth));
+        }
 
     }
   }
@@ -1595,6 +1946,21 @@ OfxGetNumberOfPlugins(void)
     gMemoryHost.reserve(gPluginsNb);
     gThreadHost.reserve(gPluginsNb);
     gMessageHost.reserve(gPluginsNb);
+    gMessageV2Host.reserve(gPluginsNb);
+    gProgressHost.reserve(gPluginsNb);
+    gTimeLineHost.reserve(gPluginsNb);
+    gParametricParameterHost.reserve(gPluginsNb);
+#ifdef OFX_EXTENSIONS_NUKE
+    gCameraHost.reserve(gPluginsNb);
+    gImageEffectPlaneHost.reserve(gPluginsNb);
+    gImageEffectPlaneV2Host.reserve(gPluginsNb);
+#endif
+#ifdef OX_EXTENSIONS_VEGAS
+    gVegasProgressHost.reserve(gPluginsNb);
+    gVegasStereoscopicImageHost.reserve(gPluginsNb);
+    gVegasKeyframeHost.reserve(gPluginsNb);
+#endif
+
     gInteractHost.reserve(gPluginsNb);
   }
 
