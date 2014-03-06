@@ -8,9 +8,10 @@ endif
 
 HAVE_CIMG ?= 0
 
-# There's only one CImg-based plugin for now. Build it separately.
+# Build CImg-based plugins separately.
 ifneq ($(HAVE_CIMG),0)
-  SUBDIRS += GREYCstoration
+# add plugins which may use CImg here
+#  SUBDIRS += GMIC
 endif
 
 all: subdirs
