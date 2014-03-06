@@ -1,4 +1,4 @@
-PLUGINOBJECTS = TimeOffset.o
+PLUGINOBJECTS = TimeOffset.o PluginRegistration.o
 PLUGINNAME = TimeOffset
 PATHTOROOT = ../../
 

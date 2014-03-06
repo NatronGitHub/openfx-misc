@@ -4,7 +4,7 @@ Move the input clip forward or backward in time.
 This can also reverse the order of the input frames so that last one is first.
 
 Copyright (C) 2013 INRIA
-Author Frederic Devernay frederic.devernay@inria.fr
+Author: Frederic Devernay <frederic.devernay@inria.fr>
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
@@ -73,9 +73,7 @@ England
 
 */
 
-#include <stdio.h>
-#include "ofxsImageEffect.h"
-#include "ofxsMultiThread.h"
+#include "TimeOffset.h"
 
 #include "../include/ofxsProcessing.H"
 
@@ -83,68 +81,10 @@ namespace OFX {
   extern ImageEffectHostDescription gHostDescription;
 }
 
-// Base class for the RGBA and the Alpha processor
-class CopierBase : public OFX::ImageProcessor {
-protected :
-  OFX::Image *_srcImg;
-public :
-  /** @brief no arg ctor */
-  CopierBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _srcImg(0)
-  {        
-  }
-
-  /** @brief set the src image */
-  void setSrcImg(OFX::Image *v) {_srcImg = v;}
-};
-
-// template to do the RGBA processing
-template <class PIX, int nComponents>
-class ImageCopier : public CopierBase {
-public :
-  // ctor
-  ImageCopier(OFX::ImageEffect &instance) 
-    : CopierBase(instance)
-  {}
-
-  // and do some processing
-  void multiThreadProcessImages(OfxRectI procWindow)
-  {
-    for(int y = procWindow.y1; y < procWindow.y2; y++) {
-      if(_effect.abort()) break;
-
-      PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-
-      for(int x = procWindow.x1; x < procWindow.x2; x++) {
-
-        PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-
-        // do we have a source image to scale up
-        if(srcPix) {
-          for(int c = 0; c < nComponents; c++) {
-            dstPix[c] = srcPix[c];
-          }
-        }
-        else {
-          // no src pixel here, be black and transparent
-          for(int c = 0; c < nComponents; c++) {
-            dstPix[c] = 0;
-          }
-        }
-
-        // increment the dst pixel
-        dstPix += nComponents;
-      }
-    }
-  }
-};
-
-
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class TimeOffsetPlugin : public OFX::ImageEffect {
-protected :
+    protected :
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;            /**< @brief Mandated output clips */
     OFX::Clip *srcClip_;            /**< @brief Mandated input clips */
@@ -152,38 +92,35 @@ protected :
     OFX::IntParam  *time_offset_;      /**< @brief only used in the filter context. */
     OFX::BooleanParam  *reverse_input_;
 
-public :
+    public :
     /** @brief ctor */
-    TimeOffsetPlugin(OfxImageEffectHandle handle)
-      : ImageEffect(handle)
-      , dstClip_(0)
-      , srcClip_(0)
-      , time_offset_(0)
-      , reverse_input_(0)
-    {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-
-        time_offset_   = fetchIntParam("time_offset");
-        reverse_input_ = fetchBooleanParam("reverse_input");
-    }
-
+    TimeOffsetPlugin(OfxImageEffectHandle handle);
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
 
+    /** Override the get frames needed action */
+    virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames);
+
     /* override the time domain action, only for the general context */
     virtual bool getTimeDomain(OfxRangeD &range);
-    
+
     /* override is identity */
     virtual bool isIdentity(const OFX::RenderArguments &args, OFX::Clip * &identityClip, double &identityTime);
-
-    /* set up and run a processor */
-    void
-    setupAndProcess(CopierBase &, const OFX::RenderArguments &args);
-
 private:
     double getSourceTime(double time) const;
 };
+
+TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
+: ImageEffect(handle)
+, srcClip_(0)
+, time_offset_(0)
+, reverse_input_(0)
+{
+    srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+
+    time_offset_   = fetchIntParam("time_offset");
+    reverse_input_ = fetchBooleanParam("reverse_input");
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -225,34 +162,6 @@ TimeOffsetPlugin::getSourceTime(double t) const
     return sourceTime;
 }
 
-/* set up and run a processor */
-void
-TimeOffsetPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArguments &args)
-{
-    // get a dst image
-    std::auto_ptr<OFX::Image>  dst(dstClip_->fetchImage(args.time));
-    OFX::BitDepthEnum          dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum    dstComponents  = dst->getPixelComponents();
-  
-    // figure the frame we should be retiming from
-    double sourceTime = getSourceTime(args.time);
-    // fetch the source image
-    std::auto_ptr<OFX::Image> srcImg(srcClip_->fetchImage(sourceTime));
-
-    // make sure bit depths are sane
-    if(srcImg.get()) checkComponents(*srcImg, dstBitDepth, dstComponents);
-
-    // set the images
-    processor.setDstImg(dst.get());
-    processor.setSrcImg(srcImg.get());
-
-    // set the render window
-    processor.setRenderWindow(args.renderWindow);
-
-    // Call the base class process member, this will call the derived templated process code
-    processor.process();
-}
-
 /* override the time domain action, only for the general context */
 bool 
 TimeOffsetPlugin::getTimeDomain(OfxRangeD &range)
@@ -272,61 +181,22 @@ TimeOffsetPlugin::getTimeDomain(OfxRangeD &range)
     return false;
 }
 
+void
+TimeOffsetPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
+                                  OFX::FramesNeededSetter &frames)
+{
+    double sourceTime = getSourceTime(args.time);
+    OfxRangeD range;
+    range.min = sourceTime;
+    range.max = sourceTime;
+    frames.setFramesNeeded(*srcClip_, range);
+}
+
 // the overridden render function
 void
 TimeOffsetPlugin::render(const OFX::RenderArguments &args)
 {
-    // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
-
-    // do the rendering
-    if(dstComponents == OFX::ePixelComponentRGBA) {
-        switch(dstBitDepth) {
-        case OFX::eBitDepthUByte : {      
-            ImageCopier<unsigned char, 4> fred(*this);
-            setupAndProcess(fred, args);
-        }
-        break;
-
-        case OFX::eBitDepthUShort : {
-            ImageCopier<unsigned short, 4> fred(*this);
-            setupAndProcess(fred, args);
-        }                          
-        break;
-
-        case OFX::eBitDepthFloat : {
-            ImageCopier<float, 4> fred(*this);
-            setupAndProcess(fred, args);
-        }
-        break;
-        default :
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
-    }
-    else {
-        switch(dstBitDepth) {
-        case OFX::eBitDepthUByte : {
-            ImageCopier<unsigned char, 1> fred(*this);
-            setupAndProcess(fred, args);
-        }
-        break;
-
-        case OFX::eBitDepthUShort : {
-            ImageCopier<unsigned short, 1> fred(*this);
-            setupAndProcess(fred, args);
-        }                          
-        break;
-
-        case OFX::eBitDepthFloat : {
-            ImageCopier<float, 1> fred(*this);
-            setupAndProcess(fred, args);
-        }                          
-        break;
-        default :
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
-    } // switch
+    // do nothing as this should never be called as isIdentity should always be trapped
 }
 
 // overridden is identity
@@ -340,19 +210,7 @@ TimeOffsetPlugin::isIdentity(const OFX::RenderArguments &args, OFX::Clip * &iden
 
 
 using namespace OFX;
-mDeclarePluginFactory(TimeOffsetPluginFactory, ;, {});
 
-namespace OFX
-{
-  namespace Plugin
-  {
-    void getPluginIDs(OFX::PluginFactoryArray &ids)
-    {
-      static TimeOffsetPluginFactory p("net.sf.openfx:timeOffset", 1, 0);
-      ids.push_back(&p);
-    }
-  };
-};
 
 void TimeOffsetPluginFactory::load()
 {

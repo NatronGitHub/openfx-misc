@@ -3,7 +3,7 @@ OFX OneView plugin.
 Takes one view from the input.
 
 Copyright (C) 2013 INRIA
-Author Frederic Devernay frederic.devernay@inria.fr
+Author: Frederic Devernay <frederic.devernay@inria.fr>
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
@@ -72,13 +72,11 @@ England
 
 */
 
+#include "OneView.h"
+
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
-
-#include <stdio.h>
-#include "ofxsImageEffect.h"
-#include "ofxsMultiThread.h"
 
 #include "../include/ofxsProcessing.H"
 
@@ -273,7 +271,6 @@ OneViewPlugin::render(const OFX::RenderArguments &args)
   } 
 }
 
-mDeclarePluginFactory(OneViewPluginFactory, ;, {});
 
 using namespace OFX;
 void OneViewPluginFactory::load()
@@ -354,16 +351,4 @@ void OneViewPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
 OFX::ImageEffect* OneViewPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
   return new OneViewPlugin(handle);
-}
-
-namespace OFX 
-{
-  namespace Plugin 
-  {  
-    void getPluginIDs(OFX::PluginFactoryArray &ids)
-    {
-      static OneViewPluginFactory p("net.sf.openfx:oneViewPlugin", 1, 0);
-      ids.push_back(&p);
-    }
-  }
 }

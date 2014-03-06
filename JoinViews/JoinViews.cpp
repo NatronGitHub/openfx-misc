@@ -3,7 +3,7 @@ OFX JoinViews plugin.
 JoinView inputs to make a stereo output.
 
 Copyright (C) 2013 INRIA
-Author Frederic Devernay frederic.devernay@inria.fr
+Author: Frederic Devernay <frederic.devernay@inria.fr>
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
@@ -72,13 +72,11 @@ England
 
 */
 
+#include "JoinViews.h"
+
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
-
-#include <stdio.h>
-#include "ofxsImageEffect.h"
-#include "ofxsMultiThread.h"
 
 #include "../include/ofxsProcessing.H"
 
@@ -273,7 +271,6 @@ JoinViewsPlugin::render(const OFX::RenderArguments &args)
   } 
 }
 
-mDeclarePluginFactory(JoinViewsPluginFactory, ;, {});
 
 using namespace OFX;
 
@@ -350,16 +347,4 @@ void JoinViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 OFX::ImageEffect* JoinViewsPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
   return new JoinViewsPlugin(handle);
-}
-
-namespace OFX 
-{
-  namespace Plugin 
-  {  
-    void getPluginIDs(OFX::PluginFactoryArray &ids)
-    {
-      static JoinViewsPluginFactory p("net.sf.openfx:joinViewsPlugin", 1, 0);
-      ids.push_back(&p);
-    }
-  }
 }

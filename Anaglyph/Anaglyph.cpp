@@ -3,7 +3,7 @@ OFX Anaglyph plugin.
 Make an anaglyph image out of the inputs.
 
 Copyright (C) 2013 INRIA
-Author Frederic Devernay frederic.devernay@inria.fr
+Author: Frederic Devernay <frederic.devernay@inria.fr>
 
 Redistribution and use in source and binary forms, with or without modification,
 are permitted provided that the following conditions are met:
@@ -72,13 +72,11 @@ England
 
 */
 
+#include "Anaglyph.h"
+
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
-
-#include <stdio.h>
-#include "ofxsImageEffect.h"
-#include "ofxsMultiThread.h"
 
 #include "../include/ofxsProcessing.H"
 
@@ -322,7 +320,6 @@ AnaglyphPlugin::render(const OFX::RenderArguments &args)
   }
 }
 
-mDeclarePluginFactory(AnaglyphPluginFactory, ;, {});
 
 using namespace OFX;
 void AnaglyphPluginFactory::load()
@@ -425,14 +422,3 @@ OFX::ImageEffect* AnaglyphPluginFactory::createInstance(OfxImageEffectHandle han
   return new AnaglyphPlugin(handle);
 }
 
-namespace OFX 
-{
-  namespace Plugin 
-  {  
-    void getPluginIDs(OFX::PluginFactoryArray &ids)
-    {
-      static AnaglyphPluginFactory p("net.sf.openfx:anaglyphPlugin", 1, 0);
-      ids.push_back(&p);
-    }
-  }
-}

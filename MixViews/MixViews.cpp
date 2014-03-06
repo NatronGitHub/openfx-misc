@@ -72,13 +72,11 @@ England
 
 */
 
+#include "MixViews.h"
+
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
-
-#include <stdio.h>
-#include "ofxsImageEffect.h"
-#include "ofxsMultiThread.h"
 
 #include "../include/ofxsProcessing.H"
 
@@ -286,7 +284,6 @@ MixViewsPlugin::render(const OFX::RenderArguments &args)
   }
 }
 
-mDeclarePluginFactory(MixViewsPluginFactory, ;, {});
 
 using namespace OFX;
 void MixViewsPluginFactory::load()
@@ -369,16 +366,4 @@ void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 OFX::ImageEffect* MixViewsPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
   return new MixViewsPlugin(handle);
-}
-
-namespace OFX 
-{
-  namespace Plugin 
-  {  
-    void getPluginIDs(OFX::PluginFactoryArray &ids)
-    {
-      static MixViewsPluginFactory p("net.sf.openfx:mixViewsPlugin", 1, 0);
-      ids.push_back(&p);
-    }
-  }
 }
