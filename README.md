@@ -6,8 +6,6 @@ Miscellaneous OFX / OpenFX / Open Effects plugins
 Credits
 -------
 
-The Bl_Defocus, Bl_ZDefocus, and GREYCstoration plugins were originally by Esteban Tovagliari.
-
-
-
+The stereoscopic plugins Anaglyph, JoinViews, MixViews, OneView, ReConverge, SideBySide are by Frederic Devernay.
+RGBLut (parametic LUTS for each channel), Switch (select one of of n inputs), TimeOffset (shift time) are by Frederic Devernay
 
