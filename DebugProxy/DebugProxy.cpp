@@ -1509,7 +1509,11 @@ clipGetHandleNth(OfxImageEffectHandle imageEffect,
         std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetHandle(" << imageEffect << ", " << name << ", " << clip << ", " << propertySet << "): host exception!" << std::endl;
         throw;
     }
-    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetHandle(" << imageEffect << ", " << name << ")->" << OFX::StatStr(st) << ": (" << *clip << ", " << *propertySet << ")" << std::endl;
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetHandle(" << imageEffect << ", " << name << ")->" << OFX::StatStr(st) << ": (" << *clip;
+    if (propertySet) {
+        std::cout << ", " << *propertySet;
+    }
+    std::cout << ")" << std::endl;
     return st;
 }
 
