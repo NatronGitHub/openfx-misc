@@ -108,12 +108,15 @@
 // the Plugin path can be set here in the source code, or at runtime via the OFX_DEBUGPROXY_BINARY environment variable
 #ifndef BINARY_PATH
 #if defined(WINDOWS)
+#define OFX_PATH "C:\\Program Files\\Common Files\\OFX\\Plugins\\"
 #define BINARY_PATH "C:\\Program Files\\Common Files\\OFX\\Plugins.disabled\\Sapphire.ofx.bundle\\Contents\\Win64\\Sapphire.ofx"
 #endif
 #if defined(__linux__)
+#define OFX_PATH "/usr/OFX/Plugins/"
 #define BINARY_PATH "/usr/OFX/Plugins.disabled/Sapphire.ofx.bundle/Contents/Linux-x86-64/Sapphire.ofx"
 #endif
 #if defined(__APPLE__)
+#define OFX_PATH "/Library/OFX/Plugins/"
 #define BINARY_PATH "/Library/OFX/Plugins.disabled/Sapphire.ofx.bundle/Contents/MacOS/Sapphire.ofx"
 #endif
 #endif
@@ -235,6 +238,29 @@ static int (*OfxGetNumberOfPlugins_binary)(void) = 0;
 static OfxPlugin* (*OfxGetPlugin_binary)(int) = 0;
 static std::vector<OfxSetHost*> gPluginsSetHost;
 
+static const char* help_string =
+"OFX DebugProxy Help:\n"
+"- Specify the PATH to the plugin to be debugged using the environment variable OFX_DEBUGPROXY_PATH.\n"
+"  this can be done on Unix/Linux/OSX using something like:\n"
+"  env OFX_DEBUGPROXY_BINARY=/path/to/plugindir/plugin.ofx /path/to/ofx/host/bin/host\n"
+"  the first path points to the plugin binary (ending in \".ofx\"), and the second path is the host\n"
+"  executable.\n"
+"  The OSX executable for Nuke is usually in /Applications/Nuke<version>/Nuke<version>.app/Contents/MacOS/Nuke<version>\n"
+"- Note that the plugin must NOT be in a default location for OFX plugins, or it will be loaded twice\n"
+"  The default locations for plugins on this system is "OFX_PATH"\n"
+"- If the plugin depends on dynamic libraries and cannot find them, you can modify the path to locate them\n"
+"  by adding the directory containing the dependency (usually the same as the plugin location) to\n"
+#if defined(WINDOWS)
+"  the global %PATH%.\n"
+#endif
+#if defined(__linux__)
+"  the environment variable LD_LIBRARY_PATH (add \"LD_LIBRARY_PATH=/path/to/plugindir\" after the \"env\" in the line above).\n"
+#endif
+#if defined(__APPLE__)
+"  the environment variable DYLD_LIBRARY_PATH (add \"DYLD_LIBRARY_PATH=/path/to/plugindir\" after the \"env\" in the line above).\n"
+#endif
+;
+
 // load the underlying binary
 struct Loader {
     Loader()
@@ -249,15 +275,43 @@ struct Loader {
             gBinaryPath = BINARY_PATH;
         }
         if (gBinaryPath) {
+            if (std::strncmp(gBinaryPath, OFX_PATH, std::strlen(OFX_PATH)) == 0) {
+                std::cout << "OFX DebugProxy: Error: plugin binary seems to be in the default plugin path:" << std::endl;
+                std::cout << "OFX DebugProxy: OFX_DEBUGPROXY_BINARY=" << gBinaryPath << " is in " << OFX_PATH << std::endl;
+                std::cout << "OFX DebugProxy: This is probably a very bad idea, since the host will load twice" << std::endl;
+                std::cout << "OFX DebugProxy: the same plugin, and wouldn't be able to tell one from the other." << std::endl;
+                std::cout << "OFX DebugProxy: Please move the plugin binary to another location.\n" << std::endl;
+                return;
+            }
             gBinary = new OFX::Binary(gBinaryPath);
         }
         if (gBinary) {
             gBinary->load();
+            if (gBinary->isInvalid()) {
+                std::cout << "OFX DebugProxy: Error: Cannot load the plugin binary." << std::endl;
+                std::cout << "OFX DebugProxy: OFX_DEBUGPROXY_BINARY=" << gBinaryPath << " is propably not an OFX plugin," << std::endl;
+                std::cout << "OFX DebugProxy:  or misses some of its dynamic dependencies (see help below)." << std::endl;
+                std::cout << help_string;
+                return;
+            }
             // fetch the binary entry points
             OfxGetNumberOfPlugins_binary = (int(*)()) gBinary->findSymbol("OfxGetNumberOfPlugins");
             OfxGetPlugin_binary = (OfxPlugin*(*)(int)) gBinary->findSymbol("OfxGetPlugin");
-            std::cout << "OFX DebugProxy: " << gBinaryPath << " loaded" << std::endl;
+            if (!OfxGetNumberOfPlugins_binary || !OfxGetPlugin_binary) {
+                std::cout << "OFX DebugProxy: Error: Cannot find the mandatory symbols OfxGetNumberOfPlugins and OfxGetPlugin." << std::endl;
+                std::cout << "OFX DebugProxy: OFX_DEBUGPROXY_BINARY=" << gBinaryPath << " is propably not an OFX plugin." << std::endl;
+                std::cout << help_string;
+                gBinary->setInvalid(true);
+                return;
+            }
+            std::cout << "OFX DebugProxy: OFX_DEBUGPROXY_BINARY=" << gBinaryPath << " succesfully loaded" << std::endl;
+            std::cout << help_string;
+        } else {
+            std::cout << "OFX DebugProxy: Error: Cannot load the plugin binary OFX_DEBUGPROXY_BINARY=" << gBinaryPath <<  std::endl;
+            std::cout << help_string;
+            return;
         }
+
     }
 
     ~Loader()
