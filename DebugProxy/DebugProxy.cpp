@@ -325,7 +325,6 @@ struct Loader {
                 return;
             }
             std::cout << "OFX DebugProxy: OFX_DEBUGPROXY_BINARY=" << gBinaryPath << " succesfully loaded" << std::endl;
-            std::cout << help_string;
         } else {
             std::cout << "OFX DebugProxy: Error: Cannot load the plugin binary OFX_DEBUGPROXY_BINARY=" << gBinaryPath <<  std::endl;
             std::cout << help_string;
