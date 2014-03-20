@@ -1112,8 +1112,29 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       // get the interactive render status
       int interactiverenderstatus;
       gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropInteractiveRenderStatus, 0, &interactiverenderstatus);
-     
-      ss << "(" << handle << "," << time << "," << field << ",(" << renderWindow.x1 << "," << renderWindow.y1 << "," << renderWindow.x2 << "," << renderWindow.y2 << "),(" << renderScale.x << "," << renderScale.y << ")," << sequentialrenderstatus << "," << interactiverenderstatus << ")";
+      // get the view number
+#   if defined(OFX_EXTENSIONS_VEGAS) || defined(OFX_EXTENSIONS_NUKE)
+      int view = 0;
+#   endif
+#   ifdef OFX_EXTENSIONS_VEGAS
+      int nViews = 0;
+#   endif
+#   ifdef OFX_EXTENSIONS_VEGAS
+      gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropRenderView, 0, &view);
+      gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropViewsToRender, 0, &nViews);
+#   endif
+#   ifdef OFX_EXTENSIONS_NUKE
+      gPropHost[nth]->propGetInt(inArgs, kFnOfxImageEffectPropView, 0, &view);
+#   endif
+
+      ss << "(" << handle << "," << time << "," << field << ",(" << renderWindow.x1 << "," << renderWindow.y1 << "," << renderWindow.x2 << "," << renderWindow.y2 << "),(" << renderScale.x << "," << renderScale.y << ")," << sequentialrenderstatus << "," << interactiverenderstatus
+#     if defined(OFX_EXTENSIONS_VEGAS) || defined(OFX_EXTENSIONS_NUKE)
+        <<","<<view
+#     endif
+#     ifdef OFX_EXTENSIONS_VEGAS
+        <<","<<nViews
+#     endif
+        << ")";
     }    
     else if(strcmp(action, kOfxImageEffectActionBeginSequenceRender) == 0 ||
             strcmp(action, kOfxImageEffectActionEndSequenceRender) == 0) {
@@ -1140,8 +1161,17 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       // get the interactive render status
       int interactiverenderstatus;
       gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropInteractiveRenderStatus, 0, &interactiverenderstatus);
-     
-      ss << "(" << handle << ",[" << range[0] << "," << range[1] << "]," << step << "," << isinteractive << ",(" << renderScale.x << "," << renderScale.y << ")," << sequentialrenderstatus << "," << interactiverenderstatus << ")";
+#   ifdef OFX_EXTENSIONS_NUKE
+      // get the view number
+      int view = 0;
+      gPropHost[nth]->propGetInt(inArgs, kFnOfxImageEffectPropView, 0, &view);
+#   endif
+
+      ss << "(" << handle << ",[" << range[0] << "," << range[1] << "]," << step << "," << isinteractive << ",(" << renderScale.x << "," << renderScale.y << ")," << sequentialrenderstatus << "," << interactiverenderstatus
+#     ifdef OFX_EXTENSIONS_NUKE
+        <<","<<view
+#     endif
+        << ")";
     }
     else if(strcmp(action, kOfxImageEffectActionGetClipPreferences) == 0) {
       // no inArgs
