@@ -114,7 +114,10 @@
 #define BINARY_PATH "/usr/OFX/Plugins.disabled/Sapphire.ofx.bundle/Contents/Linux-x86-64/Sapphire.ofx"
 #endif
 #if defined(__APPLE__)
-#define BINARY_PATH "/Library/OFX/Plugins.disabled/Sapphire.ofx.bundle/Contents/MacOS/Sapphire.ofx"
+//"/Library/OFX/Plugins/Tuttle.release/HistogramKeyer-0.0.ofx.bundle/Contents/MacOS/HistogramKeyer-0.0.ofx"
+//"/Library/OFX/Plugins.disabled/Sapphire.ofx.bundle/Contents/MacOS/Sapphire.ofx"
+//"/Library/OFX/ParticleIllusion.ofx.bundle/Contents/MacOS-x86-64/ParticleIllusion.ofx"
+#define BINARY_PATH "/Library/OFX/HistogramKeyer-0.0.ofx.bundle/Contents/MacOS/HistogramKeyer-0.0.ofx"
 #endif
 #endif
 
