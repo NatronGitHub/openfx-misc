@@ -240,24 +240,44 @@ static std::vector<OfxSetHost*> gPluginsSetHost;
 
 static const char* help_string =
 "OFX DebugProxy Help:\n"
-"- Specify the PATH to the plugin to be debugged using the environment variable OFX_DEBUGPROXY_PATH.\n"
+"- Specify the PATH to the plugin to be debugged using the environment variable\n"
+"  OFX_DEBUGPROXY_PATH.\n"
 "  this can be done on Unix/Linux/OSX using something like:\n"
 "  env OFX_DEBUGPROXY_BINARY=/path/to/plugindir/plugin.ofx /path/to/ofx/host/bin/host\n"
-"  the first path points to the plugin binary (ending in \".ofx\"), and the second path is the host\n"
-"  executable.\n"
-"  The OSX executable for Nuke is usually in /Applications/Nuke<version>/Nuke<version>.app/Contents/MacOS/Nuke<version>\n"
-"- Note that the plugin must NOT be in a default location for OFX plugins, or it will be loaded twice\n"
+"  the first path points to the plugin binary (ending in \".ofx\"), and the second\n"
+"  path is the host executable.\n"
+#if defined(__APPLE__)
+"  The OS X executable for Nuke is usually in\n"
+"  /Applications/Nuke<version>/Nuke<version>.app/Contents/MacOS/Nuke<version>\n"
+#endif
+"- Note that the plugin must NOT be in a default location for OFX plugins, or\n"
+"  it will be loaded twice.\n"
 "  The default locations for plugins on this system is "OFX_PATH"\n"
-"- If the plugin depends on dynamic libraries and cannot find them, you can modify the path to locate them\n"
-"  by adding the directory containing the dependency (usually the same as the plugin location) to\n"
+"- If the plugin depends on dynamic libraries and cannot find them, you can\n"
+"  modify the path to locate them by adding the directory containing the\n"
+"  dependency (usually the same as the plugin location) to\n"
 #if defined(WINDOWS)
 "  the global %PATH%.\n"
 #endif
 #if defined(__linux__)
-"  the environment variable LD_LIBRARY_PATH (add \"LD_LIBRARY_PATH=/path/to/plugindir\" after the \"env\" in the line above).\n"
+"  the environment variable LD_LIBRARY_PATH\n"
+"  (add \"LD_LIBRARY_PATH=/path/to/plugindir\" after the \"env\" in the line above).\n"
 #endif
 #if defined(__APPLE__)
-"  the environment variable DYLD_LIBRARY_PATH (add \"DYLD_LIBRARY_PATH=/path/to/plugindir\" after the \"env\" in the line above).\n"
+"  the environment variable DYLD_LIBRARY_PATH\n"
+"  (add \"DYLD_LIBRARY_PATH=/path/to/plugindir after the \"env\" in the line above).\n"
+#endif
+"- If the value of OFX_DEBUGPROXY_PATH is changed, or if the plugin is modified\n"
+"  or recompiled, the OFX host may not take this into account, since the \n"
+"  DebugProxy plugin itself is unchanged. You have to either clean up the OFX\n"
+"  Plugin cache in the host, or modify the date of the DebugProxy binary.\n"
+#if defined(__linux__)
+"  On Linux, this can be done using the following command:\n"
+"  touch "OFX_PATH"DebugProxy.ofx.bundle/Contents/Linux-x86*/DebugProxy.ofx\n"
+#endif
+#if defined(__APPLE__)
+"  On OS X, this can be done using the following command:\n"
+"  touch "OFX_PATH"DebugProxy.ofx.bundle/Contents/MacOS/DebugProxy.ofx\n"
 #endif
 ;
 
