@@ -95,10 +95,11 @@ static const std::string kColorCorrectOffsetName = std::string("Offset");
 #define kColorCorrectToneRangesParamName "ToneRanges"
 #define LUT_MAX_PRECISION 100
 
+// Rec.709 luminance:
 //Y = 0.2126 R + 0.7152 G + 0.0722 B
-static double s_redLum = 0.2126;
-static double s_greenLum = 0.7152;
-static double s_blueLum = 0.0722;
+static const double s_rLum = 0.2126;
+static const double s_gLum = 0.7152;
+static const double s_bLum = 0.0722;
 
 using namespace OFX;
 
@@ -111,34 +112,124 @@ Clamp(T v, int min, int max)
     return v;
 }
 
+namespace {
+    struct ColorControlValues {
+        double r;
+        double g;
+        double b;
+        double a;
+
+        void getValueFrom(OFX::RGBAParam* p)
+        {
+            p->getValue(r, g, b, a);
+        }
+    };
+
+    struct ColorControlGroup {
+        ColorControlValues saturation;
+        ColorControlValues contrast;
+        ColorControlValues gamma;
+        ColorControlValues gain;
+        ColorControlValues offset;
+    };
+
+    struct RGBPixel {
+        float r, g, b;
+
+        RGBPixel(float r_, float g_, float b_)
+        : r(r_)
+        , g(g_)
+        , b(b_)
+        {
+        }
+
+        void applySaturation(const ColorControlValues &c)
+        {
+            r = r *((1.f - c.r) * s_rLum + c.r) + g *((1.0-c.r) * s_gLum) + b *((1.0-c.r) * s_bLum);
+            g = g *((1.f - c.g) * s_gLum + c.g) + r *((1.0-c.g) * s_rLum) + b *((1.0-c.g) * s_bLum);
+            b = b *((1.f - c.b) * s_bLum + c.b) + g *((1.0-c.b) * s_gLum) + r *((1.0-c.b) * s_rLum);
+        }
+
+        void applyContrast(const ColorControlValues &c)
+        {
+            r = (r - 0.5f) * c.r  + 0.5f;
+            g = (g - 0.5f) * c.g  + 0.5f;
+            b = (b - 0.5f) * c.b  + 0.5f;
+        }
+
+        void applyGain(const ColorControlValues &c)
+        {
+            r = r * c.r;
+            g = g * c.g;
+            b = b * c.b;
+        }
+
+        void applyGamma(const ColorControlValues &c)
+        {
+            if (r > 0) {
+                r = std::pow(r ,1.f / c.r);
+            }
+            if (g > 0) {
+                g = std::pow(g ,1.f / c.g);
+            }
+            if (b > 0) {
+                b = std::pow(b ,1.f / c.b);
+            }
+        }
+
+        void applyOffset(const ColorControlValues &c)
+        {
+            r = r + c.r;
+            g = g + c.g;
+            b = b + c.b;
+        }
+
+        void applyGroup(const ColorControlGroup& group)
+        {
+            applySaturation(group.saturation);
+            applyContrast(group.contrast);
+            applyGamma(group.gamma);
+            applyGain(group.gain);
+            applyOffset(group.offset);
+        }
+
+        void applySMH(const ColorControlGroup& sValues,
+                      double s_scale,
+                      const ColorControlGroup& mValues,
+                      double m_scale,
+                      const ColorControlGroup& hValues,
+                      double h_scale,
+                      const ColorControlGroup& masterValues)
+        {
+            RGBPixel s = *this;
+            RGBPixel m = *this;
+            RGBPixel h = *this;
+            s.applyGroup(sValues);
+            m.applyGroup(mValues);
+            h.applyGroup(hValues);
+
+            r = s.r * s_scale + m.r * m_scale + h.r * h_scale;
+            g = s.g * s_scale + m.g * m_scale + h.g * h_scale;
+            b = s.b * s_scale + m.b * m_scale + h.b * h_scale;
+
+            applyGroup(masterValues);
+        }
+    };
+}
+
 class ColorCorrecterBase : public OFX::ImageProcessor
 {
-    
-public:
-    
-    struct ColorControlValues { double red,green,blue,alpha; };
-    
-    struct ColorControlGroup { ColorControlValues saturation,contrast,gamma,gain,offset; };
-    
-protected :
-    
+protected:
     OFX::Image *_srcImg;
     OFX::Image *_maskImg;
     bool   _doMasking;
-    ColorControlGroup _masterValues;
-    ColorControlGroup _shadowValues;
-    ColorControlGroup _midtoneValues;
-    ColorControlGroup _highlightsValues;
-
-    float _lookupTable[2][LUT_MAX_PRECISION + 1];
 
 public :
-    
     ColorCorrecterBase(OFX::ImageEffect &instance,const OFX::RenderArguments &args)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
-    ,_doMasking(false)
+    , _doMasking(false)
     {
         // build the LUT
         OFX::ParametricParam  *lookupTable = instance.fetchParametricParam(kColorCorrectToneRangesParamName);
@@ -147,22 +238,22 @@ public :
             for(int position = 0; position <= LUT_MAX_PRECISION; ++position) {
                 // position to evaluate the param at
                 float parametricPos = float(position)/LUT_MAX_PRECISION;
-                
+
                 // evaluate the parametric param
                 double value = lookupTable->getValue(curve, args.time, parametricPos);
-                
+
                 // set that in the lut
                 _lookupTable[curve][position] = std::max(0.f,std::min(float(value*LUT_MAX_PRECISION+0.5), float(LUT_MAX_PRECISION)));
             }
         }
     }
-    
+
     void setSrcImg(OFX::Image *v) {_srcImg = v;}
-    
+
     void setMaskImg(OFX::Image *v) {_maskImg = v;}
-    
+
     void doMasking(bool v) {_doMasking = v;}
-    
+
     void setColorControlValues(const ColorControlGroup& master,
                                const ColorControlGroup& shadow,
                                const ColorControlGroup& midtone,
@@ -173,55 +264,22 @@ public :
         _midtoneValues = midtone;
         _highlightsValues = hightlights;
     }
-    
-    void applySaturation(float *r,float *g,float* b,float rSat,float gSat,float bSat) {
-        
-        *r = *r * ((1.f - rSat) * s_redLum + rSat) + *g * ((1.0-rSat) * s_greenLum) + *b *((1.0-rSat) * s_blueLum);
-        *g = *g *((1.f - gSat) * s_greenLum + gSat) + *r *((1.0-gSat) * s_redLum) + *b *((1.0-gSat) * s_blueLum);
-        *b = *b *((1.f - bSat) * s_blueLum + bSat) + *g *((1.0-bSat) * s_greenLum) + *r *((1.0-bSat) * s_redLum);
-    }
-    
-    
-    void applyContrast(float *r,float *g,float* b,float rContrast,float gContrast,float bContrast) {
-        *r = (*r - 0.5f) * rContrast  + 0.5f;
-        *g = (*g - 0.5f) * gContrast  + 0.5f;
-        *b = (*b - 0.5f) * bContrast  + 0.5f;
-    }
-    
-    void applyGain(float *r,float* g,float* b,float rGain,float gGain,float bGain) {
-        *r = *r * rGain;
-        *g = *g * gGain;
-        *b = *b * bGain;
-    }
-    
-    
-    void applyGamma(float *r,float* g,float *b,float rG,float gG,float bG) {
-        if (*r > 0) {
-            *r = std::pow(*r ,1.f / rG);
-        }
-        if (*g > 0) {
-            *g = std::pow(*g ,1.f / gG);
-        }
-        if (*b > 0) {
-            *b = std::pow(*b ,1.f / bG);
-        }
-    }
-    
-    void applyOffset(float *r,float * g,float* b,float rO,float gO,float bO) {
-        *r = *r + rO;
-        *g = *g + gO;
-        *b = *b + bO;
-    }
-    
-    void applyGroup(float *r,float* g,float* b,const ColorControlGroup& group) {
-        applySaturation(r, g, b, group.saturation.red,group.saturation.green,group.saturation.blue);
-        applyContrast(r, g, b, group.contrast.red,group.contrast.green,group.contrast.blue);
-        applyGamma(r, g, b, group.gamma.red,group.gamma.green,group.gamma.blue);
-        applyGain(r, g, b, group.gain.red,group.gain.green,group.gain.blue);
-        applyOffset(r, g, b, group.offset.red,group.offset.green,group.offset.blue);
-    }
-    
 
+    void colorTransform(float *r,float *g,float *b)
+    {
+        float luminance = *r * s_rLum + *g * s_gLum + *b * s_bLum;
+        float s_scale = interpolate(0, luminance);
+        float h_scale = interpolate(1, luminance);
+        float m_scale = 1.f - s_scale - h_scale;
+
+        RGBPixel p(*r, *g, *b);
+        p.applySMH(_shadowValues, s_scale,
+                   _midtoneValues, m_scale,
+                   _highlightsValues, h_scale,
+                   _masterValues);
+    }
+
+private:
     float interpolate(int curve, float value)
     {
         if (value < 0.) {
@@ -238,27 +296,13 @@ public :
         }
     }
 
-    
-    void colorTransform(float *r,float *g,float *b) {
-        
-        float luminance = *r * s_redLum + *g * s_greenLum + *b * s_blueLum;
-        float s_scale = interpolate(0, luminance);
-        float h_scale = interpolate(1, luminance);
-        float m_scale = 1.f - s_scale - h_scale;
+private :
+    ColorControlGroup _masterValues;
+    ColorControlGroup _shadowValues;
+    ColorControlGroup _midtoneValues;
+    ColorControlGroup _highlightsValues;
 
-        
-        float rS = *r,gS = *g,bS = *b,rH = *r,gH = *g ,bH = *b,rM = *r,gM = *g,bM = *b;
-        applyGroup(&rS, &gS, &bS,_shadowValues);
-        applyGroup(&rM, &gM, &bM,_midtoneValues);
-        applyGroup(&rH, &gH, &bH,_highlightsValues);
-        
-        *r = rS * s_scale + rM * m_scale + rH * h_scale;
-        *g = gS * s_scale + gM * m_scale + gH * h_scale;
-        *b = bS * s_scale + bM * m_scale + bH * h_scale;
-        
-        applyGroup(r, g, b, _masterValues);
-        
-    }
+    float _lookupTable[2][LUT_MAX_PRECISION + 1];
 };
 
 
@@ -266,18 +310,16 @@ public :
 template <class PIX, int nComponents, int maxValue>
 class ColorCorrecter : public ColorCorrecterBase
 {
-    
-
 public :
     ColorCorrecter(OFX::ImageEffect &instance,const OFX::RenderArguments &args)
     : ColorCorrecterBase(instance,args)
     {
-        
+
     }
-    
+
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-       
+
         float maskScale = 1.0f;
         for(int y = procWindow.y1; y < procWindow.y2; y++)
         {
@@ -326,10 +368,8 @@ public :
     }
 };
 
-
-namespace  {
-    
-    struct ColorControlGroup {
+namespace {
+    struct ColorControlParamGroup {
         OFX::RGBAParam* saturation;
         OFX::RGBAParam* contrast;
         OFX::RGBAParam* gamma;
@@ -340,29 +380,8 @@ namespace  {
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class ColorCorrectPlugin : public OFX::ImageEffect {
-    
-    
-    void fetchColorControlGroup(const std::string& groupName,ColorControlGroup* group) {
-        group->saturation = fetchRGBAParam(groupName + '.' + kColorCorrectSaturationName);
-        group->contrast = fetchRGBAParam(groupName + '.' + kColorCorrectContrastName);
-        group->gamma = fetchRGBAParam(groupName + '.' + kColorCorrectGammaName);
-        group->gain = fetchRGBAParam(groupName + '.' + kColorCorrectGainName);
-        group->offset = fetchRGBAParam(groupName + '.' + kColorCorrectOffsetName);
-    }
-    
-protected :
-    // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
-    OFX::Clip *maskClip_;
-    
-    ColorControlGroup _masterParamsGroup;
-    ColorControlGroup _shadowsParamsGroup;
-    ColorControlGroup _midtonesParamsGroup;
-    ColorControlGroup _highlightsParamsGroup;
-    OFX::ParametricParam* _rangesParam;
-    
+class ColorCorrectPlugin : public OFX::ImageEffect
+{
 public :
     
     enum ColorCorrectGroupType {
@@ -378,7 +397,6 @@ public :
     , dstClip_(0)
     , srcClip_(0)
     , maskClip_(0)
-    
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -397,10 +415,17 @@ public :
     void setupAndProcess(ColorCorrecterBase &, const OFX::RenderArguments &args);
     
 private:
+    void fetchColorControlGroup(const std::string& groupName, ColorControlParamGroup* group) {
+        group->saturation = fetchRGBAParam(groupName + '.' + kColorCorrectSaturationName);
+        group->contrast = fetchRGBAParam(groupName + '.' + kColorCorrectContrastName);
+        group->gamma = fetchRGBAParam(groupName + '.' + kColorCorrectGammaName);
+        group->gain = fetchRGBAParam(groupName + '.' + kColorCorrectGainName);
+        group->offset = fetchRGBAParam(groupName + '.' + kColorCorrectOffsetName);
+    }
     
-    void getColorCorrectGroupValues(ColorCorrecterBase::ColorControlGroup* groupValues,ColorCorrectGroupType type);
+    void getColorCorrectGroupValues(ColorControlGroup* groupValues,ColorCorrectGroupType type);
 
-    ColorControlGroup& getGroup(ColorCorrectGroupType type) {
+    ColorControlParamGroup& getGroup(ColorCorrectGroupType type) {
         switch (type) {
             case eGroupMaster:
                 return _masterParamsGroup;
@@ -415,19 +440,29 @@ private:
                 break;
         }
     }
+
+private :
+    // do not need to delete these, the ImageEffect is managing them for us
+    OFX::Clip *dstClip_;
+    OFX::Clip *srcClip_;
+    OFX::Clip *maskClip_;
+
+    ColorControlParamGroup _masterParamsGroup;
+    ColorControlParamGroup _shadowsParamsGroup;
+    ColorControlParamGroup _midtonesParamsGroup;
+    ColorControlParamGroup _highlightsParamsGroup;
+    OFX::ParametricParam* _rangesParam;
 };
 
 
-void ColorCorrectPlugin::getColorCorrectGroupValues(ColorCorrecterBase::ColorControlGroup* groupValues,ColorCorrectGroupType type)
+void ColorCorrectPlugin::getColorCorrectGroupValues(ColorControlGroup* groupValues, ColorCorrectGroupType type)
 {
-    
-    ColorControlGroup& group = getGroup(type);
-    group.saturation->getValue(groupValues->saturation.red,groupValues->saturation.green,
-                               groupValues->saturation.blue,groupValues->saturation.alpha);
-    group.contrast->getValue(groupValues->contrast.red,groupValues->contrast.green,groupValues->contrast.blue,groupValues->contrast.alpha);
-    group.gamma->getValue(groupValues->gamma.red,groupValues->gamma.green,groupValues->gamma.blue,groupValues->gamma.alpha);
-    group.gain->getValue(groupValues->gain.red,groupValues->gain.green,groupValues->gain.blue,groupValues->gain.alpha);
-    group.offset->getValue(groupValues->offset.red,groupValues->offset.green,groupValues->offset.blue,groupValues->offset.alpha);
+    ColorControlParamGroup& group = getGroup(type);
+    groupValues->saturation.getValueFrom(group.saturation);
+    groupValues->contrast.getValueFrom(group.contrast);
+    groupValues->gamma.getValueFrom(group.gamma);
+    groupValues->gain.getValueFrom(group.gain);
+    groupValues->offset.getValueFrom(group.offset);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -462,7 +497,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
     processor.setSrcImg(src.get());
     processor.setRenderWindow(args.renderWindow);
     
-    ColorCorrecterBase::ColorControlGroup masterValues,shadowValues,midtoneValues,highlightValues;
+    ColorControlGroup masterValues,shadowValues,midtoneValues,highlightValues;
     getColorCorrectGroupValues(&masterValues,eGroupMaster);
     getColorCorrectGroupValues(&shadowValues,eGroupShadow);
     getColorCorrectGroupValues(&midtoneValues,eGroupMidtone);
@@ -535,21 +570,6 @@ ColorCorrectPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
-#if 0
-static bool stringEndsWith(const std::string& fullString,const std::string& ending) {
-    if (fullString.length() >= ending.length()) {
-        return (0 == fullString.compare (fullString.size() - ending.size(), ending.size(), ending));
-    } else {
-        return false;
-    }
-}
-#endif
-
-void ColorCorrectPluginFactory::load()
-{
-    
-}
-
 void ColorCorrectPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
@@ -577,9 +597,16 @@ void ColorCorrectPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     
 }
 
-void defineRGBAScaleParam(OFX::ImageEffectDescriptor &desc,
-                          const std::string &name, const std::string &label, const std::string &hint,
-                          GroupParamDescriptor *parent, PageParamDescriptor* page,double def , double min,double max)
+static void
+defineRGBAScaleParam(OFX::ImageEffectDescriptor &desc,
+                     const std::string &name,
+                     const std::string &label,
+                     const std::string &hint,
+                     GroupParamDescriptor *parent,
+                     PageParamDescriptor* page,
+                     double def,
+                     double min,
+                     double max)
 {
     RGBAParamDescriptor *param = desc.defineRGBAParam(name);
     param->setLabels(label, label, label);
@@ -588,17 +615,23 @@ void defineRGBAScaleParam(OFX::ImageEffectDescriptor &desc,
     param->setDefault(def,def,def,def);
     param->setRange(min,min,min,min, max,max,max,max);
     param->setDisplayRange(min,min,min,min,max,max,max,max);
-    if(parent)
+    if(parent) {
         param->setParent(*parent);
+    }
 }
 
-void defineColorGroup(const std::string& groupName,const std::string& hint,PageParamDescriptor* page,OFX::ImageEffectDescriptor &desc,bool open) {
+static void
+defineColorGroup(const std::string& groupName,
+                 const std::string& hint,
+                 PageParamDescriptor* page,
+                 OFX::ImageEffectDescriptor &desc,
+                 bool open)
+ {
     GroupParamDescriptor* groupDesc = 0;
     groupDesc = desc.defineGroupParam(groupName);
     groupDesc->setLabels(groupName, groupName, groupName);
     groupDesc->setHint(hint);
     groupDesc->setOpen(open);
-    
     
     defineRGBAScaleParam(desc, groupName + '.' + kColorCorrectSaturationName, kColorCorrectSaturationName, hint, groupDesc, page, 1, 0, 4);
     defineRGBAScaleParam(desc, groupName + '.' + kColorCorrectContrastName, kColorCorrectContrastName, hint, groupDesc, page, 1, 0, 4);

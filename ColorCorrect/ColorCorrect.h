@@ -70,11 +70,11 @@
  
  */
 
-#ifndef MISC_COLOR_CORRECT_H
-#define MISC_COLOR_CORRECT_H
+#ifndef Misc_ColorCorrect_h
+#define Misc_ColorCorrect_h
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(ColorCorrectPluginFactory, ;, {});
+mDeclarePluginFactory(ColorCorrectPluginFactory, {}, {});
 
-#endif // MISC_COLOR_CORRECT_H
+#endif
