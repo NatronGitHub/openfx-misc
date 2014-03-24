@@ -221,16 +221,19 @@ public :
         applyOffset(r, g, b, group.offset.red,group.offset.green,group.offset.blue);
     }
     
-    float interpolate(int curve, float value) {
-       
+
+    float interpolate(int curve, float value)
+    {
         if (value < 0.) {
             return _lookupTable[curve][0];
         } else if (value >= 1.) {
             return _lookupTable[curve][LUT_MAX_PRECISION];
         } else {
-            int i = (int)(value * LUT_MAX_PRECISION);
+            double i_d = std::floor(value * LUT_MAX_PRECISION);
+            int i = (int)i_d;
             assert(i < LUT_MAX_PRECISION);
-            float alpha = value - (float)i / LUT_MAX_PRECISION;
+            double alpha = value * LUT_MAX_PRECISION - i_d;
+            assert(0. <= alpha && alpha < 1.);
             return _lookupTable[curve][i] * (1.-alpha) + _lookupTable[curve][i] * alpha;
         }
     }
