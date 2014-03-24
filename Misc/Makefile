@@ -7,10 +7,11 @@ PLUGINOBJECTS = \
         OneView.o \
         JoinsViews.o \
         Anaglyph.o \
+	    ColorCorrect.o \
         PluginRegistrationCombined.o
 
 PLUGINNAME = Misc
-VPATH += ../Switch ../TimeOffset ../RGBLut ../SideBySide ../MixViews ../OneView ../JoinViews ../Anaglyph
+VPATH += ../Switch ../TimeOffset ../RGBLut ../SideBySide ../MixViews ../OneView ../JoinViews ../Anaglyph ../ColorCorrect
 
 include ../Makefile.master
 

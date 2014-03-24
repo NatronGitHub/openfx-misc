@@ -291,7 +291,6 @@
 		D7B4C96118D9DA410004137D /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D7B4C96218D9DA410004137D /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		D7B4C97418D9DB6E0004137D /* ColorCorrect.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorCorrect.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		D7B4C97518D9DB6E0004137D /* Anaglyph.ofx copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Anaglyph.ofx copy-Info.plist"; path = "/Users/Lex/Development/openfx_stuff/openfx-misc/Anaglyph.ofx copy-Info.plist"; sourceTree = "<absolute>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -502,7 +501,6 @@
 				1E551ED217994DEF00A4135C /* Sources */,
 				1E551EDA17994E8100A4135C /* Frameworks */,
 				1E551EC217994D4000A4135C /* Products */,
-				D7B4C97518D9DB6E0004137D /* Anaglyph.ofx copy-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -1461,7 +1459,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_FILE = ColorCorrect/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = ColorCorrect.ofx;
 				WRAPPER_EXTENSION = bundle;
@@ -1478,7 +1476,7 @@
 					OFX_EXTENSIONS_VEGAS,
 					OFX_EXTENSIONS_TUTTLE,
 				);
-				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_FILE = ColorCorrect/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = ColorCorrect.ofx;
 				WRAPPER_EXTENSION = bundle;

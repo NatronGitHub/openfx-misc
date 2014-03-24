@@ -29,7 +29,7 @@ namespace OFX
             ids.push_back(&p7);
             static AnaglyphPluginFactory p8("net.sf.openfx:anaglyphPlugin", 1, 0);
             ids.push_back(&p8);
-            static ColorCorrectPluginFactory p9("fr.INRIA.openfx:ColorCorrectPlugin", 1, 0);
+            static ColorCorrectPluginFactory p9("net.sf.openfx:ColorCorrectPlugin", 1, 0);
             ids.push_back(&p9);
             // ReConverge is not finished/tested
             //static ReConvergePluginFactory p("net.sf.openfx:reConvergePlugin", 1, 0);
