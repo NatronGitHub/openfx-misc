@@ -552,7 +552,9 @@ void ColorCorrectPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabels("ColorCorrectOFX", "ColorCorrectOFX", "ColorCorrectOFX");
     desc.setPluginGrouping("Color");
-    desc.setPluginDescription("");
+    desc.setPluginDescription("Adjusts the saturation, constrast, gamma, gain and offset of an image. "
+                              "The ranges of the shadows, midtones and highlights are controlled by the curves "
+                              "in the \"Ranges\" tab. ");
     
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
