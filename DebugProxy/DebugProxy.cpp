@@ -108,16 +108,16 @@
 // the Plugin path can be set here in the source code, or at runtime via the OFX_DEBUGPROXY_BINARY environment variable
 #ifndef BINARY_PATH
 #if defined(WINDOWS)
+#define OFX_PATH "C:\\Program Files\\Common Files\\OFX\\Plugins\\"
 #define BINARY_PATH "C:\\Program Files\\Common Files\\OFX\\Plugins.disabled\\Sapphire.ofx.bundle\\Contents\\Win64\\Sapphire.ofx"
 #endif
 #if defined(__linux__)
+#define OFX_PATH "/usr/OFX/Plugins/"
 #define BINARY_PATH "/usr/OFX/Plugins.disabled/Sapphire.ofx.bundle/Contents/Linux-x86-64/Sapphire.ofx"
 #endif
 #if defined(__APPLE__)
-//"/Library/OFX/Plugins/Tuttle.release/HistogramKeyer-0.0.ofx.bundle/Contents/MacOS/HistogramKeyer-0.0.ofx"
-//"/Library/OFX/Plugins.disabled/Sapphire.ofx.bundle/Contents/MacOS/Sapphire.ofx"
-//"/Library/OFX/ParticleIllusion.ofx.bundle/Contents/MacOS-x86-64/ParticleIllusion.ofx"
-#define BINARY_PATH "/Library/OFX/HistogramKeyer-0.0.ofx.bundle/Contents/MacOS/HistogramKeyer-0.0.ofx"
+#define OFX_PATH "/Library/OFX/Plugins/"
+#define BINARY_PATH "/Library/OFX/Plugins.disabled/Sapphire.ofx.bundle/Contents/MacOS/Sapphire.ofx"
 #endif
 #endif
 
@@ -238,6 +238,49 @@ static int (*OfxGetNumberOfPlugins_binary)(void) = 0;
 static OfxPlugin* (*OfxGetPlugin_binary)(int) = 0;
 static std::vector<OfxSetHost*> gPluginsSetHost;
 
+static const char* help_string =
+"OFX DebugProxy Help:\n"
+"- Specify the PATH to the plugin to be debugged using the environment variable\n"
+"  OFX_DEBUGPROXY_PATH.\n"
+"  this can be done on Unix/Linux/OSX using something like:\n"
+"  env OFX_DEBUGPROXY_BINARY=/path/to/plugindir/plugin.ofx /path/to/ofx/host/bin/host\n"
+"  the first path points to the plugin binary (ending in \".ofx\"), and the second\n"
+"  path is the host executable.\n"
+#if defined(__APPLE__)
+"  The OS X executable for Nuke is usually in\n"
+"  /Applications/Nuke<version>/Nuke<version>.app/Contents/MacOS/Nuke<version>\n"
+#endif
+"- Note that the plugin must NOT be in a default location for OFX plugins, or\n"
+"  it will be loaded twice.\n"
+"  The default locations for plugins on this system is "OFX_PATH"\n"
+"- If the plugin depends on dynamic libraries and cannot find them, you can\n"
+"  modify the path to locate them by adding the directory containing the\n"
+"  dependency (usually the same as the plugin location) to\n"
+#if defined(WINDOWS)
+"  the global %PATH%.\n"
+#endif
+#if defined(__linux__)
+"  the environment variable LD_LIBRARY_PATH\n"
+"  (add \"LD_LIBRARY_PATH=/path/to/plugindir\" after the \"env\" in the line above).\n"
+#endif
+#if defined(__APPLE__)
+"  the environment variable DYLD_LIBRARY_PATH\n"
+"  (add \"DYLD_LIBRARY_PATH=/path/to/plugindir after the \"env\" in the line above).\n"
+#endif
+"- If the value of OFX_DEBUGPROXY_PATH is changed, or if the plugin is modified\n"
+"  or recompiled, the OFX host may not take this into account, since the \n"
+"  DebugProxy plugin itself is unchanged. You have to either clean up the OFX\n"
+"  Plugin cache in the host, or modify the date of the DebugProxy binary.\n"
+#if defined(__linux__)
+"  On Linux, this can be done using the following command:\n"
+"  touch "OFX_PATH"DebugProxy.ofx.bundle/Contents/Linux-x86*/DebugProxy.ofx\n"
+#endif
+#if defined(__APPLE__)
+"  On OS X, this can be done using the following command:\n"
+"  touch "OFX_PATH"DebugProxy.ofx.bundle/Contents/MacOS/DebugProxy.ofx\n"
+#endif
+;
+
 // load the underlying binary
 struct Loader {
     Loader()
@@ -252,15 +295,42 @@ struct Loader {
             gBinaryPath = BINARY_PATH;
         }
         if (gBinaryPath) {
+            if (std::strncmp(gBinaryPath, OFX_PATH, std::strlen(OFX_PATH)) == 0) {
+                std::cout << "OFX DebugProxy: Error: plugin binary seems to be in the default plugin path:" << std::endl;
+                std::cout << "OFX DebugProxy: OFX_DEBUGPROXY_BINARY=" << gBinaryPath << " is in " << OFX_PATH << std::endl;
+                std::cout << "OFX DebugProxy: This is probably a very bad idea, since the host will load twice" << std::endl;
+                std::cout << "OFX DebugProxy: the same plugin, and wouldn't be able to tell one from the other." << std::endl;
+                std::cout << "OFX DebugProxy: Please move the plugin binary to another location.\n" << std::endl;
+                return;
+            }
             gBinary = new OFX::Binary(gBinaryPath);
         }
         if (gBinary) {
             gBinary->load();
+            if (gBinary->isInvalid()) {
+                std::cout << "OFX DebugProxy: Error: Cannot load the plugin binary." << std::endl;
+                std::cout << "OFX DebugProxy: OFX_DEBUGPROXY_BINARY=" << gBinaryPath << " is propably not an OFX plugin," << std::endl;
+                std::cout << "OFX DebugProxy:  or misses some of its dynamic dependencies (see help below)." << std::endl;
+                std::cout << help_string;
+                return;
+            }
             // fetch the binary entry points
             OfxGetNumberOfPlugins_binary = (int(*)()) gBinary->findSymbol("OfxGetNumberOfPlugins");
             OfxGetPlugin_binary = (OfxPlugin*(*)(int)) gBinary->findSymbol("OfxGetPlugin");
-            std::cout << "OFX DebugProxy: " << gBinaryPath << " loaded" << std::endl;
+            if (!OfxGetNumberOfPlugins_binary || !OfxGetPlugin_binary) {
+                std::cout << "OFX DebugProxy: Error: Cannot find the mandatory symbols OfxGetNumberOfPlugins and OfxGetPlugin." << std::endl;
+                std::cout << "OFX DebugProxy: OFX_DEBUGPROXY_BINARY=" << gBinaryPath << " is propably not an OFX plugin." << std::endl;
+                std::cout << help_string;
+                gBinary->setInvalid(true);
+                return;
+            }
+            std::cout << "OFX DebugProxy: OFX_DEBUGPROXY_BINARY=" << gBinaryPath << " succesfully loaded" << std::endl;
+        } else {
+            std::cout << "OFX DebugProxy: Error: Cannot load the plugin binary OFX_DEBUGPROXY_BINARY=" << gBinaryPath <<  std::endl;
+            std::cout << help_string;
+            return;
         }
+
     }
 
     ~Loader()
@@ -1041,8 +1111,29 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       // get the interactive render status
       int interactiverenderstatus;
       gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropInteractiveRenderStatus, 0, &interactiverenderstatus);
-     
-      ss << "(" << handle << "," << time << "," << field << ",(" << renderWindow.x1 << "," << renderWindow.y1 << "," << renderWindow.x2 << "," << renderWindow.y2 << "),(" << renderScale.x << "," << renderScale.y << ")," << sequentialrenderstatus << "," << interactiverenderstatus << ")";
+      // get the view number
+#   if defined(OFX_EXTENSIONS_VEGAS) || defined(OFX_EXTENSIONS_NUKE)
+      int view = 0;
+#   endif
+#   ifdef OFX_EXTENSIONS_VEGAS
+      int nViews = 0;
+#   endif
+#   ifdef OFX_EXTENSIONS_VEGAS
+      gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropRenderView, 0, &view);
+      gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropViewsToRender, 0, &nViews);
+#   endif
+#   ifdef OFX_EXTENSIONS_NUKE
+      gPropHost[nth]->propGetInt(inArgs, kFnOfxImageEffectPropView, 0, &view);
+#   endif
+
+      ss << "(" << handle << "," << time << "," << field << ",(" << renderWindow.x1 << "," << renderWindow.y1 << "," << renderWindow.x2 << "," << renderWindow.y2 << "),(" << renderScale.x << "," << renderScale.y << ")," << sequentialrenderstatus << "," << interactiverenderstatus
+#     if defined(OFX_EXTENSIONS_VEGAS) || defined(OFX_EXTENSIONS_NUKE)
+        <<","<<view
+#     endif
+#     ifdef OFX_EXTENSIONS_VEGAS
+        <<","<<nViews
+#     endif
+        << ")";
     }    
     else if(strcmp(action, kOfxImageEffectActionBeginSequenceRender) == 0 ||
             strcmp(action, kOfxImageEffectActionEndSequenceRender) == 0) {
@@ -1069,8 +1160,17 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       // get the interactive render status
       int interactiverenderstatus;
       gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropInteractiveRenderStatus, 0, &interactiverenderstatus);
-     
-      ss << "(" << handle << ",[" << range[0] << "," << range[1] << "]," << step << "," << isinteractive << ",(" << renderScale.x << "," << renderScale.y << ")," << sequentialrenderstatus << "," << interactiverenderstatus << ")";
+#   ifdef OFX_EXTENSIONS_NUKE
+      // get the view number
+      int view = 0;
+      gPropHost[nth]->propGetInt(inArgs, kFnOfxImageEffectPropView, 0, &view);
+#   endif
+
+      ss << "(" << handle << ",[" << range[0] << "," << range[1] << "]," << step << "," << isinteractive << ",(" << renderScale.x << "," << renderScale.y << ")," << sequentialrenderstatus << "," << interactiverenderstatus
+#     ifdef OFX_EXTENSIONS_NUKE
+        <<","<<view
+#     endif
+        << ")";
     }
     else if(strcmp(action, kOfxImageEffectActionGetClipPreferences) == 0) {
       // no inArgs
