@@ -5,7 +5,7 @@ PLUGINOBJECTS = \
         SideBySide.o \
         MixViews.o \
         OneView.o \
-        JoinsViews.o \
+        JoinViews.o \
         Anaglyph.o \
 	ColorCorrect.o \
 	Grade.o \
@@ -16,3 +16,4 @@ VPATH += ../Switch ../TimeOffset ../RGBLut ../SideBySide ../MixViews ../OneView 
 
 include ../Makefile.master
 
+CXXFLAGS += -I../Anaglyph -I../ColorCorrect -I../Grade -I../JoinViews -I../OneView -I../RGBLut -I../SideBySide -I../Switch -I../TimeOffset -I../MixViews
