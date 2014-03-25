@@ -7,6 +7,7 @@
 #include "JoinViews.h"
 #include "Anaglyph.h"
 #include "ColorCorrect.h"
+#include "Grade.h"
 namespace OFX
 {
     namespace Plugin
@@ -31,6 +32,8 @@ namespace OFX
             ids.push_back(&p8);
             static ColorCorrectPluginFactory p9("net.sf.openfx:ColorCorrectPlugin", 1, 0);
             ids.push_back(&p9);
+            static GradePluginFactory p10("fr.INRIA.openfx:GradePlugin", 1, 0);
+            ids.push_back(&p10);
             // ReConverge is not finished/tested
             //static ReConvergePluginFactory p("net.sf.openfx:reConvergePlugin", 1, 0);
             //ids.push_back(&p);
