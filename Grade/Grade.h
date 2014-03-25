@@ -70,11 +70,11 @@
  
  */
 
-#ifndef MISC_GRADE_H
-#define MISC_GRADE_H
+#ifndef Misc_Grade_h
+#define Misc_Grade_h
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(GradePluginFactory, ;, {});
+mDeclarePluginFactory(GradePluginFactory, {}, {});
 
-#endif // MISC_GRADE_H
+#endif // Misc_Grade_h

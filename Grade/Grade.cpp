@@ -93,31 +93,21 @@
 
 using namespace OFX;
 
-struct RGBAValues {
-    double r,g,b,a;
-};
+
+namespace {
+    struct RGBAValues {
+        double r,g,b,a;
+    };
+}
 
 class GradeProcessorBase : public OFX::ImageProcessor
 {
-    
-public:
-    
-protected :
-    
+protected:
     OFX::Image *_srcImg;
     OFX::Image *_maskImg;
     bool   _doMasking;
-    RGBAValues _blackPoint;
-    RGBAValues _whitePoint;
-    RGBAValues _black;
-    RGBAValues _white;
-    RGBAValues _multiply;
-    RGBAValues _offset;
-    RGBAValues _gamma;
-    bool _clampBlack;
-    bool _clampWhite;
 
-public :
+public:
     
     GradeProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
@@ -134,9 +124,16 @@ public :
     
     void doMasking(bool v) {_doMasking = v;}
     
-    void setValues(const RGBAValues& blackPoint,const RGBAValues& whitePoint,const RGBAValues& black,
-                   const RGBAValues& white,const RGBAValues& multiply,const RGBAValues& offset,const RGBAValues& gamma,
-                   bool clampBlack,bool clampWhite) {
+    void setValues(const RGBAValues& blackPoint,
+                   const RGBAValues& whitePoint,
+                   const RGBAValues& black,
+                   const RGBAValues& white,
+                   const RGBAValues& multiply,
+                   const RGBAValues& offset,
+                   const RGBAValues& gamma,
+                   bool clampBlack,
+                   bool clampWhite)
+    {
         _blackPoint = blackPoint;
         _whitePoint = whitePoint;
         _black = black;
@@ -147,55 +144,16 @@ public :
         _clampBlack = clampBlack;
         _clampWhite = clampWhite;
     }
-    
-    void applyBlackAndWhitePoint(float* r,float* g,float* b,float rWp,float rBp,float gWp,float gBp,float bWp,float bBp) {
-        *r = (*r * (rWp - rBp)) + rBp;
-        *g = (*g * (gWp - gBp)) + gBp;
-        *b = (*b * (bWp - bBp)) + bBp;
-    }
 
-    
-    void applyBlackAndWhite(float *v,float bp,float wp,float black,float white) {
-        if (*v == bp) {
-            *v = black;
-        } else if (*v == wp) {
-            *v = white;
-        }
-    }
-    
-    void applyGain(float *r,float* g,float* b,float rGain,float gGain,float bGain) {
-        *r = *r * rGain;
-        *g = *g * gGain;
-        *b = *b * bGain;
-    }
-    
-    
-    void applyGamma(float *r,float* g,float *b,float rG,float gG,float bG) {
-        if (*r > 0) {
-            *r = std::pow(*r ,1.f / rG);
-        }
-        if (*g > 0) {
-            *g = std::pow(*g ,1.f / gG);
-        }
-        if (*b > 0) {
-            *b = std::pow(*b ,1.f / bG);
-        }
-    }
-    
-    void applyOffset(float *r,float * g,float* b,float rO,float gO,float bO) {
-        *r = *r + rO;
-        *g = *g + gO;
-        *b = *b + bO;
-    }
-    
-    void grade(float* v,float wp,float bp,float white,float black,float mutiply,float offset,float gamma) {
+    void grade(float* v, float wp, float bp, float white, float black, float mutiply, float offset, float gamma)
+    {
         float A = mutiply * (white - black) / (wp - bp);
         float B = offset + black - A * bp;
         *v = std::pow((A * *v) + B,1.f / gamma);
     }
     
-    void grade(float *r,float *g,float *b) {
-        
+    void grade(float *r,float *g,float *b)
+    {
         grade(r, _whitePoint.r, _blackPoint.r, _white.r, _black.r, _multiply.r, _offset.r, _gamma.r);
         grade(g, _whitePoint.g, _blackPoint.g, _white.g, _black.g, _multiply.g, _offset.g, _gamma.g);
         grade(b, _whitePoint.b, _blackPoint.b, _white.b, _black.b, _multiply.b, _offset.b, _gamma.b);
@@ -210,7 +168,17 @@ public :
             *b = std::min(1.f,*b);
         }
     }
-    
+
+private:
+    RGBAValues _blackPoint;
+    RGBAValues _whitePoint;
+    RGBAValues _black;
+    RGBAValues _white;
+    RGBAValues _multiply;
+    RGBAValues _offset;
+    RGBAValues _gamma;
+    bool _clampBlack;
+    bool _clampWhite;
 };
 
 
@@ -218,8 +186,6 @@ public :
 template <class PIX, int nComponents, int maxValue>
 class GradeProcessor : public GradeProcessorBase
 {
-    
-
 public :
     GradeProcessor(OFX::ImageEffect &instance)
     : GradeProcessorBase(instance)
@@ -281,28 +247,9 @@ public :
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class GradePlugin : public OFX::ImageEffect {
-    
-   
-    
-protected :
-    // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
-    OFX::Clip *maskClip_;
-    OFX::RGBAParam* _blackPoint;
-    OFX::RGBAParam* _whitePoint;
-    OFX::RGBAParam* _black;
-    OFX::RGBAParam* _white;
-    OFX::RGBAParam* _multiply;
-    OFX::RGBAParam* _offset;
-    OFX::RGBAParam* _gamma;
-    OFX::BooleanParam* _clampBlack;
-    OFX::BooleanParam* _clampWhite;
-    
+class GradePlugin : public OFX::ImageEffect
+{
 public :
-    
-    
     /** @brief ctor */
     GradePlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
@@ -330,6 +277,21 @@ public :
     
     /* set up and run a processor */
     void setupAndProcess(GradeProcessorBase &, const OFX::RenderArguments &args);
+
+private:
+    // do not need to delete these, the ImageEffect is managing them for us
+    OFX::Clip *dstClip_;
+    OFX::Clip *srcClip_;
+    OFX::Clip *maskClip_;
+    OFX::RGBAParam* _blackPoint;
+    OFX::RGBAParam* _whitePoint;
+    OFX::RGBAParam* _black;
+    OFX::RGBAParam* _white;
+    OFX::RGBAParam* _multiply;
+    OFX::RGBAParam* _offset;
+    OFX::RGBAParam* _gamma;
+    OFX::BooleanParam* _clampBlack;
+    OFX::BooleanParam* _clampWhite;
 };
 
 
@@ -444,11 +406,6 @@ GradePlugin::render(const OFX::RenderArguments &args)
     }
 }
 
-
-void GradePluginFactory::load()
-{
-    
-}
 
 void GradePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {

@@ -938,18 +938,18 @@
 			targets = (
 				1E551F461799509100A4135C /* all */,
 				1EDE1B7B182D04D9002392CB /* Anaglyph.ofx */,
-				1E3E3CA317995BEE005F2132 /* RGBLut.ofx */,
-				1EDE1B9D182D3985002392CB /* JoinViews.ofx */,
-				1EDE1BB6182D3F38002392CB /* OneView.ofx */,
-				1EDE1BCF182D8941002392CB /* MixViews.ofx */,
-				1E235FD918363C850019C45F /* SideBySide.ofx */,
-				1E235FF418369E4C0019C45F /* TimeOffset.ofx */,
-				1ECE543C185F2374001ED442 /* ReConverge.ofx */,
-				1ECE5459185F2433001ED442 /* DebugProxy.ofx */,
-				1E3AC8C618B6207600F228A6 /* Switch.ofx */,
-				1E8B5D4A18B76A7500C31FDC /* Misc.ofx */,
 				D7B4C96318D9DB6E0004137D /* ColorCorrect.ofx */,
+				1ECE5459185F2433001ED442 /* DebugProxy.ofx */,
 				D725A2CE18E0D30E001A1E3E /* Grade.ofx */,
+				1EDE1B9D182D3985002392CB /* JoinViews.ofx */,
+				1EDE1BCF182D8941002392CB /* MixViews.ofx */,
+				1EDE1BB6182D3F38002392CB /* OneView.ofx */,
+				1ECE543C185F2374001ED442 /* ReConverge.ofx */,
+				1E3E3CA317995BEE005F2132 /* RGBLut.ofx */,
+				1E235FD918363C850019C45F /* SideBySide.ofx */,
+				1E3AC8C618B6207600F228A6 /* Switch.ofx */,
+				1E235FF418369E4C0019C45F /* TimeOffset.ofx */,
+				1E8B5D4A18B76A7500C31FDC /* Misc.ofx */,
 			);
 		};
 /* End PBXProject section */
@@ -1334,6 +1334,12 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					OFX_EXTENSIONS_NUKE,
+					OFX_EXTENSIONS_VEGAS,
+					OFX_EXTENSIONS_TUTTLE,
+				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
@@ -1534,7 +1540,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_FILE = Grade/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = Grade.ofx;
 				WRAPPER_EXTENSION = bundle;
@@ -1545,13 +1551,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					OFX_EXTENSIONS_NUKE,
-					OFX_EXTENSIONS_VEGAS,
-					OFX_EXTENSIONS_TUTTLE,
-				);
-				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_FILE = Grade/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = Grade.ofx;
 				WRAPPER_EXTENSION = bundle;
@@ -1573,12 +1573,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					OFX_EXTENSIONS_NUKE,
-					OFX_EXTENSIONS_VEGAS,
-					OFX_EXTENSIONS_TUTTLE,
-				);
 				INFOPLIST_FILE = ColorCorrect/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = ColorCorrect.ofx;
