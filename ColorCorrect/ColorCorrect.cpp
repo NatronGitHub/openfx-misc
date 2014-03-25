@@ -167,13 +167,13 @@ namespace {
         void applyGamma(const ColorControlValues &c)
         {
             if (r > 0) {
-                r = std::pow(r ,1.f / c.r);
+                r = std::pow(r ,1.f / (float)c.r);
             }
             if (g > 0) {
-                g = std::pow(g ,1.f / c.g);
+                g = std::pow(g ,1.f / (float)c.g);
             }
             if (b > 0) {
-                b = std::pow(b ,1.f / c.b);
+                b = std::pow(b ,1.f / (float)c.b);
             }
         }
 
