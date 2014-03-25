@@ -277,6 +277,9 @@ public :
                    _midtoneValues, m_scale,
                    _highlightsValues, h_scale,
                    _masterValues);
+        *r = p.r;
+        *g = p.g;
+        *b = p.b;
     }
 
 private:
