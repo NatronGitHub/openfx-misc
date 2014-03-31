@@ -184,16 +184,17 @@ public :
                     PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(srcX,srcY) : 0);
                     if(srcPix)
                     {
-                        for(int c = 0; c < nComponents; c++)
+                        for(int c = 0; c < nComponents; ++c)
                             dstPix[c] = srcPix[c];
                     }
                     else
                     {
-                        for(int c = 0; c < nComponents; c++)
+                        for(int c = 0; c < nComponents; ++c)
                             dstPix[c] = 0;
                     }
-                    dstPix += nComponents;
                 }
+                dstPix += nComponents;
+
                 
             }
         }
@@ -260,50 +261,55 @@ void
 TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::RenderArguments &args)
 {
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
-    if(src.get())
+    if(src.get() && dst.get())
     {
+        OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+        OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
         if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
             throw int(1);
+
+        OfxPointD extent = getProjectExtent();
+        OfxPointD offset = getProjectOffset();
+        OfxPointD scale;
+        OfxPointD translate;
+        double rotate;
+        OfxPointD center;
+        int filter;
+        double skew;
+        _scale->getValue(scale.x, scale.y);
+        _translate->getValue(translate.x, translate.y);
+        translate.x *= (extent.x - offset.x);
+        translate.y *= (extent.y - offset.y);
+        _rotate->getValue(rotate);
+        
+        ///convert to radians
+        rotate = rotate * pi / 180.0;
+        
+        _center->getValue(center.x, center.y);
+        center.x *= (extent.x - offset.x);
+        center.y *= (extent.y - offset.y);
+        _filter->getValue(filter);
+        _skew->getValue(skew);
+        processor.setValues(translate, rotate, scale, skew, center, filter,src->getRegionOfDefinition());
     }
 
     
-    OfxRectI srcRoD = src->getRegionOfDefinition();
     processor.setDstImg(dst.get());
     processor.setSrcImg(src.get());
     processor.setRenderWindow(args.renderWindow);
-    OfxPointD scale;
-    OfxPointD translate;
-    double rotate;
-    OfxPointD center;
-    int filter;
-    double skew;
-    _scale->getValue(scale.x, scale.y);
-    _translate->getValue(translate.x, translate.y);
-    translate.x *= (srcRoD.x2 - srcRoD.x1);
-    translate.y *= (srcRoD.y2 - srcRoD.y1);
-    _rotate->getValue(rotate);
-    
-    ///convert to radians
-    rotate = rotate * pi / 180.0;
-    
-    _center->getValue(center.x, center.y);
-    center.x *= (srcRoD.x2 - srcRoD.x1);
-    center.y *= (srcRoD.y2 - srcRoD.y1);
-    _filter->getValue(filter);
-    _skew->getValue(skew);
-    processor.setValues(translate, rotate, scale, skew, center, filter,src->getRegionOfDefinition());
     processor.process();
 }
 
 bool
 TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
+
     OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
+    OfxPointD extent = getProjectExtent();
+    OfxPointD offset = getProjectOffset();
     OfxPointD scale;
     OfxPointD translate;
     double rotate;
@@ -312,15 +318,15 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     double skew;
     _scale->getValue(scale.x, scale.y);
     _translate->getValue(translate.x, translate.y);
-    translate.x *= (srcRoD.x2 - srcRoD.x1);
-    translate.y *= (srcRoD.y2 - srcRoD.y1);
+    translate.x *= (extent.x - offset.x);
+    translate.y *= (extent.y - offset.y);
     _rotate->getValue(rotate);
     
     ///convert to radians
     rotate = rotate * pi / 180.0;
     _center->getValue(center.x, center.y);
-    center.x *= (srcRoD.x2 - srcRoD.x1);
-    center.y *= (srcRoD.y2 - srcRoD.y1);
+    center.x *= (extent.x - offset.x);
+    center.y *= (extent.y - offset.y);
     _filter->getValue(filter);
     _skew->getValue(skew);
     
@@ -452,9 +458,11 @@ void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     
     // set a few flags
     desc.setSingleInstance(false);
-    desc.setHostFrameThreading(true);
+    desc.setHostFrameThreading(false);
     desc.setSupportsMultiResolution(true);
-    desc.setSupportsTiles(true);
+    
+
+    desc.setSupportsTiles(false);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
@@ -495,18 +503,21 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     rotate->setLabels(kRotateParamName, kRotateParamName, kRotateParamName);
     rotate->setDefault(0);
     rotate->setRange(-180, 180);
+    rotate->setDisplayRange(-180, 180);
     page->addChild(*rotate);
     
     Double2DParamDescriptor* scale = desc.defineDouble2DParam(kScaleParamName);
     scale->setLabels(kScaleParamName, kScaleParamName, kScaleParamName);
     scale->setDefault(1,1);
     scale->setRange(0.1,0.1,10,10);
+    scale->setDisplayRange(0.1, 0.1, 10, 10);
     page->addChild(*scale);
     
     DoubleParamDescriptor* skew = desc.defineDoubleParam(kSkewParamName);
     skew->setLabels(kSkewParamName, kSkewParamName, kSkewParamName);
     skew->setDefault(0);
     skew->setRange(-1, 1);
+    skew->setDisplayRange(-1,1);
     page->addChild(*skew);
     
     Double2DParamDescriptor* center = desc.defineDouble2DParam(kCenterParamName);
