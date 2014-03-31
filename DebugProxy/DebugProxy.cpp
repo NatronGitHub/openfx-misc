@@ -1470,9 +1470,9 @@ pluginMainNthFunc(int nth)
 //////////////// fetchSuite proxy
 
 template<int nth>
-void* fetchSuiteNth(OfxPropertySetHandle host, const char *suiteName, int suiteVersion)
+const void* fetchSuiteNth(OfxPropertySetHandle host, const char *suiteName, int suiteVersion)
 {
-    void* suite = NULL;
+    const void* suite = NULL;
     try {
         suite = gHost[nth]->fetchSuite(host, suiteName, suiteVersion);
     } catch (...) {
