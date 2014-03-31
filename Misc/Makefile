@@ -9,10 +9,12 @@ PLUGINOBJECTS = \
         Anaglyph.o \
 	ColorCorrect.o \
 	Grade.o \
+    Transform.o \
+    GenericTransform.o \
         PluginRegistrationCombined.o
 
 PLUGINNAME = Misc
-VPATH += ../Switch ../TimeOffset ../RGBLut ../SideBySide ../MixViews ../OneView ../JoinViews ../Anaglyph ../ColorCorrect ../Grade
+VPATH += ../Switch ../TimeOffset ../RGBLut ../SideBySide ../MixViews ../OneView ../JoinViews ../Anaglyph ../ColorCorrect ../Grade ../Transform
 
 include ../Makefile.master
 
