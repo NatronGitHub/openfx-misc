@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ColorCorrect.o GenericTransform.o
+PLUGINOBJECTS = ColorCorrect.o 
 PLUGINNAME = ColorCorrect
 
 include ../Makefile.master
