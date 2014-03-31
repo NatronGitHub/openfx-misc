@@ -903,23 +903,6 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       if((stat = fetchHostDescription(nth)) != kOfxStatOK)
           return stat;
       printHostDescription(nth);
-
-      // see if the host supports overlays
-      int supportsOverlays;
-      gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropSupportsOverlays, 0, &supportsOverlays);
-      if(supportsOverlays != 0) {
-        OfxImageEffectHandle effect = (OfxImageEffectHandle ) handle;
-        // get the property handle for the plugin
-        OfxPropertySetHandle effectProps;
-        gEffectHost[nth]->getPropertySet(effect, &effectProps);
-
-        // set the property that is the overlay's main entry point for the plugin
-        gPropHost[nth]->propGetPointer(effectProps,  kOfxImageEffectPluginPropOverlayInteractV1, 0, (void **) &gPluginsOverlayMain[nth]);
-        if (gPluginsOverlayMain[nth] != 0) {
-          gPropHost[nth]->propSetPointer(effectProps, kOfxImageEffectPluginPropOverlayInteractV1, 0,  (void *) overlayMainNthFunc(nth));
-        }
-
-    }
   }
 
   std::stringstream ss;
@@ -1203,6 +1186,23 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
     }
     else if(strcmp(action, kOfxActionDescribe) == 0) {
       // no outArgs
+        
+      // see if the host supports overlays, in which case check if the plugin set kOfxImageEffectPluginPropOverlayInteractV1
+      //int supportsOverlays;
+      //gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropSupportsOverlays, 0, &supportsOverlays);
+      ImageEffectHostDescription &hostDesc = gHostDescription[nth];
+      if (hostDesc.supportsOverlays) {
+        OfxImageEffectHandle effect = (OfxImageEffectHandle ) handle;
+        // get the property handle for the plugin
+        OfxPropertySetHandle effectProps;
+        gEffectHost[nth]->getPropertySet(effect, &effectProps);
+
+        // set the property that is the overlay's main entry point for the plugin
+        gPropHost[nth]->propGetPointer(effectProps,  kOfxImageEffectPluginPropOverlayInteractV1, 0, (void **) &gPluginsOverlayMain[nth]);
+        if (gPluginsOverlayMain[nth] != 0) {
+          gPropHost[nth]->propSetPointer(effectProps, kOfxImageEffectPluginPropOverlayInteractV1, 0,  (void *) overlayMainNthFunc(nth));
+        }
+      }
     }
     else if(strcmp(action, kOfxActionCreateInstance) == 0) {
       // no outArgs
