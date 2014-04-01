@@ -1647,7 +1647,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_FILE = Transform/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = Transform.ofx;
 				WRAPPER_EXTENSION = bundle;
@@ -1658,13 +1658,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					OFX_EXTENSIONS_NUKE,
-					OFX_EXTENSIONS_VEGAS,
-					OFX_EXTENSIONS_TUTTLE,
-				);
-				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_FILE = Transform/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = Transform.ofx;
 				WRAPPER_EXTENSION = bundle;
