@@ -95,18 +95,15 @@ using namespace OFX;
 
 class TransformProcessorBase : public OFX::ImageProcessor
 {
-    
-public:
-    
-protected :
-    
+protected:
     OFX::Image *_srcImg;
+    // NON-GENERIC PARAMETERS:
     Transform2D::Matrix3x3 _transform;
+    // GENERIC PARAMETERS:
     int _filter;
     bool _blackOutside;
-    OfxRectI _srcRod;
-    
-public :
+
+public:
     
     TransformProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
@@ -116,21 +113,20 @@ public :
     }
     
     void setSrcImg(OFX::Image *v) {_srcImg = v;}
-    
-    void setValues(const OfxPointD& translate,
-                   double rotate,
-                   const OfxPointD& scale,
-                   double skew,
-                   const OfxPointD& center,
-                   int filter,
-                   bool blackOutside,
-                   const OfxRectI& srcRod)
+
+    void setValues(const OfxPointD& translate, //!< non-generic
+                   double rotate,              //!< non-generic
+                   const OfxPointD& scale,     //!< non-generic
+                   double skew,                //!< non-generic
+                   const OfxPointD& center,    //!< non-generic
+                   int filter,                 //!< generic
+                   bool blackOutside)          //!< generic
     {
-        
+        // NON-GENERIC
         _transform = Transform2D::Matrix3x3::getTransform(translate, scale, skew, rotate, center);
+        // GENERIC
         _filter = filter;
         _blackOutside = blackOutside;
-        _srcRod = srcRod;
     }
     
     
@@ -174,12 +170,11 @@ public :
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             for(int x = procWindow.x1; x < procWindow.x2; x++)
             {
-                
+                // NON-GENERIC TRANSFORM
+
                 normalizedCoords.x = (double)x;//(x - dstRod.x1) / (double)(dstRod.x2 - dstRod.x1);
                 Transform2D::Point3D transformed = _transform * normalizedCoords;
-                
-                //transformed.x = transformed.x * (double)(_srcRod.x2 - _srcRod.x1);
-                // transformed.y = transformed.y * (double)(_srcRod.y2 - _srcRod.y1);
+
                 if (!_srcImg || transformed.z == 0.) {
                     // the back-transformed point is at infinity
                     for(int c = 0; c < nComponents; ++c) {
@@ -188,6 +183,9 @@ public :
                 } else {
                     double fx = transformed.x / transformed.z;
                     double fy = transformed.y / transformed.z;
+
+                    // GENERIC TRANSFORM
+                    // from here on, everything is generic, and should be moved to a generic transform class
                     OfxRectI bounds = _srcImg->getBounds();
                     if (_filter == 0) {
                         ///nearest neighboor
@@ -324,38 +322,29 @@ public :
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class TransformPlugin : public OFX::ImageEffect {
-    
-   
-    
-protected :
+class TransformPlugin : public OFX::ImageEffect
+{
+protected:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-    OFX::Double2DParam* _translate;
-    OFX::DoubleParam* _rotate;
-    OFX::Double2DParam* _scale;
-    OFX::DoubleParam* _skew;
-    OFX::Double2DParam* _center;
-    OFX::ChoiceParam* _filter;
-    OFX::BooleanParam* _blackOutside;
-public :
-    
-    
+
+public:
     /** @brief ctor */
     TransformPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClip_(0)
-    
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        // NON-GENERIC
         _translate = fetchDouble2DParam(kTranslateParamName);
         _rotate = fetchDoubleParam(kRotateParamName);
         _scale = fetchDouble2DParam(kScaleParamName);
         _skew = fetchDoubleParam(kSkewParamName);
         _center = fetchDouble2DParam(kCenterParamName);
+        // GENERIC
         _filter = fetchChoiceParam(kFilterParamName);
         _blackOutside = fetchBooleanParam(kBlackOutsideParamName);
     }
@@ -369,6 +358,17 @@ public :
     
     /* set up and run a processor */
     void setupAndProcess(TransformProcessorBase &, const OFX::RenderArguments &args);
+
+private:
+    // NON-GENERIC
+    OFX::Double2DParam* _translate;
+    OFX::DoubleParam* _rotate;
+    OFX::Double2DParam* _scale;
+    OFX::DoubleParam* _skew;
+    OFX::Double2DParam* _center;
+    // GENERIC
+    OFX::ChoiceParam* _filter;
+    OFX::BooleanParam* _blackOutside;
 };
 
 
@@ -395,13 +395,17 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
 
         OfxPointD extent = getProjectExtent();
         OfxPointD offset = getProjectOffset();
+        // NON-GENERIC
         OfxPointD scale;
         OfxPointD translate;
         double rotate;
+        double skew;
         OfxPointD center;
+        // GENERIC
         int filter;
         bool blackOutside;
-        double skew;
+
+        // NON-GENERIC
         _scale->getValue(scale.x, scale.y);
         _translate->getValue(translate.x, translate.y);
         translate.x *= (extent.x - offset.x);
@@ -410,14 +414,18 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         
         ///convert to radians
         rotate = rotate * pi / 180.0;
-        
+
+        _skew->getValue(skew);
+
         _center->getValue(center.x, center.y);
         center.x *= (extent.x - offset.x);
         center.y *= (extent.y - offset.y);
+
+        // GENERIC
         _filter->getValue(filter);
         _blackOutside->getValue(blackOutside);
-        _skew->getValue(skew);
-        processor.setValues(translate, rotate, scale, skew, center, filter, blackOutside, src->getRegionOfDefinition());
+
+        processor.setValues(translate, rotate, scale, skew, center, filter, blackOutside);
     }
 
     
@@ -427,6 +435,7 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
     processor.process();
 }
 
+// NON-GENERIC
 bool
 TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
@@ -437,9 +446,9 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     OfxPointD scale;
     OfxPointD translate;
     double rotate;
-    OfxPointD center;
-    int filter;
     double skew;
+    OfxPointD center;
+
     _scale->getValue(scale.x, scale.y);
     _translate->getValue(translate.x, translate.y);
     translate.x *= (extent.x - offset.x);
@@ -451,7 +460,6 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     _center->getValue(center.x, center.y);
     center.x *= (extent.x - offset.x);
     center.y *= (extent.y - offset.y);
-    _filter->getValue(filter);
     _skew->getValue(skew);
     
 
@@ -542,6 +550,7 @@ TransformPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+// NON-GENERIC
 bool TransformPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
 {
     OfxPointD scale;
@@ -600,6 +609,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         throwHostMissingSuiteException(kOfxParametricParameterSuite);
     }
 
+    // GENERIC
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -617,6 +627,9 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
+
+    // NON-GENERIC PARAMETERS
+    //
     Double2DParamDescriptor* translate = desc.defineDouble2DParam(kTranslateParamName);
     translate->setLabels(kTranslateParamName, kTranslateParamName, kTranslateParamName);
     translate->setDoubleType(OFX::eDoubleTypeNormalisedXY);
@@ -649,7 +662,10 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     center->setDoubleType(OFX::eDoubleTypeNormalisedXY);
     center->setDefault(0.5, 0.5);
     page->addChild(*center);
-    
+
+
+    // GENERIC PARAMETERS
+    //
     ChoiceParamDescriptor* filter = desc.defineChoiceParam(kFilterParamName);
     filter->setLabels(kFilterParamName, kFilterParamName, kFilterParamName);
     filter->setDefault(0);
