@@ -86,6 +86,7 @@
 #define kSkewParamName "Skew"
 #define kCenterParamName "Center"
 #define kFilterParamName "Filter"
+#define kBlackOutsideParamName "Black outside"
 
 static const double pi=3.14159265358979323846264338327950288419717;
 
@@ -102,6 +103,7 @@ protected :
     OFX::Image *_srcImg;
     Transform2D::Matrix3x3 _transform;
     int _filter;
+    bool _blackOutside;
     OfxRectI _srcRod;
     
 public :
@@ -115,12 +117,19 @@ public :
     
     void setSrcImg(OFX::Image *v) {_srcImg = v;}
     
-    void setValues(const OfxPointD& translate,double rotate,const OfxPointD& scale,double skew,const OfxPointD& center,int filter,
+    void setValues(const OfxPointD& translate,
+                   double rotate,
+                   const OfxPointD& scale,
+                   double skew,
+                   const OfxPointD& center,
+                   int filter,
+                   bool blackOutside,
                    const OfxRectI& srcRod)
     {
         
         _transform = Transform2D::Matrix3x3::getTransform(translate, scale, skew, rotate, center);
         _filter = filter;
+        _blackOutside = blackOutside;
         _srcRod = srcRod;
     }
     
@@ -171,7 +180,7 @@ public :
                 
                 //transformed.x = transformed.x * (double)(_srcRod.x2 - _srcRod.x1);
                 // transformed.y = transformed.y * (double)(_srcRod.y2 - _srcRod.y1);
-                if (transformed.z == 0.) {
+                if (!_srcImg || transformed.z == 0.) {
                     // the back-transformed point is at infinity
                     for(int c = 0; c < nComponents; ++c) {
                         dstPix[c] = 0;
@@ -179,13 +188,17 @@ public :
                 } else {
                     double fx = transformed.x / transformed.z;
                     double fy = transformed.y / transformed.z;
-
+                    OfxRectI bounds = _srcImg->getBounds();
                     if (_filter == 0) {
                         ///nearest neighboor
-                        const int x = std::floor(fx+0.5);
-                        const int y = std::floor(fy+0.5);
+                        int x = std::floor(fx+0.5);
+                        int y = std::floor(fy+0.5);
 
-                        PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                        if (!_blackOutside) {
+                            x = std::max(bounds.x1,std::min(x,bounds.x2-1));
+                            y = std::max(bounds.y1,std::min(y,bounds.y2-1));
+                        }
+                        PIX *srcPix = (PIX *)_srcImg->getPixelAddress(x, y);
                         if (srcPix) {
                             for(int c = 0; c < nComponents; ++c) {
                                 dstPix[c] = srcPix[c];
@@ -197,28 +210,108 @@ public :
                         }
                     } else if (_filter == 1) {
                         // bilinear
-                        const int x = std::floor(fx);
-                        const int y = std::floor(fy);
-                        const int nx = x + 1;
-                        const int ny = y + 1;
-                        const double dx = fx - x;
-                        const double dy = fy - y;
+                        int x = std::floor(fx);
+                        int y = std::floor(fy);
+                        int nx = x + 1;
+                        int ny = y + 1;
+                        if (!_blackOutside) {
+                            x = std::max(bounds.x1,std::min(x,bounds.x2-1));
+                            y = std::max(bounds.y1,std::min(y,bounds.y2-1));
+                        }
+                        nx = std::max(bounds.x1,std::min(nx,bounds.x2-1));
+                        ny = std::max(bounds.y1,std::min(ny,bounds.y2-1));
 
-                        PIX *cc = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                        PIX *nc = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(nx, y) : 0);
-                        PIX *cn = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, ny) : 0);
-                        PIX *nn = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(nx, ny) : 0);
-                        if (cc && nc && cn && nn) {
+                        const double dx = std::max(0., std::min(fx - x, 1.));
+                        const double dy = std::max(0., std::min(fy - y, 1.));
+
+                        PIX *Pcc = (PIX *)_srcImg->getPixelAddress( x,  y);
+                        PIX *Pnc = (PIX *)_srcImg->getPixelAddress(nx,  y);
+                        PIX *Pcn = (PIX *)_srcImg->getPixelAddress( x, ny);
+                        PIX *Pnn = (PIX *)_srcImg->getPixelAddress(nx, ny);
+                        if (Pcc && Pnc && Pcn && Pnn) {
                             for(int c = 0; c < nComponents; ++c) {
-                                dstPix[c] = cc[c] + dx*(nc[c]-cc[c] + dy*(cc[c]+nn[c]-cn[c]-nc[c])) + dy*(cn[c]-cc[c]);
+                                const double Icc = Pcc[c];
+                                const double Inc = Pnc[c];
+                                const double Icn = Pcn[c];
+                                const double Inn = Pnn[c];
+
+                                dstPix[c] = Icc + dx*(Inc-Icc + dy*(Icc+Inn-Icn-Inc)) + dy*(Icn-Icc);
                             }
                         } else {
                             for(int c = 0; c < nComponents; ++c) {
                                 dstPix[c] = 0;
                             }
                         }
+                    } else if (_filter == 2) {
+                        // bicubic
+                        int x = std::floor(fx);
+                        int y = std::floor(fy);
+                        int px = x - 1;
+                        int py = y - 1;
+                        int nx = x + 1;
+                        int ny = y + 1;
+                        int ax = x + 2;
+                        int ay = y + 2;
+                        if (!_blackOutside) {
+                            x = std::max(bounds.x1,std::min(x,bounds.x2-1));
+                            y = std::max(bounds.y1,std::min(y,bounds.y2-1));
+                        }
+                        px = std::max(bounds.x1,std::min(px,bounds.x2-1));
+                        py = std::max(bounds.y1,std::min(py,bounds.y2-1));
+                        nx = std::max(bounds.x1,std::min(nx,bounds.x2-1));
+                        ny = std::max(bounds.y1,std::min(ny,bounds.y2-1));
+                        ax = std::max(bounds.x1,std::min(ax,bounds.x2-1));
+                        ay = std::max(bounds.y1,std::min(ay,bounds.y2-1));
+                        const double dx = std::max(0., std::min(fx - x, 1.));
+                        const double dy = std::max(0., std::min(fy - y, 1.));
 
+                        PIX *Ppp = (PIX *)_srcImg->getPixelAddress(px, py);
+                        PIX *Pcp = (PIX *)_srcImg->getPixelAddress( x, py);
+                        PIX *Pnp = (PIX *)_srcImg->getPixelAddress(nx, py);
+                        PIX *Pap = (PIX *)_srcImg->getPixelAddress(nx, py);
+                        PIX *Ppc = (PIX *)_srcImg->getPixelAddress(px,  y);
+                        PIX *Pcc = (PIX *)_srcImg->getPixelAddress( x,  y);
+                        PIX *Pnc = (PIX *)_srcImg->getPixelAddress(nx,  y);
+                        PIX *Pac = (PIX *)_srcImg->getPixelAddress(nx,  y);
+                        PIX *Ppn = (PIX *)_srcImg->getPixelAddress(px, ny);
+                        PIX *Pcn = (PIX *)_srcImg->getPixelAddress( x, ny);
+                        PIX *Pnn = (PIX *)_srcImg->getPixelAddress(nx, ny);
+                        PIX *Pan = (PIX *)_srcImg->getPixelAddress(nx, ny);
+                        PIX *Ppa = (PIX *)_srcImg->getPixelAddress(px, ay);
+                        PIX *Pca = (PIX *)_srcImg->getPixelAddress( x, ay);
+                        PIX *Pna = (PIX *)_srcImg->getPixelAddress(nx, ay);
+                        PIX *Paa = (PIX *)_srcImg->getPixelAddress(nx, ay);
+                        if (Ppp && Pcp && Pnp && Pap && Ppc && Pcc && Pnc && Pac && Ppn && Pcn && Pnn && Pan && Ppa && Pca && Pna && Paa) {
+                            for(int c = 0; c < nComponents; ++c) {
+                                double Ipp = Ppp[c];
+                                double Icp = Pcp[c];
+                                double Inp = Pnp[c];
+                                double Iap = Pap[c];
+                                double Ipc = Ppc[c];
+                                double Icc = Pcc[c];
+                                double Inc = Pnc[c];
+                                double Iac = Pac[c];
+                                double Ipn = Ppn[c];
+                                double Icn = Pcn[c];
+                                double Inn = Pnn[c];
+                                double Ian = Pan[c];
+                                double Ipa = Ppa[c];
+                                double Ica = Pca[c];
+                                double Ina = Pna[c];
+                                double Iaa = Paa[c];
+                                double Ip = Icp + 0.5f*(dx*(-Ipp+Inp) + dx*dx*(2*Ipp-5*Icp+4*Inp-Iap) + dx*dx*dx*(-Ipp+3*Icp-3*Inp+Iap));
+                                double Ic = Icc + 0.5f*(dx*(-Ipc+Inc) + dx*dx*(2*Ipc-5*Icc+4*Inc-Iac) + dx*dx*dx*(-Ipc+3*Icc-3*Inc+Iac));
+                                double In = Icn + 0.5f*(dx*(-Ipn+Inn) + dx*dx*(2*Ipn-5*Icn+4*Inn-Ian) + dx*dx*dx*(-Ipn+3*Icn-3*Inn+Ian));
+                                double Ia = Ica + 0.5f*(dx*(-Ipa+Ina) + dx*dx*(2*Ipa-5*Ica+4*Ina-Iaa) + dx*dx*dx*(-Ipa+3*Ica-3*Ina+Iaa));
+                                dstPix[c] =  Ic + 0.5f*(dy*(-Ip+In) + dy*dy*(2*Ip-5*Ic+4*In-Ia) + dy*dy*dy*(-Ip+3*Ic-3*In+Ia));
+                            }
+                        } else {
+                            for(int c = 0; c < nComponents; ++c) {
+                                dstPix[c] = 0;
+                            }
+                        }
                     }
+
                 }
                 dstPix += nComponents;
                 
@@ -245,6 +338,7 @@ protected :
     OFX::DoubleParam* _skew;
     OFX::Double2DParam* _center;
     OFX::ChoiceParam* _filter;
+    OFX::BooleanParam* _blackOutside;
 public :
     
     
@@ -263,6 +357,7 @@ public :
         _skew = fetchDoubleParam(kSkewParamName);
         _center = fetchDouble2DParam(kCenterParamName);
         _filter = fetchChoiceParam(kFilterParamName);
+        _blackOutside = fetchBooleanParam(kBlackOutsideParamName);
     }
     
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod);
@@ -305,6 +400,7 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         double rotate;
         OfxPointD center;
         int filter;
+        bool blackOutside;
         double skew;
         _scale->getValue(scale.x, scale.y);
         _translate->getValue(translate.x, translate.y);
@@ -319,8 +415,9 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         center.x *= (extent.x - offset.x);
         center.y *= (extent.y - offset.y);
         _filter->getValue(filter);
+        _blackOutside->getValue(blackOutside);
         _skew->getValue(skew);
-        processor.setValues(translate, rotate, scale, skew, center, filter,src->getRegionOfDefinition());
+        processor.setValues(translate, rotate, scale, skew, center, filter, blackOutside, src->getRegionOfDefinition());
     }
 
     
@@ -559,7 +656,14 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     filter->appendOption("Nearest neighboor");
     filter->appendOption("Bilinear");
     filter->appendOption("Bicubic");
-    
+    filter->setAnimates(false);
+    page->addChild(*filter);
+
+    BooleanParamDescriptor* blackOutside = desc.defineBooleanParam(kBlackOutsideParamName);
+    blackOutside->setLabels(kBlackOutsideParamName, kBlackOutsideParamName, kBlackOutsideParamName);
+    blackOutside->setDefault(false);
+    blackOutside->setAnimates(false);
+    page->addChild(*blackOutside);
 }
 
 OFX::ImageEffect* TransformPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
