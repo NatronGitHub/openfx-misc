@@ -171,30 +171,57 @@ public :
                 
                 //transformed.x = transformed.x * (double)(_srcRod.x2 - _srcRod.x1);
                 // transformed.y = transformed.y * (double)(_srcRod.y2 - _srcRod.y1);
-                
-                if (_filter == 0) {
-                    ///nearest neighboor
-                    double xFloor = std::floor(transformed.x);
-                    double yFloor = std::floor(transformed.y);
-                    double xCeil = std::ceil(transformed.x);
-                    double yCeil = std::ceil(transformed.y);
-                    
-                    int srcX = (transformed.x - xFloor) < (xCeil - transformed.x) ? xFloor : xCeil;
-                    int srcY = (transformed.y - yFloor) < (yCeil - transformed.y) ? yFloor : yCeil;
-                    PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(srcX,srcY) : 0);
-                    if(srcPix)
-                    {
-                        for(int c = 0; c < nComponents; ++c)
-                            dstPix[c] = srcPix[c];
+                if (transformed.z == 0.) {
+                    // the back-transformed point is at infinity
+                    for(int c = 0; c < nComponents; ++c) {
+                        dstPix[c] = 0;
                     }
-                    else
-                    {
-                        for(int c = 0; c < nComponents; ++c)
-                            dstPix[c] = 0;
+                } else {
+                    double fx = transformed.x / transformed.z;
+                    double fy = transformed.y / transformed.z;
+
+                    if (_filter == 0) {
+                        ///nearest neighboor
+                        const int x = std::floor(fx+0.5);
+                        const int y = std::floor(fy+0.5);
+
+                        PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                        if (srcPix) {
+                            for(int c = 0; c < nComponents; ++c) {
+                                dstPix[c] = srcPix[c];
+                            }
+                        } else {
+                            for(int c = 0; c < nComponents; ++c) {
+                                dstPix[c] = 0;
+                            }
+                        }
+                    } else if (_filter == 1) {
+                        // bilinear
+                        const int x = std::floor(fx);
+                        const int y = std::floor(fy);
+                        const int nx = x + 1;
+                        const int ny = y + 1;
+                        const double dx = fx - x;
+                        const double dy = fy - y;
+
+                        PIX *cc = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                        PIX *nc = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(nx, y) : 0);
+                        PIX *cn = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, ny) : 0);
+                        PIX *nn = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(nx, ny) : 0);
+                        if (cc && nc && cn && nn) {
+                            for(int c = 0; c < nComponents; ++c) {
+                                dstPix[c] = cc[c] + dx*(nc[c]-cc[c] + dy*(cc[c]+nn[c]-cn[c]-nc[c])) + dy*(cn[c]-cc[c]);
+                            }
+                        } else {
+                            for(int c = 0; c < nComponents; ++c) {
+                                dstPix[c] = 0;
+                            }
+                        }
+
                     }
                 }
                 dstPix += nComponents;
-
+                
                 
             }
         }
@@ -531,7 +558,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     filter->setDefault(0);
     filter->appendOption("Nearest neighboor");
     filter->appendOption("Bilinear");
-    filter->appendOption("Cubic");
+    filter->appendOption("Bicubic");
     
 }
 
