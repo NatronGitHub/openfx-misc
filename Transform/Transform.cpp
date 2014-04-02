@@ -451,7 +451,6 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
 bool
 TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
-
     OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
     OfxPointD size = getProjectSize();
     OfxPointD offset = getProjectOffset();
@@ -492,10 +491,12 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     //  denormalize(&l, &b, srcRoD);
     // denormalize(&r, &t, srcRoD);
 
-    rod.x1 = (int)std::ceil(l);
-    rod.x2 = (int)std::floor(r);
-    rod.y1 = (int)std::ceil(b);
-    rod.y2 = (int)std::floor(t);
+    rod.x1 = std::floor(l);
+    rod.x2 = std::ceil(r);
+    rod.y1 = std::floor(b);
+    rod.y2 = std::ceil(t);
+
+    // say we set it
     return true;
 }
 
