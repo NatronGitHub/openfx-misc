@@ -450,6 +450,8 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
 
 // override the rod call
 // NON-GENERIC
+// the RoD should at least contain the region of definition of the source clip,
+// which will be filled with black or by continuity.
 bool
 TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
@@ -493,10 +495,12 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     //  denormalize(&l, &b, srcRoD);
     // denormalize(&r, &t, srcRoD);
 
-    rod.x1 = std::floor(l);
-    rod.x2 = std::ceil(r);
-    rod.y1 = std::floor(b);
-    rod.y2 = std::ceil(t);
+    // No need to round things up here, we must give the *actual* RoD,
+    // which should contain the source RoD.
+    rod.x1 = std::min(l, srcRoD.x1);
+    rod.x2 = std::max(r, srcRoD.x2);
+    rod.y1 = std::min(b, srcRoD.y1);
+    rod.y2 = std::max(t, srcRoD.y2);
 
     // say we set it
     return true;
@@ -1405,17 +1409,28 @@ void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedBitDepth(eBitDepthFloat);
     
     // set a few flags
+
+    // GENERIC
+
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
-    desc.setSupportsMultiResolution(true);
-    
-    
-    desc.setSupportsTiles(false);
     desc.setTemporalClipAccess(false);
-    desc.setRenderTwiceAlways(false);
+    // each field has to be transformed separately, or you will get combing effect
+    // this should be true for all geometric transforms
+    desc.setRenderTwiceAlways(true);
     desc.setSupportsMultipleClipPARs(false);
     desc.setRenderThreadSafety(eRenderFullySafe);
-    
+
+    // NON-GENERIC
+
+    // in order to support tiles, the plugin must implement the getRegionOfInterest function
+    // TODO: easy
+    desc.setSupportsTiles(false);
+
+    // in order to support multiresolution, the plugin must take into account the renderscale
+    // and scale the transform appropriately
+    // TODO: could be done easily.
+    desc.setSupportsMultiResolution(false);
     desc.setOverlayInteractDescriptor( new TransformOverlayDescriptor);
 
 }
