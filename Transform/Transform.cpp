@@ -661,6 +661,15 @@ private:
         p.y = (p.y - offset.y) / size.y;
     }
     
+    void unscaleFromProject(double *x , double *y)
+    {
+        OfxPointD size = _plugin->getProjectSize();
+        OfxPointD offset = _plugin->getProjectOffset();
+        *x = (*x - offset.x) / size.x;
+        *y = (*y - offset.y) / size.y;
+    }
+
+    
     OFX::DoubleParam* getShearParam() const
     {
         OFX::DoubleParam* shearParam = dynamic_cast<OFX::DoubleParam*>(_plugin->getParam(kSkewParamName));
@@ -1061,7 +1070,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     
     Transform2D::Matrix3x3 transform;
     ////for the rotation bar dragging we dont use the same transform, we don't want to undo the rotation transform
-    if (_mouseState != eDraggingRotationBar) {
+    if (_mouseState != eDraggingRotationBar && _mouseState != eDraggingCenterPoint) {
         ///undo shear + rotation to the current position
         transform = Transform2D::Matrix3x3::getTranslate(-center.x, -center.y).invert() *
         Transform2D::Matrix3x3::getRotate(-rot).invert() *
@@ -1249,12 +1258,21 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         OFX::Double2DParam* translateParam = getTranslateParam();
         OfxPointD currentTranslation;
         translateParam->getValue(currentTranslation.x, currentTranslation.y);
-        OfxPointD delta;
-        delta.x = dx;
-        delta.y = dy;
-        unscaleFromProject(delta);
-        currentTranslation.x += delta.x;
-        currentTranslation.y += delta.y;
+        
+        Transform2D::Point3D lastPosTransformed;
+        lastPosTransformed.x = _lastMousePos.x;
+        lastPosTransformed.y = _lastMousePos.y;
+        lastPosTransformed.z = 1.;
+        
+        lastPosTransformed = transform * lastPosTransformed;
+        lastPosTransformed.x /= lastPosTransformed.z;
+        lastPosTransformed.y /= lastPosTransformed.z;
+        
+        dx = transformedPos.x - lastPosTransformed.x;
+        dy = transformedPos.y - lastPosTransformed.y;
+        unscaleFromProject(&dx,&dy);
+        currentTranslation.x += dx;
+        currentTranslation.y += dy;
         translateParam->setValue(currentTranslation.x,currentTranslation.y);
     } else if(_mouseState == eDraggingRotationBar) {
         OfxPointD diffToCenter;
