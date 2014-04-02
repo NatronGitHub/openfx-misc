@@ -149,7 +149,6 @@ Matrix3x3 Matrix3x3::getShearY(double k) { return Matrix3x3(1,0,0,k,1,0,0,0,1); 
 
 Matrix3x3 Matrix3x3::getTransform(const OfxPointD& translate,const OfxPointD& scale,double shearX,double rads,const OfxPointD& center)
 {
-    ///The multiplications happens from bottom to top
     ///1) We translate to the origin.
     ///2) We scale
     ///3) We rotate

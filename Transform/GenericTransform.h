@@ -77,12 +77,25 @@
 
 namespace Transform2D {
     
+    static const double pi = 3.14159265358979323846264338327950288419717;
+
+    
     /**
      * @brief A simple 3 * 3 matrix class layed out as such:
      *  a b c
      *  d e f
      *  g h i
      **/
+    
+    inline double toDegrees(double rad) {
+        rad = rad * 180.0 / pi;
+        return rad;
+    }
+    
+    inline double toRadians(double deg) {
+        deg = deg * pi / 180.0;
+        return deg;
+    }
     
     struct Point3D {
         double x,y,z;
