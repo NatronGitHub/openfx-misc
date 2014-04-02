@@ -169,7 +169,7 @@ public :
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         
-        for(int y = procWindow.y1; y < procWindow.y2; y++)
+        for (int y = procWindow.y1; y < procWindow.y2; y++)
         {
             ///convert to a normalized 0 ,1 coordinate
             Transform2D::Point3D normalizedCoords;
@@ -178,7 +178,7 @@ public :
             
             
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            for(int x = procWindow.x1; x < procWindow.x2; x++)
+            for (int x = procWindow.x1; x < procWindow.x2; x++)
             {
                 // NON-GENERIC TRANSFORM
 
@@ -187,7 +187,7 @@ public :
 
                 if (!_srcImg || transformed.z == 0.) {
                     // the back-transformed point is at infinity
-                    for(int c = 0; c < nComponents; ++c) {
+                    for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = 0;
                     }
                 } else {
@@ -208,11 +208,11 @@ public :
                         }
                         PIX *srcPix = (PIX *)_srcImg->getPixelAddress(x, y);
                         if (srcPix) {
-                            for(int c = 0; c < nComponents; ++c) {
+                            for (int c = 0; c < nComponents; ++c) {
                                 dstPix[c] = srcPix[c];
                             }
                         } else {
-                            for(int c = 0; c < nComponents; ++c) {
+                            for (int c = 0; c < nComponents; ++c) {
                                 dstPix[c] = 0;
                             }
                         }
@@ -237,7 +237,7 @@ public :
                         PIX *Pcn = (PIX *)_srcImg->getPixelAddress( x, ny);
                         PIX *Pnn = (PIX *)_srcImg->getPixelAddress(nx, ny);
                         if (Pcc && Pnc && Pcn && Pnn) {
-                            for(int c = 0; c < nComponents; ++c) {
+                            for (int c = 0; c < nComponents; ++c) {
                                 const double Icc = Pcc[c];
                                 const double Inc = Pnc[c];
                                 const double Icn = Pcn[c];
@@ -246,7 +246,7 @@ public :
                                 dstPix[c] = Icc + dx*(Inc-Icc + dy*(Icc+Inn-Icn-Inc)) + dy*(Icn-Icc);
                             }
                         } else {
-                            for(int c = 0; c < nComponents; ++c) {
+                            for (int c = 0; c < nComponents; ++c) {
                                 dstPix[c] = 0;
                             }
                         }
@@ -290,7 +290,7 @@ public :
                         PIX *Pna = (PIX *)_srcImg->getPixelAddress(nx, ay);
                         PIX *Paa = (PIX *)_srcImg->getPixelAddress(nx, ay);
                         if (Ppp && Pcp && Pnp && Pap && Ppc && Pcc && Pnc && Pac && Ppn && Pcn && Pnn && Pan && Ppa && Pca && Pna && Paa) {
-                            for(int c = 0; c < nComponents; ++c) {
+                            for (int c = 0; c < nComponents; ++c) {
                                 double Ipp = Ppp[c];
                                 double Icp = Pcp[c];
                                 double Inp = Pnp[c];
@@ -314,7 +314,7 @@ public :
                                 dstPix[c] =  Ic + 0.5f*(dy*(-Ip+In) + dy*dy*(2*Ip-5*Ic+4*In-Ia) + dy*dy*dy*(-Ip+3*Ic-3*In+Ia));
                             }
                         } else {
-                            for(int c = 0; c < nComponents; ++c) {
+                            for (int c = 0; c < nComponents; ++c) {
                                 dstPix[c] = 0;
                             }
                         }
@@ -362,6 +362,7 @@ public:
         _blackOutside = fetchBooleanParam(kBlackOutsideParamName);
     }
     
+    // override the rod call
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod);
     
     /* Override the render */
@@ -398,14 +399,14 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
 {
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
     std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
-    if(src.get() && dst.get())
+    if (src.get() && dst.get())
     {
         OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
-            throw int(1);
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+            OFX::throwSuiteStatusException(kOfxStatFailed);
 
         OfxPointD size = getProjectSize();
         OfxPointD offset = getProjectOffset();
@@ -447,6 +448,7 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
     processor.process();
 }
 
+// override the rod call
 // NON-GENERIC
 bool
 TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
@@ -510,7 +512,7 @@ TransformPlugin::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
     
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
-    if(dstComponents == OFX::ePixelComponentRGBA)
+    if (dstComponents == OFX::ePixelComponentRGBA)
     {
         switch(dstBitDepth)
         {
@@ -564,6 +566,7 @@ TransformPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+// overridden is identity
 // NON-GENERIC
 bool TransformPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
 {
@@ -584,7 +587,8 @@ bool TransformPlugin::isIdentity(const RenderArguments &args, Clip * &identityCl
     return false;
 }
 
-
+////////////////////////////////////////////////////////////////////////////////
+// stuff for the interact
 
 class TransformInteract : public OFX::OverlayInteract {
     protected :
@@ -995,6 +999,7 @@ void TransformInteract::drawRotationBar(const OfxPointD& center,const OfxPointD&
     }
 }
 
+// draw the interact
 bool TransformInteract::draw(const OFX::DrawArgs &args)
 {
     
@@ -1038,6 +1043,7 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
     return true;
 }
 
+// overridden functions from OFX::Interact to do things
 bool TransformInteract::penMotion(const OFX::PenArgs &args)
 {
     OfxPointD center,left,right,top,bottom;
@@ -1099,17 +1105,17 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
             _drawState = eTopPointHovered;
         } else if (squareContains(transformedPos, bottomPoint,hoverToleranceX,hoverToleranceY)) {
             _drawState = eBottomPointHovered;
-        } else if(isOnEllipseBorder(transformedPos, ellipseRadius, center)) {
+        } else if (isOnEllipseBorder(transformedPos, ellipseRadius, center)) {
             _drawState = eCircleHovered;
         } else if (isOnShearBar(transformedPos,ellipseRadius.y,center,args.pixelScale,hoverToleranceY)) {
             _drawState = eShearBarHoverered;
-        } else if(isOnRotationBar(transformedPos, ellipseRadius.x, center, args.pixelScale, hoverToleranceX)) {
+        } else if (isOnRotationBar(transformedPos, ellipseRadius.x, center, args.pixelScale, hoverToleranceX)) {
             _drawState = eRotationBarHovered;
         } else {
             _drawState = eInActive;
             ret = false;
         }
-    } else if(_mouseState == eDraggingCircle) {
+    } else if (_mouseState == eDraggingCircle) {
         OFX::Double2DParam* scaleParam = getScaleParam();
         
         double minX,minY,maxX,maxY;
@@ -1189,7 +1195,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         
         scaleParam->setValue(scale.x, scale.y);
 
-    } else if(_mouseState == eDraggingLeftPoint) {
+    } else if (_mouseState == eDraggingLeftPoint) {
         OFX::Double2DParam* scaleParam = getScaleParam();
         
         double minX,minY,maxX,maxY;
@@ -1206,7 +1212,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         }
         
         scaleParam->setValue(scale.x, scale.y);
-    } else if(_mouseState == eDraggingRightPoint) {
+    } else if (_mouseState == eDraggingRightPoint) {
         OFX::Double2DParam* scaleParam = getScaleParam();
         
         double minX,minY,maxX,maxY;
@@ -1222,7 +1228,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
             scale.x = minX;
         }
         scaleParam->setValue(scale.x, scale.y);
-    } else if(_mouseState == eDraggingTopPoint) {
+    } else if (_mouseState == eDraggingTopPoint) {
         OFX::Double2DParam* scaleParam = getScaleParam();
         
         double minX,minY,maxX,maxY;
@@ -1238,7 +1244,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
             scale.y = minY;
         }
         scaleParam->setValue(scale.x, scale.y);
-    } else if(_mouseState == eDraggingBottomPoint) {
+    } else if (_mouseState == eDraggingBottomPoint) {
         OFX::Double2DParam* scaleParam = getScaleParam();
         
         double minX,minY,maxX,maxY;
@@ -1255,7 +1261,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         }
 
         scaleParam->setValue(scale.x, scale.y);
-    } else if(_mouseState == eDraggingCenterPoint) {
+    } else if (_mouseState == eDraggingCenterPoint) {
         OFX::Double2DParam* translateParam = getTranslateParam();
         OfxPointD currentTranslation;
         translateParam->getValue(currentTranslation.x, currentTranslation.y);
@@ -1275,7 +1281,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         currentTranslation.x += dx;
         currentTranslation.y += dy;
         translateParam->setValue(currentTranslation.x,currentTranslation.y);
-    } else if(_mouseState == eDraggingRotationBar) {
+    } else if (_mouseState == eDraggingRotationBar) {
         OfxPointD diffToCenter;
         ///the current mouse position (untransformed) is doing has a certain angle relative to the X axis
         ///which can be computed by : angle = arctan(opposite / adjacent)
@@ -1284,7 +1290,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         double angle = std::atan2(diffToCenter.y, diffToCenter.x);
         rotateParam->setValue(Transform2D::toDegrees(angle));
         
-    } else if(_mouseState == eDraggingShearBar) {
+    } else if (_mouseState == eDraggingShearBar) {
         OfxPointD delta;
         delta.x = dx;
         delta.y = dy;
@@ -1357,7 +1363,7 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
         _mouseState = eDraggingCircle;
     } else if (isOnShearBar(transformedPos,ellipseRadius.y,center,args.pixelScale,pressToleranceY)) {
         _mouseState = eDraggingShearBar;
-    } else if(isOnRotationBar(transformedPos, ellipseRadius.x, center, args.pixelScale, pressToleranceY)) {
+    } else if (isOnRotationBar(transformedPos, ellipseRadius.x, center, args.pixelScale, pressToleranceY)) {
         _mouseState = eDraggingRotationBar;
     } else {
         _mouseState = eReleased;
@@ -1380,12 +1386,9 @@ bool TransformInteract::penUp(const OFX::PenArgs &args)
 }
 
 
-class TransformOverlayDescriptor : public DefaultEffectOverlayDescriptor<TransformOverlayDescriptor, TransformInteract> {};
+using namespace OFX;
 
-void TransformPluginFactory::load()
-{
-    
-}
+class TransformOverlayDescriptor : public DefaultEffectOverlayDescriptor<TransformOverlayDescriptor, TransformInteract> {};
 
 void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -1411,7 +1414,7 @@ void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
-    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
+    desc.setRenderThreadSafety(eRenderFullySafe);
     
     desc.setOverlayInteractDescriptor( new TransformOverlayDescriptor);
 
@@ -1420,7 +1423,7 @@ void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
-    if (!OFX::getImageEffectHostDescription()->supportsParametricParameter) {
+    if (!getImageEffectHostDescription()->supportsParametricParameter) {
         throwHostMissingSuiteException(kOfxParametricParameterSuite);
     }
 
@@ -1448,7 +1451,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     //
     Double2DParamDescriptor* translate = desc.defineDouble2DParam(kTranslateParamName);
     translate->setLabels(kTranslateParamName, kTranslateParamName, kTranslateParamName);
-    translate->setDoubleType(OFX::eDoubleTypeNormalisedXY);
+    translate->setDoubleType(eDoubleTypeNormalisedXY);
     translate->setDefault(0, 0);
     page->addChild(*translate);
     
@@ -1475,7 +1478,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     
     Double2DParamDescriptor* center = desc.defineDouble2DParam(kCenterParamName);
     center->setLabels(kCenterParamName, kCenterParamName, kCenterParamName);
-    center->setDoubleType(OFX::eDoubleTypeNormalisedXY);
+    center->setDoubleType(eDoubleTypeNormalisedXY);
     center->setDefault(0.5, 0.5);
     page->addChild(*center);
 
