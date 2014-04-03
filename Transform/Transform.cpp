@@ -107,6 +107,7 @@ class TransformProcessorBase : public OFX::ImageProcessor
 {
 protected:
     OFX::Image *_srcImg;
+    OfxRectI _srcBounds;
     // NON-GENERIC PARAMETERS:
     Transform2D::Matrix3x3 _transform;
     // GENERIC PARAMETERS:
@@ -119,10 +120,19 @@ public:
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     {
-        
     }
     
-    void setSrcImg(OFX::Image *v) {_srcImg = v;}
+    void setSrcImg(OFX::Image *v, const OfxRectD& srcRoD)
+    {
+        _srcImg = v;
+        // the source image may not be empty
+        assert(srcRoD.x1 < srcRoD.x2 && srcRoD.y1 < srcRoD.y2);
+        // safely convert the OfxRectD to the largest enclosing OfxRectI
+        _srcBounds.x1 = std::max((double)kOfxFlagInfiniteMin, std::ceil(srcRoD.x1));
+        _srcBounds.x2 = std::min((double)kOfxFlagInfiniteMax, std::floor(srcRoD.x2));
+        _srcBounds.y1 = std::max((double)kOfxFlagInfiniteMin, std::ceil(srcRoD.y1));
+        _srcBounds.y2 = std::min((double)kOfxFlagInfiniteMax, std::floor(srcRoD.y2));
+    }
 
     void setValues(const OfxPointD& translate, //!< non-generic
                    double rotate,              //!< non-generic
@@ -196,15 +206,15 @@ public :
 
                     // GENERIC TRANSFORM
                     // from here on, everything is generic, and should be moved to a generic transform class
-                    OfxRectI bounds = _srcImg->getBounds();
+
                     if (_filter == 0) {
                         ///nearest neighboor
                         int x = std::floor(fx+0.5);
                         int y = std::floor(fy+0.5);
 
                         if (!_blackOutside) {
-                            x = std::max(bounds.x1,std::min(x,bounds.x2-1));
-                            y = std::max(bounds.y1,std::min(y,bounds.y2-1));
+                            x = std::max(_srcBounds.x1,std::min(x,_srcBounds.x2-1));
+                            y = std::max(_srcBounds.y1,std::min(y,_srcBounds.y2-1));
                         }
                         PIX *srcPix = (PIX *)_srcImg->getPixelAddress(x, y);
                         if (srcPix) {
@@ -223,11 +233,11 @@ public :
                         int nx = x + 1;
                         int ny = y + 1;
                         if (!_blackOutside) {
-                            x = std::max(bounds.x1,std::min(x,bounds.x2-1));
-                            y = std::max(bounds.y1,std::min(y,bounds.y2-1));
+                            x = std::max(_srcBounds.x1,std::min(x,_srcBounds.x2-1));
+                            y = std::max(_srcBounds.y1,std::min(y,_srcBounds.y2-1));
                         }
-                        nx = std::max(bounds.x1,std::min(nx,bounds.x2-1));
-                        ny = std::max(bounds.y1,std::min(ny,bounds.y2-1));
+                        nx = std::max(_srcBounds.x1,std::min(nx,_srcBounds.x2-1));
+                        ny = std::max(_srcBounds.y1,std::min(ny,_srcBounds.y2-1));
 
                         const double dx = std::max(0., std::min(fx - x, 1.));
                         const double dy = std::max(0., std::min(fy - y, 1.));
@@ -261,15 +271,15 @@ public :
                         int ax = x + 2;
                         int ay = y + 2;
                         if (!_blackOutside) {
-                            x = std::max(bounds.x1,std::min(x,bounds.x2-1));
-                            y = std::max(bounds.y1,std::min(y,bounds.y2-1));
+                            x = std::max(_srcBounds.x1,std::min(x,_srcBounds.x2-1));
+                            y = std::max(_srcBounds.y1,std::min(y,_srcBounds.y2-1));
                         }
-                        px = std::max(bounds.x1,std::min(px,bounds.x2-1));
-                        py = std::max(bounds.y1,std::min(py,bounds.y2-1));
-                        nx = std::max(bounds.x1,std::min(nx,bounds.x2-1));
-                        ny = std::max(bounds.y1,std::min(ny,bounds.y2-1));
-                        ax = std::max(bounds.x1,std::min(ax,bounds.x2-1));
-                        ay = std::max(bounds.y1,std::min(ay,bounds.y2-1));
+                        px = std::max(_srcBounds.x1,std::min(px,_srcBounds.x2-1));
+                        py = std::max(_srcBounds.y1,std::min(py,_srcBounds.y2-1));
+                        nx = std::max(_srcBounds.x1,std::min(nx,_srcBounds.x2-1));
+                        ny = std::max(_srcBounds.y1,std::min(ny,_srcBounds.y2-1));
+                        ax = std::max(_srcBounds.x1,std::min(ax,_srcBounds.x2-1));
+                        ay = std::max(_srcBounds.y1,std::min(ay,_srcBounds.y2-1));
                         const double dx = std::max(0., std::min(fx - x, 1.));
                         const double dy = std::max(0., std::min(fy - y, 1.));
 
@@ -364,7 +374,10 @@ public:
     
     // override the rod call
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod);
-    
+
+    // override the roi call
+    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois);
+
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
     
@@ -443,7 +456,7 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
 
     
     processor.setDstImg(dst.get());
-    processor.setSrcImg(src.get());
+    processor.setSrcImg(src.get(), srcClip_->getRegionOfDefinition(args.time));
     processor.setRenderWindow(args.renderWindow);
     processor.process();
 }
@@ -480,17 +493,18 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     
 
     Transform2D::Matrix3x3 transform = Transform2D::Matrix3x3::getTransform(translate, scale, skew, rotate, center);
-    transform = transform.invert();
-    /// now transform the 4 corners of the initial image
-    Transform2D::Point3D topLeft = transform * Transform2D::Point3D(srcRoD.x1,srcRoD.y2,1);
-    Transform2D::Point3D topRight = transform * Transform2D::Point3D(srcRoD.x2,srcRoD.y2,1);
-    Transform2D::Point3D bottomLeft = transform * Transform2D::Point3D(srcRoD.x1,srcRoD.y1,1);
-    Transform2D::Point3D bottomRight = transform * Transform2D::Point3D(srcRoD.x2,srcRoD.y1,1);
+    // transform must be inverted to comput output coordinates from input coordinates
+    Transform2D::Matrix3x3 invtransform = transform.invert();
+    /// now transform the 4 corners of the source clip to the output image
+    Transform2D::Point3D topLeft = invtransform * Transform2D::Point3D(srcRoD.x1,srcRoD.y2,1);
+    Transform2D::Point3D topRight = invtransform * Transform2D::Point3D(srcRoD.x2,srcRoD.y2,1);
+    Transform2D::Point3D bottomLeft = invtransform * Transform2D::Point3D(srcRoD.x1,srcRoD.y1,1);
+    Transform2D::Point3D bottomRight = invtransform * Transform2D::Point3D(srcRoD.x2,srcRoD.y1,1);
     
-    double l = std::min(std::min(std::min(topLeft.x, bottomLeft.x),topRight.x),bottomRight.x);
-    double b = std::min(std::min(std::min(bottomLeft.y, bottomRight.y),topLeft.y),topRight.y);
-    double r = std::max(std::max(std::max(topRight.x, bottomRight.x),topLeft.x),bottomLeft.x);
-    double t = std::max(std::max(std::max(topLeft.y, topRight.y),bottomLeft.y),bottomRight.y);
+    double l = std::min(std::min(topLeft.x, bottomLeft.x),std::min(topRight.x,bottomRight.x));
+    double b = std::min(std::min(topLeft.y, bottomLeft.y),std::min(topRight.y,bottomRight.y));
+    double r = std::max(std::max(topLeft.x, bottomLeft.x),std::max(topRight.x,bottomRight.x));
+    double t = std::max(std::max(topLeft.y, bottomLeft.y),std::max(topRight.y,bottomRight.y));
     
     //  denormalize(&l, &b, srcRoD);
     // denormalize(&r, &t, srcRoD);
@@ -504,6 +518,71 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
 
     // say we set it
     return true;
+}
+
+
+// override the roi call
+// NON-GENERIC
+// Required if the plugin should support tiles.
+// It may be difficult to implement for complicated transforms:
+// consequently, these transforms cannot support tiles.
+void
+TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+{
+    const OfxRectD roi = args.regionOfInterest;
+    OfxPointD size = getProjectSize();
+    OfxPointD offset = getProjectOffset();
+    OfxPointD scale;
+    OfxPointD translate;
+    double rotate;
+    double skew;
+    OfxPointD center;
+
+    _scale->getValue(scale.x, scale.y);
+    _translate->getValue(translate.x, translate.y);
+    translate.x =  (translate.x * size.x) + offset.x;
+    translate.y =  (translate.y * size.y) + offset.y;
+
+    _rotate->getValue(rotate);
+
+    ///convert to radians
+    rotate = rotate * Transform2D::pi / 180.0;
+    _center->getValue(center.x, center.y);
+    center.x =  (center.x * size.x) + offset.x;
+    center.y =  (center.y * size.y) + offset.y;
+    _skew->getValue(skew);
+
+
+    Transform2D::Matrix3x3 transform = Transform2D::Matrix3x3::getTransform(translate, scale, skew, rotate, center);
+    /// now find the positions in the src clip of the 4 corners of the roi
+    Transform2D::Point3D topLeft = transform * Transform2D::Point3D(roi.x1,roi.y2,1);
+    Transform2D::Point3D topRight = transform * Transform2D::Point3D(roi.x2,roi.y2,1);
+    Transform2D::Point3D bottomLeft = transform * Transform2D::Point3D(roi.x1,roi.y1,1);
+    Transform2D::Point3D bottomRight = transform * Transform2D::Point3D(roi.x2,roi.y1,1);
+
+    double l = std::min(std::min(topLeft.x, bottomLeft.x),std::min(topRight.x,bottomRight.x));
+    double b = std::min(std::min(topLeft.y, bottomLeft.y),std::min(topRight.y,bottomRight.y));
+    double r = std::max(std::max(topLeft.x, bottomLeft.x),std::max(topRight.x,bottomRight.x));
+    double t = std::max(std::max(topLeft.y, bottomLeft.y),std::max(topRight.y,bottomRight.y));
+
+    //  denormalize(&l, &b, srcRoD);
+    // denormalize(&r, &t, srcRoD);
+
+    // No need to round things up here, we must give the *actual* RoI,
+    // the host should compute the right image region from it (by rounding it up/down).
+    OfxRectD srcRoI;
+    srcRoI.x1 = l;
+    srcRoI.x2 = r;
+    srcRoI.y1 = b;
+    srcRoI.y2 = t;
+
+    rois.setRegionOfInterest(*srcClip_, srcRoI);
+
+    // set it on the mask only if we are in an interesting context
+    // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
+    //if (getContext() != OFX::eContextFilter) {
+    //    rois.setRegionOfInterest(*maskClip_, roi);
+    //}
 }
 
 // the overridden render function
@@ -1424,12 +1503,11 @@ void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // NON-GENERIC
 
     // in order to support tiles, the plugin must implement the getRegionOfInterest function
-    // TODO: easy
-    desc.setSupportsTiles(false);
+    desc.setSupportsTiles(true);
 
     // in order to support multiresolution, the plugin must take into account the renderscale
     // and scale the transform appropriately
-    // TODO: could be done easily.
+    // TODO: Change the getRegionOfDefinition(), getRegionsOfInterest(), render() functions to handle args.renderScale
     desc.setSupportsMultiResolution(false);
     desc.setOverlayInteractDescriptor( new TransformOverlayDescriptor);
 
