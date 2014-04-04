@@ -98,6 +98,7 @@
 #define kInvertParamName "Invert"
 #define kFilterParamName "Filter"
 #define kBlackOutsideParamName "Black outside"
+#define kShowOverlayParamName "Show overlay"
 
 
 #define CIRCLE_RADIUS_BASE 30.0
@@ -803,6 +804,7 @@ public :
         _skewOrder = _plugin->fetchChoiceParam(kSkewOrderParamName);
         _center = _plugin->fetchDouble2DParam(kCenterParamName);
         _invert = _plugin->fetchBooleanParam(kInvertParamName);
+        _showOverlay = _plugin->fetchBooleanParam(kShowOverlayParamName);
         addParamToSlaveTo(_translate);
         addParamToSlaveTo(_rotate);
         addParamToSlaveTo(_scale);
@@ -810,6 +812,8 @@ public :
         addParamToSlaveTo(_skewY);
         addParamToSlaveTo(_skewOrder);
         addParamToSlaveTo(_center);
+        addParamToSlaveTo(_invert);
+        addParamToSlaveTo(_showOverlay);
     }
 
     // overridden functions from OFX::Interact to do things
@@ -819,6 +823,13 @@ public :
     virtual bool penUp(const OFX::PenArgs &args);
     
 private:
+    
+    bool isOverlayDisplayed() const {
+        bool disp;
+        _showOverlay->getValue(disp);
+        return disp;
+    }
+    
     void getCenter(OfxPointD& center)
     {
         OfxPointD translate;
@@ -932,7 +943,7 @@ private:
     OFX::ChoiceParam* _skewOrder;
     OFX::Double2DParam* _center;
     OFX::BooleanParam* _invert;
-
+    OFX::BooleanParam* _showOverlay;
 };
 
 void TransformInteract::drawSquare(const OfxPointD& center,bool hovered,const OfxPointD& pixelScale)
@@ -1116,6 +1127,10 @@ void TransformInteract::drawRotationBar(const OfxPointD& center,const OfxPointD&
 bool TransformInteract::draw(const OFX::DrawArgs &args)
 {
     
+    if (!isOverlayDisplayed()) {
+        return false;
+    }
+    
     OfxPointD center,left,right,bottom,top;
     getPoints(center,left,bottom,top,right,args.pixelScale);
     
@@ -1162,6 +1177,10 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
 // overridden functions from OFX::Interact to do things
 bool TransformInteract::penMotion(const OFX::PenArgs &args)
 {
+    if (!isOverlayDisplayed()) {
+        return false;
+    }
+    
     OfxPointD center,left,right,top,bottom;
     getPoints(center,left,bottom,top,right,args.pixelScale);
     
@@ -1390,6 +1409,10 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
 
 bool TransformInteract::penDown(const OFX::PenArgs &args)
 {
+    if (!isOverlayDisplayed()) {
+        return false;
+    }
+    
     using Transform2D::Matrix3x3;
 
     OfxPointD center,left,right,top,bottom;
@@ -1460,6 +1483,11 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
 
 bool TransformInteract::penUp(const OFX::PenArgs &args)
 {
+    
+    if (!isOverlayDisplayed()) {
+        return false;
+    }
+    
     bool ret = _mouseState != eReleased;
     _mouseState = eReleased;
     _lastMousePos = args.penPosition;
@@ -1617,6 +1645,12 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     blackOutside->setDefault(true);
     blackOutside->setAnimates(false);
     page->addChild(*blackOutside);
+    
+    BooleanParamDescriptor* showOverlay = desc.defineBooleanParam(kShowOverlayParamName);
+    showOverlay->setLabels(kShowOverlayParamName, kShowOverlayParamName, kShowOverlayParamName);
+    showOverlay->setDefault(true);
+    showOverlay->setAnimates(false);
+    page->addChild(*showOverlay);
 }
 
 OFX::ImageEffect* TransformPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
