@@ -901,7 +901,9 @@ private:
     
     bool isOnSkewXBar(const Transform2D::Point3D& pos,double radiusY,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
     {
-        double barHalfSize = radiusY + (20. * pixelScale.y);
+        // we are not axis-aligned
+        double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
+        double barHalfSize = radiusY + (20. * meanPixelScale);
         if (pos.x >= (center.x - tolerance) && pos.x <= (center.x + tolerance) &&
             pos.y >= (center.y - barHalfSize - tolerance) && pos.y <= (center.y + barHalfSize + tolerance)) {
             return true;
@@ -909,11 +911,25 @@ private:
         
         return false;
     }
-#warning "TODO: isOnSkewYBar"
+
+    bool isOnSkewYBar(const Transform2D::Point3D& pos,double radiusX,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
+    {
+        // we are not axis-aligned
+        double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
+        double barHalfSize = radiusX + (20. * meanPixelScale);
+        if (pos.y >= (center.y - tolerance) && pos.y <= (center.y + tolerance) &&
+            pos.x >= (center.x - barHalfSize - tolerance) && pos.x <= (center.x + barHalfSize + tolerance)) {
+            return true;
+        }
+
+        return false;
+    }
 
     bool isOnRotationBar(const  Transform2D::Point3D& pos,double radiusX,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
     {
-        double barExtra = 30. * pixelScale.y;
+        // we are not axis-aligned
+        double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
+        double barExtra = 30. * meanPixelScale;
         if (pos.x >= (center.x - tolerance) && pos.x <= (center.x + radiusX + barExtra + tolerance) &&
             pos.y >= (center.y  - tolerance) && pos.y <= (center.y + tolerance)) {
             return true;
@@ -954,13 +970,15 @@ private:
 
 void TransformInteract::drawSquare(const OfxPointD& center,bool hovered,const OfxPointD& pixelScale)
 {
+    // we are not axis-aligned
+    double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
     if (hovered) {
         glColor4f(1.0, 0.0, 0.0, 1.0);
     } else {
         glColor4f(1.0, 1.0, 1.0, 1.0);
     }
-    double halfWidth = (POINT_SIZE / 2.) * pixelScale.x;
-    double halfHeight = (POINT_SIZE / 2.) * pixelScale.y;
+    double halfWidth = (POINT_SIZE / 2.) * meanPixelScale;
+    double halfHeight = (POINT_SIZE / 2.) * meanPixelScale;
     glPushMatrix();
     glTranslated(center.x, center.y, 0.);
     glBegin(GL_POLYGON);
@@ -975,8 +993,10 @@ void TransformInteract::drawSquare(const OfxPointD& center,bool hovered,const Of
 
 void TransformInteract::drawEllipse(const OfxPointD& center,const OfxPointD& radius,const OfxPointD& pixelScale,bool hovered)
 {
+    // we are not axis-aligned
+    double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
     double two_pi = 2. * Transform2D::pi();
-    float angle_increment = two_pi / std::max(radius.x / pixelScale.x,radius.y / pixelScale.y);
+    float angle_increment = two_pi / std::max(radius.x / meanPixelScale, radius.y / meanPixelScale);
     
     
     if (hovered) {
@@ -1053,13 +1073,15 @@ TransformInteract::drawSkewBar(const OfxPointD &center,
 
 void TransformInteract::drawRotationBar(const OfxPointD& pixelScale,double radiusX,bool hovered)
 {
+    // we are not axis-aligned
+    double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
     if (hovered) {
         glColor4f(1.0, 0.0, 0.0, 1.0);
     } else {
         glColor4f(1.0, 1.0, 1.0, 1.0);
     }
     
-    double barExtra = 30. * pixelScale.x;
+    double barExtra = 30. * meanPixelScale;
     glBegin(GL_LINES);
     glVertex2d(0. /*center.x*/, 0. /*center.y*/);
     glVertex2d(0. /*center.x*/ + radiusX + barExtra, 0. /*center.y*/);
@@ -1071,8 +1093,8 @@ void TransformInteract::drawRotationBar(const OfxPointD& pixelScale,double radiu
         
         ///draw an arrow slightly bended. This is an arc of circle of radius 5 in X, and 10 in Y.
         OfxPointD arrowRadius;
-        arrowRadius.x = 5. * pixelScale.x;
-        arrowRadius.y = 10. * pixelScale.y;
+        arrowRadius.x = 5. * meanPixelScale;
+        arrowRadius.y = 10. * meanPixelScale;
         
         float angle_increment = Transform2D::pi() / 10.;
         glPushMatrix ();
@@ -1087,8 +1109,8 @@ void TransformInteract::drawRotationBar(const OfxPointD& pixelScale,double radiu
         
         glPopMatrix ();
         
-        double arrowOffsetX = 5. * pixelScale.x;
-        double arrowOffsetY = 5. * pixelScale.y;
+        double arrowOffsetX = 5. * meanPixelScale;
+        double arrowOffsetY = 5. * meanPixelScale;
         
         glBegin(GL_LINES);
         ///draw the top head
@@ -1096,14 +1118,14 @@ void TransformInteract::drawRotationBar(const OfxPointD& pixelScale,double radiu
         glVertex2f(arrowCenterX, 0. /*center.y*/ + arrowRadius.y - arrowOffsetY);
         
         glVertex2f(arrowCenterX, 0. /*center.y*/ + arrowRadius.y);
-        glVertex2f(arrowCenterX  + arrowOffsetX, 0. /*center.y*/ + arrowRadius.y + 1. * pixelScale.y);
+        glVertex2f(arrowCenterX  + arrowOffsetX, 0. /*center.y*/ + arrowRadius.y + 1. * meanPixelScale);
         
         ///draw the bottom head
         glVertex2f(arrowCenterX, 0. /*center.y*/ - arrowRadius.y);
         glVertex2f(arrowCenterX, 0. /*center.y*/ - arrowRadius.y + arrowOffsetY);
         
         glVertex2f(arrowCenterX, 0. /*center.y*/ - arrowRadius.y);
-        glVertex2f(arrowCenterX  + arrowOffsetX, 0. /*center.y*/ - arrowRadius.y - 1. * pixelScale.y);
+        glVertex2f(arrowCenterX  + arrowOffsetX, 0. /*center.y*/ - arrowRadius.y - 1. * meanPixelScale);
 
         glEnd();
         
@@ -1163,14 +1185,13 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
         previousPos = transformscale * previousPos;
         previousPos.x /= previousPos.z;
         previousPos.y /= previousPos.z;
-        std::cout << "flip?" << previousPos.y << std::endl;
         if ((_drawState == eSkewXBarHoverered && previousPos.y > center.y) ||
             (_drawState == eSkewYBarHoverered && previousPos.x > center.x)) {
             flip = 180.;
         }
     }
     drawSkewBar(center, args.pixelScale, radius.y, _mouseState == eDraggingSkewXBar || _drawState == eSkewXBarHoverered, flip);
-    drawSkewBar(center, args.pixelScale, radius.x, _mouseState == eDraggingSkewYBar || _drawState == eSkewYBarHoverered, flip + 90.);
+    drawSkewBar(center, args.pixelScale, radius.x, _mouseState == eDraggingSkewYBar || _drawState == eSkewYBarHoverered, flip - 90.);
 
 
     drawSquare(center, _mouseState == eDraggingCenterPoint || _drawState == eCenterPointHovered,args.pixelScale);
@@ -1251,11 +1272,6 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     currentPos.x /= currentPos.z;
     currentPos.y /= currentPos.z;
 
-    //std::cout << "penPosition = " << args.penPosition.x << "," << args.penPosition.y << std::endl;
-    //std::cout << "transform = " << "[[" << transform.a << "," << transform.b << "," << transform.c << "],[" << transform.d << "," << transform.e << "," << transform.f << "],[" << transform.g << "," << transform.h << "," << transform.i << "]]" << std::endl;
-    //std::cout << "transformedpos = " << transformedPos.x << "," << transformedPos.y << std::endl;
-    //std::cout << "center = " << center.x << "," << center.y << std::endl;
-
     bool ret = true;
     if (_mouseState == eReleased) {
         double hoverToleranceX = 5 * args.pixelScale.x;
@@ -1276,9 +1292,8 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
             _drawState = eRotationBarHovered;
         } else if (isOnSkewXBar(transformedPos,ellipseRadius.y,center,args.pixelScale,hoverToleranceY)) {
             _drawState = eSkewXBarHoverered;
-#warning "TODO:skewY"
-        //} else if (isOnSkewYBar(transformedPos,ellipseRadius.y,center,args.pixelScale,hoverToleranceX)) {
-        //    _drawState = eSkewYBarHoverered;
+        } else if (isOnSkewYBar(transformedPos,ellipseRadius.x,center,args.pixelScale,hoverToleranceX)) {
+            _drawState = eSkewYBarHoverered;
         } else {
             _drawState = eInActive;
             ret = false;
@@ -1418,10 +1433,12 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
         _mouseState = eDraggingBottomPoint;
     } else if (isOnEllipseBorder(transformedPos,ellipseRadius, center)) {
         _mouseState = eDraggingCircle;
-    } else if (isOnSkewXBar(transformedPos,ellipseRadius.y,center,args.pixelScale,pressToleranceY)) {
-        _mouseState = eDraggingSkewXBar;
     } else if (isOnRotationBar(rotationPos, ellipseRadius.x, center, args.pixelScale, pressToleranceY)) {
         _mouseState = eDraggingRotationBar;
+    } else if (isOnSkewXBar(transformedPos,ellipseRadius.y,center,args.pixelScale,pressToleranceY)) {
+        _mouseState = eDraggingSkewXBar;
+    } else if (isOnSkewYBar(transformedPos,ellipseRadius.x,center,args.pixelScale,pressToleranceX)) {
+        _mouseState = eDraggingSkewYBar;
     } else {
         _mouseState = eReleased;
         ret =  false;
