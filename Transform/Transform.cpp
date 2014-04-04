@@ -874,8 +874,12 @@ private:
     
     void drawEllipse(const OfxPointD& center,const OfxPointD& radius,const OfxPointD& pixelScale,bool hovered);
     
-    void drawSkewXBar(const OfxPointD& penPos, const OfxPointD &center, const OfxPointD& pixelScale, double radiusY, bool hovered);
-    
+    void drawSkewBar(const OfxPointD &center,
+                     const OfxPointD& pixelScale,
+                     double radiusY,
+                     bool hovered,
+                     double angle);
+
     void drawRotationBar(const OfxPointD& pixelScale, double radiusX, bool hovered);
     
     static bool squareContains(const Transform2D::Point3D& pos,const OfxRectD& rect,double toleranceX= 0.,double toleranceY = 0.)
@@ -957,12 +961,15 @@ void TransformInteract::drawSquare(const OfxPointD& center,bool hovered,const Of
     }
     double halfWidth = (POINT_SIZE / 2.) * pixelScale.x;
     double halfHeight = (POINT_SIZE / 2.) * pixelScale.y;
+    glPushMatrix();
+    glTranslated(center.x, center.y, 0.);
     glBegin(GL_POLYGON);
-    glVertex2d(center.x - halfWidth, center.y - halfHeight); // bottom left
-    glVertex2d(center.x - halfWidth, center.y + halfHeight); // top left
-    glVertex2d(center.x + halfWidth, center.y + halfHeight); // bottom right
-    glVertex2d(center.x + halfWidth, center.y - halfHeight); // top right
+    glVertex2d(- halfWidth, - halfHeight); // bottom left
+    glVertex2d(- halfWidth, + halfHeight); // top left
+    glVertex2d(+ halfWidth, + halfHeight); // bottom right
+    glVertex2d(+ halfWidth, - halfHeight); // top right
     glEnd();
+    glPopMatrix();
     
 }
 
@@ -991,79 +998,58 @@ void TransformInteract::drawEllipse(const OfxPointD& center,const OfxPointD& rad
     glPopMatrix ();
 }
 
-void TransformInteract::drawSkewXBar(const OfxPointD& penPos,const OfxPointD &center,const OfxPointD& pixelScale,double radiusY,bool hovered)
+void
+TransformInteract::drawSkewBar(const OfxPointD &center,
+                               const OfxPointD& pixelScale,
+                               double radiusY,
+                               bool hovered,
+                               double angle)
 {
     if (hovered) {
         glColor4f(1.0, 0.0, 0.0, 1.0);
     } else {
         glColor4f(1.0, 1.0, 1.0, 1.0);
     }
+
+    // we are not axis-aligned: use the mean pixel scale
+    double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
+    double barHalfSize = radiusY + 20. * meanPixelScale;
+    double arrowYPosition = radiusY + 10. * meanPixelScale;
+    double arrowXHalfSize = 10 * meanPixelScale;
+    double arrowHeadOffsetX = 3 * meanPixelScale;
+    double arrowHeadOffsetY = 3 * meanPixelScale;
     
-    double barHalfSize = radiusY + (20. * pixelScale.y);
-    double arrowYPosition = radiusY + (10. * pixelScale.y);
-    double arrowXHalfSize = 10 * pixelScale.x;
-    double arrowHeadOffsetX = 3 * pixelScale.x;
-    double arrowHeadOffsetY = 3 * pixelScale.y;
-    
+    glPushMatrix ();
+    glTranslatef (center.x, center.y, 0);
+    glRotated(angle, 0, 0, 1);
+
     glBegin(GL_LINES);
-    glVertex2d(center.x, center.y - barHalfSize);
-    glVertex2d(center.x, center.y + barHalfSize);
+    glVertex2d(0., - barHalfSize);
+    glVertex2d(0., + barHalfSize);
     
     if (hovered) {
-        if (penPos.y < center.y) {
-            ///draw an arrow in the bottom of the bar
-            
-            ///draw the central bar
-            glVertex2d(center.x - arrowXHalfSize,center.y - arrowYPosition);
-            glVertex2d(center.x + arrowXHalfSize, center.y - arrowYPosition);
-            
-            
+             ///draw the central bar
+            glVertex2d(- arrowXHalfSize, - arrowYPosition);
+            glVertex2d(+ arrowXHalfSize, - arrowYPosition);
             
             ///left triangle
-            glVertex2d(center.x - arrowXHalfSize,center.y -  arrowYPosition);
-            glVertex2d(center.x - arrowXHalfSize + arrowHeadOffsetX,center.y - arrowYPosition + arrowHeadOffsetY);
+            glVertex2d(- arrowXHalfSize, -  arrowYPosition);
+            glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, - arrowYPosition + arrowHeadOffsetY);
             
-            glVertex2d(center.x - arrowXHalfSize,center.y - arrowYPosition);
-            glVertex2d(center.x - arrowXHalfSize + arrowHeadOffsetX,center.y - arrowYPosition - arrowHeadOffsetY);
+            glVertex2d(- arrowXHalfSize,- arrowYPosition);
+            glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, - arrowYPosition - arrowHeadOffsetY);
 
-            
             ///right triangle
-            glVertex2d(center.x + arrowXHalfSize,center.y - arrowYPosition);
-            glVertex2d(center.x + arrowXHalfSize - arrowHeadOffsetX,center.y - arrowYPosition + arrowHeadOffsetY);
+            glVertex2d(+ arrowXHalfSize,- arrowYPosition);
+            glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, - arrowYPosition + arrowHeadOffsetY);
             
-            glVertex2d(center.x + arrowXHalfSize,center.y - arrowYPosition);
-            glVertex2d(center.x + arrowXHalfSize - arrowHeadOffsetX,center.y - arrowYPosition - arrowHeadOffsetY);
-            
-        } else {
-            ///draw an arrow in the top of the bar
-            ///draw the central bar
-            glVertex2d(center.x - arrowXHalfSize,center.y + arrowYPosition);
-            glVertex2d(center.x + arrowXHalfSize, center.y + arrowYPosition);
-            
-            
-            
-            ///left triangle
-            glVertex2d(center.x - arrowXHalfSize,center.y +  arrowYPosition);
-            glVertex2d(center.x - arrowXHalfSize + arrowHeadOffsetX,center.y + arrowYPosition + arrowHeadOffsetY);
-            
-            glVertex2d(center.x - arrowXHalfSize,center.y + arrowYPosition);
-            glVertex2d(center.x - arrowXHalfSize + arrowHeadOffsetX,center.y + arrowYPosition - arrowHeadOffsetY);
-            
-            
-            ///right triangle
-            glVertex2d(center.x + arrowXHalfSize,center.y + arrowYPosition);
-            glVertex2d(center.x + arrowXHalfSize - arrowHeadOffsetX,center.y + arrowYPosition + arrowHeadOffsetY);
-            
-            glVertex2d(center.x + arrowXHalfSize, center.y +arrowYPosition);
-            glVertex2d(center.x + arrowXHalfSize - arrowHeadOffsetX,center.y + arrowYPosition - arrowHeadOffsetY);
-
-        }
+            glVertex2d(+ arrowXHalfSize,- arrowYPosition);
+            glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, - arrowYPosition - arrowHeadOffsetY);
     }
-
-    
     glEnd();
-    
+    glPopMatrix();
 }
+
 
 void TransformInteract::drawRotationBar(const OfxPointD& pixelScale,double radiusX,bool hovered)
 {
@@ -1134,7 +1120,7 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
     
     double angle;
     _rotate->getValue(angle);
-    
+
     double skewX, skewY;
     int skewOrderYX;
     _skewX->getValue(skewX);
@@ -1159,10 +1145,32 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
     glTranslated(-center.x, -center.y, 0.);
 
     drawEllipse(center,radius,args.pixelScale, _mouseState == eDraggingCircle || _drawState == eCircleHovered);
-    
-    drawSkewXBar(_lastMousePos, center, args.pixelScale, radius.y, _mouseState == eDraggingSkewXBar || _drawState == eSkewXBarHoverered);
-#warning "TODO: drawSkewY"
-    //drawSkewYBar(_lastMousePos, center, args.pixelScale, radius.x, _mouseState == eDraggingSkewYBar || _drawState == eSkewYBarHoverered);
+
+    // add 180 to the angle to draw the arrows on the other side. unfortunately, this requires knowing
+    // the mouse position in the ellipse frame
+    double flip = 0.;
+    if (_drawState == eSkewXBarHoverered || _drawState == eSkewYBarHoverered) {
+        OfxPointD scale;
+        _scale->getValue(scale.x, scale.y);
+        double rot = Transform2D::toRadians(angle);
+        Transform2D::Matrix3x3 transformscale;
+        transformscale = Transform2D::Matrix3x3::getInverseTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+
+        Transform2D::Point3D previousPos;
+        previousPos.x = _lastMousePos.x;
+        previousPos.y = _lastMousePos.y;
+        previousPos.z = 1.;
+        previousPos = transformscale * previousPos;
+        previousPos.x /= previousPos.z;
+        previousPos.y /= previousPos.z;
+        std::cout << "flip?" << previousPos.y << std::endl;
+        if ((_drawState == eSkewXBarHoverered && previousPos.y > center.y) ||
+            (_drawState == eSkewYBarHoverered && previousPos.x > center.x)) {
+            flip = 180.;
+        }
+    }
+    drawSkewBar(center, args.pixelScale, radius.y, _mouseState == eDraggingSkewXBar || _drawState == eSkewXBarHoverered, flip);
+    drawSkewBar(center, args.pixelScale, radius.x, _mouseState == eDraggingSkewYBar || _drawState == eSkewYBarHoverered, flip + 90.);
 
 
     drawSquare(center, _mouseState == eDraggingCenterPoint || _drawState == eCenterPointHovered,args.pixelScale);
@@ -1304,7 +1312,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         }
     } else if (_mouseState == eDraggingTopPoint || _mouseState == eDraggingBottomPoint) {
         // avoid division by zero
-        if (center.y - previousPos.y) {
+        if (center.y != previousPos.y) {
             double minX,minY,maxX,maxY;
             _scale->getRange(minX, minY, maxX, maxY);
             const double scaleRatio = (center.y - currentPos.y)/(center.y - previousPos.y);
@@ -1331,13 +1339,17 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         _rotate->setValue(Transform2D::toDegrees(angle));
         
     } else if (_mouseState == eDraggingSkewXBar) {
-#warning "FIXME: doesn't work"
-        OfxPointD delta;
-        delta.x = dx;
-        delta.y = dy;
-        delta.x *= args.pixelScale.x;
-        delta.y *= args.pixelScale.y;
-        _skewX->setValue(skewX + delta.x);
+        // avoid division by zero
+        if (scale.y != 0. && center.y != previousPos.y) {
+            const double addSkew = (scale.x/scale.y)*(currentPos.x - previousPos.x)/(currentPos.y - center.y);
+            _skewX->setValue(skewX + addSkew);
+        }
+    } else if (_mouseState == eDraggingSkewYBar) {
+        // avoid division by zero
+        if (scale.x != 0. && center.x != previousPos.x) {
+            const double addSkew = (scale.y/scale.x)*(currentPos.y - previousPos.y)/(currentPos.x - center.x);
+            _skewY->setValue(skewY + addSkew);
+        }
     } else {
         assert(false);
     }
