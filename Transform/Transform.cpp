@@ -88,6 +88,7 @@
 #include "../include/ofxsProcessing.H"
 #include "GenericTransform.h"
 
+// NON-GENERIC
 #define kTranslateParamName "Translate"
 #define kRotateParamName "Rotate"
 #define kScaleParamName "Scale"
@@ -96,9 +97,11 @@
 #define kSkewOrderParamName "Skew order"
 #define kCenterParamName "Center"
 #define kInvertParamName "Invert"
+// GENERIC
 #define kFilterParamName "Filter"
 #define kBlackOutsideParamName "Black outside"
-
+#define kMaskParamName "Mask"
+#define kMixParamName "Mix"
 
 #define CIRCLE_RADIUS_BASE 30.0
 #define POINT_SIZE 7.0
@@ -110,21 +113,35 @@ class TransformProcessorBase : public OFX::ImageProcessor
 {
 protected:
     OFX::Image *_srcImg;
+    OFX::Image *_maskImg;
     OfxRectI _srcBounds;
     // NON-GENERIC PARAMETERS:
     Transform2D::Matrix3x3 _invtransform;
     // GENERIC PARAMETERS:
     int _filter;
     bool _blackOutside;
+    bool _domask;
+    double _mix;
 
 public:
     
     TransformProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
+    , _maskImg(0)
+    , _invtransform()
+    , _filter(0)
+    , _blackOutside(false)
+    , _domask(false)
+    , _mix(0.0)
     {
+        _srcBounds.x1 = 0;
+        _srcBounds.x2 = 0;
+        _srcBounds.y1 = 0;
+        _srcBounds.y2 = 0;
     }
-    
+
+    /** @brief set the src image */
     void setSrcImg(OFX::Image *v, const OfxRectD& srcRoD)
     {
         _srcImg = v;
@@ -136,6 +153,13 @@ public:
         _srcBounds.y1 = std::max((double)kOfxFlagInfiniteMin, std::ceil(srcRoD.y1));
         _srcBounds.y2 = std::min((double)kOfxFlagInfiniteMax, std::floor(srcRoD.y2));
     }
+
+    
+    /** @brief set the optional mask image */
+    void setMaskImg(OFX::Image *v) {_maskImg = v;}
+
+    // Are we masking. We can't derive this from the mask image being set as NULL is a valid value for an input image
+    void doMasking(bool v) {_domask = v;}
 
     void setValues(double translateX, //!< non-generic
                    double translateY, //!< non-generic
@@ -149,7 +173,8 @@ public:
                    double centerY,    //!< non-generic
                    bool invert,                //!< non-generic
                    int filter,                 //!< generic
-                   bool blackOutside)          //!< generic
+                   bool blackOutside, //!< generic
+                   double mix)          //!< generic
     {
         // NON-GENERIC
         if (invert) {
@@ -160,21 +185,18 @@ public:
         // GENERIC
         _filter = filter;
         _blackOutside = blackOutside;
+        _mix = mix;
     }
     
     
 };
 
-static void normalize(double *x,double *y,double x1,double x2,double y1,double y2)
+template <class T> inline T
+Clamp(T v, int min, int max)
 {
-    *x = (*x - x1) / (x2 - x1);
-    *y = (*y - y1) / (y2 - y1);
-}
-
-static void denormalize(double* x,double *y,const OfxRectD& rod)
-{
-    *x = *x * (rod.x2 - rod.x1);
-    *y = *y * (rod.y2 - rod.y1);
+    if(v < T(min)) return T(min);
+    if(v > T(max)) return T(max);
+    return v;
 }
 
 template <class PIX, int nComponents, int maxValue>
@@ -191,17 +213,22 @@ public :
     
     void multiThreadProcessImages(OfxRectI procWindow)
     {
+        float maskScale = 1.0f;
+        float tmpPix[nComponents];
+
         for (int y = procWindow.y1; y < procWindow.y2; y++)
         {
+            if(_effect.abort()) break;
+
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
             // the coordinates of the center of the pixel in canonical coordinates
             // see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#CanonicalCoordinates
             Transform2D::Point3D canonicalCoords;
             canonicalCoords.z = 1;
             canonicalCoords.y = (double)y + 0.5;
-            
-            
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            for (int x = procWindow.x1; x < procWindow.x2; x++)
+
+            for (int x = procWindow.x1; x < procWindow.x2; x++, dstPix += nComponents)
             {
                 // NON-GENERIC TRANSFORM
 
@@ -212,7 +239,7 @@ public :
                 if (!_srcImg || transformed.z == 0.) {
                     // the back-transformed point is at infinity
                     for (int c = 0; c < nComponents; ++c) {
-                        dstPix[c] = 0;
+                        tmpPix[c] = 0;
                     }
                 } else {
                     double fx = transformed.x / transformed.z;
@@ -234,11 +261,11 @@ public :
                         PIX *srcPix = (PIX *)_srcImg->getPixelAddress(x, y);
                         if (srcPix) {
                             for (int c = 0; c < nComponents; ++c) {
-                                dstPix[c] = srcPix[c];
+                                tmpPix[c] = srcPix[c];
                             }
                         } else {
                             for (int c = 0; c < nComponents; ++c) {
-                                dstPix[c] = 0;
+                                tmpPix[c] = 0;
                             }
                         }
                     } else if (_filter == 1) {
@@ -269,11 +296,11 @@ public :
                                 const double Icn = get(Pcn,c);
                                 const double Inn = get(Pnn,c);
 
-                                dstPix[c] = Icc + dx*(Inc-Icc + dy*(Icc+Inn-Icn-Inc)) + dy*(Icn-Icc);
+                                tmpPix[c] = Icc + dx*(Inc-Icc + dy*(Icc+Inn-Icn-Inc)) + dy*(Icn-Icc);
                             }
                         } else {
                             for (int c = 0; c < nComponents; ++c) {
-                                dstPix[c] = 0;
+                                tmpPix[c] = 0;
                             }
                         }
                     } else if (_filter == 2) {
@@ -338,19 +365,52 @@ public :
                                 double Ic = Icc + 0.5f*(dx*(-Ipc+Inc) + dx*dx*(2*Ipc-5*Icc+4*Inc-Iac) + dx*dx*dx*(-Ipc+3*Icc-3*Inc+Iac));
                                 double In = Icn + 0.5f*(dx*(-Ipn+Inn) + dx*dx*(2*Ipn-5*Icn+4*Inn-Ian) + dx*dx*dx*(-Ipn+3*Icn-3*Inn+Ian));
                                 double Ia = Ica + 0.5f*(dx*(-Ipa+Ina) + dx*dx*(2*Ipa-5*Ica+4*Ina-Iaa) + dx*dx*dx*(-Ipa+3*Ica-3*Ina+Iaa));
-                                dstPix[c] =  Ic + 0.5f*(dy*(-Ip+In) + dy*dy*(2*Ip-5*Ic+4*In-Ia) + dy*dy*dy*(-Ip+3*Ic-3*In+Ia));
+                                tmpPix[c] =  Ic + 0.5f*(dy*(-Ip+In) + dy*dy*(2*Ip-5*Ic+4*In-Ia) + dy*dy*dy*(-Ip+3*Ic-3*In+Ia));
                             }
                         } else {
                             for (int c = 0; c < nComponents; ++c) {
-                                dstPix[c] = 0;
+                                tmpPix[c] = 0;
                             }
                         }
                     }
 
                 }
-                dstPix += nComponents;
-                
-                
+
+                PIX *maskPix = NULL;
+                PIX *srcPix = NULL;
+
+                // are we doing masking
+                if (_domask && _maskImg) {
+                    // we do, get the pixel from the mask
+                    maskPix = (PIX *)_maskImg->getPixelAddress(x, y);
+                    // figure the scale factor from that pixel
+                    maskScale = maskPix != 0 ? float(*maskPix)/float(maxValue) : 0.0f;
+                }
+                if ((_domask && _maskImg) || _mix != 1.) {
+                    srcPix = (PIX *)_srcImg->getPixelAddress(x, y);
+                }
+                if (srcPix) {
+                    float alpha = maskScale * _mix;
+                    for (int c = 0; c < nComponents; ++c) {
+                        float v = tmpPix[c] * alpha + (1. - alpha) * srcPix[c];
+                        if (maxValue == 1) { // implies floating point and so no clamping
+                            dstPix[c] = PIX(v);
+                        } else { // integer based and we need to clamp
+                            // (e.g. bicubic filter may overflow)
+                            dstPix[c] = PIX(Clamp(v, 0, maxValue));
+                        }
+                    }
+                } else {
+                    // no mask, no mix
+                    for (int c = 0; c < nComponents; ++c) {
+                        if (maxValue == 1) { // implies floating point and so no clamping
+                            dstPix[c] = tmpPix[c];
+                        } else { // integer based and we need to clamp
+                            // (e.g. bicubic filter may overflow)
+                            dstPix[c] = PIX(Clamp(tmpPix[c], 0, maxValue));
+                        }
+                    }
+                }
             }
         }
     }
@@ -373,6 +433,7 @@ protected:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
+    OFX::Clip *maskClip_;
 
 public:
     /** @brief ctor */
@@ -380,9 +441,12 @@ public:
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClip_(0)
+    , maskClip_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        // name of mask clip depends on the context
+        maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         // NON-GENERIC
         _translate = fetchDouble2DParam(kTranslateParamName);
         _rotate = fetchDoubleParam(kRotateParamName);
@@ -395,6 +459,8 @@ public:
         // GENERIC
         _filter = fetchChoiceParam(kFilterParamName);
         _blackOutside = fetchBooleanParam(kBlackOutsideParamName);
+        _domask = fetchBooleanParam(kMaskParamName);
+        _mix = fetchDoubleParam(kMixParamName);
     }
     
     // override the rod call
@@ -424,6 +490,8 @@ private:
     // GENERIC
     OFX::ChoiceParam* _filter;
     OFX::BooleanParam* _blackOutside;
+    OFX::BooleanParam* _domask;
+    OFX::DoubleParam* _mix;
 };
 
 
@@ -460,6 +528,7 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         // GENERIC
         int filter;
         bool blackOutside;
+        double mix;
 
         // NON-GENERIC
         _scale->getValue(scaleX, scaleY);
@@ -478,14 +547,35 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         // GENERIC
         _filter->getValue(filter);
         _blackOutside->getValue(blackOutside);
+        _mix->getValue(mix);
 
-        processor.setValues(translateX, translateY, rotate, scaleX, scaleY, skewX, skewY, (bool)skewOrder, centerX, centerY, invert, filter, blackOutside);
+        processor.setValues(translateX, translateY, rotate, scaleX, scaleY, skewX, skewY, (bool)skewOrder, centerX, centerY, invert, filter, blackOutside, mix);
     }
 
-    
+    // auto ptr for the mask.
+    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
+
+    // do we do masking
+    if (getContext() != OFX::eContextFilter) {
+        bool doMasking;
+        _domask->getValue(doMasking);
+        if (doMasking) {
+            // say we are masking
+            processor.doMasking(true);
+
+            // Set it in the processor
+            processor.setMaskImg(mask.get());
+        }
+    }
+
+    // set the images
     processor.setDstImg(dst.get());
     processor.setSrcImg(src.get(), srcClip_->getRegionOfDefinition(args.time));
+
+    // set the render window
     processor.setRenderWindow(args.renderWindow);
+
+    // Call the base class process member, this will call the derived templated process code
     processor.process();
 }
 
@@ -542,9 +632,6 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     double r = std::max(std::max(topLeft.x, bottomLeft.x),std::max(topRight.x,bottomRight.x));
     double t = std::max(std::max(topLeft.y, bottomLeft.y),std::max(topRight.y,bottomRight.y));
     
-    //  denormalize(&l, &b, srcRoD);
-    // denormalize(&r, &t, srcRoD);
-
     // GENERIC
     //int filter;
     //_filter->getValue(filter);
@@ -621,14 +708,16 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     double r = std::max(std::max(topLeft.x, bottomLeft.x),std::max(topRight.x,bottomRight.x));
     double t = std::max(std::max(topLeft.y, bottomLeft.y),std::max(topRight.y,bottomRight.y));
 
-    //  denormalize(&l, &b, srcRoD);
-    // denormalize(&r, &t, srcRoD);
-
     // GENERIC
     int filter;
     _filter->getValue(filter);
     bool blackOutside;
     _blackOutside->getValue(blackOutside);
+    bool doMasking;
+    _domask->getValue(doMasking);
+    double mix;
+    _mix->getValue(mix);
+
     if (filter == 0) {
         // nearest neighbor, the exact region is OK
     } else if (filter == 1) {
@@ -644,6 +733,22 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
         b -= 1.5;
         t += 1.5;
     }
+
+
+    // set it on the mask only if we are in an interesting context
+    // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
+    if (getContext() != OFX::eContextFilter && doMasking) {
+        rois.setRegionOfInterest(*maskClip_, roi);
+    }
+    if ((getContext() != OFX::eContextFilter && doMasking) || mix != 1.) {
+        // for masking, we also need the source image for that same roi.
+        // compute the union of both ROIs
+        l = std::min(l, roi.x1);
+        r = std::max(r, roi.x2);
+        b = std::min(b, roi.y1);
+        t = std::max(t, roi.y2);
+    }
+
     // No need to round things up here, we must give the *actual* RoI,
     // the host should compute the right image region from it (by rounding it up/down).
     OfxRectD srcRoI;
@@ -653,12 +758,6 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     srcRoI.y2 = t;
 
     rois.setRegionOfInterest(*srcClip_, srcRoI);
-
-    // set it on the mask only if we are in an interesting context
-    // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
-    //if (getContext() != OFX::eContextFilter) {
-    //    rois.setRegionOfInterest(*maskClip_, roi);
-    //}
 }
 
 // the overridden render function
@@ -726,9 +825,9 @@ TransformPlugin::render(const OFX::RenderArguments &args)
 }
 
 // overridden is identity
-// NON-GENERIC
 bool TransformPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
 {
+    // NON-GENERIC
     OfxPointD scale;
     OfxPointD translate;
     double rotate;
@@ -744,6 +843,18 @@ bool TransformPlugin::isIdentity(const RenderArguments &args, Clip * &identityCl
         identityTime = args.time;
         return true;
     }
+
+    // GENERIC
+    bool doMasking;
+    _domask->getValue(doMasking);
+    double mix;
+    _mix->getValue(mix);
+    if (doMasking && mix == 0.) {
+        identityClip = srcClip_;
+        identityTime = args.time;
+        return true;
+    }
+
     return false;
 }
 
@@ -1473,7 +1584,7 @@ void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
-    desc.addSupportedContext(eContextPaint);
+    //desc.addSupportedContext(eContextPaint);
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
@@ -1513,6 +1624,19 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // GENERIC
 
+    // if general or paint context, define the mask clip
+    if (context == eContextGeneral || context == eContextPaint) {
+        // if paint context, it is a mandated input called 'brush'
+        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
+        maskClip->addSupportedComponent(ePixelComponentAlpha);
+        maskClip->setTemporalClipAccess(false);
+        if (context == eContextGeneral) {
+            maskClip->setOptional(true);
+        }
+        maskClip->setSupportsTiles(true);
+        maskClip->setIsMask(true); // we are a mask input
+    }
+
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -1521,7 +1645,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(true);
     srcClip->setIsMask(false);
-    
+
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
@@ -1609,6 +1733,19 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     blackOutside->setDefault(true);
     blackOutside->setAnimates(false);
     page->addChild(*blackOutside);
+
+    BooleanParamDescriptor* domask = desc.defineBooleanParam(kMaskParamName);
+    domask->setLabels(kMaskParamName, kMaskParamName, kMaskParamName);
+    domask->setDefault(false);
+    domask->setAnimates(false);
+    page->addChild(*domask);
+
+    DoubleParamDescriptor* mix = desc.defineDoubleParam(kMixParamName);
+    mix->setLabels(kMixParamName, kMixParamName, kMixParamName);
+    mix->setDefault(1.);
+    mix->setRange(0.,1.);
+    mix->setDisplayRange(0.,1.);
+    page->addChild(*mix);
 }
 
 OFX::ImageEffect* TransformPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
