@@ -1263,67 +1263,34 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         
         OfxPointD scale;
         _scale->getValue(scale.x, scale.y);
-        
-        dx /= (CIRCLE_RADIUS_BASE * args.pixelScale.x);
-        dy /= (CIRCLE_RADIUS_BASE * args.pixelScale.y);
-        
-        // y = 1 , x = 0
-        int direction = std::abs(dx) < std::abs(dy) ? 1 : 0;
-        
-        bool isLeftFromCenter = transformedPos.x < center.x;
-        bool isBelowFromCenter = transformedPos.y < center.y;
-        
-        
-        ////  | 1 | 2 |
-        ////  | 3 | 4 |
-        
-        int quadrant;
-        if (isLeftFromCenter && !isBelowFromCenter) {
-            quadrant = 1;
-        } else if (!isLeftFromCenter && !isBelowFromCenter) {
-            quadrant = 2;
-        } else if (!isLeftFromCenter && isBelowFromCenter) {
-            quadrant = 4;
-        } else {
-            quadrant = 3;
+
+        // we need to compute the backtransformed points with the scale
+        Transform2D::Matrix3x3 transformscale = Transform2D::Matrix3x3::getInverseTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+        Transform2D::Point3D previousPos;
+        previousPos.x = _lastMousePos.x;
+        previousPos.y = _lastMousePos.y;
+        previousPos.z = 1.;
+        previousPos = transformscale * previousPos;
+        previousPos.x /= previousPos.z;
+        previousPos.y /= previousPos.z;
+
+        Transform2D::Point3D currentPos;
+        currentPos.x = args.penPosition.x;
+        currentPos.y = args.penPosition.y;
+        currentPos.z = 1.;
+        currentPos = transformscale * currentPos;
+        currentPos.x /= currentPos.z;
+        currentPos.y /= currentPos.z;
+
+        // the scale ratio is the ratio of distances to the center
+        double prevDistSq = (center.x - previousPos.x)*(center.x - previousPos.x) + (center.y - previousPos.y)*(center.y - previousPos.y);
+        if (prevDistSq != 0.) {
+            const double distSq = (center.x - currentPos.x)*(center.x - currentPos.x) + (center.y - currentPos.y)*(center.y - currentPos.y);
+            const double distRatio = std::sqrt(distSq/prevDistSq);
+            scale.x *= distRatio;
+            scale.y *= distRatio;
         }
-        
-        if (quadrant == 1) {
-            if (direction) {
-                scale.y += dy;
-                scale.x += dy;
-            } else {
-                scale.y -= dx;
-                scale.x -= dx;
-            }
-        } else if (quadrant == 2) {
-            if (direction) {
-                scale.y += dy;
-                scale.x += dy;
-            } else {
-                scale.y += dx;
-                scale.x += dx;
-            }
-        } else if (quadrant == 3) {
-            if (direction) {
-                scale.y -= dy;
-                scale.x -= dy;
-            } else {
-                scale.y -= dx;
-                scale.x -= dx;
-            }
-        } else if (quadrant == 4) {
-            if (direction) {
-                scale.y -= dy;
-                scale.x -= dy;
-            } else {
-                scale.y += dx;
-                scale.x += dx;
-            }
-        }
-       
-        scale.y = std::max(minY, std::min(scale.y, maxY));
-        scale.x = std::max(minX, std::min(scale.x, maxX));
+
         _scale->setValue(scale.x, scale.y);
 
     } else if (_mouseState == eDraggingLeftPoint) {
