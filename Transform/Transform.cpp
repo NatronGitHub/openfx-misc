@@ -204,8 +204,8 @@ template <class PIX, int nComponents, int maxValue>
 class TransformProcessor : public TransformProcessorBase
 {
     
-
-public :
+    
+    public :
     TransformProcessor(OFX::ImageEffect &instance)
     : TransformProcessorBase(instance)
     {
