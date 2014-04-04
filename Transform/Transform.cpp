@@ -837,8 +837,21 @@ private:
     {
         OfxPointD scale;
         getScale(scale);
-        radius.x = (scale.x * CIRCLE_RADIUS_BASE * pixelScale.x);
-        radius.y = (scale.y * CIRCLE_RADIUS_BASE * pixelScale.y);
+        radius.x = scale.x * CIRCLE_RADIUS_BASE;
+        radius.y = scale.y * CIRCLE_RADIUS_BASE;
+        // don't draw too small. 15 pixels is the limit
+        if (std::fabs(radius.x) < 15) {
+            radius.y *= std::fabs(15./radius.x);
+            radius.x = radius.x > 0 ? 15. : -15.;
+        }
+        if (std::fabs(radius.y) < 15) {
+            radius.x *= std::fabs(15./radius.y);
+            radius.y = radius.y > 0 ? 15. : -15.;
+        }
+        // the circle axes are not aligned with the images axes, so we cannot use the x and y scales separately
+        double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
+        radius.x *= meanPixelScale;
+        radius.y *= meanPixelScale;
     }
     
     void getPoints(OfxPointD& center,OfxPointD& left,OfxPointD& bottom,OfxPointD& top,OfxPointD& right,const OfxPointD& pixelScale)
