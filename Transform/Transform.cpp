@@ -1277,19 +1277,34 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
 
     OfxPointD radius;
     getCircleRadius(radius, args.pixelScale);
+    
+    bool inverted;
+    _invert->getValue(inverted);
 
-    glPushMatrix();
-    glTranslated(center.x, center.y, 0.);
-    glRotated(angle, 0, 0., 1.);
-
-    drawRotationBar(args.pixelScale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered);
-
+    if (inverted) {
+        skewOrderYX = !skewOrderYX;
+    }
     GLdouble skewMatrix[16];
-    skewMatrix[0] = (skewOrderYX ? 1. : (1.+skewX*skewY)); skewMatrix[1] = skewY; skewMatrix[2] = 0.; skewMatrix[3] = 0;
-    skewMatrix[4] = skewX; skewMatrix[5] = (skewOrderYX ? (1.+skewX*skewY) : 1.); skewMatrix[6] = 0.; skewMatrix[7] = 0;
+    skewMatrix[0] = (skewOrderYX ? 1. : (1.+skewX*skewY)); skewMatrix[1] = inverted ? -skewY : skewY; skewMatrix[2] = 0.; skewMatrix[3] = 0;
+    skewMatrix[4] = inverted ? -skewX : skewX; skewMatrix[5] = (skewOrderYX ? (1.+skewX*skewY) : 1.); skewMatrix[6] = 0.; skewMatrix[7] = 0;
     skewMatrix[8] = 0.; skewMatrix[9] = 0.; skewMatrix[10] = 1.; skewMatrix[11] = 0;
     skewMatrix[12] = 0.; skewMatrix[13] = 0.; skewMatrix[14] = 0.; skewMatrix[15] = 1.;
-    glMultMatrixd(skewMatrix);
+
+    
+    glPushMatrix();
+    glTranslated(center.x, center.y, 0.);
+    if (inverted) {
+        glMultMatrixd(skewMatrix);
+    } else {
+        glRotated(angle, 0, 0., 1.);
+    }
+
+    drawRotationBar(args.pixelScale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered);
+    if (inverted) {
+        glRotated(-angle, 0, 0., 1.);
+    } else {
+        glMultMatrixd(skewMatrix);
+    }
     glTranslated(-center.x, -center.y, 0.);
 
     drawEllipse(center,radius,args.pixelScale, _mouseState == eDraggingCircle || _drawState == eCircleHovered);
