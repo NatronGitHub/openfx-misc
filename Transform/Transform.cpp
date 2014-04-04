@@ -1190,20 +1190,24 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     _skewY->getValue(skewY);
     _skewOrder->getValue(skewOrderYX);
 
-    Transform2D::Point3D transformedPos;
+    Transform2D::Point3D rotationPos, transformedPos;
     transformedPos.x = args.penPosition.x;
     transformedPos.y = args.penPosition.y;
     transformedPos.z = 1.;
     
-    Transform2D::Matrix3x3 transform;
+    Transform2D::Matrix3x3 rotation, transform;
     ////for the rotation bar dragging we dont use the same transform, we don't want to undo the rotation transform
     if (_mouseState != eDraggingRotationBar && _mouseState != eDraggingCenterPoint) {
         ///undo skew + rotation to the current position
-        //transform = Transform2D::Matrix3x3::getInverseTransform(translate, scale, skewX, skewY, (bool)skewOrderYX, rot, center);
+        rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
         transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
      } else {
-        transform = Transform2D::Matrix3x3::getSkewXY(-skewX, -skewY, !skewOrderYX);
+        rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
+        transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
     }
+    rotationPos = rotation * transformedPos;
+    rotationPos.x /= rotationPos.z;
+    rotationPos.y /= rotationPos.z;
     transformedPos = transform * transformedPos;
     transformedPos.x /= transformedPos.z;
     transformedPos.y /= transformedPos.z;
@@ -1229,7 +1233,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
             _drawState = eBottomPointHovered;
         } else if (isOnEllipseBorder(transformedPos, ellipseRadius, center)) {
             _drawState = eCircleHovered;
-        } else if (isOnRotationBar(transformedPos, ellipseRadius.x, center, args.pixelScale, hoverToleranceX)) {
+        } else if (isOnRotationBar(rotationPos, ellipseRadius.x, center, args.pixelScale, hoverToleranceX)) {
             _drawState = eRotationBarHovered;
         } else if (isOnSkewXBar(transformedPos,ellipseRadius.y,center,args.pixelScale,hoverToleranceY)) {
             _drawState = eSkewXBarHoverered;
@@ -1369,8 +1373,8 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         OfxPointD diffToCenter;
         ///the current mouse position (untransformed) is doing has a certain angle relative to the X axis
         ///which can be computed by : angle = arctan(opposite / adjacent)
-        diffToCenter.y = transformedPos.y - center.y;
-        diffToCenter.x = transformedPos.x - center.x;
+        diffToCenter.y = rotationPos.y - center.y;
+        diffToCenter.x = rotationPos.x - center.x;
         double angle = std::atan2(diffToCenter.y, diffToCenter.x);
         _rotate->setValue(Transform2D::toDegrees(angle));
         
@@ -1416,7 +1420,7 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     _skewY->getValue(skewY);
     _skewOrder->getValue(skewOrderYX);
 
-    Transform2D::Point3D transformedPos;
+    Transform2D::Point3D transformedPos, rotationPos;
     transformedPos.x = args.penPosition.x;
     transformedPos.y = args.penPosition.y;
     transformedPos.z = 1.;
@@ -1424,13 +1428,17 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     double rot = Transform2D::toRadians(currentRotation);
     
     ///now undo skew + rotation to the current position
-    Transform2D::Matrix3x3 transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+    Transform2D::Matrix3x3 rotation, transform;
+    rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
+    transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+
+    rotationPos = rotation * transformedPos;
+    rotationPos.x /= rotationPos.z;
+    rotationPos.y /= rotationPos.z;
     transformedPos = transform * transformedPos;
     transformedPos.x /= transformedPos.z;
     transformedPos.y /= transformedPos.z;
 
-
-    
     double pressToleranceX = 5 * args.pixelScale.x;
     double pressToleranceY = 5 * args.pixelScale.y;
     bool ret = true;
@@ -1448,7 +1456,7 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
         _mouseState = eDraggingCircle;
     } else if (isOnSkewXBar(transformedPos,ellipseRadius.y,center,args.pixelScale,pressToleranceY)) {
         _mouseState = eDraggingSkewXBar;
-    } else if (isOnRotationBar(transformedPos, ellipseRadius.x, center, args.pixelScale, pressToleranceY)) {
+    } else if (isOnRotationBar(rotationPos, ellipseRadius.x, center, args.pixelScale, pressToleranceY)) {
         _mouseState = eDraggingRotationBar;
     } else {
         _mouseState = eReleased;
