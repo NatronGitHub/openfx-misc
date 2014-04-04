@@ -1353,19 +1353,8 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         OfxPointD currentTranslation;
         _translate->getValue(currentTranslation.x, currentTranslation.y);
         
-        Transform2D::Point3D lastPosTransformed;
-        lastPosTransformed.x = _lastMousePos.x;
-        lastPosTransformed.y = _lastMousePos.y;
-        lastPosTransformed.z = 1.;
-        
-        lastPosTransformed = transform * lastPosTransformed;
-        lastPosTransformed.x /= lastPosTransformed.z;
-        lastPosTransformed.y /= lastPosTransformed.z;
-        
-        dx = transformedPos.x - lastPosTransformed.x;
-        dy = transformedPos.y - lastPosTransformed.y;
-        dx *= args.pixelScale.x;
-        dy *= args.pixelScale.y;
+        dx = args.penPosition.x - _lastMousePos.x;
+        dy = args.penPosition.y - _lastMousePos.y;
         currentTranslation.x += dx;
         currentTranslation.y += dy;
         _translate->setValue(currentTranslation.x,currentTranslation.y);
