@@ -863,7 +863,7 @@ private:
     
     void drawSkewXBar(const OfxPointD& penPos, const OfxPointD &center, const OfxPointD& pixelScale, double radiusY, bool hovered);
     
-    void drawRotationBar(const OfxPointD& center,const OfxPointD& pixelScale,double radiusX,bool hovered);
+    void drawRotationBar(const OfxPointD& pixelScale, double radiusX, bool hovered);
     
     static bool squareContains(const Transform2D::Point3D& pos,const OfxRectD& rect,double toleranceX= 0.,double toleranceY = 0.)
     {
@@ -1052,7 +1052,7 @@ void TransformInteract::drawSkewXBar(const OfxPointD& penPos,const OfxPointD &ce
     
 }
 
-void TransformInteract::drawRotationBar(const OfxPointD& center,const OfxPointD& pixelScale,double radiusX,bool hovered)
+void TransformInteract::drawRotationBar(const OfxPointD& pixelScale,double radiusX,bool hovered)
 {
     if (hovered) {
         glColor4f(1.0, 0.0, 0.0, 1.0);
@@ -1062,13 +1062,13 @@ void TransformInteract::drawRotationBar(const OfxPointD& center,const OfxPointD&
     
     double barExtra = 30. * pixelScale.x;
     glBegin(GL_LINES);
-    glVertex2d(center.x, center.y);
-    glVertex2d(center.x + radiusX + barExtra, center.y);
+    glVertex2d(0. /*center.x*/, 0. /*center.y*/);
+    glVertex2d(0. /*center.x*/ + radiusX + barExtra, 0. /*center.y*/);
     glEnd();
     
     if (hovered) {
         
-        double arrowCenterX = center.x + radiusX + barExtra / 2.;
+        double arrowCenterX = 0. /*center.x*/ + radiusX + barExtra / 2.;
         
         ///draw an arrow slightly bended. This is an arc of circle of radius 5 in X, and 10 in Y.
         OfxPointD arrowRadius;
@@ -1078,7 +1078,7 @@ void TransformInteract::drawRotationBar(const OfxPointD& center,const OfxPointD&
         float angle_increment = Transform2D::pi() / 10.;
         glPushMatrix ();
         //  center the oval at x_center, y_center
-        glTranslatef (arrowCenterX, center.y, 0);
+        glTranslatef (arrowCenterX, 0. /*center.y*/, 0);
         //  draw the oval using line segments
         glBegin (GL_LINE_STRIP);
         for (double theta = - Transform2D::pi() / 2.; theta < Transform2D::pi() / 2.; theta += angle_increment) {
@@ -1093,18 +1093,18 @@ void TransformInteract::drawRotationBar(const OfxPointD& center,const OfxPointD&
         
         glBegin(GL_LINES);
         ///draw the top head
-        glVertex2f(arrowCenterX, center.y + arrowRadius.y);
-        glVertex2f(arrowCenterX, center.y + arrowRadius.y - arrowOffsetY);
+        glVertex2f(arrowCenterX, 0. /*center.y*/ + arrowRadius.y);
+        glVertex2f(arrowCenterX, 0. /*center.y*/ + arrowRadius.y - arrowOffsetY);
         
-        glVertex2f(arrowCenterX, center.y + arrowRadius.y);
-        glVertex2f(arrowCenterX  + arrowOffsetX, center.y + arrowRadius.y + 1. * pixelScale.y);
+        glVertex2f(arrowCenterX, 0. /*center.y*/ + arrowRadius.y);
+        glVertex2f(arrowCenterX  + arrowOffsetX, 0. /*center.y*/ + arrowRadius.y + 1. * pixelScale.y);
         
         ///draw the bottom head
-        glVertex2f(arrowCenterX, center.y - arrowRadius.y);
-        glVertex2f(arrowCenterX, center.y - arrowRadius.y + arrowOffsetY);
+        glVertex2f(arrowCenterX, 0. /*center.y*/ - arrowRadius.y);
+        glVertex2f(arrowCenterX, 0. /*center.y*/ - arrowRadius.y + arrowOffsetY);
         
-        glVertex2f(arrowCenterX, center.y - arrowRadius.y);
-        glVertex2f(arrowCenterX  + arrowOffsetX, center.y - arrowRadius.y - 1. * pixelScale.y);
+        glVertex2f(arrowCenterX, 0. /*center.y*/ - arrowRadius.y);
+        glVertex2f(arrowCenterX  + arrowOffsetX, 0. /*center.y*/ - arrowRadius.y - 1. * pixelScale.y);
 
         glEnd();
         
@@ -1128,27 +1128,30 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
     _skewY->getValue(skewY);
     _skewOrder->getValue(skewOrderYX);
 
+    OfxPointD radius;
+    getCircleRadius(radius, args.pixelScale);
+
     glPushMatrix();
+    glTranslated(center.x, center.y, 0.);
+    glRotated(angle, 0, 0., 1.);
+
+    drawRotationBar(args.pixelScale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered);
+
     GLdouble skewMatrix[16];
     skewMatrix[0] = (skewOrderYX ? 1. : (1.+skewX*skewY)); skewMatrix[1] = skewY; skewMatrix[2] = 0.; skewMatrix[3] = 0;
     skewMatrix[4] = skewX; skewMatrix[5] = (skewOrderYX ? (1.+skewX*skewY) : 1.); skewMatrix[6] = 0.; skewMatrix[7] = 0;
     skewMatrix[8] = 0.; skewMatrix[9] = 0.; skewMatrix[10] = 1.; skewMatrix[11] = 0;
     skewMatrix[12] = 0.; skewMatrix[13] = 0.; skewMatrix[14] = 0.; skewMatrix[15] = 1.;
     glMultMatrixd(skewMatrix);
-    glTranslated(center.x, center.y, 0.);
-    glRotated(angle, 0, 0., 1.);
     glTranslated(-center.x, -center.y, 0.);
-    
-    OfxPointD radius;
-    getCircleRadius(radius, args.pixelScale);
+
     drawEllipse(center,radius,args.pixelScale, _mouseState == eDraggingCircle || _drawState == eCircleHovered);
     
     drawSkewXBar(_lastMousePos, center, args.pixelScale, radius.y, _mouseState == eDraggingSkewXBar || _drawState == eSkewXBarHoverered);
 #warning "TODO: drawSkewY"
     //drawSkewYBar(_lastMousePos, center, args.pixelScale, radius.x, _mouseState == eDraggingSkewYBar || _drawState == eSkewYBarHoverered);
 
-    drawRotationBar(center, args.pixelScale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered);
-    
+
     drawSquare(center, _mouseState == eDraggingCenterPoint || _drawState == eCenterPointHovered,args.pixelScale);
     drawSquare(left, _mouseState == eDraggingLeftPoint || _drawState == eLeftPointHovered, args.pixelScale);
     drawSquare(right, _mouseState == eDraggingRightPoint || _drawState == eRightPointHovered, args.pixelScale);
