@@ -123,7 +123,7 @@ protected:
     bool _blackOutside;
     bool _domask;
     double _mix;
-
+    
 public:
     
     TransformProcessorBase(OFX::ImageEffect &instance)
@@ -141,7 +141,7 @@ public:
         _srcBounds.y1 = 0;
         _srcBounds.y2 = 0;
     }
-
+    
     /** @brief set the src image */
     void setSrcImg(OFX::Image *v, const OfxRectD& srcRoD)
     {
@@ -154,14 +154,14 @@ public:
         _srcBounds.y1 = std::max((double)kOfxFlagInfiniteMin, std::ceil(srcRoD.y1));
         _srcBounds.y2 = std::min((double)kOfxFlagInfiniteMax, std::floor(srcRoD.y2));
     }
-
+    
     
     /** @brief set the optional mask image */
     void setMaskImg(OFX::Image *v) {_maskImg = v;}
-
+    
     // Are we masking. We can't derive this from the mask image being set as NULL is a valid value for an input image
     void doMasking(bool v) {_domask = v;}
-
+    
     void setValues(double translateX, //!< non-generic
                    double translateY, //!< non-generic
                    double rotate,              //!< non-generic
@@ -216,23 +216,23 @@ class TransformProcessor : public TransformProcessorBase
     {
         float maskScale = 1.0f;
         float tmpPix[nComponents];
-
+        
         for (int y = procWindow.y1; y < procWindow.y2; y++)
         {
             if(_effect.abort()) break;
-
+            
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-
+            
             // the coordinates of the center of the pixel in canonical coordinates
             // see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#CanonicalCoordinates
             Transform2D::Point3D canonicalCoords;
             canonicalCoords.z = 1;
             canonicalCoords.y = (double)y + 0.5;
-
+            
             for (int x = procWindow.x1; x < procWindow.x2; x++, dstPix += nComponents)
             {
                 // NON-GENERIC TRANSFORM
-
+                
                 // the coordinates of the center of the pixel in canonical coordinates
                 // see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#CanonicalCoordinates
                 canonicalCoords.x = (double)x + 0.5;
@@ -245,7 +245,7 @@ class TransformProcessor : public TransformProcessorBase
                 } else {
                     double fx = transformed.x / transformed.z;
                     double fy = transformed.y / transformed.z;
-
+                    
                     // GENERIC TRANSFORM
                     // from here on, everything is generic, and should be moved to a generic transform class
                     // Important: (0,0) is the *corner*, not the *center* of the first pixel (see OpenFX specs)
@@ -254,7 +254,7 @@ class TransformProcessor : public TransformProcessorBase
                         // the center of pixel (0,0) has coordinates (0.5,0.5)
                         int x = std::floor(fx); // don't add 0.5
                         int y = std::floor(fy); // don't add 0.5
-
+                        
                         if (!_blackOutside) {
                             x = std::max(_srcBounds.x1,std::min(x,_srcBounds.x2-1));
                             y = std::max(_srcBounds.y1,std::min(y,_srcBounds.y2-1));
@@ -282,10 +282,10 @@ class TransformProcessor : public TransformProcessorBase
                             nx = std::max(_srcBounds.x1,std::min(nx,_srcBounds.x2-1));
                             ny = std::max(_srcBounds.y1,std::min(ny,_srcBounds.y2-1));
                         }
-
+                        
                         const double dx = std::max(0., std::min(fx-0.5 - x, 1.));
                         const double dy = std::max(0., std::min(fy-0.5 - y, 1.));
-
+                        
                         PIX *Pcc = (PIX *)_srcImg->getPixelAddress( x,  y);
                         PIX *Pnc = (PIX *)_srcImg->getPixelAddress(nx,  y);
                         PIX *Pcn = (PIX *)_srcImg->getPixelAddress( x, ny);
@@ -296,7 +296,7 @@ class TransformProcessor : public TransformProcessorBase
                                 const double Inc = get(Pnc,c);
                                 const double Icn = get(Pcn,c);
                                 const double Inn = get(Pnn,c);
-
+                                
                                 tmpPix[c] = Icc + dx*(Inc-Icc + dy*(Icc+Inn-Icn-Inc)) + dy*(Icn-Icc);
                             }
                         } else {
@@ -327,7 +327,7 @@ class TransformProcessor : public TransformProcessorBase
                         }
                         const double dx = std::max(0., std::min(fx-0.5 - x, 1.));
                         const double dy = std::max(0., std::min(fy-0.5 - y, 1.));
-
+                        
                         PIX *Ppp = (PIX *)_srcImg->getPixelAddress(px, py);
                         PIX *Pcp = (PIX *)_srcImg->getPixelAddress( x, py);
                         PIX *Pnp = (PIX *)_srcImg->getPixelAddress(nx, py);
@@ -374,12 +374,12 @@ class TransformProcessor : public TransformProcessorBase
                             }
                         }
                     }
-
+                    
                 }
-
+                
                 PIX *maskPix = NULL;
                 PIX *srcPix = NULL;
-
+                
                 // are we doing masking
                 if (_domask && _maskImg) {
                     // we do, get the pixel from the mask
@@ -397,7 +397,7 @@ class TransformProcessor : public TransformProcessorBase
                         if (maxValue == 1) { // implies floating point and so no clamping
                             dstPix[c] = PIX(v);
                         } else { // integer based and we need to clamp
-                            // (e.g. bicubic filter may overflow)
+                                 // (e.g. bicubic filter may overflow)
                             dstPix[c] = PIX(Clamp(v, 0, maxValue));
                         }
                     }
@@ -407,7 +407,7 @@ class TransformProcessor : public TransformProcessorBase
                         if (maxValue == 1) { // implies floating point and so no clamping
                             dstPix[c] = tmpPix[c];
                         } else { // integer based and we need to clamp
-                            // (e.g. bicubic filter may overflow)
+                                 // (e.g. bicubic filter may overflow)
                             dstPix[c] = PIX(Clamp(tmpPix[c], 0, maxValue));
                         }
                     }
@@ -435,7 +435,7 @@ protected:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::Clip *maskClip_;
-
+    
 public:
     /** @brief ctor */
     TransformPlugin(OfxImageEffectHandle handle)
@@ -466,10 +466,10 @@ public:
     
     // override the rod call
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod);
-
+    
     // override the roi call
     virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois);
-
+    
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
     
@@ -477,7 +477,7 @@ public:
     
     /* set up and run a processor */
     void setupAndProcess(TransformProcessorBase &, const OFX::RenderArguments &args);
-
+    
 private:
     // NON-GENERIC
     OFX::Double2DParam* _translate;
@@ -517,7 +517,7 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
         if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
             OFX::throwSuiteStatusException(kOfxStatFailed);
-
+        
         // NON-GENERIC
         double scaleX, scaleY;
         double translateX, translateY;
@@ -530,32 +530,32 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         int filter;
         bool blackOutside;
         double mix;
-
+        
         // NON-GENERIC
         _scale->getValue(scaleX, scaleY);
         _translate->getValue(translateX, translateY);
         _rotate->getValue(rotate);
         rotate = Transform2D::toRadians(rotate);
-
+        
         _skewX->getValue(skewX);
         _skewY->getValue(skewY);
         _skewOrder->getValue(skewOrder);
-
+        
         _center->getValue(centerX, centerY);
-
+        
         _invert->getValue(invert);
-
+        
         // GENERIC
         _filter->getValue(filter);
         _blackOutside->getValue(blackOutside);
         _mix->getValue(mix);
-
+        
         processor.setValues(translateX, translateY, rotate, scaleX, scaleY, skewX, skewY, (bool)skewOrder, centerX, centerY, invert, filter, blackOutside, mix);
     }
-
+    
     // auto ptr for the mask.
     std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
-
+    
     // do we do masking
     if (getContext() != OFX::eContextFilter) {
         bool doMasking;
@@ -563,19 +563,19 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         if (doMasking) {
             // say we are masking
             processor.doMasking(true);
-
+            
             // Set it in the processor
             processor.setMaskImg(mask.get());
         }
     }
-
+    
     // set the images
     processor.setDstImg(dst.get());
     processor.setSrcImg(src.get(), srcClip_->getRegionOfDefinition(args.time));
-
+    
     // set the render window
     processor.setRenderWindow(args.renderWindow);
-
+    
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 }
@@ -595,10 +595,10 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     int skewOrder;
     double centerX, centerY;
     bool invert;
-
+    
     _scale->getValue(scaleX, scaleY);
     _translate->getValue(translateX, translateY);
-
+    
     _rotate->getValue(rotate);
     
     // NON-GENERIC
@@ -606,16 +606,16 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     _translate->getValue(translateX, translateY);
     _rotate->getValue(rotate);
     rotate = Transform2D::toRadians(rotate);
-
+    
     _skewX->getValue(skewX);
     _skewY->getValue(skewY);
     _skewOrder->getValue(skewOrder);
-
+    
     _center->getValue(centerX, centerY);
-
+    
     _invert->getValue(invert);
-
-
+    
+    
     Transform2D::Matrix3x3 transform;
     if (!invert) {
         transform = Transform2D::Matrix3x3::getTransform(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
@@ -638,13 +638,13 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     //_filter->getValue(filter);
     bool blackOutside;
     _blackOutside->getValue(blackOutside);
-
+    
     // No need to round things up here, we must give the *actual* RoD
     if (!blackOutside) {
         // if it's not black outside, the RoD should contain the project (we can't rely on the host to fill it).
         OfxPointD size = getProjectSize();
         OfxPointD offset = getProjectOffset();
-
+        
         rod.x1 = std::min(l, offset.x);
         rod.x2 = std::max(r, offset.x + size.x);
         rod.y1 = std::min(b, offset.y);
@@ -677,21 +677,21 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     int skewOrder;
     double centerX, centerY;
     bool invert;
-
+    
     // NON-GENERIC
     _scale->getValue(scaleX, scaleY);
     _translate->getValue(translateX, translateY);
     _rotate->getValue(rotate);
     rotate = Transform2D::toRadians(rotate);
-
+    
     _skewX->getValue(skewX);
     _skewY->getValue(skewY);
     _skewOrder->getValue(skewOrder);
-
+    
     _center->getValue(centerX, centerY);
-
+    
     _invert->getValue(invert);
-
+    
     Transform2D::Matrix3x3 invtransform;
     if (!invert) {
         invtransform = Transform2D::Matrix3x3::getInverseTransform(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
@@ -703,12 +703,12 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     Transform2D::Point3D topRight = invtransform * Transform2D::Point3D(roi.x2,roi.y2,1);
     Transform2D::Point3D bottomLeft = invtransform * Transform2D::Point3D(roi.x1,roi.y1,1);
     Transform2D::Point3D bottomRight = invtransform * Transform2D::Point3D(roi.x2,roi.y1,1);
-
+    
     double l = std::min(std::min(topLeft.x, bottomLeft.x),std::min(topRight.x,bottomRight.x));
     double b = std::min(std::min(topLeft.y, bottomLeft.y),std::min(topRight.y,bottomRight.y));
     double r = std::max(std::max(topLeft.x, bottomLeft.x),std::max(topRight.x,bottomRight.x));
     double t = std::max(std::max(topLeft.y, bottomLeft.y),std::max(topRight.y,bottomRight.y));
-
+    
     // GENERIC
     int filter;
     _filter->getValue(filter);
@@ -718,7 +718,7 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     _domask->getValue(doMasking);
     double mix;
     _mix->getValue(mix);
-
+    
     if (filter == 0) {
         // nearest neighbor, the exact region is OK
     } else if (filter == 1) {
@@ -734,8 +734,8 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
         b -= 1.5;
         t += 1.5;
     }
-
-
+    
+    
     // set it on the mask only if we are in an interesting context
     // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
     if (getContext() != OFX::eContextFilter && doMasking) {
@@ -749,7 +749,7 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
         b = std::min(b, roi.y1);
         t = std::max(t, roi.y2);
     }
-
+    
     // No need to round things up here, we must give the *actual* RoI,
     // the host should compute the right image region from it (by rounding it up/down).
     OfxRectD srcRoI;
@@ -757,7 +757,7 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     srcRoI.x2 = r;
     srcRoI.y1 = b;
     srcRoI.y2 = t;
-
+    
     rois.setRegionOfInterest(*srcClip_, srcRoI);
 }
 
@@ -838,13 +838,13 @@ bool TransformPlugin::isIdentity(const RenderArguments &args, Clip * &identityCl
     _rotate->getValue(rotate);
     _skewX->getValue(skewX);
     _skewY->getValue(skewY);
-
+    
     if (scale.x == 1. && scale.y == 1. && translate.x == 0. && translate.y == 0. && rotate == 0. && skewX == 0. && skewY == 0.) {
         identityClip = srcClip_;
         identityTime = args.time;
         return true;
     }
-
+    
     // GENERIC
     bool doMasking;
     _domask->getValue(doMasking);
@@ -855,7 +855,7 @@ bool TransformPlugin::isIdentity(const RenderArguments &args, Clip * &identityCl
         identityTime = args.time;
         return true;
     }
-
+    
     return false;
 }
 
@@ -895,7 +895,7 @@ class TransformInteract : public OFX::OverlayInteract {
     TransformPlugin* _plugin;
     OfxPointD _lastMousePos;
     
-public :
+    public :
     TransformInteract(OfxInteractHandle handle, OFX::ImageEffect* effect)
     : OFX::OverlayInteract(handle)
     , _drawState(eInActive)
@@ -926,7 +926,7 @@ public :
         addParamToSlaveTo(_invert);
         addParamToSlaveTo(_showOverlay);
     }
-
+    
     // overridden functions from OFX::Interact to do things
     virtual bool draw(const OFX::DrawArgs &args);
     virtual bool penMotion(const OFX::PenArgs &args);
@@ -1001,7 +1001,7 @@ private:
                      double radiusY,
                      bool hovered,
                      double angle);
-
+    
     void drawRotationBar(const OfxPointD& pixelScale, double radiusX, bool hovered);
     
     static bool squareContains(const Transform2D::Point3D& pos,const OfxRectD& rect,double toleranceX= 0.,double toleranceY = 0.)
@@ -1033,7 +1033,7 @@ private:
         
         return false;
     }
-
+    
     bool isOnSkewYBar(const Transform2D::Point3D& pos,double radiusX,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
     {
         // we are not axis-aligned
@@ -1043,10 +1043,10 @@ private:
             pos.x >= (center.x - barHalfSize - tolerance) && pos.x <= (center.x + barHalfSize + tolerance)) {
             return true;
         }
-
+        
         return false;
     }
-
+    
     bool isOnRotationBar(const  Transform2D::Point3D& pos,double radiusX,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
     {
         // we are not axis-aligned
@@ -1152,7 +1152,7 @@ TransformInteract::drawSkewBar(const OfxPointD &center,
     } else {
         glColor4f(1.0, 1.0, 1.0, 1.0);
     }
-
+    
     // we are not axis-aligned: use the mean pixel scale
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
     double barHalfSize = radiusY + 20. * meanPixelScale;
@@ -1164,29 +1164,29 @@ TransformInteract::drawSkewBar(const OfxPointD &center,
     glPushMatrix ();
     glTranslatef (center.x, center.y, 0);
     glRotated(angle, 0, 0, 1);
-
+    
     glBegin(GL_LINES);
     glVertex2d(0., - barHalfSize);
     glVertex2d(0., + barHalfSize);
     
     if (hovered) {
-             ///draw the central bar
-            glVertex2d(- arrowXHalfSize, - arrowYPosition);
-            glVertex2d(+ arrowXHalfSize, - arrowYPosition);
-            
-            ///left triangle
-            glVertex2d(- arrowXHalfSize, -  arrowYPosition);
-            glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, - arrowYPosition + arrowHeadOffsetY);
-            
-            glVertex2d(- arrowXHalfSize,- arrowYPosition);
-            glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, - arrowYPosition - arrowHeadOffsetY);
-
-            ///right triangle
-            glVertex2d(+ arrowXHalfSize,- arrowYPosition);
-            glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, - arrowYPosition + arrowHeadOffsetY);
-            
-            glVertex2d(+ arrowXHalfSize,- arrowYPosition);
-            glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, - arrowYPosition - arrowHeadOffsetY);
+        ///draw the central bar
+        glVertex2d(- arrowXHalfSize, - arrowYPosition);
+        glVertex2d(+ arrowXHalfSize, - arrowYPosition);
+        
+        ///left triangle
+        glVertex2d(- arrowXHalfSize, -  arrowYPosition);
+        glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, - arrowYPosition + arrowHeadOffsetY);
+        
+        glVertex2d(- arrowXHalfSize,- arrowYPosition);
+        glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, - arrowYPosition - arrowHeadOffsetY);
+        
+        ///right triangle
+        glVertex2d(+ arrowXHalfSize,- arrowYPosition);
+        glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, - arrowYPosition + arrowHeadOffsetY);
+        
+        glVertex2d(+ arrowXHalfSize,- arrowYPosition);
+        glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, - arrowYPosition - arrowHeadOffsetY);
     }
     glEnd();
     glPopMatrix();
@@ -1248,10 +1248,10 @@ void TransformInteract::drawRotationBar(const OfxPointD& pixelScale,double radiu
         
         glVertex2f(arrowCenterX, 0. /*center.y*/ - arrowRadius.y);
         glVertex2f(arrowCenterX  + arrowOffsetX, 0. /*center.y*/ - arrowRadius.y - 1. * meanPixelScale);
-
+        
         glEnd();
         
-
+        
     }
 }
 
@@ -1268,19 +1268,19 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
     
     double angle;
     _rotate->getValue(angle);
-
+    
     double skewX, skewY;
     int skewOrderYX;
     _skewX->getValue(skewX);
     _skewY->getValue(skewY);
     _skewOrder->getValue(skewOrderYX);
-
+    
     OfxPointD radius;
     getCircleRadius(radius, args.pixelScale);
     
     bool inverted;
     _invert->getValue(inverted);
-
+    
     if (inverted) {
         skewOrderYX = !skewOrderYX;
     }
@@ -1289,26 +1289,23 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
     skewMatrix[4] = inverted ? -skewX : skewX; skewMatrix[5] = (skewOrderYX ? (1.+skewX*skewY) : 1.); skewMatrix[6] = 0.; skewMatrix[7] = 0;
     skewMatrix[8] = 0.; skewMatrix[9] = 0.; skewMatrix[10] = 1.; skewMatrix[11] = 0;
     skewMatrix[12] = 0.; skewMatrix[13] = 0.; skewMatrix[14] = 0.; skewMatrix[15] = 1.;
-
+    
     
     glPushMatrix();
     glTranslated(center.x, center.y, 0.);
     if (inverted) {
+        drawRotationBar(args.pixelScale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered);
         glMultMatrixd(skewMatrix);
-    } else {
-        glRotated(angle, 0, 0., 1.);
-    }
-
-    drawRotationBar(args.pixelScale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered);
-    if (inverted) {
         glRotated(-angle, 0, 0., 1.);
     } else {
+        glRotated(angle, 0, 0., 1.);
+        drawRotationBar(args.pixelScale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered);
         glMultMatrixd(skewMatrix);
     }
     glTranslated(-center.x, -center.y, 0.);
-
+    
     drawEllipse(center,radius,args.pixelScale, _mouseState == eDraggingCircle || _drawState == eCircleHovered);
-
+    
     // add 180 to the angle to draw the arrows on the other side. unfortunately, this requires knowing
     // the mouse position in the ellipse frame
     double flip = 0.;
@@ -1318,7 +1315,7 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
         double rot = Transform2D::toRadians(angle);
         Transform2D::Matrix3x3 transformscale;
         transformscale = Transform2D::Matrix3x3::getInverseTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-
+        
         Transform2D::Point3D previousPos;
         previousPos.x = _lastMousePos.x;
         previousPos.y = _lastMousePos.y;
@@ -1333,8 +1330,8 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
     }
     drawSkewBar(center, args.pixelScale, radius.y, _mouseState == eDraggingSkewXBar || _drawState == eSkewXBarHoverered, flip);
     drawSkewBar(center, args.pixelScale, radius.x, _mouseState == eDraggingSkewYBar || _drawState == eSkewYBarHoverered, flip - 90.);
-
-
+    
+    
     drawSquare(center, _mouseState == eDraggingCenterPoint || _drawState == eCenterPointHovered,args.pixelScale);
     drawSquare(left, _mouseState == eDraggingLeftPoint || _drawState == eLeftPointHovered, args.pixelScale);
     drawSquare(right, _mouseState == eDraggingRightPoint || _drawState == eRightPointHovered, args.pixelScale);
@@ -1376,47 +1373,62 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     _skewX->getValue(skewX);
     _skewY->getValue(skewY);
     _skewOrder->getValue(skewOrderYX);
-
+    
     OfxPointD scale;
     _scale->getValue(scale.x, scale.y);
-
+    
     Transform2D::Point3D penPos, rotationPos, transformedPos, previousPos, currentPos;
     penPos.x = args.penPosition.x;
     penPos.y = args.penPosition.y;
     penPos.z = 1.;
     
+    bool inverted;
+    _invert->getValue(inverted);
+    
     Transform2D::Matrix3x3 rotation, transform, transformscale;
     ////for the rotation bar dragging we dont use the same transform, we don't want to undo the rotation transform
     if (_mouseState != eDraggingRotationBar && _mouseState != eDraggingCenterPoint) {
         ///undo skew + rotation to the current position
-        rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
-        transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-        transformscale = Transform2D::Matrix3x3::getInverseTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+        if (!inverted) {
+            rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
+            transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+            transformscale = Transform2D::Matrix3x3::getInverseTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+        } else {
+            rotation = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
+            transform = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+            transformscale = Transform2D::Matrix3x3::getTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+        }
     } else {
-        rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
-        transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
-        transformscale = Transform2D::Matrix3x3::getInverseTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+        if (!inverted) {
+            rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
+            transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+            transformscale = Transform2D::Matrix3x3::getInverseTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+        } else {
+            rotation = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
+            transform = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+            transformscale = Transform2D::Matrix3x3::getTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+        }
     }
-
+    
     rotationPos = rotation * penPos;
     rotationPos.x /= rotationPos.z;
     rotationPos.y /= rotationPos.z;
-
+    
     transformedPos = transform * penPos;
     transformedPos.x /= transformedPos.z;
     transformedPos.y /= transformedPos.z;
-
+    
     previousPos.x = _lastMousePos.x;
     previousPos.y = _lastMousePos.y;
     previousPos.z = 1.;
     previousPos = transformscale * previousPos;
     previousPos.x /= previousPos.z;
     previousPos.y /= previousPos.z;
-
+    
     currentPos = transformscale * penPos;
     currentPos.x /= currentPos.z;
     currentPos.y /= currentPos.z;
-
+    
     bool ret = true;
     if (_mouseState == eReleased) {
         double hoverToleranceX = 5 * args.pixelScale.x;
@@ -1446,9 +1458,9 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     } else if (_mouseState == eDraggingCircle) {
         double minX,minY,maxX,maxY;
         _scale->getRange(minX, minY, maxX, maxY);
-
+        
         // we need to compute the backtransformed points with the scale
-
+        
         // the scale ratio is the ratio of distances to the center
         double prevDistSq = (center.x - previousPos.x)*(center.x - previousPos.x) + (center.y - previousPos.y)*(center.y - previousPos.y);
         if (prevDistSq != 0.) {
@@ -1457,9 +1469,9 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
             scale.x *= distRatio;
             scale.y *= distRatio;
         }
-
+        
         _scale->setValue(scale.x, scale.y);
-
+        
     } else if (_mouseState == eDraggingLeftPoint || _mouseState == eDraggingRightPoint) {
         // avoid division by zero
         if (center.x != previousPos.x) {
@@ -1495,20 +1507,20 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         ///which can be computed by : angle = arctan(opposite / adjacent)
         diffToCenter.y = rotationPos.y - center.y;
         diffToCenter.x = rotationPos.x - center.x;
-        double angle = std::atan2(diffToCenter.y, diffToCenter.x);
+        double angle = std::atan2(inverted ? -diffToCenter.y : diffToCenter.y, diffToCenter.x);
         _rotate->setValue(Transform2D::toDegrees(angle));
         
     } else if (_mouseState == eDraggingSkewXBar) {
         // avoid division by zero
         if (scale.y != 0. && center.y != previousPos.y) {
             const double addSkew = (scale.x/scale.y)*(currentPos.x - previousPos.x)/(currentPos.y - center.y);
-            _skewX->setValue(skewX + addSkew);
+            _skewX->setValue(inverted ? skewX - addSkew : skewX + addSkew);
         }
     } else if (_mouseState == eDraggingSkewYBar) {
         // avoid division by zero
         if (scale.x != 0. && center.x != previousPos.x) {
             const double addSkew = (scale.y/scale.x)*(currentPos.y - previousPos.y)/(currentPos.x - center.x);
-            _skewY->setValue(skewY + addSkew);
+            _skewY->setValue(inverted ? skewY - addSkew : skewY + addSkew);
         }
     } else {
         assert(false);
@@ -1526,7 +1538,7 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     }
     
     using Transform2D::Matrix3x3;
-
+    
     OfxPointD center,left,right,top,bottom;
     getPoints(center,left,bottom,top,right,args.pixelScale);
     OfxRectD centerPoint = rectFromCenterPoint(center);
@@ -1547,7 +1559,7 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     _skewX->getValue(skewX);
     _skewY->getValue(skewY);
     _skewOrder->getValue(skewOrderYX);
-
+    
     Transform2D::Point3D transformedPos, rotationPos;
     transformedPos.x = args.penPosition.x;
     transformedPos.y = args.penPosition.y;
@@ -1555,18 +1567,27 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     
     double rot = Transform2D::toRadians(currentRotation);
     
+    bool inverted;
+    _invert->getValue(inverted);
+    
     ///now undo skew + rotation to the current position
     Transform2D::Matrix3x3 rotation, transform;
-    rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
-    transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+    if (!inverted) {
+        rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
+        transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+    } else {
+        rotation = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
+        transform = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
 
+    }
+    
     rotationPos = rotation * transformedPos;
     rotationPos.x /= rotationPos.z;
     rotationPos.y /= rotationPos.z;
     transformedPos = transform * transformedPos;
     transformedPos.x /= transformedPos.z;
     transformedPos.y /= transformedPos.z;
-
+    
     double pressToleranceX = 5 * args.pixelScale.x;
     double pressToleranceY = 5 * args.pixelScale.y;
     bool ret = true;
@@ -1633,9 +1654,9 @@ void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedBitDepth(eBitDepthFloat);
     
     // set a few flags
-
+    
     // GENERIC
-
+    
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
     desc.setTemporalClipAccess(false);
@@ -1644,18 +1665,18 @@ void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderTwiceAlways(true);
     desc.setSupportsMultipleClipPARs(false);
     desc.setRenderThreadSafety(eRenderFullySafe);
-
+    
     // NON-GENERIC
-
+    
     // in order to support tiles, the plugin must implement the getRegionOfInterest function
     desc.setSupportsTiles(true);
-
+    
     // in order to support multiresolution, the plugin must take into account the renderscale
     // and scale the transform appropriately
     // TODO: Change the getRegionOfDefinition(), getRegionsOfInterest(), render() functions to handle args.renderScale
     desc.setSupportsMultiResolution(false);
     desc.setOverlayInteractDescriptor( new TransformOverlayDescriptor);
-
+    
 }
 
 
@@ -1664,9 +1685,9 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     if (!getImageEffectHostDescription()->supportsParametricParameter) {
         throwHostMissingSuiteException(kOfxParametricParameterSuite);
     }
-
+    
     // GENERIC
-
+    
     // if general or paint context, define the mask clip
     if (context == eContextGeneral || context == eContextPaint) {
         // if paint context, it is a mandated input called 'brush'
@@ -1679,7 +1700,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         maskClip->setSupportsTiles(true);
         maskClip->setIsMask(true); // we are a mask input
     }
-
+    
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -1688,7 +1709,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(true);
     srcClip->setIsMask(false);
-
+    
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
@@ -1697,7 +1718,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-
+    
     // NON-GENERIC PARAMETERS
     //
     Double2DParamDescriptor* translate = desc.defineDouble2DParam(kTranslateParamName);
@@ -1730,13 +1751,13 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     skewX->setDefault(0);
     skewX->setDisplayRange(-1,1);
     page->addChild(*skewX);
-
+    
     DoubleParamDescriptor* skewY = desc.defineDoubleParam(kSkewYParamName);
     skewY->setLabels(kSkewYParamName, kSkewYParamName, kSkewYParamName);
     skewY->setDefault(0);
     skewY->setDisplayRange(-1,1);
     page->addChild(*skewY);
-
+    
     ChoiceParamDescriptor* skewOrder = desc.defineChoiceParam(kSkewOrderParamName);
     skewOrder->setLabels(kSkewOrderParamName, kSkewOrderParamName, kSkewOrderParamName);
     skewOrder->setDefault(0);
@@ -1744,7 +1765,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     skewOrder->appendOption("YX");
     skewOrder->setAnimates(false);
     page->addChild(*skewOrder);
-
+    
     Double2DParamDescriptor* center = desc.defineDouble2DParam(kCenterParamName);
     center->setLabels(kCenterParamName, kCenterParamName, kCenterParamName);
     //center->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
@@ -1753,20 +1774,20 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     center->setDefaultCoordinateSystem(eCoordinatesNormalised);
     center->setDefault(0.5, 0.5);
     page->addChild(*center);
-
+    
     BooleanParamDescriptor* invert = desc.defineBooleanParam(kInvertParamName);
     invert->setLabels(kInvertParamName, kInvertParamName, kInvertParamName);
     invert->setDefault(false);
     invert->setAnimates(false);
     page->addChild(*invert);
-
+    
     BooleanParamDescriptor* showOverlay = desc.defineBooleanParam(kShowOverlayParamName);
     showOverlay->setLabels(kShowOverlayParamName, kShowOverlayParamName, kShowOverlayParamName);
     showOverlay->setDefault(true);
     showOverlay->setAnimates(false);
     showOverlay->setEvaluateOnChange(false);
     page->addChild(*showOverlay);
-
+    
     // GENERIC PARAMETERS
     //
     ChoiceParamDescriptor* filter = desc.defineChoiceParam(kFilterParamName);
@@ -1777,19 +1798,19 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     filter->appendOption("Bicubic");
     filter->setAnimates(false);
     page->addChild(*filter);
-
+    
     BooleanParamDescriptor* blackOutside = desc.defineBooleanParam(kBlackOutsideParamName);
     blackOutside->setLabels(kBlackOutsideParamName, kBlackOutsideParamName, kBlackOutsideParamName);
     blackOutside->setDefault(true);
     blackOutside->setAnimates(false);
     page->addChild(*blackOutside);
-
+    
     BooleanParamDescriptor* domask = desc.defineBooleanParam(kMaskParamName);
     domask->setLabels(kMaskParamName, kMaskParamName, kMaskParamName);
     domask->setDefault(false);
     domask->setAnimates(false);
     page->addChild(*domask);
-
+    
     DoubleParamDescriptor* mix = desc.defineDoubleParam(kMixParamName);
     mix->setLabels(kMixParamName, kMixParamName, kMixParamName);
     mix->setDefault(1.);
