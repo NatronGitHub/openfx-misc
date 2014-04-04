@@ -1203,27 +1203,45 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     _skewY->getValue(skewY);
     _skewOrder->getValue(skewOrderYX);
 
-    Transform2D::Point3D rotationPos, transformedPos;
-    transformedPos.x = args.penPosition.x;
-    transformedPos.y = args.penPosition.y;
-    transformedPos.z = 1.;
+    OfxPointD scale;
+    _scale->getValue(scale.x, scale.y);
+
+    Transform2D::Point3D penPos, rotationPos, transformedPos, previousPos, currentPos;
+    penPos.x = args.penPosition.x;
+    penPos.y = args.penPosition.y;
+    penPos.z = 1.;
     
-    Transform2D::Matrix3x3 rotation, transform;
+    Transform2D::Matrix3x3 rotation, transform, transformscale;
     ////for the rotation bar dragging we dont use the same transform, we don't want to undo the rotation transform
     if (_mouseState != eDraggingRotationBar && _mouseState != eDraggingCenterPoint) {
         ///undo skew + rotation to the current position
         rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
         transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-     } else {
+        transformscale = Transform2D::Matrix3x3::getInverseTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+    } else {
         rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
         transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+        transformscale = Transform2D::Matrix3x3::getInverseTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
     }
-    rotationPos = rotation * transformedPos;
+
+    rotationPos = rotation * penPos;
     rotationPos.x /= rotationPos.z;
     rotationPos.y /= rotationPos.z;
-    transformedPos = transform * transformedPos;
+
+    transformedPos = transform * penPos;
     transformedPos.x /= transformedPos.z;
     transformedPos.y /= transformedPos.z;
+
+    previousPos.x = _lastMousePos.x;
+    previousPos.y = _lastMousePos.y;
+    previousPos.z = 1.;
+    previousPos = transformscale * previousPos;
+    previousPos.x /= previousPos.z;
+    previousPos.y /= previousPos.z;
+
+    currentPos = transformscale * penPos;
+    currentPos.x /= currentPos.z;
+    currentPos.y /= currentPos.z;
 
     //std::cout << "penPosition = " << args.penPosition.x << "," << args.penPosition.y << std::endl;
     //std::cout << "transform = " << "[[" << transform.a << "," << transform.b << "," << transform.c << "],[" << transform.d << "," << transform.e << "," << transform.f << "],[" << transform.g << "," << transform.h << "," << transform.i << "]]" << std::endl;
@@ -1260,27 +1278,8 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     } else if (_mouseState == eDraggingCircle) {
         double minX,minY,maxX,maxY;
         _scale->getRange(minX, minY, maxX, maxY);
-        
-        OfxPointD scale;
-        _scale->getValue(scale.x, scale.y);
 
         // we need to compute the backtransformed points with the scale
-        Transform2D::Matrix3x3 transformscale = Transform2D::Matrix3x3::getInverseTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-        Transform2D::Point3D previousPos;
-        previousPos.x = _lastMousePos.x;
-        previousPos.y = _lastMousePos.y;
-        previousPos.z = 1.;
-        previousPos = transformscale * previousPos;
-        previousPos.x /= previousPos.z;
-        previousPos.y /= previousPos.z;
-
-        Transform2D::Point3D currentPos;
-        currentPos.x = args.penPosition.x;
-        currentPos.y = args.penPosition.y;
-        currentPos.z = 1.;
-        currentPos = transformscale * currentPos;
-        currentPos.x /= currentPos.z;
-        currentPos.y /= currentPos.z;
 
         // the scale ratio is the ratio of distances to the center
         double prevDistSq = (center.x - previousPos.x)*(center.x - previousPos.x) + (center.y - previousPos.y)*(center.y - previousPos.y);
@@ -1293,42 +1292,26 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
 
         _scale->setValue(scale.x, scale.y);
 
-    } else if (_mouseState == eDraggingLeftPoint) {
-        double minX,minY,maxX,maxY;
-        _scale->getRange(minX, minY, maxX, maxY);
-        
-        OfxPointD scale;
-        _scale->getValue(scale.x, scale.y);
-        dx /= (CIRCLE_RADIUS_BASE * args.pixelScale.x);
-        scale.x = std::max(minX, std::min(scale.x - dx, maxX));
-        _scale->setValue(scale.x, scale.y);
-    } else if (_mouseState == eDraggingRightPoint) {
-        double minX,minY,maxX,maxY;
-        _scale->getRange(minX, minY, maxX, maxY);
-        
-        OfxPointD scale;
-        _scale->getValue(scale.x, scale.y);
-        dx /= (CIRCLE_RADIUS_BASE * args.pixelScale.x);
-        scale.x = std::max(minX, std::min(scale.x + dx, maxX));
-        _scale->setValue(scale.x, scale.y);
-    } else if (_mouseState == eDraggingTopPoint) {
-        double minX,minY,maxX,maxY;
-        _scale->getRange(minX, minY, maxX, maxY);
-        
-        OfxPointD scale;
-        _scale->getValue(scale.x, scale.y);
-        dy /= (CIRCLE_RADIUS_BASE * args.pixelScale.y);
-        scale.y = std::max(minY, std::min(scale.y + dy, maxY));
-        _scale->setValue(scale.x, scale.y);
-    } else if (_mouseState == eDraggingBottomPoint) {
-        double minX,minY,maxX,maxY;
-        _scale->getRange(minX, minY, maxX, maxY);
-        
-        OfxPointD scale;
-        _scale->getValue(scale.x, scale.y);
-        dy /= (CIRCLE_RADIUS_BASE * args.pixelScale.y);
-        scale.y = std::max(minY, std::min(scale.y - dy, maxY));
-        _scale->setValue(scale.x, scale.y);
+    } else if (_mouseState == eDraggingLeftPoint || _mouseState == eDraggingRightPoint) {
+        // avoid division by zero
+        if (center.x != previousPos.x) {
+            double minX,minY,maxX,maxY;
+            _scale->getRange(minX, minY, maxX, maxY);
+            const double scaleRatio = (center.x - currentPos.x)/(center.x - previousPos.x);
+            scale.x *= scaleRatio;
+            scale.x = std::max(minX, std::min(scale.x, maxX));
+            _scale->setValue(scale.x, scale.y);
+        }
+    } else if (_mouseState == eDraggingTopPoint || _mouseState == eDraggingBottomPoint) {
+        // avoid division by zero
+        if (center.y - previousPos.y) {
+            double minX,minY,maxX,maxY;
+            _scale->getRange(minX, minY, maxX, maxY);
+            const double scaleRatio = (center.y - currentPos.y)/(center.y - previousPos.y);
+            scale.y *= scaleRatio;
+            scale.y = std::max(minY, std::min(scale.y, maxY));
+            _scale->setValue(scale.x, scale.y);
+        }
     } else if (_mouseState == eDraggingCenterPoint) {
         OfxPointD currentTranslation;
         _translate->getValue(currentTranslation.x, currentTranslation.y);
