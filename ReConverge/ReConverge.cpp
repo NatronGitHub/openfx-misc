@@ -576,7 +576,9 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     convergepoint->setLabels("Converge upon", "Converge upon", "Converge upon");
     convergepoint->setScriptName("convergepoint");
     convergepoint->setHint("Position of the tracked point when the convergence is set");
-    convergepoint->setDoubleType(eDoubleTypeNormalisedXYAbsolute);
+    convergepoint->setDoubleType(eDoubleTypeXYAbsolute);
+    convergepoint->setDefaultCoordinateSystem(eCoordinatesNormalised);
+    convergepoint->setDefault(0.5, 0.5);
     convergepoint->setAnimates(true);
     page->addChild(*convergepoint);
   }
