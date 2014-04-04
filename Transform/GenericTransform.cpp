@@ -98,7 +98,7 @@ double Matrix3x3::determinant() const
     return ret;
 }
 
-Matrix3x3 Matrix3x3::scaleAdjoint(double s) const
+Matrix3x3 Matrix3x3::getScaleAdjoint(double s) const
 {
     Matrix3x3 ret;
     ret.a = (s) * (e * i - h * f);
@@ -115,9 +115,9 @@ Matrix3x3 Matrix3x3::scaleAdjoint(double s) const
     return ret;
 }
 
-Matrix3x3 Matrix3x3::invert() const
+Matrix3x3 Matrix3x3::getInverse() const
 {
-    return scaleAdjoint(1. / determinant());
+    return getScaleAdjoint(1. / determinant());
 }
 
 Matrix3x3 Matrix3x3::getRotate(double rads)
@@ -127,39 +127,87 @@ Matrix3x3 Matrix3x3::getRotate(double rads)
     return Matrix3x3(c,s,0,-s,c,0,0,0,1);
 }
 
-Matrix3x3 Matrix3x3::getRotateAroundPoint(double rads,const OfxPointD& p)
+Matrix3x3 Matrix3x3::getRotateAroundPoint(double rads, double px, double py)
 {
-    return getTranslate(p.x, p.y) * (getRotate(rads) * getTranslate(-p.x, -p.y));
+    return getTranslate(px, py) * (getRotate(rads) * getTranslate(-px, -py));
 }
 
-Matrix3x3 Matrix3x3::getTranslate(const OfxPointD& t) { return Matrix3x3(1,0,t.x,0,1,t.y,0,0,1); }
-Matrix3x3 Matrix3x3::getTranslate(double x, double y) { return Matrix3x3(1,0,x,0,1,y,0,0,1);; }
-
-Matrix3x3 Matrix3x3::getScale(const OfxPointD& s) { return Matrix3x3(s.x,0,0,0,s.y,0,0,0,1); }
-Matrix3x3 Matrix3x3::getScale(double x, double y) { return Matrix3x3(x,0,0,0,y,0,0,0,1); }
-Matrix3x3 Matrix3x3::getScale(double s)           { return Matrix3x3(s,0,0,0,s,0,0,0,1); }
-
-Matrix3x3 Matrix3x3::getScaleAroundPoint(double sx,double sy,const OfxPointD& p)
+Matrix3x3 Matrix3x3::getTranslate(double x, double y)
 {
-    return getTranslate(p.x,p.y) * (getScale(sx,sy) * getTranslate(-p.x, -p.y));
+    return Matrix3x3(1., 0., x,
+                     0., 1., y,
+                     0., 0., 1.);
 }
 
-Matrix3x3 Matrix3x3::getShearX(double k) { return Matrix3x3(1,k,0,0,1,0,0,0,1); }
-Matrix3x3 Matrix3x3::getShearY(double k) { return Matrix3x3(1,0,0,k,1,0,0,0,1); }
+Matrix3x3 Matrix3x3::getScale(double x, double y)
+{
+    return Matrix3x3(x,  0., 0.,
+                     0., y,  0.,
+                     0., 0., 1.);
+}
 
-Matrix3x3 Matrix3x3::getTransform(const OfxPointD& translate,const OfxPointD& scale,double shearX,double rads,const OfxPointD& center)
+Matrix3x3 Matrix3x3::getScale(double s)
+{
+    return getScale(s, s);
+}
+
+Matrix3x3 Matrix3x3::getScaleAroundPoint(double scaleX, double scaleY, double px, double py)
+{
+    return getTranslate(px,py) * (getScale(scaleX,scaleY) * getTranslate(-px, -py));
+}
+
+Matrix3x3 Matrix3x3::getSkewXY(double skewX, double skewY, bool skewOrderYX)
+{
+    return Matrix3x3(skewOrderYX ? 1. : (1. + skewX*skewY), skewX, 0.,
+                     skewY, skewOrderYX ? (1. + skewX*skewY) : 1, 0.,
+                     0., 0., 1.);
+}
+
+// matrix transform from destination to source
+Matrix3x3 Matrix3x3::getInverseTransform(double translateX, double translateY,
+                                  double scaleX, double scaleY,
+                                  double skewX,
+                                  double skewY,
+                                  bool skewOrderYX,
+                                  double rads,
+                                  double centerX, double centerY)
 {
     ///1) We translate to the origin.
     ///2) We scale
     ///3) We rotate
     ///4) We translate back to the center
     ///5) We apply the global translation
-    ///6) We apply shearX
-    return
-    getTranslate(center) *
-    getScale(1.f / scale.x, 1.f / scale.y) *
-    getRotate(rads) *
-    getTranslate(-center.x,-center.y) *
-    getTranslate(-translate.x,-translate.y) *
-    getShearX(-shearX);
+    ///6) We apply skewX and skewY in the right order
+
+    // since this is the inverse, oerations are in reverse order
+    return (getTranslate(centerX, centerY) *
+            getScale(1. / scaleX, 1. / scaleY) *
+            getSkewXY(-skewX, -skewY, !skewOrderYX) *
+            getRotate(rads) *
+            getTranslate(-translateX,-translateY) *
+            getTranslate(-centerX,-centerY));
+}
+
+// matrix transform from source to destination
+Matrix3x3 Matrix3x3::getTransform(double translateX, double translateY,
+                                  double scaleX, double scaleY,
+                                  double skewX,
+                                  double skewY,
+                                  bool skewOrderYX,
+                                  double rads,
+                                  double centerX, double centerY)
+{
+    ///1) We translate to the origin.
+    ///2) We scale
+    ///3) We rotate
+    ///4) We translate back to the center
+    ///5) We apply the global translation
+    ///6) We apply skewX and skewY in the right order
+
+    return (getTranslate(centerX, centerY) *
+            getTranslate(translateX, translateY) *
+            getRotate(-rads) *
+            getSkewXY(skewX, skewY, skewOrderYX) *
+            getScale(scaleX, scaleY) *
+            getTranslate(-centerX,-centerY));
 }

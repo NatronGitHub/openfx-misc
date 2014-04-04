@@ -91,8 +91,11 @@
 #define kTranslateParamName "Translate"
 #define kRotateParamName "Rotate"
 #define kScaleParamName "Scale"
-#define kSkewParamName "Skew"
+#define kSkewXParamName "Skew X"
+#define kSkewYParamName "Skew Y"
+#define kSkewOrderParamName "Skew order"
 #define kCenterParamName "Center"
+#define kInvertParamName "Invert"
 #define kFilterParamName "Filter"
 #define kBlackOutsideParamName "Black outside"
 
@@ -109,7 +112,7 @@ protected:
     OFX::Image *_srcImg;
     OfxRectI _srcBounds;
     // NON-GENERIC PARAMETERS:
-    Transform2D::Matrix3x3 _transform;
+    Transform2D::Matrix3x3 _invtransform;
     // GENERIC PARAMETERS:
     int _filter;
     bool _blackOutside;
@@ -134,16 +137,26 @@ public:
         _srcBounds.y2 = std::min((double)kOfxFlagInfiniteMax, std::floor(srcRoD.y2));
     }
 
-    void setValues(const OfxPointD& translate, //!< non-generic
+    void setValues(double translateX, //!< non-generic
+                   double translateY, //!< non-generic
                    double rotate,              //!< non-generic
-                   const OfxPointD& scale,     //!< non-generic
-                   double skew,                //!< non-generic
-                   const OfxPointD& center,    //!< non-generic
+                   double scaleX,     //!< non-generic
+                   double scaleY,     //!< non-generic
+                   double skewX,               //!< non-generic
+                   double skewY,               //!< non-generic
+                   bool skewOrderYX,             //!< non-generic
+                   double centerX,    //!< non-generic
+                   double centerY,    //!< non-generic
+                   bool invert,                //!< non-generic
                    int filter,                 //!< generic
                    bool blackOutside)          //!< generic
     {
         // NON-GENERIC
-        _transform = Transform2D::Matrix3x3::getTransform(translate, scale, skew, rotate, center);
+        if (invert) {
+            _invtransform = Transform2D::Matrix3x3::getTransform(translateX, translateY, scaleX, scaleY, skewX, skewY, skewOrderYX, rotate, centerX, centerY);
+        } else {
+            _invtransform = Transform2D::Matrix3x3::getInverseTransform(translateX, translateY, scaleX, scaleY, skewX, skewY, skewOrderYX, rotate, centerX, centerY);
+        }
         // GENERIC
         _filter = filter;
         _blackOutside = blackOutside;
@@ -178,13 +191,13 @@ public :
     
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        
         for (int y = procWindow.y1; y < procWindow.y2; y++)
         {
-            ///convert to a normalized 0 ,1 coordinate
-            Transform2D::Point3D normalizedCoords;
-            normalizedCoords.z = 1;
-            normalizedCoords.y = (double)y; //(y - dstRod.y1) / (double)(dstRod.y2 - dstRod.y1);
+            // the coordinates of the center of the pixel in canonical coordinates
+            // see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#CanonicalCoordinates
+            Transform2D::Point3D canonicalCoords;
+            canonicalCoords.z = 1;
+            canonicalCoords.y = (double)y + 0.5;
             
             
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
@@ -192,9 +205,10 @@ public :
             {
                 // NON-GENERIC TRANSFORM
 
-                normalizedCoords.x = (double)x;//(x - dstRod.x1) / (double)(dstRod.x2 - dstRod.x1);
-                Transform2D::Point3D transformed = _transform * normalizedCoords;
-
+                // the coordinates of the center of the pixel in canonical coordinates
+                // see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#CanonicalCoordinates
+                canonicalCoords.x = (double)x + 0.5;
+                Transform2D::Point3D transformed = _invtransform * canonicalCoords;
                 if (!_srcImg || transformed.z == 0.) {
                     // the back-transformed point is at infinity
                     for (int c = 0; c < nComponents; ++c) {
@@ -206,11 +220,12 @@ public :
 
                     // GENERIC TRANSFORM
                     // from here on, everything is generic, and should be moved to a generic transform class
-
+                    // Important: (0,0) is the *corner*, not the *center* of the first pixel (see OpenFX specs)
                     if (_filter == 0) {
                         ///nearest neighboor
-                        int x = std::floor(fx+0.5);
-                        int y = std::floor(fy+0.5);
+                        // the center of pixel (0,0) has coordinates (0.5,0.5)
+                        int x = std::floor(fx); // don't add 0.5
+                        int y = std::floor(fy); // don't add 0.5
 
                         if (!_blackOutside) {
                             x = std::max(_srcBounds.x1,std::min(x,_srcBounds.x2-1));
@@ -228,30 +243,31 @@ public :
                         }
                     } else if (_filter == 1) {
                         // bilinear
-                        int x = std::floor(fx);
-                        int y = std::floor(fy);
+                        // the center of pixel (0,0) has coordinates (0.5,0.5)
+                        int x = std::floor(fx-0.5);
+                        int y = std::floor(fy-0.5);
                         int nx = x + 1;
                         int ny = y + 1;
                         if (!_blackOutside) {
                             x = std::max(_srcBounds.x1,std::min(x,_srcBounds.x2-1));
                             y = std::max(_srcBounds.y1,std::min(y,_srcBounds.y2-1));
+                            nx = std::max(_srcBounds.x1,std::min(nx,_srcBounds.x2-1));
+                            ny = std::max(_srcBounds.y1,std::min(ny,_srcBounds.y2-1));
                         }
-                        nx = std::max(_srcBounds.x1,std::min(nx,_srcBounds.x2-1));
-                        ny = std::max(_srcBounds.y1,std::min(ny,_srcBounds.y2-1));
 
-                        const double dx = std::max(0., std::min(fx - x, 1.));
-                        const double dy = std::max(0., std::min(fy - y, 1.));
+                        const double dx = std::max(0., std::min(fx-0.5 - x, 1.));
+                        const double dy = std::max(0., std::min(fy-0.5 - y, 1.));
 
                         PIX *Pcc = (PIX *)_srcImg->getPixelAddress( x,  y);
                         PIX *Pnc = (PIX *)_srcImg->getPixelAddress(nx,  y);
                         PIX *Pcn = (PIX *)_srcImg->getPixelAddress( x, ny);
                         PIX *Pnn = (PIX *)_srcImg->getPixelAddress(nx, ny);
-                        if (Pcc && Pnc && Pcn && Pnn) {
+                        if (Pcc || Pnc || Pcn || Pnn) {
                             for (int c = 0; c < nComponents; ++c) {
-                                const double Icc = Pcc[c];
-                                const double Inc = Pnc[c];
-                                const double Icn = Pcn[c];
-                                const double Inn = Pnn[c];
+                                const double Icc = get(Pcc,c);
+                                const double Inc = get(Pnc,c);
+                                const double Icn = get(Pcn,c);
+                                const double Inn = get(Pnn,c);
 
                                 dstPix[c] = Icc + dx*(Inc-Icc + dy*(Icc+Inn-Icn-Inc)) + dy*(Icn-Icc);
                             }
@@ -262,8 +278,9 @@ public :
                         }
                     } else if (_filter == 2) {
                         // bicubic
-                        int x = std::floor(fx);
-                        int y = std::floor(fy);
+                        // the center of pixel (0,0) has coordinates (0.5,0.5)
+                        int x = std::floor(fx-0.5);
+                        int y = std::floor(fy-0.5);
                         int px = x - 1;
                         int py = y - 1;
                         int nx = x + 1;
@@ -273,15 +290,15 @@ public :
                         if (!_blackOutside) {
                             x = std::max(_srcBounds.x1,std::min(x,_srcBounds.x2-1));
                             y = std::max(_srcBounds.y1,std::min(y,_srcBounds.y2-1));
+                            px = std::max(_srcBounds.x1,std::min(px,_srcBounds.x2-1));
+                            py = std::max(_srcBounds.y1,std::min(py,_srcBounds.y2-1));
+                            nx = std::max(_srcBounds.x1,std::min(nx,_srcBounds.x2-1));
+                            ny = std::max(_srcBounds.y1,std::min(ny,_srcBounds.y2-1));
+                            ax = std::max(_srcBounds.x1,std::min(ax,_srcBounds.x2-1));
+                            ay = std::max(_srcBounds.y1,std::min(ay,_srcBounds.y2-1));
                         }
-                        px = std::max(_srcBounds.x1,std::min(px,_srcBounds.x2-1));
-                        py = std::max(_srcBounds.y1,std::min(py,_srcBounds.y2-1));
-                        nx = std::max(_srcBounds.x1,std::min(nx,_srcBounds.x2-1));
-                        ny = std::max(_srcBounds.y1,std::min(ny,_srcBounds.y2-1));
-                        ax = std::max(_srcBounds.x1,std::min(ax,_srcBounds.x2-1));
-                        ay = std::max(_srcBounds.y1,std::min(ay,_srcBounds.y2-1));
-                        const double dx = std::max(0., std::min(fx - x, 1.));
-                        const double dy = std::max(0., std::min(fy - y, 1.));
+                        const double dx = std::max(0., std::min(fx-0.5 - x, 1.));
+                        const double dy = std::max(0., std::min(fy-0.5 - y, 1.));
 
                         PIX *Ppp = (PIX *)_srcImg->getPixelAddress(px, py);
                         PIX *Pcp = (PIX *)_srcImg->getPixelAddress( x, py);
@@ -299,24 +316,24 @@ public :
                         PIX *Pca = (PIX *)_srcImg->getPixelAddress( x, ay);
                         PIX *Pna = (PIX *)_srcImg->getPixelAddress(nx, ay);
                         PIX *Paa = (PIX *)_srcImg->getPixelAddress(nx, ay);
-                        if (Ppp && Pcp && Pnp && Pap && Ppc && Pcc && Pnc && Pac && Ppn && Pcn && Pnn && Pan && Ppa && Pca && Pna && Paa) {
+                        if (Ppp || Pcp || Pnp || Pap || Ppc || Pcc || Pnc || Pac || Ppn || Pcn || Pnn || Pan || Ppa || Pca || Pna || Paa) {
                             for (int c = 0; c < nComponents; ++c) {
-                                double Ipp = Ppp[c];
-                                double Icp = Pcp[c];
-                                double Inp = Pnp[c];
-                                double Iap = Pap[c];
-                                double Ipc = Ppc[c];
-                                double Icc = Pcc[c];
-                                double Inc = Pnc[c];
-                                double Iac = Pac[c];
-                                double Ipn = Ppn[c];
-                                double Icn = Pcn[c];
-                                double Inn = Pnn[c];
-                                double Ian = Pan[c];
-                                double Ipa = Ppa[c];
-                                double Ica = Pca[c];
-                                double Ina = Pna[c];
-                                double Iaa = Paa[c];
+                                double Ipp = get(Ppp,c);
+                                double Icp = get(Pcp,c);
+                                double Inp = get(Pnp,c);
+                                double Iap = get(Pap,c);
+                                double Ipc = get(Ppc,c);
+                                double Icc = get(Pcc,c);
+                                double Inc = get(Pnc,c);
+                                double Iac = get(Pac,c);
+                                double Ipn = get(Ppn,c);
+                                double Icn = get(Pcn,c);
+                                double Inn = get(Pnn,c);
+                                double Ian = get(Pan,c);
+                                double Ipa = get(Ppa,c);
+                                double Ica = get(Pca,c);
+                                double Ina = get(Pna,c);
+                                double Iaa = get(Paa,c);
                                 double Ip = Icp + 0.5f*(dx*(-Ipp+Inp) + dx*dx*(2*Ipp-5*Icp+4*Inp-Iap) + dx*dx*dx*(-Ipp+3*Icp-3*Inp+Iap));
                                 double Ic = Icc + 0.5f*(dx*(-Ipc+Inc) + dx*dx*(2*Ipc-5*Icc+4*Inc-Iac) + dx*dx*dx*(-Ipc+3*Icc-3*Inc+Iac));
                                 double In = Icn + 0.5f*(dx*(-Ipn+Inn) + dx*dx*(2*Ipn-5*Icn+4*Inn-Ian) + dx*dx*dx*(-Ipn+3*Icn-3*Inn+Ian));
@@ -336,6 +353,11 @@ public :
                 
             }
         }
+    }
+private:
+    PIX get(const PIX* p, int c)
+    {
+        return p ? p[c] : PIX();
     }
 };
 
@@ -365,8 +387,11 @@ public:
         _translate = fetchDouble2DParam(kTranslateParamName);
         _rotate = fetchDoubleParam(kRotateParamName);
         _scale = fetchDouble2DParam(kScaleParamName);
-        _skew = fetchDoubleParam(kSkewParamName);
+        _skewX = fetchDoubleParam(kSkewXParamName);
+        _skewY = fetchDoubleParam(kSkewYParamName);
+        _skewOrder = fetchChoiceParam(kSkewOrderParamName);
         _center = fetchDouble2DParam(kCenterParamName);
+        _invert = fetchBooleanParam(kInvertParamName);
         // GENERIC
         _filter = fetchChoiceParam(kFilterParamName);
         _blackOutside = fetchBooleanParam(kBlackOutsideParamName);
@@ -391,8 +416,11 @@ private:
     OFX::Double2DParam* _translate;
     OFX::DoubleParam* _rotate;
     OFX::Double2DParam* _scale;
-    OFX::DoubleParam* _skew;
+    OFX::DoubleParam* _skewX;
+    OFX::DoubleParam* _skewY;
+    OFX::ChoiceParam* _skewOrder;
     OFX::Double2DParam* _center;
+    OFX::BooleanParam* _invert;
     // GENERIC
     OFX::ChoiceParam* _filter;
     OFX::BooleanParam* _blackOutside;
@@ -421,37 +449,37 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
             OFX::throwSuiteStatusException(kOfxStatFailed);
 
-        OfxPointD size = getProjectSize();
-        OfxPointD offset = getProjectOffset();
         // NON-GENERIC
-        OfxPointD scale;
-        OfxPointD translate;
+        double scaleX, scaleY;
+        double translateX, translateY;
         double rotate;
-        double skew;
-        OfxPointD center;
+        double skewX, skewY;
+        int skewOrder;
+        double centerX, centerY;
+        bool invert;
         // GENERIC
         int filter;
         bool blackOutside;
 
         // NON-GENERIC
-        _scale->getValue(scale.x, scale.y);
-        _translate->getValue(translate.x, translate.y);
-        translate.x =  (translate.x * size.x) + offset.x;
-        translate.y =  (translate.y * size.y) + offset.y;
+        _scale->getValue(scaleX, scaleY);
+        _translate->getValue(translateX, translateY);
         _rotate->getValue(rotate);
         rotate = Transform2D::toRadians(rotate);
 
-        _skew->getValue(skew);
-        
-        _center->getValue(center.x, center.y);
-        center.x =  (center.x * size.x) + offset.x;
-        center.y =  (center.y * size.y) + offset.y;
-        
+        _skewX->getValue(skewX);
+        _skewY->getValue(skewY);
+        _skewOrder->getValue(skewOrder);
+
+        _center->getValue(centerX, centerY);
+
+        _invert->getValue(invert);
+
         // GENERIC
         _filter->getValue(filter);
         _blackOutside->getValue(blackOutside);
 
-        processor.setValues(translate, rotate, scale, skew, center, filter, blackOutside);
+        processor.setValues(translateX, translateY, rotate, scaleX, scaleY, skewX, skewY, (bool)skewOrder, centerX, centerY, invert, filter, blackOutside);
     }
 
     
@@ -469,37 +497,45 @@ bool
 TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
-    OfxPointD size = getProjectSize();
-    OfxPointD offset = getProjectOffset();
-    OfxPointD scale;
-    OfxPointD translate;
+    double scaleX, scaleY;
+    double translateX, translateY;
     double rotate;
-    double skew;
-    OfxPointD center;
+    double skewX, skewY;
+    int skewOrder;
+    double centerX, centerY;
+    bool invert;
 
-    _scale->getValue(scale.x, scale.y);
-    _translate->getValue(translate.x, translate.y);
-    translate.x =  (translate.x * size.x) + offset.x;
-    translate.y =  (translate.y * size.y) + offset.y;
+    _scale->getValue(scaleX, scaleY);
+    _translate->getValue(translateX, translateY);
 
     _rotate->getValue(rotate);
     
-    ///convert to radians
-    rotate = rotate * Transform2D::pi / 180.0;
-    _center->getValue(center.x, center.y);
-    center.x =  (center.x * size.x) + offset.x;
-    center.y =  (center.y * size.y) + offset.y;
-    _skew->getValue(skew);
-    
+    // NON-GENERIC
+    _scale->getValue(scaleX, scaleY);
+    _translate->getValue(translateX, translateY);
+    _rotate->getValue(rotate);
+    rotate = Transform2D::toRadians(rotate);
 
-    Transform2D::Matrix3x3 transform = Transform2D::Matrix3x3::getTransform(translate, scale, skew, rotate, center);
-    // transform must be inverted to comput output coordinates from input coordinates
-    Transform2D::Matrix3x3 invtransform = transform.invert();
+    _skewX->getValue(skewX);
+    _skewY->getValue(skewY);
+    _skewOrder->getValue(skewOrder);
+
+    _center->getValue(centerX, centerY);
+
+    _invert->getValue(invert);
+
+
+    Transform2D::Matrix3x3 transform;
+    if (!invert) {
+        transform = Transform2D::Matrix3x3::getTransform(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+    } else {
+        transform = Transform2D::Matrix3x3::getInverseTransform(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+    }
     /// now transform the 4 corners of the source clip to the output image
-    Transform2D::Point3D topLeft = invtransform * Transform2D::Point3D(srcRoD.x1,srcRoD.y2,1);
-    Transform2D::Point3D topRight = invtransform * Transform2D::Point3D(srcRoD.x2,srcRoD.y2,1);
-    Transform2D::Point3D bottomLeft = invtransform * Transform2D::Point3D(srcRoD.x1,srcRoD.y1,1);
-    Transform2D::Point3D bottomRight = invtransform * Transform2D::Point3D(srcRoD.x2,srcRoD.y1,1);
+    Transform2D::Point3D topLeft = transform * Transform2D::Point3D(srcRoD.x1,srcRoD.y2,1);
+    Transform2D::Point3D topRight = transform * Transform2D::Point3D(srcRoD.x2,srcRoD.y2,1);
+    Transform2D::Point3D bottomLeft = transform * Transform2D::Point3D(srcRoD.x1,srcRoD.y1,1);
+    Transform2D::Point3D bottomRight = transform * Transform2D::Point3D(srcRoD.x2,srcRoD.y1,1);
     
     double l = std::min(std::min(topLeft.x, bottomLeft.x),std::min(topRight.x,bottomRight.x));
     double b = std::min(std::min(topLeft.y, bottomLeft.y),std::min(topRight.y,bottomRight.y));
@@ -509,13 +545,29 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     //  denormalize(&l, &b, srcRoD);
     // denormalize(&r, &t, srcRoD);
 
-    // No need to round things up here, we must give the *actual* RoD,
-    // which should contain the source RoD.
-    rod.x1 = std::min(l, srcRoD.x1);
-    rod.x2 = std::max(r, srcRoD.x2);
-    rod.y1 = std::min(b, srcRoD.y1);
-    rod.y2 = std::max(t, srcRoD.y2);
+    // GENERIC
+    //int filter;
+    //_filter->getValue(filter);
+    bool blackOutside;
+    _blackOutside->getValue(blackOutside);
 
+    // No need to round things up here, we must give the *actual* RoD
+    if (!blackOutside) {
+        // if it's not black outside, the RoD should contain the project (we can't rely on the host to fill it).
+        OfxPointD size = getProjectSize();
+        OfxPointD offset = getProjectOffset();
+
+        rod.x1 = std::min(l, offset.x);
+        rod.x2 = std::max(r, offset.x + size.x);
+        rod.y1 = std::min(b, offset.y);
+        rod.y2 = std::max(t, offset.y + size.y);
+    } else {
+        // expand the RoD to get at least one black pixel
+        rod.x1 = l - 1.;
+        rod.x2 = r + 1.;
+        rod.y1 = b - 1.;
+        rod.y2 = t + 1.;
+    }
     // say we set it
     return true;
 }
@@ -530,35 +582,39 @@ void
 TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
     const OfxRectD roi = args.regionOfInterest;
-    OfxPointD size = getProjectSize();
-    OfxPointD offset = getProjectOffset();
-    OfxPointD scale;
-    OfxPointD translate;
+    double scaleX, scaleY;
+    double translateX, translateY;
     double rotate;
-    double skew;
-    OfxPointD center;
+    double skewX, skewY;
+    int skewOrder;
+    double centerX, centerY;
+    bool invert;
 
-    _scale->getValue(scale.x, scale.y);
-    _translate->getValue(translate.x, translate.y);
-    translate.x =  (translate.x * size.x) + offset.x;
-    translate.y =  (translate.y * size.y) + offset.y;
-
+    // NON-GENERIC
+    _scale->getValue(scaleX, scaleY);
+    _translate->getValue(translateX, translateY);
     _rotate->getValue(rotate);
+    rotate = Transform2D::toRadians(rotate);
 
-    ///convert to radians
-    rotate = rotate * Transform2D::pi / 180.0;
-    _center->getValue(center.x, center.y);
-    center.x =  (center.x * size.x) + offset.x;
-    center.y =  (center.y * size.y) + offset.y;
-    _skew->getValue(skew);
+    _skewX->getValue(skewX);
+    _skewY->getValue(skewY);
+    _skewOrder->getValue(skewOrder);
 
+    _center->getValue(centerX, centerY);
 
-    Transform2D::Matrix3x3 transform = Transform2D::Matrix3x3::getTransform(translate, scale, skew, rotate, center);
+    _invert->getValue(invert);
+
+    Transform2D::Matrix3x3 invtransform;
+    if (!invert) {
+        invtransform = Transform2D::Matrix3x3::getInverseTransform(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+    } else {
+        invtransform = Transform2D::Matrix3x3::getTransform(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+    }
     /// now find the positions in the src clip of the 4 corners of the roi
-    Transform2D::Point3D topLeft = transform * Transform2D::Point3D(roi.x1,roi.y2,1);
-    Transform2D::Point3D topRight = transform * Transform2D::Point3D(roi.x2,roi.y2,1);
-    Transform2D::Point3D bottomLeft = transform * Transform2D::Point3D(roi.x1,roi.y1,1);
-    Transform2D::Point3D bottomRight = transform * Transform2D::Point3D(roi.x2,roi.y1,1);
+    Transform2D::Point3D topLeft = invtransform * Transform2D::Point3D(roi.x1,roi.y2,1);
+    Transform2D::Point3D topRight = invtransform * Transform2D::Point3D(roi.x2,roi.y2,1);
+    Transform2D::Point3D bottomLeft = invtransform * Transform2D::Point3D(roi.x1,roi.y1,1);
+    Transform2D::Point3D bottomRight = invtransform * Transform2D::Point3D(roi.x2,roi.y1,1);
 
     double l = std::min(std::min(topLeft.x, bottomLeft.x),std::min(topRight.x,bottomRight.x));
     double b = std::min(std::min(topLeft.y, bottomLeft.y),std::min(topRight.y,bottomRight.y));
@@ -568,6 +624,26 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     //  denormalize(&l, &b, srcRoD);
     // denormalize(&r, &t, srcRoD);
 
+    // GENERIC
+    int filter;
+    _filter->getValue(filter);
+    bool blackOutside;
+    _blackOutside->getValue(blackOutside);
+    if (filter == 0) {
+        // nearest neighbor, the exact region is OK
+    } else if (filter == 1) {
+        // bilinear, expand by 0.5
+        l -= 0.5;
+        r += 0.5;
+        b -= 0.5;
+        t += 0.5;
+    } else if (filter == 2) {
+        // bicubic, expand by 1.5
+        l -= 1.5;
+        r += 1.5;
+        b -= 1.5;
+        t += 1.5;
+    }
     // No need to round things up here, we must give the *actual* RoI,
     // the host should compute the right image region from it (by rounding it up/down).
     OfxRectD srcRoI;
@@ -656,13 +732,14 @@ bool TransformPlugin::isIdentity(const RenderArguments &args, Clip * &identityCl
     OfxPointD scale;
     OfxPointD translate;
     double rotate;
-    double skew;
+    double skewX, skewY;
     _scale->getValue(scale.x, scale.y);
     _translate->getValue(translate.x, translate.y);
     _rotate->getValue(rotate);
-    _skew->getValue(skew);
+    _skewX->getValue(skewX);
+    _skewY->getValue(skewY);
 
-    if (scale.x == 1. && scale.y == 1. && translate.x == 0 && translate.y == 0 && rotate == 0 && skew == 0) {
+    if (scale.x == 1. && scale.y == 1. && translate.x == 0. && translate.y == 0. && rotate == 0. && skewX == 0. && skewY == 0.) {
         identityClip = srcClip_;
         identityTime = args.time;
         return true;
@@ -684,7 +761,8 @@ class TransformInteract : public OFX::OverlayInteract {
         eTopPointHovered, //< the top point of the circle is hovered
         eCenterPointHovered, //< the center point of the circle is hovered
         eRotationBarHovered, //< the rotation bar is hovered
-        eShearBarHoverered //< the shear bar is hovered
+        eSkewXBarHoverered, //< the skew bar is hovered
+        eSkewYBarHoverered //< the skew bar is hovered
     };
     
     enum MouseStateEnum {
@@ -696,7 +774,8 @@ class TransformInteract : public OFX::OverlayInteract {
         eDraggingBottomPoint,
         eDraggingCenterPoint,
         eDraggingRotationBar,
-        eDraggingShearBar
+        eDraggingSkewXBar,
+        eDraggingSkewYBar
     };
     
     DrawStateEnum _drawState;
@@ -715,14 +794,24 @@ public :
         
         assert(_plugin);
         _lastMousePos.x = _lastMousePos.y = 0.;
-        addParamToSlaveTo(effect->getParam(kTranslateParamName));
-        addParamToSlaveTo(effect->getParam(kRotateParamName));
-        addParamToSlaveTo(effect->getParam(kScaleParamName));
-        addParamToSlaveTo(effect->getParam(kSkewParamName));
-        addParamToSlaveTo(effect->getParam(kCenterParamName));
-    
+        // NON-GENERIC
+        _translate = _plugin->fetchDouble2DParam(kTranslateParamName);
+        _rotate = _plugin->fetchDoubleParam(kRotateParamName);
+        _scale = _plugin->fetchDouble2DParam(kScaleParamName);
+        _skewX = _plugin->fetchDoubleParam(kSkewXParamName);
+        _skewY = _plugin->fetchDoubleParam(kSkewYParamName);
+        _skewOrder = _plugin->fetchChoiceParam(kSkewOrderParamName);
+        _center = _plugin->fetchDouble2DParam(kCenterParamName);
+        _invert = _plugin->fetchBooleanParam(kInvertParamName);
+        addParamToSlaveTo(_translate);
+        addParamToSlaveTo(_rotate);
+        addParamToSlaveTo(_scale);
+        addParamToSlaveTo(_skewX);
+        addParamToSlaveTo(_skewY);
+        addParamToSlaveTo(_skewOrder);
+        addParamToSlaveTo(_center);
     }
-    
+
     // overridden functions from OFX::Interact to do things
     virtual bool draw(const OFX::DrawArgs &args);
     virtual bool penMotion(const OFX::PenArgs &args);
@@ -730,88 +819,18 @@ public :
     virtual bool penUp(const OFX::PenArgs &args);
     
 private:
-    
-    
-    
-    void scaleToProject(OfxPointD& p)
-    {
-        OfxPointD size = _plugin->getProjectSize();
-        OfxPointD offset = _plugin->getProjectOffset();
-        p.x =  (p.x * size.x) + offset.x;
-        p.y = (p.y * size.y) + offset.y;
-    }
-    
-    void unscaleFromProject(OfxPointD& p)
-    {
-        OfxPointD size = _plugin->getProjectSize();
-        OfxPointD offset = _plugin->getProjectOffset();
-        p.x = (p.x - offset.x) / size.x;
-        p.y = (p.y - offset.y) / size.y;
-    }
-    
-    void unscaleFromProject(double *x , double *y)
-    {
-        OfxPointD size = _plugin->getProjectSize();
-        OfxPointD offset = _plugin->getProjectOffset();
-        *x = (*x - offset.x) / size.x;
-        *y = (*y - offset.y) / size.y;
-    }
-
-    
-    OFX::DoubleParam* getShearParam() const
-    {
-        OFX::DoubleParam* shearParam = dynamic_cast<OFX::DoubleParam*>(_plugin->getParam(kSkewParamName));
-        assert(shearParam);
-        return shearParam;
-    }
-    
-    
-    OFX::DoubleParam* getRotateParam() const
-    {
-        OFX::DoubleParam* rotateParam = dynamic_cast<OFX::DoubleParam*>(_plugin->getParam(kRotateParamName));
-        assert(rotateParam);
-        return rotateParam;
-    }
-    
-    
-    OFX::Double2DParam* getTranslateParam() const
-    {
-        OFX::Double2DParam* translateParam = dynamic_cast<OFX::Double2DParam*>(_plugin->getParam(kTranslateParamName));
-        assert(translateParam);
-        return translateParam;
-    }
-    
-    OFX::Double2DParam* getCenterParam() const
-    {
-        OFX::Double2DParam* centerParam = dynamic_cast<OFX::Double2DParam*>(_plugin->getParam(kCenterParamName));
-        assert(centerParam);
-        return centerParam;
-    }
-    
     void getCenter(OfxPointD& center)
     {
-        OFX::Double2DParam* centerParam = getCenterParam();
-        OFX::Double2DParam* translationParam = getTranslateParam();
         OfxPointD translate;
-        centerParam->getValue(center.x, center.y);
-        translationParam->getValue(translate.x, translate.y);
-        scaleToProject(translate);
-        scaleToProject(center);
+        _center->getValue(center.x, center.y);
+        _translate->getValue(translate.x, translate.y);
         center.x += translate.x;
         center.y += translate.y;
     }
     
-    OFX::Double2DParam* getScaleParam() const
-    {
-        OFX::Double2DParam* scaleParam = dynamic_cast<OFX::Double2DParam*>(_effect->getParam(kScaleParamName));
-        assert(scaleParam);
-        return scaleParam;
-    }
-    
     void getScale(OfxPointD& scale)
     {
-        OFX::Double2DParam* scaleParam = getScaleParam();
-        scaleParam->getValue(scale.x, scale.y);
+        _scale->getValue(scale.x, scale.y);
     }
     
     void getCircleRadius(OfxPointD& radius,const OfxPointD& pixelScale)
@@ -842,7 +861,7 @@ private:
     
     void drawEllipse(const OfxPointD& center,const OfxPointD& radius,const OfxPointD& pixelScale,bool hovered);
     
-    void drawShearBar(const OfxPointD& penPos,const OfxPointD &center,const OfxPointD& pixelScale,double radiusY,bool hovered);
+    void drawSkewXBar(const OfxPointD& penPos, const OfxPointD &center, const OfxPointD& pixelScale, double radiusY, bool hovered);
     
     void drawRotationBar(const OfxPointD& center,const OfxPointD& pixelScale,double radiusX,bool hovered);
     
@@ -863,7 +882,7 @@ private:
         return false;
     }
     
-    bool isOnShearBar(const Transform2D::Point3D& pos,double radiusY,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
+    bool isOnSkewXBar(const Transform2D::Point3D& pos,double radiusY,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
     {
         double barHalfSize = radiusY + (20. * pixelScale.y);
         if (pos.x >= (center.x - tolerance) && pos.x <= (center.x + tolerance) &&
@@ -873,7 +892,8 @@ private:
         
         return false;
     }
-    
+#warning "TODO: isOnSkewYBar"
+
     bool isOnRotationBar(const  Transform2D::Point3D& pos,double radiusX,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
     {
         double barExtra = 30. * pixelScale.y;
@@ -902,7 +922,17 @@ private:
         ret.max = getProperties().propGetDouble(kOfxInteractPropViewportSize, 1);
         return ret;
     }
-    
+private:
+    // NON-GENERIC
+    OFX::Double2DParam* _translate;
+    OFX::DoubleParam* _rotate;
+    OFX::Double2DParam* _scale;
+    OFX::DoubleParam* _skewX;
+    OFX::DoubleParam* _skewY;
+    OFX::ChoiceParam* _skewOrder;
+    OFX::Double2DParam* _center;
+    OFX::BooleanParam* _invert;
+
 };
 
 void TransformInteract::drawSquare(const OfxPointD& center,bool hovered,const OfxPointD& pixelScale)
@@ -925,8 +955,8 @@ void TransformInteract::drawSquare(const OfxPointD& center,bool hovered,const Of
 
 void TransformInteract::drawEllipse(const OfxPointD& center,const OfxPointD& radius,const OfxPointD& pixelScale,bool hovered)
 {
-    double pi_2 = 2. * Transform2D::pi;
-    float angle_increment = pi_2 / std::max(radius.x / pixelScale.x,radius.y / pixelScale.y);
+    double two_pi = 2. * Transform2D::pi();
+    float angle_increment = two_pi / std::max(radius.x / pixelScale.x,radius.y / pixelScale.y);
     
     
     if (hovered) {
@@ -940,7 +970,7 @@ void TransformInteract::drawEllipse(const OfxPointD& center,const OfxPointD& rad
     glTranslatef (center.x, center.y, 0);
     //  draw the oval using line segments
     glBegin (GL_LINE_LOOP);
-    for (double theta = 0.0f; theta < pi_2; theta += angle_increment) {
+    for (double theta = 0.0f; theta < two_pi; theta += angle_increment) {
         glVertex2f (radius.x * std::cos(theta), radius.y * std::sin(theta));
     }
     glEnd ();
@@ -948,7 +978,7 @@ void TransformInteract::drawEllipse(const OfxPointD& center,const OfxPointD& rad
     glPopMatrix ();
 }
 
-void TransformInteract::drawShearBar(const OfxPointD& penPos,const OfxPointD &center,const OfxPointD& pixelScale,double radiusY,bool hovered)
+void TransformInteract::drawSkewXBar(const OfxPointD& penPos,const OfxPointD &center,const OfxPointD& pixelScale,double radiusY,bool hovered)
 {
     if (hovered) {
         glColor4f(1.0, 0.0, 0.0, 1.0);
@@ -1045,13 +1075,13 @@ void TransformInteract::drawRotationBar(const OfxPointD& center,const OfxPointD&
         arrowRadius.x = 5. * pixelScale.x;
         arrowRadius.y = 10. * pixelScale.y;
         
-        float angle_increment = Transform2D::pi / 10.;
+        float angle_increment = Transform2D::pi() / 10.;
         glPushMatrix ();
         //  center the oval at x_center, y_center
         glTranslatef (arrowCenterX, center.y, 0);
         //  draw the oval using line segments
         glBegin (GL_LINE_STRIP);
-        for (double theta = - Transform2D::pi / 2.; theta < Transform2D::pi / 2.; theta += angle_increment) {
+        for (double theta = - Transform2D::pi() / 2.; theta < Transform2D::pi() / 2.; theta += angle_increment) {
             glVertex2f (arrowRadius.x * std::cos(theta), arrowRadius.y * std::sin(theta));
         }
         glEnd ();
@@ -1089,21 +1119,22 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
     OfxPointD center,left,right,bottom,top;
     getPoints(center,left,bottom,top,right,args.pixelScale);
     
-    OFX::DoubleParam* rotateParam = getRotateParam();
     double angle;
-    rotateParam->getValue(angle);
+    _rotate->getValue(angle);
     
-    OFX::DoubleParam* shearParam = getShearParam();
-    double shear;
-    shearParam->getValue(shear);
-    
+    double skewX, skewY;
+    int skewOrderYX;
+    _skewX->getValue(skewX);
+    _skewY->getValue(skewY);
+    _skewOrder->getValue(skewOrderYX);
+
     glPushMatrix();
-    GLdouble shearMatrix[16];
-    shearMatrix[0] = 1.; shearMatrix[1] = 0.; shearMatrix[2] = 0.; shearMatrix[3] = 0;
-    shearMatrix[4] = shear; shearMatrix[5] = 1.; shearMatrix[6] = 0.; shearMatrix[7] = 0;
-    shearMatrix[8] = 0.; shearMatrix[9] = 0.; shearMatrix[10] = 1.; shearMatrix[11] = 0;
-    shearMatrix[12] = 0.; shearMatrix[13] = 0.; shearMatrix[14] = 0.; shearMatrix[15] = 1.;
-    glMultMatrixd(shearMatrix);
+    GLdouble skewMatrix[16];
+    skewMatrix[0] = (skewOrderYX ? 1. : (1.+skewX*skewY)); skewMatrix[1] = skewY; skewMatrix[2] = 0.; skewMatrix[3] = 0;
+    skewMatrix[4] = skewX; skewMatrix[5] = (skewOrderYX ? (1.+skewX*skewY) : 1.); skewMatrix[6] = 0.; skewMatrix[7] = 0;
+    skewMatrix[8] = 0.; skewMatrix[9] = 0.; skewMatrix[10] = 1.; skewMatrix[11] = 0;
+    skewMatrix[12] = 0.; skewMatrix[13] = 0.; skewMatrix[14] = 0.; skewMatrix[15] = 1.;
+    glMultMatrixd(skewMatrix);
     glTranslated(center.x, center.y, 0.);
     glRotated(angle, 0, 0., 1.);
     glTranslated(-center.x, -center.y, 0.);
@@ -1112,8 +1143,10 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
     getCircleRadius(radius, args.pixelScale);
     drawEllipse(center,radius,args.pixelScale, _mouseState == eDraggingCircle || _drawState == eCircleHovered);
     
-    drawShearBar(_lastMousePos, center, args.pixelScale, radius.y, _mouseState == eDraggingShearBar || _drawState == eShearBarHoverered);
-    
+    drawSkewXBar(_lastMousePos, center, args.pixelScale, radius.y, _mouseState == eDraggingSkewXBar || _drawState == eSkewXBarHoverered);
+#warning "TODO: drawSkewY"
+    //drawSkewYBar(_lastMousePos, center, args.pixelScale, radius.x, _mouseState == eDraggingSkewYBar || _drawState == eSkewYBarHoverered);
+
     drawRotationBar(center, args.pixelScale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered);
     
     drawSquare(center, _mouseState == eDraggingCenterPoint || _drawState == eCenterPointHovered,args.pixelScale);
@@ -1144,15 +1177,16 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     double dx = args.penPosition.x - _lastMousePos.x;
     double dy = args.penPosition.y - _lastMousePos.y;
     
-    OFX::DoubleParam* rotateParam = getRotateParam();
     double currentRotation;
-    rotateParam->getValue(currentRotation);
+    _rotate->getValue(currentRotation);
     double rot = Transform2D::toRadians(currentRotation);
     
-    OFX::DoubleParam* shearParam = getShearParam();
-    double shear;
-    shearParam->getValue(shear);
-    
+    double skewX, skewY;
+    int skewOrderYX;
+    _skewX->getValue(skewX);
+    _skewY->getValue(skewY);
+    _skewOrder->getValue(skewOrderYX);
+
     Transform2D::Point3D transformedPos;
     transformedPos.x = args.penPosition.x;
     transformedPos.y = args.penPosition.y;
@@ -1161,19 +1195,21 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     Transform2D::Matrix3x3 transform;
     ////for the rotation bar dragging we dont use the same transform, we don't want to undo the rotation transform
     if (_mouseState != eDraggingRotationBar && _mouseState != eDraggingCenterPoint) {
-        ///undo shear + rotation to the current position
-        transform = Transform2D::Matrix3x3::getTranslate(-center.x, -center.y).invert() *
-        Transform2D::Matrix3x3::getRotate(-rot).invert() *
-        Transform2D::Matrix3x3::getTranslate(center).invert() *
-        Transform2D::Matrix3x3::getShearX(shear).invert();
-    } else {
-        transform = Transform2D::Matrix3x3::getShearX(shear).invert();
+        ///undo skew + rotation to the current position
+        //transform = Transform2D::Matrix3x3::getInverseTransform(translate, scale, skewX, skewY, (bool)skewOrderYX, rot, center);
+        transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+     } else {
+        transform = Transform2D::Matrix3x3::getSkewXY(-skewX, -skewY, !skewOrderYX);
     }
     transformedPos = transform * transformedPos;
     transformedPos.x /= transformedPos.z;
     transformedPos.y /= transformedPos.z;
 
-    
+    //std::cout << "penPosition = " << args.penPosition.x << "," << args.penPosition.y << std::endl;
+    //std::cout << "transform = " << "[[" << transform.a << "," << transform.b << "," << transform.c << "],[" << transform.d << "," << transform.e << "," << transform.f << "],[" << transform.g << "," << transform.h << "," << transform.i << "]]" << std::endl;
+    //std::cout << "transformedpos = " << transformedPos.x << "," << transformedPos.y << std::endl;
+    //std::cout << "center = " << center.x << "," << center.y << std::endl;
+
     bool ret = true;
     if (_mouseState == eReleased) {
         double hoverToleranceX = 5 * args.pixelScale.x;
@@ -1190,22 +1226,23 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
             _drawState = eBottomPointHovered;
         } else if (isOnEllipseBorder(transformedPos, ellipseRadius, center)) {
             _drawState = eCircleHovered;
-        } else if (isOnShearBar(transformedPos,ellipseRadius.y,center,args.pixelScale,hoverToleranceY)) {
-            _drawState = eShearBarHoverered;
         } else if (isOnRotationBar(transformedPos, ellipseRadius.x, center, args.pixelScale, hoverToleranceX)) {
             _drawState = eRotationBarHovered;
+        } else if (isOnSkewXBar(transformedPos,ellipseRadius.y,center,args.pixelScale,hoverToleranceY)) {
+            _drawState = eSkewXBarHoverered;
+#warning "TODO:skewY"
+        //} else if (isOnSkewYBar(transformedPos,ellipseRadius.y,center,args.pixelScale,hoverToleranceX)) {
+        //    _drawState = eSkewYBarHoverered;
         } else {
             _drawState = eInActive;
             ret = false;
         }
     } else if (_mouseState == eDraggingCircle) {
-        OFX::Double2DParam* scaleParam = getScaleParam();
-        
         double minX,minY,maxX,maxY;
-        scaleParam->getRange(minX, minY, maxX, maxY);
+        _scale->getRange(minX, minY, maxX, maxY);
         
         OfxPointD scale;
-        scaleParam->getValue(scale.x, scale.y);
+        _scale->getValue(scale.x, scale.y);
         
         dx /= (CIRCLE_RADIUS_BASE * args.pixelScale.x);
         dy /= (CIRCLE_RADIUS_BASE * args.pixelScale.y);
@@ -1265,89 +1302,49 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
             }
         }
        
-        if (scale.y <= minY) {
-            scale.y = minY;
-        } else if (scale.y >= maxY) {
-            scale.y = maxY;
-        }
-        if (scale.x <= minX) {
-            scale.x = minX;
-        } else if (scale.x >= maxX) {
-            scale.x = maxX;
-        }
-        
-        scaleParam->setValue(scale.x, scale.y);
+        scale.y = std::max(minY, std::min(scale.y, maxY));
+        scale.x = std::max(minX, std::min(scale.x, maxX));
+        _scale->setValue(scale.x, scale.y);
 
     } else if (_mouseState == eDraggingLeftPoint) {
-        OFX::Double2DParam* scaleParam = getScaleParam();
-        
         double minX,minY,maxX,maxY;
-        scaleParam->getRange(minX, minY, maxX, maxY);
+        _scale->getRange(minX, minY, maxX, maxY);
         
         OfxPointD scale;
-        scaleParam->getValue(scale.x, scale.y);
+        _scale->getValue(scale.x, scale.y);
         dx /= (CIRCLE_RADIUS_BASE * args.pixelScale.x);
-        scale.x -= dx;
-        if (scale.x <= minX) {
-            scale.x = minX;
-        } else if (scale.x >= maxX) {
-            scale.x = maxX;
-        }
-        
-        scaleParam->setValue(scale.x, scale.y);
+        scale.x = std::max(minX, std::min(scale.x - dx, maxX));
+        _scale->setValue(scale.x, scale.y);
     } else if (_mouseState == eDraggingRightPoint) {
-        OFX::Double2DParam* scaleParam = getScaleParam();
-        
         double minX,minY,maxX,maxY;
-        scaleParam->getRange(minX, minY, maxX, maxY);
+        _scale->getRange(minX, minY, maxX, maxY);
         
         OfxPointD scale;
-        scaleParam->getValue(scale.x, scale.y);
+        _scale->getValue(scale.x, scale.y);
         dx /= (CIRCLE_RADIUS_BASE * args.pixelScale.x);
-        scale.x += dx;
-        if (scale.x >= maxX) {
-            scale.x = maxX;
-        } else if (scale.x <= minX) {
-            scale.x = minX;
-        }
-        scaleParam->setValue(scale.x, scale.y);
+        scale.x = std::max(minX, std::min(scale.x + dx, maxX));
+        _scale->setValue(scale.x, scale.y);
     } else if (_mouseState == eDraggingTopPoint) {
-        OFX::Double2DParam* scaleParam = getScaleParam();
-        
         double minX,minY,maxX,maxY;
-        scaleParam->getRange(minX, minY, maxX, maxY);
+        _scale->getRange(minX, minY, maxX, maxY);
         
         OfxPointD scale;
-        scaleParam->getValue(scale.x, scale.y);
+        _scale->getValue(scale.x, scale.y);
         dy /= (CIRCLE_RADIUS_BASE * args.pixelScale.y);
-        scale.y += dy;
-        if (scale.y >= maxY) {
-            scale.y = maxY;
-        } else if (scale.y <= minY) {
-            scale.y = minY;
-        }
-        scaleParam->setValue(scale.x, scale.y);
+        scale.y = std::max(minY, std::min(scale.y + dy, maxY));
+        _scale->setValue(scale.x, scale.y);
     } else if (_mouseState == eDraggingBottomPoint) {
-        OFX::Double2DParam* scaleParam = getScaleParam();
-        
         double minX,minY,maxX,maxY;
-        scaleParam->getRange(minX, minY, maxX, maxY);
+        _scale->getRange(minX, minY, maxX, maxY);
         
         OfxPointD scale;
-        scaleParam->getValue(scale.x, scale.y);
+        _scale->getValue(scale.x, scale.y);
         dy /= (CIRCLE_RADIUS_BASE * args.pixelScale.y);
-        scale.y -= dy;
-        if (scale.y <= minY) {
-            scale.y = minY;
-        } else if (scale.y >= maxY) {
-            scale.y = maxY;
-        }
-
-        scaleParam->setValue(scale.x, scale.y);
+        scale.y = std::max(minY, std::min(scale.y - dy, maxY));
+        _scale->setValue(scale.x, scale.y);
     } else if (_mouseState == eDraggingCenterPoint) {
-        OFX::Double2DParam* translateParam = getTranslateParam();
         OfxPointD currentTranslation;
-        translateParam->getValue(currentTranslation.x, currentTranslation.y);
+        _translate->getValue(currentTranslation.x, currentTranslation.y);
         
         Transform2D::Point3D lastPosTransformed;
         lastPosTransformed.x = _lastMousePos.x;
@@ -1360,10 +1357,11 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         
         dx = transformedPos.x - lastPosTransformed.x;
         dy = transformedPos.y - lastPosTransformed.y;
-        unscaleFromProject(&dx,&dy);
+        dx *= args.pixelScale.x;
+        dy *= args.pixelScale.y;
         currentTranslation.x += dx;
         currentTranslation.y += dy;
-        translateParam->setValue(currentTranslation.x,currentTranslation.y);
+        _translate->setValue(currentTranslation.x,currentTranslation.y);
     } else if (_mouseState == eDraggingRotationBar) {
         OfxPointD diffToCenter;
         ///the current mouse position (untransformed) is doing has a certain angle relative to the X axis
@@ -1371,14 +1369,16 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         diffToCenter.y = transformedPos.y - center.y;
         diffToCenter.x = transformedPos.x - center.x;
         double angle = std::atan2(diffToCenter.y, diffToCenter.x);
-        rotateParam->setValue(Transform2D::toDegrees(angle));
+        _rotate->setValue(Transform2D::toDegrees(angle));
         
-    } else if (_mouseState == eDraggingShearBar) {
+    } else if (_mouseState == eDraggingSkewXBar) {
+#warning "FIXME: doesn't work"
         OfxPointD delta;
         delta.x = dx;
         delta.y = dy;
-        unscaleFromProject(delta);
-        shearParam->setValue(shear + delta.x);
+        delta.x *= args.pixelScale.x;
+        delta.y *= args.pixelScale.y;
+        _skewX->setValue(skewX + delta.x);
     } else {
         assert(false);
     }
@@ -1390,6 +1390,8 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
 
 bool TransformInteract::penDown(const OFX::PenArgs &args)
 {
+    using Transform2D::Matrix3x3;
+
     OfxPointD center,left,right,top,bottom;
     getPoints(center,left,bottom,top,right,args.pixelScale);
     OfxRectD centerPoint = rectFromCenterPoint(center);
@@ -1402,14 +1404,15 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     getCircleRadius(ellipseRadius, args.pixelScale);
     
     
-    OFX::DoubleParam* rotateParam = getRotateParam();
     double currentRotation;
-    rotateParam->getValue(currentRotation);
+    _rotate->getValue(currentRotation);
     
-    OFX::DoubleParam* shearParam = getShearParam();
-    double shear;
-    shearParam->getValue(shear);
-    
+    double skewX, skewY;
+    int skewOrderYX;
+    _skewX->getValue(skewX);
+    _skewY->getValue(skewY);
+    _skewOrder->getValue(skewOrderYX);
+
     Transform2D::Point3D transformedPos;
     transformedPos.x = args.penPosition.x;
     transformedPos.y = args.penPosition.y;
@@ -1417,12 +1420,8 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     
     double rot = Transform2D::toRadians(currentRotation);
     
-    ///now undo shear + rotation to the current position
-    Transform2D::Matrix3x3 transform =
-    Transform2D::Matrix3x3::getTranslate(-center.x, -center.y).invert() *
-    Transform2D::Matrix3x3::getRotate(-rot).invert() *
-    Transform2D::Matrix3x3::getTranslate(center).invert() *
-    Transform2D::Matrix3x3::getShearX(shear).invert();
+    ///now undo skew + rotation to the current position
+    Transform2D::Matrix3x3 transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
     transformedPos = transform * transformedPos;
     transformedPos.x /= transformedPos.z;
     transformedPos.y /= transformedPos.z;
@@ -1444,8 +1443,8 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
         _mouseState = eDraggingBottomPoint;
     } else if (isOnEllipseBorder(transformedPos,ellipseRadius, center)) {
         _mouseState = eDraggingCircle;
-    } else if (isOnShearBar(transformedPos,ellipseRadius.y,center,args.pixelScale,pressToleranceY)) {
-        _mouseState = eDraggingShearBar;
+    } else if (isOnSkewXBar(transformedPos,ellipseRadius.y,center,args.pixelScale,pressToleranceY)) {
+        _mouseState = eDraggingSkewXBar;
     } else if (isOnRotationBar(transformedPos, ellipseRadius.x, center, args.pixelScale, pressToleranceY)) {
         _mouseState = eDraggingRotationBar;
     } else {
@@ -1544,37 +1543,63 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     //
     Double2DParamDescriptor* translate = desc.defineDouble2DParam(kTranslateParamName);
     translate->setLabels(kTranslateParamName, kTranslateParamName, kTranslateParamName);
-    translate->setDoubleType(eDoubleTypeNormalisedXY);
+    //translate->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
+    translate->setDoubleType(eDoubleTypeXYAbsolute);
+    translate->setDimensionLabels("x","y");
     translate->setDefault(0, 0);
     page->addChild(*translate);
     
     DoubleParamDescriptor* rotate = desc.defineDoubleParam(kRotateParamName);
     rotate->setLabels(kRotateParamName, kRotateParamName, kRotateParamName);
+    rotate->setDoubleType(eDoubleTypeAngle);
     rotate->setDefault(0);
-    rotate->setRange(-180, 180);
+    //rotate->setRange(-180, 180); // the angle may be -infinity..+infinity
     rotate->setDisplayRange(-180, 180);
     page->addChild(*rotate);
     
     Double2DParamDescriptor* scale = desc.defineDouble2DParam(kScaleParamName);
     scale->setLabels(kScaleParamName, kScaleParamName, kScaleParamName);
+    scale->setDoubleType(eDoubleTypeScale);
+    scale->setDimensionLabels("w","h");
     scale->setDefault(1,1);
-    scale->setRange(0.1,0.1,10,10);
+    //scale->setRange(0.1,0.1,10,10);
     scale->setDisplayRange(0.1, 0.1, 10, 10);
     page->addChild(*scale);
     
-    DoubleParamDescriptor* skew = desc.defineDoubleParam(kSkewParamName);
-    skew->setLabels(kSkewParamName, kSkewParamName, kSkewParamName);
-    skew->setDefault(0);
-    skew->setRange(-100, 100);
-    skew->setDisplayRange(-1,1);
-    page->addChild(*skew);
-    
+    DoubleParamDescriptor* skewX = desc.defineDoubleParam(kSkewXParamName);
+    skewX->setLabels(kSkewXParamName, kSkewXParamName, kSkewXParamName);
+    skewX->setDefault(0);
+    skewX->setDisplayRange(-1,1);
+    page->addChild(*skewX);
+
+    DoubleParamDescriptor* skewY = desc.defineDoubleParam(kSkewYParamName);
+    skewY->setLabels(kSkewYParamName, kSkewYParamName, kSkewYParamName);
+    skewY->setDefault(0);
+    skewY->setDisplayRange(-1,1);
+    page->addChild(*skewY);
+
+    ChoiceParamDescriptor* skewOrder = desc.defineChoiceParam(kSkewOrderParamName);
+    skewOrder->setLabels(kSkewOrderParamName, kSkewOrderParamName, kSkewOrderParamName);
+    skewOrder->setDefault(0);
+    skewOrder->appendOption("XY");
+    skewOrder->appendOption("YX");
+    skewOrder->setAnimates(false);
+    page->addChild(*skewOrder);
+
     Double2DParamDescriptor* center = desc.defineDouble2DParam(kCenterParamName);
     center->setLabels(kCenterParamName, kCenterParamName, kCenterParamName);
-    center->setDoubleType(eDoubleTypeNormalisedXY);
+    //center->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
+    center->setDoubleType(eDoubleTypeXYAbsolute);
+    center->setDimensionLabels("x","y");
+    center->setDefaultCoordinateSystem(eCoordinatesNormalised);
     center->setDefault(0.5, 0.5);
     page->addChild(*center);
 
+    BooleanParamDescriptor* invert = desc.defineBooleanParam(kInvertParamName);
+    invert->setLabels(kInvertParamName, kInvertParamName, kInvertParamName);
+    invert->setDefault(false);
+    invert->setAnimates(false);
+    page->addChild(*invert);
 
     // GENERIC PARAMETERS
     //
@@ -1589,7 +1614,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     BooleanParamDescriptor* blackOutside = desc.defineBooleanParam(kBlackOutsideParamName);
     blackOutside->setLabels(kBlackOutsideParamName, kBlackOutsideParamName, kBlackOutsideParamName);
-    blackOutside->setDefault(false);
+    blackOutside->setDefault(true);
     blackOutside->setAnimates(false);
     page->addChild(*blackOutside);
 }

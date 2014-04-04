@@ -77,7 +77,8 @@
 
 namespace Transform2D {
     
-    static const double pi = 3.14159265358979323846264338327950288419717;
+    // NEVER define a variable/constant in a header (said it 100 times already)
+    inline double pi() { return 3.14159265358979323846264338327950288419717; }
 
     
     /**
@@ -88,12 +89,12 @@ namespace Transform2D {
      **/
     
     inline double toDegrees(double rad) {
-        rad = rad * 180.0 / pi;
+        rad = rad * 180.0 / pi();
         return rad;
     }
     
     inline double toRadians(double deg) {
-        deg = deg * pi / 180.0;
+        deg = deg * pi() / 180.0;
         return deg;
     }
     
@@ -127,26 +128,27 @@ namespace Transform2D {
         
         double determinant() const;
         
-        Matrix3x3 scaleAdjoint(double s) const;
+        Matrix3x3 getScaleAdjoint(double s) const;
         
-        Matrix3x3 invert() const;
+        Matrix3x3 getInverse() const;
         
         static Matrix3x3 getRotate(double rads);
-        static Matrix3x3 getRotateAroundPoint(double rads,const OfxPointD& p);
+        static Matrix3x3 getRotateAroundPoint(double rads, double pointX, double pointY);
         
-        static Matrix3x3 getTranslate(const OfxPointD& t);
-        static Matrix3x3 getTranslate(double x, double y);
+        static Matrix3x3 getTranslate(double translateX, double translateY);
         
-        static Matrix3x3 getScale(const OfxPointD& s);
-        static Matrix3x3 getScale(double x, double y);
-        static Matrix3x3 getScale(double s);
-        static Matrix3x3 getScaleAroundPoint(double sx,double sy,const OfxPointD& p);
+        static Matrix3x3 getScale(double scaleX, double scaleY);
+        static Matrix3x3 getScale(double scale);
+        static Matrix3x3 getScaleAroundPoint(double scaleX, double scaleY, double pointX, double pointY);
         
-        static Matrix3x3 getShearX(double k);
-        static Matrix3x3 getShearY(double k);
-        
-        static Matrix3x3 getTransform(const OfxPointD& translate,const OfxPointD& scale,double shearX,double rads,const OfxPointD& center);
-        
+        static Matrix3x3 getSkewXY(double skewX, double skewY, bool skewOrderYX);
+
+        // matrix transform from destination to source
+        static Matrix3x3 getInverseTransform(double translateX, double translateY, double scaleX, double scaleY, double skewX, double skewY, bool skewOrderYX, double rads, double centerX, double centerY);
+
+        // matrix transform from source to destination
+        static Matrix3x3 getTransform(double translateX, double translateY, double scaleX, double scaleY, double skewX, double skewY, bool skewOrderYX, double rads, double centerX, double centerY);
+
         double a,b,c,d,e,f,g,h,i;
     };
     
