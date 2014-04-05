@@ -70,6 +70,9 @@
  
  */
 
+// uncomment the following to enable the experimental host transform code
+//#define ENABLE_HOST_TRANSFORM
+
 #include "Transform.h"
 
 #include <cmath>
@@ -86,7 +89,15 @@
 
 
 #include "../include/ofxsProcessing.H"
+#ifdef OFX_EXTENSIONS_NUKE
+#include "nuke/fnOfxExtensions.h"
+#endif
+
 #include "Transform2D.h"
+
+#ifndef ENABLE_HOST_TRANSFORM
+#undef OFX_EXTENSIONS_NUKE // host transform is the only nuke extension used
+#endif
 
 // NON-GENERIC
 #define kTranslateParamName "Translate"
@@ -98,6 +109,7 @@
 #define kCenterParamName "Center"
 #define kInvertParamName "Invert"
 #define kShowOverlayParamName "Show overlay"
+#define kHostTransformParamName "Host transform"
 // GENERIC
 #define kFilterParamName "Filter"
 #define kBlackOutsideParamName "Black outside"
@@ -439,6 +451,11 @@ public:
         _skewOrder = fetchChoiceParam(kSkewOrderParamName);
         _center = fetchDouble2DParam(kCenterParamName);
         _invert = fetchBooleanParam(kInvertParamName);
+#ifdef OFX_EXTENSIONS_NUKE
+        if (getImageEffectHostDescription()->canTransform) {
+            _hostTransform = fetchBooleanParam(kHostTransformParamName);
+        }
+#endif
         // GENERIC
         _filter = fetchChoiceParam(kFilterParamName);
         _blackOutside = fetchBooleanParam(kBlackOutsideParamName);
@@ -456,7 +473,14 @@ public:
     virtual void render(const OFX::RenderArguments &args);
     
     virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime);
-    
+
+#ifdef OFX_EXTENSIONS_NUKE
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
+
+    /** @brief recover a transform matrix from an effect */
+    virtual bool getTransform(const TransformArguments &args, Clip * &transformClip, double transformMatrix[9]) override;
+#endif
+
     /* set up and run a processor */
     void setupAndProcess(TransformProcessorBase &, const OFX::RenderArguments &args);
     
@@ -470,6 +494,7 @@ private:
     OFX::ChoiceParam* _skewOrder;
     OFX::Double2DParam* _center;
     OFX::BooleanParam* _invert;
+    OFX::BooleanParam* _hostTransform;
     // GENERIC
     OFX::ChoiceParam* _filter;
     OFX::BooleanParam* _blackOutside;
@@ -853,6 +878,69 @@ bool TransformPlugin::isIdentity(const RenderArguments &args, Clip * &identityCl
     
     return false;
 }
+
+#ifdef OFX_EXTENSIONS_NUKE
+// overridden changedParam
+void TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kHostTransformParamName) {
+        assert(getImageEffectHostDescription()->canTransform);
+        bool transform;
+        _hostTransform->getValue(transform);
+        std::cout << "hosttransform=" << std::endl;
+        setCanTransform(transform);
+    }
+}
+
+// overridden getTransform
+bool TransformPlugin::getTransform(const TransformArguments &args, Clip * &transformClip, double transformMatrix[9])
+{
+    double scaleX, scaleY;
+    double translateX, translateY;
+    double rotate;
+    double skewX, skewY;
+    int skewOrder;
+    double centerX, centerY;
+    bool invert;
+
+    std::cout << "getTransform called!" << std::endl;
+    // NON-GENERIC
+    _scale->getValueAtTime(args.time, scaleX, scaleY);
+    _translate->getValueAtTime(args.time, translateX, translateY);
+    _rotate->getValueAtTime(args.time, rotate);
+    rotate = Transform2D::toRadians(rotate);
+
+    _skewX->getValueAtTime(args.time, skewX);
+    _skewY->getValueAtTime(args.time, skewY);
+    _skewOrder->getValueAtTime(args.time, skewOrder);
+
+    _center->getValueAtTime(args.time, centerX, centerY);
+
+    _invert->getValueAtTime(args.time, invert);
+
+    Transform2D::Matrix3x3 invtransform;
+    if (!invert) {
+        invtransform = Transform2D::matInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+    } else {
+        invtransform = Transform2D::matTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+    }
+    double pixelaspectratio = srcClip_->getPixelAspectRatio();
+    bool fielded = args.fieldToRender == eFieldLower || args.fieldToRender == eFieldUpper;
+    Transform2D::Matrix3x3 invtransformpixel = (Transform2D::matCanonicalToPixel(pixelaspectratio, args.renderScale.x, args.renderScale.y, fielded) *
+                                                invtransform *
+                                                Transform2D::matPixelToCanonical(pixelaspectratio, args.renderScale.x, args.renderScale.y, fielded));
+    transformMatrix[0] = invtransformpixel.a;
+    transformMatrix[1] = invtransformpixel.b;
+    transformMatrix[2] = invtransformpixel.c;
+    transformMatrix[3] = invtransformpixel.d;
+    transformMatrix[4] = invtransformpixel.e;
+    transformMatrix[5] = invtransformpixel.f;
+    transformMatrix[6] = invtransformpixel.g;
+    transformMatrix[7] = invtransformpixel.h;
+    transformMatrix[8] = invtransformpixel.i;
+    return true;
+}
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // stuff for the interact
@@ -1831,6 +1919,19 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     showOverlay->setEvaluateOnChange(false);
     page->addChild(*showOverlay);
     
+#ifdef OFX_EXTENSIONS_NUKE
+    // if the host has the kFnOfxImageEffectCanTransform property set, add a
+    // "Host transform" boolean parameter which enables transform by the host.
+    // It is only possible for transforms which can be represented as a 3x3 matrix.
+    if (getImageEffectHostDescription()->canTransform) {
+        BooleanParamDescriptor* hostTransform = desc.defineBooleanParam(kHostTransformParamName);
+        hostTransform->setLabels(kHostTransformParamName, kHostTransformParamName, kHostTransformParamName);
+        hostTransform->setDefault(false);
+        hostTransform->setAnimates(false);
+        page->addChild(*hostTransform);
+    }
+#endif
+
     // GENERIC PARAMETERS
     //
     ChoiceParamDescriptor* filter = desc.defineChoiceParam(kFilterParamName);
