@@ -539,23 +539,23 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         double mix;
         
         // NON-GENERIC
-        _scale->getValue(scaleX, scaleY);
-        _translate->getValue(translateX, translateY);
-        _rotate->getValue(rotate);
+        _scale->getValueAtTime(args.time, scaleX, scaleY);
+        _translate->getValueAtTime(args.time, translateX, translateY);
+        _rotate->getValueAtTime(args.time, rotate);
         rotate = Transform2D::toRadians(rotate);
         
-        _skewX->getValue(skewX);
-        _skewY->getValue(skewY);
-        _skewOrder->getValue(skewOrder);
+        _skewX->getValueAtTime(args.time, skewX);
+        _skewY->getValueAtTime(args.time, skewY);
+        _skewOrder->getValueAtTime(args.time, skewOrder);
         
-        _center->getValue(centerX, centerY);
+        _center->getValueAtTime(args.time, centerX, centerY);
         
         _invert->getValue(invert);
         
         // GENERIC
         _filter->getValue(filter);
         _blackOutside->getValue(blackOutside);
-        _mix->getValue(mix);
+        _mix->getValueAtTime(args.time, mix);
 
         Transform2D::Matrix3x3 invtransform;
         if (invert) {
@@ -614,22 +614,22 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     double centerX, centerY;
     bool invert;
     
-    _scale->getValue(scaleX, scaleY);
-    _translate->getValue(translateX, translateY);
+    _scale->getValueAtTime(args.time, scaleX, scaleY);
+    _translate->getValueAtTime(args.time, translateX, translateY);
     
-    _rotate->getValue(rotate);
+    _rotate->getValueAtTime(args.time, rotate);
     
     // NON-GENERIC
-    _scale->getValue(scaleX, scaleY);
-    _translate->getValue(translateX, translateY);
-    _rotate->getValue(rotate);
+    _scale->getValueAtTime(args.time, scaleX, scaleY);
+    _translate->getValueAtTime(args.time, translateX, translateY);
+    _rotate->getValueAtTime(args.time, rotate);
     rotate = Transform2D::toRadians(rotate);
     
-    _skewX->getValue(skewX);
-    _skewY->getValue(skewY);
-    _skewOrder->getValue(skewOrder);
+    _skewX->getValueAtTime(args.time, skewX);
+    _skewY->getValueAtTime(args.time, skewY);
+    _skewOrder->getValueAtTime(args.time, skewOrder);
     
-    _center->getValue(centerX, centerY);
+    _center->getValueAtTime(args.time, centerX, centerY);
     
     _invert->getValue(invert);
     
@@ -697,16 +697,16 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     bool invert;
     
     // NON-GENERIC
-    _scale->getValue(scaleX, scaleY);
-    _translate->getValue(translateX, translateY);
-    _rotate->getValue(rotate);
+    _scale->getValueAtTime(args.time, scaleX, scaleY);
+    _translate->getValueAtTime(args.time, translateX, translateY);
+    _rotate->getValueAtTime(args.time, rotate);
     rotate = Transform2D::toRadians(rotate);
     
-    _skewX->getValue(skewX);
-    _skewY->getValue(skewY);
-    _skewOrder->getValue(skewOrder);
+    _skewX->getValueAtTime(args.time, skewX);
+    _skewY->getValueAtTime(args.time, skewY);
+    _skewOrder->getValueAtTime(args.time, skewOrder);
     
-    _center->getValue(centerX, centerY);
+    _center->getValueAtTime(args.time, centerX, centerY);
     
     _invert->getValue(invert);
     
@@ -735,7 +735,7 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     bool doMasking;
     _domask->getValue(doMasking);
     double mix;
-    _mix->getValue(mix);
+    _mix->getValueAtTime(args.time, mix);
 
     double pixelSizeX = srcClip_->getPixelAspectRatio() / args.renderScale.x;
     double pixelSizeY = 1. / args.renderScale.x;
@@ -853,11 +853,11 @@ bool TransformPlugin::isIdentity(const RenderArguments &args, Clip * &identityCl
     OfxPointD translate;
     double rotate;
     double skewX, skewY;
-    _scale->getValue(scale.x, scale.y);
-    _translate->getValue(translate.x, translate.y);
-    _rotate->getValue(rotate);
-    _skewX->getValue(skewX);
-    _skewY->getValue(skewY);
+    _scale->getValueAtTime(args.time, scale.x, scale.y);
+    _translate->getValueAtTime(args.time, translate.x, translate.y);
+    _rotate->getValueAtTime(args.time, rotate);
+    _skewX->getValueAtTime(args.time, skewX);
+    _skewY->getValueAtTime(args.time, skewY);
     
     if (scale.x == 1. && scale.y == 1. && translate.x == 0. && translate.y == 0. && rotate == 0. && skewX == 0. && skewY == 0.) {
         identityClip = srcClip_;
@@ -869,7 +869,7 @@ bool TransformPlugin::isIdentity(const RenderArguments &args, Clip * &identityCl
     bool doMasking;
     _domask->getValue(doMasking);
     double mix;
-    _mix->getValue(mix);
+    _mix->getValueAtTime(args.time, mix);
     if (doMasking && mix == 0.) {
         identityClip = srcClip_;
         identityTime = args.time;
