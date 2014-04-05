@@ -1,4 +1,4 @@
-#include "Grade.h"
+#include "Transform.h"
 
 namespace OFX
 {
@@ -6,7 +6,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            static GradePluginFactory p("fr.INRIA.openfx:TransformPlugin", 1, 0);
+            static TransformPluginFactory p("fr.INRIA.openfx:TransformPlugin", 1, 0);
             ids.push_back(&p);
         }
     }
