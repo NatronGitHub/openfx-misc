@@ -188,8 +188,8 @@ public:
         _blackOutside = blackOutside;
         _mix = mix;
     }
-    
-    
+
+
 };
 
 template <class T> inline T
@@ -397,7 +397,7 @@ class TransformProcessor : public TransformProcessorBase
                         if (maxValue == 1) { // implies floating point and so no clamping
                             dstPix[c] = PIX(v);
                         } else { // integer based and we need to clamp
-                                 // (e.g. bicubic filter may overflow)
+                            // (e.g. bicubic filter may overflow)
                             dstPix[c] = PIX(Clamp(v, 0, maxValue));
                         }
                     }
@@ -407,7 +407,7 @@ class TransformProcessor : public TransformProcessorBase
                         if (maxValue == 1) { // implies floating point and so no clamping
                             dstPix[c] = tmpPix[c];
                         } else { // integer based and we need to clamp
-                                 // (e.g. bicubic filter may overflow)
+                            // (e.g. bicubic filter may overflow)
                             dstPix[c] = PIX(Clamp(tmpPix[c], 0, maxValue));
                         }
                     }
@@ -769,7 +769,7 @@ TransformPlugin::render(const OFX::RenderArguments &args)
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
-    
+
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA)
     {
@@ -1277,10 +1277,12 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
     
     OfxPointD radius;
     getCircleRadius(radius, args.pixelScale);
-    
+
+#ifdef INVERT_INTERACT
+#warning "inverting interact makes no sense, please explain precisely why you need to invert it?"
     bool inverted;
     _invert->getValue(inverted);
-    
+
     if (inverted) {
         skewOrderYX = !skewOrderYX;
     }
@@ -1289,10 +1291,11 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
     skewMatrix[4] = inverted ? -skewX : skewX; skewMatrix[5] = (skewOrderYX ? (1.+skewX*skewY) : 1.); skewMatrix[6] = 0.; skewMatrix[7] = 0;
     skewMatrix[8] = 0.; skewMatrix[9] = 0.; skewMatrix[10] = 1.; skewMatrix[11] = 0;
     skewMatrix[12] = 0.; skewMatrix[13] = 0.; skewMatrix[14] = 0.; skewMatrix[15] = 1.;
-    
-    
+#endif
+
     glPushMatrix();
     glTranslated(center.x, center.y, 0.);
+#ifdef INVERT_INTERACT
     if (inverted) {
         drawRotationBar(args.pixelScale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered);
         glMultMatrixd(skewMatrix);
@@ -1302,6 +1305,17 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
         drawRotationBar(args.pixelScale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered);
         glMultMatrixd(skewMatrix);
     }
+#else
+    glRotated(angle, 0, 0., 1.);
+    drawRotationBar(args.pixelScale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered);
+
+    GLdouble skewMatrix[16];
+    skewMatrix[0] = (skewOrderYX ? 1. : (1.+skewX*skewY)); skewMatrix[1] = skewY; skewMatrix[2] = 0.; skewMatrix[3] = 0;
+    skewMatrix[4] = skewX; skewMatrix[5] = (skewOrderYX ? (1.+skewX*skewY) : 1.); skewMatrix[6] = 0.; skewMatrix[7] = 0;
+    skewMatrix[8] = 0.; skewMatrix[9] = 0.; skewMatrix[10] = 1.; skewMatrix[11] = 0;
+    skewMatrix[12] = 0.; skewMatrix[13] = 0.; skewMatrix[14] = 0.; skewMatrix[15] = 1.;
+    glMultMatrixd(skewMatrix);
+#endif
     glTranslated(-center.x, -center.y, 0.);
     
     drawEllipse(center,radius,args.pixelScale, _mouseState == eDraggingCircle || _drawState == eCircleHovered);
@@ -1381,7 +1395,8 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     penPos.x = args.penPosition.x;
     penPos.y = args.penPosition.y;
     penPos.z = 1.;
-    
+
+#ifdef INVERT_INTERACT
     bool inverted;
     _invert->getValue(inverted);
     
@@ -1409,7 +1424,21 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
             transformscale = Transform2D::Matrix3x3::getTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
         }
     }
-    
+#else
+    Transform2D::Matrix3x3 rotation, transform, transformscale;
+    ////for the rotation bar dragging we dont use the same transform, we don't want to undo the rotation transform
+    if (_mouseState != eDraggingRotationBar && _mouseState != eDraggingCenterPoint) {
+        ///undo skew + rotation to the current position
+        rotation = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
+        transform = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+        transformscale = Transform2D::Matrix3x3::getTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+    } else {
+        rotation = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
+        transform = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+        transformscale = Transform2D::Matrix3x3::getTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+    }
+#endif
+
     rotationPos = rotation * penPos;
     rotationPos.x /= rotationPos.z;
     rotationPos.y /= rotationPos.z;
@@ -1507,20 +1536,32 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         ///which can be computed by : angle = arctan(opposite / adjacent)
         diffToCenter.y = rotationPos.y - center.y;
         diffToCenter.x = rotationPos.x - center.x;
+#ifdef INVERT_INTERACT
         double angle = std::atan2(inverted ? -diffToCenter.y : diffToCenter.y, diffToCenter.x);
+#else
+        double angle = std::atan2(diffToCenter.y, diffToCenter.x);
+#endif
         _rotate->setValue(Transform2D::toDegrees(angle));
         
     } else if (_mouseState == eDraggingSkewXBar) {
         // avoid division by zero
         if (scale.y != 0. && center.y != previousPos.y) {
             const double addSkew = (scale.x/scale.y)*(currentPos.x - previousPos.x)/(currentPos.y - center.y);
+#ifdef INVERT_INTERACT
             _skewX->setValue(inverted ? skewX - addSkew : skewX + addSkew);
+#else
+            _skewX->setValue(skewX + addSkew);
+#endif
         }
     } else if (_mouseState == eDraggingSkewYBar) {
         // avoid division by zero
         if (scale.x != 0. && center.x != previousPos.x) {
             const double addSkew = (scale.y/scale.x)*(currentPos.y - previousPos.y)/(currentPos.x - center.x);
+#ifdef INVERT_INTERACT
             _skewY->setValue(inverted ? skewY - addSkew : skewY + addSkew);
+#else
+            _skewY->setValue(skewY + addSkew);
+#endif
         }
     } else {
         assert(false);
@@ -1566,7 +1607,8 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     transformedPos.z = 1.;
     
     double rot = Transform2D::toRadians(currentRotation);
-    
+
+#ifdef INVERT_INTERACT
     bool inverted;
     _invert->getValue(inverted);
     
@@ -1580,7 +1622,13 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
         transform = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
 
     }
-    
+#else
+    ///now undo skew + rotation to the current position
+    Transform2D::Matrix3x3 rotation, transform;
+    rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
+    transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+#endif
+
     rotationPos = rotation * transformedPos;
     rotationPos.x /= rotationPos.z;
     rotationPos.y /= rotationPos.z;
