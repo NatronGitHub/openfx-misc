@@ -451,11 +451,6 @@ public:
         _skewOrder = fetchChoiceParam(kSkewOrderParamName);
         _center = fetchDouble2DParam(kCenterParamName);
         _invert = fetchBooleanParam(kInvertParamName);
-#ifdef OFX_EXTENSIONS_NUKE
-        if (getImageEffectHostDescription()->canTransform) {
-            _hostTransform = fetchBooleanParam(kHostTransformParamName);
-        }
-#endif
         // GENERIC
         _filter = fetchChoiceParam(kFilterParamName);
         _blackOutside = fetchBooleanParam(kBlackOutsideParamName);
@@ -475,8 +470,6 @@ public:
     virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime);
 
 #ifdef OFX_EXTENSIONS_NUKE
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
-
     /** @brief recover a transform matrix from an effect */
     virtual bool getTransform(const TransformArguments &args, Clip * &transformClip, double transformMatrix[9]) override;
 #endif
@@ -494,7 +487,6 @@ private:
     OFX::ChoiceParam* _skewOrder;
     OFX::Double2DParam* _center;
     OFX::BooleanParam* _invert;
-    OFX::BooleanParam* _hostTransform;
     // GENERIC
     OFX::ChoiceParam* _filter;
     OFX::BooleanParam* _blackOutside;
@@ -880,18 +872,6 @@ bool TransformPlugin::isIdentity(const RenderArguments &args, Clip * &identityCl
 }
 
 #ifdef OFX_EXTENSIONS_NUKE
-// overridden changedParam
-void TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
-{
-    if (paramName == kHostTransformParamName) {
-        assert(getImageEffectHostDescription()->canTransform);
-        bool transform;
-        _hostTransform->getValue(transform);
-        std::cout << "hosttransform=" << std::endl;
-        setCanTransform(transform);
-    }
-}
-
 // overridden getTransform
 bool TransformPlugin::getTransform(const TransformArguments &args, Clip * &transformClip, double transformMatrix[9])
 {
@@ -1816,6 +1796,15 @@ void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     
     // NON-GENERIC
     
+#ifdef OFX_EXTENSIONS_NUKE
+    // Enable transform by the host.
+    // It is only possible for transforms which can be represented as a 3x3 matrix.
+    desc.setCanTransform(true);
+    if (getImageEffectHostDescription()->canTransform) {
+        std::cout << "kFnOfxImageEffectCanTransform (describe) =" << desc.getPropertySet().propGetInt(kFnOfxImageEffectCanTransform) << std::endl;
+    }
+#endif
+
     // in order to support tiles, the plugin must implement the getRegionOfInterest function
     desc.setSupportsTiles(true);
     
@@ -1825,7 +1814,7 @@ void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultiResolution(true);
 
     desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
-}
+ }
 
 
 void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
@@ -1836,6 +1825,17 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     
     // GENERIC
     
+    // Source clip only in the filter context
+    // create the mandated source clip
+    // always declare the source clip first, because some hosts may consider
+    // it as the default input clip (e.g. Nuke)
+    ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+    srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->setTemporalClipAccess(false);
+    srcClip->setSupportsTiles(true);
+    srcClip->setIsMask(false);
+
     // if general or paint context, define the mask clip
     if (context == eContextGeneral || context == eContextPaint) {
         // if paint context, it is a mandated input called 'brush'
@@ -1848,16 +1848,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         maskClip->setSupportsTiles(true);
         maskClip->setIsMask(true); // we are a mask input
     }
-    
-    // Source clip only in the filter context
-    // create the mandated source clip
-    ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
-    srcClip->setTemporalClipAccess(false);
-    srcClip->setSupportsTiles(true);
-    srcClip->setIsMask(false);
-    
+
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
@@ -1936,19 +1927,6 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     showOverlay->setEvaluateOnChange(false);
     page->addChild(*showOverlay);
     
-#ifdef OFX_EXTENSIONS_NUKE
-    // if the host has the kFnOfxImageEffectCanTransform property set, add a
-    // "Host transform" boolean parameter which enables transform by the host.
-    // It is only possible for transforms which can be represented as a 3x3 matrix.
-    if (getImageEffectHostDescription()->canTransform) {
-        BooleanParamDescriptor* hostTransform = desc.defineBooleanParam(kHostTransformParamName);
-        hostTransform->setLabels(kHostTransformParamName, kHostTransformParamName, kHostTransformParamName);
-        hostTransform->setDefault(false);
-        hostTransform->setAnimates(false);
-        page->addChild(*hostTransform);
-    }
-#endif
-
     // GENERIC PARAMETERS
     //
     ChoiceParamDescriptor* filter = desc.defineChoiceParam(kFilterParamName);
@@ -1978,6 +1956,12 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     mix->setRange(0.,1.);
     mix->setDisplayRange(0.,1.);
     page->addChild(*mix);
+
+#ifdef OFX_EXTENSIONS_NUKE
+    if (getImageEffectHostDescription()->canTransform) {
+        std::cout << "kFnOfxImageEffectCanTransform (describeincontext)=" << desc.getPropertySet().propGetInt(kFnOfxImageEffectCanTransform) << std::endl;
+    }
+#endif
 }
 
 OFX::ImageEffect* TransformPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
