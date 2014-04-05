@@ -86,7 +86,7 @@
 
 
 #include "../include/ofxsProcessing.H"
-#include "GenericTransform.h"
+#include "Transform2D.h"
 
 // NON-GENERIC
 #define kTranslateParamName "Translate"
@@ -162,27 +162,20 @@ public:
     // Are we masking. We can't derive this from the mask image being set as NULL is a valid value for an input image
     void doMasking(bool v) {_domask = v;}
     
-    void setValues(double translateX, //!< non-generic
-                   double translateY, //!< non-generic
-                   double rotate,              //!< non-generic
-                   double scaleX,     //!< non-generic
-                   double scaleY,     //!< non-generic
-                   double skewX,               //!< non-generic
-                   double skewY,               //!< non-generic
-                   bool skewOrderYX,             //!< non-generic
-                   double centerX,    //!< non-generic
-                   double centerY,    //!< non-generic
-                   bool invert,                //!< non-generic
+    void setValues(const Transform2D::Matrix3x3& invtransform, //!< non-generic
+                   // all generic parameters below
+                   double pixelaspectratio, //!< 1.067 for PAL, where 720x576 pixels occupy 768x576 in canonical coords
+                   const OfxPointD& renderscale, //!< 0.5 for a half-resolution image
+                   FieldEnum fieldToRender,
                    int filter,                 //!< generic
                    bool blackOutside, //!< generic
                    double mix)          //!< generic
     {
+        bool fielded = fieldToRender == eFieldLower || fieldToRender == eFieldUpper;
         // NON-GENERIC
-        if (invert) {
-            _invtransform = Transform2D::Matrix3x3::getTransform(translateX, translateY, scaleX, scaleY, skewX, skewY, skewOrderYX, rotate, centerX, centerY);
-        } else {
-            _invtransform = Transform2D::Matrix3x3::getInverseTransform(translateX, translateY, scaleX, scaleY, skewX, skewY, skewOrderYX, rotate, centerX, centerY);
-        }
+        _invtransform = (Transform2D::matCanonicalToPixel(pixelaspectratio, renderscale.x, renderscale.y, fielded) *
+                         invtransform *
+                         Transform2D::matPixelToCanonical(pixelaspectratio, renderscale.x, renderscale.y, fielded));
         // GENERIC
         _filter = filter;
         _blackOutside = blackOutside;
@@ -549,8 +542,19 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         _filter->getValue(filter);
         _blackOutside->getValue(blackOutside);
         _mix->getValue(mix);
-        
-        processor.setValues(translateX, translateY, rotate, scaleX, scaleY, skewX, skewY, (bool)skewOrder, centerX, centerY, invert, filter, blackOutside, mix);
+
+        Transform2D::Matrix3x3 invtransform;
+        if (invert) {
+            invtransform = Transform2D::matTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+        } else {
+            invtransform = Transform2D::matInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+        }
+
+        processor.setValues(invtransform,
+                            srcClip_->getPixelAspectRatio(),
+                            args.renderScale, //!< 0.5 for a half-resolution image
+                            args.fieldToRender,
+                            filter, blackOutside, mix);
     }
     
     // auto ptr for the mask.
@@ -618,9 +622,9 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     
     Transform2D::Matrix3x3 transform;
     if (!invert) {
-        transform = Transform2D::Matrix3x3::getTransform(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+        transform = Transform2D::matTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
     } else {
-        transform = Transform2D::Matrix3x3::getInverseTransform(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+        transform = Transform2D::matInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
     }
     /// now transform the 4 corners of the source clip to the output image
     Transform2D::Point3D topLeft = transform * Transform2D::Point3D(srcRoD.x1,srcRoD.y2,1);
@@ -694,9 +698,9 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     
     Transform2D::Matrix3x3 invtransform;
     if (!invert) {
-        invtransform = Transform2D::Matrix3x3::getInverseTransform(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+        invtransform = Transform2D::matInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
     } else {
-        invtransform = Transform2D::Matrix3x3::getTransform(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+        invtransform = Transform2D::matTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
     }
     /// now find the positions in the src clip of the 4 corners of the roi
     Transform2D::Point3D topLeft = invtransform * Transform2D::Point3D(roi.x1,roi.y2,1);
@@ -1328,7 +1332,7 @@ bool TransformInteract::draw(const OFX::DrawArgs &args)
         _scale->getValue(scale.x, scale.y);
         double rot = Transform2D::toRadians(angle);
         Transform2D::Matrix3x3 transformscale;
-        transformscale = Transform2D::Matrix3x3::getInverseTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+        transformscale = Transform2D::matInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
         
         Transform2D::Point3D previousPos;
         previousPos.x = _lastMousePos.x;
@@ -1405,23 +1409,23 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     if (_mouseState != eDraggingRotationBar && _mouseState != eDraggingCenterPoint) {
         ///undo skew + rotation to the current position
         if (!inverted) {
-            rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
-            transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-            transformscale = Transform2D::Matrix3x3::getInverseTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+            rotation = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
+            transform = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+            transformscale = Transform2D::matInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
         } else {
-            rotation = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
-            transform = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-            transformscale = Transform2D::Matrix3x3::getTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+            rotation = Transform2D::matTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
+            transform = Transform2D::matTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+            transformscale = Transform2D::matTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
         }
     } else {
         if (!inverted) {
-            rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
-            transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
-            transformscale = Transform2D::Matrix3x3::getInverseTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+            rotation = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
+            transform = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+            transformscale = Transform2D::matInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
         } else {
-            rotation = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
-            transform = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
-            transformscale = Transform2D::Matrix3x3::getTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+            rotation = Transform2D::matTransformCanonical(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
+            transform = Transform2D::matTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+            transformscale = Transform2D::matTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
         }
     }
 #else
@@ -1429,13 +1433,13 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     ////for the rotation bar dragging we dont use the same transform, we don't want to undo the rotation transform
     if (_mouseState != eDraggingRotationBar && _mouseState != eDraggingCenterPoint) {
         ///undo skew + rotation to the current position
-        rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
-        transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-        transformscale = Transform2D::Matrix3x3::getInverseTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+        rotation = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
+        transform = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+        transformscale = Transform2D::matInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
     } else {
-        rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
-        transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
-        transformscale = Transform2D::Matrix3x3::getInverseTransform(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+        rotation = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
+        transform = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+        transformscale = Transform2D::matInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
     }
 #endif
 
@@ -1615,18 +1619,18 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     ///now undo skew + rotation to the current position
     Transform2D::Matrix3x3 rotation, transform;
     if (!inverted) {
-        rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
-        transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+        rotation = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
+        transform = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
     } else {
-        rotation = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
-        transform = Transform2D::Matrix3x3::getTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+        rotation = Transform2D::matTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
+        transform = Transform2D::matTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
 
     }
 #else
     ///now undo skew + rotation to the current position
     Transform2D::Matrix3x3 rotation, transform;
-    rotation = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
-    transform = Transform2D::Matrix3x3::getInverseTransform(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+    rotation = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
+    transform = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
 #endif
 
     rotationPos = rotation * transformedPos;
@@ -1719,12 +1723,12 @@ void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // in order to support tiles, the plugin must implement the getRegionOfInterest function
     desc.setSupportsTiles(true);
     
-    // in order to support multiresolution, the plugin must take into account the renderscale
-    // and scale the transform appropriately
-    // TODO: Change the getRegionOfDefinition(), getRegionsOfInterest(), render() functions to handle args.renderScale
-    desc.setSupportsMultiResolution(false);
-    desc.setOverlayInteractDescriptor( new TransformOverlayDescriptor);
-    
+    // in order to support multiresolution, render() must take into account the pixelaspectratio and the renderscale
+    // and scale the transform appropriately.
+    // All other functions are usually in canonical coordinates.
+    desc.setSupportsMultiResolution(true);
+
+    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
 }
 
 
