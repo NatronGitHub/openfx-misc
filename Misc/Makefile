@@ -1,21 +1,20 @@
 PLUGINOBJECTS = \
-        Switch.o \
-        TimeOffset.o \
+        JoinViews.o \
+        OneView.o \
         RGBLut.o \
         SideBySide.o \
+        Switch.o \
+        TimeOffset.o \
         MixViews.o \
-        OneView.o \
-        JoinViews.o \
         Anaglyph.o \
 	ColorCorrect.o \
 	Grade.o \
     Transform.o \
-    GenericTransform.o \
         PluginRegistrationCombined.o
 
 PLUGINNAME = Misc
-VPATH += ../Switch ../TimeOffset ../RGBLut ../SideBySide ../MixViews ../OneView ../JoinViews ../Anaglyph ../ColorCorrect ../Grade ../Transform
+VPATH += ../JoinViews ../OneView ../RGBLut ../SideBySide ../Switch ../TimeOffset ../MixViews  ../Anaglyph ../ColorCorrect ../Grade ../Transform
 
 include ../Makefile.master
 
-CXXFLAGS += -I../Anaglyph -I../ColorCorrect -I../Grade -I../JoinViews -I../OneView -I../RGBLut -I../SideBySide -I../Switch -I../TimeOffset -I../MixViews
+CXXFLAGS += -I../JoinViews -I../OneView -I../RGBLut -I../SideBySide -I../Switch -I../TimeOffset -I../MixViews -I../Anaglyph -I../ColorCorrect -I../Grade -I../Transform
