@@ -115,7 +115,6 @@ class TransformProcessorBase : public OFX::ImageProcessor
 protected:
     OFX::Image *_srcImg;
     OFX::Image *_maskImg;
-    OfxRectI _srcBounds;
     // NON-GENERIC PARAMETERS:
     Transform2D::Matrix3x3 _invtransform;
     // GENERIC PARAMETERS:
@@ -136,23 +135,12 @@ public:
     , _domask(false)
     , _mix(0.0)
     {
-        _srcBounds.x1 = 0;
-        _srcBounds.x2 = 0;
-        _srcBounds.y1 = 0;
-        _srcBounds.y2 = 0;
     }
     
     /** @brief set the src image */
-    void setSrcImg(OFX::Image *v, const OfxRectD& srcRoD)
+    void setSrcImg(OFX::Image *v)
     {
         _srcImg = v;
-        // the source image may not be empty
-        assert(srcRoD.x1 < srcRoD.x2 && srcRoD.y1 < srcRoD.y2);
-        // safely convert the OfxRectD to the largest enclosing OfxRectI
-        _srcBounds.x1 = std::max((double)kOfxFlagInfiniteMin, std::ceil(srcRoD.x1));
-        _srcBounds.x2 = std::min((double)kOfxFlagInfiniteMax, std::floor(srcRoD.x2));
-        _srcBounds.y1 = std::max((double)kOfxFlagInfiniteMin, std::ceil(srcRoD.y1));
-        _srcBounds.y2 = std::min((double)kOfxFlagInfiniteMax, std::floor(srcRoD.y2));
     }
     
     
@@ -242,6 +230,7 @@ class TransformProcessor : public TransformProcessorBase
                     // GENERIC TRANSFORM
                     // from here on, everything is generic, and should be moved to a generic transform class
                     // Important: (0,0) is the *corner*, not the *center* of the first pixel (see OpenFX specs)
+                    const OfxRectI srcBounds = _srcImg->getBounds();
                     if (_filter == 0) {
                         ///nearest neighboor
                         // the center of pixel (0,0) has coordinates (0.5,0.5)
@@ -249,8 +238,8 @@ class TransformProcessor : public TransformProcessorBase
                         int y = std::floor(fy); // don't add 0.5
                         
                         if (!_blackOutside) {
-                            x = std::max(_srcBounds.x1,std::min(x,_srcBounds.x2-1));
-                            y = std::max(_srcBounds.y1,std::min(y,_srcBounds.y2-1));
+                            x = std::max(srcBounds.x1,std::min(x,srcBounds.x2-1));
+                            y = std::max(srcBounds.y1,std::min(y,srcBounds.y2-1));
                         }
                         PIX *srcPix = (PIX *)_srcImg->getPixelAddress(x, y);
                         if (srcPix) {
@@ -270,10 +259,10 @@ class TransformProcessor : public TransformProcessorBase
                         int nx = x + 1;
                         int ny = y + 1;
                         if (!_blackOutside) {
-                            x = std::max(_srcBounds.x1,std::min(x,_srcBounds.x2-1));
-                            y = std::max(_srcBounds.y1,std::min(y,_srcBounds.y2-1));
-                            nx = std::max(_srcBounds.x1,std::min(nx,_srcBounds.x2-1));
-                            ny = std::max(_srcBounds.y1,std::min(ny,_srcBounds.y2-1));
+                            x = std::max(srcBounds.x1,std::min(x,srcBounds.x2-1));
+                            y = std::max(srcBounds.y1,std::min(y,srcBounds.y2-1));
+                            nx = std::max(srcBounds.x1,std::min(nx,srcBounds.x2-1));
+                            ny = std::max(srcBounds.y1,std::min(ny,srcBounds.y2-1));
                         }
                         
                         const double dx = std::max(0., std::min(fx-0.5 - x, 1.));
@@ -309,14 +298,14 @@ class TransformProcessor : public TransformProcessorBase
                         int ax = x + 2;
                         int ay = y + 2;
                         if (!_blackOutside) {
-                            x = std::max(_srcBounds.x1,std::min(x,_srcBounds.x2-1));
-                            y = std::max(_srcBounds.y1,std::min(y,_srcBounds.y2-1));
-                            px = std::max(_srcBounds.x1,std::min(px,_srcBounds.x2-1));
-                            py = std::max(_srcBounds.y1,std::min(py,_srcBounds.y2-1));
-                            nx = std::max(_srcBounds.x1,std::min(nx,_srcBounds.x2-1));
-                            ny = std::max(_srcBounds.y1,std::min(ny,_srcBounds.y2-1));
-                            ax = std::max(_srcBounds.x1,std::min(ax,_srcBounds.x2-1));
-                            ay = std::max(_srcBounds.y1,std::min(ay,_srcBounds.y2-1));
+                            x = std::max(srcBounds.x1,std::min(x,srcBounds.x2-1));
+                            y = std::max(srcBounds.y1,std::min(y,srcBounds.y2-1));
+                            px = std::max(srcBounds.x1,std::min(px,srcBounds.x2-1));
+                            py = std::max(srcBounds.y1,std::min(py,srcBounds.y2-1));
+                            nx = std::max(srcBounds.x1,std::min(nx,srcBounds.x2-1));
+                            ny = std::max(srcBounds.y1,std::min(ny,srcBounds.y2-1));
+                            ax = std::max(srcBounds.x1,std::min(ax,srcBounds.x2-1));
+                            ay = std::max(srcBounds.y1,std::min(ay,srcBounds.y2-1));
                         }
                         const double dx = std::max(0., std::min(fx-0.5 - x, 1.));
                         const double dy = std::max(0., std::min(fy-0.5 - y, 1.));
@@ -575,7 +564,7 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
     
     // set the images
     processor.setDstImg(dst.get());
-    processor.setSrcImg(src.get(), srcClip_->getRegionOfDefinition(args.time));
+    processor.setSrcImg(src.get());
     
     // set the render window
     processor.setRenderWindow(args.renderWindow);
@@ -722,21 +711,23 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     _domask->getValue(doMasking);
     double mix;
     _mix->getValue(mix);
-    
+
+    double pixelSizeX = srcClip_->getPixelAspectRatio() / args.renderScale.x;
+    double pixelSizeY = 1. / args.renderScale.x;
     if (filter == 0) {
         // nearest neighbor, the exact region is OK
     } else if (filter == 1) {
-        // bilinear, expand by 0.5
-        l -= 0.5;
-        r += 0.5;
-        b -= 0.5;
-        t += 0.5;
+        // bilinear, expand by 0.5 pixels
+        l -= 0.5*pixelSizeX;
+        r += 0.5*pixelSizeX;
+        b -= 0.5*pixelSizeY;
+        t += 0.5*pixelSizeY;
     } else if (filter == 2) {
-        // bicubic, expand by 1.5
-        l -= 1.5;
-        r += 1.5;
-        b -= 1.5;
-        t += 1.5;
+        // bicubic, expand by 1.5 pixels
+        l -= 1.5*pixelSizeX;
+        r += 1.5*pixelSizeX;
+        b -= 1.5*pixelSizeY;
+        t += 1.5*pixelSizeY;
     }
     
     
