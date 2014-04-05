@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Transform.o GenericTransform.o
+PLUGINOBJECTS = Transform.o
 PLUGINNAME = Transform
 
 include ../Makefile.master
