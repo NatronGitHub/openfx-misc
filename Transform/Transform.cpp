@@ -933,6 +933,7 @@ bool TransformPlugin::getTransform(const TransformArguments &args, Clip * &trans
     Transform2D::Matrix3x3 invtransformpixel = (Transform2D::matCanonicalToPixel(pixelaspectratio, args.renderScale.x, args.renderScale.y, fielded) *
                                                 invtransform *
                                                 Transform2D::matPixelToCanonical(pixelaspectratio, args.renderScale.x, args.renderScale.y, fielded));
+    transformClip = srcClip_;
     transformMatrix[0] = invtransformpixel.a;
     transformMatrix[1] = invtransformpixel.b;
     transformMatrix[2] = invtransformpixel.c;
