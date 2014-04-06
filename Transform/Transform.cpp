@@ -145,7 +145,7 @@ public:
     , _filter(0)
     , _blackOutside(false)
     , _domask(false)
-    , _mix(0.0)
+    , _mix(1.0)
     {
     }
     
@@ -193,7 +193,7 @@ Clamp(T v, int min, int max)
     return v;
 }
 
-template <class PIX, int nComponents, int maxValue>
+template <class PIX, int nComponents, int maxValue, bool masked>
 class TransformProcessor : public TransformProcessorBase
 {
     
@@ -375,16 +375,18 @@ class TransformProcessor : public TransformProcessorBase
                 PIX *srcPix = NULL;
                 
                 // are we doing masking
-                if (_domask && _maskImg) {
-                    // we do, get the pixel from the mask
-                    maskPix = (PIX *)_maskImg->getPixelAddress(x, y);
-                    // figure the scale factor from that pixel
-                    maskScale = maskPix != 0 ? float(*maskPix)/float(maxValue) : 0.0f;
+                if (masked) {
+                    if (_domask && _maskImg) {
+                        // we do, get the pixel from the mask
+                        maskPix = (PIX *)_maskImg->getPixelAddress(x, y);
+                        // figure the scale factor from that pixel
+                        maskScale = maskPix != 0 ? float(*maskPix)/float(maxValue) : 0.0f;
+                    }
+                    if ((_domask && _maskImg) || _mix != 1.) {
+                        srcPix = (PIX *)_srcImg->getPixelAddress(x, y);
+                    }
                 }
-                if ((_domask && _maskImg) || _mix != 1.) {
-                    srcPix = (PIX *)_srcImg->getPixelAddress(x, y);
-                }
-                if (srcPix) {
+                if (masked && srcPix) {
                     float alpha = maskScale * _mix;
                     for (int c = 0; c < nComponents; ++c) {
                         float v = tmpPix[c] * alpha + (1. - alpha) * srcPix[c];
@@ -432,16 +434,31 @@ protected:
     
 public:
     /** @brief ctor */
-    TransformPlugin(OfxImageEffectHandle handle)
+    TransformPlugin(OfxImageEffectHandle handle, bool masked)
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClip_(0)
     , maskClip_(0)
+    , _translate(0)
+    , _rotate(0)
+    , _scale(0)
+    , _skewX(0)
+    , _skewY(0)
+    , _skewOrder(0)
+    , _center(0)
+    , _invert(0)
+    , _filter(0)
+    , _blackOutside(0)
+    , _masked(masked)
+    , _domask(0)
+    , _mix(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         // name of mask clip depends on the context
-        maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        if (masked) {
+            maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        }
         // NON-GENERIC
         _translate = fetchDouble2DParam(kTranslateParamName);
         _rotate = fetchDoubleParam(kRotateParamName);
@@ -454,8 +471,10 @@ public:
         // GENERIC
         _filter = fetchChoiceParam(kFilterParamName);
         _blackOutside = fetchBooleanParam(kBlackOutsideParamName);
-        _domask = fetchBooleanParam(kMaskParamName);
-        _mix = fetchDoubleParam(kMixParamName);
+        if (masked) {
+            _domask = fetchBooleanParam(kMaskParamName);
+            _mix = fetchDoubleParam(kMixParamName);
+        }
     }
     
     // override the rod call
@@ -471,8 +490,12 @@ public:
 
 #ifdef OFX_EXTENSIONS_NUKE
     /** @brief recover a transform matrix from an effect */
-    virtual bool getTransform(const TransformArguments &args, Clip * &transformClip, double transformMatrix[9]) override;
+    virtual bool getTransform(const TransformArguments &args, Clip * &transformClip, double transformMatrix[9]);
 #endif
+
+    /* internal render function */
+    template <int nComponents, bool masked>
+    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
     void setupAndProcess(TransformProcessorBase &, const OFX::RenderArguments &args);
@@ -490,6 +513,7 @@ private:
     // GENERIC
     OFX::ChoiceParam* _filter;
     OFX::BooleanParam* _blackOutside;
+    bool _masked;
     OFX::BooleanParam* _domask;
     OFX::DoubleParam* _mix;
 };
@@ -528,7 +552,7 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         // GENERIC
         int filter;
         bool blackOutside;
-        double mix;
+        double mix = 1.;
         
         // NON-GENERIC
         _scale->getValueAtTime(args.time, scaleX, scaleY);
@@ -547,7 +571,9 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         // GENERIC
         _filter->getValue(filter);
         _blackOutside->getValue(blackOutside);
-        _mix->getValueAtTime(args.time, mix);
+        if (_masked) {
+            _mix->getValueAtTime(args.time, mix);
+        }
 
         Transform2D::Matrix3x3 invtransform;
         if (invert) {
@@ -564,10 +590,10 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
     }
     
     // auto ptr for the mask.
-    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
+    std::auto_ptr<OFX::Image> mask((_masked && (getContext() != OFX::eContextFilter)) ? maskClip_->fetchImage(args.time) : 0);
     
     // do we do masking
-    if (getContext() != OFX::eContextFilter) {
+    if (_masked && getContext() != OFX::eContextFilter) {
         bool doMasking;
         _domask->getValue(doMasking);
         if (doMasking) {
@@ -724,10 +750,12 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     _filter->getValue(filter);
     bool blackOutside;
     _blackOutside->getValue(blackOutside);
-    bool doMasking;
-    _domask->getValue(doMasking);
-    double mix;
-    _mix->getValueAtTime(args.time, mix);
+    bool doMasking = false;
+    double mix = 1.;
+    if (_masked) {
+        _domask->getValue(doMasking);
+        _mix->getValueAtTime(args.time, mix);
+    }
 
     double pixelSizeX = srcClip_->getPixelAspectRatio() / args.renderScale.x;
     double pixelSizeY = 1. / args.renderScale.x;
@@ -748,18 +776,20 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     }
     
     
-    // set it on the mask only if we are in an interesting context
-    // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
-    if (getContext() != OFX::eContextFilter && doMasking) {
-        rois.setRegionOfInterest(*maskClip_, roi);
-    }
-    if ((getContext() != OFX::eContextFilter && doMasking) || mix != 1.) {
-        // for masking, we also need the source image for that same roi.
-        // compute the union of both ROIs
-        l = std::min(l, roi.x1);
-        r = std::max(r, roi.x2);
-        b = std::min(b, roi.y1);
-        t = std::max(t, roi.y2);
+    if (_masked) {
+        // set it on the mask only if we are in an interesting context
+        // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
+        if (getContext() != OFX::eContextFilter && doMasking) {
+            rois.setRegionOfInterest(*maskClip_, roi);
+        }
+        if ((getContext() != OFX::eContextFilter && doMasking) || mix != 1.) {
+            // for masking, we also need the source image for that same roi.
+            // compute the union of both ROIs
+            l = std::min(l, roi.x1);
+            r = std::max(r, roi.x2);
+            b = std::min(b, roi.y1);
+            t = std::max(t, roi.y2);
+        }
     }
     
     // No need to round things up here, we must give the *actual* RoI,
@@ -773,6 +803,37 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     rois.setRegionOfInterest(*srcClip_, srcRoI);
 }
 
+
+// the internal render function
+template <int nComponents, bool masked>
+void
+TransformPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+{
+    switch(dstBitDepth)
+    {
+        case OFX::eBitDepthUByte :
+        {
+            TransformProcessor<unsigned char, 4, 255, masked> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthUShort :
+        {
+            TransformProcessor<unsigned short, 4, 65535, masked> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthFloat :
+        {
+            TransformProcessor<float, 4, 1, masked> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        default :
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
 // the overridden render function
 void
 TransformPlugin::render(const OFX::RenderArguments &args)
@@ -783,56 +844,17 @@ TransformPlugin::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
 
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
-    if (dstComponents == OFX::ePixelComponentRGBA)
-    {
-        switch(dstBitDepth)
-        {
-            case OFX::eBitDepthUByte :
-            {
-                TransformProcessor<unsigned char, 4, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort :
-            {
-                TransformProcessor<unsigned short, 4, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat :
-            {
-                TransformProcessor<float,4,1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    if (dstComponents == OFX::ePixelComponentRGBA) {
+        if (_masked) {
+            renderInternal<4,true>(args, dstBitDepth);
+        } else {
+            renderInternal<4,false>(args, dstBitDepth);
         }
-    }
-    else
-    {
-        switch(dstBitDepth)
-        {
-            case OFX::eBitDepthUByte :
-            {
-                TransformProcessor<unsigned char, 3, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort :
-            {
-                TransformProcessor<unsigned short, 3, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat :
-            {
-                TransformProcessor<float,3,1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    } else {
+        if (_masked) {
+            renderInternal<3,true>(args, dstBitDepth);
+        } else {
+            renderInternal<3,false>(args, dstBitDepth);
         }
     }
 }
@@ -858,14 +880,16 @@ bool TransformPlugin::isIdentity(const RenderArguments &args, Clip * &identityCl
     }
     
     // GENERIC
-    bool doMasking;
-    _domask->getValue(doMasking);
-    double mix;
-    _mix->getValueAtTime(args.time, mix);
-    if (doMasking && mix == 0.) {
-        identityClip = srcClip_;
-        identityTime = args.time;
-        return true;
+    if (_masked) {
+        bool doMasking;
+        _domask->getValue(doMasking);
+        double mix;
+        _mix->getValueAtTime(args.time, mix);
+        if (doMasking && mix == 0.) {
+            identityClip = srcClip_;
+            identityTime = args.time;
+            return true;
+        }
     }
     
     return false;
@@ -1795,15 +1819,6 @@ void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(eRenderFullySafe);
     
     // NON-GENERIC
-    
-#ifdef OFX_EXTENSIONS_NUKE
-    // Enable transform by the host.
-    // It is only possible for transforms which can be represented as a 3x3 matrix.
-    desc.setCanTransform(true);
-    if (getImageEffectHostDescription()->canTransform) {
-        std::cout << "kFnOfxImageEffectCanTransform (describe) =" << desc.getPropertySet().propGetInt(kFnOfxImageEffectCanTransform) << std::endl;
-    }
-#endif
 
     // in order to support tiles, the plugin must implement the getRegionOfInterest function
     desc.setSupportsTiles(true);
@@ -1814,15 +1829,22 @@ void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultiResolution(true);
 
     desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
- }
+
+    // NON-GENERIC (NON-MASKED)
+
+#ifdef OFX_EXTENSIONS_NUKE
+    // Enable transform by the host.
+    // It is only possible for transforms which can be represented as a 3x3 matrix.
+    desc.setCanTransform(true);
+    if (getImageEffectHostDescription()->canTransform) {
+        std::cout << "kFnOfxImageEffectCanTransform (describe) =" << desc.getPropertySet().propGetInt(kFnOfxImageEffectCanTransform) << std::endl;
+    }
+#endif
+}
 
 
 void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
-    if (!getImageEffectHostDescription()->supportsParametricParameter) {
-        throwHostMissingSuiteException(kOfxParametricParameterSuite);
-    }
-    
     // GENERIC
     
     // Source clip only in the filter context
@@ -1835,19 +1857,6 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(true);
     srcClip->setIsMask(false);
-
-    // if general or paint context, define the mask clip
-    if (context == eContextGeneral || context == eContextPaint) {
-        // if paint context, it is a mandated input called 'brush'
-        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
-        maskClip->addSupportedComponent(ePixelComponentAlpha);
-        maskClip->setTemporalClipAccess(false);
-        if (context == eContextGeneral) {
-            maskClip->setOptional(true);
-        }
-        maskClip->setSupportsTiles(true);
-        maskClip->setIsMask(true); // we are a mask input
-    }
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
@@ -1936,6 +1945,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     filter->appendOption("Bilinear");
     filter->appendOption("Bicubic");
     filter->setAnimates(false);
+    filter->setLayoutHint(OFX::eLayoutHintNoNewLine);
     page->addChild(*filter);
     
     BooleanParamDescriptor* blackOutside = desc.defineBooleanParam(kBlackOutsideParamName);
@@ -1943,20 +1953,9 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     blackOutside->setDefault(true);
     blackOutside->setAnimates(false);
     page->addChild(*blackOutside);
-    
-    BooleanParamDescriptor* domask = desc.defineBooleanParam(kMaskParamName);
-    domask->setLabels(kMaskParamName, kMaskParamName, kMaskParamName);
-    domask->setDefault(false);
-    domask->setAnimates(false);
-    page->addChild(*domask);
-    
-    DoubleParamDescriptor* mix = desc.defineDoubleParam(kMixParamName);
-    mix->setLabels(kMixParamName, kMixParamName, kMixParamName);
-    mix->setDefault(1.);
-    mix->setRange(0.,1.);
-    mix->setDisplayRange(0.,1.);
-    page->addChild(*mix);
 
+    // NON-GENERIC (NON-MASKED)
+    //
 #ifdef OFX_EXTENSIONS_NUKE
     if (getImageEffectHostDescription()->canTransform) {
         std::cout << "kFnOfxImageEffectCanTransform (describeincontext)=" << desc.getPropertySet().propGetInt(kFnOfxImageEffectCanTransform) << std::endl;
@@ -1966,5 +1965,194 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
 OFX::ImageEffect* TransformPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
-    return new TransformPlugin(handle);
+    return new TransformPlugin(handle, false);
+}
+
+
+void TransformMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+{
+    // basic labels
+    desc.setLabels("TransformMaskedOFX", "TransformMaskedOFX", "TransformMaskedOFX");
+    desc.setPluginGrouping("Transform");
+    desc.setPluginDescription("Translate / Rotate / Scale a 2D image.");
+
+    desc.addSupportedContext(eContextFilter);
+    desc.addSupportedContext(eContextGeneral);
+    //desc.addSupportedContext(eContextPaint);
+    desc.addSupportedBitDepth(eBitDepthUByte);
+    desc.addSupportedBitDepth(eBitDepthUShort);
+    desc.addSupportedBitDepth(eBitDepthFloat);
+
+    // set a few flags
+
+    // GENERIC
+
+    desc.setSingleInstance(false);
+    desc.setHostFrameThreading(false);
+    desc.setTemporalClipAccess(false);
+    // each field has to be transformed separately, or you will get combing effect
+    // this should be true for all geometric transforms
+    desc.setRenderTwiceAlways(true);
+    desc.setSupportsMultipleClipPARs(false);
+    desc.setRenderThreadSafety(eRenderFullySafe);
+
+    // NON-GENERIC
+
+    // in order to support tiles, the plugin must implement the getRegionOfInterest function
+    desc.setSupportsTiles(true);
+
+    // in order to support multiresolution, render() must take into account the pixelaspectratio and the renderscale
+    // and scale the transform appropriately.
+    // All other functions are usually in canonical coordinates.
+    desc.setSupportsMultiResolution(true);
+
+    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
+}
+
+
+void TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+{
+    // GENERIC
+
+    // Source clip only in the filter context
+    // create the mandated source clip
+    // always declare the source clip first, because some hosts may consider
+    // it as the default input clip (e.g. Nuke)
+    ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+    srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->setTemporalClipAccess(false);
+    srcClip->setSupportsTiles(true);
+    srcClip->setIsMask(false);
+
+    // GENERIC (MASKED)
+    //
+    // if general or paint context, define the mask clip
+    if (context == eContextGeneral || context == eContextPaint) {
+        // if paint context, it is a mandated input called 'brush'
+        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
+        maskClip->addSupportedComponent(ePixelComponentAlpha);
+        maskClip->setTemporalClipAccess(false);
+        if (context == eContextGeneral) {
+            maskClip->setOptional(true);
+        }
+        maskClip->setSupportsTiles(true);
+        maskClip->setIsMask(true); // we are a mask input
+    }
+
+    // create the mandated output clip
+    ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
+    dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->setSupportsTiles(true);
+
+
+    // make some pages and to things in
+    PageParamDescriptor *page = desc.definePageParam("Controls");
+
+    // NON-GENERIC PARAMETERS
+    //
+    Double2DParamDescriptor* translate = desc.defineDouble2DParam(kTranslateParamName);
+    translate->setLabels(kTranslateParamName, kTranslateParamName, kTranslateParamName);
+    //translate->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
+    translate->setDoubleType(eDoubleTypeXYAbsolute);
+    translate->setDimensionLabels("x","y");
+    translate->setDefault(0, 0);
+    page->addChild(*translate);
+
+    DoubleParamDescriptor* rotate = desc.defineDoubleParam(kRotateParamName);
+    rotate->setLabels(kRotateParamName, kRotateParamName, kRotateParamName);
+    rotate->setDoubleType(eDoubleTypeAngle);
+    rotate->setDefault(0);
+    //rotate->setRange(-180, 180); // the angle may be -infinity..+infinity
+    rotate->setDisplayRange(-180, 180);
+    page->addChild(*rotate);
+
+    Double2DParamDescriptor* scale = desc.defineDouble2DParam(kScaleParamName);
+    scale->setLabels(kScaleParamName, kScaleParamName, kScaleParamName);
+    scale->setDoubleType(eDoubleTypeScale);
+    scale->setDimensionLabels("w","h");
+    scale->setDefault(1,1);
+    //scale->setRange(0.1,0.1,10,10);
+    scale->setDisplayRange(0.1, 0.1, 10, 10);
+    page->addChild(*scale);
+
+    DoubleParamDescriptor* skewX = desc.defineDoubleParam(kSkewXParamName);
+    skewX->setLabels(kSkewXParamName, kSkewXParamName, kSkewXParamName);
+    skewX->setDefault(0);
+    skewX->setDisplayRange(-1,1);
+    page->addChild(*skewX);
+
+    DoubleParamDescriptor* skewY = desc.defineDoubleParam(kSkewYParamName);
+    skewY->setLabels(kSkewYParamName, kSkewYParamName, kSkewYParamName);
+    skewY->setDefault(0);
+    skewY->setDisplayRange(-1,1);
+    page->addChild(*skewY);
+
+    ChoiceParamDescriptor* skewOrder = desc.defineChoiceParam(kSkewOrderParamName);
+    skewOrder->setLabels(kSkewOrderParamName, kSkewOrderParamName, kSkewOrderParamName);
+    skewOrder->setDefault(0);
+    skewOrder->appendOption("XY");
+    skewOrder->appendOption("YX");
+    skewOrder->setAnimates(false);
+    page->addChild(*skewOrder);
+
+    Double2DParamDescriptor* center = desc.defineDouble2DParam(kCenterParamName);
+    center->setLabels(kCenterParamName, kCenterParamName, kCenterParamName);
+    //center->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
+    center->setDoubleType(eDoubleTypeXYAbsolute);
+    center->setDimensionLabels("x","y");
+    center->setDefaultCoordinateSystem(eCoordinatesNormalised);
+    center->setDefault(0.5, 0.5);
+    page->addChild(*center);
+
+    BooleanParamDescriptor* invert = desc.defineBooleanParam(kInvertParamName);
+    invert->setLabels(kInvertParamName, kInvertParamName, kInvertParamName);
+    invert->setDefault(false);
+    invert->setAnimates(false);
+    page->addChild(*invert);
+
+    BooleanParamDescriptor* showOverlay = desc.defineBooleanParam(kShowOverlayParamName);
+    showOverlay->setLabels(kShowOverlayParamName, kShowOverlayParamName, kShowOverlayParamName);
+    showOverlay->setDefault(true);
+    showOverlay->setAnimates(false);
+    showOverlay->setEvaluateOnChange(false);
+    page->addChild(*showOverlay);
+
+    // GENERIC PARAMETERS
+    //
+    ChoiceParamDescriptor* filter = desc.defineChoiceParam(kFilterParamName);
+    filter->setLabels(kFilterParamName, kFilterParamName, kFilterParamName);
+    filter->setDefault(2);
+    filter->appendOption("Nearest neighboor");
+    filter->appendOption("Bilinear");
+    filter->appendOption("Bicubic");
+    filter->setAnimates(false);
+    filter->setLayoutHint(OFX::eLayoutHintNoNewLine);
+    page->addChild(*filter);
+
+    BooleanParamDescriptor* blackOutside = desc.defineBooleanParam(kBlackOutsideParamName);
+    blackOutside->setLabels(kBlackOutsideParamName, kBlackOutsideParamName, kBlackOutsideParamName);
+    blackOutside->setDefault(true);
+    blackOutside->setAnimates(false);
+    page->addChild(*blackOutside);
+
+    // GENERIC (MASKED)
+    //
+    BooleanParamDescriptor* domask = desc.defineBooleanParam(kMaskParamName);
+    domask->setLabels(kMaskParamName, kMaskParamName, kMaskParamName);
+    domask->setDefault(false);
+    domask->setAnimates(false);
+    page->addChild(*domask);
+
+    DoubleParamDescriptor* mix = desc.defineDoubleParam(kMixParamName);
+    mix->setLabels(kMixParamName, kMixParamName, kMixParamName);
+    mix->setDefault(1.);
+    mix->setRange(0.,1.);
+    mix->setDisplayRange(0.,1.);
+    page->addChild(*mix);
+}
+
+OFX::ImageEffect* TransformMaskedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+{
+    return new TransformPlugin(handle, true);
 }

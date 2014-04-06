@@ -40,5 +40,6 @@
 #include "ofxsImageEffect.h"
 
 mDeclarePluginFactory(TransformPluginFactory, {}, {});
+mDeclarePluginFactory(TransformMaskedPluginFactory, {}, {});
 
 #endif // MISC_TRANSFORM_H
