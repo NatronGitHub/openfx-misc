@@ -692,6 +692,7 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
         rod.y1 = b - 1.;
         rod.y2 = t + 1.;
     }
+    assert(rod.x1 < rod.x2 && rod.y1 < rod.y2);
     // say we set it
     return true;
 }
@@ -791,7 +792,7 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
             t = std::max(t, roi.y2);
         }
     }
-    
+    assert(l < r && b < t);
     // No need to round things up here, we must give the *actual* RoI,
     // the host should compute the right image region from it (by rounding it up/down).
     OfxRectD srcRoI;
