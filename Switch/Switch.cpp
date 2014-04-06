@@ -80,6 +80,9 @@
 #include <windows.h>
 #endif
 
+#ifdef OFX_EXTENSIONS_NUKE
+#include "nuke/fnOfxExtensions.h"
+#endif
 
 #define kSwitchPluginSourceClipCount 10
 #define kSwitchPluginParamWhich "which"
@@ -102,6 +105,11 @@ class SwitchPlugin : public OFX::ImageEffect {
 
     /* override is identity */
     virtual bool isIdentity(const OFX::RenderArguments &args, OFX::Clip * &identityClip, double &identityTime);
+
+#ifdef OFX_EXTENSIONS_NUKE
+    /** @brief recover a transform matrix from an effect */
+    virtual bool getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9]);
+#endif
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName);
@@ -134,6 +142,27 @@ SwitchPlugin::isIdentity(const OFX::RenderArguments &args, OFX::Clip * &identity
     identityClip = srcClip_[input];
     return true;
 }
+
+#ifdef OFX_EXTENSIONS_NUKE
+// overridden getTransform
+bool SwitchPlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9])
+{
+    int input;
+    which_->getValue(input);
+    transformClip = srcClip_[input];
+
+    transformMatrix[0] = 1.;
+    transformMatrix[1] = 0.;
+    transformMatrix[2] = 0.;
+    transformMatrix[3] = 0.;
+    transformMatrix[4] = 1.;
+    transformMatrix[5] = 0.;
+    transformMatrix[6] = 0.;
+    transformMatrix[7] = 0.;
+    transformMatrix[8] = 1.;
+    return true;
+}
+#endif
 
 void
 SwitchPlugin::changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName)
@@ -173,6 +202,11 @@ void SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
+#ifdef OFX_EXTENSIONS_NUKE
+    // Enable transform by the host.
+    // It is only possible for transforms which can be represented as a 3x3 matrix.
+    desc.setCanTransform(true);
+#endif
 }
 
 void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
@@ -214,6 +248,12 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     which->setAnimates(true);
     
     page->addChild(*which);
+
+#ifdef OFX_EXTENSIONS_NUKE
+    // Enable transform by the host.
+    // It is only possible for transforms which can be represented as a 3x3 matrix.
+    desc.setCanTransform(true);
+#endif
 }
 
 OFX::ImageEffect* SwitchPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
