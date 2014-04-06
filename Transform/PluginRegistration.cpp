@@ -6,7 +6,9 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            static TransformPluginFactory p("fr.INRIA.openfx:TransformPlugin", 1, 0);
+            static TransformPluginFactory p("net.sf.openfx:TransformPlugin", 1, 0);
+            ids.push_back(&p);
+            static TransformMaskedPluginFactory p("net.sf.openfx:TransformMaskedPlugin", 1, 0);
             ids.push_back(&p);
         }
     }

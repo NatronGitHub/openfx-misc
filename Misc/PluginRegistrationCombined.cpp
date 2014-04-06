@@ -33,10 +33,12 @@ namespace OFX
             ids.push_back(&p8);
             static ColorCorrectPluginFactory p9("net.sf.openfx:ColorCorrectPlugin", 1, 0);
             ids.push_back(&p9);
-            static GradePluginFactory p10("fr.INRIA.openfx:GradePlugin", 1, 0);
+            static GradePluginFactory p10("net.sf.openfx:GradePlugin", 1, 0);
             ids.push_back(&p10);
-            static TransformPluginFactory p11("fr.INRIA.openfx:TransformPlugin", 1, 0);
+            static TransformPluginFactory p11("net.sf.openfx:TransformPlugin", 1, 0);
             ids.push_back(&p11);
+            static TransformMaskedPluginFactory p12("net.sf.openfx:TransformMaskedPlugin", 1, 0);
+            ids.push_back(&p12);
             // ReConverge is not finished/tested
             //static ReConvergePluginFactory p("net.sf.openfx:reConvergePlugin", 1, 0);
             //ids.push_back(&p);

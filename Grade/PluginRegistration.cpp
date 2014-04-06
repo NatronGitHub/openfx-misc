@@ -6,7 +6,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            static GradePluginFactory p("fr.INRIA.openfx:GradePlugin", 1, 0);
+            static GradePluginFactory p("net.sf.openfx:GradePlugin", 1, 0);
             ids.push_back(&p);
         }
     }
