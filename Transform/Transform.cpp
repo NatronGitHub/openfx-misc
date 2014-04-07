@@ -1190,11 +1190,7 @@ drawSkewBar(const OfxPointD &center,
     // we are not axis-aligned: use the mean pixel scale
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
     double barHalfSize = radiusY + 20. * meanPixelScale;
-    double arrowYPosition = radiusY + 10. * meanPixelScale;
-    double arrowXHalfSize = 10 * meanPixelScale;
-    double arrowHeadOffsetX = 3 * meanPixelScale;
-    double arrowHeadOffsetY = 3 * meanPixelScale;
-    
+
     glPushMatrix ();
     glTranslatef (center.x, center.y, 0);
     glRotated(angle, 0, 0, 1);
@@ -1204,6 +1200,11 @@ drawSkewBar(const OfxPointD &center,
     glVertex2d(0., + barHalfSize);
     
     if (hovered) {
+        double arrowYPosition = radiusY + 10. * meanPixelScale;
+        double arrowXHalfSize = 10 * meanPixelScale;
+        double arrowHeadOffsetX = 3 * meanPixelScale;
+        double arrowHeadOffsetY = 3 * meanPixelScale;
+
         ///draw the central bar
         glVertex2d(- arrowXHalfSize, - arrowYPosition);
         glVertex2d(+ arrowXHalfSize, - arrowYPosition);
@@ -1230,7 +1231,8 @@ drawSkewBar(const OfxPointD &center,
 static void
 drawRotationBar(const OfxPointD& pixelScale,
                 double radiusX,
-                bool hovered)
+                bool hovered,
+                bool inverted)
 {
     // we are not axis-aligned
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
@@ -1242,13 +1244,12 @@ drawRotationBar(const OfxPointD& pixelScale,
     
     double barExtra = 30. * meanPixelScale;
     glBegin(GL_LINES);
-    glVertex2d(0. /*center.x*/, 0. /*center.y*/);
-    glVertex2d(0. /*center.x*/ + radiusX + barExtra, 0. /*center.y*/);
+    glVertex2d(0., 0.);
+    glVertex2d(0. + radiusX + barExtra, 0.);
     glEnd();
     
     if (hovered) {
-        
-        double arrowCenterX = 0. /*center.x*/ + radiusX + barExtra / 2.;
+        double arrowCenterX = radiusX + barExtra / 2.;
         
         ///draw an arrow slightly bended. This is an arc of circle of radius 5 in X, and 10 in Y.
         OfxPointD arrowRadius;
@@ -1258,7 +1259,7 @@ drawRotationBar(const OfxPointD& pixelScale,
         float angle_increment = Transform2D::pi() / 10.;
         glPushMatrix ();
         //  center the oval at x_center, y_center
-        glTranslatef (arrowCenterX, 0. /*center.y*/, 0);
+        glTranslatef (arrowCenterX, 0., 0);
         //  draw the oval using line segments
         glBegin (GL_LINE_STRIP);
         for (double theta = - Transform2D::pi() / 2.; theta < Transform2D::pi() / 2.; theta += angle_increment) {
@@ -1266,30 +1267,83 @@ drawRotationBar(const OfxPointD& pixelScale,
         }
         glEnd ();
         
-        glPopMatrix ();
-        
+
         double arrowOffsetX = 5. * meanPixelScale;
         double arrowOffsetY = 5. * meanPixelScale;
         
         glBegin(GL_LINES);
         ///draw the top head
-        glVertex2f(arrowCenterX, 0. /*center.y*/ + arrowRadius.y);
-        glVertex2f(arrowCenterX, 0. /*center.y*/ + arrowRadius.y - arrowOffsetY);
+        glVertex2f(0., arrowRadius.y);
+        glVertex2f(0., arrowRadius.y - arrowOffsetY);
         
-        glVertex2f(arrowCenterX, 0. /*center.y*/ + arrowRadius.y);
-        glVertex2f(arrowCenterX  + arrowOffsetX, 0. /*center.y*/ + arrowRadius.y + 1. * meanPixelScale);
+        glVertex2f(0., arrowRadius.y);
+        glVertex2f(arrowOffsetX, arrowRadius.y + 1. * meanPixelScale);
         
         ///draw the bottom head
-        glVertex2f(arrowCenterX, 0. /*center.y*/ - arrowRadius.y);
-        glVertex2f(arrowCenterX, 0. /*center.y*/ - arrowRadius.y + arrowOffsetY);
+        glVertex2f(0., -arrowRadius.y);
+        glVertex2f(0., -arrowRadius.y + arrowOffsetY);
         
-        glVertex2f(arrowCenterX, 0. /*center.y*/ - arrowRadius.y);
-        glVertex2f(arrowCenterX  + arrowOffsetX, 0. /*center.y*/ - arrowRadius.y - 1. * meanPixelScale);
+        glVertex2f(0., -arrowRadius.y);
+        glVertex2f(arrowOffsetX, -arrowRadius.y - 1. * meanPixelScale);
         
         glEnd();
-        
-        
+
+        glPopMatrix ();
     }
+    if (inverted) {
+        double arrowXPosition = radiusX + barExtra * 1.5;
+        double arrowXHalfSize = 10 * meanPixelScale;
+        double arrowHeadOffsetX = 3 * meanPixelScale;
+        double arrowHeadOffsetY = 3 * meanPixelScale;
+
+        glPushMatrix ();
+        glTranslatef (arrowXPosition, 0., 0);
+
+        glBegin(GL_LINES);
+        ///draw the central bar
+        glVertex2d(- arrowXHalfSize, 0.);
+        glVertex2d(+ arrowXHalfSize, 0.);
+
+        ///left triangle
+        glVertex2d(- arrowXHalfSize, 0.);
+        glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, arrowHeadOffsetY);
+
+        glVertex2d(- arrowXHalfSize, 0.);
+        glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, -arrowHeadOffsetY);
+
+        ///right triangle
+        glVertex2d(+ arrowXHalfSize, 0.);
+        glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, arrowHeadOffsetY);
+
+        glVertex2d(+ arrowXHalfSize, 0.);
+        glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, -arrowHeadOffsetY);
+        glEnd();
+
+        glRotated(90., 0., 0., 1.);
+
+        glBegin(GL_LINES);
+        ///draw the central bar
+        glVertex2d(- arrowXHalfSize, 0.);
+        glVertex2d(+ arrowXHalfSize, 0.);
+
+        ///left triangle
+        glVertex2d(- arrowXHalfSize, 0.);
+        glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, arrowHeadOffsetY);
+
+        glVertex2d(- arrowXHalfSize, 0.);
+        glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, -arrowHeadOffsetY);
+
+        ///right triangle
+        glVertex2d(+ arrowXHalfSize, 0.);
+        glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, arrowHeadOffsetY);
+
+        glVertex2d(+ arrowXHalfSize, 0.);
+        glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, -arrowHeadOffsetY);
+        glEnd();
+        
+        glPopMatrix ();
+    }
+
 }
 
 // draw the interact
@@ -1316,37 +1370,15 @@ TransformInteract::draw(const OFX::DrawArgs &args)
     _skewX->getValue(skewX);
     _skewY->getValue(skewY);
     _skewOrder->getValue(skewOrderYX);
-    
+
+    bool inverted;
+    _invert->getValue(inverted);
+
     OfxPointD radius;
     getCircleRadius(pscale, &radius);
 
     glPushMatrix();
     glTranslated(center.x, center.y, 0.);
-
-#ifdef INVERT_INTERACT
-#warning "inverting interact makes no sense, please explain precisely why you need to invert it?"
-    bool inverted;
-    _invert->getValue(inverted);
-
-    if (inverted) {
-        skewOrderYX = !skewOrderYX;
-    }
-    GLdouble skewMatrix[16];
-    skewMatrix[0] = (skewOrderYX ? 1. : (1.+skewX*skewY)); skewMatrix[1] = inverted ? -skewY : skewY; skewMatrix[2] = 0.; skewMatrix[3] = 0;
-    skewMatrix[4] = inverted ? -skewX : skewX; skewMatrix[5] = (skewOrderYX ? (1.+skewX*skewY) : 1.); skewMatrix[6] = 0.; skewMatrix[7] = 0;
-    skewMatrix[8] = 0.; skewMatrix[9] = 0.; skewMatrix[10] = 1.; skewMatrix[11] = 0;
-    skewMatrix[12] = 0.; skewMatrix[13] = 0.; skewMatrix[14] = 0.; skewMatrix[15] = 1.;
-
-    if (inverted) {
-        drawRotationBar(scale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered);
-        glMultMatrixd(skewMatrix);
-        glRotated(-angle, 0, 0., 1.);
-    } else {
-        glRotated(angle, 0, 0., 1.);
-        drawRotationBar(scale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered);
-        glMultMatrixd(skewMatrix);
-    }
-#else
 
     GLdouble skewMatrix[16];
     skewMatrix[0] = (skewOrderYX ? 1. : (1.+skewX*skewY)); skewMatrix[1] = skewY; skewMatrix[2] = 0.; skewMatrix[3] = 0;
@@ -1355,9 +1387,8 @@ TransformInteract::draw(const OFX::DrawArgs &args)
     skewMatrix[12] = 0.; skewMatrix[13] = 0.; skewMatrix[14] = 0.; skewMatrix[15] = 1.;
 
     glRotated(angle, 0, 0., 1.);
-    drawRotationBar(pscale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered);
+    drawRotationBar(pscale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered, inverted);
     glMultMatrixd(skewMatrix);
-#endif
     glTranslated(-center.x, -center.y, 0.);
     
     drawEllipse(center, radius, pscale, _mouseState == eDraggingCircle || _drawState == eCircleHovered);
@@ -1509,35 +1540,6 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     penPos.y = args.penPosition.y;
     penPos.z = 1.;
 
-#ifdef INVERT_INTERACT
-    bool inverted;
-    _invert->getValue(inverted);
-    
-    Transform2D::Matrix3x3 rotation, transform, transformscale;
-    ////for the rotation bar dragging we dont use the same transform, we don't want to undo the rotation transform
-    if (_mouseState != eDraggingRotationBar && _mouseState != eDraggingCenterPoint) {
-        ///undo skew + rotation to the current position
-        if (!inverted) {
-            rotation = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
-            transform = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-            transformscale = Transform2D::matInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-        } else {
-            rotation = Transform2D::matTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
-            transform = Transform2D::matTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-            transformscale = Transform2D::matTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-        }
-    } else {
-        if (!inverted) {
-            rotation = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
-            transform = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
-            transformscale = Transform2D::matInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
-        } else {
-            rotation = Transform2D::matTransformCanonical(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
-            transform = Transform2D::matTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
-            transformscale = Transform2D::matTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
-        }
-    }
-#else
     Transform2D::Matrix3x3 rotation, transform, transformscale;
     ////for the rotation bar dragging we dont use the same transform, we don't want to undo the rotation transform
     if (_mouseState != eDraggingRotationBar && _mouseState != eDraggingCenterPoint) {
@@ -1550,7 +1552,6 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         transform = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
         transformscale = Transform2D::matInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
     }
-#endif
 
     rotationPos = rotation * penPos;
     rotationPos.x /= rotationPos.z;
@@ -1649,32 +1650,20 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         ///which can be computed by : angle = arctan(opposite / adjacent)
         diffToCenter.y = rotationPos.y - center.y;
         diffToCenter.x = rotationPos.x - center.x;
-#ifdef INVERT_INTERACT
-        double angle = std::atan2(inverted ? -diffToCenter.y : diffToCenter.y, diffToCenter.x);
-#else
         double angle = std::atan2(diffToCenter.y, diffToCenter.x);
-#endif
         _rotate->setValue(Transform2D::toDegrees(angle));
         
     } else if (_mouseState == eDraggingSkewXBar) {
         // avoid division by zero
         if (scale.y != 0. && center.y != previousPos.y) {
             const double addSkew = (scale.x/scale.y)*(currentPos.x - previousPos.x)/(currentPos.y - center.y);
-#ifdef INVERT_INTERACT
-            _skewX->setValue(inverted ? skewX - addSkew : skewX + addSkew);
-#else
             _skewX->setValue(skewX + addSkew);
-#endif
         }
     } else if (_mouseState == eDraggingSkewYBar) {
         // avoid division by zero
         if (scale.x != 0. && center.x != previousPos.x) {
             const double addSkew = (scale.y/scale.x)*(currentPos.y - previousPos.y)/(currentPos.x - center.x);
-#ifdef INVERT_INTERACT
-            _skewY->setValue(inverted ? skewY - addSkew : skewY + addSkew);
-#else
             _skewY->setValue(skewY + addSkew);
-#endif
         }
     } else {
         assert(false);
@@ -1725,26 +1714,10 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     
     double rot = Transform2D::toRadians(currentRotation);
 
-#ifdef INVERT_INTERACT
-    bool inverted;
-    _invert->getValue(inverted);
-    
-    ///now undo skew + rotation to the current position
-    Transform2D::Matrix3x3 rotation, transform;
-    if (!inverted) {
-        rotation = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
-        transform = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-    } else {
-        rotation = Transform2D::matTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
-        transform = Transform2D::matTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-
-    }
-#else
     ///now undo skew + rotation to the current position
     Transform2D::Matrix3x3 rotation, transform;
     rotation = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
     transform = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-#endif
 
     rotationPos = rotation * transformedPos;
     rotationPos.x /= rotationPos.z;
