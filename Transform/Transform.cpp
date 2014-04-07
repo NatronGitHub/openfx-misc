@@ -70,7 +70,18 @@
  
  */
 
-// uncomment the following to enable the experimental host transform code
+/*
+   Although the indications from nuke/fnOfxExtensions.h were followed, and the
+   kFnOfxImageEffectActionGetTransform action was implemented in the Support
+   library, that action is never called by the Nuke host, so it cannot be tested.
+   The code is left here for reference or for further extension.
+
+   There is also an open question about how the last plugin in a transform chain
+   may get the concatenated transform from upstream, the untransformed source image,
+   concatenate its own transform and apply the resulting transform in its render
+   action. Should the host be doing this instead?
+*/
+// Uncomment the following to enable the experimental host transform code.
 //#define ENABLE_HOST_TRANSFORM
 
 #include "Transform.h"
@@ -1960,7 +1971,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     //
 #ifdef OFX_EXTENSIONS_NUKE
     if (getImageEffectHostDescription()->canTransform) {
-        std::cout << "kFnOfxImageEffectCanTransform (describeincontext)=" << desc.getPropertySet().propGetInt(kFnOfxImageEffectCanTransform) << std::endl;
+        std::cout << "kFnOfxImageEffectCanTransform in describeincontext(" << context << ")=" << desc.getPropertySet().propGetInt(kFnOfxImageEffectCanTransform) << std::endl;
     }
 #endif
 }
@@ -1980,7 +1991,7 @@ void TransformMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
-    //desc.addSupportedContext(eContextPaint);
+    desc.addSupportedContext(eContextPaint);
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
