@@ -187,6 +187,7 @@ void SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginDescription("Lets you switch between any number of inputs.");
 
     // add the supported contexts
+    desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextFilter);
 
     // add supported pixel depths
