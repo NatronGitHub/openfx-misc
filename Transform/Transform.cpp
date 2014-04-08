@@ -416,6 +416,7 @@ class TransformProcessor : public TransformProcessorBase
     {
         float maskScale = 1.0f;
         float tmpPix[nComponents];
+        const OfxRectI srcBounds = _srcImg->getBounds();
 
         assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; y++)
@@ -450,7 +451,6 @@ class TransformProcessor : public TransformProcessorBase
                     // GENERIC TRANSFORM
                     // from here on, everything is generic, and should be moved to a generic transform class
                     // Important: (0,0) is the *corner*, not the *center* of the first pixel (see OpenFX specs)
-                    const OfxRectI srcBounds = _srcImg->getBounds();
                     switch (filter) {
                         case eImpulseFilter: {
                             ///nearest neighboor
