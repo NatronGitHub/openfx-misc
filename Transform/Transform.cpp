@@ -245,16 +245,56 @@ Clamp(T v, int min, int max)
     return v;
 }
 
-static double sinc(double x)
-{
-    x = (x * M_PI);
+/*
+ Maple code to compute the filters.
 
-    if ((x < 0.01f) && (x > -0.01f))
-        return 1.0f + x*x*(-1.0f/6.0f + x*x*1.0f/120.0f);
+ # Mitchell, D. and A. Netravali, "Reconstruction Filters in Computer Graphics."
+ # http://www.cs.utexas.edu/users/fussell/courses/cs384g/lectures/mitchell/Mitchell.pdf
+ # Computer Graphics, Vol. 22, No. 4, pp. 221-228.
+ # (B, C)
+ # (1/3, 1/3) - Defaults recommended by Mitchell and Netravali
+ # (1, 0) - Equivalent to the Cubic B-Spline
+ # (0, 0.5) - Equivalent to the Catmull-Rom Spline
+ # (0, C) - The family of Cardinal Cubic Splines
+ # (B, 0) - Duff's tensioned B-Splines.
+ unassign('Ip'):unassign('Ic'):unassign('In'):unassign('Ia'):
+ unassign('Jp'):unassign('Jc'):unassign('Jn'):unassign('Ja'):
+ P:= x -> ((12-9*B-6*C)*x**3 + (-18+12*B+6*C)*x**2+(6-2*B))/6;
+ Q:= x -> ((-B-6*C)*x**3 + (6*B+30*C)*x**2 + (-12*B-48*C)*x + (8*B+24*C))/6;
 
-    return sin(x) / x;
-}
+ R := d -> Q(d+1)*Ip + P(d)*Ic + P(1-d) * In + Q(2-d)*Ia;
 
+ # how does it perform on a linear function?
+ R0 :=  d -> Q(d+1)*(Ic-1) + P(d)*Ic + P(1-d) * (Ic+1) + Q(2-d)*(Ic+2);
+
+ # Cubic (cubic splines - depends only on In and Ic, derivatives are 0 at the center of each sample)
+ collect(subs({B=0,C=0},R(d)),d);
+ collect(subs({B=0,C=0},R0(d)),d);
+
+ # Catmull-Rom / Keys / Hermite spline - gives linear func if input is linear
+ collect(subs({B=0,C=0.5},R(d)),d);
+ collect(subs({B=0,C=0.5},R0(d)),d);
+
+ # Simon
+ collect(subs({B=0,C=0.75},R(d)),d);
+ collect(subs({B=0,C=0.75},R0(d)),d);
+
+ # Rifman
+ collect(subs({B=0,C=1.},R(d)),d);
+ collect(subs({B=0,C=1.},R0(d)),d);
+
+ # Mitchell - gives linear func if input is linear
+ collect(subs({B=1/3, C=1/3},R(d)),d);
+ collect(subs({B=1/3, C=1/3},R0(d)),d);
+
+ # Parzen (Cubic B-spline) - gives linear func if input is linear
+ collect(subs({B=1,C=0},R(d)),d);
+ collect(subs({B=1,C=0},R0(d)),d);
+
+ # Notch - gives linear func if input is linear
+ collect(subs({B=3/2,C=-1/4},R(d)),d);
+ collect(subs({B=3/2,C=-1/4},R0(d)),d);
+*/
 static inline double
 clampcn(double I, double Ic, double In)
 {
@@ -2444,3 +2484,4 @@ OFX::ImageEffect* TransformMaskedPluginFactory::createInstance(OfxImageEffectHan
 {
     return new TransformPlugin(handle, true);
 }
+
