@@ -269,6 +269,20 @@ clampcn(double I, double Ic, double In)
 
 static inline
 double
+Linear(double Ic, double In, double d)
+{
+    return Ic + d*(In - Ic);
+}
+
+static inline
+double
+Cubic(double Ic, double In, double d)
+{
+    return Ic + d*d*((-3*Ic +3*In ) + d*(2*Ic -2*In ));
+}
+
+static inline
+double
 Keys(double Ip, double Ic, double In, double Ia, double d, bool clamp)
 {
     double I = Ic  + d*((-Ip +In ) + d*((2*Ip -5*Ic +4*In -Ia ) + d*(-Ip +3*Ic -3*In +Ia )))/2;
@@ -446,12 +460,14 @@ class TransformProcessor : public TransformProcessorBase
 #define GETI(i,j)                   const double I ## i ## j = get(P ## i ## j,c)
                                     GETI(c,c); GETI(n,c); GETI(c,n); GETI(n,n);
                                     if (_filter == eBilinearFilter) {
-                                        tmpPix[c] = Icc + dx*(Inc-Icc + dy*(Icc+Inn-Icn-Inc)) + dy*(Icn-Icc);
+                                        double Ic = Linear(Icc, Inc, dx);
+                                        double In = Linear(Icn, Inn, dx);
+                                        tmpPix[c] = Linear(Ic , In , dy);
                                     } else {
                                         assert(_filter == eCubicFilter);
-                                        double Ic = ((2*Icc-2*Inc)*dx + (-3*Icc+3*Inc))*dx*dx + Icc;
-                                        double In = ((2*Icn-2*Inn)*dx + (-3*Icn+3*Inn))*dx*dx + Icn;
-                                        tmpPix[c] = ((2*Ic -2*In )*dy + (-3*Ic +3*In ))*dy*dy + Ic;
+                                        double Ic = Cubic(Icc, Inc, dx);
+                                        double In = Cubic(Icn, Inn, dx);
+                                        tmpPix[c] = Cubic(Ic , In , dy);
                                     }
                                 }
                             } else {
