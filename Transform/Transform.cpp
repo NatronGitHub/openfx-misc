@@ -123,9 +123,44 @@
 #define kHostTransformParamName "Host transform"
 // GENERIC
 #define kFilterParamName "Filter"
+#define kFilterParamHint "Filtering algorithm - some filters may produce values outside of the initial range (*) or modify the values even if there is no movement (+)."
+#define kClampParamName "Clamp"
+#define kClampParamHint "Clamp filter output within the original range - useful to avoid negative values in mattes"
 #define kBlackOutsideParamName "Black outside"
+#define kBlackOutsideParamHint "Fill the area outside the source image with black"
 #define kMaskParamName "Mask"
 #define kMixParamName "Mix"
+
+enum FilterEnum {
+    eImpulseFilter,
+    eBilinearFilter,
+    eCubicFilter,
+    eKeysFilter,
+    eSimonFilter,
+    eRifmanFilter,
+    eMitchellFilter,
+    eParzenFilter,
+    eNotchFilter,
+};
+
+#define kImpulseFilter "Impulse"
+#define kImpulseFilterHint "(nearest neighbor / box) Use original values"
+#define kBilinearFilter "Bilinear"
+#define kBilinearFilterHint "(tent / triangle) Bilinear interpolation between original values"
+#define kCubicFilter "Cubic"
+#define kCubicFilterHint "(cubic spline) Some smoothing"
+#define kKeysFilter "Keys"
+#define kKeysFilterHint "(Catmull-Rom / Hermite spline) Some smoothing, plus minor sharpening (*)"
+#define kSimonFilter "Simon"
+#define kSimonFilterHint "Some smoothing, plus medium sharpening (*)"
+#define kRifmanFilter "Rifman"
+#define kRifmanFilterHint "Some smoothing, plus significant sharpening (*)"
+#define kMitchellFilter "Mitchell"
+#define kMitchellFilterHint "Some smoothing, plus blurring to hide pixelation (*+)"
+#define kParzenFilter "Parzen"
+#define kParzenFilterHint "(cubic B-spline) Greatest smoothing of all filters (+)"
+#define kNotchFilter "Notch"
+#define kNotchFilterHint "Flat smoothing (which tends to hide moire' patterns) (+)"
 
 #define CIRCLE_RADIUS_BASE 30.0
 #define POINT_SIZE 7.0
@@ -141,7 +176,8 @@ protected:
     // NON-GENERIC PARAMETERS:
     Transform2D::Matrix3x3 _invtransform;
     // GENERIC PARAMETERS:
-    int _filter;
+    FilterEnum _filter;
+    bool _clamp;
     bool _blackOutside;
     bool _domask;
     double _mix;
@@ -153,7 +189,8 @@ public:
     , _srcImg(0)
     , _maskImg(0)
     , _invtransform()
-    , _filter(0)
+    , _filter(eImpulseFilter)
+    , _clamp(false)
     , _blackOutside(false)
     , _domask(false)
     , _mix(1.0)
@@ -178,7 +215,8 @@ public:
                    double pixelaspectratio, //!< 1.067 for PAL, where 720x576 pixels occupy 768x576 in canonical coords
                    const OfxPointD& renderscale, //!< 0.5 for a half-resolution image
                    FieldEnum fieldToRender,
-                   int filter,                 //!< generic
+                   FilterEnum filter,                 //!< generic
+                   bool clamp, //!< generic
                    bool blackOutside, //!< generic
                    double mix)          //!< generic
     {
@@ -189,6 +227,7 @@ public:
                          Transform2D::matPixelToCanonical(pixelaspectratio, renderscale.x, renderscale.y, fielded));
         // GENERIC
         _filter = filter;
+        _clamp = clamp;
         _blackOutside = blackOutside;
         _mix = mix;
     }
@@ -203,6 +242,106 @@ Clamp(T v, int min, int max)
     if(v > T(max)) return T(max);
     return v;
 }
+
+static double sinc(double x)
+{
+    x = (x * M_PI);
+
+    if ((x < 0.01f) && (x > -0.01f))
+        return 1.0f + x*x*(-1.0f/6.0f + x*x*1.0f/120.0f);
+
+    return sin(x) / x;
+}
+
+static inline double
+clampcn(double I, double Ic, double In)
+{
+    double Imin = std::min(Ic, In);
+    if (I < Imin)
+        return Imin;
+    double Imax = std::max(Ic, In);
+    if (I > Imax)
+        return Imax;
+    return I;
+}
+
+static inline
+double
+Keys(double Ip, double Ic, double In, double Ia, double d, bool clamp)
+{
+    double I = Ic  + d*((-Ip +In ) + d*((2*Ip -5*Ic +4*In -Ia ) + d*(-Ip +3*Ic -3*In +Ia )))/2;
+    if (clamp) {
+        I = clampcn(I, Ic, In);
+    }
+    return I;
+}
+
+static inline
+double
+Simon(double Ip, double Ic, double In, double Ia, double d, bool clamp)
+{
+    double I = Ic  + d*((-3*Ip +3*In ) + d*((6*Ip -9*Ic +6*In -3*Ia ) + d*(-3*Ip +5*Ic -5*In +3*Ia )))/4;
+    if (clamp) {
+        I = clampcn(I, Ic, In);
+    }
+    return I;
+}
+
+static inline double
+Rifman(double Ip, double Ic, double In, double Ia, double d, bool clamp)
+{
+    double I = Ic  + d*((-Ip +In ) + d*((2*Ip -2*Ic +In -Ia ) + d*(-Ip +Ic -In +Ia )));
+    if (clamp) {
+        I = clampcn(I, Ic, In);
+    }
+    return I;
+}
+
+static inline double
+Mitchell(double Ip, double Ic, double In, double Ia, double d, bool clamp)
+{
+    double I = (Ip +16*Ic +In + d*((-9*Ip +9*In ) + d*((15*Ip -36*Ic +27*In -6*Ia ) + d*(-7*Ip +21*Ic -21*In +7*Ia ))))/18;
+    if (clamp) {
+        I = clampcn(I, Ic, In);
+    }
+    return I;
+}
+
+static inline double
+Parzen(double Ip, double Ic, double In, double Ia, double d, bool clamp)
+{
+    double I = (Ip +4*Ic +In + d*((-3*Ip +3*In ) + d*((3*Ip -6*Ic +3*In ) + d*(-Ip +3*Ic -3*In +Ia ))))/6;
+    return I;
+}
+
+static inline double
+Notch(double Ip, double Ic, double In, double Ia, double d, bool clamp)
+{
+    double I = (Ip +2*Ic +In + d*((-2*Ip +2*In ) + d*((Ip -Ic -In +Ia ))))/4;
+    return I;
+}
+
+#define APPLY4(f,j) double I ## j = f(Ip ## j, Ic ## j, In ## j, Ia ##j, dx, clamp)
+
+#define CUBIC2D(f)                                      \
+static inline                                           \
+double                                                  \
+f ## 2D(double Ipp, double Icp, double Inp, double Iap, \
+        double Ipc, double Icc, double Inc, double Iac, \
+        double Ipn, double Icn, double Inn, double Ian, \
+        double Ipa, double Ica, double Ina, double Iaa, \
+        double dx, double dy, bool clamp)               \
+{                                                       \
+    APPLY4(f,p); APPLY4(f,c); APPLY4(f,n); APPLY4(f,a); \
+    return f(Ip , Ic , In , Ia , dy, clamp);            \
+}
+
+CUBIC2D(Keys);
+CUBIC2D(Simon);
+CUBIC2D(Rifman);
+CUBIC2D(Mitchell);
+CUBIC2D(Parzen);
+CUBIC2D(Notch);
 
 template <class PIX, int nComponents, int maxValue, bool masked>
 class TransformProcessor : public TransformProcessorBase
@@ -254,132 +393,153 @@ class TransformProcessor : public TransformProcessorBase
                     // from here on, everything is generic, and should be moved to a generic transform class
                     // Important: (0,0) is the *corner*, not the *center* of the first pixel (see OpenFX specs)
                     const OfxRectI srcBounds = _srcImg->getBounds();
-                    if (_filter == 0) {
-                        ///nearest neighboor
-                        // the center of pixel (0,0) has coordinates (0.5,0.5)
-                        int x = std::floor(fx); // don't add 0.5
-                        int y = std::floor(fy); // don't add 0.5
+                    switch (_filter) {
+                        case eImpulseFilter: {
+                            ///nearest neighboor
+                            // the center of pixel (0,0) has coordinates (0.5,0.5)
+                            int mx = std::floor(fx); // don't add 0.5
+                            int my = std::floor(fy); // don't add 0.5
+                            
+                            if (!_blackOutside) {
+                                //mx = std::max(srcBounds.x1,std::min(mx,srcBounds.x2-1));
+                                //my = std::max(srcBounds.y1,std::min(my,srcBounds.y2-1));
+#define CLAMPXY(m)              m ## x = std::max(srcBounds.x1,std::min(m ## x,srcBounds.x2-1)); \
+                                m ## y = std::max(srcBounds.y1,std::min(m ## y,srcBounds.y2-1))
+                                CLAMPXY(m);
+                            }
+                            PIX *srcPix = (PIX *)_srcImg->getPixelAddress(mx, my);
+                            if (srcPix) {
+                                for (int c = 0; c < nComponents; ++c) {
+                                    tmpPix[c] = srcPix[c];
+                                }
+                            } else {
+                                for (int c = 0; c < nComponents; ++c) {
+                                    tmpPix[c] = 0;
+                                }
+                            }
+                        }
+                            break;
+                        case eBilinearFilter:
+                        case eCubicFilter: {
+                            // bilinear or cubic
+                            // the center of pixel (0,0) has coordinates (0.5,0.5)
+                            int cx = std::floor(fx-0.5);
+                            int cy = std::floor(fy-0.5);
+                            int nx = cx + 1;
+                            int ny = cy + 1;
+                            if (!_blackOutside) {
+                                CLAMPXY(c);
+                                CLAMPXY(n);
+                            }
+
+                            const double dx = std::max(0., std::min(fx-0.5 - cx, 1.));
+                            const double dy = std::max(0., std::min(fy-0.5 - cy, 1.));
                         
-                        if (!_blackOutside) {
-                            x = std::max(srcBounds.x1,std::min(x,srcBounds.x2-1));
-                            y = std::max(srcBounds.y1,std::min(y,srcBounds.y2-1));
-                        }
-                        PIX *srcPix = (PIX *)_srcImg->getPixelAddress(x, y);
-                        if (srcPix) {
-                            for (int c = 0; c < nComponents; ++c) {
-                                tmpPix[c] = srcPix[c];
+                            //PIX *Pcc = (PIX *)_srcImg->getPixelAddress(cx, cy);, etc.
+#define GETPIX(i,j)         PIX *P ## i ## j = (PIX *)_srcImg->getPixelAddress(i ## x, j ## y)
+                            GETPIX(c,c); GETPIX(n,c); GETPIX(c,n); GETPIX(n,n);
+                            if (Pcc || Pnc || Pcn || Pnn) {
+                                for (int c = 0; c < nComponents; ++c) {
+                                    //const double Icc = get(Pcc,c);, etc.
+#define GETI(i,j)                   const double I ## i ## j = get(P ## i ## j,c)
+                                    GETI(c,c); GETI(n,c); GETI(c,n); GETI(n,n);
+                                    if (_filter == eBilinearFilter) {
+                                        tmpPix[c] = Icc + dx*(Inc-Icc + dy*(Icc+Inn-Icn-Inc)) + dy*(Icn-Icc);
+                                    } else {
+                                        assert(_filter == eCubicFilter);
+                                        double Ic = ((2*Icc-2*Inc)*dx + (-3*Icc+3*Inc))*dx*dx + Icc;
+                                        double In = ((2*Icn-2*Inn)*dx + (-3*Icn+3*Inn))*dx*dx + Icn;
+                                        tmpPix[c] = ((2*Ic -2*In )*dy + (-3*Ic +3*In ))*dy*dy + Ic;
+                                    }
+                                }
+                            } else {
+                                for (int c = 0; c < nComponents; ++c) {
+                                    tmpPix[c] = 0;
+                                }
                             }
-                        } else {
-                            for (int c = 0; c < nComponents; ++c) {
-                                tmpPix[c] = 0;
+                        }
+                            break;
+
+                            // (B,C) cubic filters
+                        case eKeysFilter:
+                        case eSimonFilter:
+                        case eRifmanFilter:
+                        case eMitchellFilter:
+                        case eParzenFilter:
+                        case eNotchFilter: {
+                            // the center of pixel (0,0) has coordinates (0.5,0.5)
+                            int cx = std::floor(fx-0.5);
+                            int cy = std::floor(fy-0.5);
+                            int px = cx - 1;
+                            int py = cy - 1;
+                            int nx = cx + 1;
+                            int ny = cy + 1;
+                            int ax = cx + 2;
+                            int ay = cy + 2;
+                            if (!_blackOutside) {
+                                CLAMPXY(c);
+                                CLAMPXY(p);
+                                CLAMPXY(n);
+                                CLAMPXY(a);
                             }
-                        }
-                    } else if (_filter == 1) {
-                        // bilinear
-                        // the center of pixel (0,0) has coordinates (0.5,0.5)
-                        int x = std::floor(fx-0.5);
-                        int y = std::floor(fy-0.5);
-                        int nx = x + 1;
-                        int ny = y + 1;
-                        if (!_blackOutside) {
-                            x = std::max(srcBounds.x1,std::min(x,srcBounds.x2-1));
-                            y = std::max(srcBounds.y1,std::min(y,srcBounds.y2-1));
-                            nx = std::max(srcBounds.x1,std::min(nx,srcBounds.x2-1));
-                            ny = std::max(srcBounds.y1,std::min(ny,srcBounds.y2-1));
-                        }
+                            const double dx = std::max(0., std::min(fx-0.5 - cx, 1.));
+                            const double dy = std::max(0., std::min(fy-0.5 - cy, 1.));
                         
-                        const double dx = std::max(0., std::min(fx-0.5 - x, 1.));
-                        const double dy = std::max(0., std::min(fy-0.5 - y, 1.));
-                        
-                        PIX *Pcc = (PIX *)_srcImg->getPixelAddress( x,  y);
-                        PIX *Pnc = (PIX *)_srcImg->getPixelAddress(nx,  y);
-                        PIX *Pcn = (PIX *)_srcImg->getPixelAddress( x, ny);
-                        PIX *Pnn = (PIX *)_srcImg->getPixelAddress(nx, ny);
-                        if (Pcc || Pnc || Pcn || Pnn) {
-                            for (int c = 0; c < nComponents; ++c) {
-                                const double Icc = get(Pcc,c);
-                                const double Inc = get(Pnc,c);
-                                const double Icn = get(Pcn,c);
-                                const double Inn = get(Pnn,c);
-                                
-                                tmpPix[c] = Icc + dx*(Inc-Icc + dy*(Icc+Inn-Icn-Inc)) + dy*(Icn-Icc);
-                            }
-                        } else {
-                            for (int c = 0; c < nComponents; ++c) {
-                                tmpPix[c] = 0;
-                            }
-                        }
-                    } else if (_filter == 2) {
-                        // bicubic
-                        // the center of pixel (0,0) has coordinates (0.5,0.5)
-                        int x = std::floor(fx-0.5);
-                        int y = std::floor(fy-0.5);
-                        int px = x - 1;
-                        int py = y - 1;
-                        int nx = x + 1;
-                        int ny = y + 1;
-                        int ax = x + 2;
-                        int ay = y + 2;
-                        if (!_blackOutside) {
-                            x = std::max(srcBounds.x1,std::min(x,srcBounds.x2-1));
-                            y = std::max(srcBounds.y1,std::min(y,srcBounds.y2-1));
-                            px = std::max(srcBounds.x1,std::min(px,srcBounds.x2-1));
-                            py = std::max(srcBounds.y1,std::min(py,srcBounds.y2-1));
-                            nx = std::max(srcBounds.x1,std::min(nx,srcBounds.x2-1));
-                            ny = std::max(srcBounds.y1,std::min(ny,srcBounds.y2-1));
-                            ax = std::max(srcBounds.x1,std::min(ax,srcBounds.x2-1));
-                            ay = std::max(srcBounds.y1,std::min(ay,srcBounds.y2-1));
-                        }
-                        const double dx = std::max(0., std::min(fx-0.5 - x, 1.));
-                        const double dy = std::max(0., std::min(fy-0.5 - y, 1.));
-                        
-                        PIX *Ppp = (PIX *)_srcImg->getPixelAddress(px, py);
-                        PIX *Pcp = (PIX *)_srcImg->getPixelAddress( x, py);
-                        PIX *Pnp = (PIX *)_srcImg->getPixelAddress(nx, py);
-                        PIX *Pap = (PIX *)_srcImg->getPixelAddress(nx, py);
-                        PIX *Ppc = (PIX *)_srcImg->getPixelAddress(px,  y);
-                        PIX *Pcc = (PIX *)_srcImg->getPixelAddress( x,  y);
-                        PIX *Pnc = (PIX *)_srcImg->getPixelAddress(nx,  y);
-                        PIX *Pac = (PIX *)_srcImg->getPixelAddress(nx,  y);
-                        PIX *Ppn = (PIX *)_srcImg->getPixelAddress(px, ny);
-                        PIX *Pcn = (PIX *)_srcImg->getPixelAddress( x, ny);
-                        PIX *Pnn = (PIX *)_srcImg->getPixelAddress(nx, ny);
-                        PIX *Pan = (PIX *)_srcImg->getPixelAddress(nx, ny);
-                        PIX *Ppa = (PIX *)_srcImg->getPixelAddress(px, ay);
-                        PIX *Pca = (PIX *)_srcImg->getPixelAddress( x, ay);
-                        PIX *Pna = (PIX *)_srcImg->getPixelAddress(nx, ay);
-                        PIX *Paa = (PIX *)_srcImg->getPixelAddress(nx, ay);
-                        if (Ppp || Pcp || Pnp || Pap || Ppc || Pcc || Pnc || Pac || Ppn || Pcn || Pnn || Pan || Ppa || Pca || Pna || Paa) {
-                            for (int c = 0; c < nComponents; ++c) {
-                                double Ipp = get(Ppp,c);
-                                double Icp = get(Pcp,c);
-                                double Inp = get(Pnp,c);
-                                double Iap = get(Pap,c);
-                                double Ipc = get(Ppc,c);
-                                double Icc = get(Pcc,c);
-                                double Inc = get(Pnc,c);
-                                double Iac = get(Pac,c);
-                                double Ipn = get(Ppn,c);
-                                double Icn = get(Pcn,c);
-                                double Inn = get(Pnn,c);
-                                double Ian = get(Pan,c);
-                                double Ipa = get(Ppa,c);
-                                double Ica = get(Pca,c);
-                                double Ina = get(Pna,c);
-                                double Iaa = get(Paa,c);
-                                double Ip = Icp + 0.5f*(dx*(-Ipp+Inp) + dx*dx*(2*Ipp-5*Icp+4*Inp-Iap) + dx*dx*dx*(-Ipp+3*Icp-3*Inp+Iap));
-                                double Ic = Icc + 0.5f*(dx*(-Ipc+Inc) + dx*dx*(2*Ipc-5*Icc+4*Inc-Iac) + dx*dx*dx*(-Ipc+3*Icc-3*Inc+Iac));
-                                double In = Icn + 0.5f*(dx*(-Ipn+Inn) + dx*dx*(2*Ipn-5*Icn+4*Inn-Ian) + dx*dx*dx*(-Ipn+3*Icn-3*Inn+Ian));
-                                double Ia = Ica + 0.5f*(dx*(-Ipa+Ina) + dx*dx*(2*Ipa-5*Ica+4*Ina-Iaa) + dx*dx*dx*(-Ipa+3*Ica-3*Ina+Iaa));
-                                tmpPix[c] =  Ic + 0.5f*(dy*(-Ip+In) + dy*dy*(2*Ip-5*Ic+4*In-Ia) + dy*dy*dy*(-Ip+3*Ic-3*In+Ia));
-                            }
-                        } else {
-                            for (int c = 0; c < nComponents; ++c) {
-                                tmpPix[c] = 0;
+#define GETPIX4(i)          GETPIX(i,p); GETPIX(i,c); GETPIX(i,n); GETPIX(i,a);
+                            GETPIX4(p); GETPIX4(c); GETPIX4(n); GETPIX4(a);
+                            if (Ppp || Pcp || Pnp || Pap || Ppc || Pcc || Pnc || Pac || Ppn || Pcn || Pnn || Pan || Ppa || Pca || Pna || Paa) {
+                                for (int c = 0; c < nComponents; ++c) {
+                                    //double Ipp = get(Ppp,c);, etc.
+#define GETI4(i)                    GETI(i,p); GETI(i,c); GETI(i,n); GETI(i,a);
+                                    GETI4(p); GETI4(c); GETI4(n); GETI4(a);
+                                    double I = 0.;
+#define I44                         Ipp, Icp, Inp, Iap, \
+                                    Ipc, Icc, Inc, Iac, \
+                                    Ipn, Icn, Inn, Ian, \
+                                    Ipa, Ica, Ina, Iaa
+                                    switch (_filter) {
+                                        case eKeysFilter:
+                                            I = Keys2D(I44, dx, dy, _clamp);
+                                            break;
+                                        case eSimonFilter:
+                                            I = Simon2D(I44, dx, dy, _clamp);
+                                            break;
+                                        case eRifmanFilter:
+                                            I = Rifman2D(I44, dx, dy, _clamp);
+                                            break;
+                                        case eMitchellFilter:
+                                            I = Mitchell2D(I44, dx, dy, _clamp);
+                                            break;
+                                        case eParzenFilter:
+                                            I = Parzen2D(I44, dx, dy, false);
+                                            break;
+                                        case eNotchFilter:
+                                            I = Notch2D(I44, dx, dy, false);
+                                            break;
+                                        default:
+                                            assert(0);
+                                    }
+                                    tmpPix[c] = I;
+                                }
+                            } else {
+                                for (int c = 0; c < nComponents; ++c) {
+                                    tmpPix[c] = 0;
+                                }
                             }
                         }
+                            break;
+
+                        //case eLanczos4Filter:
+                        //case eSinc4Filter:
+                        //    break;
+
+                        //case eLanczos6Filter:
+                        //    break;
+
+                        default:
+                            assert(0);
+                            break;
                     }
-                    
                 }
                 
                 PIX *maskPix = NULL;
@@ -459,6 +619,7 @@ public:
     , _center(0)
     , _invert(0)
     , _filter(0)
+    , _clamp(0)
     , _blackOutside(0)
     , _masked(masked)
     , _domask(0)
@@ -481,6 +642,7 @@ public:
         _invert = fetchBooleanParam(kInvertParamName);
         // GENERIC
         _filter = fetchChoiceParam(kFilterParamName);
+        _clamp = fetchBooleanParam(kClampParamName);
         _blackOutside = fetchBooleanParam(kBlackOutsideParamName);
         if (masked) {
             _domask = fetchBooleanParam(kMaskParamName);
@@ -523,6 +685,7 @@ private:
     OFX::BooleanParam* _invert;
     // GENERIC
     OFX::ChoiceParam* _filter;
+    OFX::BooleanParam* _clamp;
     OFX::BooleanParam* _blackOutside;
     bool _masked;
     OFX::BooleanParam* _domask;
@@ -562,6 +725,7 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         bool invert;
         // GENERIC
         int filter;
+        bool clamp;
         bool blackOutside;
         double mix = 1.;
         
@@ -581,6 +745,7 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         
         // GENERIC
         _filter->getValue(filter);
+        _clamp->getValue(clamp);
         _blackOutside->getValue(blackOutside);
         if (_masked) {
             _mix->getValueAtTime(args.time, mix);
@@ -597,7 +762,7 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
                             srcClip_->getPixelAspectRatio(),
                             args.renderScale, //!< 0.5 for a half-resolution image
                             args.fieldToRender,
-                            filter, blackOutside, mix);
+                            (FilterEnum)filter, clamp, blackOutside, mix);
     }
     
     // auto ptr for the mask.
@@ -681,8 +846,6 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     double t = std::max(std::max(topLeft.y, bottomLeft.y),std::max(topRight.y,bottomRight.y));
     
     // GENERIC
-    //int filter;
-    //_filter->getValue(filter);
     bool blackOutside;
     _blackOutside->getValue(blackOutside);
     
@@ -771,22 +934,31 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
 
     double pixelSizeX = srcClip_->getPixelAspectRatio() / args.renderScale.x;
     double pixelSizeY = 1. / args.renderScale.x;
-    if (filter == 0) {
-        // nearest neighbor, the exact region is OK
-    } else if (filter == 1) {
-        // bilinear, expand by 0.5 pixels
-        l -= 0.5*pixelSizeX;
-        r += 0.5*pixelSizeX;
-        b -= 0.5*pixelSizeY;
-        t += 0.5*pixelSizeY;
-    } else if (filter == 2) {
-        // bicubic, expand by 1.5 pixels
-        l -= 1.5*pixelSizeX;
-        r += 1.5*pixelSizeX;
-        b -= 1.5*pixelSizeY;
-        t += 1.5*pixelSizeY;
+    switch (filter) {
+        case eImpulseFilter:
+            // nearest neighbor, the exact region is OK
+            break;
+        case eBilinearFilter:
+        case eCubicFilter:
+            // bilinear or cubic, expand by 0.5 pixels
+            l -= 0.5*pixelSizeX;
+            r += 0.5*pixelSizeX;
+            b -= 0.5*pixelSizeY;
+            t += 0.5*pixelSizeY;
+            break;
+        case eKeysFilter:
+        case eSimonFilter:
+        case eRifmanFilter:
+        case eMitchellFilter:
+        case eParzenFilter:
+        case eNotchFilter:
+            // bicubic, expand by 1.5 pixels
+            l -= 1.5*pixelSizeX;
+            r += 1.5*pixelSizeX;
+            b -= 1.5*pixelSizeY;
+            t += 1.5*pixelSizeY;
+            break;
     }
-    
     
     if (_masked) {
         // set it on the mask only if we are in an interesting context
@@ -862,7 +1034,14 @@ TransformPlugin::render(const OFX::RenderArguments &args)
         } else {
             renderInternal<4,false>(args, dstBitDepth);
         }
+    } else if (dstComponents == OFX::ePixelComponentRGB) {
+        if (_masked) {
+            renderInternal<3,true>(args, dstBitDepth);
+        } else {
+            renderInternal<3,false>(args, dstBitDepth);
+        }
     } else {
+        assert(dstComponents == OFX::ePixelComponentAlpha);
         if (_masked) {
             renderInternal<3,true>(args, dstBitDepth);
         } else {
@@ -1926,16 +2105,41 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     //
     ChoiceParamDescriptor* filter = desc.defineChoiceParam(kFilterParamName);
     filter->setLabels(kFilterParamName, kFilterParamName, kFilterParamName);
-    filter->setDefault(2);
-    filter->appendOption("Nearest neighboor");
-    filter->appendOption("Bilinear");
-    filter->appendOption("Bicubic");
+    filter->setHint(kFilterParamHint);
+    assert(filter->getNOptions() == eImpulseFilter);
+    filter->appendOption(kImpulseFilter, kImpulseFilterHint);
+    assert(filter->getNOptions() == eBilinearFilter);
+    filter->appendOption(kBilinearFilter, kBilinearFilterHint);
+    assert(filter->getNOptions() == eCubicFilter);
+    filter->appendOption(kCubicFilter, kCubicFilterHint);
+    assert(filter->getNOptions() == eKeysFilter);
+    filter->appendOption(kKeysFilter, kKeysFilterHint);
+    assert(filter->getNOptions() == eSimonFilter);
+    filter->appendOption(kSimonFilter, kSimonFilterHint);
+    assert(filter->getNOptions() == eRifmanFilter);
+    filter->appendOption(kRifmanFilter, kRifmanFilterHint);
+    assert(filter->getNOptions() == eMitchellFilter);
+    filter->appendOption(kMitchellFilter, kMitchellFilterHint);
+    assert(filter->getNOptions() == eParzenFilter);
+    filter->appendOption(kParzenFilter, kParzenFilterHint);
+    assert(filter->getNOptions() == eNotchFilter);
+    filter->appendOption(kNotchFilter, kNotchFilterHint);
+    filter->setDefault(eCubicFilter);
     filter->setAnimates(false);
     filter->setLayoutHint(OFX::eLayoutHintNoNewLine);
     page->addChild(*filter);
-    
+
+    BooleanParamDescriptor* clamp = desc.defineBooleanParam(kClampParamName);
+    clamp->setLabels(kClampParamName, kClampParamName, kClampParamName);
+    clamp->setHint(kClampParamHint);
+    clamp->setDefault(false);
+    clamp->setAnimates(false);
+    clamp->setLayoutHint(OFX::eLayoutHintNoNewLine);
+    page->addChild(*clamp);
+
     BooleanParamDescriptor* blackOutside = desc.defineBooleanParam(kBlackOutsideParamName);
     blackOutside->setLabels(kBlackOutsideParamName, kBlackOutsideParamName, kBlackOutsideParamName);
+    blackOutside->setHint(kBlackOutsideParamHint);
     blackOutside->setDefault(true);
     blackOutside->setAnimates(false);
     page->addChild(*blackOutside);
@@ -2007,6 +2211,7 @@ void TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(true);
     srcClip->setIsMask(false);
@@ -2029,6 +2234,8 @@ void TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(true);
 
 
@@ -2108,14 +2315,38 @@ void TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     //
     ChoiceParamDescriptor* filter = desc.defineChoiceParam(kFilterParamName);
     filter->setLabels(kFilterParamName, kFilterParamName, kFilterParamName);
-    filter->setDefault(2);
-    filter->appendOption("Nearest neighboor");
-    filter->appendOption("Bilinear");
-    filter->appendOption("Bicubic");
+    filter->setHint(kFilterParamHint);
+    assert(filter->getNOptions() == eImpulseFilter);
+    filter->appendOption(kImpulseFilter, kImpulseFilterHint);
+    assert(filter->getNOptions() == eBilinearFilter);
+    filter->appendOption(kBilinearFilter, kBilinearFilterHint);
+    assert(filter->getNOptions() == eCubicFilter);
+    filter->appendOption(kCubicFilter, kCubicFilterHint);
+    assert(filter->getNOptions() == eKeysFilter);
+    filter->appendOption(kKeysFilter, kKeysFilterHint);
+    assert(filter->getNOptions() == eSimonFilter);
+    filter->appendOption(kSimonFilter, kSimonFilterHint);
+    assert(filter->getNOptions() == eRifmanFilter);
+    filter->appendOption(kRifmanFilter, kRifmanFilterHint);
+    assert(filter->getNOptions() == eMitchellFilter);
+    filter->appendOption(kMitchellFilter, kMitchellFilterHint);
+    assert(filter->getNOptions() == eParzenFilter);
+    filter->appendOption(kParzenFilter, kParzenFilterHint);
+    assert(filter->getNOptions() == eNotchFilter);
+    filter->appendOption(kNotchFilter, kNotchFilterHint);
+    filter->setDefault(eCubicFilter);
     filter->setAnimates(false);
     filter->setLayoutHint(OFX::eLayoutHintNoNewLine);
     page->addChild(*filter);
 
+    BooleanParamDescriptor* clamp = desc.defineBooleanParam(kClampParamName);
+    clamp->setLabels(kClampParamName, kClampParamName, kClampParamName);
+    clamp->setHint(kClampParamHint);
+    clamp->setDefault(false);
+    clamp->setAnimates(false);
+    clamp->setLayoutHint(OFX::eLayoutHintNoNewLine);
+    page->addChild(*clamp);
+    
     BooleanParamDescriptor* blackOutside = desc.defineBooleanParam(kBlackOutsideParamName);
     blackOutside->setLabels(kBlackOutsideParamName, kBlackOutsideParamName, kBlackOutsideParamName);
     blackOutside->setDefault(true);
