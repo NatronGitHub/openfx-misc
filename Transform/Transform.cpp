@@ -114,6 +114,8 @@
 #define kTranslateParamName "Translate"
 #define kRotateParamName "Rotate"
 #define kScaleParamName "Scale"
+#define kScaleUniformParamName "Uniform"
+#define kScaleUniformParamHint "Use same scale for both directions"
 #define kSkewXParamName "Skew X"
 #define kSkewYParamName "Skew Y"
 #define kSkewOrderParamName "Skew order"
@@ -613,6 +615,7 @@ public:
     , _translate(0)
     , _rotate(0)
     , _scale(0)
+    , _scaleUniform(0)
     , _skewX(0)
     , _skewY(0)
     , _skewOrder(0)
@@ -635,6 +638,7 @@ public:
         _translate = fetchDouble2DParam(kTranslateParamName);
         _rotate = fetchDoubleParam(kRotateParamName);
         _scale = fetchDouble2DParam(kScaleParamName);
+        _scaleUniform = fetchBooleanParam(kScaleUniformParamName);
         _skewX = fetchDoubleParam(kSkewXParamName);
         _skewY = fetchDoubleParam(kSkewYParamName);
         _skewOrder = fetchChoiceParam(kSkewOrderParamName);
@@ -678,6 +682,7 @@ private:
     OFX::Double2DParam* _translate;
     OFX::DoubleParam* _rotate;
     OFX::Double2DParam* _scale;
+    OFX::BooleanParam* _scaleUniform;
     OFX::DoubleParam* _skewX;
     OFX::DoubleParam* _skewY;
     OFX::ChoiceParam* _skewOrder;
@@ -717,6 +722,7 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         
         // NON-GENERIC
         double scaleX, scaleY;
+        bool scaleUniform;
         double translateX, translateY;
         double rotate;
         double skewX, skewY;
@@ -731,6 +737,10 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         
         // NON-GENERIC
         _scale->getValueAtTime(args.time, scaleX, scaleY);
+        _scaleUniform->getValue(scaleUniform);
+        if (scaleUniform) {
+            scaleY = scaleX;
+        }
         _translate->getValueAtTime(args.time, translateX, translateY);
         _rotate->getValueAtTime(args.time, rotate);
         rotate = Transform2D::toRadians(rotate);
@@ -808,13 +818,13 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     double centerX, centerY;
     bool invert;
     
-    _scale->getValueAtTime(args.time, scaleX, scaleY);
-    _translate->getValueAtTime(args.time, translateX, translateY);
-    
-    _rotate->getValueAtTime(args.time, rotate);
-    
     // NON-GENERIC
     _scale->getValueAtTime(args.time, scaleX, scaleY);
+    bool scaleUniform;
+    _scaleUniform->getValue(scaleUniform);
+    if (scaleUniform) {
+        scaleY = scaleX;
+    }
     _translate->getValueAtTime(args.time, translateX, translateY);
     _rotate->getValueAtTime(args.time, rotate);
     rotate = Transform2D::toRadians(rotate);
@@ -891,6 +901,11 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     
     // NON-GENERIC
     _scale->getValueAtTime(args.time, scaleX, scaleY);
+    bool scaleUniform;
+    _scaleUniform->getValue(scaleUniform);
+    if (scaleUniform) {
+        scaleY = scaleX;
+    }
     _translate->getValueAtTime(args.time, translateX, translateY);
     _rotate->getValueAtTime(args.time, rotate);
     rotate = Transform2D::toRadians(rotate);
@@ -1059,6 +1074,11 @@ bool TransformPlugin::isIdentity(const RenderArguments &args, Clip * &identityCl
     double rotate;
     double skewX, skewY;
     _scale->getValueAtTime(args.time, scale.x, scale.y);
+    bool scaleUniform;
+    _scaleUniform->getValue(scaleUniform);
+    if (scaleUniform) {
+        scale.y = scale.x;
+    }
     _translate->getValueAtTime(args.time, translate.x, translate.y);
     _rotate->getValueAtTime(args.time, rotate);
     _skewX->getValueAtTime(args.time, skewX);
@@ -1101,6 +1121,11 @@ bool TransformPlugin::getTransform(const TransformArguments &args, Clip * &trans
     std::cout << "getTransform called!" << std::endl;
     // NON-GENERIC
     _scale->getValueAtTime(args.time, scaleX, scaleY);
+    bool scaleUniform;
+    _scaleUniform->getValue(scaleUniform);
+    if (scaleUniform) {
+        scaleY = scaleX;
+    }
     _translate->getValueAtTime(args.time, translateX, translateY);
     _rotate->getValueAtTime(args.time, rotate);
     rotate = Transform2D::toRadians(rotate);
@@ -1189,6 +1214,7 @@ class TransformInteract : public OFX::OverlayInteract {
         _translate = _plugin->fetchDouble2DParam(kTranslateParamName);
         _rotate = _plugin->fetchDoubleParam(kRotateParamName);
         _scale = _plugin->fetchDouble2DParam(kScaleParamName);
+        _scaleUniform = _plugin->fetchBooleanParam(kScaleUniformParamName);
         _skewX = _plugin->fetchDoubleParam(kSkewXParamName);
         _skewY = _plugin->fetchDoubleParam(kSkewYParamName);
         _skewOrder = _plugin->fetchChoiceParam(kSkewOrderParamName);
@@ -1232,6 +1258,11 @@ private:
     void getScale(OfxPointD* scale)
     {
         _scale->getValue(scale->x, scale->y);
+        bool scaleUniform;
+        _scaleUniform->getValue(scaleUniform);
+        if (scaleUniform) {
+            scale->y = scale->x;
+        }
     }
     
     void getCircleRadius(const OfxPointD& pixelScale, OfxPointD* radius)
@@ -1288,6 +1319,7 @@ private:
     OFX::Double2DParam* _translate;
     OFX::DoubleParam* _rotate;
     OFX::Double2DParam* _scale;
+    OFX::BooleanParam* _scaleUniform;
     OFX::DoubleParam* _skewX;
     OFX::DoubleParam* _skewY;
     OFX::ChoiceParam* _skewOrder;
@@ -1328,12 +1360,6 @@ drawEllipse(const OfxPointD& center,
                                const OfxPointD& pixelScale,
                                bool hovered)
 {
-    // we are not axis-aligned
-    double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
-    double two_pi = 2. * Transform2D::pi();
-    float angle_increment = two_pi / std::max(radius.x / meanPixelScale, radius.y / meanPixelScale);
-    
-    
     if (hovered) {
         glColor4f(1.0, 0.0, 0.0, 1.0);
     } else {
@@ -1345,7 +1371,10 @@ drawEllipse(const OfxPointD& center,
     glTranslatef (center.x, center.y, 0);
     //  draw the oval using line segments
     glBegin (GL_LINE_LOOP);
-    for (double theta = 0.0f; theta < two_pi; theta += angle_increment) {
+    // we don't need to be pixel-perfect here, it's just an interact!
+    // 40 segments is enough.
+    for (int i = 0; i < 40; ++i) {
+        double theta = i * 2 * Transform2D::pi() / 40.;
         glVertex2f (radius.x * std::cos(theta), radius.y * std::sin(theta));
     }
     glEnd ();
@@ -1435,35 +1464,31 @@ drawRotationBar(const OfxPointD& pixelScale,
         arrowRadius.x = 5. * meanPixelScale;
         arrowRadius.y = 10. * meanPixelScale;
         
-        float angle_increment = Transform2D::pi() / 10.;
         glPushMatrix ();
         //  center the oval at x_center, y_center
         glTranslatef (arrowCenterX, 0., 0);
         //  draw the oval using line segments
         glBegin (GL_LINE_STRIP);
-        for (double theta = - Transform2D::pi() / 2.; theta < Transform2D::pi() / 2.; theta += angle_increment) {
-            glVertex2f (arrowRadius.x * std::cos(theta), arrowRadius.y * std::sin(theta));
-        }
+        glVertex2f (0, arrowRadius.y);
+        glVertex2f (arrowRadius.x, 0.);
+        glVertex2f (0, -arrowRadius.y);
         glEnd ();
         
 
-        double arrowOffsetX = 5. * meanPixelScale;
-        double arrowOffsetY = 5. * meanPixelScale;
-        
         glBegin(GL_LINES);
         ///draw the top head
         glVertex2f(0., arrowRadius.y);
-        glVertex2f(0., arrowRadius.y - arrowOffsetY);
+        glVertex2f(0., arrowRadius.y - 5. * meanPixelScale);
         
         glVertex2f(0., arrowRadius.y);
-        glVertex2f(arrowOffsetX, arrowRadius.y + 1. * meanPixelScale);
+        glVertex2f(4. * meanPixelScale, arrowRadius.y - 3. * meanPixelScale); // 5^2 = 3^2+4^2
         
         ///draw the bottom head
         glVertex2f(0., -arrowRadius.y);
-        glVertex2f(0., -arrowRadius.y + arrowOffsetY);
+        glVertex2f(0., -arrowRadius.y + 5. * meanPixelScale);
         
         glVertex2f(0., -arrowRadius.y);
-        glVertex2f(arrowOffsetX, -arrowRadius.y - 1. * meanPixelScale);
+        glVertex2f(4. * meanPixelScale, -arrowRadius.y + 3. * meanPixelScale); // 5^2 = 3^2+4^2
         
         glEnd();
 
@@ -1578,6 +1603,11 @@ TransformInteract::draw(const OFX::DrawArgs &args)
     if (_drawState == eSkewXBarHoverered || _drawState == eSkewYBarHoverered) {
         OfxPointD scale;
         _scale->getValue(scale.x, scale.y);
+        bool scaleUniform;
+        _scaleUniform->getValue(scaleUniform);
+        if (scaleUniform) {
+            scale.y = scale.x;
+        }
         double rot = Transform2D::toRadians(angle);
         Transform2D::Matrix3x3 transformscale;
         transformscale = Transform2D::matInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
@@ -1713,7 +1743,12 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     
     OfxPointD scale;
     _scale->getValue(scale.x, scale.y);
-    
+    bool scaleUniform;
+    _scaleUniform->getValue(scaleUniform);
+    if (scaleUniform) {
+        scale.y = scale.x;
+    }
+
     Transform2D::Point3D penPos, rotationPos, transformedPos, previousPos, currentPos;
     penPos.x = args.penPosition.x;
     penPos.y = args.penPosition.y;
@@ -1790,10 +1825,8 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
             const double distRatio = std::sqrt(distSq/prevDistSq);
             scale.x *= distRatio;
             scale.y *= distRatio;
+            _scale->setValue(scale.x, scale.y);
         }
-        
-        _scale->setValue(scale.x, scale.y);
-        
     } else if (_mouseState == eDraggingLeftPoint || _mouseState == eDraggingRightPoint) {
         // avoid division by zero
         if (center.x != previousPos.x) {
@@ -1802,6 +1835,9 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
             const double scaleRatio = (center.x - currentPos.x)/(center.x - previousPos.x);
             scale.x *= scaleRatio;
             scale.x = std::max(minX, std::min(scale.x, maxX));
+            if (scaleUniform) {
+                scale.y = scale.x;
+            }
             _scale->setValue(scale.x, scale.y);
         }
     } else if (_mouseState == eDraggingTopPoint || _mouseState == eDraggingBottomPoint) {
@@ -1812,6 +1848,9 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
             const double scaleRatio = (center.y - currentPos.y)/(center.y - previousPos.y);
             scale.y *= scaleRatio;
             scale.y = std::max(minY, std::min(scale.y, maxY));
+            if (scaleUniform) {
+                scale.x = scale.y;
+            }
             _scale->setValue(scale.x, scale.y);
         }
     } else if (_mouseState == eDraggingCenterPoint) {
@@ -2057,8 +2096,16 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     scale->setDefault(1,1);
     //scale->setRange(0.1,0.1,10,10);
     scale->setDisplayRange(0.1, 0.1, 10, 10);
+    scale->setLayoutHint(OFX::eLayoutHintNoNewLine);
     page->addChild(*scale);
     
+    BooleanParamDescriptor* scaleUniform = desc.defineBooleanParam(kScaleUniformParamName);
+    scaleUniform->setLabels(kScaleUniformParamName, kScaleUniformParamName, kScaleUniformParamName);
+    scaleUniform->setHint(kScaleUniformParamHint);
+    scaleUniform->setDefault(true);
+    scaleUniform->setAnimates(false);
+    page->addChild(*scaleUniform);
+
     DoubleParamDescriptor* skewX = desc.defineDoubleParam(kSkewXParamName);
     skewX->setLabels(kSkewXParamName, kSkewXParamName, kSkewXParamName);
     skewX->setDefault(0);
@@ -2267,7 +2314,15 @@ void TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     scale->setDefault(1,1);
     //scale->setRange(0.1,0.1,10,10);
     scale->setDisplayRange(0.1, 0.1, 10, 10);
+    scale->setLayoutHint(OFX::eLayoutHintNoNewLine);
     page->addChild(*scale);
+
+    BooleanParamDescriptor* scaleUniform = desc.defineBooleanParam(kScaleUniformParamName);
+    scaleUniform->setLabels(kScaleUniformParamName, kScaleUniformParamName, kScaleUniformParamName);
+    scaleUniform->setHint(kScaleUniformParamHint);
+    scaleUniform->setDefault(true);
+    scaleUniform->setAnimates(false);
+    page->addChild(*scaleUniform);
 
     DoubleParamDescriptor* skewX = desc.defineDoubleParam(kSkewXParamName);
     skewX->setLabels(kSkewXParamName, kSkewXParamName, kSkewXParamName);
