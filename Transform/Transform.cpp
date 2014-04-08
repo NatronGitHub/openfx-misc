@@ -399,7 +399,9 @@ CUBIC2D(Mitchell);
 CUBIC2D(Parzen);
 CUBIC2D(Notch);
 
-template <class PIX, int nComponents, int maxValue, bool masked>
+// The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
+// by the compiler, using the same generic code for all filters.
+template <class PIX, int nComponents, int maxValue, bool masked, FilterEnum filter, bool clamp>
 class TransformProcessor : public TransformProcessorBase
 {
     
@@ -408,14 +410,14 @@ class TransformProcessor : public TransformProcessorBase
     TransformProcessor(OFX::ImageEffect &instance)
     : TransformProcessorBase(instance)
     {
-        
     }
     
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         float maskScale = 1.0f;
         float tmpPix[nComponents];
-        
+
+        assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; y++)
         {
             if(_effect.abort()) break;
@@ -449,7 +451,7 @@ class TransformProcessor : public TransformProcessorBase
                     // from here on, everything is generic, and should be moved to a generic transform class
                     // Important: (0,0) is the *corner*, not the *center* of the first pixel (see OpenFX specs)
                     const OfxRectI srcBounds = _srcImg->getBounds();
-                    switch (_filter) {
+                    switch (filter) {
                         case eImpulseFilter: {
                             ///nearest neighboor
                             // the center of pixel (0,0) has coordinates (0.5,0.5)
@@ -499,15 +501,16 @@ class TransformProcessor : public TransformProcessorBase
                                     //const double Icc = get(Pcc,c);, etc.
 #define GETI(i,j)                   const double I ## i ## j = get(P ## i ## j,c)
                                     GETI(c,c); GETI(n,c); GETI(c,n); GETI(n,n);
-                                    if (_filter == eBilinearFilter) {
+                                    if (filter == eBilinearFilter) {
                                         double Ic = Linear(Icc, Inc, dx);
                                         double In = Linear(Icn, Inn, dx);
                                         tmpPix[c] = Linear(Ic , In , dy);
-                                    } else {
-                                        assert(_filter == eCubicFilter);
+                                    } else if (filter == eCubicFilter) {
                                         double Ic = Cubic(Icc, Inc, dx);
                                         double In = Cubic(Icn, Inn, dx);
                                         tmpPix[c] = Cubic(Ic , In , dy);
+                                    } else {
+                                        assert(0);
                                     }
                                 }
                             } else {
@@ -555,18 +558,18 @@ class TransformProcessor : public TransformProcessorBase
                                     Ipc, Icc, Inc, Iac, \
                                     Ipn, Icn, Inn, Ian, \
                                     Ipa, Ica, Ina, Iaa
-                                    switch (_filter) {
+                                    switch (filter) {
                                         case eKeysFilter:
-                                            I = Keys2D(I44, dx, dy, _clamp);
+                                            I = Keys2D(I44, dx, dy, clamp);
                                             break;
                                         case eSimonFilter:
-                                            I = Simon2D(I44, dx, dy, _clamp);
+                                            I = Simon2D(I44, dx, dy, clamp);
                                             break;
                                         case eRifmanFilter:
-                                            I = Rifman2D(I44, dx, dy, _clamp);
+                                            I = Rifman2D(I44, dx, dy, clamp);
                                             break;
                                         case eMitchellFilter:
-                                            I = Mitchell2D(I44, dx, dy, _clamp);
+                                            I = Mitchell2D(I44, dx, dy, clamp);
                                             break;
                                         case eParzenFilter:
                                             I = Parzen2D(I44, dx, dy, false);
@@ -727,6 +730,9 @@ public:
 #endif
 
     /* internal render function */
+    template <class PIX, int nComponents, int maxValue, bool masked>
+    void renderInternalForBitDepth(const OFX::RenderArguments &args);
+
     template <int nComponents, bool masked>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
@@ -1059,6 +1065,87 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
 }
 
 
+template <class PIX, int nComponents, int maxValue, bool masked>
+void
+TransformPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
+{
+    int filter;
+    _filter->getValue(filter);
+    bool clamp;
+    _clamp->getValue(clamp);
+
+    // as you may see below, some filters don't need explicit clamping, since they are
+    // "clamped" by construction.
+    switch ((FilterEnum)filter) {
+        case eImpulseFilter:
+        {
+            TransformProcessor<PIX, nComponents, maxValue, masked, eImpulseFilter, false> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case eBilinearFilter:
+        {
+            TransformProcessor<PIX, nComponents, maxValue, masked, eBilinearFilter, false> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case eCubicFilter:
+        {
+            TransformProcessor<PIX, nComponents, maxValue, masked, eCubicFilter, false> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case eKeysFilter:
+            if (clamp) {
+                TransformProcessor<PIX, nComponents, maxValue, masked, eKeysFilter, true> fred(*this);
+                setupAndProcess(fred, args);
+            } else {
+                TransformProcessor<PIX, nComponents, maxValue, masked, eKeysFilter, false> fred(*this);
+                setupAndProcess(fred, args);
+            }
+            break;
+        case eSimonFilter:
+            if (clamp) {
+                TransformProcessor<PIX, nComponents, maxValue, masked, eSimonFilter, true> fred(*this);
+                setupAndProcess(fred, args);
+            } else {
+                TransformProcessor<PIX, nComponents, maxValue, masked, eSimonFilter, false> fred(*this);
+                setupAndProcess(fred, args);
+            }
+            break;
+        case eRifmanFilter:
+            if (clamp) {
+                TransformProcessor<PIX, nComponents, maxValue, masked, eRifmanFilter, true> fred(*this);
+                setupAndProcess(fred, args);
+            } else {
+                TransformProcessor<PIX, nComponents, maxValue, masked, eRifmanFilter, false> fred(*this);
+                setupAndProcess(fred, args);
+            }
+            break;
+        case eMitchellFilter:
+            if (clamp) {
+                TransformProcessor<PIX, nComponents, maxValue, masked, eMitchellFilter, true> fred(*this);
+                setupAndProcess(fred, args);
+            } else {
+                TransformProcessor<PIX, nComponents, maxValue, masked, eMitchellFilter, false> fred(*this);
+                setupAndProcess(fred, args);
+            }
+            break;
+        case eParzenFilter:
+        {
+            TransformProcessor<PIX, nComponents, maxValue, masked, eParzenFilter, false> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case eNotchFilter:
+        {
+            TransformProcessor<PIX, nComponents, maxValue, masked, eNotchFilter, false> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+    }
+}
+
 // the internal render function
 template <int nComponents, bool masked>
 void
@@ -1067,23 +1154,14 @@ TransformPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthE
     switch(dstBitDepth)
     {
         case OFX::eBitDepthUByte :
-        {
-            TransformProcessor<unsigned char, 4, 255, masked> fred(*this);
-            setupAndProcess(fred, args);
+            renderInternalForBitDepth<unsigned char, nComponents, 255, masked>(args);
             break;
-        }
         case OFX::eBitDepthUShort :
-        {
-            TransformProcessor<unsigned short, 4, 65535, masked> fred(*this);
-            setupAndProcess(fred, args);
+            renderInternalForBitDepth<unsigned short, nComponents, 65535, masked>(args);
             break;
-        }
         case OFX::eBitDepthFloat :
-        {
-            TransformProcessor<float, 4, 1, masked> fred(*this);
-            setupAndProcess(fred, args);
+            renderInternalForBitDepth<float, nComponents, 1, masked>(args);
             break;
-        }
         default :
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
