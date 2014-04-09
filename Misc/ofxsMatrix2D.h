@@ -41,6 +41,7 @@
 namespace OFX {
 
 // NEVER define a variable/constant in a header (said it 100 times already)
+// an inline function is OK
 inline double ofxsPi() { return 3.14159265358979323846264338327950288419717; }
 
     
@@ -395,4 +396,4 @@ ofxsMatTransformPixel(double pixelaspectratio, //!< 1.067 for PAL, where 720x576
 
 };
 
-#endif _OFXS_MATRIX2D_H_
+#endif // _OFXS_MATRIX2D_H_
