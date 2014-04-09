@@ -124,7 +124,6 @@
 #define kCenterParamName "Center"
 #define kInvertParamName "Invert"
 #define kShowOverlayParamName "Show overlay"
-#define kHostTransformParamName "Host transform"
 
 
 #define CIRCLE_RADIUS_BASE 30.0
@@ -890,7 +889,8 @@ class TransformInteract : public OFX::OverlayInteract {
         eDraggingRightPoint,
         eDraggingTopPoint,
         eDraggingBottomPoint,
-        eDraggingCenterPoint,
+        eDraggingTranslation,
+        eDraggingCenter,
         eDraggingRotationBar,
         eDraggingSkewXBar,
         eDraggingSkewYBar
@@ -898,6 +898,7 @@ class TransformInteract : public OFX::OverlayInteract {
     
     DrawStateEnum _drawState;
     MouseStateEnum _mouseState;
+    int _modifierStateCtrl;
     TransformPlugin* _plugin;
     OfxPointD _lastMousePos;
     
@@ -906,6 +907,7 @@ class TransformInteract : public OFX::OverlayInteract {
     : OFX::OverlayInteract(handle)
     , _drawState(eInActive)
     , _mouseState(eReleased)
+    , _modifierStateCtrl(0)
     , _plugin(dynamic_cast<TransformPlugin*>(effect))
     , _lastMousePos()
     {
@@ -939,7 +941,9 @@ class TransformInteract : public OFX::OverlayInteract {
     virtual bool penMotion(const OFX::PenArgs &args);
     virtual bool penDown(const OFX::PenArgs &args);
     virtual bool penUp(const OFX::PenArgs &args);
-    
+    virtual bool keyDown(const OFX::KeyArgs &args);
+    virtual bool keyUp(const OFX::KeyArgs &args);
+
 private:
     
     bool isOverlayDisplayed() const {
@@ -1032,13 +1036,18 @@ private:
 
 static void
 drawSquare(const OfxPointD& center,
-                              const OfxPointD& pixelScale,
-                              bool hovered)
+           const OfxPointD& pixelScale,
+           bool hovered,
+           bool althovered = false)
 {
     // we are not axis-aligned
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
     if (hovered) {
-        glColor4f(1.0, 0.0, 0.0, 1.0);
+        if (althovered) {
+            glColor4f(0.0, 1.0, 0.0, 1.0);
+        } else {
+            glColor4f(1.0, 0.0, 0.0, 1.0);
+        }
     } else {
         glColor4f(1.0, 1.0, 1.0, 1.0);
     }
@@ -1330,7 +1339,7 @@ TransformInteract::draw(const OFX::DrawArgs &args)
     drawSkewBar(center, pscale, radius.x, _mouseState == eDraggingSkewYBar || _drawState == eSkewYBarHoverered, flip - 90.);
     
     
-    drawSquare(center, pscale, _mouseState == eDraggingCenterPoint || _drawState == eCenterPointHovered);
+    drawSquare(center, pscale, _mouseState == eDraggingTranslation || _mouseState == eDraggingCenter || _drawState == eCenterPointHovered, _modifierStateCtrl);
     drawSquare(left, pscale, _mouseState == eDraggingLeftPoint || _drawState == eLeftPointHovered);
     drawSquare(right, pscale, _mouseState == eDraggingRightPoint || _drawState == eRightPointHovered);
     drawSquare(top, pscale, _mouseState == eDraggingTopPoint || _drawState == eTopPointHovered);
@@ -1451,14 +1460,17 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         scale.y = scale.x;
     }
 
-    OFX::Point3D penPos, rotationPos, transformedPos, previousPos, currentPos;
+    OFX::Point3D penPos, prevPenPos, rotationPos, transformedPos, previousPos, currentPos;
     penPos.x = args.penPosition.x;
     penPos.y = args.penPosition.y;
     penPos.z = 1.;
+    prevPenPos.x = _lastMousePos.x;
+    prevPenPos.y = _lastMousePos.y;
+    prevPenPos.z = 1.;
 
     OFX::Matrix3x3 rotation, transform, transformscale;
-    ////for the rotation bar dragging we dont use the same transform, we don't want to undo the rotation transform
-    if (_mouseState != eDraggingRotationBar && _mouseState != eDraggingCenterPoint) {
+    ////for the rotation bar/translation/center dragging we dont use the same transform, we don't want to undo the rotation transform
+    if (_mouseState != eDraggingRotationBar && _mouseState != eDraggingTranslation && _mouseState != eDraggingCenter) {
         ///undo skew + rotation to the current position
         rotation = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
         transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
@@ -1477,10 +1489,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     transformedPos.x /= transformedPos.z;
     transformedPos.y /= transformedPos.z;
     
-    previousPos.x = _lastMousePos.x;
-    previousPos.y = _lastMousePos.y;
-    previousPos.z = 1.;
-    previousPos = transformscale * previousPos;
+    previousPos = transformscale * prevPenPos;
     previousPos.x /= previousPos.z;
     previousPos.y /= previousPos.z;
     
@@ -1555,14 +1564,58 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
             }
             _scale->setValue(scale.x, scale.y);
         }
-    } else if (_mouseState == eDraggingCenterPoint) {
+    } else if (_mouseState == eDraggingTranslation) {
         OfxPointD currentTranslation;
         _translate->getValue(currentTranslation.x, currentTranslation.y);
         
         dx = args.penPosition.x - _lastMousePos.x;
         dy = args.penPosition.y - _lastMousePos.y;
-        currentTranslation.x += dx;
-        currentTranslation.y += dy;
+        double newx = currentTranslation.x + dx;
+        double newy = currentTranslation.y + dy;
+        // round newx/y to the closest int, 1/10 int, etc
+        // this make parameter editing easier
+        // pscale10 is the power of 10 below pscale
+        OfxPointD pscale10;
+        pscale10.x = std::pow(10.,std::floor(std::log10(pscale.x)));
+        pscale10.y = std::pow(10.,std::floor(std::log10(pscale.y)));
+        newx = pscale10.x * std::floor(newx/pscale10.x + 0.5);
+        newy = pscale10.y * std::floor(newy/pscale10.y + 0.5);
+        std::cout << pscale.x << std::endl;
+        _translate->setValue(newx,newy);
+    } else if (_mouseState == eDraggingCenter) {
+        OfxPointD currentTranslation;
+        _translate->getValue(currentTranslation.x, currentTranslation.y);
+        OfxPointD currentCenter;
+        _center->getValue(currentCenter.x, currentCenter.y);
+        OFX::Matrix3x3 R = ofxsMatRotation(rot);
+
+        dx = args.penPosition.x - _lastMousePos.x;
+        dy = args.penPosition.y - _lastMousePos.y;
+        OFX::Point3D dRot;
+        dRot.x = dx;
+        dRot.y = dy;
+        dRot.z = 1.;
+        dRot = R * dRot;
+        dRot.x /= dRot.z;
+        dRot.y /= dRot.z;
+        double dxrot = dRot.x;
+        double dyrot = dRot.y;
+        double newx = currentCenter.x + dxrot;
+        double newy = currentCenter.y + dyrot;
+        // round newx/y to the closest int, 1/10 int, etc
+        // this make parameter editing easier
+        // pscale10 is the power of 10 below pscale
+        OfxPointD pscale10;
+        pscale10.x = std::pow(10.,std::floor(std::log10(pscale.x)));
+        pscale10.y = std::pow(10.,std::floor(std::log10(pscale.y)));
+        newx = pscale10.x * std::floor(newx/pscale10.x + 0.5);
+        newy = pscale10.y * std::floor(newy/pscale10.y + 0.5);
+        _center->setValue(newx,newy);
+        // recompure dxrot,dyrot after rounding
+        dxrot = newx - currentCenter.x;
+        dyrot = newy - currentCenter.y;
+        currentTranslation.x += dx - dxrot;
+        currentTranslation.y += dy - dyrot;
         _translate->setValue(currentTranslation.x,currentTranslation.y);
     } else if (_mouseState == eDraggingRotationBar) {
         OfxPointD diffToCenter;
@@ -1650,7 +1703,7 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     double pressToleranceY = 5 * pscale.y;
     bool ret = true;
     if (squareContains(transformedPos, centerPoint,pressToleranceX,pressToleranceY)) {
-        _mouseState = eDraggingCenterPoint;
+        _mouseState = _modifierStateCtrl ? eDraggingCenter : eDraggingTranslation;
     } else if (squareContains(transformedPos, leftPoint,pressToleranceX,pressToleranceY)) {
         _mouseState = eDraggingLeftPoint;
     } else if (squareContains(transformedPos, rightPoint,pressToleranceX,pressToleranceY)) {
@@ -1680,7 +1733,6 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
 
 bool TransformInteract::penUp(const OFX::PenArgs &args)
 {
-    
     if (!isOverlayDisplayed()) {
         return false;
     }
@@ -1692,6 +1744,31 @@ bool TransformInteract::penUp(const OFX::PenArgs &args)
     return ret;
 }
 
+bool TransformInteract::keyDown(const OFX::KeyArgs &args)
+{
+    // Note that on the Mac:
+    // cmd/apple/cloverleaf is kOfxKey_Control_L
+    // ctrl is kOfxKey_Meta_L
+    // alt/option is kOfxKey_Alt_L
+
+    // the two control keys may be pressed consecutively, be aware about this
+    _modifierStateCtrl += args.keySymbol == kOfxKey_Control_L || args.keySymbol == kOfxKey_Control_R;
+    std::cout << std::hex << args.keySymbol << std::endl;
+    // modifiers are not "caught"
+    return false;
+}
+
+bool TransformInteract::keyUp(const OFX::KeyArgs &args)
+{
+    _modifierStateCtrl -= args.keySymbol == kOfxKey_Control_L || args.keySymbol == kOfxKey_Control_R;
+    if (_modifierStateCtrl < 0) {
+        // we may have missed a keypress
+        _modifierStateCtrl = 0;
+    }
+
+    // modifiers are not "caught"
+    return false;
+}
 
 using namespace OFX;
 
