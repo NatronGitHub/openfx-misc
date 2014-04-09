@@ -309,6 +309,8 @@
 		1EDE1BE4182D8983002392CB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EDE1BE5182D8983002392CB /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EDE1BE8182D8B18002392CB /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EF33E0F18F556CB003E62EF /* ofxsFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsFilter.h; sourceTree = "<group>"; };
+		1EF33E1018F556CB003E62EF /* ofxsMatrix2D.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsMatrix2D.h; sourceTree = "<group>"; };
 		D725A2C918E0D308001A1E3E /* Grade.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Grade.cpp; sourceTree = "<group>"; };
 		D725A2CA18E0D308001A1E3E /* Grade.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Grade.h; sourceTree = "<group>"; };
 		D725A2CB18E0D308001A1E3E /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -327,7 +329,6 @@
 		D7B4C96118D9DA410004137D /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D7B4C96218D9DA410004137D /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		D7B4C97418D9DB6E0004137D /* ColorCorrect.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorCorrect.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		D7E9B8ED18E88814007C52C2 /* Transform2D.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Transform2D.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -612,6 +613,8 @@
 		1E8B5D4618B769B400C31FDC /* Misc */ = {
 			isa = PBXGroup;
 			children = (
+				1EF33E0F18F556CB003E62EF /* ofxsFilter.h */,
+				1EF33E1018F556CB003E62EF /* ofxsMatrix2D.h */,
 				1E8B5D4718B769CA00C31FDC /* Info.plist */,
 				1E8B5D4818B769CA00C31FDC /* Makefile */,
 				1E8B5D4918B769CA00C31FDC /* PluginRegistrationCombined.cpp */,
@@ -729,7 +732,6 @@
 				D7349E8B18E7766F0097DB1D /* PluginRegistration.cpp */,
 				D7349E8C18E7766F0097DB1D /* Transform.cpp */,
 				D7349E8D18E7766F0097DB1D /* Transform.h */,
-				D7E9B8ED18E88814007C52C2 /* Transform2D.h */,
 			);
 			path = Transform;
 			sourceTree = "<group>";

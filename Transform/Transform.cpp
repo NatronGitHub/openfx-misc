@@ -104,7 +104,9 @@
 #include "nuke/fnOfxExtensions.h"
 #endif
 
-#include "Transform2D.h"
+#include "../Misc/ofxsFilter.h"
+
+#include "../Misc/ofxsMatrix2D.h"
 
 #ifndef ENABLE_HOST_TRANSFORM
 #undef OFX_EXTENSIONS_NUKE // host transform is the only nuke extension used
@@ -123,46 +125,7 @@
 #define kInvertParamName "Invert"
 #define kShowOverlayParamName "Show overlay"
 #define kHostTransformParamName "Host transform"
-// GENERIC
-#define kFilterParamName "Filter"
-#define kFilterParamHint "Filtering algorithm - some filters may produce values outside of the initial range (*) or modify the values even if there is no movement (+)."
-#define kClampParamName "Clamp"
-#define kClampParamHint "Clamp filter output within the original range - useful to avoid negative values in mattes"
-#define kBlackOutsideParamName "Black outside"
-#define kBlackOutsideParamHint "Fill the area outside the source image with black"
-#define kMaskParamName "Mask"
-#define kMixParamName "Mix"
 
-enum FilterEnum {
-    eImpulseFilter,
-    eBilinearFilter,
-    eCubicFilter,
-    eKeysFilter,
-    eSimonFilter,
-    eRifmanFilter,
-    eMitchellFilter,
-    eParzenFilter,
-    eNotchFilter,
-};
-
-#define kImpulseFilter "Impulse"
-#define kImpulseFilterHint "(nearest neighbor / box) Use original values"
-#define kBilinearFilter "Bilinear"
-#define kBilinearFilterHint "(tent / triangle) Bilinear interpolation between original values"
-#define kCubicFilter "Cubic"
-#define kCubicFilterHint "(cubic spline) Some smoothing"
-#define kKeysFilter "Keys"
-#define kKeysFilterHint "(Catmull-Rom / Hermite spline) Some smoothing, plus minor sharpening (*)"
-#define kSimonFilter "Simon"
-#define kSimonFilterHint "Some smoothing, plus medium sharpening (*)"
-#define kRifmanFilter "Rifman"
-#define kRifmanFilterHint "Some smoothing, plus significant sharpening (*)"
-#define kMitchellFilter "Mitchell"
-#define kMitchellFilterHint "Some smoothing, plus blurring to hide pixelation (*+)"
-#define kParzenFilter "Parzen"
-#define kParzenFilterHint "(cubic B-spline) Greatest smoothing of all filters (+)"
-#define kNotchFilter "Notch"
-#define kNotchFilterHint "Flat smoothing (which tends to hide moire' patterns) (+)"
 
 #define CIRCLE_RADIUS_BASE 30.0
 #define POINT_SIZE 7.0
@@ -176,228 +139,68 @@ protected:
     OFX::Image *_srcImg;
     OFX::Image *_maskImg;
     // NON-GENERIC PARAMETERS:
-    Transform2D::Matrix3x3 _invtransform;
+    OFX::Matrix3x3 _invtransform;
     // GENERIC PARAMETERS:
-    FilterEnum _filter;
-    bool _clamp;
+    //FilterEnum _filter;
+    //bool _clamp;
     bool _blackOutside;
     bool _domask;
     double _mix;
-    
+
 public:
-    
+
     TransformProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
     , _invtransform()
-    , _filter(eImpulseFilter)
-    , _clamp(false)
+    //, _filter(eFilterImpulse)
+    //, _clamp(false)
     , _blackOutside(false)
     , _domask(false)
     , _mix(1.0)
     {
     }
-    
+
+    virtual FilterEnum getFilter() const = 0;
+    virtual bool getClamp() const = 0;
+
     /** @brief set the src image */
     void setSrcImg(OFX::Image *v)
     {
         _srcImg = v;
     }
-    
-    
+
+
     /** @brief set the optional mask image */
     void setMaskImg(OFX::Image *v) {_maskImg = v;}
-    
+
     // Are we masking. We can't derive this from the mask image being set as NULL is a valid value for an input image
     void doMasking(bool v) {_domask = v;}
-    
-    void setValues(const Transform2D::Matrix3x3& invtransform, //!< non-generic
+
+    void setValues(const OFX::Matrix3x3& invtransform, //!< non-generic
                    // all generic parameters below
                    double pixelaspectratio, //!< 1.067 for PAL, where 720x576 pixels occupy 768x576 in canonical coords
                    const OfxPointD& renderscale, //!< 0.5 for a half-resolution image
                    FieldEnum fieldToRender,
-                   FilterEnum filter,                 //!< generic
-                   bool clamp, //!< generic
+                   //FilterEnum filter,                 //!< generic
+                   //bool clamp, //!< generic
                    bool blackOutside, //!< generic
                    double mix)          //!< generic
     {
         bool fielded = fieldToRender == eFieldLower || fieldToRender == eFieldUpper;
         // NON-GENERIC
-        _invtransform = (Transform2D::matCanonicalToPixel(pixelaspectratio, renderscale.x, renderscale.y, fielded) *
+        _invtransform = (OFX::ofxsMatCanonicalToPixel(pixelaspectratio, renderscale.x, renderscale.y, fielded) *
                          invtransform *
-                         Transform2D::matPixelToCanonical(pixelaspectratio, renderscale.x, renderscale.y, fielded));
+                         OFX::ofxsMatPixelToCanonical(pixelaspectratio, renderscale.x, renderscale.y, fielded));
         // GENERIC
-        _filter = filter;
-        _clamp = clamp;
+        //_filter = filter;
+        //_clamp = clamp;
         _blackOutside = blackOutside;
         _mix = mix;
     }
-
-
 };
 
-template <class T> inline T
-Clamp(T v, int min, int max)
-{
-    if(v < T(min)) return T(min);
-    if(v > T(max)) return T(max);
-    return v;
-}
-
-/*
- Maple code to compute the filters.
-
- # Mitchell, D. and A. Netravali, "Reconstruction Filters in Computer Graphics."
- # http://www.cs.utexas.edu/users/fussell/courses/cs384g/lectures/mitchell/Mitchell.pdf
- # Computer Graphics, Vol. 22, No. 4, pp. 221-228.
- # (B, C)
- # (1/3, 1/3) - Defaults recommended by Mitchell and Netravali
- # (1, 0) - Equivalent to the Cubic B-Spline
- # (0, 0.5) - Equivalent to the Catmull-Rom Spline
- # (0, C) - The family of Cardinal Cubic Splines
- # (B, 0) - Duff's tensioned B-Splines.
- unassign('Ip'):unassign('Ic'):unassign('In'):unassign('Ia'):
- unassign('Jp'):unassign('Jc'):unassign('Jn'):unassign('Ja'):
- P:= x -> ((12-9*B-6*C)*x**3 + (-18+12*B+6*C)*x**2+(6-2*B))/6;
- Q:= x -> ((-B-6*C)*x**3 + (6*B+30*C)*x**2 + (-12*B-48*C)*x + (8*B+24*C))/6;
-
- R := d -> Q(d+1)*Ip + P(d)*Ic + P(1-d) * In + Q(2-d)*Ia;
-
- # how does it perform on a linear function?
- R0 :=  d -> Q(d+1)*(Ic-1) + P(d)*Ic + P(1-d) * (Ic+1) + Q(2-d)*(Ic+2);
-
- # Cubic (cubic splines - depends only on In and Ic, derivatives are 0 at the center of each sample)
- collect(subs({B=0,C=0},R(d)),d);
- collect(subs({B=0,C=0},R0(d)),d);
-
- # Catmull-Rom / Keys / Hermite spline - gives linear func if input is linear
- collect(subs({B=0,C=0.5},R(d)),d);
- collect(subs({B=0,C=0.5},R0(d)),d);
-
- # Simon
- collect(subs({B=0,C=0.75},R(d)),d);
- collect(subs({B=0,C=0.75},R0(d)),d);
-
- # Rifman
- collect(subs({B=0,C=1.},R(d)),d);
- collect(subs({B=0,C=1.},R0(d)),d);
-
- # Mitchell - gives linear func if input is linear
- collect(subs({B=1/3, C=1/3},R(d)),d);
- collect(subs({B=1/3, C=1/3},R0(d)),d);
-
- # Parzen (Cubic B-spline) - gives linear func if input is linear
- collect(subs({B=1,C=0},R(d)),d);
- collect(subs({B=1,C=0},R0(d)),d);
-
- # Notch - gives linear func if input is linear
- collect(subs({B=3/2,C=-1/4},R(d)),d);
- collect(subs({B=3/2,C=-1/4},R0(d)),d);
-*/
-static inline double
-clampcn(double I, double Ic, double In)
-{
-    double Imin = std::min(Ic, In);
-    if (I < Imin)
-        return Imin;
-    double Imax = std::max(Ic, In);
-    if (I > Imax)
-        return Imax;
-    return I;
-}
-
-static inline
-double
-Linear(double Ic, double In, double d)
-{
-    return Ic + d*(In - Ic);
-}
-
-static inline
-double
-Cubic(double Ic, double In, double d)
-{
-    return Ic + d*d*((-3*Ic +3*In ) + d*(2*Ic -2*In ));
-}
-
-static inline
-double
-Keys(double Ip, double Ic, double In, double Ia, double d, bool clamp)
-{
-    double I = Ic  + d*((-Ip +In ) + d*((2*Ip -5*Ic +4*In -Ia ) + d*(-Ip +3*Ic -3*In +Ia )))/2;
-    if (clamp) {
-        I = clampcn(I, Ic, In);
-    }
-    return I;
-}
-
-static inline
-double
-Simon(double Ip, double Ic, double In, double Ia, double d, bool clamp)
-{
-    double I = Ic  + d*((-3*Ip +3*In ) + d*((6*Ip -9*Ic +6*In -3*Ia ) + d*(-3*Ip +5*Ic -5*In +3*Ia )))/4;
-    if (clamp) {
-        I = clampcn(I, Ic, In);
-    }
-    return I;
-}
-
-static inline double
-Rifman(double Ip, double Ic, double In, double Ia, double d, bool clamp)
-{
-    double I = Ic  + d*((-Ip +In ) + d*((2*Ip -2*Ic +In -Ia ) + d*(-Ip +Ic -In +Ia )));
-    if (clamp) {
-        I = clampcn(I, Ic, In);
-    }
-    return I;
-}
-
-static inline double
-Mitchell(double Ip, double Ic, double In, double Ia, double d, bool clamp)
-{
-    double I = (Ip +16*Ic +In + d*((-9*Ip +9*In ) + d*((15*Ip -36*Ic +27*In -6*Ia ) + d*(-7*Ip +21*Ic -21*In +7*Ia ))))/18;
-    if (clamp) {
-        I = clampcn(I, Ic, In);
-    }
-    return I;
-}
-
-static inline double
-Parzen(double Ip, double Ic, double In, double Ia, double d, bool clamp)
-{
-    double I = (Ip +4*Ic +In + d*((-3*Ip +3*In ) + d*((3*Ip -6*Ic +3*In ) + d*(-Ip +3*Ic -3*In +Ia ))))/6;
-    return I;
-}
-
-static inline double
-Notch(double Ip, double Ic, double In, double Ia, double d, bool clamp)
-{
-    double I = (Ip +2*Ic +In + d*((-2*Ip +2*In ) + d*((Ip -Ic -In +Ia ))))/4;
-    return I;
-}
-
-#define APPLY4(f,j) double I ## j = f(Ip ## j, Ic ## j, In ## j, Ia ##j, dx, clamp)
-
-#define CUBIC2D(f)                                      \
-static inline                                           \
-double                                                  \
-f ## 2D(double Ipp, double Icp, double Inp, double Iap, \
-        double Ipc, double Icc, double Inc, double Iac, \
-        double Ipn, double Icn, double Inn, double Ian, \
-        double Ipa, double Ica, double Ina, double Iaa, \
-        double dx, double dy, bool clamp)               \
-{                                                       \
-    APPLY4(f,p); APPLY4(f,c); APPLY4(f,n); APPLY4(f,a); \
-    return f(Ip , Ic , In , Ia , dy, clamp);            \
-}
-
-CUBIC2D(Keys);
-CUBIC2D(Simon);
-CUBIC2D(Rifman);
-CUBIC2D(Mitchell);
-CUBIC2D(Parzen);
-CUBIC2D(Notch);
 
 // The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
 // by the compiler, using the same generic code for all filters.
@@ -411,14 +214,15 @@ class TransformProcessor : public TransformProcessorBase
     : TransformProcessorBase(instance)
     {
     }
-    
+
+    virtual FilterEnum getFilter() const { return filter; }
+    virtual bool getClamp() const { return clamp; }
+
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        float maskScale = 1.0f;
         float tmpPix[nComponents];
-        const OfxRectI srcBounds = _srcImg->getBounds();
 
-        assert(filter == _filter);
+        //assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; y++)
         {
             if(_effect.abort()) break;
@@ -427,7 +231,7 @@ class TransformProcessor : public TransformProcessorBase
             
             // the coordinates of the center of the pixel in canonical coordinates
             // see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#CanonicalCoordinates
-            Transform2D::Point3D canonicalCoords;
+            OFX::Point3D canonicalCoords;
             canonicalCoords.z = 1;
             canonicalCoords.y = (double)y + 0.5;
             
@@ -438,7 +242,7 @@ class TransformProcessor : public TransformProcessorBase
                 // the coordinates of the center of the pixel in canonical coordinates
                 // see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#CanonicalCoordinates
                 canonicalCoords.x = (double)x + 0.5;
-                Transform2D::Point3D transformed = _invtransform * canonicalCoords;
+                OFX::Point3D transformed = _invtransform * canonicalCoords;
                 if (!_srcImg || transformed.z == 0.) {
                     // the back-transformed point is at infinity
                     for (int c = 0; c < nComponents; ++c) {
@@ -447,206 +251,13 @@ class TransformProcessor : public TransformProcessorBase
                 } else {
                     double fx = transformed.x / transformed.z;
                     double fy = transformed.y / transformed.z;
-                    
-                    // GENERIC TRANSFORM
-                    // from here on, everything is generic, and should be moved to a generic transform class
-                    // Important: (0,0) is the *corner*, not the *center* of the first pixel (see OpenFX specs)
-                    switch (filter) {
-                        case eImpulseFilter: {
-                            ///nearest neighboor
-                            // the center of pixel (0,0) has coordinates (0.5,0.5)
-                            int mx = std::floor(fx); // don't add 0.5
-                            int my = std::floor(fy); // don't add 0.5
-                            
-                            if (!_blackOutside) {
-                                //mx = std::max(srcBounds.x1,std::min(mx,srcBounds.x2-1));
-                                //my = std::max(srcBounds.y1,std::min(my,srcBounds.y2-1));
-#define CLAMPXY(m)              m ## x = std::max(srcBounds.x1,std::min(m ## x,srcBounds.x2-1)); \
-                                m ## y = std::max(srcBounds.y1,std::min(m ## y,srcBounds.y2-1))
-                                CLAMPXY(m);
-                            }
-                            PIX *srcPix = (PIX *)_srcImg->getPixelAddress(mx, my);
-                            if (srcPix) {
-                                for (int c = 0; c < nComponents; ++c) {
-                                    tmpPix[c] = srcPix[c];
-                                }
-                            } else {
-                                for (int c = 0; c < nComponents; ++c) {
-                                    tmpPix[c] = 0;
-                                }
-                            }
-                        }
-                            break;
-                        case eBilinearFilter:
-                        case eCubicFilter: {
-                            // bilinear or cubic
-                            // the center of pixel (0,0) has coordinates (0.5,0.5)
-                            int cx = std::floor(fx-0.5);
-                            int cy = std::floor(fy-0.5);
-                            int nx = cx + 1;
-                            int ny = cy + 1;
-                            if (!_blackOutside) {
-                                CLAMPXY(c);
-                                CLAMPXY(n);
-                            }
 
-                            const double dx = std::max(0., std::min(fx-0.5 - cx, 1.));
-                            const double dy = std::max(0., std::min(fy-0.5 - cy, 1.));
-                        
-                            //PIX *Pcc = (PIX *)_srcImg->getPixelAddress(cx, cy);, etc.
-#define GETPIX(i,j)         PIX *P ## i ## j = (PIX *)_srcImg->getPixelAddress(i ## x, j ## y)
-                            GETPIX(c,c); GETPIX(n,c); GETPIX(c,n); GETPIX(n,n);
-                            if (Pcc || Pnc || Pcn || Pnn) {
-                                for (int c = 0; c < nComponents; ++c) {
-                                    //const double Icc = get(Pcc,c);, etc.
-#define GETI(i,j)                   const double I ## i ## j = get(P ## i ## j,c)
-                                    GETI(c,c); GETI(n,c); GETI(c,n); GETI(n,n);
-                                    if (filter == eBilinearFilter) {
-                                        double Ic = Linear(Icc, Inc, dx);
-                                        double In = Linear(Icn, Inn, dx);
-                                        tmpPix[c] = Linear(Ic , In , dy);
-                                    } else if (filter == eCubicFilter) {
-                                        double Ic = Cubic(Icc, Inc, dx);
-                                        double In = Cubic(Icn, Inn, dx);
-                                        tmpPix[c] = Cubic(Ic , In , dy);
-                                    } else {
-                                        assert(0);
-                                    }
-                                }
-                            } else {
-                                for (int c = 0; c < nComponents; ++c) {
-                                    tmpPix[c] = 0;
-                                }
-                            }
-                        }
-                            break;
-
-                            // (B,C) cubic filters
-                        case eKeysFilter:
-                        case eSimonFilter:
-                        case eRifmanFilter:
-                        case eMitchellFilter:
-                        case eParzenFilter:
-                        case eNotchFilter: {
-                            // the center of pixel (0,0) has coordinates (0.5,0.5)
-                            int cx = std::floor(fx-0.5);
-                            int cy = std::floor(fy-0.5);
-                            int px = cx - 1;
-                            int py = cy - 1;
-                            int nx = cx + 1;
-                            int ny = cy + 1;
-                            int ax = cx + 2;
-                            int ay = cy + 2;
-                            if (!_blackOutside) {
-                                CLAMPXY(c);
-                                CLAMPXY(p);
-                                CLAMPXY(n);
-                                CLAMPXY(a);
-                            }
-                            const double dx = std::max(0., std::min(fx-0.5 - cx, 1.));
-                            const double dy = std::max(0., std::min(fy-0.5 - cy, 1.));
-                        
-#define GETPIX4(i)          GETPIX(i,p); GETPIX(i,c); GETPIX(i,n); GETPIX(i,a);
-                            GETPIX4(p); GETPIX4(c); GETPIX4(n); GETPIX4(a);
-                            if (Ppp || Pcp || Pnp || Pap || Ppc || Pcc || Pnc || Pac || Ppn || Pcn || Pnn || Pan || Ppa || Pca || Pna || Paa) {
-                                for (int c = 0; c < nComponents; ++c) {
-                                    //double Ipp = get(Ppp,c);, etc.
-#define GETI4(i)                    GETI(i,p); GETI(i,c); GETI(i,n); GETI(i,a);
-                                    GETI4(p); GETI4(c); GETI4(n); GETI4(a);
-                                    double I = 0.;
-#define I44                         Ipp, Icp, Inp, Iap, \
-                                    Ipc, Icc, Inc, Iac, \
-                                    Ipn, Icn, Inn, Ian, \
-                                    Ipa, Ica, Ina, Iaa
-                                    switch (filter) {
-                                        case eKeysFilter:
-                                            I = Keys2D(I44, dx, dy, clamp);
-                                            break;
-                                        case eSimonFilter:
-                                            I = Simon2D(I44, dx, dy, clamp);
-                                            break;
-                                        case eRifmanFilter:
-                                            I = Rifman2D(I44, dx, dy, clamp);
-                                            break;
-                                        case eMitchellFilter:
-                                            I = Mitchell2D(I44, dx, dy, clamp);
-                                            break;
-                                        case eParzenFilter:
-                                            I = Parzen2D(I44, dx, dy, false);
-                                            break;
-                                        case eNotchFilter:
-                                            I = Notch2D(I44, dx, dy, false);
-                                            break;
-                                        default:
-                                            assert(0);
-                                    }
-                                    tmpPix[c] = I;
-                                }
-                            } else {
-                                for (int c = 0; c < nComponents; ++c) {
-                                    tmpPix[c] = 0;
-                                }
-                            }
-                        }
-                            break;
-
-                        //case eLanczos4Filter:
-                        //case eSinc4Filter:
-                        //    break;
-
-                        //case eLanczos6Filter:
-                        //    break;
-
-                        default:
-                            assert(0);
-                            break;
-                    }
+                    ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
                 }
                 
-                PIX *maskPix = NULL;
-                PIX *srcPix = NULL;
-                
-                // are we doing masking
-                if (masked) {
-                    if (_domask && _maskImg) {
-                        // we do, get the pixel from the mask
-                        maskPix = (PIX *)_maskImg->getPixelAddress(x, y);
-                        // figure the scale factor from that pixel
-                        maskScale = maskPix != 0 ? float(*maskPix)/float(maxValue) : 0.0f;
-                    }
-                    if ((_domask && _maskImg) || _mix != 1.) {
-                        srcPix = (PIX *)_srcImg->getPixelAddress(x, y);
-                    }
-                }
-                if (masked && srcPix) {
-                    float alpha = maskScale * _mix;
-                    for (int c = 0; c < nComponents; ++c) {
-                        float v = tmpPix[c] * alpha + (1. - alpha) * srcPix[c];
-                        if (maxValue == 1) { // implies floating point and so no clamping
-                            dstPix[c] = PIX(v);
-                        } else { // integer based and we need to clamp
-                            // (e.g. bicubic filter may overflow)
-                            dstPix[c] = PIX(Clamp(v, 0, maxValue));
-                        }
-                    }
-                } else {
-                    // no mask, no mix
-                    for (int c = 0; c < nComponents; ++c) {
-                        if (maxValue == 1) { // implies floating point and so no clamping
-                            dstPix[c] = tmpPix[c];
-                        } else { // integer based and we need to clamp
-                            // (e.g. bicubic filter may overflow)
-                            dstPix[c] = PIX(Clamp(tmpPix[c], 0, maxValue));
-                        }
-                    }
-                }
+                ofxsMaskMix<PIX, nComponents, maxValue, masked>(tmpPix, x, y, _srcImg, _domask, _maskImg, _mix, dstPix);
             }
         }
-    }
-private:
-    PIX get(const PIX* p, int c)
-    {
-        return p ? p[c] : PIX();
     }
 };
 
@@ -704,12 +315,12 @@ public:
         _center = fetchDouble2DParam(kCenterParamName);
         _invert = fetchBooleanParam(kInvertParamName);
         // GENERIC
-        _filter = fetchChoiceParam(kFilterParamName);
-        _clamp = fetchBooleanParam(kClampParamName);
-        _blackOutside = fetchBooleanParam(kBlackOutsideParamName);
+        _filter = fetchChoiceParam(kFilterTypeParamName);
+        _clamp = fetchBooleanParam(kFilterClampParamName);
+        _blackOutside = fetchBooleanParam(kFilterBlackOutsideParamName);
         if (masked) {
-            _domask = fetchBooleanParam(kMaskParamName);
-            _mix = fetchDoubleParam(kMixParamName);
+            _domask = fetchBooleanParam(kFilterMaskParamName);
+            _mix = fetchDoubleParam(kFilterMixParamName);
         }
     }
     
@@ -792,8 +403,8 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         double centerX, centerY;
         bool invert;
         // GENERIC
-        int filter;
-        bool clamp;
+        //int filter;
+        //bool clamp;
         bool blackOutside;
         double mix = 1.;
         
@@ -805,7 +416,7 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         }
         _translate->getValueAtTime(args.time, translateX, translateY);
         _rotate->getValueAtTime(args.time, rotate);
-        rotate = Transform2D::toRadians(rotate);
+        rotate = OFX::ofxsToRadians(rotate);
         
         _skewX->getValueAtTime(args.time, skewX);
         _skewY->getValueAtTime(args.time, skewY);
@@ -816,25 +427,26 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         _invert->getValue(invert);
         
         // GENERIC
-        _filter->getValue(filter);
-        _clamp->getValue(clamp);
+        //_filter->getValue(filter);
+        //_clamp->getValue(clamp);
         _blackOutside->getValue(blackOutside);
         if (_masked) {
             _mix->getValueAtTime(args.time, mix);
         }
 
-        Transform2D::Matrix3x3 invtransform;
+        OFX::Matrix3x3 invtransform;
         if (invert) {
-            invtransform = Transform2D::matTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+            invtransform = OFX::ofxsMatTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
         } else {
-            invtransform = Transform2D::matInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+            invtransform = OFX::ofxsMatInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
         }
 
         processor.setValues(invtransform,
                             srcClip_->getPixelAspectRatio(),
                             args.renderScale, //!< 0.5 for a half-resolution image
                             args.fieldToRender,
-                            (FilterEnum)filter, clamp, blackOutside, mix);
+                            //(FilterEnum)filter, clamp,
+                            blackOutside, mix);
     }
     
     // auto ptr for the mask.
@@ -889,7 +501,7 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     }
     _translate->getValueAtTime(args.time, translateX, translateY);
     _rotate->getValueAtTime(args.time, rotate);
-    rotate = Transform2D::toRadians(rotate);
+    rotate = OFX::ofxsToRadians(rotate);
     
     _skewX->getValueAtTime(args.time, skewX);
     _skewY->getValueAtTime(args.time, skewY);
@@ -900,17 +512,17 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     _invert->getValue(invert);
     
     
-    Transform2D::Matrix3x3 transform;
+    OFX::Matrix3x3 transform;
     if (!invert) {
-        transform = Transform2D::matTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+        transform = OFX::ofxsMatTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
     } else {
-        transform = Transform2D::matInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+        transform = OFX::ofxsMatInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
     }
     /// now transform the 4 corners of the source clip to the output image
-    Transform2D::Point3D topLeft = transform * Transform2D::Point3D(srcRoD.x1,srcRoD.y2,1);
-    Transform2D::Point3D topRight = transform * Transform2D::Point3D(srcRoD.x2,srcRoD.y2,1);
-    Transform2D::Point3D bottomLeft = transform * Transform2D::Point3D(srcRoD.x1,srcRoD.y1,1);
-    Transform2D::Point3D bottomRight = transform * Transform2D::Point3D(srcRoD.x2,srcRoD.y1,1);
+    OFX::Point3D topLeft = transform * OFX::Point3D(srcRoD.x1,srcRoD.y2,1);
+    OFX::Point3D topRight = transform * OFX::Point3D(srcRoD.x2,srcRoD.y2,1);
+    OFX::Point3D bottomLeft = transform * OFX::Point3D(srcRoD.x1,srcRoD.y1,1);
+    OFX::Point3D bottomRight = transform * OFX::Point3D(srcRoD.x2,srcRoD.y1,1);
     
     double l = std::min(std::min(topLeft.x, bottomLeft.x),std::min(topRight.x,bottomRight.x));
     double b = std::min(std::min(topLeft.y, bottomLeft.y),std::min(topRight.y,bottomRight.y));
@@ -970,7 +582,7 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     }
     _translate->getValueAtTime(args.time, translateX, translateY);
     _rotate->getValueAtTime(args.time, rotate);
-    rotate = Transform2D::toRadians(rotate);
+    rotate = OFX::ofxsToRadians(rotate);
     
     _skewX->getValueAtTime(args.time, skewX);
     _skewY->getValueAtTime(args.time, skewY);
@@ -980,23 +592,23 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     
     _invert->getValue(invert);
     
-    Transform2D::Matrix3x3 invtransform;
+    OFX::Matrix3x3 invtransform;
     if (!invert) {
-        invtransform = Transform2D::matInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+        invtransform = OFX::ofxsMatInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
     } else {
-        invtransform = Transform2D::matTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+        invtransform = OFX::ofxsMatTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
     }
     /// now find the positions in the src clip of the 4 corners of the roi
-    Transform2D::Point3D topLeft = invtransform * Transform2D::Point3D(roi.x1,roi.y2,1);
-    Transform2D::Point3D topRight = invtransform * Transform2D::Point3D(roi.x2,roi.y2,1);
-    Transform2D::Point3D bottomLeft = invtransform * Transform2D::Point3D(roi.x1,roi.y1,1);
-    Transform2D::Point3D bottomRight = invtransform * Transform2D::Point3D(roi.x2,roi.y1,1);
+    OFX::Point3D topLeft = invtransform * OFX::Point3D(roi.x1,roi.y2,1);
+    OFX::Point3D topRight = invtransform * OFX::Point3D(roi.x2,roi.y2,1);
+    OFX::Point3D bottomLeft = invtransform * OFX::Point3D(roi.x1,roi.y1,1);
+    OFX::Point3D bottomRight = invtransform * OFX::Point3D(roi.x2,roi.y1,1);
     
     double l = std::min(std::min(topLeft.x, bottomLeft.x),std::min(topRight.x,bottomRight.x));
     double b = std::min(std::min(topLeft.y, bottomLeft.y),std::min(topRight.y,bottomRight.y));
     double r = std::max(std::max(topLeft.x, bottomLeft.x),std::max(topRight.x,bottomRight.x));
     double t = std::max(std::max(topLeft.y, bottomLeft.y),std::max(topRight.y,bottomRight.y));
-    
+
     // GENERIC
     int filter;
     _filter->getValue(filter);
@@ -1012,23 +624,23 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     double pixelSizeX = srcClip_->getPixelAspectRatio() / args.renderScale.x;
     double pixelSizeY = 1. / args.renderScale.x;
     switch (filter) {
-        case eImpulseFilter:
+        case eFilterImpulse:
             // nearest neighbor, the exact region is OK
             break;
-        case eBilinearFilter:
-        case eCubicFilter:
+        case eFilterBilinear:
+        case eFilterCubic:
             // bilinear or cubic, expand by 0.5 pixels
             l -= 0.5*pixelSizeX;
             r += 0.5*pixelSizeX;
             b -= 0.5*pixelSizeY;
             t += 0.5*pixelSizeY;
             break;
-        case eKeysFilter:
-        case eSimonFilter:
-        case eRifmanFilter:
-        case eMitchellFilter:
-        case eParzenFilter:
-        case eNotchFilter:
+        case eFilterKeys:
+        case eFilterSimon:
+        case eFilterRifman:
+        case eFilterMitchell:
+        case eFilterParzen:
+        case eFilterNotch:
             // bicubic, expand by 1.5 pixels
             l -= 1.5*pixelSizeX;
             r += 1.5*pixelSizeX;
@@ -1077,69 +689,69 @@ TransformPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
     // as you may see below, some filters don't need explicit clamping, since they are
     // "clamped" by construction.
     switch ((FilterEnum)filter) {
-        case eImpulseFilter:
+        case eFilterImpulse:
         {
-            TransformProcessor<PIX, nComponents, maxValue, masked, eImpulseFilter, false> fred(*this);
+            TransformProcessor<PIX, nComponents, maxValue, masked, eFilterImpulse, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
-        case eBilinearFilter:
+        case eFilterBilinear:
         {
-            TransformProcessor<PIX, nComponents, maxValue, masked, eBilinearFilter, false> fred(*this);
+            TransformProcessor<PIX, nComponents, maxValue, masked, eFilterBilinear, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
-        case eCubicFilter:
+        case eFilterCubic:
         {
-            TransformProcessor<PIX, nComponents, maxValue, masked, eCubicFilter, false> fred(*this);
+            TransformProcessor<PIX, nComponents, maxValue, masked, eFilterCubic, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
-        case eKeysFilter:
+        case eFilterKeys:
             if (clamp) {
-                TransformProcessor<PIX, nComponents, maxValue, masked, eKeysFilter, true> fred(*this);
+                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterKeys, true> fred(*this);
                 setupAndProcess(fred, args);
             } else {
-                TransformProcessor<PIX, nComponents, maxValue, masked, eKeysFilter, false> fred(*this);
+                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterKeys, false> fred(*this);
                 setupAndProcess(fred, args);
             }
             break;
-        case eSimonFilter:
+        case eFilterSimon:
             if (clamp) {
-                TransformProcessor<PIX, nComponents, maxValue, masked, eSimonFilter, true> fred(*this);
+                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterSimon, true> fred(*this);
                 setupAndProcess(fred, args);
             } else {
-                TransformProcessor<PIX, nComponents, maxValue, masked, eSimonFilter, false> fred(*this);
+                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterSimon, false> fred(*this);
                 setupAndProcess(fred, args);
             }
             break;
-        case eRifmanFilter:
+        case eFilterRifman:
             if (clamp) {
-                TransformProcessor<PIX, nComponents, maxValue, masked, eRifmanFilter, true> fred(*this);
+                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterRifman, true> fred(*this);
                 setupAndProcess(fred, args);
             } else {
-                TransformProcessor<PIX, nComponents, maxValue, masked, eRifmanFilter, false> fred(*this);
+                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterRifman, false> fred(*this);
                 setupAndProcess(fred, args);
             }
             break;
-        case eMitchellFilter:
+        case eFilterMitchell:
             if (clamp) {
-                TransformProcessor<PIX, nComponents, maxValue, masked, eMitchellFilter, true> fred(*this);
+                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterMitchell, true> fred(*this);
                 setupAndProcess(fred, args);
             } else {
-                TransformProcessor<PIX, nComponents, maxValue, masked, eMitchellFilter, false> fred(*this);
+                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterMitchell, false> fred(*this);
                 setupAndProcess(fred, args);
             }
             break;
-        case eParzenFilter:
+        case eFilterParzen:
         {
-            TransformProcessor<PIX, nComponents, maxValue, masked, eParzenFilter, false> fred(*this);
+            TransformProcessor<PIX, nComponents, maxValue, masked, eFilterParzen, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
-        case eNotchFilter:
+        case eFilterNotch:
         {
-            TransformProcessor<PIX, nComponents, maxValue, masked, eNotchFilter, false> fred(*this);
+            TransformProcessor<PIX, nComponents, maxValue, masked, eFilterNotch, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
@@ -1262,7 +874,7 @@ bool TransformPlugin::getTransform(const TransformArguments &args, Clip * &trans
     }
     _translate->getValueAtTime(args.time, translateX, translateY);
     _rotate->getValueAtTime(args.time, rotate);
-    rotate = Transform2D::toRadians(rotate);
+    rotate = OFX::ofxsToRadians(rotate);
 
     _skewX->getValueAtTime(args.time, skewX);
     _skewY->getValueAtTime(args.time, skewY);
@@ -1272,17 +884,17 @@ bool TransformPlugin::getTransform(const TransformArguments &args, Clip * &trans
 
     _invert->getValueAtTime(args.time, invert);
 
-    Transform2D::Matrix3x3 invtransform;
+    OFX::Matrix3x3 invtransform;
     if (!invert) {
-        invtransform = Transform2D::matInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+        invtransform = OFX::ofxsMatInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
     } else {
-        invtransform = Transform2D::matTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+        invtransform = OFX::ofxsMatTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
     }
     double pixelaspectratio = srcClip_->getPixelAspectRatio();
     bool fielded = args.fieldToRender == eFieldLower || args.fieldToRender == eFieldUpper;
-    Transform2D::Matrix3x3 invtransformpixel = (Transform2D::matCanonicalToPixel(pixelaspectratio, args.renderScale.x, args.renderScale.y, fielded) *
+    OFX::Matrix3x3 invtransformpixel = (OFX::ofxsMatCanonicalToPixel(pixelaspectratio, args.renderScale.x, args.renderScale.y, fielded) *
                                                 invtransform *
-                                                Transform2D::matPixelToCanonical(pixelaspectratio, args.renderScale.x, args.renderScale.y, fielded));
+                                                OFX::ofxsMatPixelToCanonical(pixelaspectratio, args.renderScale.x, args.renderScale.y, fielded));
     transformClip = srcClip_;
     transformMatrix[0] = invtransformpixel.a;
     transformMatrix[1] = invtransformpixel.b;
@@ -1508,7 +1120,7 @@ drawEllipse(const OfxPointD& center,
     // we don't need to be pixel-perfect here, it's just an interact!
     // 40 segments is enough.
     for (int i = 0; i < 40; ++i) {
-        double theta = i * 2 * Transform2D::pi() / 40.;
+        double theta = i * 2 * OFX::ofxsPi() / 40.;
         glVertex2f (radius.x * std::cos(theta), radius.y * std::sin(theta));
     }
     glEnd ();
@@ -1742,11 +1354,11 @@ TransformInteract::draw(const OFX::DrawArgs &args)
         if (scaleUniform) {
             scale.y = scale.x;
         }
-        double rot = Transform2D::toRadians(angle);
-        Transform2D::Matrix3x3 transformscale;
-        transformscale = Transform2D::matInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+        double rot = OFX::ofxsToRadians(angle);
+        OFX::Matrix3x3 transformscale;
+        transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
         
-        Transform2D::Point3D previousPos;
+        OFX::Point3D previousPos;
         previousPos.x = _lastMousePos.x;
         previousPos.y = _lastMousePos.y;
         previousPos.z = 1.;
@@ -1772,13 +1384,13 @@ TransformInteract::draw(const OFX::DrawArgs &args)
     return true;
 }
 
-static bool squareContains(const Transform2D::Point3D& pos,const OfxRectD& rect,double toleranceX= 0.,double toleranceY = 0.)
+static bool squareContains(const OFX::Point3D& pos,const OfxRectD& rect,double toleranceX= 0.,double toleranceY = 0.)
 {
     return (pos.x >= (rect.x1 - toleranceX) && pos.x < (rect.x2 + toleranceX)
             && pos.y >= (rect.y1 - toleranceY) && pos.y < (rect.y2 + toleranceY));
 }
 
-static bool isOnEllipseBorder(const Transform2D::Point3D& pos,const OfxPointD& radius,const OfxPointD& center,double epsilon = 0.1)
+static bool isOnEllipseBorder(const OFX::Point3D& pos,const OfxPointD& radius,const OfxPointD& center,double epsilon = 0.1)
 {
 
     double v = (((pos.x - center.x) * (pos.x - center.x)) / (radius.x * radius.x)) +
@@ -1789,7 +1401,7 @@ static bool isOnEllipseBorder(const Transform2D::Point3D& pos,const OfxPointD& r
     return false;
 }
 
-static bool isOnSkewXBar(const Transform2D::Point3D& pos,double radiusY,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
+static bool isOnSkewXBar(const OFX::Point3D& pos,double radiusY,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
 {
     // we are not axis-aligned
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
@@ -1802,7 +1414,7 @@ static bool isOnSkewXBar(const Transform2D::Point3D& pos,double radiusY,const Of
     return false;
 }
 
-static bool isOnSkewYBar(const Transform2D::Point3D& pos,double radiusX,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
+static bool isOnSkewYBar(const OFX::Point3D& pos,double radiusX,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
 {
     // we are not axis-aligned
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
@@ -1815,7 +1427,7 @@ static bool isOnSkewYBar(const Transform2D::Point3D& pos,double radiusX,const Of
     return false;
 }
 
-static bool isOnRotationBar(const  Transform2D::Point3D& pos,double radiusX,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
+static bool isOnRotationBar(const  OFX::Point3D& pos,double radiusX,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
 {
     // we are not axis-aligned
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
@@ -1867,7 +1479,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     
     double currentRotation;
     _rotate->getValue(currentRotation);
-    double rot = Transform2D::toRadians(currentRotation);
+    double rot = OFX::ofxsToRadians(currentRotation);
     
     double skewX, skewY;
     int skewOrderYX;
@@ -1883,22 +1495,22 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         scale.y = scale.x;
     }
 
-    Transform2D::Point3D penPos, rotationPos, transformedPos, previousPos, currentPos;
+    OFX::Point3D penPos, rotationPos, transformedPos, previousPos, currentPos;
     penPos.x = args.penPosition.x;
     penPos.y = args.penPosition.y;
     penPos.z = 1.;
 
-    Transform2D::Matrix3x3 rotation, transform, transformscale;
+    OFX::Matrix3x3 rotation, transform, transformscale;
     ////for the rotation bar dragging we dont use the same transform, we don't want to undo the rotation transform
     if (_mouseState != eDraggingRotationBar && _mouseState != eDraggingCenterPoint) {
         ///undo skew + rotation to the current position
-        rotation = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
-        transform = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-        transformscale = Transform2D::matInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+        rotation = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
+        transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+        transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
     } else {
-        rotation = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
-        transform = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
-        transformscale = Transform2D::matInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+        rotation = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
+        transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+        transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
     }
 
     rotationPos = rotation * penPos;
@@ -2003,7 +1615,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         diffToCenter.y = rotationPos.y - center.y;
         diffToCenter.x = rotationPos.x - center.x;
         double angle = std::atan2(diffToCenter.y, diffToCenter.x);
-        _rotate->setValue(Transform2D::toDegrees(angle));
+        _rotate->setValue(OFX::ofxsToDegrees(angle));
         
     } else if (_mouseState == eDraggingSkewXBar) {
         // avoid division by zero
@@ -2032,7 +1644,7 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
         return false;
     }
     
-    using Transform2D::Matrix3x3;
+    using OFX::Matrix3x3;
     
     OfxPointD center,left,right,top,bottom;
     OfxPointD pscale;
@@ -2059,17 +1671,17 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     _skewY->getValue(skewY);
     _skewOrder->getValue(skewOrderYX);
     
-    Transform2D::Point3D transformedPos, rotationPos;
+    OFX::Point3D transformedPos, rotationPos;
     transformedPos.x = args.penPosition.x;
     transformedPos.y = args.penPosition.y;
     transformedPos.z = 1.;
     
-    double rot = Transform2D::toRadians(currentRotation);
+    double rot = OFX::ofxsToRadians(currentRotation);
 
     ///now undo skew + rotation to the current position
-    Transform2D::Matrix3x3 rotation, transform;
-    rotation = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
-    transform = Transform2D::matInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+    OFX::Matrix3x3 rotation, transform;
+    rotation = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
+    transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
 
     rotationPos = rotation * transformedPos;
     rotationPos.x /= rotationPos.z;
@@ -2282,48 +1894,9 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     showOverlay->setEvaluateOnChange(false);
     page->addChild(*showOverlay);
     
-    // GENERIC PARAMETERS
-    //
-    ChoiceParamDescriptor* filter = desc.defineChoiceParam(kFilterParamName);
-    filter->setLabels(kFilterParamName, kFilterParamName, kFilterParamName);
-    filter->setHint(kFilterParamHint);
-    assert(filter->getNOptions() == eImpulseFilter);
-    filter->appendOption(kImpulseFilter, kImpulseFilterHint);
-    assert(filter->getNOptions() == eBilinearFilter);
-    filter->appendOption(kBilinearFilter, kBilinearFilterHint);
-    assert(filter->getNOptions() == eCubicFilter);
-    filter->appendOption(kCubicFilter, kCubicFilterHint);
-    assert(filter->getNOptions() == eKeysFilter);
-    filter->appendOption(kKeysFilter, kKeysFilterHint);
-    assert(filter->getNOptions() == eSimonFilter);
-    filter->appendOption(kSimonFilter, kSimonFilterHint);
-    assert(filter->getNOptions() == eRifmanFilter);
-    filter->appendOption(kRifmanFilter, kRifmanFilterHint);
-    assert(filter->getNOptions() == eMitchellFilter);
-    filter->appendOption(kMitchellFilter, kMitchellFilterHint);
-    assert(filter->getNOptions() == eParzenFilter);
-    filter->appendOption(kParzenFilter, kParzenFilterHint);
-    assert(filter->getNOptions() == eNotchFilter);
-    filter->appendOption(kNotchFilter, kNotchFilterHint);
-    filter->setDefault(eCubicFilter);
-    filter->setAnimates(false);
-    filter->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    page->addChild(*filter);
+    // GENERIC
 
-    BooleanParamDescriptor* clamp = desc.defineBooleanParam(kClampParamName);
-    clamp->setLabels(kClampParamName, kClampParamName, kClampParamName);
-    clamp->setHint(kClampParamHint);
-    clamp->setDefault(false);
-    clamp->setAnimates(false);
-    clamp->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    page->addChild(*clamp);
-
-    BooleanParamDescriptor* blackOutside = desc.defineBooleanParam(kBlackOutsideParamName);
-    blackOutside->setLabels(kBlackOutsideParamName, kBlackOutsideParamName, kBlackOutsideParamName);
-    blackOutside->setHint(kBlackOutsideParamHint);
-    blackOutside->setDefault(true);
-    blackOutside->setAnimates(false);
-    page->addChild(*blackOutside);
+    ofxsFilterDescribeParamsInterpolate2D(desc, page);
 
     // NON-GENERIC (NON-MASKED)
     //
@@ -2502,60 +2075,12 @@ void TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
 
     // GENERIC PARAMETERS
     //
-    ChoiceParamDescriptor* filter = desc.defineChoiceParam(kFilterParamName);
-    filter->setLabels(kFilterParamName, kFilterParamName, kFilterParamName);
-    filter->setHint(kFilterParamHint);
-    assert(filter->getNOptions() == eImpulseFilter);
-    filter->appendOption(kImpulseFilter, kImpulseFilterHint);
-    assert(filter->getNOptions() == eBilinearFilter);
-    filter->appendOption(kBilinearFilter, kBilinearFilterHint);
-    assert(filter->getNOptions() == eCubicFilter);
-    filter->appendOption(kCubicFilter, kCubicFilterHint);
-    assert(filter->getNOptions() == eKeysFilter);
-    filter->appendOption(kKeysFilter, kKeysFilterHint);
-    assert(filter->getNOptions() == eSimonFilter);
-    filter->appendOption(kSimonFilter, kSimonFilterHint);
-    assert(filter->getNOptions() == eRifmanFilter);
-    filter->appendOption(kRifmanFilter, kRifmanFilterHint);
-    assert(filter->getNOptions() == eMitchellFilter);
-    filter->appendOption(kMitchellFilter, kMitchellFilterHint);
-    assert(filter->getNOptions() == eParzenFilter);
-    filter->appendOption(kParzenFilter, kParzenFilterHint);
-    assert(filter->getNOptions() == eNotchFilter);
-    filter->appendOption(kNotchFilter, kNotchFilterHint);
-    filter->setDefault(eCubicFilter);
-    filter->setAnimates(false);
-    filter->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    page->addChild(*filter);
 
-    BooleanParamDescriptor* clamp = desc.defineBooleanParam(kClampParamName);
-    clamp->setLabels(kClampParamName, kClampParamName, kClampParamName);
-    clamp->setHint(kClampParamHint);
-    clamp->setDefault(false);
-    clamp->setAnimates(false);
-    clamp->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    page->addChild(*clamp);
-    
-    BooleanParamDescriptor* blackOutside = desc.defineBooleanParam(kBlackOutsideParamName);
-    blackOutside->setLabels(kBlackOutsideParamName, kBlackOutsideParamName, kBlackOutsideParamName);
-    blackOutside->setDefault(true);
-    blackOutside->setAnimates(false);
-    page->addChild(*blackOutside);
+    ofxsFilterDescribeParamsInterpolate2D(desc, page);
 
     // GENERIC (MASKED)
     //
-    BooleanParamDescriptor* domask = desc.defineBooleanParam(kMaskParamName);
-    domask->setLabels(kMaskParamName, kMaskParamName, kMaskParamName);
-    domask->setDefault(false);
-    domask->setAnimates(false);
-    page->addChild(*domask);
-
-    DoubleParamDescriptor* mix = desc.defineDoubleParam(kMixParamName);
-    mix->setLabels(kMixParamName, kMixParamName, kMixParamName);
-    mix->setDefault(1.);
-    mix->setRange(0.,1.);
-    mix->setDisplayRange(0.,1.);
-    page->addChild(*mix);
+    ofxsFilterDescribeParamsMaskMix(desc, page);
 }
 
 OFX::ImageEffect* TransformMaskedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
