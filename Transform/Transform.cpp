@@ -530,27 +530,17 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     double t = std::max(std::max(topLeft.y, bottomLeft.y),std::max(topRight.y,bottomRight.y));
     
     // GENERIC
+    rod.x1 = l;
+    rod.x2 = r;
+    rod.y1 = b;
+    rod.y2 = t;
+    assert(rod.x1 < rod.x2 && rod.y1 < rod.y2);
+
     bool blackOutside;
     _blackOutside->getValue(blackOutside);
-    
-    // No need to round things up here, we must give the *actual* RoD
-    if (!blackOutside) {
-        // if it's not black outside, the RoD should contain the project (we can't rely on the host to fill it).
-        OfxPointD size = getProjectSize();
-        OfxPointD offset = getProjectOffset();
-        
-        rod.x1 = std::min(l, offset.x);
-        rod.x2 = std::max(r, offset.x + size.x);
-        rod.y1 = std::min(b, offset.y);
-        rod.y2 = std::max(t, offset.y + size.y);
-    } else {
-        // expand the RoD to get at least one black pixel
-        rod.x1 = l - 1.;
-        rod.x2 = r + 1.;
-        rod.y1 = b - 1.;
-        rod.y2 = t + 1.;
-    }
-    assert(rod.x1 < rod.x2 && rod.y1 < rod.y2);
+
+    ofxsFilterExpandRoD(this, dstClip_->getPixelAspectRatio(), args.renderScale, blackOutside, &rod);
+
     // say we set it
     return true;
 }
@@ -617,62 +607,28 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     bool doMasking = false;
     double mix = 1.;
     if (_masked) {
-        _domask->getValue(doMasking);
+        if (getContext() != OFX::eContextFilter) {
+            _domask->getValue(doMasking);
+        }
         _mix->getValueAtTime(args.time, mix);
     }
 
-    double pixelSizeX = srcClip_->getPixelAspectRatio() / args.renderScale.x;
-    double pixelSizeY = 1. / args.renderScale.x;
-    switch (filter) {
-        case eFilterImpulse:
-            // nearest neighbor, the exact region is OK
-            break;
-        case eFilterBilinear:
-        case eFilterCubic:
-            // bilinear or cubic, expand by 0.5 pixels
-            l -= 0.5*pixelSizeX;
-            r += 0.5*pixelSizeX;
-            b -= 0.5*pixelSizeY;
-            t += 0.5*pixelSizeY;
-            break;
-        case eFilterKeys:
-        case eFilterSimon:
-        case eFilterRifman:
-        case eFilterMitchell:
-        case eFilterParzen:
-        case eFilterNotch:
-            // bicubic, expand by 1.5 pixels
-            l -= 1.5*pixelSizeX;
-            r += 1.5*pixelSizeX;
-            b -= 1.5*pixelSizeY;
-            t += 1.5*pixelSizeY;
-            break;
-    }
-    
-    if (_masked) {
-        // set it on the mask only if we are in an interesting context
-        // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
-        if (getContext() != OFX::eContextFilter && doMasking) {
-            rois.setRegionOfInterest(*maskClip_, roi);
-        }
-        if ((getContext() != OFX::eContextFilter && doMasking) || mix != 1.) {
-            // for masking, we also need the source image for that same roi.
-            // compute the union of both ROIs
-            l = std::min(l, roi.x1);
-            r = std::max(r, roi.x2);
-            b = std::min(b, roi.y1);
-            t = std::max(t, roi.y2);
-        }
-    }
-    assert(l < r && b < t);
-    // No need to round things up here, we must give the *actual* RoI,
-    // the host should compute the right image region from it (by rounding it up/down).
+
     OfxRectD srcRoI;
     srcRoI.x1 = l;
     srcRoI.x2 = r;
     srcRoI.y1 = b;
     srcRoI.y2 = t;
-    
+    assert(srcRoI.x1 < srcRoI.x2 && srcRoI.y1 < srcRoI.y2);
+
+    ofxsFilterExpandRoI(roi, srcClip_->getPixelAspectRatio(), args.renderScale, (FilterEnum)filter, doMasking, mix, &srcRoI);
+
+
+    // set it on the mask only if we are in an interesting context
+    // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
+    if (doMasking) {
+        rois.setRegionOfInterest(*maskClip_, roi);
+    }
     rois.setRegionOfInterest(*srcClip_, srcRoI);
 }
 

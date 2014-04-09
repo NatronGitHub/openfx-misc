@@ -546,4 +546,75 @@ ofxsMaskMix(const float *tmpPix, //!< interpolated pixel
         }
     }
 }
+
+inline void
+ofxsFilterExpandRoD(OFX::ImageEffect* effect, double pixelAspectRatio, const OfxPointD& renderScale, bool blackOutside, OfxRectD *rod)
+{
+    // No need to round things up here, we must give the *actual* RoD
+
+    if (!blackOutside) {
+        // if it's not black outside, the RoD should contain the project (we can't rely on the host to fill it).
+        OfxPointD size = effect->getProjectSize();
+        OfxPointD offset = effect->getProjectOffset();
+
+        rod->x1 = std::min(rod->x1, offset.x);
+        rod->x2 = std::max(rod->x2, offset.x + size.x);
+        rod->y1 = std::min(rod->y1, offset.y);
+        rod->y2 = std::max(rod->y2, offset.y + size.y);
+    } else {
+        // expand the RoD to get at least one black pixel
+        double pixelSizeX = pixelAspectRatio / renderScale.x;
+        double pixelSizeY = 1. / renderScale.x;
+        rod->x1 = rod->x1 - pixelSizeX;
+        rod->x2 = rod->x2 + pixelSizeX;
+        rod->y1 = rod->y1 - pixelSizeY;
+        rod->y2 = rod->y2 + pixelSizeY;
+    }
+    assert(rod->x1 < rod->x2 && rod->y1 < rod->y2);
+}
+
+inline void
+ofxsFilterExpandRoI(const OfxRectD &roi, double pixelAspectRatio, const OfxPointD& renderScale, FilterEnum filter, bool doMasking, double mix, OfxRectD *srcRoI)
+{
+    // No need to round things up here, we must give the *actual* RoI,
+    // the host should compute the right image region from it (by rounding it up/down).
+
+    double pixelSizeX = pixelAspectRatio / renderScale.x;
+    double pixelSizeY = 1. / renderScale.x;
+    switch (filter) {
+        case eFilterImpulse:
+            // nearest neighbor, the exact region is OK
+            break;
+        case eFilterBilinear:
+        case eFilterCubic:
+            // bilinear or cubic, expand by 0.5 pixels
+            srcRoI->x1 -= 0.5*pixelSizeX;
+            srcRoI->x2 += 0.5*pixelSizeX;
+            srcRoI->y1 -= 0.5*pixelSizeY;
+            srcRoI->y2 += 0.5*pixelSizeY;
+            break;
+        case eFilterKeys:
+        case eFilterSimon:
+        case eFilterRifman:
+        case eFilterMitchell:
+        case eFilterParzen:
+        case eFilterNotch:
+            // bicubic, expand by 1.5 pixels
+            srcRoI->x1 -= 1.5*pixelSizeX;
+            srcRoI->x2 += 1.5*pixelSizeX;
+            srcRoI->y1 -= 1.5*pixelSizeY;
+            srcRoI->y2 += 1.5*pixelSizeY;
+            break;
+    }
+    if (doMasking || mix != 1.) {
+        // for masking or mixing, we also need the source image for that same roi.
+        // compute the union of both ROIs
+        srcRoI->x1 = std::min(srcRoI->x1, roi.x1);
+        srcRoI->x2 = std::max(srcRoI->x2, roi.x2);
+        srcRoI->y1 = std::min(srcRoI->y1, roi.y1);
+        srcRoI->y2 = std::max(srcRoI->y2, roi.y2);
+    }
+    assert(srcRoI->x1 < srcRoI->x2 && srcRoI->y1 < srcRoI->y2);
+}
+
 #endif
