@@ -123,7 +123,6 @@
 #define kSkewOrderParamName "Skew order"
 #define kCenterParamName "Center"
 #define kInvertParamName "Invert"
-#define kShowOverlayParamName "Show overlay"
 
 
 #define CIRCLE_RADIUS_BASE 30.0
@@ -924,7 +923,6 @@ class TransformInteract : public OFX::OverlayInteract {
         _skewOrder = _plugin->fetchChoiceParam(kSkewOrderParamName);
         _center = _plugin->fetchDouble2DParam(kCenterParamName);
         _invert = _plugin->fetchBooleanParam(kInvertParamName);
-        _showOverlay = _plugin->fetchBooleanParam(kShowOverlayParamName);
         addParamToSlaveTo(_translate);
         addParamToSlaveTo(_rotate);
         addParamToSlaveTo(_scale);
@@ -933,7 +931,6 @@ class TransformInteract : public OFX::OverlayInteract {
         addParamToSlaveTo(_skewOrder);
         addParamToSlaveTo(_center);
         addParamToSlaveTo(_invert);
-        addParamToSlaveTo(_showOverlay);
     }
     
     // overridden functions from OFX::Interact to do things
@@ -945,13 +942,7 @@ class TransformInteract : public OFX::OverlayInteract {
     virtual bool keyUp(const OFX::KeyArgs &args);
 
 private:
-    
-    bool isOverlayDisplayed() const {
-        bool disp;
-        _showOverlay->getValue(disp);
-        return disp;
-    }
-    
+
     void getCenter(OfxPointD *center)
     {
         OfxPointD translate;
@@ -1031,7 +1022,6 @@ private:
     OFX::ChoiceParam* _skewOrder;
     OFX::Double2DParam* _center;
     OFX::BooleanParam* _invert;
-    OFX::BooleanParam* _showOverlay;
 };
 
 static void
@@ -1265,10 +1255,6 @@ drawRotationBar(const OfxPointD& pixelScale,
 bool
 TransformInteract::draw(const OFX::DrawArgs &args)
 {
-    
-    if (!isOverlayDisplayed()) {
-        return false;
-    }
     //std::cout << "pixelScale= "<<args.pixelScale.x << "," << args.pixelScale.y << " renderscale=" << args.renderScale.x << "," << args.renderScale.y << std::endl;
     OfxPointD center, left, right, bottom, top;
     OfxPointD pscale;
@@ -1419,10 +1405,6 @@ static OfxRectD rectFromCenterPoint(const OfxPointD& center)
 // overridden functions from OFX::Interact to do things
 bool TransformInteract::penMotion(const OFX::PenArgs &args)
 {
-    if (!isOverlayDisplayed()) {
-        return false;
-    }
-
     OfxPointD center, left, right, top, bottom;
     OfxPointD pscale;
 
@@ -1648,10 +1630,6 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
 
 bool TransformInteract::penDown(const OFX::PenArgs &args)
 {
-    if (!isOverlayDisplayed()) {
-        return false;
-    }
-    
     using OFX::Matrix3x3;
     
     OfxPointD center,left,right,top,bottom;
@@ -1732,10 +1710,6 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
 
 bool TransformInteract::penUp(const OFX::PenArgs &args)
 {
-    if (!isOverlayDisplayed()) {
-        return false;
-    }
-    
     bool ret = _mouseState != eReleased;
     _mouseState = eReleased;
     _lastMousePos = args.penPosition;
@@ -1918,14 +1892,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     invert->setDefault(false);
     invert->setAnimates(false);
     page->addChild(*invert);
-    
-    BooleanParamDescriptor* showOverlay = desc.defineBooleanParam(kShowOverlayParamName);
-    showOverlay->setLabels(kShowOverlayParamName, kShowOverlayParamName, kShowOverlayParamName);
-    showOverlay->setDefault(true);
-    showOverlay->setAnimates(false);
-    showOverlay->setEvaluateOnChange(false);
-    page->addChild(*showOverlay);
-    
+
     // GENERIC
 
     ofxsFilterDescribeParamsInterpolate2D(desc, page);
@@ -2097,13 +2064,6 @@ void TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     invert->setDefault(false);
     invert->setAnimates(false);
     page->addChild(*invert);
-
-    BooleanParamDescriptor* showOverlay = desc.defineBooleanParam(kShowOverlayParamName);
-    showOverlay->setLabels(kShowOverlayParamName, kShowOverlayParamName, kShowOverlayParamName);
-    showOverlay->setDefault(true);
-    showOverlay->setAnimates(false);
-    showOverlay->setEvaluateOnChange(false);
-    page->addChild(*showOverlay);
 
     // GENERIC PARAMETERS
     //
