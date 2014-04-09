@@ -1580,7 +1580,6 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         pscale10.y = std::pow(10.,std::floor(std::log10(pscale.y)));
         newx = pscale10.x * std::floor(newx/pscale10.x + 0.5);
         newy = pscale10.y * std::floor(newy/pscale10.y + 0.5);
-        std::cout << pscale.x << std::endl;
         _translate->setValue(newx,newy);
     } else if (_mouseState == eDraggingCenter) {
         OfxPointD currentTranslation;
@@ -1753,7 +1752,7 @@ bool TransformInteract::keyDown(const OFX::KeyArgs &args)
 
     // the two control keys may be pressed consecutively, be aware about this
     _modifierStateCtrl += args.keySymbol == kOfxKey_Control_L || args.keySymbol == kOfxKey_Control_R;
-    std::cout << std::hex << args.keySymbol << std::endl;
+    //std::cout << std::hex << args.keySymbol << std::endl;
     // modifiers are not "caught"
     return false;
 }
