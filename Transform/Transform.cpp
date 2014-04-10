@@ -482,6 +482,7 @@ bool
 TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
+    
     double scaleX, scaleY;
     double translateX, translateY;
     double rotate;
@@ -509,6 +510,11 @@ TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     
     _invert->getValue(invert);
     
+    ///if is identity return the input rod instead of transforming
+    if (scaleX == 1. && scaleY == 1. && translateX == 0. && translateY == 0. && rotate == 0. && skewX == 0. && skewY == 0.) {
+        rod = srcRoD;
+        return true;
+    }
     
     OFX::Matrix3x3 transform;
     if (!invert) {
