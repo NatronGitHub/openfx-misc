@@ -221,7 +221,7 @@ class TransformProcessor : public TransformProcessorBase
         float tmpPix[nComponents];
 
         //assert(filter == _filter);
-        for (int y = procWindow.y1; y < procWindow.y2; y++)
+        for (int y = procWindow.y1; y < procWindow.y2; ++y)
         {
             if(_effect.abort()) break;
             
@@ -233,7 +233,7 @@ class TransformProcessor : public TransformProcessorBase
             canonicalCoords.z = 1;
             canonicalCoords.y = (double)y + 0.5;
             
-            for (int x = procWindow.x1; x < procWindow.x2; x++, dstPix += nComponents)
+            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents)
             {
                 // NON-GENERIC TRANSFORM
                 

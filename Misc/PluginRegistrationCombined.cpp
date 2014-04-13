@@ -9,6 +9,7 @@
 #include "ColorCorrect.h"
 #include "Grade.h"
 #include "Transform.h"
+#include "Merge.h"
 namespace OFX
 {
     namespace Plugin
@@ -39,6 +40,8 @@ namespace OFX
             ids.push_back(&p11);
             static TransformMaskedPluginFactory p12("net.sf.openfx:TransformMaskedPlugin", 1, 0);
             ids.push_back(&p12);
+            static MergePluginFactory p13("net.sf.openfx:MergePlugin", 1, 0);
+            ids.push_back(&p13);
             // ReConverge is not finished/tested
             //static ReConvergePluginFactory p("net.sf.openfx:reConvergePlugin", 1, 0);
             //ids.push_back(&p);
