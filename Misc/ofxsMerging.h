@@ -194,8 +194,7 @@ namespace MergeImages2D {
     {
         if(A < maxValue) {
 			PIX dst = B / (maxValue - A);
-			if(dst > maxValue)
-				dst = maxValue;
+            return dst > maxValue ? maxValue : dst;
 		} else {
 			return maxValue;
         }
