@@ -327,12 +327,17 @@ namespace MergeImages2D {
     }
 
     template <typename PIX,int nComponents,int maxValue>
-    void mergePixel(MergingFunction f,const PIX* A,const PIX* B,PIX* dst)
+    void mergePixel(MergingFunction f,bool doAlphaMasking,const PIX* A,const PIX* B,PIX* dst)
     {
         PIX a = nComponents == 4 ? A[3] : maxValue;
         PIX b = nComponents == 4 ? B[3] : maxValue;
         
-        for (int i = 0; i < 3; ++i) {
+        ///When doAlphaMasking is enabled and we're in RGBA the output alpha is set to alphaA+alphaB-alphA*alphaB
+        int maxComp = doAlphaMasking && nComponents == 4 ? 3 : nComponents;
+        if (doAlphaMasking && nComponents == 4) {
+            dst[3] = A[3] + B[3] - A[3] * B[3];
+        }
+        for (int i = 0; i < maxComp; ++i) {
             switch (f) {
                 case Merge_ATop:
                     dst[i] = atopFunctor<PIX, maxValue>(A[i], B[i], a, b);

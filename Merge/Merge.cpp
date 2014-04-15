@@ -82,6 +82,7 @@
 #include "../Misc/ofxsFilter.h"
 
 #define kOperationParamName "Operation"
+#define kAlphaMaskingParamName "Alpha masking"
 #define kBboxParamName "Bounding Box"
 #define kSourceClipAName "A"
 #define kSourceClipBName "B"
@@ -99,6 +100,7 @@ protected:
     MergingFunction _operation;
     int _bbox;
     double _mix;
+    bool _alphaMasking;
 
 public:
     
@@ -111,6 +113,7 @@ public:
     , _operation(Merge_Plus)
     , _bbox(0)
     , _mix(0)
+    , _alphaMasking(false)
     {
         
     }
@@ -121,11 +124,12 @@ public:
     
     void doMasking(bool v) {_doMasking = v;}
 
-    void setValues(MergingFunction operation,int bboxChoice,double mix)
+    void setValues(MergingFunction operation,int bboxChoice,double mix,bool alphaMasking)
     {
         _operation = operation;
         _bbox = bboxChoice;
         _mix = mix;
+        _alphaMasking = alphaMasking;
     }
     
 };
@@ -162,18 +166,18 @@ public :
                         tmpA[c] = (float)srcPixA[c] / (float)maxValue;
                         tmpB[c] = (float)srcPixB[c] / (float)maxValue;
                     }
-                    mergePixel<float, nComponents, maxValue>(_operation, tmpA, tmpB, tmpPix);
+                    mergePixel<float, nComponents, maxValue>(_operation,_alphaMasking, tmpA, tmpB, tmpPix);
                     ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImgB, _doMasking, _maskImg, _mix, dstPix);
                 } else if (srcPixA && !srcPixB) {
-                    for (int c = 0; c < nComponents; c++) {
+                    for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = srcPixA[c];
                     }
                 } else if (srcPixB && !srcPixA) {
-                    for (int c = 0; c < nComponents; c++) {
+                    for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = srcPixB[c];
                     }
                 } else {
-                    for (int c = 0; c < nComponents; c++) {
+                    for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = 0;
                     }
                 }
@@ -207,7 +211,7 @@ public :
         _bbox = fetchChoiceParam(kBboxParamName);
         _doMask = fetchBooleanParam(kFilterMaskParamName);
         _mix = fetchDoubleParam(kFilterMixParamName);
-        
+        _alphaMasking = fetchBooleanParam(kAlphaMaskingParamName);
     }
     
     // override the rod call
@@ -230,6 +234,7 @@ private:
     OFX::ChoiceParam *_bbox;
     OFX::BooleanParam *_doMask;
     OFX::DoubleParam* _mix;
+    OFX::BooleanParam *_alphaMasking;
 };
 
 
@@ -325,10 +330,12 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     int operation;
     int bboxChoice;
     double mix;
+    bool alphaMasking;
+    _alphaMasking->getValue(alphaMasking);
     _operation->getValue(operation);
     _bbox->getValue(bboxChoice);
     _mix->getValueAtTime(args.time, mix);
-    processor.setValues((MergingFunction)operation, bboxChoice, mix);
+    processor.setValues((MergingFunction)operation, bboxChoice, mix,alphaMasking);
     processor.setDstImg(dst.get());
     processor.setSrcImg(srcA.get(),srcB.get());
     processor.setRenderWindow(args.renderWindow);
@@ -506,6 +513,14 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     operation->setDefault(Merge_Plus);
     operation->setAnimates(false);
     page->addChild(*operation);
+    
+    BooleanParamDescriptor* alphaMasking = desc.defineBooleanParam(kAlphaMaskingParamName);
+    alphaMasking->setLabels(kAlphaMaskingParamName, kAlphaMaskingParamName, kAlphaMaskingParamName);
+    alphaMasking->setAnimates(false);
+    alphaMasking->setDefault(false);
+    alphaMasking->setHint("When enabled, the input images are unchanged where the other image has 0 alpha and"
+                          " the output alpha is set to a+b - a*b. When disabled the alpha channel is processed as "
+                          "any other channel.");
     
     ChoiceParamDescriptor* boundingBox = desc.defineChoiceParam(kBboxParamName);
     boundingBox->setLabels(kBboxParamName, kBboxParamName, kBboxParamName);
