@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Grade.o
-PLUGINNAME = Grade
+PLUGINOBJECTS = Merge.o
+PLUGINNAME = Merge
 
 include ../Makefile.master

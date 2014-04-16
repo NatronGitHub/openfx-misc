@@ -1,4 +1,4 @@
-SUBDIRS = RGBLut JoinViews OneView Anaglyph MixViews SideBySide Switch ColorCorrect Grade Transform
+SUBDIRS = RGBLut JoinViews OneView Anaglyph MixViews SideBySide Switch ColorCorrect Grade Transform Merge
 ifneq ($(DEBUGFLAG),-O3)
   # DebugProxy is only useful to debug the communication between a host and a plugin
   SUBDIRS += DebugProxy
