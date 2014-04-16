@@ -262,8 +262,9 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
             bool interesect = rectangleIntersect(rodA, rodB, &rod);
             if (!interesect) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "The bounding boxes of the 2 images don't intersect.");
+                return false;
             }
-			return false;
+			return true;
 		}
 		case 2: //A
 		{
