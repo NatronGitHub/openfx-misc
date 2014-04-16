@@ -7,14 +7,15 @@ PLUGINOBJECTS = \
         TimeOffset.o \
         MixViews.o \
         Anaglyph.o \
-	ColorCorrect.o \
-	Grade.o \
-    Transform.o \
+ 	ColorCorrect.o \
+ 	Grade.o \
+        Transform.o \
+        Merge.o \
         PluginRegistrationCombined.o
 
 PLUGINNAME = Misc
-VPATH += ../JoinViews ../OneView ../RGBLut ../SideBySide ../Switch ../TimeOffset ../MixViews  ../Anaglyph ../ColorCorrect ../Grade ../Transform
+VPATH += ../JoinViews ../OneView ../RGBLut ../SideBySide ../Switch ../TimeOffset ../MixViews  ../Anaglyph ../ColorCorrect ../Grade ../Transform ../Merge
 
 include ../Makefile.master
 
-CXXFLAGS += -I../JoinViews -I../OneView -I../RGBLut -I../SideBySide -I../Switch -I../TimeOffset -I../MixViews -I../Anaglyph -I../ColorCorrect -I../Grade -I../Transform
+CXXFLAGS += -I../JoinViews -I../OneView -I../RGBLut -I../SideBySide -I../Switch -I../TimeOffset -I../MixViews -I../Anaglyph -I../ColorCorrect -I../Grade -I../Transform -I../Merge
