@@ -417,6 +417,7 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor, const OFX::RenderArg
   processor.setRenderWindow(args.renderWindow);
 
 #pragma message ("TODO")
+  (void)offset;
   // set the parameters
   if (getContext() == OFX::eContextGeneral && convergepoint_ && dispClip_) {
     // fetch the disparity of the tracked point
