@@ -4,6 +4,8 @@ ifneq ($(DEBUGFLAG),-O3)
   SUBDIRS += DebugProxy
   # ReConverge is not tested yet
   SUBDIRS += ReConverge
+  # ChromaKeyer is WIP
+  SUBDIRS += ChromaKeyer
 endif
 
 HAVE_CIMG ?= 0
