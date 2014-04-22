@@ -92,6 +92,8 @@
 #define kKeyColorParamHint "Foreground key color; foreground areas containing the key color are replaced with the background image."
 #define kAcceptanceAngleParamName "Acceptance Angle"
 #define kAcceptanceAngleParamHint "Foreground colors are only suppressed inside the acceptance angle."
+#define kNoiseLevelParamName "Noise Level"
+#define kNoiseLevelParamHint "A circle around the key color with radius of noise_level treated as exact key color. Introduces sharp transitions."
 #define kOutputModeParamName "Output Mode"
 #define kOutputModeCompositeOption "Composite"
 #define kOutputModeCompositeHint "Color is the composite of Source and Bg. Alpha is the foreground key."
@@ -120,6 +122,7 @@ protected:
     OFX::Image *_outMaskImg;
     OfxRGBColourD _keyColor;
     double _acceptanceAngle;
+    double _noiseLevel;
     OutputModeEnum _outputmode;
 
 public:
@@ -143,10 +146,11 @@ public:
         _outMaskImg = outMaskImg;
     }
     
-    void setValues(const OfxRGBColourD& keyColor, double acceptanceAngle, OutputModeEnum outputmode)
+    void setValues(const OfxRGBColourD& keyColor, double acceptanceAngle, double noiseLevel, OutputModeEnum outputmode)
     {
         _keyColor = keyColor;
         _acceptanceAngle = acceptanceAngle;
+        _noiseLevel = noiseLevel;
         _outputmode = outputmode;
     }
     
@@ -177,6 +181,19 @@ public :
                 PIX *inMaskPix = (PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
                 PIX *outMaskPix = (PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
                 
+                if (!srcPix) {
+                    for (int c = 0; c < nComponents; ++c) {
+                        dstPix[c] = 0;
+                    }
+                    continue;
+                }
+                if (!bgPix) {
+                    for (int c = 0; c < nComponents; ++c) {
+                        dstPix[c] = srcPix[c];
+                    }
+                    continue;
+                }
+
 #pragma message ("TODO")
                 // from Rec.2020  http://www.itu.int/rec/R-REC-BT.2020-0-201208-I/en :
                 // Y' = 0.2627R' + 0.6780G' + 0.0593B'
@@ -199,7 +216,22 @@ public :
                 // For our purpose, we only work in the linear space (which is why
                 // we don't allow UByte bit depth), and use the first set of formulas
                 //
-                
+
+                double r = srcPix[0];
+                double g = srcPix[1];
+                double b = srcPix[2];
+                double y = 0.2627*r+0.6780*g+0.0593*b;
+                double fgy = y;
+                double fgcb = (b-y)/1.8814;
+                double fgcr = (r-y)/1.4746;
+                r = bgPix[0];
+                g = bgPix[1];
+                b = bgPix[2];
+                y = 0.2627*r+0.6780*g+0.0593*b;
+                double bgy = y;
+                double bgcb = (b-y)/1.8814;
+                double bgcr = (r-y)/1.4746;
+
                 for (int c = 0; c < nComponents; ++c) {
                     dstPix[c] = srcPix[c];
                 }
@@ -225,6 +257,7 @@ public :
     , outMaskClip_(0)
     , keyColor_(0)
     , acceptanceAngle_(0)
+    , noiseLevel_(0)
     , outputMode_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
@@ -234,6 +267,7 @@ public :
         outMaskClip_ = fetchClip(kOutsideMaskClipName);;
         keyColor_ = fetchRGBParam(kKeyColorParamName);
         acceptanceAngle_ = fetchDoubleParam(kAcceptanceAngleParamName);
+        noiseLevel_ = fetchDoubleParam(kNoiseLevelParamName);
         outputMode_ = fetchChoiceParam(kOutputModeParamName);
     }
  
@@ -253,6 +287,7 @@ private:
     
     OFX::RGBParam* keyColor_;
     OFX::DoubleParam* acceptanceAngle_;
+    OFX::DoubleParam* noiseLevel_;
     OFX::ChoiceParam* outputMode_;
 };
 
@@ -294,13 +329,15 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
     
     OfxRGBColourD keyColor;
     double acceptanceAngle;
+    double noiseLevel;
     int outputModeI;
     OutputModeEnum outputMode;
     keyColor_->getValueAtTime(args.time, keyColor.r, keyColor.g, keyColor.b);
     acceptanceAngle_->getValueAtTime(args.time, acceptanceAngle);
+    noiseLevel_->getValueAtTime(args.time, noiseLevel);
     outputMode_->getValue(outputModeI);
     outputMode = (OutputModeEnum)outputModeI;
-    processor.setValues(keyColor, acceptanceAngle, outputMode);
+    processor.setValues(keyColor, acceptanceAngle, noiseLevel, outputMode);
     processor.setDstImg(dst.get());
     processor.setSrcImgs(src.get(), bg.get(), inMask.get(), outMask.get());
     processor.setRenderWindow(args.renderWindow);
@@ -452,6 +489,13 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     acceptanceAngle->setAnimates(true);
     page->addChild(*acceptanceAngle);
     
+    DoubleParamDescriptor* noiseLevel = desc.defineDoubleParam(kNoiseLevelParamName);
+    noiseLevel->setLabels(kNoiseLevelParamName, kNoiseLevelParamName, kNoiseLevelParamName);
+    noiseLevel->setHint(kNoiseLevelParamHint);
+    noiseLevel->setDefault(0.);
+    noiseLevel->setAnimates(true);
+    page->addChild(*noiseLevel);
+
     ChoiceParamDescriptor* outputMode = desc.defineChoiceParam(kOutputModeParamName);
     outputMode->setLabels(kOutputModeParamName, kOutputModeParamName, kOutputModeParamName);
     outputMode->appendOption(kOutputModeCompositeOption, kOutputModeCompositeHint);
