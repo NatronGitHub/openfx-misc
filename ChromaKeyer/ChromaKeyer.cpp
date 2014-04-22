@@ -83,32 +83,57 @@
   Simple Chroma Keyer.
 
   Algorithm description:
+  [1] Keith Jack, "Video Demystified", Independent Pub Group (Computer), 1996, pp. 214-222, http://www.ee-techs.com/circuit/video-demy5.pdf
 
-  - http://www.cs.utah.edu/~michael/chroma/
-  - Keith Jack, "Video Demystified", Independent Pub Group (Computer), 1996, pp. 214-222, http://www.ee-techs.com/circuit/video-demy5.pdf
+ A simplified version is described in:
+  [2] High Quality Chroma Key, Michael Ashikhmin, http://www.cs.utah.edu/~michael/chroma/
 */
 
 #define kKeyColorParamName "Key Color"
 #define kKeyColorParamHint "Foreground key color; foreground areas containing the key color are replaced with the background image."
+
 #define kAcceptanceAngleParamName "Acceptance Angle"
-#define kAcceptanceAngleParamHint "Foreground colors are only suppressed inside the acceptance angle."
+#define kAcceptanceAngleParamHint "Foreground colors are only suppressed inside the acceptance angle (alpha)."
+
+#define kSuppressionAngleParamName "Suppression Angle"
+#define kSuppressionAngleParamHint "The chrominance of foreground colors inside the suppression angle (beta) is set to zero on output."
+
 #define kNoiseLevelParamName "Noise Level"
 #define kNoiseLevelParamHint "A circle around the key color with radius of noise_level treated as exact key color. Introduces sharp transitions."
+
 #define kOutputModeParamName "Output Mode"
-#define kOutputModeCompositeOption "Composite"
-#define kOutputModeCompositeHint "Color is the composite of Source and Bg. Alpha is the foreground key."
+#define kOutputModeIntermediateOption "Intermediate"
+#define kOutputModeIntermediateHint "Color is the source color. Alpha is the foreground key. Use for multi-pass keying."
 #define kOutputModePremultipliedOption "Premultiplied"
 #define kOutputModePremultipliedHint "Color is the Source color after key color suppression, multiplied by alpha. Alpha is the foreground key."
 #define kOutputModeUnpremultipliedOption "Unpremultiplied"
 #define kOutputModeUnpremultipliedHint "Color is the Source color after key color suppression. Alpha is the foreground key."
+#define kOutputModeCompositeOption "Composite"
+#define kOutputModeCompositeHint "Color is the composite of Source and Bg. Alpha is the foreground key."
+
+#define kSourceAlphaParamName "Source Alpha"
+#define kSourceAlphaIgnoreOption "Ignore"
+#define kSourceAlphaIgnoreHint "Ignore the source alpha."
+#define kSourceAlphaAddToInsideMaskOption "Add to Inside Mask"
+#define kSourceAlphaAddToInsideMaskHint "Source alpha is added to the inside mask."
+#define kSourceAlphaNormalOption "Normal"
+#define kSourceAlphaNormalHint "Foreground key is multiplied by source alpha."
+
 #define kBgClipName "Bg"
 #define kInsideMaskClipName "InM"
 #define kOutsideMaskClipName "OutM"
 
 enum OutputModeEnum {
-    eOutputModeComposite,
+    eOutputModeIntermediate,
     eOutputModePremultiplied,
     eOutputModeUnpremultiplied,
+    eOutputModeComposite,
+};
+
+enum SourceAlphaEnum {
+    eSourceAlphaIgnore,
+    eSourceAlphaAddToInsideMask,
+    eSourceAlphaNormal,
 };
 
 using namespace OFX;
@@ -122,8 +147,11 @@ protected:
     OFX::Image *_outMaskImg;
     OfxRGBColourD _keyColor;
     double _acceptanceAngle;
+    double _tan_acceptanceAngle_2;
     double _noiseLevel;
-    OutputModeEnum _outputmode;
+    OutputModeEnum _outputMode;
+    SourceAlphaEnum _sourceAlpha;
+    double _sinKey, _cosKey;
 
 public:
     
@@ -133,7 +161,10 @@ public:
     , _bgImg(0)
     , _inMaskImg(0)
     , _outMaskImg(0)
-    , _outputmode(eOutputModeComposite)
+    , _outputMode(eOutputModeComposite)
+    , _sourceAlpha(eSourceAlphaIgnore)
+    , _sinKey(0)
+    , _cosKey(0)
     {
         
     }
@@ -146,14 +177,30 @@ public:
         _outMaskImg = outMaskImg;
     }
     
-    void setValues(const OfxRGBColourD& keyColor, double acceptanceAngle, double noiseLevel, OutputModeEnum outputmode)
+    void setValues(const OfxRGBColourD& keyColor, double acceptanceAngle, double noiseLevel, OutputModeEnum outputMode, SourceAlphaEnum sourceAlpha)
     {
         _keyColor = keyColor;
         _acceptanceAngle = acceptanceAngle;
         _noiseLevel = noiseLevel;
-        _outputmode = outputmode;
+        _outputMode = outputMode;
+        _sourceAlpha = sourceAlpha;
+        double y, cb, cr;
+        rgb2ycbcr(keyColor.r, keyColor.g, keyColor.b, &y, &cb, &cr);
+        if (cb == 0. && cr == 0.) {
+            cb = 1.;
+        }
+        double norm = std::sqrt(cb*cb + cr*cr);
+        _cosKey = cb/norm;
+        _sinKey = cr/norm;
+        _tan_acceptanceAngle_2 = std::tan(_acceptanceAngle/2);
     }
-    
+
+    void rgb2ycbcr(double r, double g, double b, double *y, double *cb, double *cr)
+    {
+        *y = 0.2627*r+0.6780*g+0.0593*b;
+        *cb = (b-*y)/1.8814;
+        *cr = (r-*y)/1.4746;
+    }
 };
 
 
@@ -180,65 +227,176 @@ public :
                 PIX *bgPix = (PIX *)  (_bgImg ? _bgImg->getPixelAddress(x, y) : 0);
                 PIX *inMaskPix = (PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
                 PIX *outMaskPix = (PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
-                
-                if (!srcPix) {
-                    for (int c = 0; c < nComponents; ++c) {
-                        dstPix[c] = 0;
-                    }
-                    continue;
-                }
-                if (!bgPix) {
-                    for (int c = 0; c < nComponents; ++c) {
-                        dstPix[c] = srcPix[c];
-                    }
-                    continue;
-                }
 
+                float inMask = inMaskPix ? *inMaskPix : 0.;
+                if (_sourceAlpha == eSourceAlphaAddToInsideMask) {
+                    // take the max of inMask and the source Alpha
 #pragma message ("TODO")
-                // from Rec.2020  http://www.itu.int/rec/R-REC-BT.2020-0-201208-I/en :
-                // Y' = 0.2627R' + 0.6780G' + 0.0593B'
-                // Cb' = (B'-Y')/1.8814
-                // Cr' = (R'-Y')/1.4746
-                //
-                // or the "constant luminance" version
-                // Yc' = (0.2627R + 0.6780G + 0.0593B)'
-                // Cbc' = (B'-Yc')/1.9404 if -0.9702<=(B'-Y')<=0
-                //        (B'-Yc')/1.5816 if 0<=(R'-Y')<=0.7908
-                // Crc' = (R'-Yc')/1.7184 if -0.8592<=(B'-Y')<=0
-                //        (R'-Yc')/0.9936 if 0<=(R'-Y')<=0.4968
-                //
-                // with
-                // E' = 4.5E if 0 <=E<=beta
-                //      alpha*E^(0.45)-(alpha-1) if beta<=E<=1
-                // α = 1.099 and β = 0.018 for 10-bit system
-                // α = 1.0993 and β = 0.0181 for 12-bit system
-                //
-                // For our purpose, we only work in the linear space (which is why
-                // we don't allow UByte bit depth), and use the first set of formulas
-                //
+                    //TODO
+                }
+                float outMask = outMaskPix ? *outMaskPix : 0.;
+                float Kbg = 0.;
 
-                double r = srcPix[0];
-                double g = srcPix[1];
-                double b = srcPix[2];
-                double y = 0.2627*r+0.6780*g+0.0593*b;
-                double fgy = y;
-                double fgcb = (b-y)/1.8814;
-                double fgcr = (r-y)/1.4746;
-                r = bgPix[0];
-                g = bgPix[1];
-                b = bgPix[2];
-                y = 0.2627*r+0.6780*g+0.0593*b;
-                double bgy = y;
-                double bgcb = (b-y)/1.8814;
-                double bgcr = (r-y)/1.4746;
+                // clamp inMask and outMask in the [0,1] range
+                inMask = std::max(0.f,std::min(inMask,1.f));
+                outMask = std::max(0.f,std::min(outMask,1.f));
 
-                for (int c = 0; c < nComponents; ++c) {
-                    dstPix[c] = srcPix[c];
+                // output of the foreground suppressor
+                double fgr = 0.;
+                double fgg = 0.;
+                double fgb = 0.;
+
+                if (!srcPix) {
+                    // no source, take only background
+                    Kbg = 1.;
+                } else if (!bgPix) {
+                    // no background, take source only
+                    Kbg = 0.;
+                } else if (outMask >= 1.-inMask) {
+                    // outside mask has priority over inside mask
+                    // (or outMask == 1)
+                    Kbg = 1.;
+                } else if (inMask >= 1) {
+                    Kbg = 0.;
+                } else {
+                    // general case: compute Kbg from [1]
+
+                    // first, we need to compute YCbCr coordinates.
+
+                    // from Rec.2020  http://www.itu.int/rec/R-REC-BT.2020-0-201208-I/en :
+                    // Y' = 0.2627R' + 0.6780G' + 0.0593B'
+                    // Cb' = (B'-Y')/1.8814
+                    // Cr' = (R'-Y')/1.4746
+                    //
+                    // or the "constant luminance" version
+                    // Yc' = (0.2627R + 0.6780G + 0.0593B)'
+                    // Cbc' = (B'-Yc')/1.9404 if -0.9702<=(B'-Y')<=0
+                    //        (B'-Yc')/1.5816 if 0<=(R'-Y')<=0.7908
+                    // Crc' = (R'-Yc')/1.7184 if -0.8592<=(B'-Y')<=0
+                    //        (R'-Yc')/0.9936 if 0<=(R'-Y')<=0.4968
+                    //
+                    // with
+                    // E' = 4.5E if 0 <=E<=beta
+                    //      alpha*E^(0.45)-(alpha-1) if beta<=E<=1
+                    // α = 1.099 and β = 0.018 for 10-bit system
+                    // α = 1.0993 and β = 0.0181 for 12-bit system
+                    //
+                    // For our purpose, we only work in the linear space (which is why
+                    // we don't allow UByte bit depth), and use the first set of formulas
+                    //
+
+                    double r = srcPix[0];
+                    double g = srcPix[1];
+                    double b = srcPix[2];
+                    double y = 0.2627*r+0.6780*g+0.0593*b;
+                    double fgy = y;
+                    double fgcb = (b-y)/1.8814;
+                    double fgcr = (r-y)/1.4746;
+                    r = bgPix[0];
+                    g = bgPix[1];
+                    b = bgPix[2];
+                    y = 0.2627*r+0.6780*g+0.0593*b;
+                    double bgy = y;
+                    double bgcb = (b-y)/1.8814;
+                    double bgcr = (r-y)/1.4746;
+
+                    ///////////////////////
+                    // STEP A: Key Generator
+
+                    // First, we rotate (Cb, Cr) coordinate system by an angle defined by the key color to obtain (X,Z) coordinate system.
+
+                    // normalize fgcb and fgcr (which are in [-0.5,0.5]) to the [-1,1] interval
+                    double fgcbp = fgcb * 2;
+                    double fgcrp = fgcr * 2;
+
+                    /* Convert foreground to XZ coords where X direction is defined by
+                     the key color */
+
+                    double fgx = _cosKey * fgcbp + _sinKey * fgcrp;
+                    double fgz = -_sinKey * fgcbp + _cosKey * fgcrp;
+                    // Since Cb ́ and Cr ́ are normalized to have a range of ±1, X and Z have a range of ±1.
+
+                    // Second, we use a parameter alfa (60 to 120 degrees were used for different images) to divide the color space into two regions, one where the processing will be applied and the one where foreground will not be changed (where Kbg = 0 and blue_backing_contrubution = 0 in eq.1 above).
+                    /* WARNING: accept angle should never be set greater than "somewhat less
+                     than 90 degrees" to avoid dealing with negative/infinite tg. In reality,
+                     80 degrees should be enough if foreground is reasonable. If this seems
+                     to be a problem, go to alternative ways of checking point position
+                     (scalar product or line equations). This angle should not be too small
+                     either to avoid infinite ctg (used to suppress foreground without use of
+                     division)*/
+
+                    double Kfg;
+
+                    if (fgx <= 0 || fgz/fgx > _tan_acceptanceAngle_2) {
+                        /* keep foreground Kfg = 0*/
+                        Kfg = 0.;
+                    } else {
+                        //TODO
+                    }
+
+                    ///////////////
+                    // STEP B: Nonadditive Mix
+
+                    // nonadditive mix between the key generator and the garbage matte (outMask)
+
+                    // The garbage matte is added to the foreground key signal (KFG) using a non-additive mixer (NAM). A nonadditive mixer takes the brighter of the two pictures, on a sample-by-sample basis, to generate the key signal. Matting is ideal for any source that generates its own keying signal, such as character generators, and so on.
+
+                    // outside mask has priority over inside mask, treat inside first
+
+                    if (Kfg < 1.-inMask) {
+                        Kfg = std::max(0., 1.-inMask);
+                    }
+                    if (Kfg < outMask) {
+                        Kfg = outMask;
+                    }
+
+
+                    //TODO
+
+                    //////////////////////
+                    // STEP C: Foreground suppressor
+
+                    // The foreground suppressor reduces foreground color information by implementing X = X – KFG, with the key color being clamped to the black level.
+
+                    /////////////////////
+                    // STEP D: Key processor
+
+                    // The key processor generates the initial background key signal (K ́BG) used to remove areas of the background image where the fore- ground is to be visible.
+
+                    // Additional controls may be implemented to enable the foreground and background signals to be controlled independently. Examples are adjusting the contrast of the foreground so it matches the background or fading the fore- ground in various ways (such as fading to the background to make a foreground object van- ish or fading to black to generate a silhouette).
+                    // In the computer environment, there may be relatively slow, smooth edges—especially edges involving smooth shading. As smooth edges are easily distorted during the chroma keying process, a wide keying process is usu- ally used in these circumstances. During wide keying, the keying signal starts before the edge of the graphic object.
+                }
+
+                // At this point, we have Kbg,
+
+                // set the alpha channel to the opposite of Kbg
+                dstPix[3] = 1. - Kbg;
+                switch (_outputMode) {
+                    case eOutputModeIntermediate:
+                        for (int c = 0; c < 3; ++c) {
+                            dstPix[c] = srcPix[c];
+                        }
+                        break;
+                    case eOutputModePremultiplied:
+                        dstPix[0] = fgr * dstPix[3];
+                        dstPix[1] = fgg * dstPix[3];
+                        dstPix[2] = fgb * dstPix[3];
+                        break;
+                    case eOutputModeUnpremultiplied:
+                        dstPix[0] = fgr;
+                        dstPix[1] = fgg;
+                        dstPix[2] = fgb;
+                        break;
+                    case eOutputModeComposite:
+                        dstPix[0] = fgr * dstPix[3];
+                        dstPix[1] = fgg * dstPix[3];
+                        dstPix[2] = fgb * dstPix[3];
+                        break;
                 }
             }
         }
     }
- 
+
 };
 
 
@@ -259,6 +417,7 @@ public :
     , acceptanceAngle_(0)
     , noiseLevel_(0)
     , outputMode_(0)
+    , sourceAlpha_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -269,6 +428,7 @@ public :
         acceptanceAngle_ = fetchDoubleParam(kAcceptanceAngleParamName);
         noiseLevel_ = fetchDoubleParam(kNoiseLevelParamName);
         outputMode_ = fetchChoiceParam(kOutputModeParamName);
+        sourceAlpha_ = fetchChoiceParam(kSourceAlphaParamName);
     }
  
     /* Override the render */
@@ -289,6 +449,7 @@ private:
     OFX::DoubleParam* acceptanceAngle_;
     OFX::DoubleParam* noiseLevel_;
     OFX::ChoiceParam* outputMode_;
+    OFX::ChoiceParam* sourceAlpha_;
 };
 
 
@@ -332,12 +493,16 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
     double noiseLevel;
     int outputModeI;
     OutputModeEnum outputMode;
+    int sourceAlphaI;
+    SourceAlphaEnum sourceAlpha;
     keyColor_->getValueAtTime(args.time, keyColor.r, keyColor.g, keyColor.b);
     acceptanceAngle_->getValueAtTime(args.time, acceptanceAngle);
     noiseLevel_->getValueAtTime(args.time, noiseLevel);
     outputMode_->getValue(outputModeI);
     outputMode = (OutputModeEnum)outputModeI;
-    processor.setValues(keyColor, acceptanceAngle, noiseLevel, outputMode);
+    sourceAlpha_->getValue(sourceAlphaI);
+    sourceAlpha = (SourceAlphaEnum)sourceAlphaI;
+    processor.setValues(keyColor, acceptanceAngle, noiseLevel, outputMode, sourceAlpha);
     processor.setDstImg(dst.get());
     processor.setSrcImgs(src.get(), bg.get(), inMask.get(), outMask.get());
     processor.setRenderWindow(args.renderWindow);
@@ -485,10 +650,20 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     acceptanceAngle->setLabels(kAcceptanceAngleParamName, kAcceptanceAngleParamName, kAcceptanceAngleParamName);
     acceptanceAngle->setHint(kAcceptanceAngleParamHint);
     acceptanceAngle->setDoubleType(eDoubleTypeAngle);;
-    acceptanceAngle->setDefault(60.);
+    acceptanceAngle->setRange(0., 175.);
+    acceptanceAngle->setDefault(90.);
     acceptanceAngle->setAnimates(true);
     page->addChild(*acceptanceAngle);
-    
+
+    DoubleParamDescriptor* suppressionAngle = desc.defineDoubleParam(kSuppressionAngleParamName);
+    suppressionAngle->setLabels(kSuppressionAngleParamName, kSuppressionAngleParamName, kSuppressionAngleParamName);
+    suppressionAngle->setHint(kSuppressionAngleParamHint);
+    suppressionAngle->setDoubleType(eDoubleTypeAngle);;
+    suppressionAngle->setRange(0., 175.);
+    suppressionAngle->setDefault(10.);
+    suppressionAngle->setAnimates(true);
+    page->addChild(*suppressionAngle);
+
     DoubleParamDescriptor* noiseLevel = desc.defineDoubleParam(kNoiseLevelParamName);
     noiseLevel->setLabels(kNoiseLevelParamName, kNoiseLevelParamName, kNoiseLevelParamName);
     noiseLevel->setHint(kNoiseLevelParamHint);
@@ -498,10 +673,27 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
 
     ChoiceParamDescriptor* outputMode = desc.defineChoiceParam(kOutputModeParamName);
     outputMode->setLabels(kOutputModeParamName, kOutputModeParamName, kOutputModeParamName);
-    outputMode->appendOption(kOutputModeCompositeOption, kOutputModeCompositeHint);
+    outputMode->appendOption(kOutputModeIntermediateOption, kOutputModeIntermediateHint);
+    assert(outputMode->getNOptions() == (int)eOutputModeIntermediate);
     outputMode->appendOption(kOutputModePremultipliedOption, kOutputModePremultipliedHint);
+    assert(outputMode->getNOptions() == (int)eOutputModePremultiplied);
     outputMode->appendOption(kOutputModeUnpremultipliedOption, kOutputModeUnpremultipliedHint);
+    assert(outputMode->getNOptions() == (int)eOutputModeUnpremultiplied);
+    outputMode->appendOption(kOutputModeCompositeOption, kOutputModeCompositeHint);
+    assert(outputMode->getNOptions() == (int)eOutputModeComposite);
+    outputMode->setDefault((int)eOutputModeComposite);
     page->addChild(*outputMode);
+
+    ChoiceParamDescriptor* sourceAlpha = desc.defineChoiceParam(kSourceAlphaParamName);
+    sourceAlpha->setLabels(kSourceAlphaParamName, kSourceAlphaParamName, kSourceAlphaParamName);
+    sourceAlpha->appendOption(kSourceAlphaIgnoreOption, kSourceAlphaIgnoreHint);
+    assert(sourceAlpha->getNOptions() == (int)eSourceAlphaIgnore);
+    sourceAlpha->appendOption(kSourceAlphaAddToInsideMaskOption, kSourceAlphaAddToInsideMaskHint);
+    assert(sourceAlpha->getNOptions() == (int)eSourceAlphaAddToInsideMask);
+    sourceAlpha->appendOption(kSourceAlphaNormalOption, kSourceAlphaNormalHint);
+    assert(sourceAlpha->getNOptions() == (int)eSourceAlphaNormal);
+    sourceAlpha->setDefault((int)eSourceAlphaIgnore);
+    page->addChild(*sourceAlpha);
 }
 
 OFX::ImageEffect* ChromaKeyerPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
