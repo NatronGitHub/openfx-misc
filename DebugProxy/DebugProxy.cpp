@@ -1236,7 +1236,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       if (st == kOfxStatOK) {
         // get the RoD of the effect from outArgs
         OfxRectD rod;
-        gPropHost[nth]->propGetDoubleN(outArgs, kOfxImageEffectPropRegionOfInterest, 4, &rod.x1);
+        gPropHost[nth]->propGetDoubleN(outArgs, kOfxImageEffectPropRegionOfDefinition, 4, &rod.x1);
         ssr << "((" << rod.x1 << "," << rod.y1 << "," << rod.x2 << "," << rod.y2 << "))";
       }
     }  
