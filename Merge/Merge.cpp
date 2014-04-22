@@ -436,10 +436,6 @@ void MergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
-    if (!OFX::getImageEffectHostDescription()->supportsParametricParameter) {
-        throwHostMissingSuiteException(kOfxParametricParameterSuite);
-    }
-    
     OFX::ClipDescriptor* srcClipB = desc.defineClip(kSourceClipBName);
 	srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
 	srcClipB->addSupportedComponent( OFX::ePixelComponentRGB );

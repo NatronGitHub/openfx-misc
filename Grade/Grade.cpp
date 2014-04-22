@@ -456,10 +456,6 @@ void defineRGBAScaleParam(OFX::ImageEffectDescriptor &desc,
 
 void GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
-    if (!OFX::getImageEffectHostDescription()->supportsParametricParameter) {
-        throwHostMissingSuiteException(kOfxParametricParameterSuite);
-    }
-
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);

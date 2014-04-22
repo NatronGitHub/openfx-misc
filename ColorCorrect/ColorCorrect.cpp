@@ -646,10 +646,6 @@ defineColorGroup(const std::string& groupName,
 
 void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
-    if (!OFX::getImageEffectHostDescription()->supportsParametricParameter) {
-        throwHostMissingSuiteException(kOfxParametricParameterSuite);
-    }
-
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
