@@ -178,6 +178,28 @@ public :
                 PIX *outMaskPix = (PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
                 
 #pragma message ("TODO")
+                // from Rec.2020  http://www.itu.int/rec/R-REC-BT.2020-0-201208-I/en :
+                // Y' = 0.2627R' + 0.6780G' + 0.0593B'
+                // Cb' = (B'-Y')/1.8814
+                // Cr' = (R'-Y')/1.4746
+                //
+                // or the "constant luminance" version
+                // Yc' = (0.2627R + 0.6780G + 0.0593B)'
+                // Cbc' = (B'-Yc')/1.9404 if -0.9702<=(B'-Y')<=0
+                //        (B'-Yc')/1.5816 if 0<=(R'-Y')<=0.7908
+                // Crc' = (R'-Yc')/1.7184 if -0.8592<=(B'-Y')<=0
+                //        (R'-Yc')/0.9936 if 0<=(R'-Y')<=0.4968
+                //
+                // with
+                // E' = 4.5E if 0 <=E<=beta
+                //      alpha*E^(0.45)-(alpha-1) if beta<=E<=1
+                // α = 1.099 and β = 0.018 for 10-bit system
+                // α = 1.0993 and β = 0.0181 for 12-bit system
+                //
+                // For our purpose, we only work in the linear space (which is why
+                // we don't allow UByte bit depth), and use the first set of formulas
+                //
+                
                 for (int c = 0; c < nComponents; ++c) {
                     dstPix[c] = srcPix[c];
                 }
@@ -300,12 +322,12 @@ ChromaKeyerPlugin::render(const OFX::RenderArguments &args)
     {
         switch(dstBitDepth)
         {
-            case OFX::eBitDepthUByte :
-            {
-                ChromaKeyerProcessor<unsigned char, 4, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
+            //case OFX::eBitDepthUByte :
+            //{
+            //    ChromaKeyerProcessor<unsigned char, 4, 255> fred(*this);
+            //    setupAndProcess(fred, args);
+            //    break;
+            //}
             case OFX::eBitDepthUShort :
             {
                 ChromaKeyerProcessor<unsigned short, 4, 65535> fred(*this);
@@ -326,12 +348,12 @@ ChromaKeyerPlugin::render(const OFX::RenderArguments &args)
     {
         switch(dstBitDepth)
         {
-            case OFX::eBitDepthUByte :
-            {
-                ChromaKeyerProcessor<unsigned char, 3, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
+            //case OFX::eBitDepthUByte :
+            //{
+            //    ChromaKeyerProcessor<unsigned char, 3, 255> fred(*this);
+            //    setupAndProcess(fred, args);
+            //    break;
+            //}
             case OFX::eBitDepthUShort :
             {
                 ChromaKeyerProcessor<unsigned short, 3, 65535> fred(*this);
@@ -360,7 +382,7 @@ void ChromaKeyerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
-    desc.addSupportedBitDepth(eBitDepthUByte);
+    //desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
     
