@@ -327,10 +327,11 @@ public :
 
                     double Kfg;
 
-                    if (fgx <= 0 || fgz/fgx > _tan_acceptanceAngle_2) {
+                    if (fgx <= 0 || std::abs(fgz)/fgx > _tan_acceptanceAngle_2) {
                         /* keep foreground Kfg = 0*/
                         Kfg = 0.;
                     } else {
+                        Kfg = fgx - std::abs(fgz)/_tan_acceptanceAngle_2;
                         //TODO
                     }
 
