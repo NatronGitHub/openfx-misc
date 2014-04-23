@@ -282,15 +282,9 @@ public :
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             assert(dstPix);
 
-            for (int x = procWindow.x1; x < procWindow.x2; ++x,                 dstPix += nComponents) {
+            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
                 
                 PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-#if 0
-                // dummy copy (for testing purposes)
-                for (int c = 0; c < nComponents; ++c) {
-                    dstPix[c] = srcPix ? srcPix[c] : 0.;
-                }
-#else
                 PIX *bgPix = (PIX *)  (_bgImg ? _bgImg->getPixelAddress(x, y) : 0);
                 PIX *inMaskPix = (PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
                 PIX *outMaskPix = (PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
@@ -308,18 +302,12 @@ public :
                 outMask = std::max(0.f,std::min(outMask,1.f));
 
                 // output of the foreground suppressor
-                double fgr = 0.;
-                double fgg = 0.;
-                double fgb = 0.;
+                double fgr = srcPix ? sampleToFloat<PIX,maxValue>(srcPix[0]) : 0.;
+                double fgg = srcPix ? sampleToFloat<PIX,maxValue>(srcPix[1]) : 0.;
+                double fgb = srcPix ? sampleToFloat<PIX,maxValue>(srcPix[2]) : 0.;
                 double bgr = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[0]) : 0.;
                 double bgg = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[1]) : 0.;
                 double bgb = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[2]) : 0.;
-
-                if (_outputMode != eOutputModeIntermediate) {
-                    fgr = srcPix ? sampleToFloat<PIX,maxValue>(srcPix[0]) : 0.;
-                    fgg = srcPix ? sampleToFloat<PIX,maxValue>(srcPix[1]) : 0.;
-                    fgb = srcPix ? sampleToFloat<PIX,maxValue>(srcPix[2]) : 0.;
-                }
 
                 if (!srcPix) {
                     // no source, take only background
@@ -481,15 +469,15 @@ public :
                         }
                         break;
                     case eOutputModeComposite:
-                        dstPix[0] = floatToSample<PIX,maxValue>(fgr * compAlpha + bgr * Kbg * (1.-compAlpha));
-                        dstPix[1] = floatToSample<PIX,maxValue>(fgg * compAlpha + bgg * Kbg * (1.-compAlpha));
-                        dstPix[2] = floatToSample<PIX,maxValue>(fgb * compAlpha + bgb * Kbg * (1.-compAlpha));
+                        // [FD] not sure if this is the expected way to use compAlpha
+                        dstPix[0] = floatToSample<PIX,maxValue>(compAlpha * (fgr + bgr * Kbg) + (1.-compAlpha) * bgr);
+                        dstPix[1] = floatToSample<PIX,maxValue>(compAlpha * (fgg + bgg * Kbg) + (1.-compAlpha) * bgg);
+                        dstPix[2] = floatToSample<PIX,maxValue>(compAlpha * (fgb + bgb * Kbg) + (1.-compAlpha) * bgb);
                         break;
                 }
                 if (nComponents == 4) {
                     dstPix[3] = floatToSample<PIX,maxValue>(fga);
                 }
-#endif
             }
         }
     }
