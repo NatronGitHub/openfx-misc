@@ -14,7 +14,6 @@
 			);
 			dependencies = (
 				1E8B5D5F18B76ACD00C31FDC /* PBXTargetDependency */,
-				1E3451FC190695A70080D699 /* PBXTargetDependency */,
 				1ECE5472185F24B7001ED442 /* PBXTargetDependency */,
 				1ECE5470185F24B7001ED442 /* PBXTargetDependency */,
 			);
@@ -96,6 +95,7 @@
 		1E3E3CC417995D5C005F2132 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1E3E3CC517995D5C005F2132 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E3E3CC617995D8C005F2132 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1E47341D1907FB9400DC26E1 /* ChromaKeyer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3451F3190695850080D699 /* ChromaKeyer.cpp */; };
 		1E77A3BC1906988C00286856 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7349E8B18E7766F0097DB1D /* PluginRegistration.cpp */; };
 		1E8B5D4518B7684A00C31FDC /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E8B5D4318B7684A00C31FDC /* PluginRegistration.cpp */; };
 		1E8B5D4C18B76A7500C31FDC /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
@@ -206,13 +206,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		1E3451FB190695A70080D699 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 1E3451E11906952D0080D699;
-			remoteInfo = ChromaKeyer.ofx;
-		};
 		1E8B5D5E18B76ACD00C31FDC /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
@@ -656,22 +649,22 @@
 		1E551ED217994DEF00A4135C /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				1EDE1B8E182D0511002392CB /* Anaglyph */,
 				1E3451E0190695070080D699 /* ChromaKeyer */,
-				D74121CA18F9C99300A81F8B /* Merge */,
-				D7349E8818E7766F0097DB1D /* Transform */,
-				D725A2C818E0D308001A1E3E /* Grade */,
 				D7B4C95D18D9DA410004137D /* ColorCorrect */,
-				1E8B5D4618B769B400C31FDC /* Misc */,
-				1E3AC8D818B6211800F228A6 /* Switch */,
-				1E235FF318369E2B0019C45F /* TimeOffset */,
-				1E3E3CB117995CB1005F2132 /* RGBLut */,
-				1E235FEC18363CCA0019C45F /* SideBySide */,
+				1ECE5453185F240A001ED442 /* DebugProxy */,
+				D725A2C818E0D308001A1E3E /* Grade */,
+				1EDE1BAF182D39DA002392CB /* JoinViews */,
+				D74121CA18F9C99300A81F8B /* Merge */,
 				1EDE1BE1182D8961002392CB /* MixViews */,
 				1EDE1BC8182D3F73002392CB /* OneView */,
-				1EDE1BAF182D39DA002392CB /* JoinViews */,
-				1EDE1B8E182D0511002392CB /* Anaglyph */,
 				1ECE544E185F23BD001ED442 /* ReConverge */,
-				1ECE5453185F240A001ED442 /* DebugProxy */,
+				1E3E3CB117995CB1005F2132 /* RGBLut */,
+				1E235FEC18363CCA0019C45F /* SideBySide */,
+				1E3AC8D818B6211800F228A6 /* Switch */,
+				1E235FF318369E2B0019C45F /* TimeOffset */,
+				D7349E8818E7766F0097DB1D /* Transform */,
+				1E8B5D4618B769B400C31FDC /* Misc */,
 				1E3E3CB417995D15005F2132 /* Library */,
 				1EDE1BE8182D8B18002392CB /* Makefile */,
 			);
@@ -1264,6 +1257,7 @@
 			files = (
 				1E8B5D5D18B76AB300C31FDC /* PluginRegistrationCombined.cpp in Sources */,
 				1E8B5D8018B7828800C31FDC /* Anaglyph.cpp in Sources */,
+				1E47341D1907FB9400DC26E1 /* ChromaKeyer.cpp in Sources */,
 				D7B4C97818D9DBE70004137D /* ColorCorrect.cpp in Sources */,
 				D725A2E318E0D54E001A1E3E /* Grade.cpp in Sources */,
 				1E8B5D7F18B7828400C31FDC /* JoinViews.cpp in Sources */,
@@ -1417,11 +1411,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		1E3451FC190695A70080D699 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 1E3451E11906952D0080D699 /* ChromaKeyer.ofx */;
-			targetProxy = 1E3451FB190695A70080D699 /* PBXContainerItemProxy */;
-		};
 		1E8B5D5F18B76ACD00C31FDC /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 1E8B5D4A18B76A7500C31FDC /* Misc.ofx */;
