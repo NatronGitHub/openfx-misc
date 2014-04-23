@@ -73,6 +73,7 @@
 #include "ChromaKeyer.h"
 
 #include <cmath>
+#include <limits>
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -777,6 +778,8 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     keyColor->setLabels(kKeyColorParamName, kKeyColorParamName, kKeyColorParamName);
     keyColor->setHint(kKeyColorParamHint);
     keyColor->setDefault(0.,1.,0.);
+    // the following should be the default
+    //keyColor->setRange(-DBL_MAX,-DBL_MAX,-DBL_MAX,DBL_MAX,DBL_MAX,DBL_MAX);
     keyColor->setAnimates(true);
     page->addChild(*keyColor);
     
@@ -812,7 +815,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     DoubleParamDescriptor* keyGain = desc.defineDoubleParam(kKeyGainParamName);
     keyGain->setLabels(kKeyGainParamName, kKeyGainParamName, kKeyGainParamName);
     keyGain->setHint(kKeyGainParamHint);
-    keyGain->setRange(0., 2.);
+    keyGain->setRange(0., std::numeric_limits<float>::max());
     keyGain->setDisplayRange(0., 2.);
     keyGain->setDefault(1.);
     keyGain->setAnimates(true);
