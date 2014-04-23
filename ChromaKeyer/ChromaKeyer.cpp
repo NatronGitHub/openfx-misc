@@ -726,6 +726,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     acceptanceAngle->setHint(kAcceptanceAngleParamHint);
     acceptanceAngle->setDoubleType(eDoubleTypeAngle);;
     acceptanceAngle->setRange(0., 175.);
+    acceptanceAngle->setDisplayRange(0., 175.);
     acceptanceAngle->setDefault(90.);
     acceptanceAngle->setAnimates(true);
     page->addChild(*acceptanceAngle);
@@ -735,31 +736,32 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     suppressionAngle->setHint(kSuppressionAngleParamHint);
     suppressionAngle->setDoubleType(eDoubleTypeAngle);;
     suppressionAngle->setRange(0., 175.);
+    suppressionAngle->setDisplayRange(0., 175.);
     suppressionAngle->setDefault(10.);
     suppressionAngle->setAnimates(true);
     page->addChild(*suppressionAngle);
 
     ChoiceParamDescriptor* outputMode = desc.defineChoiceParam(kOutputModeParamName);
     outputMode->setLabels(kOutputModeParamName, kOutputModeParamName, kOutputModeParamName);
-    outputMode->appendOption(kOutputModeIntermediateOption, kOutputModeIntermediateHint);
     assert(outputMode->getNOptions() == (int)eOutputModeIntermediate);
-    outputMode->appendOption(kOutputModePremultipliedOption, kOutputModePremultipliedHint);
+    outputMode->appendOption(kOutputModeIntermediateOption, kOutputModeIntermediateHint);
     assert(outputMode->getNOptions() == (int)eOutputModePremultiplied);
-    outputMode->appendOption(kOutputModeUnpremultipliedOption, kOutputModeUnpremultipliedHint);
+    outputMode->appendOption(kOutputModePremultipliedOption, kOutputModePremultipliedHint);
     assert(outputMode->getNOptions() == (int)eOutputModeUnpremultiplied);
-    outputMode->appendOption(kOutputModeCompositeOption, kOutputModeCompositeHint);
+    outputMode->appendOption(kOutputModeUnpremultipliedOption, kOutputModeUnpremultipliedHint);
     assert(outputMode->getNOptions() == (int)eOutputModeComposite);
+    outputMode->appendOption(kOutputModeCompositeOption, kOutputModeCompositeHint);
     outputMode->setDefault((int)eOutputModeComposite);
     page->addChild(*outputMode);
 
     ChoiceParamDescriptor* sourceAlpha = desc.defineChoiceParam(kSourceAlphaParamName);
     sourceAlpha->setLabels(kSourceAlphaParamName, kSourceAlphaParamName, kSourceAlphaParamName);
-    sourceAlpha->appendOption(kSourceAlphaIgnoreOption, kSourceAlphaIgnoreHint);
     assert(sourceAlpha->getNOptions() == (int)eSourceAlphaIgnore);
-    sourceAlpha->appendOption(kSourceAlphaAddToInsideMaskOption, kSourceAlphaAddToInsideMaskHint);
+    sourceAlpha->appendOption(kSourceAlphaIgnoreOption, kSourceAlphaIgnoreHint);
     assert(sourceAlpha->getNOptions() == (int)eSourceAlphaAddToInsideMask);
-    sourceAlpha->appendOption(kSourceAlphaNormalOption, kSourceAlphaNormalHint);
+    sourceAlpha->appendOption(kSourceAlphaAddToInsideMaskOption, kSourceAlphaAddToInsideMaskHint);
     assert(sourceAlpha->getNOptions() == (int)eSourceAlphaNormal);
+    sourceAlpha->appendOption(kSourceAlphaNormalOption, kSourceAlphaNormalHint);
     sourceAlpha->setDefault((int)eSourceAlphaIgnore);
     page->addChild(*sourceAlpha);
 }
