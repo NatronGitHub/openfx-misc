@@ -780,7 +780,10 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     keyColor->setHint(kKeyColorParamHint);
     keyColor->setDefault(0.,1.,0.);
     // the following should be the default
-    //keyColor->setRange(-DBL_MAX,-DBL_MAX,-DBL_MAX,DBL_MAX,DBL_MAX,DBL_MAX);
+    double kmin = -std::numeric_limits<double>::max();
+    double kmax = std::numeric_limits<double>::max();
+    keyColor->setRange(kmin, kmin, kmin, kmax, kmax, kmax);
+    keyColor->setDisplayRange(0., 0., 0., 1., 1., 1.);
     keyColor->setAnimates(true);
     page->addChild(*keyColor);
     
@@ -816,7 +819,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     DoubleParamDescriptor* keyGain = desc.defineDoubleParam(kKeyGainParamName);
     keyGain->setLabels(kKeyGainParamName, kKeyGainParamName, kKeyGainParamName);
     keyGain->setHint(kKeyGainParamHint);
-    keyGain->setRange(0., std::numeric_limits<float>::max());
+    keyGain->setRange(0., std::numeric_limits<double>::max());
     keyGain->setDisplayRange(0., 2.);
     keyGain->setDefault(1.);
     keyGain->setAnimates(true);
