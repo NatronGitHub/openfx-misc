@@ -758,6 +758,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     assert(outputMode->getNOptions() == (int)eOutputModeComposite);
     outputMode->appendOption(kOutputModeCompositeOption, kOutputModeCompositeHint);
     outputMode->setDefault((int)eOutputModeComposite);
+    outputMode->setAnimates(false);
     page->addChild(*outputMode);
 
     ChoiceParamDescriptor* sourceAlpha = desc.defineChoiceParam(kSourceAlphaParamName);
@@ -769,6 +770,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     assert(sourceAlpha->getNOptions() == (int)eSourceAlphaNormal);
     sourceAlpha->appendOption(kSourceAlphaNormalOption, kSourceAlphaNormalHint);
     sourceAlpha->setDefault((int)eSourceAlphaIgnore);
+    sourceAlpha->setAnimates(false);
     page->addChild(*sourceAlpha);
 }
 
