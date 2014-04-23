@@ -245,14 +245,14 @@ public:
 };
 
 
-template<int maxValue>
-static float sampleToFloat(int value)
+template<class PIX, int maxValue>
+static float sampleToFloat(PIX value)
 {
     return (maxValue == 1) ? value : (value / (float)maxValue);
 }
 
-template<int maxValue>
-static int floatToSample(float value)
+template<class PIX, int maxValue>
+static PIX floatToSample(float value)
 {
     if (maxValue == 1) {
         return value;
@@ -280,10 +280,17 @@ public :
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            assert(dstPix);
 
-            for (int x = procWindow.x1; x < procWindow.x2; ++x) {
+            for (int x = procWindow.x1; x < procWindow.x2; ++x,                 dstPix += nComponents) {
                 
                 PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+#if 0
+                // dummy copy (for testing purposes)
+                for (int c = 0; c < nComponents; ++c) {
+                    dstPix[c] = srcPix ? srcPix[c] : 0.;
+                }
+#else
                 PIX *bgPix = (PIX *)  (_bgImg ? _bgImg->getPixelAddress(x, y) : 0);
                 PIX *inMaskPix = (PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
                 PIX *outMaskPix = (PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
@@ -291,7 +298,7 @@ public :
                 float inMask = inMaskPix ? *inMaskPix : 0.;
                 if (_sourceAlpha == eSourceAlphaAddToInsideMask && nComponents == 4 && srcPix) {
                     // take the max of inMask and the source Alpha
-                    inMask = std::max(inMask, sampleToFloat<maxValue>(srcPix[3]));
+                    inMask = std::max(inMask, sampleToFloat<PIX,maxValue>(srcPix[3]));
                 }
                 float outMask = outMaskPix ? *outMaskPix : 0.;
                 float Kbg = 0.;
@@ -304,9 +311,9 @@ public :
                 double fgr = 0.;
                 double fgg = 0.;
                 double fgb = 0.;
-                double bgr = bgPix ? sampleToFloat<maxValue>(bgPix[0]) : 0.;
-                double bgg = bgPix ? sampleToFloat<maxValue>(bgPix[1]) : 0.;
-                double bgb = bgPix ? sampleToFloat<maxValue>(bgPix[2]) : 0.;
+                double bgr = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[0]) : 0.;
+                double bgg = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[1]) : 0.;
+                double bgb = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[2]) : 0.;
 
                 if (!srcPix) {
                     // no source, take only background
@@ -327,9 +334,9 @@ public :
 
 
                     double fgy, fgcb, fgcr;
-                    rgb2ycbcr(sampleToFloat<maxValue>(srcPix[0]),
-                              sampleToFloat<maxValue>(srcPix[1]),
-                              sampleToFloat<maxValue>(srcPix[2]), &fgy, &fgcb, &fgcr);
+                    rgb2ycbcr(sampleToFloat<PIX,maxValue>(srcPix[0]),
+                              sampleToFloat<PIX,maxValue>(srcPix[1]),
+                              sampleToFloat<PIX,maxValue>(srcPix[2]), &fgy, &fgcb, &fgcr);
 
                     ///////////////////////
                     // STEP A: Key Generator
@@ -438,7 +445,7 @@ public :
 
                 // set the alpha channel to the complement of Kbg
                 double fga = 1. - Kbg;
-                double compAlpha = (_sourceAlpha == eSourceAlphaNormal) ? sampleToFloat<maxValue>(srcPix[3]) : 1.;
+                double compAlpha = (_sourceAlpha == eSourceAlphaNormal) ? sampleToFloat<PIX,maxValue>(srcPix[3]) : 1.;
                 switch (_outputMode) {
                     case eOutputModeIntermediate:
                         for (int c = 0; c < 3; ++c) {
@@ -446,28 +453,29 @@ public :
                         }
                         break;
                     case eOutputModePremultiplied:
-                        dstPix[0] = floatToSample<maxValue>(fgr);
-                        dstPix[1] = floatToSample<maxValue>(fgg);
-                        dstPix[2] = floatToSample<maxValue>(fgb);
+                        dstPix[0] = floatToSample<PIX,maxValue>(fgr);
+                        dstPix[1] = floatToSample<PIX,maxValue>(fgg);
+                        dstPix[2] = floatToSample<PIX,maxValue>(fgb);
                         break;
                     case eOutputModeUnpremultiplied:
                         if (fga == 0.) {
                             dstPix[0] = dstPix[1] = dstPix[2] = 0.;
                         } else {
-                        dstPix[0] = floatToSample<maxValue>(fgr / fga);
-                        dstPix[1] = floatToSample<maxValue>(fgg / fga);
-                        dstPix[2] = floatToSample<maxValue>(fgb / fga);
+                        dstPix[0] = floatToSample<PIX,maxValue>(fgr / fga);
+                        dstPix[1] = floatToSample<PIX,maxValue>(fgg / fga);
+                        dstPix[2] = floatToSample<PIX,maxValue>(fgb / fga);
                         }
                         break;
                     case eOutputModeComposite:
-                        dstPix[0] = floatToSample<maxValue>(fgr * compAlpha + bgr * Kbg * (1.-compAlpha));
-                        dstPix[1] = floatToSample<maxValue>(fgg * compAlpha + bgg * Kbg * (1.-compAlpha));
-                        dstPix[2] = floatToSample<maxValue>(fgb * compAlpha + bgb * Kbg * (1.-compAlpha));
+                        dstPix[0] = floatToSample<PIX,maxValue>(fgr * compAlpha + bgr * Kbg * (1.-compAlpha));
+                        dstPix[1] = floatToSample<PIX,maxValue>(fgg * compAlpha + bgg * Kbg * (1.-compAlpha));
+                        dstPix[2] = floatToSample<PIX,maxValue>(fgb * compAlpha + bgb * Kbg * (1.-compAlpha));
                         break;
                 }
                 if (nComponents == 4) {
-                    dstPix[3] = floatToSample<maxValue>(fga);
+                    dstPix[3] = floatToSample<PIX,maxValue>(fga);
                 }
+#endif
             }
         }
     }
@@ -544,6 +552,9 @@ void
 ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OFX::RenderArguments &args)
 {
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    if (!dst.get()) {
+        return; // nothing to do
+    }
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
