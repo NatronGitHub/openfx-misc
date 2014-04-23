@@ -341,6 +341,8 @@ public :
 
                     double fgy, fgcb, fgcr;
                     rgb2ycbcr(fgr, fgg, fgb, &fgy, &fgcb, &fgcr);
+                    assert(-0.5 <= fgcb && fgcb <= 0.5);
+                    assert(-0.5 <= fgcr && fgcr <= 0.5);
 
                     ///////////////////////
                     // STEP A: Key Generator
@@ -350,6 +352,8 @@ public :
                     // normalize fgcb and fgcr (which are in [-0.5,0.5]) to the [-1,1] interval
                     double fgcbp = fgcb * 2;
                     double fgcrp = fgcr * 2;
+                    //assert(-1. <= fgcbp && fgcbp <= 1.);
+                    //assert(-1. <= fgcrp && fgcrp <= 1.);
 
                     /* Convert foreground to XZ coords where X direction is defined by
                      the key color */
@@ -386,8 +390,8 @@ public :
 
                     // outside mask has priority over inside mask, treat inside first
 
-                    if (Kfg < 1.-inMask) {
-                        Kfg = std::max(0., 1.-inMask);
+                    if (Kfg > 1.-inMask) {
+                        Kfg = 1.-inMask;
                     }
                     if (Kfg < outMask) {
                         Kfg = outMask;
@@ -413,6 +417,8 @@ public :
                         } else {
                             fgcb = fgcb - Kfg * _cosKey / 2;
                             fgcr = fgcr - Kfg * _sinKey / 2;
+                            //assert(-0.5 <= fgcb && fgcb <= 0.5);
+                            //assert(-0.5 <= fgcr && fgcr <= 0.5);
                         }
 
                         // Foreground luminance, after being normalized to have a range of 0–1, is suppressed by:
