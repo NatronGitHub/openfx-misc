@@ -378,7 +378,7 @@ public :
 
                     double Kfg;
 
-                    if (fgx <= 0 || (_acceptanceAngle < 180. && std::abs(fgz)/fgx > _tan_acceptanceAngle_2)) {
+                    if (fgx <= 0 || (_acceptanceAngle >= 180. && fgx >= 0) || std::abs(fgz)/fgx > _tan_acceptanceAngle_2) {
                         /* keep foreground Kfg = 0*/
                         Kfg = 0.;
                     } else {
@@ -416,7 +416,7 @@ public :
                         // [FD] there is an error in the paper, which doesn't take into account chrominance denormalization:
                         // (X,Z) was computed from twice the chrominance, so subtracting Kfg from X means to
                         // subtract Kfg/2 from (Cb,Cr).
-                        if (fgx > 0 && (_tan_suppressionAngle_2 < 180. && std::abs(fgz)/fgx < _tan_suppressionAngle_2)) {
+                        if (fgx > 0 && (_tan_suppressionAngle_2 >= 180. || std::abs(fgz)/fgx < _tan_suppressionAngle_2)) {
                             fgcb = 0;
                             fgcr = 0;
                         } else {
@@ -459,6 +459,7 @@ public :
                     } else {
                         Kbg = (Kfg/(_keyGain*_xKey) -_keyLift)/ (1.-_keyLift);
                     }
+                    //Kbg = Kfg/_xKey; // if _keyGain = 1 and _keyLift = 0
                     if (Kbg > 1.) {
                         Kbg = 1.;
                     } else if (Kbg < 0.) {
