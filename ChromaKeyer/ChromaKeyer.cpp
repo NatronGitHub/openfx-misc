@@ -79,6 +79,10 @@
 
 #include "../include/ofxsProcessing.H"
 
+#ifndef M_PI
+#define M_PI        3.14159265358979323846264338327950288   /* pi             */
+#endif
+
 /*
   Simple Chroma Keyer.
 
@@ -112,9 +116,9 @@
 #define kSourceAlphaIgnoreOption "Ignore"
 #define kSourceAlphaIgnoreHint "Ignore the source alpha."
 #define kSourceAlphaAddToInsideMaskOption "Add to Inside Mask"
-#define kSourceAlphaAddToInsideMaskHint "Source alpha is added to the inside mask."
+#define kSourceAlphaAddToInsideMaskHint "Source alpha is added to the inside mask. Use for multi-pass keying."
 #define kSourceAlphaNormalOption "Normal"
-#define kSourceAlphaNormalHint "Foreground key is multiplied by source alpha."
+#define kSourceAlphaNormalHint "Foreground key is multiplied by source alpha when compositing."
 
 #define kBgClipName "Bg"
 #define kInsideMaskClipName "InM"
@@ -146,9 +150,10 @@ protected:
     double _acceptanceAngle;
     double _tan_acceptanceAngle_2;
     double _suppressionAngle;
+    double _tan_suppressionAngle_2;
     OutputModeEnum _outputMode;
     SourceAlphaEnum _sourceAlpha;
-    double _sinKey, _cosKey;
+    double _sinKey, _cosKey, _xKey, _ys;
 
 public:
     
@@ -161,10 +166,13 @@ public:
     , _acceptanceAngle(0.)
     , _tan_acceptanceAngle_2(0.)
     , _suppressionAngle(0.)
+    , _tan_suppressionAngle_2(0.)
     , _outputMode(eOutputModeComposite)
     , _sourceAlpha(eSourceAlphaIgnore)
     , _sinKey(0)
     , _cosKey(0)
+    , _xKey(0)
+    , _ys(0)
     {
         
     }
@@ -180,30 +188,82 @@ public:
     void setValues(const OfxRGBColourD& keyColor, double acceptanceAngle, double suppressionAngle, OutputModeEnum outputMode, SourceAlphaEnum sourceAlpha)
     {
         _keyColor = keyColor;
-        _acceptanceAngle = acceptanceAngle;
-        _suppressionAngle = suppressionAngle;
+        _acceptanceAngle = acceptanceAngle * M_PI / 180;
+        _suppressionAngle = suppressionAngle * M_PI / 180;
         _outputMode = outputMode;
         _sourceAlpha = sourceAlpha;
         double y, cb, cr;
         rgb2ycbcr(keyColor.r, keyColor.g, keyColor.b, &y, &cb, &cr);
         if (cb == 0. && cr == 0.) {
+            // no chrominance in the key is an error - default to blue screen
             cb = 1.;
         }
-        double norm = std::sqrt(cb*cb + cr*cr);
-        _cosKey = cb/norm;
-        _sinKey = cr/norm;
+        // xKey is the norm of normalized chrominance (Cb',Cr') = 2 * (Cb,Cr)
+        // 0 <= xKey <= 1
+        _xKey = 2*std::sqrt(cb*cb + cr*cr);
+        _cosKey = 2*cb/_xKey;
+        _sinKey = 2*cr/_xKey;
+        _ys = _xKey == 0. ? 0. : y/_xKey;
         _tan_acceptanceAngle_2 = std::tan(_acceptanceAngle/2);
+        _tan_suppressionAngle_2 = std::tan(_suppressionAngle/2);
     }
 
+    // from Rec.2020  http://www.itu.int/rec/R-REC-BT.2020-0-201208-I/en :
+    // Y' = 0.2627R' + 0.6780G' + 0.0593B'
+    // Cb' = (B'-Y')/1.8814
+    // Cr' = (R'-Y')/1.4746
+    //
+    // or the "constant luminance" version
+    // Yc' = (0.2627R + 0.6780G + 0.0593B)'
+    // Cbc' = (B'-Yc')/1.9404 if -0.9702<=(B'-Y')<=0
+    //        (B'-Yc')/1.5816 if 0<=(R'-Y')<=0.7908
+    // Crc' = (R'-Yc')/1.7184 if -0.8592<=(B'-Y')<=0
+    //        (R'-Yc')/0.9936 if 0<=(R'-Y')<=0.4968
+    //
+    // with
+    // E' = 4.5E if 0 <=E<=beta
+    //      alpha*E^(0.45)-(alpha-1) if beta<=E<=1
+    // α = 1.099 and β = 0.018 for 10-bit system
+    // α = 1.0993 and β = 0.0181 for 12-bit system
+    //
+    // For our purpose, we only work in the linear space (which is why
+    // we don't allow UByte bit depth), and use the first set of formulas
+    //
     void rgb2ycbcr(double r, double g, double b, double *y, double *cb, double *cr)
     {
         *y = 0.2627*r+0.6780*g+0.0593*b;
         *cb = (b-*y)/1.8814;
         *cr = (r-*y)/1.4746;
     }
+
+    void ycbcr2rgb(double y, double cb, double cr, double *r, double *g, double *b)
+    {
+        *r = cr * 1.4746 + y;
+        *b = cb  *1.8814 + y;
+        *g = (y - 0.2627 * *r - 0.0593 * *b)/0.6780;
+    }
 };
 
 
+template<int maxValue>
+static float sampleToFloat(int value)
+{
+    return (maxValue == 1) ? value : (value / (float)maxValue);
+}
+
+template<int maxValue>
+static int floatToSample(float value)
+{
+    if (maxValue == 1) {
+        return value;
+    }
+    if (value <= 0) {
+        return 0;
+    } else if (value >= 1.) {
+        return maxValue;
+    }
+    return value * maxValue + 0.5;
+}
 
 template <class PIX, int nComponents, int maxValue>
 class ChromaKeyerProcessor : public ChromaKeyerProcessorBase
@@ -229,10 +289,9 @@ public :
                 PIX *outMaskPix = (PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
 
                 float inMask = inMaskPix ? *inMaskPix : 0.;
-                if (_sourceAlpha == eSourceAlphaAddToInsideMask) {
+                if (_sourceAlpha == eSourceAlphaAddToInsideMask && nComponents == 4 && srcPix) {
                     // take the max of inMask and the source Alpha
-#pragma message ("TODO")
-                    //TODO
+                    inMask = std::max(inMask, sampleToFloat<maxValue>(srcPix[3]));
                 }
                 float outMask = outMaskPix ? *outMaskPix : 0.;
                 float Kbg = 0.;
@@ -245,6 +304,9 @@ public :
                 double fgr = 0.;
                 double fgg = 0.;
                 double fgb = 0.;
+                double bgr = bgPix ? sampleToFloat<maxValue>(bgPix[0]) : 0.;
+                double bgg = bgPix ? sampleToFloat<maxValue>(bgPix[1]) : 0.;
+                double bgb = bgPix ? sampleToFloat<maxValue>(bgPix[2]) : 0.;
 
                 if (!srcPix) {
                     // no source, take only background
@@ -263,42 +325,11 @@ public :
 
                     // first, we need to compute YCbCr coordinates.
 
-                    // from Rec.2020  http://www.itu.int/rec/R-REC-BT.2020-0-201208-I/en :
-                    // Y' = 0.2627R' + 0.6780G' + 0.0593B'
-                    // Cb' = (B'-Y')/1.8814
-                    // Cr' = (R'-Y')/1.4746
-                    //
-                    // or the "constant luminance" version
-                    // Yc' = (0.2627R + 0.6780G + 0.0593B)'
-                    // Cbc' = (B'-Yc')/1.9404 if -0.9702<=(B'-Y')<=0
-                    //        (B'-Yc')/1.5816 if 0<=(R'-Y')<=0.7908
-                    // Crc' = (R'-Yc')/1.7184 if -0.8592<=(B'-Y')<=0
-                    //        (R'-Yc')/0.9936 if 0<=(R'-Y')<=0.4968
-                    //
-                    // with
-                    // E' = 4.5E if 0 <=E<=beta
-                    //      alpha*E^(0.45)-(alpha-1) if beta<=E<=1
-                    // α = 1.099 and β = 0.018 for 10-bit system
-                    // α = 1.0993 and β = 0.0181 for 12-bit system
-                    //
-                    // For our purpose, we only work in the linear space (which is why
-                    // we don't allow UByte bit depth), and use the first set of formulas
-                    //
 
-                    double r = srcPix[0];
-                    double g = srcPix[1];
-                    double b = srcPix[2];
-                    double y = 0.2627*r+0.6780*g+0.0593*b;
-                    double fgy = y;
-                    double fgcb = (b-y)/1.8814;
-                    double fgcr = (r-y)/1.4746;
-                    r = bgPix[0];
-                    g = bgPix[1];
-                    b = bgPix[2];
-                    y = 0.2627*r+0.6780*g+0.0593*b;
-                    double bgy = y;
-                    double bgcb = (b-y)/1.8814;
-                    double bgcr = (r-y)/1.4746;
+                    double fgy, fgcb, fgcr;
+                    rgb2ycbcr(sampleToFloat<maxValue>(srcPix[0]),
+                              sampleToFloat<maxValue>(srcPix[1]),
+                              sampleToFloat<maxValue>(srcPix[2]), &fgy, &fgcb, &fgcr);
 
                     ///////////////////////
                     // STEP A: Key Generator
@@ -332,8 +363,8 @@ public :
                         Kfg = 0.;
                     } else {
                         Kfg = fgx - std::abs(fgz)/_tan_acceptanceAngle_2;
-                        //TODO
                     }
+                    assert(Kfg >= 0.);
 
                     ///////////////
                     // STEP B: Nonadditive Mix
@@ -351,18 +382,53 @@ public :
                         Kfg = outMask;
                     }
 
-
-                    //TODO
-
                     //////////////////////
                     // STEP C: Foreground suppressor
 
                     // The foreground suppressor reduces foreground color information by implementing X = X – KFG, with the key color being clamped to the black level.
 
+                    //fgx = fgx - Kfg;
+
+                    // there seems to be an error in the book here: there should be primes (') in the formula:
+                    // CbFG =Cb–KFG cosθ
+                    // CrFG = Cr – KFG sin θ
+                    // [FD] there is an error in the paper, which doesn't take into account chrominance denormalization:
+                    // (X,Z) was computed from twice the chrominance, so subtracting Kfg from X means to
+                    // subtract Kfg/2 from (Cb,Cr).
+                    if (fgx > 0 && std::abs(fgz)/fgx < _tan_suppressionAngle_2) {
+                        fgcb = 0;
+                        fgcr = 0;
+                    } else {
+                        fgcb = fgcb - Kfg * _cosKey / 2;
+                        fgcr = fgcr - Kfg * _sinKey / 2;
+                    }
+
+                    // Foreground luminance, after being normalized to have a range of 0–1, is suppressed by:
+                    // YFG = Y ́ – yS*KFG
+                    // YFG = 0 if yS*KFG > Y ́
+                    // [FD] the luminance is already normalized
+
+                    // Y' = Y - y*Kfg, where y is such that Y' = 0 for the key color.
+                    fgy = fgy - _ys * Kfg;
+                    if (fgy < 0) {
+                        fgy = 0;
+                    }
+
+                    // convert back to r g b
+                    // (note: r,g,b is premultiplied since it should be added to the suppressed background)
+                    ycbcr2rgb(fgy, fgcb, fgcr, &fgr, &fgg, &fgb);
+
                     /////////////////////
                     // STEP D: Key processor
 
                     // The key processor generates the initial background key signal (K ́BG) used to remove areas of the background image where the fore- ground is to be visible.
+                    // [FD] we don't implement the key lift (kL), just the key gain (kG)
+                    // kG = 1/_xKey, since Kbg should be 1 at the key color
+                    Kbg = Kfg / _xKey;
+                    if (Kbg > 1.) {
+                        Kbg = 1.;
+                    }
+                    assert(Kbg >= 0.);
 
                     // Additional controls may be implemented to enable the foreground and background signals to be controlled independently. Examples are adjusting the contrast of the foreground so it matches the background or fading the fore- ground in various ways (such as fading to the background to make a foreground object van- ish or fading to black to generate a silhouette).
                     // In the computer environment, there may be relatively slow, smooth edges—especially edges involving smooth shading. As smooth edges are easily distorted during the chroma keying process, a wide keying process is usu- ally used in these circumstances. During wide keying, the keying signal starts before the edge of the graphic object.
@@ -370,8 +436,9 @@ public :
 
                 // At this point, we have Kbg,
 
-                // set the alpha channel to the opposite of Kbg
-                dstPix[3] = 1. - Kbg;
+                // set the alpha channel to the complement of Kbg
+                double fga = 1. - Kbg;
+                double compAlpha = (_sourceAlpha == eSourceAlphaNormal) ? sampleToFloat<maxValue>(srcPix[3]) : 1.;
                 switch (_outputMode) {
                     case eOutputModeIntermediate:
                         for (int c = 0; c < 3; ++c) {
@@ -379,20 +446,27 @@ public :
                         }
                         break;
                     case eOutputModePremultiplied:
-                        dstPix[0] = fgr * dstPix[3];
-                        dstPix[1] = fgg * dstPix[3];
-                        dstPix[2] = fgb * dstPix[3];
+                        dstPix[0] = floatToSample<maxValue>(fgr);
+                        dstPix[1] = floatToSample<maxValue>(fgg);
+                        dstPix[2] = floatToSample<maxValue>(fgb);
                         break;
                     case eOutputModeUnpremultiplied:
-                        dstPix[0] = fgr;
-                        dstPix[1] = fgg;
-                        dstPix[2] = fgb;
+                        if (fga == 0.) {
+                            dstPix[0] = dstPix[1] = dstPix[2] = 0.;
+                        } else {
+                        dstPix[0] = floatToSample<maxValue>(fgr / fga);
+                        dstPix[1] = floatToSample<maxValue>(fgg / fga);
+                        dstPix[2] = floatToSample<maxValue>(fgb / fga);
+                        }
                         break;
                     case eOutputModeComposite:
-                        dstPix[0] = fgr * dstPix[3];
-                        dstPix[1] = fgg * dstPix[3];
-                        dstPix[2] = fgb * dstPix[3];
+                        dstPix[0] = floatToSample<maxValue>(fgr * compAlpha + bgr * Kbg * (1.-compAlpha));
+                        dstPix[1] = floatToSample<maxValue>(fgg * compAlpha + bgg * Kbg * (1.-compAlpha));
+                        dstPix[2] = floatToSample<maxValue>(fgb * compAlpha + bgb * Kbg * (1.-compAlpha));
                         break;
+                }
+                if (nComponents == 4) {
+                    dstPix[3] = floatToSample<maxValue>(fga);
                 }
             }
         }
