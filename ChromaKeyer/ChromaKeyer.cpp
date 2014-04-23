@@ -102,6 +102,12 @@
 #define kSuppressionAngleParamName "Suppression Angle"
 #define kSuppressionAngleParamHint "The chrominance of foreground colors inside the suppression angle (beta) is set to zero on output, to deal with noise. Use no more than one third of acceptance angle."
 
+#define kKeyLiftParamName "Key Lift"
+#define kKeyLiftParamHint "Raise it so that less pixels are classified as background. Makes a sharper transition between foreground and background. Defaults to 0."
+
+#define kKeyGainParamName "Key Gain"
+#define kKeyGainParamHint "Lower it to classify more colors as background. Defaults to 1."
+
 #define kOutputModeParamName "Output Mode"
 #define kOutputModeIntermediateOption "Intermediate"
 #define kOutputModeIntermediateHint "Color is the source color. Alpha is the foreground key. Use for multi-pass keying."
@@ -151,6 +157,8 @@ protected:
     double _tan_acceptanceAngle_2;
     double _suppressionAngle;
     double _tan_suppressionAngle_2;
+    double _keyLift;
+    double _keyGain;
     OutputModeEnum _outputMode;
     SourceAlphaEnum _sourceAlpha;
     double _sinKey, _cosKey, _xKey, _ys;
@@ -167,6 +175,8 @@ public:
     , _tan_acceptanceAngle_2(0.)
     , _suppressionAngle(0.)
     , _tan_suppressionAngle_2(0.)
+    , _keyLift(0.)
+    , _keyGain(1.)
     , _outputMode(eOutputModeComposite)
     , _sourceAlpha(eSourceAlphaIgnore)
     , _sinKey(0)
@@ -185,11 +195,13 @@ public:
         _outMaskImg = outMaskImg;
     }
     
-    void setValues(const OfxRGBColourD& keyColor, double acceptanceAngle, double suppressionAngle, OutputModeEnum outputMode, SourceAlphaEnum sourceAlpha)
+    void setValues(const OfxRGBColourD& keyColor, double acceptanceAngle, double suppressionAngle, double keyLift, double keyGain, OutputModeEnum outputMode, SourceAlphaEnum sourceAlpha)
     {
         _keyColor = keyColor;
-        _acceptanceAngle = acceptanceAngle * M_PI / 180;
-        _suppressionAngle = suppressionAngle * M_PI / 180;
+        _acceptanceAngle = acceptanceAngle;
+        _suppressionAngle = suppressionAngle;
+        _keyLift = keyLift;
+        _keyGain = keyGain;
         _outputMode = outputMode;
         _sourceAlpha = sourceAlpha;
         double y, cb, cr;
@@ -204,8 +216,12 @@ public:
         _cosKey = 2*cb/_xKey;
         _sinKey = 2*cr/_xKey;
         _ys = _xKey == 0. ? 0. : y/_xKey;
-        _tan_acceptanceAngle_2 = std::tan(_acceptanceAngle/2);
-        _tan_suppressionAngle_2 = std::tan(_suppressionAngle/2);
+        if (_acceptanceAngle < 180.) {
+            _tan_acceptanceAngle_2 = std::tan((_acceptanceAngle/2) * M_PI / 180);
+        }
+        if (_suppressionAngle < 180.) {
+            _tan_suppressionAngle_2 = std::tan((_suppressionAngle/2) * M_PI / 180);
+        }
     }
 
     // from Rec.2020  http://www.itu.int/rec/R-REC-BT.2020-0-201208-I/en :
@@ -361,11 +377,11 @@ public :
 
                     double Kfg;
 
-                    if (fgx <= 0 || std::abs(fgz)/fgx > _tan_acceptanceAngle_2) {
+                    if (fgx <= 0 || (_acceptanceAngle < 180. && std::abs(fgz)/fgx > _tan_acceptanceAngle_2)) {
                         /* keep foreground Kfg = 0*/
                         Kfg = 0.;
                     } else {
-                        Kfg = fgx - std::abs(fgz)/_tan_acceptanceAngle_2;
+                        Kfg = _tan_acceptanceAngle_2 > 0 ? (fgx - std::abs(fgz)/_tan_acceptanceAngle_2) : 0.;
                     }
                     assert(Kfg >= 0.);
 
@@ -399,7 +415,7 @@ public :
                         // [FD] there is an error in the paper, which doesn't take into account chrominance denormalization:
                         // (X,Z) was computed from twice the chrominance, so subtracting Kfg from X means to
                         // subtract Kfg/2 from (Cb,Cr).
-                        if (fgx > 0 && std::abs(fgz)/fgx < _tan_suppressionAngle_2) {
+                        if (fgx > 0 && (_tan_suppressionAngle_2 < 180. && std::abs(fgz)/fgx < _tan_suppressionAngle_2)) {
                             fgcb = 0;
                             fgcr = 0;
                         } else {
@@ -427,14 +443,26 @@ public :
                     /////////////////////
                     // STEP D: Key processor
 
-                    // The key processor generates the initial background key signal (K ́BG) used to remove areas of the background image where the fore- ground is to be visible.
+                    // The key processor generates the initial background key signal (K ́BG) used to remove areas of the background image where the foreground is to be visible.
                     // [FD] we don't implement the key lift (kL), just the key gain (kG)
                     // kG = 1/_xKey, since Kbg should be 1 at the key color
-                    Kbg = Kfg / _xKey;
+                    // in our implementation, _keyGain is a multiplier of xKey (1 by default) and keylift is the fraction (from 0 to 1) of _keyGain*_xKey where the linear ramp begins
+                    if (_keyGain == 0.) {
+                        Kbg = 1.;
+                    } else if (_keyLift == 1) {
+                        if (Kfg >= _xKey) {
+                            Kbg = 1.;
+                        } else {
+                            Kbg = 0.;
+                        }
+                    } else {
+                        Kbg = (Kfg/(_keyGain*_xKey) -_keyLift)/ (1.-_keyLift);
+                    }
                     if (Kbg > 1.) {
                         Kbg = 1.;
+                    } else if (Kbg < 0.) {
+                        Kbg = 0.;
                     }
-                    assert(Kbg >= 0.);
 
                     // Additional controls may be implemented to enable the foreground and background signals to be controlled independently. Examples are adjusting the contrast of the foreground so it matches the background or fading the fore- ground in various ways (such as fading to the background to make a foreground object van- ish or fading to black to generate a silhouette).
                     // In the computer environment, there may be relatively slow, smooth edges—especially edges involving smooth shading. As smooth edges are easily distorted during the chroma keying process, a wide keying process is usu- ally used in these circumstances. During wide keying, the keying signal starts before the edge of the graphic object.
@@ -501,6 +529,8 @@ public :
     , keyColor_(0)
     , acceptanceAngle_(0)
     , suppressionAngle_(0)
+    , keyLift_(0)
+    , keyGain_(0)
     , outputMode_(0)
     , sourceAlpha_(0)
     {
@@ -517,6 +547,8 @@ public :
         keyColor_ = fetchRGBParam(kKeyColorParamName);
         acceptanceAngle_ = fetchDoubleParam(kAcceptanceAngleParamName);
         suppressionAngle_ = fetchDoubleParam(kSuppressionAngleParamName);
+        keyLift_ = fetchDoubleParam(kKeyLiftParamName);
+        keyGain_ = fetchDoubleParam(kKeyGainParamName);
         outputMode_ = fetchChoiceParam(kOutputModeParamName);
         sourceAlpha_ = fetchChoiceParam(kSourceAlphaParamName);
     }
@@ -538,6 +570,8 @@ private:
     OFX::RGBParam* keyColor_;
     OFX::DoubleParam* acceptanceAngle_;
     OFX::DoubleParam* suppressionAngle_;
+    OFX::DoubleParam* keyLift_;
+    OFX::DoubleParam* keyGain_;
     OFX::ChoiceParam* outputMode_;
     OFX::ChoiceParam* sourceAlpha_;
 };
@@ -584,6 +618,8 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
     OfxRGBColourD keyColor;
     double acceptanceAngle;
     double suppressionAngle;
+    double keyLift;
+    double keyGain;
     int outputModeI;
     OutputModeEnum outputMode;
     int sourceAlphaI;
@@ -591,11 +627,13 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
     keyColor_->getValueAtTime(args.time, keyColor.r, keyColor.g, keyColor.b);
     acceptanceAngle_->getValueAtTime(args.time, acceptanceAngle);
     suppressionAngle_->getValueAtTime(args.time, suppressionAngle);
+    keyLift_->getValueAtTime(args.time, keyLift);
+    keyGain_->getValueAtTime(args.time, keyGain);
     outputMode_->getValue(outputModeI);
     outputMode = (OutputModeEnum)outputModeI;
     sourceAlpha_->getValue(sourceAlphaI);
     sourceAlpha = (SourceAlphaEnum)sourceAlphaI;
-    processor.setValues(keyColor, acceptanceAngle, suppressionAngle, outputMode, sourceAlpha);
+    processor.setValues(keyColor, acceptanceAngle, suppressionAngle, keyLift, keyGain, outputMode, sourceAlpha);
     processor.setDstImg(dst.get());
     processor.setSrcImgs(src.get(), bg.get(), inMask.get(), outMask.get());
     processor.setRenderWindow(args.renderWindow);
@@ -746,9 +784,9 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     acceptanceAngle->setLabels(kAcceptanceAngleParamName, kAcceptanceAngleParamName, kAcceptanceAngleParamName);
     acceptanceAngle->setHint(kAcceptanceAngleParamHint);
     acceptanceAngle->setDoubleType(eDoubleTypeAngle);;
-    acceptanceAngle->setRange(0., 175.);
-    acceptanceAngle->setDisplayRange(0., 175.);
-    acceptanceAngle->setDefault(90.);
+    acceptanceAngle->setRange(0., 180.);
+    acceptanceAngle->setDisplayRange(0., 180.);
+    acceptanceAngle->setDefault(120.);
     acceptanceAngle->setAnimates(true);
     page->addChild(*acceptanceAngle);
 
@@ -756,11 +794,29 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     suppressionAngle->setLabels(kSuppressionAngleParamName, kSuppressionAngleParamName, kSuppressionAngleParamName);
     suppressionAngle->setHint(kSuppressionAngleParamHint);
     suppressionAngle->setDoubleType(eDoubleTypeAngle);;
-    suppressionAngle->setRange(0., 175.);
-    suppressionAngle->setDisplayRange(0., 175.);
-    suppressionAngle->setDefault(10.);
+    suppressionAngle->setRange(0., 180.);
+    suppressionAngle->setDisplayRange(0., 180.);
+    suppressionAngle->setDefault(40.);
     suppressionAngle->setAnimates(true);
     page->addChild(*suppressionAngle);
+
+    DoubleParamDescriptor* keyLift = desc.defineDoubleParam(kKeyLiftParamName);
+    keyLift->setLabels(kKeyLiftParamName, kKeyLiftParamName, kKeyLiftParamName);
+    keyLift->setHint(kKeyLiftParamHint);
+    keyLift->setRange(0., 1.);
+    keyLift->setDisplayRange(0., 1.);
+    keyLift->setDefault(0.);
+    keyLift->setAnimates(true);
+    page->addChild(*keyLift);
+
+    DoubleParamDescriptor* keyGain = desc.defineDoubleParam(kKeyGainParamName);
+    keyGain->setLabels(kKeyGainParamName, kKeyGainParamName, kKeyGainParamName);
+    keyGain->setHint(kKeyGainParamHint);
+    keyGain->setRange(0., 2.);
+    keyGain->setDisplayRange(0., 2.);
+    keyGain->setDefault(1.);
+    keyGain->setAnimates(true);
+    page->addChild(*keyGain);
 
     ChoiceParamDescriptor* outputMode = desc.defineChoiceParam(kOutputModeParamName);
     outputMode->setLabels(kOutputModeParamName, kOutputModeParamName, kOutputModeParamName);
