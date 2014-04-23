@@ -700,6 +700,22 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     srcClip->setSupportsTiles(true);
     srcClip->setOptional(false);
     
+    // create the inside mask clip
+    ClipDescriptor *inMaskClip =  desc.defineClip(kInsideMaskClipName);
+    inMaskClip->addSupportedComponent(ePixelComponentAlpha);
+    inMaskClip->setTemporalClipAccess(false);
+    inMaskClip->setOptional(true);
+    inMaskClip->setSupportsTiles(true);
+    inMaskClip->setIsMask(true);
+
+    // outside mask clip (garbage matte)
+    ClipDescriptor *outMaskClip =  desc.defineClip(kOutsideMaskClipName);
+    outMaskClip->addSupportedComponent(ePixelComponentAlpha);
+    outMaskClip->setTemporalClipAccess(false);
+    outMaskClip->setOptional(true);
+    outMaskClip->setSupportsTiles(true);
+    outMaskClip->setIsMask(true);
+
     ClipDescriptor* bgClip = desc.defineClip(kBgClipName);
     bgClip->addSupportedComponent( OFX::ePixelComponentRGBA );
     bgClip->addSupportedComponent( OFX::ePixelComponentRGB );
@@ -713,21 +729,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->setSupportsTiles(true);
     
-    // create the inside mask clip
-    ClipDescriptor *inMaskClip =  desc.defineClip(kInsideMaskClipName);
-    inMaskClip->addSupportedComponent(ePixelComponentAlpha);
-    inMaskClip->setTemporalClipAccess(false);
-    inMaskClip->setOptional(true);
-    inMaskClip->setSupportsTiles(true);
-    inMaskClip->setIsMask(true);
-    
-    ClipDescriptor *outMaskClip =  desc.defineClip(kOutsideMaskClipName);
-    outMaskClip->addSupportedComponent(ePixelComponentAlpha);
-    outMaskClip->setTemporalClipAccess(false);
-    outMaskClip->setOptional(true);
-    outMaskClip->setSupportsTiles(true);
-    outMaskClip->setIsMask(true);
-    
+
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
  
