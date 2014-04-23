@@ -297,10 +297,13 @@ public:
     , _mix(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
+        assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
         // name of mask clip depends on the context
         if (masked) {
             maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+            assert(maskClip_->getPixelComponents() == ePixelComponentAlpha);
         }
         // NON-GENERIC
         _translate = fetchDouble2DParam(kTranslateParamName);
@@ -764,9 +767,9 @@ TransformPlugin::render(const OFX::RenderArguments &args)
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
         if (_masked) {
-            renderInternal<3,true>(args, dstBitDepth);
+            renderInternal<1,true>(args, dstBitDepth);
         } else {
-            renderInternal<3,false>(args, dstBitDepth);
+            renderInternal<1,false>(args, dstBitDepth);
         }
     }
 }

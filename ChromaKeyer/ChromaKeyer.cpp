@@ -495,10 +495,15 @@ public :
     , sourceAlpha_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
+        assert(dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
         bgClip_ = fetchClip(kBgClipName);
+        assert(bgClip_->getPixelComponents() == ePixelComponentRGB || bgClip_->getPixelComponents() == ePixelComponentRGBA);
         inMaskClip_ = fetchClip(kInsideMaskClipName);;
+        assert(inMaskClip_->getPixelComponents() == ePixelComponentAlpha);
         outMaskClip_ = fetchClip(kOutsideMaskClipName);;
+        assert(outMaskClip_->getPixelComponents() == ePixelComponentAlpha);
         keyColor_ = fetchRGBParam(kKeyColorParamName);
         acceptanceAngle_ = fetchDoubleParam(kAcceptanceAngleParamName);
         suppressionAngle_ = fetchDoubleParam(kSuppressionAngleParamName);
@@ -623,6 +628,7 @@ ChromaKeyerPlugin::render(const OFX::RenderArguments &args)
     }
     else
     {
+        assert(dstComponents == OFX::ePixelComponentRGB);
         switch(dstBitDepth)
         {
             //case OFX::eBitDepthUByte :

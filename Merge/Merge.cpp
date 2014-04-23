@@ -204,9 +204,13 @@ public :
     
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
+        assert(dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha);
         srcClipA_ = fetchClip(kSourceClipAName);
+        assert(srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA || srcClipA_->getPixelComponents() == ePixelComponentAlpha);
         srcClipB_ = fetchClip(kSourceClipBName);
+        assert(srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA || srcClipB_->getPixelComponents() == ePixelComponentAlpha);
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        assert(maskClip_->getPixelComponents() == ePixelComponentAlpha);
         _operation = fetchChoiceParam(kOperationParamName);
         _bbox = fetchChoiceParam(kBboxParamName);
         _doMask = fetchBooleanParam(kFilterMaskParamName);
@@ -353,7 +357,7 @@ MergePlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
     
-    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
+    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentAlpha);
     if(dstComponents == OFX::ePixelComponentRGBA)
     {
         switch(dstBitDepth)
@@ -380,7 +384,7 @@ MergePlugin::render(const OFX::RenderArguments &args)
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
-    else
+    else if (dstComponents == OFX::ePixelComponentRGB)
     {
         switch(dstBitDepth)
         {
@@ -399,6 +403,33 @@ MergePlugin::render(const OFX::RenderArguments &args)
             case OFX::eBitDepthFloat :
             {
                 MergeProcessor<float,3,1> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+            default :
+                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
+    }
+    else
+    {
+        assert(dstComponents == OFX::ePixelComponentAlpha);
+        switch(dstBitDepth)
+        {
+            case OFX::eBitDepthUByte :
+            {
+                MergeProcessor<unsigned char, 1, 255> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+            case OFX::eBitDepthUShort :
+            {
+                MergeProcessor<unsigned short, 1, 65535> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+            case OFX::eBitDepthFloat :
+            {
+                MergeProcessor<float,1,1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -439,6 +470,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     OFX::ClipDescriptor* srcClipB = desc.defineClip(kSourceClipBName);
 	srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
 	srcClipB->addSupportedComponent( OFX::ePixelComponentRGB );
+	srcClipB->addSupportedComponent( OFX::ePixelComponentAlpha );
     srcClipB->setTemporalClipAccess(false);
 	srcClipB->setSupportsTiles(true);
 	srcClipB->setOptional(false);
@@ -446,6 +478,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
 	OFX::ClipDescriptor* srcClipA = desc.defineClip(kSourceClipAName);
 	srcClipA->addSupportedComponent( OFX::ePixelComponentRGBA );
 	srcClipA->addSupportedComponent( OFX::ePixelComponentRGB );
+	srcClipA->addSupportedComponent( OFX::ePixelComponentAlpha );
     srcClipA->setTemporalClipAccess(false);
 	srcClipA->setSupportsTiles(true);
 	srcClipA->setOptional(false);
@@ -455,6 +488,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(true);
     
     if (context == eContextGeneral || context == eContextPaint) {

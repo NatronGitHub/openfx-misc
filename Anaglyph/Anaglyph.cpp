@@ -186,6 +186,8 @@ private :
   }
 };
 
+using namespace OFX;
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class AnaglyphPlugin : public OFX::ImageEffect {
@@ -209,7 +211,9 @@ public :
     , offset_(0)
   {
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
+    assert(dstClip_->getPixelComponents() == ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+    assert(srcClip_->getPixelComponents() == ePixelComponentRGBA);
     amtcolour_  = fetchDoubleParam("amtcolour");
     swap_ = fetchBooleanParam("swap");
     offset_ = fetchIntParam("offset");

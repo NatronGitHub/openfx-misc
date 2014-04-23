@@ -402,8 +402,11 @@ public :
     , maskClip_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
+        assert(dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        assert(maskClip_->getPixelComponents() == ePixelComponentAlpha);
         fetchColorControlGroup(kColorCorrectMasterGroupName, &_masterParamsGroup);
         fetchColorControlGroup(kColorCorrectShadowsGroupName, &_shadowsParamsGroup);
         fetchColorControlGroup(kColorCorrectMidtonesGroupName, &_midtonesParamsGroup);
@@ -547,6 +550,7 @@ ColorCorrectPlugin::render(const OFX::RenderArguments &args)
     }
     else
     {
+        assert(dstComponents == OFX::ePixelComponentRGB);
         switch(dstBitDepth)
         {
             case OFX::eBitDepthUByte :
@@ -658,6 +662,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->setSupportsTiles(true);
     
     if (context == eContextGeneral || context == eContextPaint) {

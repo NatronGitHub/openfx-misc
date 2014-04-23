@@ -137,6 +137,8 @@ public :
   }
 };
 
+using namespace OFX;
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class OneViewPlugin : public OFX::ImageEffect {
@@ -156,7 +158,9 @@ public :
     , view_(0)
   {
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
+    assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+    assert(srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
     view_ = fetchChoiceParam("view");
   }
 
@@ -246,7 +250,31 @@ OneViewPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
   }
+  else if (dstComponents == OFX::ePixelComponentRGB) {
+    switch(dstBitDepth) {
+      case OFX::eBitDepthUByte : {      
+        ImageCopier<unsigned char, 3> fred(*this);
+        setupAndProcess(fred, args);
+      }
+        break;
+
+      case OFX::eBitDepthUShort : {
+        ImageCopier<unsigned short, 3> fred(*this);
+        setupAndProcess(fred, args);
+      }                          
+        break;
+
+      case OFX::eBitDepthFloat : {
+        ImageCopier<float, 3> fred(*this);
+        setupAndProcess(fred, args);
+      }
+        break;
+      default :
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+  }
   else {
+    assert(dstComponents == OFX::ePixelComponentAlpha);
     switch(dstBitDepth) {
       case OFX::eBitDepthUByte : {
         ImageCopier<unsigned char, 1> fred(*this);
@@ -321,6 +349,7 @@ void OneViewPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
   // Source clip only in the filter context
   // create the mandated source clip
   ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+  srcClip->addSupportedComponent(ePixelComponentRGB);
   srcClip->addSupportedComponent(ePixelComponentRGBA);
   srcClip->addSupportedComponent(ePixelComponentAlpha);
   srcClip->setTemporalClipAccess(false);
@@ -329,6 +358,7 @@ void OneViewPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
 
   // create the mandated output clip
   ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
+  dstClip->addSupportedComponent(ePixelComponentRGB);
   dstClip->addSupportedComponent(ePixelComponentRGBA);
   dstClip->addSupportedComponent(ePixelComponentAlpha);
   dstClip->setSupportsTiles(true);

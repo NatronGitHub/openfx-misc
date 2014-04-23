@@ -259,8 +259,11 @@ public :
     
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
+        assert(dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        assert(maskClip_->getPixelComponents() == ePixelComponentAlpha);
         _blackPoint = fetchRGBAParam(kBlackPointParamName);
         _whitePoint = fetchRGBAParam(kWhitePointParamName);
         _black = fetchRGBAParam(kBlackParamName);
@@ -380,6 +383,7 @@ GradePlugin::render(const OFX::RenderArguments &args)
     }
     else
     {
+        assert(dstComponents == OFX::ePixelComponentRGB);
         switch(dstBitDepth)
         {
             case OFX::eBitDepthUByte :

@@ -230,6 +230,8 @@ private:
   }
 };
 
+using namespace OFX;
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class RGBLutPlugin : public OFX::ImageEffect 
@@ -245,7 +247,9 @@ public :
     , srcClip_(0)
   {
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
+    assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+    assert(srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
   }
 
   virtual void render(const OFX::RenderArguments &args);
@@ -384,7 +388,36 @@ void RGBLutPlugin::render(const OFX::RenderArguments &args)
       OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
   }
+  else if(dstComponents == OFX::ePixelComponentRGB)
+  {
+    switch(dstBitDepth) 
+    {
+    case OFX::eBitDepthUByte : 
+      {      
+        ImageRGBLutProcessor<unsigned char, 3, 255> fred(*this, args);
+        setupAndProcess(fred, args);
+      }
+      break;
+
+    case OFX::eBitDepthUShort : 
+      {
+        ImageRGBLutProcessor<unsigned short, 3, 65535> fred(*this, args);
+        setupAndProcess(fred, args);
+      }                          
+      break;
+
+    case OFX::eBitDepthFloat : 
+      {
+        ImageRGBLutProcessorFloat<3,999> fred(*this, args);
+        setupAndProcess(fred, args);
+      }
+      break;
+    default :
+      OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+  }
   else {
+    assert(dstComponents == OFX::ePixelComponentAlpha);
     switch(dstBitDepth) 
     {
     case OFX::eBitDepthUByte : 
@@ -447,6 +480,7 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 
   ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
   assert(srcClip);
+  srcClip->addSupportedComponent(ePixelComponentRGB);
   srcClip->addSupportedComponent(ePixelComponentRGBA);
   srcClip->addSupportedComponent(ePixelComponentAlpha);
   srcClip->setTemporalClipAccess(false);
@@ -455,6 +489,7 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 
   ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
   assert(dstClip);
+  dstClip->addSupportedComponent(ePixelComponentRGB);
   dstClip->addSupportedComponent(ePixelComponentRGBA);
   dstClip->addSupportedComponent(ePixelComponentAlpha);
   dstClip->setSupportsTiles(true);

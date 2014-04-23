@@ -336,6 +336,8 @@ class ImageTranslator : public TranslateBase {
   }
 };
 
+using namespace OFX;
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class ReConvergePlugin : public OFX::ImageEffect {
@@ -357,8 +359,11 @@ class ReConvergePlugin : public OFX::ImageEffect {
       , srcClip_(0)
   {
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
+    assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+    assert(srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
     dispClip_ = fetchClip("Disparity");
+    assert(dispClip_->getPixelComponents() == ePixelComponentAlpha || dispClip_->getPixelComponents() == ePixelComponentRGB || dispClip_->getPixelComponents() == ePixelComponentRGBA);
 
     convergepoint_ = fetchDouble2DParam("convergepoint");
     offset_ = fetchIntParam("offset");
@@ -479,7 +484,30 @@ ReConvergePlugin::render(const OFX::RenderArguments &args)
       default :
         OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
+  } else if(dstComponents == OFX::ePixelComponentRGB) {
+    switch(dstBitDepth) {
+      case OFX::eBitDepthUByte : {      
+        ImageTranslator<unsigned char, 3, 255> fred(*this);
+        setupAndProcess(fred, args);
+      }
+        break;
+
+      case OFX::eBitDepthUShort : {
+        ImageTranslator<unsigned short, 3, 65535> fred(*this);
+        setupAndProcess(fred, args);
+      }                          
+        break;
+
+      case OFX::eBitDepthFloat : {
+        ImageTranslator<float, 3, 1> fred(*this);
+        setupAndProcess(fred, args);
+      }
+        break;
+      default :
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
   } else {
+    assert(dstComponents == OFX::ePixelComponentAlpha);
     switch(dstBitDepth) {
       case OFX::eBitDepthUByte : {
         ImageTranslator<unsigned char, 1, 255> fred(*this);
@@ -547,6 +575,7 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
   // Source clip only in the filter context
   // create the mandated source clip
   ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+  srcClip->addSupportedComponent(ePixelComponentRGB);
   srcClip->addSupportedComponent(ePixelComponentRGBA);
   srcClip->addSupportedComponent(ePixelComponentAlpha);
   srcClip->setTemporalClipAccess(false);
@@ -556,6 +585,7 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
   if (context == eContextGeneral) {
     // Optional disparity clip
     ClipDescriptor *dispClip = desc.defineClip("Disparity");
+    dispClip->addSupportedComponent(ePixelComponentRGB);
     dispClip->addSupportedComponent(ePixelComponentRGBA);
     dispClip->addSupportedComponent(ePixelComponentAlpha);
     dispClip->setTemporalClipAccess(false);

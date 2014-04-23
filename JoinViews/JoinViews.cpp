@@ -138,6 +138,8 @@ public :
   }
 };
 
+using namespace OFX;
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class JoinViewsPlugin : public OFX::ImageEffect {
@@ -156,8 +158,11 @@ public :
     , srcRightClip_(0)
   {
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
+    assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
     srcLeftClip_ = fetchClip("Left");
+    assert(srcLeftClip_->getPixelComponents() == ePixelComponentAlpha || srcLeftClip_->getPixelComponents() == ePixelComponentRGB || srcLeftClip_->getPixelComponents() == ePixelComponentRGBA);
     srcRightClip_ = fetchClip("Right");
+    assert(srcRightClip_->getPixelComponents() == ePixelComponentAlpha || srcRightClip_->getPixelComponents() == ePixelComponentRGB || srcRightClip_->getPixelComponents() == ePixelComponentRGBA);
   }
 
   /* Override the render */
@@ -246,6 +251,29 @@ JoinViewsPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
   }
+  else if(dstComponents == OFX::ePixelComponentRGB) {
+    switch(dstBitDepth) {
+      case OFX::eBitDepthUByte : {      
+        ImageCopier<unsigned char, 3, 255> fred(*this);
+        setupAndProcess(fred, args);
+      }
+        break;
+
+      case OFX::eBitDepthUShort : {
+        ImageCopier<unsigned short, 3, 65535> fred(*this);
+        setupAndProcess(fred, args);
+      }                          
+        break;
+
+      case OFX::eBitDepthFloat : {
+        ImageCopier<float, 3, 1> fred(*this);
+        setupAndProcess(fred, args);
+      }
+        break;
+      default :
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+  }
   else {
     switch(dstBitDepth) {
       case OFX::eBitDepthUByte : {
@@ -323,6 +351,7 @@ void JoinViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
   // create the source clips from the rightmost one (in Nuke's GUI) to the leftmost
   ClipDescriptor *srcRightClip = desc.defineClip("Right");
+  srcRightClip->addSupportedComponent(ePixelComponentRGB);
   srcRightClip->addSupportedComponent(ePixelComponentRGBA);
   srcRightClip->addSupportedComponent(ePixelComponentAlpha);
   srcRightClip->setTemporalClipAccess(false);
@@ -330,6 +359,7 @@ void JoinViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
   srcRightClip->setIsMask(false);
 
   ClipDescriptor *srcLeftClip = desc.defineClip("Left");
+  srcLeftClip->addSupportedComponent(ePixelComponentRGB);
   srcLeftClip->addSupportedComponent(ePixelComponentRGBA);
   srcLeftClip->addSupportedComponent(ePixelComponentAlpha);
   srcLeftClip->setTemporalClipAccess(false);
@@ -338,6 +368,7 @@ void JoinViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
   // create the mandated output clip
   ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
+  dstClip->addSupportedComponent(ePixelComponentRGB);
   dstClip->addSupportedComponent(ePixelComponentRGBA);
   dstClip->addSupportedComponent(ePixelComponentAlpha);
   dstClip->setSupportsTiles(true);

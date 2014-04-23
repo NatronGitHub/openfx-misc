@@ -138,6 +138,8 @@ public :
   }
 };
 
+using namespace OFX;
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class MixViewsPlugin : public OFX::ImageEffect {
@@ -157,7 +159,9 @@ public :
     , mix_(0)
   {
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
+    assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+    assert(srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
     mix_  = fetchDoubleParam("mix");
   }
 
@@ -259,7 +263,30 @@ MixViewsPlugin::render(const OFX::RenderArguments &args)
       default :
         OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
+  } else if (dstComponents == OFX::ePixelComponentRGB) {
+    switch(dstBitDepth) {
+      case OFX::eBitDepthUByte : {      
+        ViewMixer<unsigned char, 3, 255> fred(*this);
+        setupAndProcess(fred, args);
+      }
+        break;
+
+      case OFX::eBitDepthUShort : {
+        ViewMixer<unsigned short, 3, 65535> fred(*this);
+        setupAndProcess(fred, args);
+      }                          
+        break;
+
+      case OFX::eBitDepthFloat : {
+        ViewMixer<float, 3, 1> fred(*this);
+        setupAndProcess(fred, args);
+      }
+        break;
+      default :
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
   } else {
+    assert(dstComponents == OFX::ePixelComponentAlpha);
     switch(dstBitDepth) {
       case OFX::eBitDepthUByte : {      
         ViewMixer<unsigned char, 1, 255> fred(*this);
@@ -334,6 +361,7 @@ void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
   // Source clip only in the filter context
   // create the mandated source clip
   ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+  srcClip->addSupportedComponent(ePixelComponentRGB);
   srcClip->addSupportedComponent(ePixelComponentRGBA);
   srcClip->addSupportedComponent(ePixelComponentAlpha);
   srcClip->setTemporalClipAccess(false);
@@ -342,6 +370,7 @@ void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 
   // create the mandated output clip
   ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
+  dstClip->addSupportedComponent(ePixelComponentRGB);
   dstClip->addSupportedComponent(ePixelComponentRGBA);
   dstClip->addSupportedComponent(ePixelComponentAlpha);
   dstClip->setSupportsTiles(true);
