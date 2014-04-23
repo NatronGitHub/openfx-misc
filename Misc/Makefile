@@ -14,6 +14,8 @@ PLUGINOBJECTS = \
         Roto.o \
 	CornerPin.o \
         ChromaKeyer.o \
+	ofxsOGLTextRenderer.o \
+	freeglut_font_data.o  \
         PluginRegistrationCombined.o
 
 PLUGINNAME = Misc
