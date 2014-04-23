@@ -315,6 +315,12 @@ public :
                 double bgg = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[1]) : 0.;
                 double bgb = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[2]) : 0.;
 
+                if (_outputMode != eOutputModeIntermediate) {
+                    fgr = srcPix ? sampleToFloat<PIX,maxValue>(srcPix[0]) : 0.;
+                    fgg = srcPix ? sampleToFloat<PIX,maxValue>(srcPix[1]) : 0.;
+                    fgb = srcPix ? sampleToFloat<PIX,maxValue>(srcPix[2]) : 0.;
+                }
+
                 if (!srcPix) {
                     // no source, take only background
                     Kbg = 1.;
@@ -334,9 +340,7 @@ public :
 
 
                     double fgy, fgcb, fgcr;
-                    rgb2ycbcr(sampleToFloat<PIX,maxValue>(srcPix[0]),
-                              sampleToFloat<PIX,maxValue>(srcPix[1]),
-                              sampleToFloat<PIX,maxValue>(srcPix[2]), &fgy, &fgcb, &fgcr);
+                    rgb2ycbcr(fgr, fgg, fgb, &fgy, &fgcb, &fgcr);
 
                     ///////////////////////
                     // STEP A: Key Generator
@@ -392,39 +396,40 @@ public :
                     //////////////////////
                     // STEP C: Foreground suppressor
 
-                    // The foreground suppressor reduces foreground color information by implementing X = X – KFG, with the key color being clamped to the black level.
+                    if (_outputMode != eOutputModeIntermediate) {
+                        // The foreground suppressor reduces foreground color information by implementing X = X – KFG, with the key color being clamped to the black level.
 
-                    //fgx = fgx - Kfg;
+                        //fgx = fgx - Kfg;
 
-                    // there seems to be an error in the book here: there should be primes (') in the formula:
-                    // CbFG =Cb–KFG cosθ
-                    // CrFG = Cr – KFG sin θ
-                    // [FD] there is an error in the paper, which doesn't take into account chrominance denormalization:
-                    // (X,Z) was computed from twice the chrominance, so subtracting Kfg from X means to
-                    // subtract Kfg/2 from (Cb,Cr).
-                    if (fgx > 0 && std::abs(fgz)/fgx < _tan_suppressionAngle_2) {
-                        fgcb = 0;
-                        fgcr = 0;
-                    } else {
-                        fgcb = fgcb - Kfg * _cosKey / 2;
-                        fgcr = fgcr - Kfg * _sinKey / 2;
+                        // there seems to be an error in the book here: there should be primes (') in the formula:
+                        // CbFG =Cb–KFG cosθ
+                        // CrFG = Cr – KFG sin θ
+                        // [FD] there is an error in the paper, which doesn't take into account chrominance denormalization:
+                        // (X,Z) was computed from twice the chrominance, so subtracting Kfg from X means to
+                        // subtract Kfg/2 from (Cb,Cr).
+                        if (fgx > 0 && std::abs(fgz)/fgx < _tan_suppressionAngle_2) {
+                            fgcb = 0;
+                            fgcr = 0;
+                        } else {
+                            fgcb = fgcb - Kfg * _cosKey / 2;
+                            fgcr = fgcr - Kfg * _sinKey / 2;
+                        }
+
+                        // Foreground luminance, after being normalized to have a range of 0–1, is suppressed by:
+                        // YFG = Y ́ – yS*KFG
+                        // YFG = 0 if yS*KFG > Y ́
+                        // [FD] the luminance is already normalized
+
+                        // Y' = Y - y*Kfg, where y is such that Y' = 0 for the key color.
+                        fgy = fgy - _ys * Kfg;
+                        if (fgy < 0) {
+                            fgy = 0;
+                        }
+
+                        // convert back to r g b
+                        // (note: r,g,b is premultiplied since it should be added to the suppressed background)
+                        ycbcr2rgb(fgy, fgcb, fgcr, &fgr, &fgg, &fgb);
                     }
-
-                    // Foreground luminance, after being normalized to have a range of 0–1, is suppressed by:
-                    // YFG = Y ́ – yS*KFG
-                    // YFG = 0 if yS*KFG > Y ́
-                    // [FD] the luminance is already normalized
-
-                    // Y' = Y - y*Kfg, where y is such that Y' = 0 for the key color.
-                    fgy = fgy - _ys * Kfg;
-                    if (fgy < 0) {
-                        fgy = 0;
-                    }
-
-                    // convert back to r g b
-                    // (note: r,g,b is premultiplied since it should be added to the suppressed background)
-                    ycbcr2rgb(fgy, fgcb, fgcr, &fgr, &fgg, &fgb);
-
                     /////////////////////
                     // STEP D: Key processor
 
@@ -445,11 +450,14 @@ public :
 
                 // set the alpha channel to the complement of Kbg
                 double fga = 1. - Kbg;
-                double compAlpha = (_sourceAlpha == eSourceAlphaNormal) ? sampleToFloat<PIX,maxValue>(srcPix[3]) : 1.;
+                assert(fga >= 0. && fga <= 1.);
+                double compAlpha = (_outputMode == eOutputModeComposite &&
+                                    _sourceAlpha == eSourceAlphaNormal &&
+                                    srcPix) ? sampleToFloat<PIX,maxValue>(srcPix[3]) : 1.;
                 switch (_outputMode) {
                     case eOutputModeIntermediate:
                         for (int c = 0; c < 3; ++c) {
-                            dstPix[c] = srcPix[c];
+                            dstPix[c] = srcPix ? srcPix[c] : 0;
                         }
                         break;
                     case eOutputModePremultiplied:
