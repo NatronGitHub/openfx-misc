@@ -487,7 +487,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
         dst->getRenderScale().y != args.renderScale.y ||
-        dst->getField() == args.fieldToRender) {
+        dst->getField() != args.fieldToRender) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -501,7 +501,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
             throw int(1);
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
-            src->getField() == args.fieldToRender) {
+            src->getField() != args.fieldToRender) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -510,7 +510,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
     if (mask.get()) {
         if (mask->getRenderScale().x != args.renderScale.x ||
             mask->getRenderScale().y != args.renderScale.y ||
-            mask->getField() == args.fieldToRender) {
+            mask->getField() != args.fieldToRender) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
