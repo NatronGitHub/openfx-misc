@@ -186,6 +186,15 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor, const OFX::RenderArgume
 {
   // get a dst image
   std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+  if (!dst.get()) {
+    OFX::throwSuiteStatusException(kOfxStatFailed);
+  }
+  if (dst->getRenderScale().x != args.renderScale.x ||
+      dst->getRenderScale().y != args.renderScale.y ||
+      dst->getField() == args.fieldToRender) {
+    setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+    OFX::throwSuiteStatusException(kOfxStatFailed);
+  }
   OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
   OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 

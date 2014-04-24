@@ -240,12 +240,37 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor, const OFX::RenderArgume
 {
   // get a dst image
   std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+  if (!dst.get()) {
+    OFX::throwSuiteStatusException(kOfxStatFailed);
+  }
+  if (dst->getRenderScale().x != args.renderScale.x ||
+      dst->getRenderScale().y != args.renderScale.y ||
+      dst->getField() == args.fieldToRender) {
+    setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+    OFX::throwSuiteStatusException(kOfxStatFailed);
+  }
   OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
   OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
   // fetch main input image
   std::auto_ptr<OFX::Image> srcLeft(srcClip_->fetchStereoscopicImage(args.time,0));
+  if (srcLeft.get()) {
+    if (srcLeft->getRenderScale().x != args.renderScale.x ||
+        srcLeft->getRenderScale().y != args.renderScale.y ||
+        srcLeft->getField() == args.fieldToRender) {
+      setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+      OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+  }
   std::auto_ptr<OFX::Image> srcRight(srcClip_->fetchStereoscopicImage(args.time,1));
+  if (srcRight.get()) {
+    if (srcRight->getRenderScale().x != args.renderScale.x ||
+        srcRight->getRenderScale().y != args.renderScale.y ||
+        srcRight->getField() == args.fieldToRender) {
+      setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+      OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+  }
 
   // make sure bit depths are sane
   if(srcLeft.get()) {
