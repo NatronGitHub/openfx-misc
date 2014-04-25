@@ -263,7 +263,7 @@ public :
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-        assert(maskClip_->getPixelComponents() == ePixelComponentAlpha);
+        assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
         _blackPoint = fetchRGBAParam(kBlackPointParamName);
         _whitePoint = fetchRGBAParam(kWhitePointParamName);
         _black = fetchRGBAParam(kBlackParamName);

@@ -512,7 +512,7 @@ ofxsMaskMix(const float *tmpPix, //!< interpolated pixel
     float maskScale = 1.;
 
     // are we doing masking
-    if (masked) {
+    if (masked && srcImg) {
         if (domask && maskImg) {
             // we do, get the pixel from the mask
             maskPix = (PIX *)maskImg->getPixelAddress(x, y);
