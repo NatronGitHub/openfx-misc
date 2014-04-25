@@ -346,8 +346,8 @@ public :
 
                     double fgy, fgcb, fgcr;
                     rgb2ycbcr(fgr, fgg, fgb, &fgy, &fgcb, &fgcr);
-                    assert(-0.5 <= fgcb && fgcb <= 0.5);
-                    assert(-0.5 <= fgcr && fgcr <= 0.5);
+                    //assert(-0.5 <= fgcb && fgcb <= 0.5); // may crash on superblacks/superwhites
+                    //assert(-0.5 <= fgcr && fgcr <= 0.5);
 
                     ///////////////////////
                     // STEP A: Key Generator
