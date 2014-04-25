@@ -384,6 +384,15 @@ void
 TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::RenderArguments &args)
 {
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    if (dst->getRenderScale().x != args.renderScale.x ||
+        dst->getRenderScale().y != args.renderScale.y ||
+        dst->getField() != args.fieldToRender) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
     std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
     if (src.get() && dst.get())
     {

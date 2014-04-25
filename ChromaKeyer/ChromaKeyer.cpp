@@ -593,6 +593,12 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
     if (!dst.get()) {
         return; // nothing to do
     }
+    if (dst->getRenderScale().x != args.renderScale.x ||
+        dst->getRenderScale().y != args.renderScale.y ||
+        dst->getField() != args.fieldToRender) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
@@ -603,6 +609,12 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
         if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
             throw int(1);
+        if (src->getRenderScale().x != args.renderScale.x ||
+            src->getRenderScale().y != args.renderScale.y ||
+            src->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
     }
     
     if(bg.get())
@@ -611,12 +623,34 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
         OFX::PixelComponentEnum srcComponents = bg->getPixelComponents();
         if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
             throw int(1);
+        if (bg->getRenderScale().x != args.renderScale.x ||
+            bg->getRenderScale().y != args.renderScale.y ||
+            bg->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
     }
     
     // auto ptr for the masks.
     std::auto_ptr<OFX::Image> inMask(inMaskClip_ ? inMaskClip_->fetchImage(args.time) : 0);
+    if (inMask.get()) {
+        if (inMask->getRenderScale().x != args.renderScale.x ||
+            inMask->getRenderScale().y != args.renderScale.y ||
+            inMask->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+    }
     std::auto_ptr<OFX::Image> outMask(outMaskClip_ ? outMaskClip_->fetchImage(args.time) : 0);
-    
+    if (outMask.get()) {
+        if (outMask->getRenderScale().x != args.renderScale.x ||
+            outMask->getRenderScale().y != args.renderScale.y ||
+            outMask->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+    }
+
     OfxRGBColourD keyColor;
     double acceptanceAngle;
     double suppressionAngle;
