@@ -11,6 +11,7 @@
 #include "Transform.h"
 #include "Merge.h"
 #include "ChromaKeyer.h"
+#include "Roto.h"
 
 namespace OFX
 {
@@ -46,6 +47,8 @@ namespace OFX
             ids.push_back(&p13);
             static ChromaKeyerPluginFactory p14("net.sf.openfx:ChromaKeyerPlugin", 1, 0);
             ids.push_back(&p14);
+            static RotoPluginFactory p15("net.sf.openfx:RotoPlugin", 1, 0);
+            ids.push_back(&p15);
            // ReConverge is not finished/tested
             //static ReConvergePluginFactory p("net.sf.openfx:reConvergePlugin", 1, 0);
             //ids.push_back(&p);
