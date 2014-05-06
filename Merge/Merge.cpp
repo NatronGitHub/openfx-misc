@@ -210,7 +210,7 @@ public :
         srcClipB_ = fetchClip(kSourceClipBName);
         assert(srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA || srcClipB_->getPixelComponents() == ePixelComponentAlpha);
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-        assert(maskClip_->getPixelComponents() == ePixelComponentAlpha);
+        assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
         _operation = fetchChoiceParam(kOperationParamName);
         _bbox = fetchChoiceParam(kBboxParamName);
         _doMask = fetchBooleanParam(kFilterMaskParamName);

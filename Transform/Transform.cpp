@@ -303,7 +303,7 @@ public:
         // name of mask clip depends on the context
         if (masked) {
             maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-            assert(maskClip_->getPixelComponents() == ePixelComponentAlpha);
+            assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
         }
         // NON-GENERIC
         _translate = fetchDouble2DParam(kTranslateParamName);
@@ -1439,8 +1439,8 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     OfxPointD ellipseRadius;
     getCircleRadius(pscale, &ellipseRadius);
     
-    double dx = args.penPosition.x - _lastMousePos.x;
-    double dy = args.penPosition.y - _lastMousePos.y;
+    //double dx = args.penPosition.x - _lastMousePos.x;
+    //double dy = args.penPosition.y - _lastMousePos.y;
     
     double currentRotation;
     _rotate->getValue(currentRotation);
@@ -1568,8 +1568,8 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         OfxPointD currentTranslation;
         _translate->getValue(currentTranslation.x, currentTranslation.y);
         
-        dx = args.penPosition.x - _lastMousePos.x;
-        dy = args.penPosition.y - _lastMousePos.y;
+        double dx = args.penPosition.x - _lastMousePos.x;
+        double dy = args.penPosition.y - _lastMousePos.y;
         double newx = currentTranslation.x + dx;
         double newy = currentTranslation.y + dy;
         // round newx/y to the closest int, 1/10 int, etc
@@ -1588,8 +1588,8 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         _center->getValue(currentCenter.x, currentCenter.y);
         OFX::Matrix3x3 R = ofxsMatRotation(rot);
 
-        dx = args.penPosition.x - _lastMousePos.x;
-        dy = args.penPosition.y - _lastMousePos.y;
+        double dx = args.penPosition.x - _lastMousePos.x;
+        double dy = args.penPosition.y - _lastMousePos.y;
         OFX::Point3D dRot;
         dRot.x = dx;
         dRot.y = dy;
