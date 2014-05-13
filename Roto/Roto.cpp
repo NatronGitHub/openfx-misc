@@ -97,12 +97,8 @@ class RotoProcessorBase : public OFX::ImageProcessor
 protected:
     OFX::Image *_srcImg;
     OFX::Image *_maskImg;
- 
-    bool _domask;
-    double _mix;
 
 public:
-
     RotoProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
@@ -112,13 +108,11 @@ public:
     {
     }
 
-
     /** @brief set the src image */
     void setSrcImg(OFX::Image *v)
     {
         _srcImg = v;
     }
-
 
     /** @brief set the optional mask image */
     void setMaskImg(OFX::Image *v) {_maskImg = v;}
@@ -126,6 +120,9 @@ public:
     // Are we masking. We can't derive this from the mask image being set as NULL is a valid value for an input image
     void doMasking(bool v) {_domask = v;}
 
+private:
+    bool _domask;
+    double _mix;
 };
 
 
@@ -134,18 +131,15 @@ public:
 template <class PIX, int nComponents, int maxValue>
 class RotoProcessor : public RotoProcessorBase
 {
-    
-    
-    public :
+public:
     RotoProcessor(OFX::ImageEffect &instance)
     : RotoProcessorBase(instance)
     {
     }
 
-
+private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-
         //assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; ++y)
         {
@@ -201,6 +195,7 @@ public:
         
     }
     
+private:
     // override the roi call
     virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois);
     
@@ -212,10 +207,6 @@ public:
 
     /* set up and run a processor */
     void setupAndProcess(RotoProcessorBase &, const OFX::RenderArguments &args);
-    
-private:
-
-
 };
 
 
@@ -325,7 +316,7 @@ RotoPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
 
-    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
+    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentAlpha);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
@@ -348,6 +339,7 @@ void RotoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginDescription("Create masks and shapes.");
     
     desc.addSupportedContext(eContextPaint);
+    desc.addSupportedContext(eContextGeneral);
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
@@ -418,7 +410,6 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
 
 
     // make some pages and to things in
-    PageParamDescriptor *page = desc.definePageParam("Controls");
-
+    //PageParamDescriptor *page = desc.definePageParam("Controls");
 }
 
