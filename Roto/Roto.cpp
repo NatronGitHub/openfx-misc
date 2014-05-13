@@ -90,6 +90,8 @@
 
 #include "../include/ofxsProcessing.H"
 
+#define kPremultParamName "Premultiply"
+
 using namespace OFX;
 
 class RotoProcessorBase : public OFX::ImageProcessor
@@ -100,6 +102,8 @@ protected:
  
     bool _domask;
     double _mix;
+    
+    bool _premult;
 
 public:
 
@@ -125,6 +129,11 @@ public:
 
     // Are we masking. We can't derive this from the mask image being set as NULL is a valid value for an input image
     void doMasking(bool v) {_domask = v;}
+    
+    void setValues(bool premult)
+    {
+        _premult = premult;
+    }
 
 };
 
@@ -158,12 +167,22 @@ class RotoProcessor : public RotoProcessorBase
                 PIX *srcPix = (PIX*)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 PIX *maskPix = (PIX*) (_maskImg ? _maskImg->getPixelAddress(x, y) : 0);
                 
-                for (int k = 0; k < std::min(nComponents,3); ++k) {
-                    dstPix[k] = srcPix ? srcPix[k] : 0.;
+                if (nComponents == 1) {
+                    *dstPix = maskPix ? *maskPix : 0.;
+                } else {
+                    for (int k = 0; k < std::min(nComponents,3); ++k) {
+                        if (_premult) {
+                            dstPix[k] = srcPix ? (srcPix[k] * *maskPix) / maxValue : 0.;
+                        } else {
+                            dstPix[k] = srcPix ? srcPix[k] : 0.;
+                        }
+                        
+                    }
+                    if (nComponents > 3) {
+                        dstPix[3] = maskPix ? *maskPix : 0.;
+                    }
                 }
-                if (nComponents > 3) {
-                    dstPix[3] = maskPix ? *maskPix : 0.;
-                }
+                
             }
         }
     }
@@ -182,6 +201,7 @@ protected:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::Clip *maskClip_;
+    BooleanParam* _premult;
     
 public:
     /** @brief ctor */
@@ -198,6 +218,10 @@ public:
         // name of mask clip depends on the context
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(maskClip_->getPixelComponents() == ePixelComponentAlpha);
+        
+        _premult = fetchBooleanParam(kPremultParamName);
+        assert(_premult);
+        
         
     }
     
@@ -268,6 +292,10 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     
     // set the render window
     processor.setRenderWindow(args.renderWindow);
+    
+    bool premult;
+    _premult->getValue(premult);
+    processor.setValues(premult);
     
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -419,6 +447,13 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
+    
+    BooleanParamDescriptor* premult = desc.defineBooleanParam(kPremultParamName);
+    premult->setLabels(kPremultParamName, kPremultParamName, kPremultParamName);
+    premult->setDefault(false);
+    premult->setAnimates(false);
+    premult->setHint("Premultiply the red,green and blue channels with the alpha channel produced by the mask.");
+    page->addChild(*premult);
 
 }
 
