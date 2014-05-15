@@ -425,7 +425,7 @@ void GradePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabels("GradeOFX", "GradeOFX", "GradeOFX");
     desc.setPluginGrouping("Color");
-    desc.setPluginDescription("Defines white and black points, it can help you to fix the tonal spread of an image."
+    desc.setPluginDescription("Modify the tonal spread of an image from the white and black points. "
                               "This node can also be used to match colors of 2 images: The darkest and lightest points of "
                               "the target image are converted to black and white using the blackpoint and whitepoint values. "
                               "These 2 values are then moved to new values using the black(for dark point) and white(for white point). "

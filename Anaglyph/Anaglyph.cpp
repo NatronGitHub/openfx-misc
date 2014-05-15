@@ -365,7 +365,7 @@ void AnaglyphPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
   // basic labels
   desc.setLabels("AnaglyphOFX", "AnaglyphOFX", "AnaglyphOFX");
   desc.setPluginGrouping("Views/Stereo");
-  desc.setPluginDescription("Make an anaglyph image out of the inputs.");
+  desc.setPluginDescription("Make an anaglyph image out of the two views of the input.");
 
   // add the supported contexts, only filter at the moment
   desc.addSupportedContext(eContextFilter);

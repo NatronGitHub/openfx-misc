@@ -454,7 +454,7 @@ void MergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabels("MergeOFX", "MergeOFX", "MergeOFX");
     desc.setPluginGrouping("Merge");
-    desc.setPluginDescription("Merges 2 images together");
+    desc.setPluginDescription("Pixel-by-pixel merge operation between the two inputs.");
     
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
