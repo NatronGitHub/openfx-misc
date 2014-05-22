@@ -332,12 +332,8 @@ public :
                 } else if (!bgPix) {
                     // no background, take source only
                     Kbg = 0.;
-                } else if (outMask >= 1.-inMask) {
-                    // outside mask has priority over inside mask
-                    // (or outMask == 1)
+                } else if (outMask >= 1.) {
                     Kbg = 1.;
-                } else if (inMask >= 1) {
-                    Kbg = 0.;
                 } else {
                     // general case: compute Kbg from [1]
 
