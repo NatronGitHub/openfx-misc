@@ -485,17 +485,21 @@ public :
                         }
                         break;
                     case eOutputModePremultiplied:
-                        dstPix[0] = floatToSample<PIX,maxValue>(fgr);
-                        dstPix[1] = floatToSample<PIX,maxValue>(fgg);
-                        dstPix[2] = floatToSample<PIX,maxValue>(fgb);
+                        if (fga == 0.) {
+                            dstPix[0] = dstPix[1] = dstPix[2] = 0.;
+                        } else {
+                            dstPix[0] = floatToSample<PIX,maxValue>(fgr);
+                            dstPix[1] = floatToSample<PIX,maxValue>(fgg);
+                            dstPix[2] = floatToSample<PIX,maxValue>(fgb);
+                        }
                         break;
                     case eOutputModeUnpremultiplied:
                         if (fga == 0.) {
                             dstPix[0] = dstPix[1] = dstPix[2] = 0.;
                         } else {
-                        dstPix[0] = floatToSample<PIX,maxValue>(fgr / fga);
-                        dstPix[1] = floatToSample<PIX,maxValue>(fgg / fga);
-                        dstPix[2] = floatToSample<PIX,maxValue>(fgb / fga);
+                            dstPix[0] = floatToSample<PIX,maxValue>(fgr / fga);
+                            dstPix[1] = floatToSample<PIX,maxValue>(fgg / fga);
+                            dstPix[2] = floatToSample<PIX,maxValue>(fgb / fga);
                         }
                         break;
                     case eOutputModeComposite:
