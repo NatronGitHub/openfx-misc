@@ -415,7 +415,7 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(true);
     srcClip->setIsMask(false);
-    
+    srcClip->setOptional(true);
     
     // if general or paint context, define the mask clip
     if (context == eContextGeneral || context == eContextPaint) {
