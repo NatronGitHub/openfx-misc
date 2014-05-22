@@ -329,11 +329,13 @@ public :
                 if (!srcPix) {
                     // no source, take only background
                     Kbg = 1.;
+                    fgr = fgg = fgb = 0.;
                 } else if (!bgPix) {
                     // no background, take source only
                     Kbg = 0.;
-                } else if (outMask >= 1.) {
+                } else if (outMask >= 1.) { // optimize
                     Kbg = 1.;
+                    fgr = fgg = fgb = 0.;
                 } else {
                     // general case: compute Kbg from [1]
 
@@ -381,7 +383,7 @@ public :
                         Kfg = _tan_acceptanceAngle_2 > 0 ? (fgx - std::abs(fgz)/_tan_acceptanceAngle_2) : 0.;
                     }
                     assert(Kfg >= 0.);
-
+#ifdef ORIGINAL_MIX // [FD] DON'T ACTIVATE original description in "Video demystified" did the nonadditive mix here, but it produces wrong foreground colors. we do it below (step E)
                     ///////////////
                     // STEP B: Nonadditive Mix
 
@@ -391,12 +393,14 @@ public :
 
                     // outside mask has priority over inside mask, treat inside first
 
-                    if (Kfg > 1.-inMask) {
+                    // Here, Kfg is between 0 (foreground) and _xKey (background)
+                    if (inMask > 0. && Kfg > 1.-inMask) {
                         Kfg = 1.-inMask;
                     }
-                    if (Kfg < outMask) {
+                    if (outMask > 0. && Kfg < outMask) {
                         Kfg = outMask;
                     }
+#endif
 
                     //////////////////////
                     // STEP C: Foreground suppressor
@@ -418,6 +422,8 @@ public :
                         } else {
                             fgcb = fgcb - Kfg * _cosKey / 2;
                             fgcr = fgcr - Kfg * _sinKey / 2;
+                            fgcb = std::max(-0.5,std::min(fgcb,0.5));
+                            fgcr = std::max(-0.5,std::min(fgcr,0.5));
                             //assert(-0.5 <= fgcb && fgcb <= 0.5);
                             //assert(-0.5 <= fgcr && fgcr <= 0.5);
                         }
@@ -430,12 +436,15 @@ public :
                         // Y' = Y - y*Kfg, where y is such that Y' = 0 for the key color.
                         fgy = fgy - _ys * Kfg;
                         if (fgy < 0) {
-                            fgy = 0;
+                            fgy = fgr = fgg = fgb = 0;
+                        } else {
+                            // convert back to r g b
+                            // (note: r,g,b is premultiplied since it should be added to the suppressed background)
+                            ycbcr2rgb(fgy, fgcb, fgcr, &fgr, &fgg, &fgb);
+                            fgr = std::max(0.,std::min(fgr,1.));
+                            fgg = std::max(0.,std::min(fgg,1.));
+                            fgb = std::max(0.,std::min(fgb,1.));
                         }
-
-                        // convert back to r g b
-                        // (note: r,g,b is premultiplied since it should be added to the suppressed background)
-                        ycbcr2rgb(fgy, fgcb, fgcr, &fgr, &fgg, &fgb);
                     }
                     /////////////////////
                     // STEP D: Key processor
@@ -468,8 +477,49 @@ public :
 
                 // At this point, we have Kbg,
 
+#ifndef ORIGINAL_MIX // [FD] it was at step B in the original description of the algorithm, but this gave bad artifacts in the foreground suppressor
+                ///////////////
+                // STEP E: Nonadditive Mix
+
+                // nonadditive mix between the key generator and the garbage matte (outMask)
+
+                // The garbage matte is added to the foreground key signal (KFG) using a non-additive mixer (NAM). A nonadditive mixer takes the brighter of the two pictures, on a sample-by-sample basis, to generate the key signal. Matting is ideal for any source that generates its own keying signal, such as character generators, and so on.
+
+                // outside mask has priority over inside mask, treat inside first
+                // Here, Kbg is between 0 (foreground) and 1 (background)
+                if (inMask > 0. && Kbg > 1.-inMask) {
+                    // since we change Kbg, we also have to change the foreground color accordingly (it is premultiplied)
+                    if (Kbg >= 1) {
+                        fgr = 0.;
+                        fgg = 0.;
+                        fgb = 0.;
+                    } else {
+                        double alpha = inMask / (1.-Kbg);
+                        fgr *= alpha;
+                        fgg *= alpha;
+                        fgb *= alpha;
+                    }
+                    Kbg = 1.-inMask;
+                }
+                if (outMask > 0. && Kbg < outMask) {
+                    // since we change Kbg, we also have to change the foreground color accordingly (it is premultiplied)
+                    if (Kbg >= 1) {
+                        fgr = 0.;
+                        fgg = 0.;
+                        fgb = 0.;
+                    } else {
+                        double alpha = (1.-outMask) / (1.-Kbg);
+                        fgr *= alpha;
+                        fgg *= alpha;
+                        fgb *= alpha;
+                    }
+                    Kbg = outMask;
+                }
+#endif
+
                 // set the alpha channel to the complement of Kbg
                 double fga = 1. - Kbg;
+                //double fga = Kbg;
                 assert(fga >= 0. && fga <= 1.);
                 double compAlpha = (_outputMode == eOutputModeComposite &&
                                     _sourceAlpha == eSourceAlphaNormal &&
@@ -481,13 +531,9 @@ public :
                         }
                         break;
                     case eOutputModePremultiplied:
-                        if (fga == 0.) {
-                            dstPix[0] = dstPix[1] = dstPix[2] = 0.;
-                        } else {
-                            dstPix[0] = floatToSample<PIX,maxValue>(fgr);
-                            dstPix[1] = floatToSample<PIX,maxValue>(fgg);
-                            dstPix[2] = floatToSample<PIX,maxValue>(fgb);
-                        }
+                        dstPix[0] = floatToSample<PIX,maxValue>(fgr);
+                        dstPix[1] = floatToSample<PIX,maxValue>(fgg);
+                        dstPix[2] = floatToSample<PIX,maxValue>(fgb);
                         break;
                     case eOutputModeUnpremultiplied:
                         if (fga == 0.) {
