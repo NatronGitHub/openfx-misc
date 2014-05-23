@@ -562,13 +562,6 @@ CornerPinPlugin::setupAndProcess(CornerPinProcessorBase &processor, const OFX::R
     p3.x = bounds.x2; p3.y = bounds.y1; p3.z = 1; //btm right
     p4.x = bounds.x1; p4.y = bounds.y1; p4.z = 1; //btm left
     
-    bool topLeftEnabled,topRightEnabled,btmLeftEnabled,btmRightEnabled;
-    _topLeftEnabled->getValue(topLeftEnabled);
-    _topRightEnabled->getValue(topRightEnabled);
-    _btmRightEnabled->getValue(btmRightEnabled);
-    _btmLeftEnabled->getValue(btmLeftEnabled);
-    
-    
     bool success = getHomography(args.time, args.renderScale, !invert,p1,p2,p3,p4,homography);
     
     if (!success) {

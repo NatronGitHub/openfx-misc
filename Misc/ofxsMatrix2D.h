@@ -242,12 +242,12 @@ struct Matrix4x4
     
     Matrix4x4(const double d[16])
     {
-        std::memcpy(data, d, sizeof(double) * 16);
+        std::copy(d,d+16,data);
     }
     
     Matrix4x4(const Matrix4x4& o)
     {
-        std::memcpy(data, o.data, sizeof(double) * 16);
+        std::copy(o.data,o.data+16,data);
     }
     
     
