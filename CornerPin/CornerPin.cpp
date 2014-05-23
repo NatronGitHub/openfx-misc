@@ -127,9 +127,6 @@ class CornerPinProcessorBase : public OFX::ImageProcessor
 {
 protected:
     OFX::Image *_srcImg;
-
-    OfxPointD _topLeft,_topRight,_btmLeft,_btmRight;
-    double _extraMatrix[16];
     OFX::Matrix3x3 _invtransform;
     bool _blackOutside;
 
@@ -153,21 +150,12 @@ public:
     }
 
     
-    void setValues(double *extraMat,
-                   const OfxPointD& topLeft,
-                   const OfxPointD& topRight,
-                   const OfxPointD& bottomLeft,
-                   const OfxPointD& bottomRight,
-                   const OFX::Matrix3x3& invtransform,
+    void setValues(const OFX::Matrix3x3& invtransform,
                    bool blackOutside,
                    FieldEnum fieldToRender,
                    double pixelaspectratio,
                    const OfxPointD& renderscale)
     {
-        _topLeft = topLeft;
-        _topRight = topRight;
-        _btmLeft = bottomLeft;
-        _btmRight = bottomRight;
         
         bool fielded = fieldToRender == eFieldLower || fieldToRender == eFieldUpper;
         // NON-GENERIC
@@ -176,7 +164,6 @@ public:
                          OFX::ofxsMatPixelToCanonical(pixelaspectratio, renderscale.x, renderscale.y, fielded));
         // GENERIC
         _blackOutside = blackOutside;
-        std::copy(extraMat,extraMat + 16,_extraMatrix);
     }
 
 };
@@ -334,7 +321,13 @@ protected:
     OFX::Double2DParam* _topRight;
     OFX::Double2DParam* _btmLeft;
     OFX::Double2DParam* _btmRight;
-    std::vector<OFX::DoubleParam*> _extraMatrix;
+    OFX::BooleanParam* _topLeftEnabled;
+    OFX::BooleanParam* _topRightEnabled;
+    OFX::BooleanParam* _btmLeftEnabled;
+    OFX::BooleanParam* _btmRightEnabled;
+    OFX::Double3DParam* _extraMatrixRow1;
+    OFX::Double3DParam* _extraMatrixRow2;
+    OFX::Double3DParam* _extraMatrixRow3;
     OFX::BooleanParam* _invert;
     
     // GENERIC
@@ -352,7 +345,9 @@ public:
     , _topRight(0)
     , _btmLeft(0)
     , _btmRight(0)
-    , _extraMatrix(16)
+    , _extraMatrixRow1(0)
+    , _extraMatrixRow2(0)
+    , _extraMatrixRow3(0)
     , _invert(0)
     , _filter(0)
     , _clamp(0)
@@ -367,14 +362,18 @@ public:
         _topRight = fetchDouble2DParam(kTopRightParamName);
         _btmLeft = fetchDouble2DParam(kBtmLeftParamName);
         _btmRight = fetchDouble2DParam(kBtmRightParamName);
+        assert(_topLeft && _topRight && _btmLeft && _btmRight);
         
-        for (int i = 0; i < 4; ++i) {
-            for (int j = 0; j < 4; ++j) {
-                std::stringstream ss;
-                ss << 'a' << i << j;
-                _extraMatrix[i * 4 + j] = fetchDoubleParam(ss.str());
-            }
-        }
+        _topLeftEnabled = fetchBooleanParam(std::string("enable ") + kTopLeftParamName);
+        _topRightEnabled = fetchBooleanParam(std::string("enable ") + kTopRightParamName);
+        _btmLeftEnabled = fetchBooleanParam(std::string("enable ") + kBtmLeftParamName);
+        _btmRightEnabled = fetchBooleanParam(std::string("enable ") + kBtmRightParamName);
+        assert(_topLeftEnabled && _topRightEnabled && _btmLeftEnabled && _btmRightEnabled);
+        
+        _extraMatrixRow1 = fetchDouble3DParam("row1");
+        _extraMatrixRow2 = fetchDouble3DParam("row2");
+        _extraMatrixRow3 = fetchDouble3DParam("row3");
+        assert(_extraMatrixRow1 && _extraMatrixRow2 && _extraMatrixRow3);
         
         _invert = fetchBooleanParam(kInvertParamName);
         // GENERIC
@@ -384,6 +383,23 @@ public:
     }
     
 private:
+    
+    OFX::Matrix3x3 getExtraMatrix(OfxTime time)
+    {
+        OFX::Matrix3x3 ret;
+        _extraMatrixRow1->getValueAtTime(time,ret.a, ret.b, ret.c);
+        _extraMatrixRow2->getValueAtTime(time,ret.d, ret.e, ret.f);
+        _extraMatrixRow3->getValueAtTime(time,ret.g, ret.h, ret.i);
+        return ret;
+    }
+    
+    bool getHomography(OfxTime time,const OfxPointD& scale,
+                       bool inverseTransform,
+                       const OFX::Point3D& p1,
+                       const OFX::Point3D& p2,
+                       const OFX::Point3D& p3,
+                       const OFX::Point3D& p4,
+                       OFX::Matrix3x3& m);
     
     // override the rod call
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod);
@@ -413,12 +429,81 @@ private:
     void setupAndProcess(CornerPinProcessorBase&, const OFX::RenderArguments &args);
 };
 
-
 static void scalePoint(OfxPointD& p,const OfxPointD& scale)
 {
     p.x *= scale.x;
     p.y *= scale.y;
 }
+
+bool CornerPinPlugin::getHomography(OfxTime time,const OfxPointD& scale,
+                                    bool inverseTransform,
+                                    const OFX::Point3D& p1,
+                                    const OFX::Point3D& p2,
+                                    const OFX::Point3D& p3,
+                                    const OFX::Point3D& p4,
+                                    OFX::Matrix3x3& m)
+{
+    OfxPointD topLeft,topRight,btmLeft,btmRight;
+    _topLeft->getValueAtTime(time,topLeft.x, topLeft.y);
+    _topRight->getValueAtTime(time,topRight.x, topRight.y);
+    _btmLeft->getValueAtTime(time,btmLeft.x, btmLeft.y);
+    _btmRight->getValueAtTime(time,btmRight.x, btmRight.y);
+    
+    scalePoint(topLeft,scale);
+    scalePoint(topRight,scale);
+    scalePoint(btmLeft,scale);
+    scalePoint(btmRight,scale);
+   
+    OFX::Point3D q1,q2,q3,q4;
+    
+    bool topLeftEnabled,topRightEnabled,btmLeftEnabled,btmRightEnabled;
+    _topLeftEnabled->getValue(topLeftEnabled);
+    _topRightEnabled->getValue(topRightEnabled);
+    _btmRightEnabled->getValue(btmRightEnabled);
+    _btmLeftEnabled->getValue(btmLeftEnabled);
+    
+    if (topLeftEnabled) {
+        q1.x = topLeft.x; q1.y = topLeft.y; q1.z = 1;
+    } else {
+        q1 = p1;
+    }
+    
+    if (topRightEnabled) {
+        q2.x = topRight.x; q2.y = topRight.y; q2.z = 1;
+    } else {
+        q2 = p2;
+    }
+    
+    if (btmRightEnabled) {
+        q3.x = btmRight.x; q3.y = btmRight.y; q3.z = 1;
+    } else {
+        q3 = p3;
+    }
+    
+    if (btmLeftEnabled) {
+        q4.x = btmLeft.x; q4.y = btmLeft.y; q4.z = 1;
+    } else {
+        q4 = p4;
+    }
+    
+    OFX::Matrix3x3 homo3x3;
+    bool success = homography_from_four_points(p1, p2, p3, p4, q1, q2, q3, q4, &homo3x3);
+    
+    if (!success) {
+        ///cannot compute the homography when 3 points are aligned
+        return false;
+    }
+    
+    OFX::Matrix3x3 extraMat = getExtraMatrix(time);
+    m = homo3x3 * extraMat;
+    if (inverseTransform) {
+        m = ofxsMatInverse(m);
+    }
+    return true;
+
+}
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */
@@ -462,22 +547,6 @@ CornerPinPlugin::setupAndProcess(CornerPinProcessorBase &processor, const OFX::R
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
-    OfxPointD topLeft,topRight,btmLeft,btmRight;
-    _topLeft->getValue(topLeft.x, topLeft.y);
-    _topRight->getValue(topRight.x, topRight.y);
-    _btmLeft->getValue(btmLeft.x, btmLeft.y);
-    _btmRight->getValue(btmRight.x, btmRight.y);
-    
-    scalePoint(topLeft,args.renderScale);
-    scalePoint(topRight,args.renderScale);
-    scalePoint(btmLeft,args.renderScale);
-    scalePoint(btmRight,args.renderScale);
-    
-    double extraMat[16];
-    for (int i = 0; i < 16; ++i) {
-        _extraMatrix[i]->getValue(extraMat[i]);
-    }
-    
     bool invert;
     bool blackOutside;
     _invert->getValue(invert);
@@ -485,35 +554,29 @@ CornerPinPlugin::setupAndProcess(CornerPinProcessorBase &processor, const OFX::R
     // GENERIC
     _blackOutside->getValue(blackOutside);
     
-    OFX::Matrix3x3 homography,inverse;
-    OFX::Point3D p1,p2,p3,p4,q1,q2,q3,q4;
+    OFX::Matrix3x3 homography;
+    OFX::Point3D p1,p2,p3,p4;
     
     p1.x = bounds.x1; p1.y = bounds.y2; p1.z = 1; //top left
     p2.x = bounds.x2; p2.y = bounds.y2; p2.z = 1; //top right
     p3.x = bounds.x2; p3.y = bounds.y1; p3.z = 1; //btm right
     p4.x = bounds.x1; p4.y = bounds.y1; p4.z = 1; //btm left
     
-    q1.x = topLeft.x; q1.y = topLeft.y; q1.z = 1;
-    q2.x = topRight.x; q2.y = topRight.y; q2.z = 1;
-    q3.x = btmRight.x; q3.y = btmRight.y; q3.z = 1;
-    q4.x = btmLeft.x; q4.y = btmLeft.y; q4.z = 1;
+    bool topLeftEnabled,topRightEnabled,btmLeftEnabled,btmRightEnabled;
+    _topLeftEnabled->getValue(topLeftEnabled);
+    _topRightEnabled->getValue(topRightEnabled);
+    _btmRightEnabled->getValue(btmRightEnabled);
+    _btmLeftEnabled->getValue(btmLeftEnabled);
     
-    bool success = homography_from_four_points(p1, p2, p3, p4, q1, q2, q3, q4, &homography);
+    
+    bool success = getHomography(args.time, args.renderScale, !invert,p1,p2,p3,p4,homography);
     
     if (!success) {
         ///render nothing
         return;
     }
     
-    if (!invert) {
-        inverse = ofxsMatInverse(homography);
-    } else {
-        inverse = homography;
-    }
-    
-    processor.setValues(extraMat, topLeft, topRight, btmLeft, btmRight,
-                        inverse,
-                        blackOutside, args.fieldToRender, srcClip_->getPixelAspectRatio(), args.renderScale);
+    processor.setValues(homography, blackOutside, args.fieldToRender, srcClip_->getPixelAspectRatio(), args.renderScale);
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 }
@@ -521,12 +584,39 @@ CornerPinPlugin::setupAndProcess(CornerPinProcessorBase &processor, const OFX::R
 bool
 CornerPinPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
-    OfxPointD topLeft,topRight,btmLeft,btmRight;
-    _topLeft->getValue(topLeft.x, topLeft.y);
-    _topRight->getValue(topRight.x, topRight.y);
-    _btmLeft->getValue(btmLeft.x, btmLeft.y);
-    _btmRight->getValue(btmRight.x, btmRight.y);
+    OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
     
+    OfxPointD topLeft,topRight,btmLeft,btmRight;
+    
+    bool topLeftEnabled,topRightEnabled,btmLeftEnabled,btmRightEnabled;
+    _topLeftEnabled->getValue(topLeftEnabled);
+    _topRightEnabled->getValue(topRightEnabled);
+    _btmRightEnabled->getValue(btmRightEnabled);
+    _btmLeftEnabled->getValue(btmLeftEnabled);
+    
+    if (topLeftEnabled) {
+        _topLeft->getValue(topLeft.x, topLeft.y);
+    } else {
+        topLeft.x = srcRoD.x1; topLeft.y = srcRoD.y2;
+    }
+    
+    if (topRightEnabled) {
+        _topRight->getValue(topRight.x, topRight.y);
+    } else {
+        topRight.x = srcRoD.x2; topRight.y = srcRoD.y2;
+    }
+    
+    if (btmLeftEnabled) {
+        _btmLeft->getValue(btmLeft.x, btmLeft.y);
+    } else {
+        btmLeft.x = srcRoD.x1;  btmLeft.y = srcRoD.y1;
+    }
+    
+    if (btmRightEnabled) {
+        _btmRight->getValue(btmRight.x, btmRight.y);
+    } else {
+        btmRight.x = srcRoD.x2; btmRight.y = srcRoD.y1;
+    }
 
     double l = std::min(std::min(topLeft.x, btmLeft.x),std::min(topRight.x,btmRight.x));
     double b = std::min(std::min(topLeft.y, btmLeft.y),std::min(topRight.y,btmRight.y));
@@ -557,52 +647,31 @@ CornerPinPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
 {
     const OfxRectD roi = args.regionOfInterest;
     
-    OfxPointD topLeft,topRight,btmLeft,btmRight;
-    _topLeft->getValue(topLeft.x, topLeft.y);
-    _topRight->getValue(topRight.x, topRight.y);
-    _btmLeft->getValue(btmLeft.x, btmLeft.y);
-    _btmRight->getValue(btmRight.x, btmRight.y);
-    
-    double extraMat[16];
-    for (int i = 0; i < 16; ++i) {
-        _extraMatrix[i]->getValue(extraMat[i]);
-    }
-    
     bool invert;
     _invert->getValue(invert);
     
-    OFX::Matrix3x3 homography,transform;
-    OFX::Point3D p1,p2,p3,p4,q1,q2,q3,q4;
+    OFX::Matrix3x3 homography;
+    OFX::Point3D p1,p2,p3,p4;
     
     p1.x = roi.x1; p1.y = roi.y2; p1.z = 1; //top left
     p2.x = roi.x2; p2.y = roi.y2; p2.z = 1; //top right
     p3.x = roi.x2; p3.y = roi.y1; p3.z = 1; //btm right
     p4.x = roi.x1; p4.y = roi.y1; p4.z = 1; //btm left
     
-    q1.x = topLeft.x; q1.y = topLeft.y; q1.z = 1;
-    q2.x = topRight.x; q2.y = topRight.y; q2.z = 1;
-    q3.x = btmRight.x; q3.y = btmRight.y; q3.z = 1;
-    q4.x = btmLeft.x; q4.y = btmLeft.y; q4.z = 1;
-    
-    bool success = homography_from_four_points(p1, p2, p3, p4, q1, q2, q3, q4, &homography);
+    bool success = getHomography(args.time, args.renderScale, invert, p1, p2, p3, p4, homography);
     
     if (!success) {
         ///cannot compute the corner pin
         setPersistentMessage(OFX::Message::eMessageError, "", "Cannot compute a corner pin when 3 points are aligned.");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    
-    if (invert) {
-        transform = ofxsMatInverse(homography);
-    } else {
-        transform = homography;
-    }
+
     
     /// now transform the 4 corners of the source clip to the output image
-    OFX::Point3D dstTopLeft = transform * OFX::Point3D(roi.x1,roi.y2,1);
-    OFX::Point3D dstTopRight = transform * OFX::Point3D(roi.x2,roi.y2,1);
-    OFX::Point3D dstBottomLeft = transform * OFX::Point3D(roi.x1,roi.y1,1);
-    OFX::Point3D dstBottomRight = transform * OFX::Point3D(roi.x2,roi.y1,1);
+    OFX::Point3D dstTopLeft = homography * OFX::Point3D(roi.x1,roi.y2,1);
+    OFX::Point3D dstTopRight = homography * OFX::Point3D(roi.x2,roi.y2,1);
+    OFX::Point3D dstBottomLeft = homography * OFX::Point3D(roi.x1,roi.y1,1);
+    OFX::Point3D dstBottomRight = homography * OFX::Point3D(roi.x2,roi.y1,1);
     
     double l = std::min(std::min(dstTopLeft.x, dstBottomLeft.x),std::min(dstTopRight.x,dstBottomRight.x));
     double b = std::min(std::min(dstTopLeft.y, dstBottomLeft.y),std::min(dstTopRight.y,dstBottomRight.y));
@@ -640,12 +709,8 @@ bool CornerPinPlugin::isIdentity(const RenderArguments &args, Clip * &identityCl
     _btmLeft->getValue(btmLeft.x, btmLeft.y);
     _btmRight->getValue(btmRight.x, btmRight.y);
     
-    double extraMat[16];
-    for (int i = 0; i < 16; ++i) {
-        _extraMatrix[i]->getValue(extraMat[i]);
-    }
+    OFX::Matrix3x3 extraMat = getExtraMatrix(args.time);
     
-    OFX::Matrix3x3 homography,transform;
     OFX::Point3D p1,p2,p3,p4,q1,q2,q3,q4;
     
     p1.x = srcRoD.x1; p1.y = srcRoD.y2; p1.z = 1; //top left
@@ -658,16 +723,10 @@ bool CornerPinPlugin::isIdentity(const RenderArguments &args, Clip * &identityCl
     q3.x = btmRight.x; q3.y = btmRight.y; q3.z = 1;
     q4.x = btmLeft.x; q4.y = btmLeft.y; q4.z = 1;
     
-    if (p1 == q1 && p2 == q2 && p3 == q3 && p4 == q4) {
-        if (extraMat[0] == 1 && extraMat[1] == 0 && extraMat[2] == 0 && extraMat[3] == 0 &&
-            extraMat[4] == 0 && extraMat[5] == 1 && extraMat[6] == 0 && extraMat[7] == 0 &&
-            extraMat[8] == 0 && extraMat[9] == 0 && extraMat[10] == 1 && extraMat[11] == 0 &&
-            extraMat[12] == 0 && extraMat[13] == 0 && extraMat[14] == 0 && extraMat[15] == 1) {
-            identityClip = srcClip_;
-            identityTime = args.time;
-            return true;
-        }
-        
+    if (p1 == q1 && p2 == q2 && p3 == q3 && p4 == q4 && extraMat.isIdentity()) {
+        identityClip = srcClip_;
+        identityTime = args.time;
+        return true;
     }
     
     return false;
@@ -681,12 +740,6 @@ bool CornerPinPlugin::getTransform(const TransformArguments &args, Clip * &trans
     
     OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
     
-    OfxPointD topLeft,topRight,btmLeft,btmRight;
-    _topLeft->getValue(topLeft.x, topLeft.y);
-    _topRight->getValue(topRight.x, topRight.y);
-    _btmLeft->getValue(btmLeft.x, btmLeft.y);
-    _btmRight->getValue(btmRight.x, btmRight.y);
-    
     double extraMat[16];
     for (int i = 0; i < 16; ++i) {
         _extraMatrix[i]->getValue(extraMat[i]);
@@ -695,32 +748,22 @@ bool CornerPinPlugin::getTransform(const TransformArguments &args, Clip * &trans
     bool invert;
     _invert->getValue(invert);
     
-    OFX::Matrix3x3 homography,transform;
-    OFX::Point3D p1,p2,p3,p4,q1,q2,q3,q4;
+    OFX::Matrix3x3 transform;
+    OFX::Point3D p1,p2,p3,p4;
     
     p1.x = srcRoD.x1; p1.y = srcRoD.y2; p1.z = 1; //top left
     p2.x = srcRoD.x2; p2.y = srcRoD.y2; p2.z = 1; //top right
     p3.x = srcRoD.x2; p3.y = srcRoD.y1; p3.z = 1; //btm right
     p4.x = srcRoD.x1; p4.y = srcRoD.y1; p4.z = 1; //btm left
     
-    q1.x = topLeft.x; q1.y = topLeft.y; q1.z = 1;
-    q2.x = topRight.x; q2.y = topRight.y; q2.z = 1;
-    q3.x = btmRight.x; q3.y = btmRight.y; q3.z = 1;
-    q4.x = btmLeft.x; q4.y = btmLeft.y; q4.z = 1;
-    
-    bool success = homography_from_four_points(p1, p2, p3, p4, q1, q2, q3, q4, &homography);
+    bool success = getHomography(args.time, args.renderScale, !invert, p1, p2, p3, p4, transform);
     
     if (!success) {
         ///cannot compute the corner pin
         setPersistentMessage(OFX::Message::eMessageError, "", "Cannot compute a corner pin when 3 points are aligned.");
         return false;
     }
-    
-    if (!invert) {
-        transform = ofxsMatInverse(homography);
-    } else {
-        transform = homography;
-    }
+
     transformClip = srcClip_;
     transformMatrix[0] = transform.a;
     transformMatrix[1] = transform.b;
@@ -1112,6 +1155,63 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
     
     glPointSize(1.);
     glLineWidth(1.);
+    
+    bool inverted;
+    _invert->getValue(inverted);
+    if (inverted) {
+        double arrowXPosition = 0;
+        double arrowXHalfSize = 10 * args.pixelScale.x;
+        double arrowHeadOffsetX = 3 * args.pixelScale.x;
+        double arrowHeadOffsetY = 3 * args.pixelScale.x;
+        
+        glPushMatrix ();
+        glTranslatef (arrowXPosition, 0., 0);
+        
+        glBegin(GL_LINES);
+        ///draw the central bar
+        glVertex2d(- arrowXHalfSize, 0.);
+        glVertex2d(+ arrowXHalfSize, 0.);
+        
+        ///left triangle
+        glVertex2d(- arrowXHalfSize, 0.);
+        glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, arrowHeadOffsetY);
+        
+        glVertex2d(- arrowXHalfSize, 0.);
+        glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, -arrowHeadOffsetY);
+        
+        ///right triangle
+        glVertex2d(+ arrowXHalfSize, 0.);
+        glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, arrowHeadOffsetY);
+        
+        glVertex2d(+ arrowXHalfSize, 0.);
+        glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, -arrowHeadOffsetY);
+        glEnd();
+        
+        glRotated(90., 0., 0., 1.);
+        
+        glBegin(GL_LINES);
+        ///draw the central bar
+        glVertex2d(- arrowXHalfSize, 0.);
+        glVertex2d(+ arrowXHalfSize, 0.);
+        
+        ///left triangle
+        glVertex2d(- arrowXHalfSize, 0.);
+        glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, arrowHeadOffsetY);
+        
+        glVertex2d(- arrowXHalfSize, 0.);
+        glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, -arrowHeadOffsetY);
+        
+        ///right triangle
+        glVertex2d(+ arrowXHalfSize, 0.);
+        glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, arrowHeadOffsetY);
+        
+        glVertex2d(+ arrowXHalfSize, 0.);
+        glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, -arrowHeadOffsetY);
+        glEnd();
+        
+        glPopMatrix ();
+    }
+
     return true;
 }
 bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
@@ -1298,18 +1398,14 @@ static void defineCornerPinDouble2DParam(OFX::ImageEffectDescriptor &desc,PagePa
     page->addChild(*enable);
 }
 
-static void defineExtraMatrixCell(OFX::ImageEffectDescriptor &desc,PageParamDescriptor *page,GroupParamDescriptor* group,const std::string& name,bool newLine,double v)
+static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,PageParamDescriptor *page,GroupParamDescriptor* group,const std::string& name,double x,double y,double z)
 {
-    DoubleParamDescriptor* cell = desc.defineDoubleParam(name);
-    cell->setLabels("", "", "");
-    cell->setScriptName(name);
-    cell->setAnimates(true);
-    cell->setDefault(v);
-    if (!newLine) {
-        cell->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    }
-    cell->setParent(*group);
-    //  page->addChild(*cell);
+    Double3DParamDescriptor* row = desc.defineDouble3DParam(name);
+    row->setLabels("", "", "");
+    row->setScriptName(name);
+    row->setAnimates(true);
+    row->setDefault(x,y,z);
+    row->setParent(*group);
 }
 
 void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
@@ -1349,25 +1445,10 @@ void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     extraMatrix->setLabels("Extra matrix", "Extra matrix", "Extra matrix");
     extraMatrix->setOpen(false);
     
-    defineExtraMatrixCell(desc, page, extraMatrix,"a00", false,1);
-    defineExtraMatrixCell(desc, page, extraMatrix,"a01", false,0);
-    defineExtraMatrixCell(desc, page, extraMatrix,"a02", false,0);
-    defineExtraMatrixCell(desc, page, extraMatrix,"a03", true,0);
-    
-    defineExtraMatrixCell(desc, page, extraMatrix,"a10", false,0);
-    defineExtraMatrixCell(desc, page, extraMatrix,"a11", false,1);
-    defineExtraMatrixCell(desc, page, extraMatrix,"a12", false,0);
-    defineExtraMatrixCell(desc, page, extraMatrix,"a13", true,0);
-    
-    defineExtraMatrixCell(desc, page, extraMatrix,"a20", false,0);
-    defineExtraMatrixCell(desc, page, extraMatrix,"a21", false,0);
-    defineExtraMatrixCell(desc, page, extraMatrix,"a22", false,1);
-    defineExtraMatrixCell(desc, page, extraMatrix,"a23", true,0);
-    
-    defineExtraMatrixCell(desc, page, extraMatrix,"a30", false,0);
-    defineExtraMatrixCell(desc, page, extraMatrix,"a31", false,0);
-    defineExtraMatrixCell(desc, page, extraMatrix,"a32", false,0);
-    defineExtraMatrixCell(desc, page, extraMatrix,"a33", true,1);
+    defineExtraMatrixRow(desc, page, extraMatrix,"row1",1,0,0);
+    defineExtraMatrixRow(desc, page, extraMatrix,"row2",0,1,0);
+    defineExtraMatrixRow(desc, page, extraMatrix,"row3",0,0,1);
+
 
     BooleanParamDescriptor* invert = desc.defineBooleanParam(kInvertParamName);
     invert->setLabels(kInvertParamName, kInvertParamName, kInvertParamName);

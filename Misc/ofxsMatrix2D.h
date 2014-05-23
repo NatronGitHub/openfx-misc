@@ -81,6 +81,54 @@ struct Point3D {
   }
 };
     
+struct Point4D {
+    double x,y,z,w;
+    
+    Point4D(): x(0), y(0), z(0) , w(0) {}
+    
+    Point4D(double x,double y,double z,double w) : x(x) , y(y) , z(z) , w(w) {}
+    
+    Point4D(const Point4D& o) : x(o.x) , y(o.y) , z(o.z) , w(o.w) {}
+    
+    double& operator() (int i) {
+        switch (i)
+        {
+            case 0:
+                return x;
+            case 1:
+                return y;
+            case 2:
+                return z;
+            case 3:
+                return w;
+            default:
+                assert(false);
+        };
+    }
+    
+    double operator() (int i) const {
+        switch (i)
+        {
+            case 0:
+                return x;
+            case 1:
+                return y;
+            case 2:
+                return z;
+            case 3:
+                return w;
+            default:
+                assert(false);
+        };
+    }
+    
+    bool operator==(const Point4D& o) {
+        return x == o.x && y == o.y && z == o.z && w == o.w;
+    }
+    
+
+};
+
 struct Matrix3x3 {
     double a,b,c,d,e,f,g,h,i;
 
@@ -95,6 +143,10 @@ struct Matrix3x3 {
 
     Matrix3x3& operator=(const Matrix3x3& m)
     { a = m.a; b = m.b; c = m.c; d = m.d; e = m.e; f = m.f; g = m.g; h = m.h; i = m.i; return *this; }
+    
+    bool isIdentity() const {
+        return a == 1 && b == 0 && c == 0 && d == 0 && e == 1 && f && 0 && g == 0 && h == 0 && i == 1;
+    }
 };
 
 inline double ofxsMatDeterminant(const Matrix3x3& M);
@@ -179,7 +231,73 @@ inline Point3D operator*(const Matrix3x3& m,const Point3D& p) {
     return ret;
 }
 
+struct Matrix4x4
+{
+    double data[16];
+    
+    Matrix4x4()
+    {
+        std::fill(data, data+16, 0.);
+    }
+    
+    Matrix4x4(const double d[16])
+    {
+        std::memcpy(data, d, sizeof(double) * 16);
+    }
+    
+    Matrix4x4(const Matrix4x4& o)
+    {
+        std::memcpy(data, o.data, sizeof(double) * 16);
+    }
+    
+    
+    double& operator()(int row,int col)
+    {
+        assert(row >= 0 && row < 4 && col >= 0 && col < 4);
+        return data[row * 4 + col];
+    }
+    
+    double operator()(int row,int col) const
+    {
+        assert(row >= 0 && row < 4 && col >= 0 && col < 4);
+        return data[row * 4 + col];
+    }
 
+};
+    
+inline Matrix4x4 operator*(const Matrix4x4& m1, const Matrix4x4& m2) {
+    Matrix4x4 ret;
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            for (int x = 0; x < 4; ++x) {
+                ret(i,j) += m1(i,x) * m2(x,j);
+            }
+        }
+    }
+    return ret;
+}
+
+inline Point4D operator*(const Matrix4x4& m,const Point4D& p) {
+        Point4D ret;
+    for (int i = 0; i < 4; ++i) {
+        ret(i) = 0.;
+        for (int j = 0; j < 4; ++j) {
+            ret(i) += m(i,j) * p(j);
+        }
+    }
+    return ret;
+}
+    
+inline Matrix4x4 matrix4x4FromMatrix3x3(const Matrix3x3& m)
+{
+    Matrix4x4 ret;
+    ret(0,0) = m.a; ret(0,1) = m.b; ret(0,2) = m.c; ret(0,3) = 0.;
+    ret(1,0) = m.d; ret(1,1) = m.e; ret(1,2) = m.f; ret(1,3) = 0.;
+    ret(2,0) = m.g; ret(2,1) = m.h; ret(2,2) = m.i; ret(2,3) = 0.;
+    ret(3,0) = 0.;  ret(3,1) = 0.;  ret(3,2) = 0.;  ret(3,3) = 1.;
+    return ret;
+}
+    
 ////////////////////
 // IMPLEMENTATION //
 ////////////////////
