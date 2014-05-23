@@ -113,8 +113,8 @@
 #define kInvertParamName "Invert"
 #define kTopLeftParamName "Top left"
 #define kTopRightParamName "Top right"
-#define kBtmLeftParamName "Bottom right"
-#define kBtmRightParamName "Bottom left"
+#define kBtmLeftParamName "Bottom left"
+#define kBtmRightParamName "Bottom right"
 
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
 
