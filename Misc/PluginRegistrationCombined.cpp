@@ -52,6 +52,8 @@ namespace OFX
             ids.push_back(&p15);
             static CornerPinPluginFactory p16("net.sf.openfx:CornerPinPlugin",1,0);
             ids.push_back(&p16);
+            static CornerPinMaskedPluginFactory p17("net.sf.openfx:CornerPinMaskedPlugin", 1, 0);
+            ids.push_back(&p17);
            // ReConverge is not finished/tested
             //static ReConvergePluginFactory p("net.sf.openfx:reConvergePlugin", 1, 0);
             //ids.push_back(&p);
