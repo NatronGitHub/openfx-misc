@@ -497,7 +497,12 @@ bool CornerPinPlugin::getHomography(OfxTime time,const OfxPointD& scale,
     OFX::Matrix3x3 extraMat = getExtraMatrix(time);
     m = homo3x3 * extraMat;
     if (inverseTransform) {
-        m = ofxsMatInverse(m);
+        double det = ofxsMatDeterminant(m);
+        if (det != 0) {
+            m = ofxsMatInverse(m);
+        } else {
+            return false;
+        }
     }
     return true;
 
