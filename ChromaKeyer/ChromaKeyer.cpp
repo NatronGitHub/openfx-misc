@@ -325,6 +325,9 @@ public :
                 double bgr = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[0]) : 0.;
                 double bgg = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[1]) : 0.;
                 double bgb = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[2]) : 0.;
+                const double fgr_orig = fgr;
+                const double fgg_orig = fgg;
+                const double fgb_orig = fgb;
 
                 if (!srcPix) {
                     // no source, take only background
@@ -453,15 +456,20 @@ public :
                     // [FD] we don't implement the key lift (kL), just the key gain (kG)
                     // kG = 1/_xKey, since Kbg should be 1 at the key color
                     // in our implementation, _keyGain is a multiplier of xKey (1 by default) and keylift is the fraction (from 0 to 1) of _keyGain*_xKey where the linear ramp begins
-                    if (_keyGain == 0.) {
-                        Kbg = 1.;
-                    } else if (_keyLift == 1) {
-                        if (Kfg >= _xKey) {
+                    if (_keyGain <= 0.) {
+                        if (Kfg > 0.) {
+                            Kbg = 1.;
+                        } else {
+                            Kbg = 0.;
+                        }
+                    } else if (_keyLift >= 1.) {
+                        if (Kfg >= _keyGain*_xKey) {
                             Kbg = 1.;
                         } else {
                             Kbg = 0.;
                         }
                     } else {
+                        assert(_keyGain > 0. && 0. <= _keyLift && _keyLift < 1.);
                         Kbg = (Kfg/(_keyGain*_xKey) -_keyLift)/ (1.-_keyLift);
                     }
                     //Kbg = Kfg/_xKey; // if _keyGain = 1 and _keyLift = 0
@@ -487,33 +495,42 @@ public :
 
                 // outside mask has priority over inside mask, treat inside first
                 // Here, Kbg is between 0 (foreground) and 1 (background)
-                if (inMask > 0. && Kbg > 1.-inMask) {
-                    // since we change Kbg, we also have to change the foreground color accordingly (it is premultiplied)
-                    if (Kbg >= 1) {
-                        fgr = 0.;
-                        fgg = 0.;
-                        fgb = 0.;
-                    } else {
-                        double alpha = inMask / (1.-Kbg);
-                        fgr *= alpha;
-                        fgg *= alpha;
-                        fgb *= alpha;
-                    }
-                    Kbg = 1.-inMask;
+                double Kbg_new = Kbg;
+                bool Kbg_changed = false;
+                if (inMask > 0. && Kbg_new > 1.-inMask) {
+                    Kbg_new = 1.-inMask;
+                    Kbg_changed = true;
                 }
-                if (outMask > 0. && Kbg < outMask) {
+                if (outMask > 0. && Kbg_new < outMask) {
+                    Kbg_new = outMask;
+                    Kbg_changed = true;
+                }
+                if (Kbg_changed) {
                     // since we change Kbg, we also have to change the foreground color accordingly (it is premultiplied)
-                    if (Kbg >= 1) {
+                    if (Kbg_new >= 1.) {
                         fgr = 0.;
                         fgg = 0.;
                         fgb = 0.;
-                    } else {
-                        double alpha = (1.-outMask) / (1.-Kbg);
+                    } else if (Kbg_new <= 0. || Kbg >= 1.) {
+                        fgr = fgr_orig;
+                        fgg = fgg_orig;
+                        fgb = fgb_orig;
+                    } else if (Kbg_new > Kbg) {
+                        // keep the same color for foreground, but interpolate to black
+                        double alpha = (1. - Kbg_new) / (1.-Kbg);
                         fgr *= alpha;
                         fgg *= alpha;
                         fgb *= alpha;
+                    } else if (Kbg_new < Kbg && Kbg > 0.) {
+                        // interpolate between foreground color and original foreground:
+                        // Kbg_new = Kbg should give fgr,fgg,fgb
+                        // Kbg_new = 0. should give fgr_orig,fgg_orig,fgb_orig
+                        // Note: if Kbg = 0., fgr,fgg,fgb should not be changed
+                        fgr = ((Kbg-Kbg_new)*fgr_orig + Kbg_new*fgr)/Kbg;
+                        fgg = ((Kbg-Kbg_new)*fgg_orig + Kbg_new*fgg)/Kbg;
+                        fgb = ((Kbg-Kbg_new)*fgb_orig + Kbg_new*fgb)/Kbg;
                     }
-                    Kbg = outMask;
+                    Kbg = Kbg_new;
                 }
 #endif
 
@@ -893,6 +910,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     keyLift->setRange(0., 1.);
     keyLift->setDisplayRange(0., 1.);
     keyLift->setDefault(0.);
+    keyLift->setDigits(4);
     keyLift->setAnimates(true);
     page->addChild(*keyLift);
 
@@ -902,6 +920,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     keyGain->setRange(0., std::numeric_limits<double>::max());
     keyGain->setDisplayRange(0., 2.);
     keyGain->setDefault(1.);
+    keyGain->setDigits(4);
     keyGain->setAnimates(true);
     page->addChild(*keyGain);
 
