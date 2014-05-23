@@ -85,6 +85,7 @@
 //#define ENABLE_HOST_TRANSFORM
 
 #include "Transform.h"
+#include "TransformProcessor.h"
 
 #include <cmath>
 #include <iostream>
@@ -98,15 +99,9 @@
 #include <GL/gl.h>
 #endif
 
-
-#include "../include/ofxsProcessing.H"
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
 #endif
-
-#include "../Misc/ofxsFilter.h"
-
-#include "../Misc/ofxsMatrix2D.h"
 
 #ifndef ENABLE_HOST_TRANSFORM
 #undef OFX_EXTENSIONS_NUKE // host transform is the only nuke extension used
@@ -130,134 +125,6 @@
 #define ELLIPSE_N_POINTS 50.0
 
 using namespace OFX;
-
-class TransformProcessorBase : public OFX::ImageProcessor
-{
-protected:
-    OFX::Image *_srcImg;
-    OFX::Image *_maskImg;
-    // NON-GENERIC PARAMETERS:
-    OFX::Matrix3x3 _invtransform;
-    // GENERIC PARAMETERS:
-    //FilterEnum _filter;
-    //bool _clamp;
-    bool _blackOutside;
-    bool _domask;
-    double _mix;
-
-public:
-
-    TransformProcessorBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _srcImg(0)
-    , _maskImg(0)
-    , _invtransform()
-    //, _filter(eFilterImpulse)
-    //, _clamp(false)
-    , _blackOutside(false)
-    , _domask(false)
-    , _mix(1.0)
-    {
-    }
-
-    virtual FilterEnum getFilter() const = 0;
-    virtual bool getClamp() const = 0;
-
-    /** @brief set the src image */
-    void setSrcImg(OFX::Image *v)
-    {
-        _srcImg = v;
-    }
-
-
-    /** @brief set the optional mask image */
-    void setMaskImg(OFX::Image *v) {_maskImg = v;}
-
-    // Are we masking. We can't derive this from the mask image being set as NULL is a valid value for an input image
-    void doMasking(bool v) {_domask = v;}
-
-    void setValues(const OFX::Matrix3x3& invtransform, //!< non-generic
-                   // all generic parameters below
-                   double pixelaspectratio, //!< 1.067 for PAL, where 720x576 pixels occupy 768x576 in canonical coords
-                   const OfxPointD& renderscale, //!< 0.5 for a half-resolution image
-                   FieldEnum fieldToRender,
-                   //FilterEnum filter,                 //!< generic
-                   //bool clamp, //!< generic
-                   bool blackOutside, //!< generic
-                   double mix)          //!< generic
-    {
-        bool fielded = fieldToRender == eFieldLower || fieldToRender == eFieldUpper;
-        // NON-GENERIC
-        _invtransform = (OFX::ofxsMatCanonicalToPixel(pixelaspectratio, renderscale.x, renderscale.y, fielded) *
-                         invtransform *
-                         OFX::ofxsMatPixelToCanonical(pixelaspectratio, renderscale.x, renderscale.y, fielded));
-        // GENERIC
-        //_filter = filter;
-        //_clamp = clamp;
-        _blackOutside = blackOutside;
-        _mix = mix;
-    }
-};
-
-
-// The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
-// by the compiler, using the same generic code for all filters.
-template <class PIX, int nComponents, int maxValue, bool masked, FilterEnum filter, bool clamp>
-class TransformProcessor : public TransformProcessorBase
-{
-    
-    
-    public :
-    TransformProcessor(OFX::ImageEffect &instance)
-    : TransformProcessorBase(instance)
-    {
-    }
-
-    virtual FilterEnum getFilter() const { return filter; }
-    virtual bool getClamp() const { return clamp; }
-
-    void multiThreadProcessImages(OfxRectI procWindow)
-    {
-        float tmpPix[nComponents];
-
-        //assert(filter == _filter);
-        for (int y = procWindow.y1; y < procWindow.y2; ++y)
-        {
-            if(_effect.abort()) break;
-            
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            
-            // the coordinates of the center of the pixel in canonical coordinates
-            // see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#CanonicalCoordinates
-            OFX::Point3D canonicalCoords;
-            canonicalCoords.z = 1;
-            canonicalCoords.y = (double)y + 0.5;
-            
-            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents)
-            {
-                // NON-GENERIC TRANSFORM
-                
-                // the coordinates of the center of the pixel in canonical coordinates
-                // see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#CanonicalCoordinates
-                canonicalCoords.x = (double)x + 0.5;
-                OFX::Point3D transformed = _invtransform * canonicalCoords;
-                if (!_srcImg || transformed.z == 0.) {
-                    // the back-transformed point is at infinity
-                    for (int c = 0; c < nComponents; ++c) {
-                        tmpPix[c] = 0;
-                    }
-                } else {
-                    double fx = transformed.x / transformed.z;
-                    double fy = transformed.y / transformed.z;
-
-                    ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
-                }
-                
-                ofxsMaskMix<PIX, nComponents, maxValue, masked>(tmpPix, x, y, _srcImg, _domask, _maskImg, _mix, dstPix);
-            }
-        }
-    }
-};
 
 
 
@@ -1828,6 +1695,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(true);
     srcClip->setIsMask(false);
@@ -1835,6 +1703,8 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(true);
     
     
