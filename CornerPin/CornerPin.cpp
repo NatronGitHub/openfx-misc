@@ -98,9 +98,7 @@
 #endif
 
 
-#include "../include/ofxsProcessing.H"
-#include "../Misc/ofxsFilter.h"
-#include "../Misc/ofxsMatrix2D.h"
+#include "../Transform/TransformProcessor.h"
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
@@ -119,54 +117,6 @@
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
 
 using namespace OFX;
-
-
-
-
-class CornerPinProcessorBase : public OFX::ImageProcessor
-{
-protected:
-    OFX::Image *_srcImg;
-    OFX::Matrix3x3 _invtransform;
-    bool _blackOutside;
-
-
-public:
-    CornerPinProcessorBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _srcImg(0)
-    , _blackOutside(false)
-    {
-    }
-
-    virtual FilterEnum getFilter() const = 0;
-    virtual bool getClamp() const = 0;
-
-    
-    /** @brief set the src image */
-    void setSrcImg(OFX::Image *v)
-    {
-        _srcImg = v;
-    }
-
-    
-    void setValues(const OFX::Matrix3x3& invtransform,
-                   bool blackOutside,
-                   FieldEnum fieldToRender,
-                   double pixelaspectratio,
-                   const OfxPointD& renderscale)
-    {
-        
-        bool fielded = fieldToRender == eFieldLower || fieldToRender == eFieldUpper;
-        // NON-GENERIC
-        _invtransform = (OFX::ofxsMatCanonicalToPixel(pixelaspectratio, renderscale.x, renderscale.y, fielded) *
-                         invtransform *
-                         OFX::ofxsMatPixelToCanonical(pixelaspectratio, renderscale.x, renderscale.y, fielded));
-        // GENERIC
-        _blackOutside = blackOutside;
-    }
-
-};
 
 
 /**
@@ -245,65 +195,6 @@ homography_from_four_points(const OFX::Point3D &p1, const OFX::Point3D &p2, cons
 }
 
 
-// The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
-// by the compiler, using the same generic code for all filters.
-template <class PIX, int nComponents, int maxValue,  FilterEnum filter, bool clamp>
-class CornerPinProcessor : public CornerPinProcessorBase
-{
-public:
-    
-    CornerPinProcessor(OFX::ImageEffect &instance)
-    : CornerPinProcessorBase(instance)
-    {
-    }
-    
-    virtual FilterEnum getFilter() const { return filter; }
-    virtual bool getClamp() const { return clamp; }
-
-
-private:
-    void multiThreadProcessImages(OfxRectI procWindow)
-    {
-        float tmpPix[nComponents];
-        //assert(filter == _filter);
-        for (int y = procWindow.y1; y < procWindow.y2; ++y)
-        {
-            if(_effect.abort()) break;
-            
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-      
-            // the coordinates of the center of the pixel in canonical coordinates
-            // see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#CanonicalCoordinates
-            OFX::Point3D canonicalCoords;
-            canonicalCoords.z = 1;
-            canonicalCoords.y = (double)y + 0.5;
-            
-            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents)
-            {                
-                // the coordinates of the center of the pixel in canonical coordinates
-                // see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#CanonicalCoordinates
-                canonicalCoords.x = (double)x + 0.5;
-                OFX::Point3D transformed = _invtransform * canonicalCoords;
-                if (!_srcImg || transformed.z == 0.) {
-                    // the back-transformed point is at infinity
-                    for (int c = 0; c < nComponents; ++c) {
-                        dstPix[c] = 0;
-                    }
-                } else {
-                    double fx = transformed.x / transformed.z;
-                    double fy = transformed.y / transformed.z;
-                    
-                    ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
-                    for (int k = 0; k < nComponents; ++k) {
-                        dstPix[k] = tmpPix[k];
-                    }
-                }
-                
-            }
-        }
-    }
-};
-
 
 
 
@@ -316,28 +207,11 @@ protected:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-    
-    OFX::Double2DParam* _topLeft;
-    OFX::Double2DParam* _topRight;
-    OFX::Double2DParam* _btmLeft;
-    OFX::Double2DParam* _btmRight;
-    OFX::BooleanParam* _topLeftEnabled;
-    OFX::BooleanParam* _topRightEnabled;
-    OFX::BooleanParam* _btmLeftEnabled;
-    OFX::BooleanParam* _btmRightEnabled;
-    OFX::Double3DParam* _extraMatrixRow1;
-    OFX::Double3DParam* _extraMatrixRow2;
-    OFX::Double3DParam* _extraMatrixRow3;
-    OFX::BooleanParam* _invert;
-    
-    // GENERIC
-    OFX::ChoiceParam* _filter;
-    OFX::BooleanParam* _clamp;
-    OFX::BooleanParam* _blackOutside;
-    
+    OFX::Clip *maskClip_;
+
 public:
     /** @brief ctor */
-    CornerPinPlugin(OfxImageEffectHandle handle)
+    CornerPinPlugin(OfxImageEffectHandle handle, bool masked)
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClip_(0)
@@ -352,12 +226,20 @@ public:
     , _filter(0)
     , _clamp(0)
     , _blackOutside(0)
+    , _masked(masked)
+    , _domask(0)
+    , _mix(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
-     
+        // name of mask clip depends on the context
+        if (masked) {
+            maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+            assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
+        }
+        // NON-GENERIC
         _topLeft = fetchDouble2DParam(kTopLeftParamName);
         _topRight = fetchDouble2DParam(kTopRightParamName);
         _btmLeft = fetchDouble2DParam(kBtmLeftParamName);
@@ -380,6 +262,10 @@ public:
         _filter = fetchChoiceParam(kFilterTypeParamName);
         _clamp = fetchBooleanParam(kFilterClampParamName);
         _blackOutside = fetchBooleanParam(kFilterBlackOutsideParamName);
+        if (masked) {
+            _domask = fetchBooleanParam(kFilterMaskParamName);
+            _mix = fetchDoubleParam(kFilterMixParamName);
+        }
     }
     
 private:
@@ -419,14 +305,37 @@ private:
 
     
     /* internal render function */
-    template <class PIX, int nComponents, int maxValue>
+    template <class PIX, int nComponents, int maxValue, bool masked>
     void renderInternalForBitDepth(const OFX::RenderArguments &args);
     
-    template <int nComponents>
+    template <int nComponents, bool masked>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
-    void setupAndProcess(CornerPinProcessorBase&, const OFX::RenderArguments &args);
+    void setupAndProcess(TransformProcessorBase&, const OFX::RenderArguments &args);
+
+private:
+    // NON-GENERIC
+    OFX::Double2DParam* _topLeft;
+    OFX::Double2DParam* _topRight;
+    OFX::Double2DParam* _btmLeft;
+    OFX::Double2DParam* _btmRight;
+    OFX::BooleanParam* _topLeftEnabled;
+    OFX::BooleanParam* _topRightEnabled;
+    OFX::BooleanParam* _btmLeftEnabled;
+    OFX::BooleanParam* _btmRightEnabled;
+    OFX::Double3DParam* _extraMatrixRow1;
+    OFX::Double3DParam* _extraMatrixRow2;
+    OFX::Double3DParam* _extraMatrixRow3;
+    OFX::BooleanParam* _invert;
+
+    // GENERIC
+    OFX::ChoiceParam* _filter;
+    OFX::BooleanParam* _clamp;
+    OFX::BooleanParam* _blackOutside;
+    bool _masked;
+    OFX::BooleanParam* _domask;
+    OFX::DoubleParam* _mix;
 };
 
 static void scalePoint(OfxPointD& p,const OfxPointD& scale)
@@ -487,8 +396,13 @@ bool CornerPinPlugin::getHomography(OfxTime time,const OfxPointD& scale,
     }
     
     OFX::Matrix3x3 homo3x3;
-    bool success = homography_from_four_points(p1, p2, p3, p4, q1, q2, q3, q4, &homo3x3);
-    
+    bool success;
+    if (inverseTransform) {
+        success = homography_from_four_points(p1, p2, p3, p4, q1, q2, q3, q4, &homo3x3);
+    } else {
+        success = homography_from_four_points(q1, q2, q3, q4, p1, p2, p3, p4, &homo3x3);
+    }
+
     if (!success) {
         ///cannot compute the homography when 3 points are aligned
         return false;
@@ -496,9 +410,6 @@ bool CornerPinPlugin::getHomography(OfxTime time,const OfxPointD& scale,
     
     OFX::Matrix3x3 extraMat = getExtraMatrix(time);
     m = homo3x3 * extraMat;
-    if (inverseTransform) {
-        m = ofxsMatInverse(m);
-    }
     return true;
 
 }
@@ -513,7 +424,7 @@ bool CornerPinPlugin::getHomography(OfxTime time,const OfxPointD& scale,
 
 /* set up and run a processor */
 void
-CornerPinPlugin::setupAndProcess(CornerPinProcessorBase &processor, const OFX::RenderArguments &args)
+CornerPinPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::RenderArguments &args)
 {
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
     if (!dst.get()) {
@@ -547,29 +458,49 @@ CornerPinPlugin::setupAndProcess(CornerPinProcessorBase &processor, const OFX::R
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
+    // NON-GENERIC
     bool invert;
+    // GENERIC
+    //int filter;
+    //bool clamp;
     bool blackOutside;
+    double mix = 1.;
+
+    // NON-GENERIC
     _invert->getValue(invert);
     
     // GENERIC
+    //_filter->getValue(filter);
+    //_clamp->getValue(clamp);
     _blackOutside->getValue(blackOutside);
-    
-    OFX::Matrix3x3 homography;
+    if (_masked) {
+        _mix->getValueAtTime(args.time, mix);
+    }
+
+    OFX::Matrix3x3 invtransform;
     OFX::Point3D p1,p2,p3,p4;
-    
+
+    // FIXME: where are q1, q2, q3, q4???
+
     p1.x = bounds.x1; p1.y = bounds.y2; p1.z = 1; //top left
     p2.x = bounds.x2; p2.y = bounds.y2; p2.z = 1; //top right
     p3.x = bounds.x2; p3.y = bounds.y1; p3.z = 1; //btm right
     p4.x = bounds.x1; p4.y = bounds.y1; p4.z = 1; //btm left
     
-    bool success = getHomography(args.time, args.renderScale, !invert,p1,p2,p3,p4,homography);
+    bool success = getHomography(args.time, args.renderScale, !invert,p1,p2,p3,p4,invtransform);
     
     if (!success) {
         ///render nothing
         return;
     }
-    
-    processor.setValues(homography, blackOutside, args.fieldToRender, srcClip_->getPixelAspectRatio(), args.renderScale);
+
+    processor.setValues(invtransform,
+                        srcClip_->getPixelAspectRatio(),
+                        args.renderScale, //!< 0.5 for a half-resolution image
+                        args.fieldToRender,
+                        //(FilterEnum)filter, clamp,
+                        blackOutside, mix);
+
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 }
@@ -773,7 +704,7 @@ bool CornerPinPlugin::getTransform(const TransformArguments &args, Clip * &trans
 #endif
 
 
-template <class PIX, int nComponents, int maxValue>
+template <class PIX, int nComponents, int maxValue, bool masked>
 void
 CornerPinPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
 {
@@ -787,67 +718,67 @@ CornerPinPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
     switch ((FilterEnum)filter) {
         case eFilterImpulse:
         {
-            CornerPinProcessor<PIX, nComponents, maxValue, eFilterImpulse, false> fred(*this);
+            TransformProcessor<PIX, nComponents, maxValue, masked, eFilterImpulse, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         case eFilterBilinear:
         {
-            CornerPinProcessor<PIX, nComponents, maxValue, eFilterBilinear, false> fred(*this);
+            TransformProcessor<PIX, nComponents, maxValue, masked, eFilterBilinear, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         case eFilterCubic:
         {
-            CornerPinProcessor<PIX, nComponents, maxValue, eFilterCubic, false> fred(*this);
+            TransformProcessor<PIX, nComponents, maxValue, masked, eFilterCubic, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         case eFilterKeys:
             if (clamp) {
-                CornerPinProcessor<PIX, nComponents, maxValue, eFilterKeys, true> fred(*this);
+                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterKeys, true> fred(*this);
                 setupAndProcess(fred, args);
             } else {
-                CornerPinProcessor<PIX, nComponents, maxValue, eFilterKeys, false> fred(*this);
+                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterKeys, false> fred(*this);
                 setupAndProcess(fred, args);
             }
             break;
         case eFilterSimon:
             if (clamp) {
-                CornerPinProcessor<PIX, nComponents, maxValue, eFilterSimon, true> fred(*this);
+                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterSimon, true> fred(*this);
                 setupAndProcess(fred, args);
             } else {
-                CornerPinProcessor<PIX, nComponents, maxValue, eFilterSimon, false> fred(*this);
+                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterSimon, false> fred(*this);
                 setupAndProcess(fred, args);
             }
             break;
         case eFilterRifman:
             if (clamp) {
-                CornerPinProcessor<PIX, nComponents, maxValue, eFilterRifman, true> fred(*this);
+                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterRifman, true> fred(*this);
                 setupAndProcess(fred, args);
             } else {
-                CornerPinProcessor<PIX, nComponents, maxValue, eFilterRifman, false> fred(*this);
+                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterRifman, false> fred(*this);
                 setupAndProcess(fred, args);
             }
             break;
         case eFilterMitchell:
             if (clamp) {
-                CornerPinProcessor<PIX, nComponents, maxValue, eFilterMitchell, true> fred(*this);
+                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterMitchell, true> fred(*this);
                 setupAndProcess(fred, args);
             } else {
-                CornerPinProcessor<PIX, nComponents, maxValue, eFilterMitchell, false> fred(*this);
+                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterMitchell, false> fred(*this);
                 setupAndProcess(fred, args);
             }
             break;
         case eFilterParzen:
         {
-            CornerPinProcessor<PIX, nComponents, maxValue, eFilterParzen, false> fred(*this);
+            TransformProcessor<PIX, nComponents, maxValue, masked, eFilterParzen, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         case eFilterNotch:
         {
-            CornerPinProcessor<PIX, nComponents, maxValue, eFilterNotch, false> fred(*this);
+            TransformProcessor<PIX, nComponents, maxValue, masked, eFilterNotch, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
@@ -856,20 +787,20 @@ CornerPinPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
 
 
 // the internal render function
-template <int nComponents>
+template <int nComponents, bool masked>
 void
 CornerPinPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
     switch(dstBitDepth)
     {
         case OFX::eBitDepthUByte :
-            renderInternalForBitDepth<unsigned char, nComponents, 255>(args);
+            renderInternalForBitDepth<unsigned char, nComponents, 255, masked>(args);
             break;
         case OFX::eBitDepthUShort :
-            renderInternalForBitDepth<unsigned short, nComponents, 65535>(args);
+            renderInternalForBitDepth<unsigned short, nComponents, 65535, masked>(args);
             break;
         case OFX::eBitDepthFloat :
-            renderInternalForBitDepth<float, nComponents, 1>(args);
+            renderInternalForBitDepth<float, nComponents, 1, masked>(args);
             break;
         default :
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
@@ -884,15 +815,27 @@ CornerPinPlugin::render(const OFX::RenderArguments &args)
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
-    
+
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
-        renderInternal<4>(args, dstBitDepth);
+        if (_masked) {
+            renderInternal<4,true>(args, dstBitDepth);
+        } else {
+            renderInternal<4,false>(args, dstBitDepth);
+        }
     } else if (dstComponents == OFX::ePixelComponentRGB) {
-        renderInternal<3>(args, dstBitDepth);
+        if (_masked) {
+            renderInternal<3,true>(args, dstBitDepth);
+        } else {
+            renderInternal<3,false>(args, dstBitDepth);
+        }
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        renderInternal<1>(args, dstBitDepth);
+        if (_masked) {
+            renderInternal<1,true>(args, dstBitDepth);
+        } else {
+            renderInternal<1,false>(args, dstBitDepth);
+        }
     }
 }
 
@@ -1319,31 +1262,36 @@ using namespace OFX;
 
 class CornerPinOverlayDescriptor : public DefaultEffectOverlayDescriptor<CornerPinOverlayDescriptor, CornerPinTransformInteract> {};
 
+
+
+
 void CornerPinPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabels("CornerPinOFX", "CornerPinOFX", "CornerPinOFX");
     desc.setPluginGrouping("Transform");
     desc.setPluginDescription("Allows an image to fit another in translation,rotation and scale.");
-    
+
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
-    
-    
+
+
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
     desc.setTemporalClipAccess(false);
+    // each field has to be transformed separately, or you will get combing effect
+    // this should be true for all geometric transforms
     desc.setRenderTwiceAlways(true);
     desc.setSupportsMultipleClipPARs(false);
     desc.setRenderThreadSafety(eRenderFullySafe);
-    
+
 
     // in order to support tiles, the plugin must implement the getRegionOfInterest function
     desc.setSupportsTiles(true);
-    
+
     // in order to support multiresolution, render() must take into account the pixelaspectratio and the renderscale
     // and scale the transform appropriately.
     // All other functions are usually in canonical coordinates.
@@ -1360,18 +1308,10 @@ void CornerPinPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
-
-
-OFX::ImageEffect* CornerPinPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
-{
-    return new CornerPinPlugin(handle);
-}
-
-
 static void defineCornerPinDouble2DParam(OFX::ImageEffectDescriptor &desc,PageParamDescriptor *page,
                                          const std::string& name,double x,double y)
 {
-    
+
     Double2DParamDescriptor* size = desc.defineDouble2DParam(name);
     size->setLabels(name, name, name);
     size->setDoubleType(OFX::eDoubleTypeXYAbsolute);
@@ -1381,7 +1321,7 @@ static void defineCornerPinDouble2DParam(OFX::ImageEffectDescriptor &desc,PagePa
     size->setDimensionLabels("x", "y");
     size->setLayoutHint(OFX::eLayoutHintNoNewLine);
     page->addChild(*size);
-    
+
     std::string enableName("enable " + name);
     BooleanParamDescriptor* enable = desc.defineBooleanParam(enableName);
     enable->setLabels(enableName, enableName, enableName);
@@ -1403,6 +1343,8 @@ static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,PageParamDescr
 
 void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
+    // GENERIC
+
     // Source clip only in the filter context
     // create the mandated source clip
     // always declare the source clip first, because some hosts may consider
@@ -1414,8 +1356,6 @@ void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(true);
     srcClip->setIsMask(false);
-    srcClip->setOptional(false);
-    
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
@@ -1427,17 +1367,19 @@ void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    
+
+    // NON-GENERIC PARAMETERS
+    //
     defineCornerPinDouble2DParam(desc, page, kTopLeftParamName,0,1);
     defineCornerPinDouble2DParam(desc, page, kTopRightParamName,1,1);
     defineCornerPinDouble2DParam(desc, page, kBtmLeftParamName,0,0);
     defineCornerPinDouble2DParam(desc, page, kBtmRightParamName,1,0);
-    
+
     GroupParamDescriptor* extraMatrix = desc.defineGroupParam("Extra matrix");
     extraMatrix->setHint("This matrix gets concatenated to the transform defined by the other parameters.");
     extraMatrix->setLabels("Extra matrix", "Extra matrix", "Extra matrix");
     extraMatrix->setOpen(false);
-    
+
     defineExtraMatrixRow(desc, page, extraMatrix,"row1",1,0,0);
     defineExtraMatrixRow(desc, page, extraMatrix,"row2",0,1,0);
     defineExtraMatrixRow(desc, page, extraMatrix,"row3",0,0,1);
@@ -1448,9 +1390,143 @@ void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     invert->setDefault(false);
     invert->setAnimates(false);
     page->addChild(*invert);
-    
-    /////Generic Parameters
-    
+
+    // GENERIC PARAMETERS
+    //
+
     ofxsFilterDescribeParamsInterpolate2D(desc, page);
+
+    // NON-GENERIC (NON-MASKED)
+    //
+#ifdef OFX_EXTENSIONS_NUKE
+    if (getImageEffectHostDescription()->canTransform) {
+        std::cout << "kFnOfxImageEffectCanTransform in describeincontext(" << context << ")=" << desc.getPropertySet().propGetInt(kFnOfxImageEffectCanTransform) << std::endl;
+    }
+#endif
 }
+
+
+OFX::ImageEffect* CornerPinPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+{
+    return new CornerPinPlugin(handle, false);
+}
+
+
+void CornerPinMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+{
+    // basic labels
+    desc.setLabels("CornerPinMaskedOFX", "CornerPinMaskedOFX", "CornerPinMaskedOFX");
+    desc.setPluginGrouping("Transform");
+    desc.setPluginDescription("Allows an image to fit another in translation,rotation and scale.");
+
+    desc.addSupportedContext(eContextFilter);
+    desc.addSupportedContext(eContextGeneral);
+    desc.addSupportedContext(eContextPaint);
+    desc.addSupportedBitDepth(eBitDepthUByte);
+    desc.addSupportedBitDepth(eBitDepthUShort);
+    desc.addSupportedBitDepth(eBitDepthFloat);
+
+
+    desc.setSingleInstance(false);
+    desc.setHostFrameThreading(false);
+    desc.setTemporalClipAccess(false);
+    // each field has to be transformed separately, or you will get combing effect
+    // this should be true for all geometric transforms
+    desc.setRenderTwiceAlways(true);
+    desc.setSupportsMultipleClipPARs(false);
+    desc.setRenderThreadSafety(eRenderFullySafe);
+
+    // NON-GENERIC
+
+    // in order to support tiles, the plugin must implement the getRegionOfInterest function
+    desc.setSupportsTiles(true);
+
+    // in order to support multiresolution, render() must take into account the pixelaspectratio and the renderscale
+    // and scale the transform appropriately.
+    // All other functions are usually in canonical coordinates.
+    desc.setSupportsMultiResolution(true);
+
+    desc.setOverlayInteractDescriptor(new CornerPinOverlayDescriptor);
+}
+
+void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+{
+    // GENERIC
+
+    // Source clip only in the filter context
+    // create the mandated source clip
+    // always declare the source clip first, because some hosts may consider
+    // it as the default input clip (e.g. Nuke)
+    ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+    srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentAlpha);
+    srcClip->setTemporalClipAccess(false);
+    srcClip->setSupportsTiles(true);
+    srcClip->setIsMask(false);
+
+    // GENERIC (MASKED)
+    //
+    // if general or paint context, define the mask clip
+    if (context == eContextGeneral || context == eContextPaint) {
+        // if paint context, it is a mandated input called 'brush'
+        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
+        maskClip->addSupportedComponent(ePixelComponentAlpha);
+        maskClip->setTemporalClipAccess(false);
+        if (context == eContextGeneral) {
+            maskClip->setOptional(true);
+        }
+        maskClip->setSupportsTiles(true);
+        maskClip->setIsMask(true); // we are a mask input
+    }
+
+    // create the mandated output clip
+    ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
+    dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentAlpha);
+    dstClip->setSupportsTiles(true);
+
+
+    // make some pages and to things in
+    PageParamDescriptor *page = desc.definePageParam("Controls");
+
+    // NON-GENERIC PARAMETERS
+    //
+    defineCornerPinDouble2DParam(desc, page, kTopLeftParamName,0,1);
+    defineCornerPinDouble2DParam(desc, page, kTopRightParamName,1,1);
+    defineCornerPinDouble2DParam(desc, page, kBtmLeftParamName,0,0);
+    defineCornerPinDouble2DParam(desc, page, kBtmRightParamName,1,0);
+
+    GroupParamDescriptor* extraMatrix = desc.defineGroupParam("Extra matrix");
+    extraMatrix->setHint("This matrix gets concatenated to the transform defined by the other parameters.");
+    extraMatrix->setLabels("Extra matrix", "Extra matrix", "Extra matrix");
+    extraMatrix->setOpen(false);
+
+    defineExtraMatrixRow(desc, page, extraMatrix,"row1",1,0,0);
+    defineExtraMatrixRow(desc, page, extraMatrix,"row2",0,1,0);
+    defineExtraMatrixRow(desc, page, extraMatrix,"row3",0,0,1);
+
+
+    BooleanParamDescriptor* invert = desc.defineBooleanParam(kInvertParamName);
+    invert->setLabels(kInvertParamName, kInvertParamName, kInvertParamName);
+    invert->setDefault(false);
+    invert->setAnimates(false);
+    page->addChild(*invert);
+
+    // GENERIC PARAMETERS
+    //
+
+    ofxsFilterDescribeParamsInterpolate2D(desc, page);
+
+    // GENERIC (MASKED)
+    //
+    ofxsFilterDescribeParamsMaskMix(desc, page);
+}
+
+OFX::ImageEffect* CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+{
+    return new CornerPinPlugin(handle, true);
+}
+
 

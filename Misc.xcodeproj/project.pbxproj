@@ -331,6 +331,7 @@
 		1E8B5D7D18B7820900C31FDC /* Anaglyph.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Anaglyph.h; sourceTree = "<group>"; };
 		1E8B5D8118B782F000C31FDC /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1E8B5D8318B7830000C31FDC /* ReConverge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ReConverge.h; sourceTree = "<group>"; };
+		1E9C215F192FA596002EEFE1 /* TransformProcessor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TransformProcessor.h; sourceTree = "<group>"; };
 		1E9FC1CE180BF74400EFE0F9 /* camera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = camera.h; sourceTree = "<group>"; };
 		1E9FC1CF180BF74400EFE0F9 /* fnPublicOfxExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fnPublicOfxExtensions.h; sourceTree = "<group>"; };
 		1EB0C41E180DCAB500C25D1E /* RGBLut.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RGBLut.cpp; sourceTree = "<group>"; };
@@ -668,7 +669,6 @@
 		1E551EB817994D4000A4135C = {
 			isa = PBXGroup;
 			children = (
-				D7257D45192E910C0040CD9C /* CornerPin */,
 				1E3E3D30179960F9005F2132 /* Headers */,
 				1E551ED217994DEF00A4135C /* Sources */,
 				1E551EDA17994E8100A4135C /* Frameworks */,
@@ -707,6 +707,7 @@
 				1EDE1B8E182D0511002392CB /* Anaglyph */,
 				1E3451E0190695070080D699 /* ChromaKeyer */,
 				D7B4C95D18D9DA410004137D /* ColorCorrect */,
+				D7257D45192E910C0040CD9C /* CornerPin */,
 				1ECE5453185F240A001ED442 /* DebugProxy */,
 				D725A2C818E0D308001A1E3E /* Grade */,
 				1EDE1BAF182D39DA002392CB /* JoinViews */,
@@ -882,6 +883,7 @@
 				D7349E8B18E7766F0097DB1D /* PluginRegistration.cpp */,
 				D7349E8C18E7766F0097DB1D /* Transform.cpp */,
 				D7349E8D18E7766F0097DB1D /* Transform.h */,
+				1E9C215F192FA596002EEFE1 /* TransformProcessor.h */,
 			);
 			path = Transform;
 			sourceTree = "<group>";

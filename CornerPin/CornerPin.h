@@ -40,5 +40,6 @@
 #include "ofxsImageEffect.h"
 
 mDeclarePluginFactory(CornerPinPluginFactory, {}, {});
+mDeclarePluginFactory(CornerPinMaskedPluginFactory, {}, {});
 
 #endif // MISC_CORNER_PIN_H
