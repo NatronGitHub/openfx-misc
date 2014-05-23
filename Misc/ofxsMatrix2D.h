@@ -74,6 +74,11 @@ struct Point3D {
   Point3D(const Point3D& p)
   : x(p.x),y(p.y),z(p.z)
     {}
+    
+  bool operator==(const Point3D& other)
+  {
+      return x == other.x && y == other.y && z == other.z;
+  }
 };
     
 struct Matrix3x3 {
@@ -97,6 +102,7 @@ inline double ofxsMatDeterminant(const Matrix3x3& M);
 inline Matrix3x3 ofxsMatScaleAdjoint(const Matrix3x3& M, double s);
 
 inline Matrix3x3 ofxsMatInverse(const Matrix3x3& M);
+inline Matrix3x3 ofxsMatInverse(const Matrix3x3& M,double det);
 
 inline Matrix3x3 ofxsMatRotation(double rads);
 inline Matrix3x3 ofxsMatRotationAroundPoint(double rads, double pointX, double pointY);
@@ -210,6 +216,12 @@ ofxsMatInverse(const Matrix3x3& M)
     return ofxsMatScaleAdjoint(M, 1. / ofxsMatDeterminant(M));
 }
 
+Matrix3x3
+ofxsMatInverse(const Matrix3x3& M,double det)
+{
+    return ofxsMatScaleAdjoint(M, 1. / det);
+}
+    
 Matrix3x3
 ofxsMatRotation(double rads)
 {

@@ -190,6 +190,18 @@
 		D721EC15191120C50069DB1D /* Roto.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D721EC001911209B0069DB1D /* Roto.cpp */; };
 		D721EC16191120C70069DB1D /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D721EBFF1911209B0069DB1D /* PluginRegistration.cpp */; };
 		D721EC17191120F30069DB1D /* Roto.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D721EC001911209B0069DB1D /* Roto.cpp */; };
+		D7257D4D192E91120040CD9C /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		D7257D4E192E91120040CD9C /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		D7257D4F192E91120040CD9C /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		D7257D50192E91120040CD9C /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		D7257D51192E91120040CD9C /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		D7257D54192E91120040CD9C /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		D7257D55192E91120040CD9C /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		D7257D56192E91120040CD9C /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		D7257D58192E91120040CD9C /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		D7257D5D192E91240040CD9C /* CornerPin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7257D46192E910C0040CD9C /* CornerPin.cpp */; };
+		D7257D5E192E91270040CD9C /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7257D4A192E910C0040CD9C /* PluginRegistration.cpp */; };
+		D7257D5F192E91510040CD9C /* CornerPin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7257D46192E910C0040CD9C /* CornerPin.cpp */; };
 		D725A2E318E0D54E001A1E3E /* Grade.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D725A2C918E0D308001A1E3E /* Grade.cpp */; };
 		D7349E8E18E776780097DB1D /* Transform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7349E8C18E7766F0097DB1D /* Transform.cpp */; };
 		D7349E9118E7767D0097DB1D /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
@@ -360,7 +372,13 @@
 		D721EBFF1911209B0069DB1D /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		D721EC001911209B0069DB1D /* Roto.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Roto.cpp; sourceTree = "<group>"; };
 		D721EC011911209B0069DB1D /* Roto.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Roto.h; sourceTree = "<group>"; };
-		D721EC13191120B30069DB1D /* Transform.ofx copy.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Transform.ofx copy.bundle"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D721EC13191120B30069DB1D /* Roto.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Roto.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		D7257D46192E910C0040CD9C /* CornerPin.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CornerPin.cpp; sourceTree = "<group>"; };
+		D7257D47192E910C0040CD9C /* CornerPin.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CornerPin.h; sourceTree = "<group>"; };
+		D7257D48192E910C0040CD9C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D7257D49192E910C0040CD9C /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		D7257D4A192E910C0040CD9C /* PluginRegistration.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		D7257D5C192E91120040CD9C /* CornerPin.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CornerPin.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		D725A2C918E0D308001A1E3E /* Grade.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Grade.cpp; sourceTree = "<group>"; };
 		D725A2CA18E0D308001A1E3E /* Grade.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Grade.h; sourceTree = "<group>"; };
 		D725A2CB18E0D308001A1E3E /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -507,6 +525,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D7257D57192E91120040CD9C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D7257D58192E91120040CD9C /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D7349E9B18E7767D0097DB1D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -642,6 +668,7 @@
 		1E551EB817994D4000A4135C = {
 			isa = PBXGroup;
 			children = (
+				D7257D45192E910C0040CD9C /* CornerPin */,
 				1E3E3D30179960F9005F2132 /* Headers */,
 				1E551ED217994DEF00A4135C /* Sources */,
 				1E551EDA17994E8100A4135C /* Frameworks */,
@@ -668,7 +695,8 @@
 				1E3451F21906952D0080D699 /* ChromaKeyer.ofx.bundle */,
 				1E345211190695DC0080D699 /* ColorCorrect.ofx.bundle */,
 				1E1FB8F4190696F200F5515D /* Grade.ofx.bundle */,
-				D721EC13191120B30069DB1D /* Transform.ofx copy.bundle */,
+				D721EC13191120B30069DB1D /* Roto.ofx.bundle */,
+				D7257D5C192E91120040CD9C /* CornerPin.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -820,6 +848,18 @@
 				D721EC011911209B0069DB1D /* Roto.h */,
 			);
 			path = Roto;
+			sourceTree = "<group>";
+		};
+		D7257D45192E910C0040CD9C /* CornerPin */ = {
+			isa = PBXGroup;
+			children = (
+				D7257D46192E910C0040CD9C /* CornerPin.cpp */,
+				D7257D47192E910C0040CD9C /* CornerPin.h */,
+				D7257D48192E910C0040CD9C /* Info.plist */,
+				D7257D49192E910C0040CD9C /* Makefile */,
+				D7257D4A192E910C0040CD9C /* PluginRegistration.cpp */,
+			);
+			path = CornerPin;
 			sourceTree = "<group>";
 		};
 		D725A2C818E0D308001A1E3E /* Grade */ = {
@@ -1110,7 +1150,23 @@
 			);
 			name = Roto.ofx;
 			productName = basic.ofx;
-			productReference = D721EC13191120B30069DB1D /* Transform.ofx copy.bundle */;
+			productReference = D721EC13191120B30069DB1D /* Roto.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
+		D7257D4B192E91120040CD9C /* CornerPin.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D7257D59192E91120040CD9C /* Build configuration list for PBXNativeTarget "CornerPin.ofx" */;
+			buildPhases = (
+				D7257D4C192E91120040CD9C /* Sources */,
+				D7257D57192E91120040CD9C /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CornerPin.ofx;
+			productName = basic.ofx;
+			productReference = D7257D5C192E91120040CD9C /* CornerPin.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
 		D7349E8F18E7767D0097DB1D /* Transform.ofx */ = {
@@ -1184,6 +1240,7 @@
 				D7349E8F18E7767D0097DB1D /* Transform.ofx */,
 				1E8B5D4A18B76A7500C31FDC /* Misc.ofx */,
 				D721EC02191120B30069DB1D /* Roto.ofx */,
+				D7257D4B192E91120040CD9C /* CornerPin.ofx */,
 			);
 		};
 /* End PBXProject section */
@@ -1315,6 +1372,7 @@
 				1E8B5D5D18B76AB300C31FDC /* PluginRegistrationCombined.cpp in Sources */,
 				1E8B5D8018B7828800C31FDC /* Anaglyph.cpp in Sources */,
 				1E47341D1907FB9400DC26E1 /* ChromaKeyer.cpp in Sources */,
+				D7257D5F192E91510040CD9C /* CornerPin.cpp in Sources */,
 				D7B4C97818D9DBE70004137D /* ColorCorrect.cpp in Sources */,
 				D725A2E318E0D54E001A1E3E /* Grade.cpp in Sources */,
 				1E8B5D7F18B7828400C31FDC /* JoinViews.cpp in Sources */,
@@ -1446,6 +1504,23 @@
 				D721EC0B191120B30069DB1D /* ofxsParams.cpp in Sources */,
 				D721EC0C191120B30069DB1D /* ofxsProperty.cpp in Sources */,
 				D721EC0D191120B30069DB1D /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D7257D4C192E91120040CD9C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D7257D4D192E91120040CD9C /* ofxsCore.cpp in Sources */,
+				D7257D4E192E91120040CD9C /* ofxsImageEffect.cpp in Sources */,
+				D7257D4F192E91120040CD9C /* ofxsInteract.cpp in Sources */,
+				D7257D50192E91120040CD9C /* ofxsLog.cpp in Sources */,
+				D7257D5E192E91270040CD9C /* PluginRegistration.cpp in Sources */,
+				D7257D51192E91120040CD9C /* ofxsMultiThread.cpp in Sources */,
+				D7257D5D192E91240040CD9C /* CornerPin.cpp in Sources */,
+				D7257D54192E91120040CD9C /* ofxsParams.cpp in Sources */,
+				D7257D55192E91120040CD9C /* ofxsProperty.cpp in Sources */,
+				D7257D56192E91120040CD9C /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1912,9 +1987,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = "Transform.ofx copy2-Info.plist";
+				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = "Transform.ofx copy";
+				PRODUCT_NAME = Roto.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Debug;
@@ -1923,9 +1998,31 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = "Transform.ofx copy2-Info.plist";
+				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = "Transform.ofx copy";
+				PRODUCT_NAME = Roto.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+		D7257D5A192E91120040CD9C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = CornerPin.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		D7257D5B192E91120040CD9C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = CornerPin.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
@@ -2126,6 +2223,15 @@
 			buildConfigurations = (
 				D721EC11191120B30069DB1D /* Debug */,
 				D721EC12191120B30069DB1D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D7257D59192E91120040CD9C /* Build configuration list for PBXNativeTarget "CornerPin.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D7257D5A192E91120040CD9C /* Debug */,
+				D7257D5B192E91120040CD9C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

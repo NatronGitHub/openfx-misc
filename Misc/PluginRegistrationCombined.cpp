@@ -12,6 +12,7 @@
 #include "Merge.h"
 #include "ChromaKeyer.h"
 #include "Roto.h"
+#include "CornerPin.h"
 
 namespace OFX
 {
@@ -49,6 +50,8 @@ namespace OFX
             ids.push_back(&p14);
             static RotoPluginFactory p15("net.sf.openfx:RotoPlugin", 1, 0);
             ids.push_back(&p15);
+            static CornerPinPluginFactory p16("net.sf.openfx:CornerPinPlugin",1,0);
+            ids.push_back(&p16);
            // ReConverge is not finished/tested
             //static ReConvergePluginFactory p("net.sf.openfx:reConvergePlugin", 1, 0);
             //ids.push_back(&p);
