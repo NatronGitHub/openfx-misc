@@ -111,8 +111,8 @@
 #define kInvertParamName "Invert"
 #define kTopLeftParamName "Top left"
 #define kTopRightParamName "Top right"
-#define kBtmLeftParamName "Bottom right"
-#define kBtmRightParamName "Bottom left"
+#define kBtmLeftParamName "Bottom left"
+#define kBtmRightParamName "Bottom right"
 
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
 
@@ -410,6 +410,7 @@ bool CornerPinPlugin::getHomography(OfxTime time,const OfxPointD& scale,
     
     OFX::Matrix3x3 extraMat = getExtraMatrix(time);
     m = homo3x3 * extraMat;
+
     return true;
 
 }
