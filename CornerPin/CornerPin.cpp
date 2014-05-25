@@ -372,25 +372,25 @@ bool CornerPinPlugin::getHomography(OfxTime time,const OfxPointD& scale,
     _btmLeftEnabled->getValue(btmLeftEnabled);
     
     if (topLeftEnabled) {
-        q1.x = topLeft.x; q1.y = topLeft.y; q1.z = 1;
+        q1.x = topLeft.x ; q1.y = topLeft.y; q1.z = 1;
     } else {
         q1 = p1;
     }
     
     if (topRightEnabled) {
-        q2.x = topRight.x; q2.y = topRight.y; q2.z = 1;
+        q2.x = topRight.x; q2.y = topRight.y ; q2.z = 1;
     } else {
         q2 = p2;
     }
     
     if (btmRightEnabled) {
-        q3.x = btmRight.x; q3.y = btmRight.y; q3.z = 1;
+        q3.x = btmRight.x ; q3.y = btmRight.y ; q3.z = 1;
     } else {
         q3 = p3;
     }
     
     if (btmLeftEnabled) {
-        q4.x = btmLeft.x; q4.y = btmLeft.y; q4.z = 1;
+        q4.x = btmLeft.x ; q4.y = btmLeft.y ; q4.z = 1;
     } else {
         q4 = p4;
     }
@@ -398,9 +398,9 @@ bool CornerPinPlugin::getHomography(OfxTime time,const OfxPointD& scale,
     OFX::Matrix3x3 homo3x3;
     bool success;
     if (inverseTransform) {
-        success = homography_from_four_points(p1, p2, p3, p4, q1, q2, q3, q4, &homo3x3);
-    } else {
         success = homography_from_four_points(q1, q2, q3, q4, p1, p2, p3, p4, &homo3x3);
+    } else {
+        success = homography_from_four_points(p1, p2, p3, p4, q1, q2, q3, q4, &homo3x3);
     }
 
     if (!success) {
@@ -450,7 +450,7 @@ CornerPinPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
         
     }
     
-    OfxRectI bounds = dst->getBounds();
+    OfxRectD srcRod = srcClip_->getRegionOfDefinition(args.time);
     
     // set the images
     processor.setDstImg(dst.get());
@@ -483,10 +483,10 @@ CornerPinPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
 
     // FIXME: where are q1, q2, q3, q4???
 
-    p1.x = bounds.x1; p1.y = bounds.y2; p1.z = 1; //top left
-    p2.x = bounds.x2; p2.y = bounds.y2; p2.z = 1; //top right
-    p3.x = bounds.x2; p3.y = bounds.y1; p3.z = 1; //btm right
-    p4.x = bounds.x1; p4.y = bounds.y1; p4.z = 1; //btm left
+    p1.x = srcRod.x1 ; p1.y = srcRod.y2 - 1 ; p1.z = 1; //top left
+    p2.x = srcRod.x2 - 1; p2.y = srcRod.y2 -1 ; p2.z = 1; //top right
+    p3.x = srcRod.x2 - 1; p3.y = srcRod.y1 ; p3.z = 1; //btm right
+    p4.x = srcRod.x1 ; p4.y = srcRod.y1 ; p4.z = 1; //btm left
     
     bool success = getHomography(args.time, args.renderScale, !invert,p1,p2,p3,p4,invtransform);
     
@@ -522,13 +522,13 @@ CornerPinPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     if (topLeftEnabled) {
         _topLeft->getValue(topLeft.x, topLeft.y);
     } else {
-        topLeft.x = srcRoD.x1; topLeft.y = srcRoD.y2;
+        topLeft.x = srcRoD.x1; topLeft.y = srcRoD.y2 ;
     }
     
     if (topRightEnabled) {
         _topRight->getValue(topRight.x, topRight.y);
     } else {
-        topRight.x = srcRoD.x2; topRight.y = srcRoD.y2;
+        topRight.x = srcRoD.x2 ; topRight.y = srcRoD.y2 ;
     }
     
     if (btmLeftEnabled) {
@@ -540,7 +540,7 @@ CornerPinPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, 
     if (btmRightEnabled) {
         _btmRight->getValue(btmRight.x, btmRight.y);
     } else {
-        btmRight.x = srcRoD.x2; btmRight.y = srcRoD.y1;
+        btmRight.x = srcRoD.x2 ; btmRight.y = srcRoD.y1;
     }
 
     double l = std::min(std::min(topLeft.x, btmLeft.x),std::min(topRight.x,btmRight.x));
@@ -578,10 +578,12 @@ CornerPinPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     OFX::Matrix3x3 homography;
     OFX::Point3D p1,p2,p3,p4;
     
-    p1.x = roi.x1; p1.y = roi.y2; p1.z = 1; //top left
-    p2.x = roi.x2; p2.y = roi.y2; p2.z = 1; //top right
-    p3.x = roi.x2; p3.y = roi.y1; p3.z = 1; //btm right
-    p4.x = roi.x1; p4.y = roi.y1; p4.z = 1; //btm left
+    OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
+    
+    p1.x = srcRoD.x1; p1.y = srcRoD.y2; p1.z = 1; //top left
+    p2.x = srcRoD.x2 ; p2.y = srcRoD.y2 ; p2.z = 1; //top right
+    p3.x = srcRoD.x2; p3.y = srcRoD.y1; p3.z = 1; //btm right
+    p4.x = srcRoD.x1; p4.y = srcRoD.y1; p4.z = 1; //btm left
     
     bool success = getHomography(args.time, args.renderScale, invert, p1, p2, p3, p4, homography);
     
@@ -618,7 +620,7 @@ CornerPinPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     
     ofxsFilterExpandRoI(roi, srcClip_->getPixelAspectRatio(), args.renderScale, (FilterEnum)filter, false, 1, &srcRoI);
     
-    rois.setRegionOfInterest(*srcClip_, srcRoI);
+    rois.setRegionOfInterest(*srcClip_, roi);
 
 }
 

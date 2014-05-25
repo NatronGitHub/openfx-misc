@@ -477,6 +477,7 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     OFX::Point3D bottomLeft = invtransform * OFX::Point3D(roi.x1,roi.y1,1);
     OFX::Point3D bottomRight = invtransform * OFX::Point3D(roi.x2,roi.y1,1);
     
+    
     double l = std::min(std::min(topLeft.x, bottomLeft.x),std::min(topRight.x,bottomRight.x));
     double b = std::min(std::min(topLeft.y, bottomLeft.y),std::min(topRight.y,bottomRight.y));
     double r = std::max(std::max(topLeft.x, bottomLeft.x),std::max(topRight.x,bottomRight.x));
