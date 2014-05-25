@@ -338,7 +338,7 @@ private:
     OFX::DoubleParam* _mix;
 };
 
-static void scalePoint(OfxPointD& p,const OfxPointD& scale)
+static void scalePoint(OFX::Point3D& p,const OfxPointD& scale)
 {
     p.x *= scale.x;
     p.y *= scale.y;
@@ -357,11 +357,6 @@ bool CornerPinPlugin::getHomography(OfxTime time,const OfxPointD& scale,
     _topRight->getValueAtTime(time,topRight.x, topRight.y);
     _btmLeft->getValueAtTime(time,btmLeft.x, btmLeft.y);
     _btmRight->getValueAtTime(time,btmRight.x, btmRight.y);
-    
-    scalePoint(topLeft,scale);
-    scalePoint(topRight,scale);
-    scalePoint(btmLeft,scale);
-    scalePoint(btmRight,scale);
    
     OFX::Point3D q1,q2,q3,q4;
     
@@ -373,27 +368,32 @@ bool CornerPinPlugin::getHomography(OfxTime time,const OfxPointD& scale,
     
     if (topLeftEnabled) {
         q1.x = topLeft.x ; q1.y = topLeft.y; q1.z = 1;
+        scalePoint(q1,scale);
     } else {
         q1 = p1;
     }
     
     if (topRightEnabled) {
         q2.x = topRight.x; q2.y = topRight.y ; q2.z = 1;
+        scalePoint(q2,scale);
     } else {
         q2 = p2;
     }
     
     if (btmRightEnabled) {
         q3.x = btmRight.x ; q3.y = btmRight.y ; q3.z = 1;
+        scalePoint(q3,scale);
     } else {
         q3 = p3;
     }
     
     if (btmLeftEnabled) {
         q4.x = btmLeft.x ; q4.y = btmLeft.y ; q4.z = 1;
+        scalePoint(q4,scale);
     } else {
         q4 = p4;
     }
+    
     
     OFX::Matrix3x3 homo3x3;
     bool success;
@@ -483,10 +483,15 @@ CornerPinPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
 
     // FIXME: where are q1, q2, q3, q4???
 
-    p1.x = srcRod.x1 ; p1.y = srcRod.y2 - 1 ; p1.z = 1; //top left
-    p2.x = srcRod.x2 - 1; p2.y = srcRod.y2 -1 ; p2.z = 1; //top right
+    p1.x = srcRod.x1 ; p1.y = srcRod.y2 - 1; p1.z = 1; //top left
+    p2.x = srcRod.x2 - 1; p2.y = srcRod.y2 - 1; p2.z = 1; //top right
     p3.x = srcRod.x2 - 1; p3.y = srcRod.y1 ; p3.z = 1; //btm right
     p4.x = srcRod.x1 ; p4.y = srcRod.y1 ; p4.z = 1; //btm left
+    
+    scalePoint(p1, args.renderScale);
+    scalePoint(p2, args.renderScale);
+    scalePoint(p3, args.renderScale);
+    scalePoint(p4, args.renderScale);
     
     bool success = getHomography(args.time, args.renderScale, !invert,p1,p2,p3,p4,invtransform);
     
@@ -501,6 +506,22 @@ CornerPinPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
                         args.fieldToRender,
                         //(FilterEnum)filter, clamp,
                         blackOutside, mix);
+    
+    // auto ptr for the mask.
+    std::auto_ptr<OFX::Image> mask((_masked && (getContext() != OFX::eContextFilter)) ? maskClip_->fetchImage(args.time) : 0);
+    
+    // do we do masking
+    if (_masked && getContext() != OFX::eContextFilter) {
+        bool doMasking;
+        _domask->getValue(doMasking);
+        if (doMasking) {
+            // say we are masking
+            processor.doMasking(true);
+            
+            // Set it in the processor
+            processor.setMaskImg(mask.get());
+        }
+    }
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -572,53 +593,65 @@ CornerPinPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
 {
     const OfxRectD roi = args.regionOfInterest;
     
-    bool invert;
-    _invert->getValue(invert);
-    
-    OFX::Matrix3x3 homography;
-    OFX::Point3D p1,p2,p3,p4;
-    
-    OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
-    
-    p1.x = srcRoD.x1; p1.y = srcRoD.y2; p1.z = 1; //top left
-    p2.x = srcRoD.x2 ; p2.y = srcRoD.y2 ; p2.z = 1; //top right
-    p3.x = srcRoD.x2; p3.y = srcRoD.y1; p3.z = 1; //btm right
-    p4.x = srcRoD.x1; p4.y = srcRoD.y1; p4.z = 1; //btm left
-    
-    bool success = getHomography(args.time, args.renderScale, invert, p1, p2, p3, p4, homography);
-    
-    if (!success) {
-        ///cannot compute the corner pin
-        setPersistentMessage(OFX::Message::eMessageError, "", "Cannot compute a corner pin when 3 points are aligned.");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-    }
-
-    
-    /// now transform the 4 corners of the source clip to the output image
-    OFX::Point3D dstTopLeft = homography * OFX::Point3D(roi.x1,roi.y2,1);
-    OFX::Point3D dstTopRight = homography * OFX::Point3D(roi.x2,roi.y2,1);
-    OFX::Point3D dstBottomLeft = homography * OFX::Point3D(roi.x1,roi.y1,1);
-    OFX::Point3D dstBottomRight = homography * OFX::Point3D(roi.x2,roi.y1,1);
-    
-    double l = std::min(std::min(dstTopLeft.x, dstBottomLeft.x),std::min(dstTopRight.x,dstBottomRight.x));
-    double b = std::min(std::min(dstTopLeft.y, dstBottomLeft.y),std::min(dstTopRight.y,dstBottomRight.y));
-    double r = std::max(std::max(dstTopLeft.x, dstBottomLeft.x),std::max(dstTopRight.x,dstBottomRight.x));
-    double t = std::max(std::max(dstTopLeft.y, dstBottomLeft.y),std::max(dstTopRight.y,dstBottomRight.y));
-    
-    // GENERIC
-    int filter;
-    _filter->getValue(filter);
-    bool blackOutside;
-    _blackOutside->getValue(blackOutside);
-    
-    OfxRectD srcRoI;
-    srcRoI.x1 = l;
-    srcRoI.x2 = r;
-    srcRoI.y1 = b;
-    srcRoI.y2 = t;
-    assert(srcRoI.x1 < srcRoI.x2 && srcRoI.y1 < srcRoI.y2);
-    
-    ofxsFilterExpandRoI(roi, srcClip_->getPixelAspectRatio(), args.renderScale, (FilterEnum)filter, false, 1, &srcRoI);
+//    bool invert;
+//    _invert->getValue(invert);
+//    
+//    OFX::Matrix3x3 homography;
+//    OFX::Point3D p1,p2,p3,p4;
+//    
+//    OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
+//    
+//    p1.x = srcRoD.x1; p1.y = srcRoD.y2; p1.z = 1; //top left
+//    p2.x = srcRoD.x2 ; p2.y = srcRoD.y2 ; p2.z = 1; //top right
+//    p3.x = srcRoD.x2; p3.y = srcRoD.y1; p3.z = 1; //btm right
+//    p4.x = srcRoD.x1; p4.y = srcRoD.y1; p4.z = 1; //btm left
+//    
+//    scalePoint(p1, args.renderScale);
+//    scalePoint(p2, args.renderScale);
+//    scalePoint(p3, args.renderScale);
+//    scalePoint(p4, args.renderScale);
+//    
+//    bool success = getHomography(args.time, args.renderScale, invert, p1, p2, p3, p4, homography);
+//    
+//    if (!success) {
+//        ///cannot compute the corner pin
+//        setPersistentMessage(OFX::Message::eMessageError, "", "Cannot compute a corner pin when 3 points are aligned.");
+//        OFX::throwSuiteStatusException(kOfxStatFailed);
+//    }
+//
+//    
+//    /// now transform the 4 corners of the source clip to the output image
+//    OFX::Point3D dstTopLeft = homography * OFX::Point3D(roi.x1,roi.y2,1);
+//    OFX::Point3D dstTopRight = homography * OFX::Point3D(roi.x2,roi.y2,1);
+//    OFX::Point3D dstBottomLeft = homography * OFX::Point3D(roi.x1,roi.y1,1);
+//    OFX::Point3D dstBottomRight = homography * OFX::Point3D(roi.x2,roi.y1,1);
+//    
+//    double l = std::min(std::min(dstTopLeft.x, dstBottomLeft.x),std::min(dstTopRight.x,dstBottomRight.x));
+//    double b = std::min(std::min(dstTopLeft.y, dstBottomLeft.y),std::min(dstTopRight.y,dstBottomRight.y));
+//    double r = std::max(std::max(dstTopLeft.x, dstBottomLeft.x),std::max(dstTopRight.x,dstBottomRight.x));
+//    double t = std::max(std::max(dstTopLeft.y, dstBottomLeft.y),std::max(dstTopRight.y,dstBottomRight.y));
+//    
+//    // GENERIC
+//    int filter;
+//    _filter->getValue(filter);
+//    bool doMasking = false;
+//    double mix = 1.;
+//    if (_masked) {
+//        if (getContext() != OFX::eContextFilter) {
+//            _domask->getValue(doMasking);
+//        }
+//        _mix->getValueAtTime(args.time, mix);
+//    }
+//
+//    
+//    OfxRectD srcRoI;
+//    srcRoI.x1 = l;
+//    srcRoI.x2 = r;
+//    srcRoI.y1 = b;
+//    srcRoI.y2 = t;
+//    assert(srcRoI.x1 < srcRoI.x2 && srcRoI.y1 < srcRoI.y2);
+//    
+//    ofxsFilterExpandRoI(roi, srcClip_->getPixelAspectRatio(), args.renderScale, (FilterEnum)filter, doMasking, mix, &srcRoI);
     
     rois.setRegionOfInterest(*srcClip_, roi);
 
