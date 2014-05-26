@@ -471,12 +471,26 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     } else {
         invtransform = OFX::ofxsMatTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
     }
+    
+    ////GENERIC
     /// now find the positions in the src clip of the 4 corners of the roi
     OFX::Point3D topLeft = invtransform * OFX::Point3D(roi.x1,roi.y2,1);
     OFX::Point3D topRight = invtransform * OFX::Point3D(roi.x2,roi.y2,1);
     OFX::Point3D bottomLeft = invtransform * OFX::Point3D(roi.x1,roi.y1,1);
     OFX::Point3D bottomRight = invtransform * OFX::Point3D(roi.x2,roi.y1,1);
     
+    if (topLeft.z != 0) {
+        topLeft.x /= topLeft.z; topLeft.y /= topLeft.z;
+    }
+    if (topRight.z != 0) {
+        topRight.x /= topRight.z; topRight.y /= topRight.z;
+    }
+    if (bottomLeft.z != 0) {
+        bottomLeft.x /= bottomLeft.z; bottomLeft.y /= bottomLeft.z;
+    }
+    if (bottomRight.z != 0) {
+        bottomRight.x /= bottomRight.z; bottomRight.y /= bottomRight.z;
+    }
     
     double l = std::min(std::min(topLeft.x, bottomLeft.x),std::min(topRight.x,bottomRight.x));
     double b = std::min(std::min(topLeft.y, bottomLeft.y),std::min(topRight.y,bottomRight.y));
@@ -1200,8 +1214,10 @@ TransformInteract::draw(const OFX::DrawArgs &args)
         previousPos.y = _lastMousePos.y;
         previousPos.z = 1.;
         previousPos = transformscale * previousPos;
-        previousPos.x /= previousPos.z;
-        previousPos.y /= previousPos.z;
+        if (previousPos.z != 0) {
+            previousPos.x /= previousPos.z;
+            previousPos.y /= previousPos.z;
+        }
         if ((_drawState == eSkewXBarHoverered && previousPos.y > center.y) ||
             (_drawState == eSkewYBarHoverered && previousPos.x > center.x)) {
             flip = 180.;
@@ -1350,20 +1366,29 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     }
 
     rotationPos = rotation * penPos;
-    rotationPos.x /= rotationPos.z;
-    rotationPos.y /= rotationPos.z;
+    if (rotationPos.z != 0) {
+        rotationPos.x /= rotationPos.z;
+        rotationPos.y /= rotationPos.z;
+    }
     
     transformedPos = transform * penPos;
-    transformedPos.x /= transformedPos.z;
-    transformedPos.y /= transformedPos.z;
+    if (transformedPos.z != 0) {
+        transformedPos.x /= transformedPos.z;
+        transformedPos.y /= transformedPos.z;
+    }
     
     previousPos = transformscale * prevPenPos;
-    previousPos.x /= previousPos.z;
-    previousPos.y /= previousPos.z;
+    if (previousPos.z != 0) {
+        previousPos.x /= previousPos.z;
+        previousPos.y /= previousPos.z;
+    }
     
     currentPos = transformscale * penPos;
-    currentPos.x /= currentPos.z;
-    currentPos.y /= currentPos.z;
+    if (currentPos.z != 0) {
+        currentPos.x /= currentPos.z;
+        currentPos.y /= currentPos.z;
+    }
+    
     
     bool ret = true;
     if (_mouseState == eReleased) {
@@ -1463,8 +1488,10 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         dRot.y = dy;
         dRot.z = 1.;
         dRot = R * dRot;
-        dRot.x /= dRot.z;
-        dRot.y /= dRot.z;
+        if (dRot.z != 0) {
+            dRot.x /= dRot.z;
+            dRot.y /= dRot.z;
+        }
         double dxrot = dRot.x;
         double dyrot = dRot.y;
         double newx = currentCenter.x + dxrot;
@@ -1556,11 +1583,15 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
 
     rotationPos = rotation * transformedPos;
-    rotationPos.x /= rotationPos.z;
-    rotationPos.y /= rotationPos.z;
+    if (rotationPos.z != 0) {
+        rotationPos.x /= rotationPos.z;
+        rotationPos.y /= rotationPos.z;
+    }
     transformedPos = transform * transformedPos;
-    transformedPos.x /= transformedPos.z;
-    transformedPos.y /= transformedPos.z;
+    if (transformedPos.z != 0) {
+        transformedPos.x /= transformedPos.z;
+        transformedPos.y /= transformedPos.z;
+    }
     
     double pressToleranceX = 5 * pscale.x;
     double pressToleranceY = 5 * pscale.y;

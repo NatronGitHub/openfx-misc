@@ -157,8 +157,8 @@ class TransformProcessor : public TransformProcessorBase
                         tmpPix[c] = 0;
                     }
                 } else {
-                    double fx = transformed.x / transformed.z;
-                    double fy = transformed.y / transformed.z;
+                    double fx = transformed.z != 0 ? transformed.x / transformed.z : transformed.x;
+                    double fy = transformed.z != 0 ? transformed.y / transformed.z : transformed.y;
 
                     ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
                 }
