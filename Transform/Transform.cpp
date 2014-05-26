@@ -472,7 +472,6 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
         invtransform = OFX::ofxsMatTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
     }
     
-    ////GENERIC
     /// now find the positions in the src clip of the 4 corners of the roi
     OFX::Point3D topLeft = invtransform * OFX::Point3D(roi.x1,roi.y2,1);
     OFX::Point3D topRight = invtransform * OFX::Point3D(roi.x2,roi.y2,1);

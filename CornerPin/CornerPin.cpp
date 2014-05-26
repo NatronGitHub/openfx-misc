@@ -120,6 +120,10 @@
 #define kFrom3ParamName "from3"
 #define kFrom4ParamName "from4"
 
+#define kCopyFromParamName "Copy \"From\" points"
+#define kCopyToParamName "Copy \"To\" points"
+#define kCopyInputRoDParamName "Set to input rod"
+
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
 
 using namespace OFX;
@@ -233,6 +237,9 @@ public:
     , _from2(0)
     , _from3(0)
     , _from4(0)
+    , _copyFromButton(0)
+    , _copyToButton(0)
+    , _copyInputButton(0)
     , _filter(0)
     , _clamp(0)
     , _blackOutside(0)
@@ -272,6 +279,11 @@ public:
         _from3 = fetchDouble2DParam(kFrom3ParamName);
         _from4 = fetchDouble2DParam(kFrom4ParamName);
         assert(_from1 && _from2 && _from3 && _from4);
+        
+        _copyFromButton = fetchPushButtonParam(kCopyFromParamName);
+        _copyToButton = fetchPushButtonParam(kCopyToParamName);
+        _copyInputButton = fetchPushButtonParam(kCopyInputRoDParamName);
+        assert(_copyInputButton && _copyToButton && _copyFromButton);
         
         _invert = fetchBooleanParam(kInvertParamName);
         // GENERIC
@@ -319,6 +331,7 @@ private:
     virtual bool getTransform(const TransformArguments &args, Clip * &transformClip, double transformMatrix[9]);
 #endif
 
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
     
     /* internal render function */
     template <class PIX, int nComponents, int maxValue, bool masked>
@@ -348,6 +361,10 @@ private:
     OFX::Double2DParam* _from2;
     OFX::Double2DParam* _from3;
     OFX::Double2DParam* _from4;
+    
+    OFX::PushButtonParam* _copyFromButton;
+    OFX::PushButtonParam* _copyToButton;
+    OFX::PushButtonParam* _copyInputButton;
 
     // GENERIC
     OFX::ChoiceParam* _filter;
@@ -625,19 +642,21 @@ CornerPinPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     OFX::Matrix3x3 homography;
     OFX::Point3D p1,p2,p3,p4;
     
-    OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
-    
-    p1.x = srcRoD.x1; p1.y = srcRoD.y2; p1.z = 1; //top left
-    p2.x = srcRoD.x2 ; p2.y = srcRoD.y2 ; p2.z = 1; //top right
-    p3.x = srcRoD.x2; p3.y = srcRoD.y1; p3.z = 1; //btm right
-    p4.x = srcRoD.x1; p4.y = srcRoD.y1; p4.z = 1; //btm left
+    _from1->getValueAtTime(args.time,p1.x, p1.y);
+    _from2->getValueAtTime(args.time,p2.x,p2.y);
+    _from3->getValueAtTime(args.time,p3.x,p3.y);
+    _from4->getValueAtTime(args.time,p4.x,p4.y);
+    p1.z = 1; //top left
+    p2.z = 1; //top right
+    p3.z = 1; //btm right
+    p4.z = 1; //btm left
     
     scalePoint(p1, args.renderScale);
     scalePoint(p2, args.renderScale);
     scalePoint(p3, args.renderScale);
     scalePoint(p4, args.renderScale);
     
-    bool success = getHomography(args.time, args.renderScale, invert, p1, p2, p3, p4, homography);
+    bool success = getHomography(args.time, args.renderScale, !invert, p1, p2, p3, p4, homography);
     
     if (!success) {
         ///cannot compute the corner pin
@@ -646,7 +665,6 @@ CornerPinPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     }
 
 
-    ////GENERIC
     /// now transform the 4 corners of the source clip to the output image
     OFX::Point3D topLeft = homography * OFX::Point3D(roi.x1,roi.y2,1);
     OFX::Point3D topRight = homography * OFX::Point3D(roi.x2,roi.y2,1);
@@ -694,7 +712,7 @@ CornerPinPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     
     ofxsFilterExpandRoI(roi, srcClip_->getPixelAspectRatio(), args.renderScale, (FilterEnum)filter, doMasking, mix, &srcRoI);
     
-    rois.setRegionOfInterest(*srcClip_, roi);
+    rois.setRegionOfInterest(*srcClip_, srcRoI);
 
 }
 
@@ -911,7 +929,43 @@ CornerPinPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+static void copyPoint(OFX::Double2DParam* from,OFX::Double2DParam* to)
+{
+    OfxPointD p;
+    unsigned int keyCount = from->getNumKeys();
+    to->deleteAllKeys();
+    for (unsigned int i = 0; i < keyCount; ++i) {
+        OfxTime time = from->getKeyTime(i);
+        from->getValueAtTime(time, p.x, p.y);
+        to->setValueAtTime(time, p.x, p.y);
+    }
+    if (keyCount == 0) {
+        from->getValue(p.x, p.y);
+        to->setValue(p.x, p.y);
+    }
 
+}
+
+void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kCopyInputRoDParamName) {
+        const OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
+        _from1->setValue(srcRoD.x1, srcRoD.y2);
+        _from2->setValue(srcRoD.x2, srcRoD.y2);
+        _from3->setValue(srcRoD.x2, srcRoD.y1);
+        _from4->setValue(srcRoD.x1, srcRoD.y1);
+    } else if (paramName == kCopyFromParamName) {
+        copyPoint(_from1,_topLeft);
+        copyPoint(_from2,_topRight);
+        copyPoint(_from3,_btmRight);
+        copyPoint(_from4,_btmLeft);
+    } else if (paramName == kCopyToParamName) {
+        copyPoint(_topLeft,_from1);
+        copyPoint(_topRight,_from2);
+        copyPoint(_btmRight,_from3);
+        copyPoint(_btmLeft,_from4);
+    }
+}
 
 
 class CornerPinTransformInteract : public OFX::OverlayInteract
@@ -1462,6 +1516,10 @@ void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     defineCornerPinToDouble2DParam(desc, page, kBtmRightParamName,1,0);
     defineCornerPinToDouble2DParam(desc, page, kBtmLeftParamName,0,0);
 
+    PushButtonParamDescriptor* copyFrom = desc.definePushButtonParam(kCopyFromParamName);
+    copyFrom->setLabels(kCopyFromParamName, kCopyFromParamName, kCopyFromParamName);
+    copyFrom->setHint("Copy the content from the \"to\" points to the \"from\" points.");
+    page->addChild(*copyFrom);
 
     GroupParamDescriptor* extraMatrix = desc.defineGroupParam("Extra matrix");
     extraMatrix->setHint("This matrix gets concatenated to the transform defined by the other parameters.");
@@ -1480,6 +1538,18 @@ void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom3ParamName, 1, 0);
     defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom4ParamName, 0, 0);
 
+    PushButtonParamDescriptor* setToInput = desc.definePushButtonParam(kCopyInputRoDParamName);
+    setToInput->setLabels(kCopyInputRoDParamName, kCopyInputRoDParamName, kCopyInputRoDParamName);
+    setToInput->setHint("Copy the values from the source region of definition into the \"to\" points.");
+    setToInput->setParent(*fromPoints);
+    setToInput->setLayoutHint(OFX::eLayoutHintNoNewLine);
+    
+    PushButtonParamDescriptor* copyTo = desc.definePushButtonParam(kCopyToParamName);
+    copyTo->setLabels(kCopyToParamName, kCopyToParamName, kCopyToParamName);
+    copyTo->setHint("Copy the content from the \"from\" points to the \"to\" points.");
+    copyTo->setParent(*fromPoints);
+
+    
 
     BooleanParamDescriptor* invert = desc.defineBooleanParam(kInvertParamName);
     invert->setLabels(kInvertParamName, kInvertParamName, kInvertParamName);
@@ -1593,6 +1663,11 @@ void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     defineCornerPinToDouble2DParam(desc, page, kTopRightParamName,1,1);
     defineCornerPinToDouble2DParam(desc, page, kBtmRightParamName,1,0);
     defineCornerPinToDouble2DParam(desc, page, kBtmLeftParamName,0,0);
+    
+    PushButtonParamDescriptor* copyFrom = desc.definePushButtonParam(kCopyFromParamName);
+    copyFrom->setLabels(kCopyFromParamName, kCopyFromParamName, kCopyFromParamName);
+    copyFrom->setHint("Copy the content from the \"to\" points to the \"from\" points.");
+    page->addChild(*copyFrom);
 
     GroupParamDescriptor* extraMatrix = desc.defineGroupParam("Extra matrix");
     extraMatrix->setHint("This matrix gets concatenated to the transform defined by the other parameters.");
@@ -1610,6 +1685,18 @@ void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom2ParamName, 1, 1);
     defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom3ParamName, 1, 0);
     defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom4ParamName, 0, 0);
+    
+    PushButtonParamDescriptor* setToInput = desc.definePushButtonParam(kCopyInputRoDParamName);
+    setToInput->setLabels(kCopyInputRoDParamName, kCopyInputRoDParamName, kCopyInputRoDParamName);
+    setToInput->setHint("Copy the values from the source region of definition into the \"to\" points.");
+    setToInput->setParent(*fromPoints);
+    setToInput->setLayoutHint(OFX::eLayoutHintNoNewLine);
+    
+    PushButtonParamDescriptor* copyTo = desc.definePushButtonParam(kCopyToParamName);
+    copyTo->setLabels(kCopyToParamName, kCopyToParamName, kCopyToParamName);
+    copyTo->setHint("Copy the content from the \"from\" points to the \"to\" points.");
+    copyTo->setParent(*fromPoints);
+    
 
 
     BooleanParamDescriptor* invert = desc.defineBooleanParam(kInvertParamName);
