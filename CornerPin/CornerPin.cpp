@@ -375,11 +375,6 @@ private:
     OFX::DoubleParam* _mix;
 };
 
-static void scalePoint(OFX::Point3D& p,const OfxPointD& scale)
-{
-    p.x *= scale.x;
-    p.y *= scale.y;
-}
 
 bool CornerPinPlugin::getHomography(OfxTime time,const OfxPointD& scale,
                                     bool inverseTransform,
@@ -405,28 +400,24 @@ bool CornerPinPlugin::getHomography(OfxTime time,const OfxPointD& scale,
     
     if (topLeftEnabled) {
         q1.x = topLeft.x ; q1.y = topLeft.y; q1.z = 1;
-        scalePoint(q1,scale);
     } else {
         q1 = p1;
     }
     
     if (topRightEnabled) {
         q2.x = topRight.x; q2.y = topRight.y ; q2.z = 1;
-        scalePoint(q2,scale);
     } else {
         q2 = p2;
     }
     
     if (btmRightEnabled) {
         q3.x = btmRight.x ; q3.y = btmRight.y ; q3.z = 1;
-        scalePoint(q3,scale);
     } else {
         q3 = p3;
     }
     
     if (btmLeftEnabled) {
         q4.x = btmLeft.x ; q4.y = btmLeft.y ; q4.z = 1;
-        scalePoint(q4,scale);
     } else {
         q4 = p4;
     }
@@ -523,12 +514,7 @@ CornerPinPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
     p2.z = 1.;
     p3.z = 1.;
     p4.z = 1.;
-    
-    scalePoint(p1, args.renderScale);
-    scalePoint(p2, args.renderScale);
-    scalePoint(p3, args.renderScale);
-    scalePoint(p4, args.renderScale);
-    
+
     bool success = getHomography(args.time, args.renderScale, !invert,p1,p2,p3,p4,invtransform);
     
     if (!success) {
@@ -650,11 +636,6 @@ CornerPinPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     p2.z = 1; //top right
     p3.z = 1; //btm right
     p4.z = 1; //btm left
-    
-    scalePoint(p1, args.renderScale);
-    scalePoint(p2, args.renderScale);
-    scalePoint(p3, args.renderScale);
-    scalePoint(p4, args.renderScale);
     
     bool success = getHomography(args.time, args.renderScale, !invert, p1, p2, p3, p4, homography);
     
