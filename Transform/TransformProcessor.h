@@ -49,8 +49,6 @@ protected:
     // NON-GENERIC PARAMETERS:
     OFX::Matrix3x3 _invtransform;
     // GENERIC PARAMETERS:
-    //FilterEnum _filter;
-    //bool _clamp;
     bool _blackOutside;
     bool _domask;
     double _mix;
@@ -62,8 +60,6 @@ public:
     , _srcImg(0)
     , _maskImg(0)
     , _invtransform()
-    //, _filter(eFilterImpulse)
-    //, _clamp(false)
     , _blackOutside(false)
     , _domask(false)
     , _mix(1.0)
@@ -91,8 +87,6 @@ public:
                    double pixelaspectratio, //!< 1.067 for PAL, where 720x576 pixels occupy 768x576 in canonical coords
                    const OfxPointD& renderscale, //!< 0.5 for a half-resolution image
                    OFX::FieldEnum fieldToRender,
-                   //FilterEnum filter,                 //!< generic
-                   //bool clamp, //!< generic
                    bool blackOutside, //!< generic
                    double mix)          //!< generic
     {
@@ -102,8 +96,6 @@ public:
                          invtransform *
                          OFX::ofxsMatPixelToCanonical(pixelaspectratio, renderscale.x, renderscale.y, fielded));
         // GENERIC
-        //_filter = filter;
-        //_clamp = clamp;
         _blackOutside = blackOutside;
         _mix = mix;
     }
