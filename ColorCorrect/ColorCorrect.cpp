@@ -515,7 +515,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    if (getContext() != OFX::eContextFilter) {
+    if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
         processor.doMasking(true);
         processor.setMaskImg(mask.get());
     }

@@ -247,7 +247,6 @@ public:
     , _clamp(0)
     , _blackOutside(0)
     , _masked(masked)
-    , _domask(0)
     , _mix(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
@@ -294,7 +293,6 @@ public:
         _clamp = fetchBooleanParam(kFilterClampParamName);
         _blackOutside = fetchBooleanParam(kFilterBlackOutsideParamName);
         if (masked) {
-            _domask = fetchBooleanParam(kFilterMaskParamName);
             _mix = fetchDoubleParam(kFilterMixParamName);
         }
     }
@@ -374,7 +372,6 @@ private:
     OFX::BooleanParam* _clamp;
     OFX::BooleanParam* _blackOutside;
     bool _masked;
-    OFX::BooleanParam* _domask;
     OFX::DoubleParam* _mix;
 };
 
@@ -536,16 +533,12 @@ CornerPinPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
     std::auto_ptr<OFX::Image> mask((_masked && (getContext() != OFX::eContextFilter)) ? maskClip_->fetchImage(args.time) : 0);
     
     // do we do masking
-    if (_masked && getContext() != OFX::eContextFilter) {
-        bool doMasking;
-        _domask->getValue(doMasking);
-        if (doMasking) {
-            // say we are masking
-            processor.doMasking(true);
-            
-            // Set it in the processor
-            processor.setMaskImg(mask.get());
-        }
+    if (_masked && getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+        // say we are masking
+        processor.doMasking(true);
+
+        // Set it in the processor
+        processor.setMaskImg(mask.get());
     }
 
     // Call the base class process member, this will call the derived templated process code
@@ -677,12 +670,9 @@ CornerPinPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     // GENERIC
     int filter;
     _filter->getValue(filter);
-    bool doMasking = false;
+    const bool doMasking = _masked && getContext() != OFX::eContextFilter && maskClip_->isConnected();
     double mix = 1.;
     if (_masked) {
-        if (getContext() != OFX::eContextFilter) {
-            _domask->getValue(doMasking);
-        }
         _mix->getValueAtTime(args.time, mix);
     }
 

@@ -213,7 +213,6 @@ public :
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
         _operation = fetchChoiceParam(kOperationParamName);
         _bbox = fetchChoiceParam(kBboxParamName);
-        _doMask = fetchBooleanParam(kFilterMaskParamName);
         _mix = fetchDoubleParam(kFilterMixParamName);
         _alphaMasking = fetchBooleanParam(kAlphaMaskingParamName);
     }
@@ -236,7 +235,6 @@ private:
     
     OFX::ChoiceParam *_operation;
     OFX::ChoiceParam *_bbox;
-    OFX::BooleanParam *_doMask;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam *_alphaMasking;
 };
@@ -329,18 +327,14 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     std::auto_ptr<OFX::Image> mask((getContext() != OFX::eContextFilter) ? maskClip_->fetchImage(args.time) : 0);
     
     // do we do masking
-    if (getContext() != OFX::eContextFilter) {
-        bool doMasking;
-        _doMask->getValue(doMasking);
-        if (doMasking) {
-            // say we are masking
-            processor.doMasking(true);
-            
-            // Set it in the processor
-            processor.setMaskImg(mask.get());
-        }
+    if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+        // say we are masking
+        processor.doMasking(true);
+
+        // Set it in the processor
+        processor.setMaskImg(mask.get());
     }
-    
+
     int operation;
     int bboxChoice;
     double mix;

@@ -160,7 +160,6 @@ public:
     , _clamp(0)
     , _blackOutside(0)
     , _masked(masked)
-    , _domask(0)
     , _mix(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
@@ -187,7 +186,6 @@ public:
         _clamp = fetchBooleanParam(kFilterClampParamName);
         _blackOutside = fetchBooleanParam(kFilterBlackOutsideParamName);
         if (masked) {
-            _domask = fetchBooleanParam(kFilterMaskParamName);
             _mix = fetchDoubleParam(kFilterMixParamName);
         }
     }
@@ -234,7 +232,6 @@ private:
     OFX::BooleanParam* _clamp;
     OFX::BooleanParam* _blackOutside;
     bool _masked;
-    OFX::BooleanParam* _domask;
     OFX::DoubleParam* _mix;
 };
 
@@ -330,18 +327,14 @@ TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::R
     std::auto_ptr<OFX::Image> mask((_masked && (getContext() != OFX::eContextFilter)) ? maskClip_->fetchImage(args.time) : 0);
     
     // do we do masking
-    if (_masked && getContext() != OFX::eContextFilter) {
-        bool doMasking;
-        _domask->getValue(doMasking);
-        if (doMasking) {
-            // say we are masking
-            processor.doMasking(true);
-            
-            // Set it in the processor
-            processor.setMaskImg(mask.get());
-        }
+    if (_masked && getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+        // say we are masking
+        processor.doMasking(true);
+
+        // Set it in the processor
+        processor.setMaskImg(mask.get());
     }
-    
+
     // set the images
     processor.setDstImg(dst.get());
     processor.setSrcImg(src.get());
@@ -501,12 +494,9 @@ TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     _filter->getValue(filter);
     bool blackOutside;
     _blackOutside->getValue(blackOutside);
-    bool doMasking = false;
+    const bool doMasking = _masked && getContext() != OFX::eContextFilter && maskClip_->isConnected();
     double mix = 1.;
     if (_masked) {
-        if (getContext() != OFX::eContextFilter) {
-            _domask->getValue(doMasking);
-        }
         _mix->getValueAtTime(args.time, mix);
     }
 
@@ -691,11 +681,9 @@ bool TransformPlugin::isIdentity(const RenderArguments &args, Clip * &identityCl
     
     // GENERIC
     if (_masked) {
-        bool doMasking;
-        _domask->getValue(doMasking);
         double mix;
         _mix->getValueAtTime(args.time, mix);
-        if (doMasking && mix == 0.) {
+        if (mix == 0.) {
             identityClip = srcClip_;
             identityTime = args.time;
             return true;

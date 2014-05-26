@@ -51,7 +51,7 @@
 #define kFilterClampParamHint "Clamp filter output within the original range - useful to avoid negative values in mattes"
 #define kFilterBlackOutsideParamName "Black outside"
 #define kFilterBlackOutsideParamHint "Fill the area outside the source image with black"
-#define kFilterMaskParamName "Mask"
+//#define kFilterMaskParamName "Mask"
 #define kFilterMixParamName "Mix"
 
 enum FilterEnum {
@@ -139,12 +139,6 @@ ofxsFilterDescribeParamsMaskMix(OFX::ImageEffectDescriptor &desc, OFX::PageParam
 {
     // GENERIC (MASKED)
     //
-    OFX::BooleanParamDescriptor* domask = desc.defineBooleanParam(kFilterMaskParamName);
-    domask->setLabels(kFilterMaskParamName, kFilterMaskParamName, kFilterMaskParamName);
-    domask->setDefault(false);
-    domask->setAnimates(false);
-    page->addChild(*domask);
-
     OFX::DoubleParamDescriptor* mix = desc.defineDoubleParam(kFilterMixParamName);
     mix->setLabels(kFilterMixParamName, kFilterMixParamName, kFilterMixParamName);
     mix->setDefault(1.);
