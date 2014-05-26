@@ -124,6 +124,8 @@
 #define kCopyToParamName "Copy \"To\" points"
 #define kCopyInputRoDParamName "Set to input rod"
 
+#define kOverlayPointsParamName "Overlay points"
+
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
 
 using namespace OFX;
@@ -979,6 +981,11 @@ public:
     , _btmLeft(0)
     , _btmRight(0)
     , _invert(0)
+    , _from1(0)
+    , _from2(0)
+    , _from3(0)
+    , _from4(0)
+    , _overlayChoice(0)
     , _ms(eIdle)
     , _ds(eInactive)
     , _lastMousePos()
@@ -993,6 +1000,14 @@ public:
         _btmRight = effect->fetchDouble2DParam(kBtmRightParamName);
         _btmLeft = effect->fetchDouble2DParam(kBtmLeftParamName);
         _invert = effect->fetchBooleanParam(kInvertParamName);
+        
+        _from1 = effect->fetchDouble2DParam(kFrom1ParamName);
+        _from2 = effect->fetchDouble2DParam(kFrom2ParamName);
+        _from3 = effect->fetchDouble2DParam(kFrom3ParamName);
+        _from4 = effect->fetchDouble2DParam(kFrom4ParamName);
+        
+        _overlayChoice = effect->fetchChoiceParam(kOverlayPointsParamName);
+        
         addParamToSlaveTo(_topLeft);
         addParamToSlaveTo(_topRight);
         addParamToSlaveTo(_btmRight);
@@ -1010,18 +1025,35 @@ public:
 
 private:
     
-
+    /**
+     * @brief Returns true if the points that should be used by the overlay are
+     * the "from" points, otherwise the overlay is assumed to use the "to" points.
+     **/
+    bool isFromPoints() const
+    {
+        int v;
+        _overlayChoice->getValue(v);
+        return v == 1;
+    }
     
-    bool isNearbyTopLeft(const OfxPointD& pos,double tolerance) const;
-    bool isNearbyTopRight(const OfxPointD& pos,double tolerance) const;
-    bool isNearbyBtmLeft(const OfxPointD& pos,double tolerance) const;
-    bool isNearbyBtmRight(const OfxPointD& pos,double tolerance) const;
+    bool isNearbyTopLeft(const OfxPointD& pos,bool useFromPoints,double tolerance) const;
+    bool isNearbyTopRight(const OfxPointD& pos,bool useFromPoints,double tolerance) const;
+    bool isNearbyBtmLeft(const OfxPointD& pos,bool useFromPoints,double tolerance) const;
+    bool isNearbyBtmRight(const OfxPointD& pos,bool useFromPoints,double tolerance) const;
     
     OFX::Double2DParam* _topLeft;
     OFX::Double2DParam* _topRight;
     OFX::Double2DParam* _btmLeft;
     OFX::Double2DParam* _btmRight;
     OFX::BooleanParam* _invert;
+    
+    OFX::Double2DParam* _from1;
+    OFX::Double2DParam* _from2;
+    OFX::Double2DParam* _from3;
+    OFX::Double2DParam* _from4;
+    
+    OFX::ChoiceParam* _overlayChoice;
+    
     MouseState _ms;
     DrawState _ds;
     OfxPointD _lastMousePos;
@@ -1035,10 +1067,10 @@ private:
 };
 
 
-bool CornerPinTransformInteract::isNearbyTopLeft(const OfxPointD& pos,double tolerance) const
+bool CornerPinTransformInteract::isNearbyTopLeft(const OfxPointD& pos,bool useFromPoints,double tolerance) const
 {
     OfxPointD topLeft;
-    _topLeft->getValue(topLeft.x, topLeft.y);
+    useFromPoints ? _from1->getValue(topLeft.x, topLeft.y) : _topLeft->getValue(topLeft.x, topLeft.y);
     if (pos.x >= (topLeft.x - tolerance) && pos.x <= (topLeft.x + tolerance) &&
         pos.y >= (topLeft.y - tolerance) && pos.y <= (topLeft.y + tolerance)) {
         return true;
@@ -1047,10 +1079,10 @@ bool CornerPinTransformInteract::isNearbyTopLeft(const OfxPointD& pos,double tol
     }
 }
 
-bool CornerPinTransformInteract::isNearbyTopRight(const OfxPointD& pos,double tolerance) const
+bool CornerPinTransformInteract::isNearbyTopRight(const OfxPointD& pos,bool useFromPoints,double tolerance) const
 {
     OfxPointD topRight;
-    _topRight->getValue(topRight.x, topRight.y);
+    useFromPoints ? _from2->getValue(topRight.x, topRight.y) : _topRight->getValue(topRight.x, topRight.y);
     if (pos.x >= (topRight.x - tolerance) && pos.x <= (topRight.x + tolerance) &&
         pos.y >= (topRight.y - tolerance) && pos.y <= (topRight.y + tolerance)) {
         return true;
@@ -1059,10 +1091,10 @@ bool CornerPinTransformInteract::isNearbyTopRight(const OfxPointD& pos,double to
     }
 }
 
-bool CornerPinTransformInteract::isNearbyBtmLeft(const OfxPointD& pos,double tolerance) const
+bool CornerPinTransformInteract::isNearbyBtmLeft(const OfxPointD& pos,bool useFromPoints,double tolerance) const
 {
     OfxPointD btmLeft;
-    _btmLeft->getValue(btmLeft.x, btmLeft.y);
+    useFromPoints ? _from4->getValue(btmLeft.x, btmLeft.y) :_btmLeft->getValue(btmLeft.x, btmLeft.y);
     if (pos.x >= (btmLeft.x - tolerance) && pos.x <= (btmLeft.x + tolerance) &&
         pos.y >= (btmLeft.y - tolerance) && pos.y <= (btmLeft.y + tolerance)) {
         return true;
@@ -1071,10 +1103,10 @@ bool CornerPinTransformInteract::isNearbyBtmLeft(const OfxPointD& pos,double tol
     }
 }
 
-bool CornerPinTransformInteract::isNearbyBtmRight(const OfxPointD& pos,double tolerance) const
+bool CornerPinTransformInteract::isNearbyBtmRight(const OfxPointD& pos,bool useFromPoints,double tolerance) const
 {
     OfxPointD btmRight;
-     _btmRight->getValue(btmRight.x, btmRight.y);
+    useFromPoints ? _from3->getValue(btmRight.x, btmRight.y) : _btmRight->getValue(btmRight.x, btmRight.y);
     if (pos.x >= (btmRight.x - tolerance) && pos.x <= (btmRight.x + tolerance) &&
         pos.y >= (btmRight.y - tolerance) && pos.y <= (btmRight.y + tolerance)) {
         return true;
@@ -1086,29 +1118,31 @@ bool CornerPinTransformInteract::isNearbyBtmRight(const OfxPointD& pos,double to
 bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
 {
 
+    bool useFrom = isFromPoints();
+    
     OfxPointD topLeft,topRight,btmLeft,btmRight;
     if (_ms == eDraggingTopLeft) {
         topLeft = _topLeftDraggedPos;
     } else {
-        _topLeft->getValue(topLeft.x, topLeft.y);
+        useFrom ? _from1->getValue(topLeft.x, topLeft.y) : _topLeft->getValue(topLeft.x, topLeft.y);
     }
     
     if (_ms == eDraggingTopRight) {
         topRight = _topRightDraggedPos;
     } else {
-        _topRight->getValue(topRight.x, topRight.y);
+        useFrom ? _from2->getValue(topRight.x, topRight.y) :_topRight->getValue(topRight.x, topRight.y);
     }
     
     if (_ms == eDraggingBottomLeft) {
         btmLeft = _btmLeftDraggedPos;
     } else {
-        _btmLeft->getValue(btmLeft.x, btmLeft.y);
+        useFrom ? _from4->getValue(btmLeft.x, btmLeft.y) :_btmLeft->getValue(btmLeft.x, btmLeft.y);
     }
     
     if (_ms == eDraggingBottomRight) {
         btmRight = _btmRightDraggedPos;
     } else {
-        _btmRight->getValue(btmRight.x, btmRight.y);
+        useFrom ? _from3->getValue(btmRight.x, btmRight.y) : _btmRight->getValue(btmRight.x, btmRight.y);
     }
     
     OfxPointD lineSize;
@@ -1265,17 +1299,19 @@ bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
     delta.x = args.penPosition.x - _lastMousePos.x;
     delta.y = args.penPosition.y - _lastMousePos.y;
     
+    bool useFrom = isFromPoints();
+    
     double selectionTol = 15. * args.pixelScale.x;
-    if (isNearbyBtmLeft(args.penPosition, selectionTol)) {
+    if (isNearbyBtmLeft(args.penPosition, useFrom,selectionTol)) {
         _ds = eHoveringBottomLeft;
         didSomething = true;
-    } else if (isNearbyBtmRight(args.penPosition, selectionTol)) {
+    } else if (isNearbyBtmRight(args.penPosition, useFrom,selectionTol)) {
         _ds = eHoveringBottomRight;
         didSomething = true;
-    } else if (isNearbyTopRight(args.penPosition, selectionTol)) {
+    } else if (isNearbyTopRight(args.penPosition, useFrom,selectionTol)) {
         _ds = eHoveringTopRight;
         didSomething = true;
-    } else if (isNearbyTopLeft(args.penPosition, selectionTol)) {
+    } else if (isNearbyTopLeft(args.penPosition, useFrom,selectionTol)) {
         _ds = eHoveringTopLeft;
         didSomething = true;
     } else {
@@ -1308,20 +1344,21 @@ bool CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
     bool didSomething = false;
     
     double selectionTol = 15. * args.pixelScale.x;
+    bool useFrom = isFromPoints();
     
-    if (isNearbyBtmLeft(args.penPosition, selectionTol)) {
+    if (isNearbyBtmLeft(args.penPosition,useFrom, selectionTol)) {
         _ms = eDraggingBottomLeft;
         _btmLeftDraggedPos = args.penPosition;
         didSomething = true;
-    } else if (isNearbyBtmRight(args.penPosition, selectionTol)) {
+    } else if (isNearbyBtmRight(args.penPosition,useFrom, selectionTol)) {
         _ms = eDraggingBottomRight;
         _btmRightDraggedPos = args.penPosition;
         didSomething = true;
-    } else if (isNearbyTopRight(args.penPosition, selectionTol)) {
+    } else if (isNearbyTopRight(args.penPosition,useFrom, selectionTol)) {
         _ms = eDraggingTopRight;
         _topRightDraggedPos = args.penPosition;
         didSomething = true;
-    } else if (isNearbyTopLeft(args.penPosition, selectionTol)) {
+    } else if (isNearbyTopLeft(args.penPosition,useFrom, selectionTol)) {
         _ms = eDraggingTopLeft;
         _topLeftDraggedPos = args.penPosition;
         didSomething = true;
@@ -1334,18 +1371,23 @@ bool CornerPinTransformInteract::penUp(const OFX::PenArgs &args)
 {
     bool didSomething = false;
     
+    bool useFrom = isFromPoints();
     
     if (_ms == eDraggingBottomLeft) {
-        _btmLeft->setValue(_btmLeftDraggedPos.x,_btmLeftDraggedPos.y);
+        useFrom ? _from4->setValue(_btmLeftDraggedPos.x, _btmLeftDraggedPos.y)
+        : _btmLeft->setValue(_btmLeftDraggedPos.x,_btmLeftDraggedPos.y);
         didSomething = true;
     } else if (_ms == eDraggingBottomRight) {
-        _btmRight->setValue(_btmRightDraggedPos.x,_btmRightDraggedPos.y);
+        useFrom ? _from3->setValue(_btmRightDraggedPos.x, _btmRightDraggedPos.y)
+        : _btmRight->setValue(_btmRightDraggedPos.x,_btmRightDraggedPos.y);
         didSomething = true;
     } else if (_ms == eDraggingTopLeft) {
-        _topLeft->setValue(_topLeftDraggedPos.x,_topLeftDraggedPos.y);
+        useFrom ? _from1->setValue(_topLeftDraggedPos.x, _topLeftDraggedPos.y)
+        :_topLeft->setValue(_topLeftDraggedPos.x,_topLeftDraggedPos.y);
         didSomething = true;
     } else if (_ms == eDraggingTopRight) {
-        _topRight->setValue(_topRightDraggedPos.x,_topRightDraggedPos.y);
+        useFrom ? _from2->setValue(_topRightDraggedPos.x, _topRightDraggedPos.y)
+        :_topRight->setValue(_topRightDraggedPos.x,_topRightDraggedPos.y);
         didSomething = true;
     }
     
@@ -1531,6 +1573,14 @@ void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     copyTo->setParent(*fromPoints);
 
     
+    ChoiceParamDescriptor* overlayChoice = desc.defineChoiceParam(kOverlayPointsParamName);
+    overlayChoice->setHint("Whether to display the \"from\" or the \"to\" points in the overlay");
+    overlayChoice->setLabels(kOverlayPointsParamName, kOverlayPointsParamName, kOverlayPointsParamName);
+    overlayChoice->appendOption("To");
+    overlayChoice->appendOption("From");
+    overlayChoice->setDefault(0);
+    overlayChoice->setAnimates(false);
+    page->addChild(*overlayChoice);
 
     BooleanParamDescriptor* invert = desc.defineBooleanParam(kInvertParamName);
     invert->setLabels(kInvertParamName, kInvertParamName, kInvertParamName);
@@ -1678,6 +1728,14 @@ void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     copyTo->setHint("Copy the content from the \"from\" points to the \"to\" points.");
     copyTo->setParent(*fromPoints);
     
+    ChoiceParamDescriptor* overlayChoice = desc.defineChoiceParam(kOverlayPointsParamName);
+    overlayChoice->setHint("Whether to display the \"from\" or the \"to\" points in the overlay");
+    overlayChoice->setLabels(kOverlayPointsParamName, kOverlayPointsParamName, kOverlayPointsParamName);
+    overlayChoice->appendOption("To");
+    overlayChoice->appendOption("From");
+    overlayChoice->setDefault(0);
+    overlayChoice->setAnimates(false);
+    page->addChild(*overlayChoice);
 
 
     BooleanParamDescriptor* invert = desc.defineBooleanParam(kInvertParamName);
