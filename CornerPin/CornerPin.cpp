@@ -97,6 +97,7 @@
 #include <GL/gl.h>
 #endif
 
+#include "../Misc/ofxsOGLTextRenderer.h"
 
 #include "../Transform/TransformProcessor.h"
 
@@ -1145,12 +1146,7 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
         useFrom ? _from3->getValue(btmRight.x, btmRight.y) : _btmRight->getValue(btmRight.x, btmRight.y);
     }
     
-    OfxPointD lineSize;
-    lineSize.x = POINT_INTERACT_LINE_SIZE_PIXELS * args.pixelScale.x;
-    lineSize.y = POINT_INTERACT_LINE_SIZE_PIXELS * args.pixelScale.y;
-    
     glPointSize(5);
-    glLineWidth(2);
     glBegin(GL_POINTS);
     
     if (_ds == eHoveringTopLeft || _ms == eDraggingTopLeft) {
@@ -1183,55 +1179,13 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
     glVertex2d(btmRight.x, btmRight.y);
     glEnd();
 
-    
-    glBegin(GL_LINES);
-    ///top left
-    if (_ds == eHoveringTopLeft || _ms == eDraggingTopLeft) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1., 0.8, 0., 1.);
-    }
-    glVertex2d(topLeft.x, topLeft.y - lineSize.y);
-    glVertex2d(topLeft.x, topLeft.y);
-    glVertex2d(topLeft.x, topLeft.y);
-    glVertex2d(topLeft.x + lineSize.x, topLeft.y);
-    
-    ///top right
-    if (_ds == eHoveringTopRight || _ms == eDraggingTopRight) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1., 0.8, 0., 1.);
-    }
-    glVertex2d(topRight.x, topRight.y - lineSize.y);
-    glVertex2d(topRight.x, topRight.y);
-    glVertex2d(topRight.x, topRight.y);
-    glVertex2d(topRight.x - lineSize.x, topRight.y);
-    
-    ///bottom right
-    if (_ds == eHoveringBottomRight || _ms == eDraggingBottomRight) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1., 0.8, 0., 1.);
-    }
-    glVertex2d(btmRight.x, btmRight.y + lineSize.y);
-    glVertex2d(btmRight.x, btmRight.y);
-    glVertex2d(btmRight.x, btmRight.y);
-    glVertex2d(btmRight.x - lineSize.x, btmRight.y);
-    
-    ///bottom left
-    if (_ds == eHoveringBottomLeft || _ms == eDraggingBottomLeft) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1., 0.8, 0., 1.);
-    }
-    glVertex2d(btmLeft.x, btmLeft.y + lineSize.y);
-    glVertex2d(btmLeft.x, btmLeft.y);
-    glVertex2d(btmLeft.x, btmLeft.y);
-    glVertex2d(btmLeft.x + lineSize.x, btmLeft.y);
-    glEnd();
-    
+    double offset = 10 * args.pixelScale.x;
+    TextRenderer::bitmapString(topLeft.x - offset,topLeft.y + offset,useFrom ? kFrom1ParamName : kTopLeftParamName);
+    TextRenderer::bitmapString(topRight.x + offset,topRight.y + offset,useFrom ? kFrom2ParamName : kTopRightParamName);
+    TextRenderer::bitmapString(btmRight.x + offset,btmRight.y - offset,useFrom ? kFrom3ParamName : kBtmRightParamName);
+    TextRenderer::bitmapString(btmLeft.x - offset,btmLeft.y - offset,useFrom ? kFrom4ParamName : kBtmLeftParamName);
+
     glPointSize(1.);
-    glLineWidth(1.);
     
     bool inverted;
     _invert->getValue(inverted);

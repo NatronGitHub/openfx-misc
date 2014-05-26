@@ -226,6 +226,10 @@
 		D74121E118F9CF3D00A81F8B /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		D74121E718F9CF5900A81F8B /* Merge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D74121CD18F9C99300A81F8B /* Merge.cpp */; };
 		D74121E818F9CF5A00A81F8B /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D74121CF18F9C99300A81F8B /* PluginRegistration.cpp */; };
+		D792A2E319334C6300547CFF /* ofxsOGLTextRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */; };
+		D792A2E419334C6300547CFF /* ofxsOGLTextRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */; };
+		D792A2F01933691800547CFF /* freeglut_font_data.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D792A2EF1933691800547CFF /* freeglut_font_data.cpp */; };
+		D792A2F11933691800547CFF /* freeglut_font_data.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D792A2EF1933691800547CFF /* freeglut_font_data.cpp */; };
 		D7B4C97818D9DBE70004137D /* ColorCorrect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B4C95E18D9DA410004137D /* ColorCorrect.cpp */; };
 /* End PBXBuildFile section */
 
@@ -398,6 +402,10 @@
 		D74121CF18F9C99300A81F8B /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		D74121D318F9CE3D00A81F8B /* ofxsMerging.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsMerging.h; sourceTree = "<group>"; };
 		D74121E518F9CF3D00A81F8B /* Merge.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Merge.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsOGLTextRenderer.cpp; sourceTree = "<group>"; };
+		D792A2E219334C6300547CFF /* ofxsOGLTextRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsOGLTextRenderer.h; sourceTree = "<group>"; };
+		D792A2E919335BE100547CFF /* ofxsOGLFontUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsOGLFontUtils.h; sourceTree = "<group>"; };
+		D792A2EF1933691800547CFF /* freeglut_font_data.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = freeglut_font_data.cpp; sourceTree = "<group>"; };
 		D7B4C95E18D9DA410004137D /* ColorCorrect.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ColorCorrect.cpp; sourceTree = "<group>"; };
 		D7B4C95F18D9DA410004137D /* ColorCorrect.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorCorrect.h; sourceTree = "<group>"; };
 		D7B4C96018D9DA410004137D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -739,12 +747,16 @@
 		1E8B5D4618B769B400C31FDC /* Misc */ = {
 			isa = PBXGroup;
 			children = (
+				D792A2EF1933691800547CFF /* freeglut_font_data.cpp */,
 				1EF33E0F18F556CB003E62EF /* ofxsFilter.h */,
 				1EF33E1018F556CB003E62EF /* ofxsMatrix2D.h */,
 				1E8B5D4718B769CA00C31FDC /* Info.plist */,
 				1E8B5D4818B769CA00C31FDC /* Makefile */,
 				1E8B5D4918B769CA00C31FDC /* PluginRegistrationCombined.cpp */,
 				D74121D318F9CE3D00A81F8B /* ofxsMerging.h */,
+				D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */,
+				D792A2E219334C6300547CFF /* ofxsOGLTextRenderer.h */,
+				D792A2E919335BE100547CFF /* ofxsOGLFontUtils.h */,
 			);
 			path = Misc;
 			sourceTree = "<group>";
@@ -1373,6 +1385,7 @@
 			files = (
 				1E8B5D5D18B76AB300C31FDC /* PluginRegistrationCombined.cpp in Sources */,
 				1E8B5D8018B7828800C31FDC /* Anaglyph.cpp in Sources */,
+				D792A2F01933691800547CFF /* freeglut_font_data.cpp in Sources */,
 				1E47341D1907FB9400DC26E1 /* ChromaKeyer.cpp in Sources */,
 				D7257D5F192E91510040CD9C /* CornerPin.cpp in Sources */,
 				D7B4C97818D9DBE70004137D /* ColorCorrect.cpp in Sources */,
@@ -1380,6 +1393,7 @@
 				1E8B5D7F18B7828400C31FDC /* JoinViews.cpp in Sources */,
 				D74121D118F9C99300A81F8B /* Merge.cpp in Sources */,
 				D721EC17191120F30069DB1D /* Roto.cpp in Sources */,
+				D792A2E319334C6300547CFF /* ofxsOGLTextRenderer.cpp in Sources */,
 				1E8B5D7218B7800800C31FDC /* MixViews.cpp in Sources */,
 				1E8B5D7718B7811500C31FDC /* OneView.cpp in Sources */,
 				1E8B5D6818B76F8700C31FDC /* RGBLut.cpp in Sources */,
@@ -1513,6 +1527,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D792A2E419334C6300547CFF /* ofxsOGLTextRenderer.cpp in Sources */,
 				D7257D4D192E91120040CD9C /* ofxsCore.cpp in Sources */,
 				D7257D4E192E91120040CD9C /* ofxsImageEffect.cpp in Sources */,
 				D7257D4F192E91120040CD9C /* ofxsInteract.cpp in Sources */,
@@ -1520,6 +1535,7 @@
 				D7257D5E192E91270040CD9C /* PluginRegistration.cpp in Sources */,
 				D7257D51192E91120040CD9C /* ofxsMultiThread.cpp in Sources */,
 				D7257D5D192E91240040CD9C /* CornerPin.cpp in Sources */,
+				D792A2F11933691800547CFF /* freeglut_font_data.cpp in Sources */,
 				D7257D54192E91120040CD9C /* ofxsParams.cpp in Sources */,
 				D7257D55192E91120040CD9C /* ofxsProperty.cpp in Sources */,
 				D7257D56192E91120040CD9C /* ofxsPropertyValidation.cpp in Sources */,
