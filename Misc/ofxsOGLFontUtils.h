@@ -58,7 +58,9 @@
 #ifndef __Misc__ofxsOGLFontUtils__
 #define __Misc__ofxsOGLFontUtils__
 
-
+#ifdef _WINDOWS
+#include <windows.h>
+#endif
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
 #else
