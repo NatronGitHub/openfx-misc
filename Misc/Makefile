@@ -1,22 +1,23 @@
 PLUGINOBJECTS = \
-        JoinViews.o \
-        OneView.o \
-        RGBLut.o \
-        SideBySide.o \
-        Switch.o \
-        TimeOffset.o \
-        MixViews.o \
-        Anaglyph.o \
-        ColorCorrect.o \
+    JoinViews.o \
+    OneView.o \
+    RGBLut.o \
+    SideBySide.o \
+    Switch.o \
+    TimeOffset.o \
+    MixViews.o \
+    Anaglyph.o \
+    ColorCorrect.o \
 	Grade.o \
-        Transform.o \
-        Merge.o \
-        Roto.o \
+    Transform.o \
+    Merge.o \
+    Roto.o \
 	CornerPin.o \
-        ChromaKeyer.o \
+    ChromaKeyer.o \
+	ofxsTransform3x3.o \
 	ofxsOGLTextRenderer.o \
-	freeglut_font_data.o  \
-        PluginRegistrationCombined.o
+	ofxsOGLFontData.o  \
+    PluginRegistrationCombined.o
 
 PLUGINNAME = Misc
 VPATH += ../JoinViews ../OneView ../RGBLut ../SideBySide ../Switch ../TimeOffset ../MixViews  ../Anaglyph ../ColorCorrect ../Grade ../Transform ../Merge ../Roto ../CornerPin ../ChromaKeyer
