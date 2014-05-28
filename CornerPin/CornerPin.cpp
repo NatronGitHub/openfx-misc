@@ -108,7 +108,7 @@
 #undef OFX_EXTENSIONS_NUKE // host transform is the only nuke extension used
 #endif
 
-#define kTransform3x3InvertParamName "Invert"
+#define kToParamGroupName "To"
 #define kTopLeftParamName "to1"
 #define kTopRightParamName "to2"
 #define kBtmLeftParamName "to3"
@@ -896,10 +896,12 @@ void CornerPinPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setOverlayInteractDescriptor(new CornerPinOverlayDescriptor);
 }
 
-static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,PageParamDescriptor *page,
-                                         const std::string& name,double x,double y)
+static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
+                                           GroupParamDescriptor* group,
+                                           const std::string& name,
+                                           double x,
+                                           double y)
 {
-
     Double2DParamDescriptor* size = desc.defineDouble2DParam(name);
     size->setLabels(name, name, name);
     size->setDoubleType(OFX::eDoubleTypeXYAbsolute);
@@ -908,7 +910,7 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,Page
     size->setDefault(x, y);
     size->setDimensionLabels("x", "y");
     size->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    page->addChild(*size);
+    size->setParent(*group);
 
     std::string enableName("enable " + name);
     BooleanParamDescriptor* enable = desc.defineBooleanParam(enableName);
@@ -916,14 +918,15 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,Page
     enable->setDefault(true);
     enable->setAnimates(false);
     enable->setHint("Enables the point on the left.");
-    page->addChild(*enable);
+    enable->setParent(*group);
 }
 
 static void defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
-                                           GroupParamDescriptor* group,
-                                            const std::string& name,double x,double y)
+                                              GroupParamDescriptor* group,
+                                              const std::string& name,
+                                              double x,
+                                              double y)
 {
-    
     Double2DParamDescriptor* size = desc.defineDouble2DParam(name);
     size->setLabels(name, name, name);
     size->setDoubleType(OFX::eDoubleTypeXYAbsolute);
@@ -973,10 +976,23 @@ void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // NON-GENERIC PARAMETERS
     //
-    defineCornerPinToDouble2DParam(desc, page, kTopLeftParamName,0,1);
-    defineCornerPinToDouble2DParam(desc, page, kTopRightParamName,1,1);
-    defineCornerPinToDouble2DParam(desc, page, kBtmRightParamName,1,0);
-    defineCornerPinToDouble2DParam(desc, page, kBtmLeftParamName,0,0);
+    GroupParamDescriptor* toPoints = desc.defineGroupParam(kToParamGroupName);
+    toPoints->setLabels(kToParamGroupName, kToParamGroupName, kToParamGroupName);
+    toPoints->setAsTab();
+    defineCornerPinToDouble2DParam(desc, toPoints, kTopLeftParamName,  0, 1);
+    defineCornerPinToDouble2DParam(desc, toPoints, kTopRightParamName, 1, 1);
+    defineCornerPinToDouble2DParam(desc, toPoints, kBtmRightParamName, 1, 0);
+    defineCornerPinToDouble2DParam(desc, toPoints, kBtmLeftParamName,  0, 0);
+    page->addChild(*toPoints);
+
+    GroupParamDescriptor* fromPoints = desc.defineGroupParam(kFromParamGroupName);
+    fromPoints->setLabels(kFromParamGroupName, kFromParamGroupName, kFromParamGroupName);
+    fromPoints->setAsTab();
+    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom1ParamName, 0, 1);
+    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom2ParamName, 1, 1);
+    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom3ParamName, 1, 0);
+    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom4ParamName, 0, 0);
+    page->addChild(*fromPoints);
 
     PushButtonParamDescriptor* copyFrom = desc.definePushButtonParam(kCopyFromParamName);
     copyFrom->setLabels(kCopyFromParamName, kCopyFromParamName, kCopyFromParamName);
@@ -987,30 +1003,24 @@ void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     extraMatrix->setHint("This matrix gets concatenated to the transform defined by the other parameters.");
     extraMatrix->setLabels("Extra matrix", "Extra matrix", "Extra matrix");
     extraMatrix->setOpen(false);
-
     defineExtraMatrixRow(desc, page, extraMatrix,"row1",1,0,0);
     defineExtraMatrixRow(desc, page, extraMatrix,"row2",0,1,0);
     defineExtraMatrixRow(desc, page, extraMatrix,"row3",0,0,1);
-    
-    GroupParamDescriptor* fromPoints = desc.defineGroupParam(kFromParamGroupName);
-    fromPoints->setLabels(kFromParamGroupName, kFromParamGroupName, kFromParamGroupName);
-    fromPoints->setAsTab();
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom1ParamName, 0, 1);
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom2ParamName, 1, 1);
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom3ParamName, 1, 0);
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom4ParamName, 0, 0);
+    page->addChild(*extraMatrix);
+
 
     PushButtonParamDescriptor* setToInput = desc.definePushButtonParam(kCopyInputRoDParamName);
     setToInput->setLabels(kCopyInputRoDParamName, kCopyInputRoDParamName, kCopyInputRoDParamName);
     setToInput->setHint("Copy the values from the source region of definition into the \"to\" points.");
     setToInput->setParent(*fromPoints);
     setToInput->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    
+    page->addChild(*setToInput);
+
     PushButtonParamDescriptor* copyTo = desc.definePushButtonParam(kCopyToParamName);
     copyTo->setLabels(kCopyToParamName, kCopyToParamName, kCopyToParamName);
     copyTo->setHint("Copy the content from the \"from\" points to the \"to\" points.");
     copyTo->setParent(*fromPoints);
-
+    page->addChild(*copyTo);
     
     ChoiceParamDescriptor* overlayChoice = desc.defineChoiceParam(kOverlayPointsParamName);
     overlayChoice->setHint("Whether to display the \"from\" or the \"to\" points in the overlay");
@@ -1104,11 +1114,24 @@ void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
 
     // NON-GENERIC PARAMETERS
     //
-    defineCornerPinToDouble2DParam(desc, page, kTopLeftParamName,0,1);
-    defineCornerPinToDouble2DParam(desc, page, kTopRightParamName,1,1);
-    defineCornerPinToDouble2DParam(desc, page, kBtmRightParamName,1,0);
-    defineCornerPinToDouble2DParam(desc, page, kBtmLeftParamName,0,0);
-    
+    GroupParamDescriptor* toPoints = desc.defineGroupParam(kToParamGroupName);
+    toPoints->setLabels(kToParamGroupName, kToParamGroupName, kToParamGroupName);
+    toPoints->setAsTab();
+    defineCornerPinToDouble2DParam(desc, toPoints, kTopLeftParamName,  0, 1);
+    defineCornerPinToDouble2DParam(desc, toPoints, kTopRightParamName, 1, 1);
+    defineCornerPinToDouble2DParam(desc, toPoints, kBtmRightParamName, 1, 0);
+    defineCornerPinToDouble2DParam(desc, toPoints, kBtmLeftParamName,  0, 0);
+    page->addChild(*toPoints);
+
+    GroupParamDescriptor* fromPoints = desc.defineGroupParam(kFromParamGroupName);
+    fromPoints->setLabels(kFromParamGroupName, kFromParamGroupName, kFromParamGroupName);
+    fromPoints->setAsTab();
+    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom1ParamName, 0, 1);
+    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom2ParamName, 1, 1);
+    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom3ParamName, 1, 0);
+    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom4ParamName, 0, 0);
+    page->addChild(*fromPoints);
+
     PushButtonParamDescriptor* copyFrom = desc.definePushButtonParam(kCopyFromParamName);
     copyFrom->setLabels(kCopyFromParamName, kCopyFromParamName, kCopyFromParamName);
     copyFrom->setHint("Copy the content from the \"to\" points to the \"from\" points.");
@@ -1118,30 +1141,25 @@ void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     extraMatrix->setHint("This matrix gets concatenated to the transform defined by the other parameters.");
     extraMatrix->setLabels("Extra matrix", "Extra matrix", "Extra matrix");
     extraMatrix->setOpen(false);
-
     defineExtraMatrixRow(desc, page, extraMatrix,"row1",1,0,0);
     defineExtraMatrixRow(desc, page, extraMatrix,"row2",0,1,0);
     defineExtraMatrixRow(desc, page, extraMatrix,"row3",0,0,1);
-    
-    GroupParamDescriptor* fromPoints = desc.defineGroupParam(kFromParamGroupName);
-    fromPoints->setLabels(kFromParamGroupName, kFromParamGroupName, kFromParamGroupName);
-    fromPoints->setAsTab();
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom1ParamName, 0, 1);
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom2ParamName, 1, 1);
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom3ParamName, 1, 0);
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom4ParamName, 0, 0);
-    
+    page->addChild(*extraMatrix);
+
+
     PushButtonParamDescriptor* setToInput = desc.definePushButtonParam(kCopyInputRoDParamName);
     setToInput->setLabels(kCopyInputRoDParamName, kCopyInputRoDParamName, kCopyInputRoDParamName);
     setToInput->setHint("Copy the values from the source region of definition into the \"to\" points.");
     setToInput->setParent(*fromPoints);
     setToInput->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    
+    page->addChild(*setToInput);
+
     PushButtonParamDescriptor* copyTo = desc.definePushButtonParam(kCopyToParamName);
     copyTo->setLabels(kCopyToParamName, kCopyToParamName, kCopyToParamName);
     copyTo->setHint("Copy the content from the \"from\" points to the \"to\" points.");
     copyTo->setParent(*fromPoints);
-    
+    page->addChild(*copyTo);
+
     ChoiceParamDescriptor* overlayChoice = desc.defineChoiceParam(kOverlayPointsParamName);
     overlayChoice->setHint("Whether to display the \"from\" or the \"to\" points in the overlay");
     overlayChoice->setLabels(kOverlayPointsParamName, kOverlayPointsParamName, kOverlayPointsParamName);
@@ -1150,18 +1168,6 @@ void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     overlayChoice->setDefault(0);
     overlayChoice->setAnimates(false);
     page->addChild(*overlayChoice);
-
-
-    BooleanParamDescriptor* invert = desc.defineBooleanParam(kTransform3x3InvertParamName);
-    invert->setLabels(kTransform3x3InvertParamName, kTransform3x3InvertParamName, kTransform3x3InvertParamName);
-    invert->setDefault(false);
-    invert->setAnimates(false);
-    page->addChild(*invert);
-
-    // GENERIC PARAMETERS
-    //
-
-    ofxsFilterDescribeParamsInterpolate2D(desc, page);
 
     // GENERIC (MASKED)
     //
