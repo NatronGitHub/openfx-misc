@@ -947,11 +947,9 @@ static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,PageParamDescr
     row->setParent(*group);
 }
 
-void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+static void
+CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, PageParamDescriptor *page)
 {
-    // make some pages and to things in
-    PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, false);
-
     // NON-GENERIC PARAMETERS
     //
     GroupParamDescriptor* toPoints = desc.defineGroupParam(kToParamGroupName);
@@ -999,7 +997,7 @@ void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     copyTo->setHint("Copy the content from the \"from\" points to the \"to\" points.");
     copyTo->setParent(*fromPoints);
     page->addChild(*copyTo);
-    
+
     ChoiceParamDescriptor* overlayChoice = desc.defineChoiceParam(kOverlayPointsParamName);
     overlayChoice->setHint("Whether to display the \"from\" or the \"to\" points in the overlay");
     overlayChoice->setLabels(kOverlayPointsParamName, kOverlayPointsParamName, kOverlayPointsParamName);
@@ -1008,6 +1006,14 @@ void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     overlayChoice->setDefault(0);
     overlayChoice->setAnimates(false);
     page->addChild(*overlayChoice);
+}
+
+void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+{
+    // make some pages and to things in
+    PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, false);
+
+    CornerPinPluginDescribeInContext(desc, context, page);
 
     Transform3x3DescribeInContextEnd(desc, context, page, false);
 }
@@ -1036,62 +1042,7 @@ void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, true);
 
-    // NON-GENERIC PARAMETERS
-    //
-    GroupParamDescriptor* toPoints = desc.defineGroupParam(kToParamGroupName);
-    toPoints->setLabels(kToParamGroupName, kToParamGroupName, kToParamGroupName);
-    toPoints->setAsTab();
-    defineCornerPinToDouble2DParam(desc, toPoints, kTopLeftParamName,  0, 1);
-    defineCornerPinToDouble2DParam(desc, toPoints, kTopRightParamName, 1, 1);
-    defineCornerPinToDouble2DParam(desc, toPoints, kBtmRightParamName, 1, 0);
-    defineCornerPinToDouble2DParam(desc, toPoints, kBtmLeftParamName,  0, 0);
-    page->addChild(*toPoints);
-
-    GroupParamDescriptor* fromPoints = desc.defineGroupParam(kFromParamGroupName);
-    fromPoints->setLabels(kFromParamGroupName, kFromParamGroupName, kFromParamGroupName);
-    fromPoints->setAsTab();
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom1ParamName, 0, 1);
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom2ParamName, 1, 1);
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom3ParamName, 1, 0);
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom4ParamName, 0, 0);
-    page->addChild(*fromPoints);
-
-    PushButtonParamDescriptor* copyFrom = desc.definePushButtonParam(kCopyFromParamName);
-    copyFrom->setLabels(kCopyFromParamName, kCopyFromParamName, kCopyFromParamName);
-    copyFrom->setHint("Copy the content from the \"to\" points to the \"from\" points.");
-    page->addChild(*copyFrom);
-
-    GroupParamDescriptor* extraMatrix = desc.defineGroupParam("Extra matrix");
-    extraMatrix->setHint("This matrix gets concatenated to the transform defined by the other parameters.");
-    extraMatrix->setLabels("Extra matrix", "Extra matrix", "Extra matrix");
-    extraMatrix->setOpen(false);
-    defineExtraMatrixRow(desc, page, extraMatrix,"row1",1,0,0);
-    defineExtraMatrixRow(desc, page, extraMatrix,"row2",0,1,0);
-    defineExtraMatrixRow(desc, page, extraMatrix,"row3",0,0,1);
-    page->addChild(*extraMatrix);
-
-
-    PushButtonParamDescriptor* setToInput = desc.definePushButtonParam(kCopyInputRoDParamName);
-    setToInput->setLabels(kCopyInputRoDParamName, kCopyInputRoDParamName, kCopyInputRoDParamName);
-    setToInput->setHint("Copy the values from the source region of definition into the \"to\" points.");
-    setToInput->setParent(*fromPoints);
-    setToInput->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    page->addChild(*setToInput);
-
-    PushButtonParamDescriptor* copyTo = desc.definePushButtonParam(kCopyToParamName);
-    copyTo->setLabels(kCopyToParamName, kCopyToParamName, kCopyToParamName);
-    copyTo->setHint("Copy the content from the \"from\" points to the \"to\" points.");
-    copyTo->setParent(*fromPoints);
-    page->addChild(*copyTo);
-
-    ChoiceParamDescriptor* overlayChoice = desc.defineChoiceParam(kOverlayPointsParamName);
-    overlayChoice->setHint("Whether to display the \"from\" or the \"to\" points in the overlay");
-    overlayChoice->setLabels(kOverlayPointsParamName, kOverlayPointsParamName, kOverlayPointsParamName);
-    overlayChoice->appendOption("To");
-    overlayChoice->appendOption("From");
-    overlayChoice->setDefault(0);
-    overlayChoice->setAnimates(false);
-    page->addChild(*overlayChoice);
+    CornerPinPluginDescribeInContext(desc, context, page);
 
     Transform3x3DescribeInContextEnd(desc, context, page, true);
 }
