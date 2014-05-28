@@ -88,7 +88,7 @@
 
 #include <cmath>
 
-#include "../include/ofxsProcessing.H"
+#include "ofxsProcessing.H"
 
 #define kPremultParamName "Premultiply"
 

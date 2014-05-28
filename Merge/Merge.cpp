@@ -77,9 +77,9 @@
 #include <windows.h>
 #endif
 
-#include "../include/ofxsProcessing.H"
-#include "../Misc/ofxsMerging.h"
-#include "../Misc/ofxsFilter.h"
+#include "ofxsProcessing.H"
+#include "ofxsMerging.h"
+#include "ofxsFilter.h"
 
 #define kOperationParamName "Operation"
 #define kAlphaMaskingParamName "Alpha masking"

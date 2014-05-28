@@ -77,7 +77,7 @@
 #include <windows.h>
 #endif
 
-#include "../include/ofxsProcessing.H"
+#include "ofxsProcessing.H"
 
 
 ////std strings because we need them in changedParam

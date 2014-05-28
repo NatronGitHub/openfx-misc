@@ -75,7 +75,7 @@ England
 
 #include "TimeOffset.h"
 
-#include "../include/ofxsProcessing.H"
+#include "ofxsProcessing.H"
 
 namespace OFX {
   extern ImageEffectHostDescription gHostDescription;

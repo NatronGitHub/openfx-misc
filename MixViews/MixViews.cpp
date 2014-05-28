@@ -78,7 +78,7 @@ England
 #include <windows.h>
 #endif
 
-#include "../include/ofxsProcessing.H"
+#include "ofxsProcessing.H"
 
 
 // Base class for the RGBA and the Alpha processor

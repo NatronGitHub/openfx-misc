@@ -88,7 +88,7 @@ England
 #include <GL/gl.h>
 #endif
 
-#include "../include/ofxsProcessing.H"
+#include "ofxsProcessing.H"
 
 static const OfxPointD kXHairSize = {5, 5};
 

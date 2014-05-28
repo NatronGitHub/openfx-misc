@@ -77,7 +77,7 @@
 #include <windows.h>
 #endif
 
-#include "../include/ofxsProcessing.H"
+#include "ofxsProcessing.H"
 
 
 #define kBlackPointParamName "BlackPoint"
