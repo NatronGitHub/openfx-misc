@@ -1134,18 +1134,6 @@ using namespace OFX;
 
 class TransformOverlayDescriptor : public DefaultEffectOverlayDescriptor<TransformOverlayDescriptor, TransformInteract> {};
 
-void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
-{
-    // basic labels
-    desc.setLabels("TransformOFX", "TransformOFX", "TransformOFX");
-    desc.setPluginGrouping("Transform");
-    desc.setPluginDescription("Translate / Rotate / Scale a 2D image.");
-    
-    Transform3x3Describe(desc, false);
-
-    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
-}
-
 static
 void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, PageParamDescriptor *page)
 {
@@ -1212,6 +1200,18 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     center->setDefaultCoordinateSystem(eCoordinatesNormalised);
     center->setDefault(0.5, 0.5);
     page->addChild(*center);
+}
+
+void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+{
+    // basic labels
+    desc.setLabels("TransformOFX", "TransformOFX", "TransformOFX");
+    desc.setPluginGrouping("Transform");
+    desc.setPluginDescription("Translate / Rotate / Scale a 2D image.");
+
+    Transform3x3Describe(desc, false);
+
+    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
 }
 
 void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)

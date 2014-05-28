@@ -881,21 +881,6 @@ using namespace OFX;
 
 class CornerPinOverlayDescriptor : public DefaultEffectOverlayDescriptor<CornerPinOverlayDescriptor, CornerPinTransformInteract> {};
 
-
-
-
-void CornerPinPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
-{
-    // basic labels
-    desc.setLabels("CornerPinOFX", "CornerPinOFX", "CornerPinOFX");
-    desc.setPluginGrouping("Transform");
-    desc.setPluginDescription("Allows an image to fit another in translation,rotation and scale.");
-
-    Transform3x3Describe(desc, false);
-
-    desc.setOverlayInteractDescriptor(new CornerPinOverlayDescriptor);
-}
-
 static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
                                            GroupParamDescriptor* group,
                                            const std::string& name,
@@ -1006,6 +991,18 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     overlayChoice->setDefault(0);
     overlayChoice->setAnimates(false);
     page->addChild(*overlayChoice);
+}
+
+void CornerPinPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+{
+    // basic labels
+    desc.setLabels("CornerPinOFX", "CornerPinOFX", "CornerPinOFX");
+    desc.setPluginGrouping("Transform");
+    desc.setPluginDescription("Allows an image to fit another in translation,rotation and scale.");
+
+    Transform3x3Describe(desc, false);
+
+    desc.setOverlayInteractDescriptor(new CornerPinOverlayDescriptor);
 }
 
 void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
