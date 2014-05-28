@@ -105,7 +105,9 @@ private:
     OFX::DoubleParam* _mix;
 };
 
-    void Transform3x3Describe(OFX::ImageEffectDescriptor &desc, bool masked);
+void Transform3x3Describe(OFX::ImageEffectDescriptor &desc, bool masked);
+OFX::PageParamDescriptor * Transform3x3DescribeInContextBegin(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, bool masked);
+void Transform3x3DescribeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, OFX::PageParamDescriptor* page, bool masked);
 
 }
 #endif /* defined(__Misc__Transform3x3__) */

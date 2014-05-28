@@ -538,3 +538,76 @@ void OFX::Transform3x3Describe(OFX::ImageEffectDescriptor &desc, bool masked)
     }
 #endif
 }
+
+OFX::PageParamDescriptor * OFX::Transform3x3DescribeInContextBegin(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, bool masked)
+{
+    // GENERIC
+
+    // Source clip only in the filter context
+    // create the mandated source clip
+    // always declare the source clip first, because some hosts may consider
+    // it as the default input clip (e.g. Nuke)
+    ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+    srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentAlpha);
+    srcClip->setTemporalClipAccess(false);
+    srcClip->setSupportsTiles(true);
+    srcClip->setIsMask(false);
+
+    if (masked && (context == eContextGeneral || context == eContextPaint)) {
+        // GENERIC (MASKED)
+        //
+        // if general or paint context, define the mask clip
+        // if paint context, it is a mandated input called 'brush'
+        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
+        maskClip->addSupportedComponent(ePixelComponentAlpha);
+        maskClip->setTemporalClipAccess(false);
+        if (context == eContextGeneral) {
+            maskClip->setOptional(true);
+        }
+        maskClip->setSupportsTiles(true);
+        maskClip->setIsMask(true); // we are a mask input
+    }
+
+    // create the mandated output clip
+    ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
+    dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentAlpha);
+    dstClip->setSupportsTiles(true);
+
+
+    // make some pages and to things in
+    PageParamDescriptor *page = desc.definePageParam("Controls");
+
+    return page;
+}
+
+void OFX::Transform3x3DescribeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, OFX::PageParamDescriptor* page, bool masked)
+{
+
+    BooleanParamDescriptor* invert = desc.defineBooleanParam(kTransform3x3InvertParamName);
+    invert->setLabels(kTransform3x3InvertParamName, kTransform3x3InvertParamName, kTransform3x3InvertParamName);
+    invert->setDefault(false);
+    invert->setAnimates(false);
+    page->addChild(*invert);
+
+    // GENERIC PARAMETERS
+    //
+
+    ofxsFilterDescribeParamsInterpolate2D(desc, page);
+
+    if (masked) {
+        // GENERIC (MASKED)
+        //
+        ofxsFilterDescribeParamsMaskMix(desc, page);
+#ifdef OFX_EXTENSIONS_NUKE
+    } else if (getImageEffectHostDescription()->canTransform) {
+        // Transform3x3-GENERIC (NON-MASKED)
+        //
+        //std::cout << "kFnOfxImageEffectCanTransform in describeincontext(" << context << ")=" << desc.getPropertySet().propGetInt(kFnOfxImageEffectCanTransform) << std::endl;
+#endif
+    }
+
+}

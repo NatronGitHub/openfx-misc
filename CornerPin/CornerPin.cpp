@@ -949,30 +949,8 @@ static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,PageParamDescr
 
 void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
-    // GENERIC
-
-    // Source clip only in the filter context
-    // create the mandated source clip
-    // always declare the source clip first, because some hosts may consider
-    // it as the default input clip (e.g. Nuke)
-    ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
-    srcClip->addSupportedComponent(ePixelComponentAlpha);
-    srcClip->setTemporalClipAccess(false);
-    srcClip->setSupportsTiles(true);
-    srcClip->setIsMask(false);
-
-    // create the mandated output clip
-    ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
-    dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
-    dstClip->addSupportedComponent(ePixelComponentAlpha);
-    dstClip->setSupportsTiles(true);
-
-
     // make some pages and to things in
-    PageParamDescriptor *page = desc.definePageParam("Controls");
+    PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, false);
 
     // NON-GENERIC PARAMETERS
     //
@@ -1031,24 +1009,7 @@ void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     overlayChoice->setAnimates(false);
     page->addChild(*overlayChoice);
 
-    BooleanParamDescriptor* invert = desc.defineBooleanParam(kTransform3x3InvertParamName);
-    invert->setLabels(kTransform3x3InvertParamName, kTransform3x3InvertParamName, kTransform3x3InvertParamName);
-    invert->setDefault(false);
-    invert->setAnimates(false);
-    page->addChild(*invert);
-
-    // GENERIC PARAMETERS
-    //
-
-    ofxsFilterDescribeParamsInterpolate2D(desc, page);
-
-    // NON-GENERIC (NON-MASKED)
-    //
-#ifdef OFX_EXTENSIONS_NUKE
-    if (getImageEffectHostDescription()->canTransform) {
-        std::cout << "kFnOfxImageEffectCanTransform in describeincontext(" << context << ")=" << desc.getPropertySet().propGetInt(kFnOfxImageEffectCanTransform) << std::endl;
-    }
-#endif
+    Transform3x3DescribeInContextEnd(desc, context, page, false);
 }
 
 
@@ -1072,45 +1033,8 @@ void CornerPinMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
-    // GENERIC
-
-    // Source clip only in the filter context
-    // create the mandated source clip
-    // always declare the source clip first, because some hosts may consider
-    // it as the default input clip (e.g. Nuke)
-    ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
-    srcClip->addSupportedComponent(ePixelComponentAlpha);
-    srcClip->setTemporalClipAccess(false);
-    srcClip->setSupportsTiles(true);
-    srcClip->setIsMask(false);
-
-    // GENERIC (MASKED)
-    //
-    // if general or paint context, define the mask clip
-    if (context == eContextGeneral || context == eContextPaint) {
-        // if paint context, it is a mandated input called 'brush'
-        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
-        maskClip->addSupportedComponent(ePixelComponentAlpha);
-        maskClip->setTemporalClipAccess(false);
-        if (context == eContextGeneral) {
-            maskClip->setOptional(true);
-        }
-        maskClip->setSupportsTiles(true);
-        maskClip->setIsMask(true); // we are a mask input
-    }
-
-    // create the mandated output clip
-    ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
-    dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
-    dstClip->addSupportedComponent(ePixelComponentAlpha);
-    dstClip->setSupportsTiles(true);
-
-
     // make some pages and to things in
-    PageParamDescriptor *page = desc.definePageParam("Controls");
+    PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, true);
 
     // NON-GENERIC PARAMETERS
     //
@@ -1169,9 +1093,7 @@ void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     overlayChoice->setAnimates(false);
     page->addChild(*overlayChoice);
 
-    // GENERIC (MASKED)
-    //
-    ofxsFilterDescribeParamsMaskMix(desc, page);
+    Transform3x3DescribeInContextEnd(desc, context, page, true);
 }
 
 OFX::ImageEffect* CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
