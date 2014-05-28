@@ -8,7 +8,7 @@ PLUGINOBJECTS = \
         MixViews.o \
         Anaglyph.o \
         ColorCorrect.o \
-     	Grade.o \
+	Grade.o \
         Transform.o \
         Merge.o \
         Roto.o \

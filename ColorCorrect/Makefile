@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ColorCorrect.o 
+PLUGINOBJECTS = ColorCorrect.o PluginRegistration.o
 PLUGINNAME = ColorCorrect
 
 include ../Makefile.master

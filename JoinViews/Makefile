@@ -1,4 +1,4 @@
-PLUGINOBJECTS = JoinViews.o
+PLUGINOBJECTS = JoinViews.o PluginRegistration.o
 PLUGINNAME = JoinViews
 
 include ../Makefile.master
