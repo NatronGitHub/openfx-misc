@@ -496,3 +496,45 @@ bool Transform3x3Plugin::getTransform(const TransformArguments &args, Clip * &tr
     return true;
 }
 #endif
+
+void OFX::Transform3x3Describe(OFX::ImageEffectDescriptor &desc, bool masked)
+{
+    desc.addSupportedContext(eContextFilter);
+    desc.addSupportedContext(eContextGeneral);
+    if (masked) {
+        desc.addSupportedContext(eContextPaint);
+    }
+    desc.addSupportedBitDepth(eBitDepthUByte);
+    desc.addSupportedBitDepth(eBitDepthUShort);
+    desc.addSupportedBitDepth(eBitDepthFloat);
+
+    desc.setSingleInstance(false);
+    desc.setHostFrameThreading(false);
+    desc.setTemporalClipAccess(false);
+    // each field has to be transformed separately, or you will get combing effect
+    // this should be true for all geometric transforms
+    desc.setRenderTwiceAlways(true);
+    desc.setSupportsMultipleClipPARs(false);
+    desc.setRenderThreadSafety(eRenderFullySafe);
+
+    // Transform3x3-GENERIC
+
+    // in order to support tiles, the plugin must implement the getRegionOfInterest function
+    desc.setSupportsTiles(true);
+
+    // in order to support multiresolution, render() must take into account the pixelaspectratio and the renderscale
+    // and scale the transform appropriately.
+    // All other functions are usually in canonical coordinates.
+    desc.setSupportsMultiResolution(true);
+
+#ifdef OFX_EXTENSIONS_NUKE
+    if (!masked) {
+        // Enable transform by the host.
+        // It is only possible for transforms which can be represented as a 3x3 matrix.
+        desc.setCanTransform(true);
+        if (getImageEffectHostDescription()->canTransform) {
+            //std::cout << "kFnOfxImageEffectCanTransform (describe) =" << desc.getPropertySet().propGetInt(kFnOfxImageEffectCanTransform) << std::endl;
+        }
+    }
+#endif
+}

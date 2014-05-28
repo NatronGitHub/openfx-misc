@@ -105,5 +105,7 @@ private:
     OFX::DoubleParam* _mix;
 };
 
+    void Transform3x3Describe(OFX::ImageEffectDescriptor &desc, bool masked);
+
 }
 #endif /* defined(__Misc__Transform3x3__) */

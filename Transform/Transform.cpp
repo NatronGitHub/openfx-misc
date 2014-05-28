@@ -1141,48 +1141,9 @@ void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping("Transform");
     desc.setPluginDescription("Translate / Rotate / Scale a 2D image.");
     
-    desc.addSupportedContext(eContextFilter);
-    desc.addSupportedContext(eContextGeneral);
-    //desc.addSupportedContext(eContextPaint);
-    desc.addSupportedBitDepth(eBitDepthUByte);
-    desc.addSupportedBitDepth(eBitDepthUShort);
-    desc.addSupportedBitDepth(eBitDepthFloat);
-    
-    // set a few flags
-    
-    // GENERIC
-    
-    desc.setSingleInstance(false);
-    desc.setHostFrameThreading(false);
-    desc.setTemporalClipAccess(false);
-    // each field has to be transformed separately, or you will get combing effect
-    // this should be true for all geometric transforms
-    desc.setRenderTwiceAlways(true);
-    desc.setSupportsMultipleClipPARs(false);
-    desc.setRenderThreadSafety(eRenderFullySafe);
-    
-    // NON-GENERIC
-
-    // in order to support tiles, the plugin must implement the getRegionOfInterest function
-    desc.setSupportsTiles(true);
-    
-    // in order to support multiresolution, render() must take into account the pixelaspectratio and the renderscale
-    // and scale the transform appropriately.
-    // All other functions are usually in canonical coordinates.
-    desc.setSupportsMultiResolution(true);
+    Transform3x3Describe(desc, false);
 
     desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
-
-    // NON-GENERIC (NON-MASKED)
-
-#ifdef OFX_EXTENSIONS_NUKE
-    // Enable transform by the host.
-    // It is only possible for transforms which can be represented as a 3x3 matrix.
-    desc.setCanTransform(true);
-    if (getImageEffectHostDescription()->canTransform) {
-        std::cout << "kFnOfxImageEffectCanTransform (describe) =" << desc.getPropertySet().propGetInt(kFnOfxImageEffectCanTransform) << std::endl;
-    }
-#endif
 }
 
 
@@ -1309,35 +1270,7 @@ void TransformMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping("Transform");
     desc.setPluginDescription("Translate / Rotate / Scale a 2D image.");
 
-    desc.addSupportedContext(eContextFilter);
-    desc.addSupportedContext(eContextGeneral);
-    desc.addSupportedContext(eContextPaint);
-    desc.addSupportedBitDepth(eBitDepthUByte);
-    desc.addSupportedBitDepth(eBitDepthUShort);
-    desc.addSupportedBitDepth(eBitDepthFloat);
-
-    // set a few flags
-
-    // GENERIC
-
-    desc.setSingleInstance(false);
-    desc.setHostFrameThreading(false);
-    desc.setTemporalClipAccess(false);
-    // each field has to be transformed separately, or you will get combing effect
-    // this should be true for all geometric transforms
-    desc.setRenderTwiceAlways(true);
-    desc.setSupportsMultipleClipPARs(false);
-    desc.setRenderThreadSafety(eRenderFullySafe);
-
-    // NON-GENERIC
-
-    // in order to support tiles, the plugin must implement the getRegionOfInterest function
-    desc.setSupportsTiles(true);
-
-    // in order to support multiresolution, render() must take into account the pixelaspectratio and the renderscale
-    // and scale the transform appropriately.
-    // All other functions are usually in canonical coordinates.
-    desc.setSupportsMultiResolution(true);
+    Transform3x3Describe(desc, true);
 
     desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
 }
