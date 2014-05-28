@@ -1146,12 +1146,9 @@ void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
 }
 
-
-void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+static
+void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, PageParamDescriptor *page)
 {
-    // make some pages and to things in
-    PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, false);
-
     // NON-GENERIC PARAMETERS
     //
     Double2DParamDescriptor* translate = desc.defineDouble2DParam(kTranslateParamName);
@@ -1161,7 +1158,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     translate->setDimensionLabels("x","y");
     translate->setDefault(0, 0);
     page->addChild(*translate);
-    
+
     DoubleParamDescriptor* rotate = desc.defineDoubleParam(kRotateParamName);
     rotate->setLabels(kRotateParamName, kRotateParamName, kRotateParamName);
     rotate->setDoubleType(eDoubleTypeAngle);
@@ -1169,7 +1166,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     //rotate->setRange(-180, 180); // the angle may be -infinity..+infinity
     rotate->setDisplayRange(-180, 180);
     page->addChild(*rotate);
-    
+
     Double2DParamDescriptor* scale = desc.defineDouble2DParam(kScaleParamName);
     scale->setLabels(kScaleParamName, kScaleParamName, kScaleParamName);
     scale->setDoubleType(eDoubleTypeScale);
@@ -1179,7 +1176,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     scale->setDisplayRange(0.1, 0.1, 10, 10);
     scale->setLayoutHint(OFX::eLayoutHintNoNewLine);
     page->addChild(*scale);
-    
+
     BooleanParamDescriptor* scaleUniform = desc.defineBooleanParam(kScaleUniformParamName);
     scaleUniform->setLabels(kScaleUniformParamName, kScaleUniformParamName, kScaleUniformParamName);
     scaleUniform->setHint(kScaleUniformParamHint);
@@ -1192,13 +1189,13 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     skewX->setDefault(0);
     skewX->setDisplayRange(-1,1);
     page->addChild(*skewX);
-    
+
     DoubleParamDescriptor* skewY = desc.defineDoubleParam(kSkewYParamName);
     skewY->setLabels(kSkewYParamName, kSkewYParamName, kSkewYParamName);
     skewY->setDefault(0);
     skewY->setDisplayRange(-1,1);
     page->addChild(*skewY);
-    
+
     ChoiceParamDescriptor* skewOrder = desc.defineChoiceParam(kSkewOrderParamName);
     skewOrder->setLabels(kSkewOrderParamName, kSkewOrderParamName, kSkewOrderParamName);
     skewOrder->setDefault(0);
@@ -1206,7 +1203,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     skewOrder->appendOption("YX");
     skewOrder->setAnimates(false);
     page->addChild(*skewOrder);
-    
+
     Double2DParamDescriptor* center = desc.defineDouble2DParam(kCenterParamName);
     center->setLabels(kCenterParamName, kCenterParamName, kCenterParamName);
     //center->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
@@ -1215,24 +1212,16 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     center->setDefaultCoordinateSystem(eCoordinatesNormalised);
     center->setDefault(0.5, 0.5);
     page->addChild(*center);
-    
-    BooleanParamDescriptor* invert = desc.defineBooleanParam(kTransform3x3InvertParamName);
-    invert->setLabels(kTransform3x3InvertParamName, kTransform3x3InvertParamName, kTransform3x3InvertParamName);
-    invert->setDefault(false);
-    invert->setAnimates(false);
-    page->addChild(*invert);
+}
 
-    // GENERIC
+void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+{
+    // make some pages and to things in
+    PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, false);
 
-    ofxsFilterDescribeParamsInterpolate2D(desc, page);
+    TransformPluginDescribeInContext(desc, context, page);
 
-    // NON-GENERIC (NON-MASKED)
-    //
-#ifdef OFX_EXTENSIONS_NUKE
-    if (getImageEffectHostDescription()->canTransform) {
-        std::cout << "kFnOfxImageEffectCanTransform in describeincontext(" << context << ")=" << desc.getPropertySet().propGetInt(kFnOfxImageEffectCanTransform) << std::endl;
-    }
-#endif
+    Transform3x3DescribeInContextEnd(desc, context, page, false);
 }
 
 OFX::ImageEffect* TransformPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
@@ -1259,69 +1248,7 @@ void TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, true);
 
-    // NON-GENERIC PARAMETERS
-    //
-    Double2DParamDescriptor* translate = desc.defineDouble2DParam(kTranslateParamName);
-    translate->setLabels(kTranslateParamName, kTranslateParamName, kTranslateParamName);
-    //translate->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
-    translate->setDoubleType(eDoubleTypeXYAbsolute);
-    translate->setDimensionLabels("x","y");
-    translate->setDefault(0, 0);
-    page->addChild(*translate);
-
-    DoubleParamDescriptor* rotate = desc.defineDoubleParam(kRotateParamName);
-    rotate->setLabels(kRotateParamName, kRotateParamName, kRotateParamName);
-    rotate->setDoubleType(eDoubleTypeAngle);
-    rotate->setDefault(0);
-    //rotate->setRange(-180, 180); // the angle may be -infinity..+infinity
-    rotate->setDisplayRange(-180, 180);
-    page->addChild(*rotate);
-
-    Double2DParamDescriptor* scale = desc.defineDouble2DParam(kScaleParamName);
-    scale->setLabels(kScaleParamName, kScaleParamName, kScaleParamName);
-    scale->setDoubleType(eDoubleTypeScale);
-    scale->setDimensionLabels("w","h");
-    scale->setDefault(1,1);
-    //scale->setRange(0.1,0.1,10,10);
-    scale->setDisplayRange(0.1, 0.1, 10, 10);
-    scale->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    page->addChild(*scale);
-
-    BooleanParamDescriptor* scaleUniform = desc.defineBooleanParam(kScaleUniformParamName);
-    scaleUniform->setLabels(kScaleUniformParamName, kScaleUniformParamName, kScaleUniformParamName);
-    scaleUniform->setHint(kScaleUniformParamHint);
-    scaleUniform->setDefault(true);
-    scaleUniform->setAnimates(false);
-    page->addChild(*scaleUniform);
-
-    DoubleParamDescriptor* skewX = desc.defineDoubleParam(kSkewXParamName);
-    skewX->setLabels(kSkewXParamName, kSkewXParamName, kSkewXParamName);
-    skewX->setDefault(0);
-    skewX->setDisplayRange(-1,1);
-    page->addChild(*skewX);
-
-    DoubleParamDescriptor* skewY = desc.defineDoubleParam(kSkewYParamName);
-    skewY->setLabels(kSkewYParamName, kSkewYParamName, kSkewYParamName);
-    skewY->setDefault(0);
-    skewY->setDisplayRange(-1,1);
-    page->addChild(*skewY);
-
-    ChoiceParamDescriptor* skewOrder = desc.defineChoiceParam(kSkewOrderParamName);
-    skewOrder->setLabels(kSkewOrderParamName, kSkewOrderParamName, kSkewOrderParamName);
-    skewOrder->setDefault(0);
-    skewOrder->appendOption("XY");
-    skewOrder->appendOption("YX");
-    skewOrder->setAnimates(false);
-    page->addChild(*skewOrder);
-
-    Double2DParamDescriptor* center = desc.defineDouble2DParam(kCenterParamName);
-    center->setLabels(kCenterParamName, kCenterParamName, kCenterParamName);
-    //center->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
-    center->setDoubleType(eDoubleTypeXYAbsolute);
-    center->setDimensionLabels("x","y");
-    center->setDefaultCoordinateSystem(eCoordinatesNormalised);
-    center->setDefault(0.5, 0.5);
-    page->addChild(*center);
+    TransformPluginDescribeInContext(desc, context, page);
 
     Transform3x3DescribeInContextEnd(desc, context, page, true);
 }
