@@ -85,7 +85,7 @@
 //#define ENABLE_HOST_TRANSFORM
 
 #include "Transform.h"
-#include "TransformProcessor.h"
+#include "ofxsTransform3x3.h"
 
 #include <cmath>
 #include <iostream>
@@ -117,7 +117,6 @@
 #define kSkewYParamName "Skew Y"
 #define kSkewOrderParamName "Skew order"
 #define kCenterParamName "Center"
-#define kInvertParamName "Invert"
 
 
 #define CIRCLE_RADIUS_BASE 30.0
@@ -132,21 +131,12 @@ using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class TransformPlugin : public OFX::ImageEffect
+class TransformPlugin : public Transform3x3Plugin
 {
-protected:
-    // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
-    OFX::Clip *maskClip_;
-    
 public:
     /** @brief ctor */
     TransformPlugin(OfxImageEffectHandle handle, bool masked)
-    : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClip_(0)
-    , maskClip_(0)
+    : Transform3x3Plugin(handle, masked)
     , _translate(0)
     , _rotate(0)
     , _scale(0)
@@ -155,22 +145,7 @@ public:
     , _skewY(0)
     , _skewOrder(0)
     , _center(0)
-    , _invert(0)
-    , _filter(0)
-    , _clamp(0)
-    , _blackOutside(0)
-    , _masked(masked)
-    , _mix(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
-        // name of mask clip depends on the context
-        if (masked) {
-            maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-            assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
-        }
         // NON-GENERIC
         _translate = fetchDouble2DParam(kTranslateParamName);
         _rotate = fetchDoubleParam(kRotateParamName);
@@ -180,42 +155,12 @@ public:
         _skewY = fetchDoubleParam(kSkewYParamName);
         _skewOrder = fetchChoiceParam(kSkewOrderParamName);
         _center = fetchDouble2DParam(kCenterParamName);
-        _invert = fetchBooleanParam(kInvertParamName);
-        // GENERIC
-        _filter = fetchChoiceParam(kFilterTypeParamName);
-        _clamp = fetchBooleanParam(kFilterClampParamName);
-        _blackOutside = fetchBooleanParam(kFilterBlackOutsideParamName);
-        if (masked) {
-            _mix = fetchDoubleParam(kFilterMixParamName);
-        }
     }
-    
-    // override the rod call
-    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod);
-    
-    // override the roi call
-    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois);
-    
-    /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
-    
-    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime);
 
-#ifdef OFX_EXTENSIONS_NUKE
-    /** @brief recover a transform matrix from an effect */
-    virtual bool getTransform(const TransformArguments &args, Clip * &transformClip, double transformMatrix[9]);
-#endif
+    virtual bool isIdentity(double time) /*OVERRIDE FINAL*/;
 
-    /* internal render function */
-    template <class PIX, int nComponents, int maxValue, bool masked>
-    void renderInternalForBitDepth(const OFX::RenderArguments &args);
+    virtual bool getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) /*OVERRIDE FINAL*/;
 
-    template <int nComponents, bool masked>
-    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
-
-    /* set up and run a processor */
-    void setupAndProcess(TransformProcessorBase &, const OFX::RenderArguments &args);
-    
 private:
     // NON-GENERIC
     OFX::Double2DParam* _translate;
@@ -226,476 +171,35 @@ private:
     OFX::DoubleParam* _skewY;
     OFX::ChoiceParam* _skewOrder;
     OFX::Double2DParam* _center;
-    OFX::BooleanParam* _invert;
-    // GENERIC
-    OFX::ChoiceParam* _filter;
-    OFX::BooleanParam* _clamp;
-    OFX::BooleanParam* _blackOutside;
-    bool _masked;
-    OFX::DoubleParam* _mix;
 };
 
-
-
-////////////////////////////////////////////////////////////////////////////////
-/** @brief render for the filter */
-
-////////////////////////////////////////////////////////////////////////////////
-// basic plugin render function, just a skelington to instantiate templates from
-
-/* set up and run a processor */
-void
-TransformPlugin::setupAndProcess(TransformProcessorBase &processor, const OFX::RenderArguments &args)
-{
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
-    if (!dst.get()) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-    }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        dst->getField() != args.fieldToRender) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-    }
-    std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
-    if (src.get() && dst.get())
-    {
-        OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-        OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
-            OFX::throwSuiteStatusException(kOfxStatFailed);
-        
-        // NON-GENERIC
-        double scaleX, scaleY;
-        bool scaleUniform;
-        double translateX, translateY;
-        double rotate;
-        double skewX, skewY;
-        int skewOrder;
-        double centerX, centerY;
-        bool invert;
-        // GENERIC
-        //int filter;
-        //bool clamp;
-        bool blackOutside;
-        double mix = 1.;
-        
-        // NON-GENERIC
-        _scale->getValueAtTime(args.time, scaleX, scaleY);
-        _scaleUniform->getValue(scaleUniform);
-        if (scaleUniform) {
-            scaleY = scaleX;
-        }
-        _translate->getValueAtTime(args.time, translateX, translateY);
-        _rotate->getValueAtTime(args.time, rotate);
-        rotate = OFX::ofxsToRadians(rotate);
-        
-        _skewX->getValueAtTime(args.time, skewX);
-        _skewY->getValueAtTime(args.time, skewY);
-        _skewOrder->getValueAtTime(args.time, skewOrder);
-        
-        _center->getValueAtTime(args.time, centerX, centerY);
-        
-        _invert->getValue(invert);
-        
-        // GENERIC
-        //_filter->getValue(filter);
-        //_clamp->getValue(clamp);
-        _blackOutside->getValue(blackOutside);
-        if (_masked) {
-            _mix->getValueAtTime(args.time, mix);
-        }
-
-        OFX::Matrix3x3 invtransform;
-        if (invert) {
-            invtransform = OFX::ofxsMatTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
-        } else {
-            invtransform = OFX::ofxsMatInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
-        }
-
-        processor.setValues(invtransform,
-                            srcClip_->getPixelAspectRatio(),
-                            args.renderScale, //!< 0.5 for a half-resolution image
-                            args.fieldToRender,
-                            //(FilterEnum)filter, clamp,
-                            blackOutside, mix);
-    }
-    
-    // auto ptr for the mask.
-    std::auto_ptr<OFX::Image> mask((_masked && (getContext() != OFX::eContextFilter)) ? maskClip_->fetchImage(args.time) : 0);
-    
-    // do we do masking
-    if (_masked && getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
-        // say we are masking
-        processor.doMasking(true);
-
-        // Set it in the processor
-        processor.setMaskImg(mask.get());
-    }
-
-    // set the images
-    processor.setDstImg(dst.get());
-    processor.setSrcImg(src.get());
-    
-    // set the render window
-    processor.setRenderWindow(args.renderWindow);
-    
-    // Call the base class process member, this will call the derived templated process code
-    processor.process();
-}
-
-// override the rod call
-// NON-GENERIC
-// the RoD should at least contain the region of definition of the source clip,
-// which will be filled with black or by continuity.
-bool
-TransformPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
-{
-    OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
-    
-    double scaleX, scaleY;
-    double translateX, translateY;
-    double rotate;
-    double skewX, skewY;
-    int skewOrder;
-    double centerX, centerY;
-    bool invert;
-    
-    // NON-GENERIC
-    _scale->getValueAtTime(args.time, scaleX, scaleY);
-    bool scaleUniform;
-    _scaleUniform->getValue(scaleUniform);
-    if (scaleUniform) {
-        scaleY = scaleX;
-    }
-    _translate->getValueAtTime(args.time, translateX, translateY);
-    _rotate->getValueAtTime(args.time, rotate);
-    rotate = OFX::ofxsToRadians(rotate);
-    
-    _skewX->getValueAtTime(args.time, skewX);
-    _skewY->getValueAtTime(args.time, skewY);
-    _skewOrder->getValueAtTime(args.time, skewOrder);
-    
-    _center->getValueAtTime(args.time, centerX, centerY);
-    
-    _invert->getValue(invert);
-    
-    ///if is identity return the input rod instead of transforming
-    if (scaleX == 1. && scaleY == 1. && translateX == 0. && translateY == 0. && rotate == 0. && skewX == 0. && skewY == 0.) {
-        rod = srcRoD;
-        return true;
-    }
-    
-    OFX::Matrix3x3 transform;
-    if (!invert) {
-        transform = OFX::ofxsMatTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
-    } else {
-        transform = OFX::ofxsMatInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
-    }
-    /// now transform the 4 corners of the source clip to the output image
-    OFX::Point3D topLeft = transform * OFX::Point3D(srcRoD.x1,srcRoD.y2,1);
-    OFX::Point3D topRight = transform * OFX::Point3D(srcRoD.x2,srcRoD.y2,1);
-    OFX::Point3D bottomLeft = transform * OFX::Point3D(srcRoD.x1,srcRoD.y1,1);
-    OFX::Point3D bottomRight = transform * OFX::Point3D(srcRoD.x2,srcRoD.y1,1);
-    
-    double l = std::min(std::min(topLeft.x, bottomLeft.x),std::min(topRight.x,bottomRight.x));
-    double b = std::min(std::min(topLeft.y, bottomLeft.y),std::min(topRight.y,bottomRight.y));
-    double r = std::max(std::max(topLeft.x, bottomLeft.x),std::max(topRight.x,bottomRight.x));
-    double t = std::max(std::max(topLeft.y, bottomLeft.y),std::max(topRight.y,bottomRight.y));
-    
-    // GENERIC
-    rod.x1 = l;
-    rod.x2 = r;
-    rod.y1 = b;
-    rod.y2 = t;
-    assert(rod.x1 < rod.x2 && rod.y1 < rod.y2);
-
-    bool blackOutside;
-    _blackOutside->getValue(blackOutside);
-
-    ofxsFilterExpandRoD(this, dstClip_->getPixelAspectRatio(), args.renderScale, blackOutside, &rod);
-
-    // say we set it
-    return true;
-}
-
-
-// override the roi call
-// NON-GENERIC
-// Required if the plugin should support tiles.
-// It may be difficult to implement for complicated transforms:
-// consequently, these transforms cannot support tiles.
-void
-TransformPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
-{
-    const OfxRectD roi = args.regionOfInterest;
-    double scaleX, scaleY;
-    double translateX, translateY;
-    double rotate;
-    double skewX, skewY;
-    int skewOrder;
-    double centerX, centerY;
-    bool invert;
-    
-    // NON-GENERIC
-    _scale->getValueAtTime(args.time, scaleX, scaleY);
-    bool scaleUniform;
-    _scaleUniform->getValue(scaleUniform);
-    if (scaleUniform) {
-        scaleY = scaleX;
-    }
-    _translate->getValueAtTime(args.time, translateX, translateY);
-    _rotate->getValueAtTime(args.time, rotate);
-    rotate = OFX::ofxsToRadians(rotate);
-    
-    _skewX->getValueAtTime(args.time, skewX);
-    _skewY->getValueAtTime(args.time, skewY);
-    _skewOrder->getValueAtTime(args.time, skewOrder);
-    
-    _center->getValueAtTime(args.time, centerX, centerY);
-    
-    _invert->getValue(invert);
-    
-    OFX::Matrix3x3 invtransform;
-    if (!invert) {
-        invtransform = OFX::ofxsMatInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
-    } else {
-        invtransform = OFX::ofxsMatTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
-    }
-    
-    /// now find the positions in the src clip of the 4 corners of the roi
-    OFX::Point3D topLeft = invtransform * OFX::Point3D(roi.x1,roi.y2,1);
-    OFX::Point3D topRight = invtransform * OFX::Point3D(roi.x2,roi.y2,1);
-    OFX::Point3D bottomLeft = invtransform * OFX::Point3D(roi.x1,roi.y1,1);
-    OFX::Point3D bottomRight = invtransform * OFX::Point3D(roi.x2,roi.y1,1);
-    
-    if (topLeft.z != 0) {
-        topLeft.x /= topLeft.z; topLeft.y /= topLeft.z;
-    }
-    if (topRight.z != 0) {
-        topRight.x /= topRight.z; topRight.y /= topRight.z;
-    }
-    if (bottomLeft.z != 0) {
-        bottomLeft.x /= bottomLeft.z; bottomLeft.y /= bottomLeft.z;
-    }
-    if (bottomRight.z != 0) {
-        bottomRight.x /= bottomRight.z; bottomRight.y /= bottomRight.z;
-    }
-    
-    double l = std::min(std::min(topLeft.x, bottomLeft.x),std::min(topRight.x,bottomRight.x));
-    double b = std::min(std::min(topLeft.y, bottomLeft.y),std::min(topRight.y,bottomRight.y));
-    double r = std::max(std::max(topLeft.x, bottomLeft.x),std::max(topRight.x,bottomRight.x));
-    double t = std::max(std::max(topLeft.y, bottomLeft.y),std::max(topRight.y,bottomRight.y));
-
-    // GENERIC
-    int filter;
-    _filter->getValue(filter);
-    bool blackOutside;
-    _blackOutside->getValue(blackOutside);
-    const bool doMasking = _masked && getContext() != OFX::eContextFilter && maskClip_->isConnected();
-    double mix = 1.;
-    if (_masked) {
-        _mix->getValueAtTime(args.time, mix);
-    }
-
-
-    OfxRectD srcRoI;
-    srcRoI.x1 = l;
-    srcRoI.x2 = r;
-    srcRoI.y1 = b;
-    srcRoI.y2 = t;
-    assert(srcRoI.x1 < srcRoI.x2 && srcRoI.y1 < srcRoI.y2);
-
-    ofxsFilterExpandRoI(roi, srcClip_->getPixelAspectRatio(), args.renderScale, (FilterEnum)filter, doMasking, mix, &srcRoI);
-
-
-    // set it on the mask only if we are in an interesting context
-    // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
-    if (doMasking) {
-        rois.setRegionOfInterest(*maskClip_, roi);
-    }
-    rois.setRegionOfInterest(*srcClip_, srcRoI);
-}
-
-
-template <class PIX, int nComponents, int maxValue, bool masked>
-void
-TransformPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
-{
-    int filter;
-    _filter->getValue(filter);
-    bool clamp;
-    _clamp->getValue(clamp);
-
-    // as you may see below, some filters don't need explicit clamping, since they are
-    // "clamped" by construction.
-    switch ((FilterEnum)filter) {
-        case eFilterImpulse:
-        {
-            TransformProcessor<PIX, nComponents, maxValue, masked, eFilterImpulse, false> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eFilterBilinear:
-        {
-            TransformProcessor<PIX, nComponents, maxValue, masked, eFilterBilinear, false> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eFilterCubic:
-        {
-            TransformProcessor<PIX, nComponents, maxValue, masked, eFilterCubic, false> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eFilterKeys:
-            if (clamp) {
-                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterKeys, true> fred(*this);
-                setupAndProcess(fred, args);
-            } else {
-                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterKeys, false> fred(*this);
-                setupAndProcess(fred, args);
-            }
-            break;
-        case eFilterSimon:
-            if (clamp) {
-                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterSimon, true> fred(*this);
-                setupAndProcess(fred, args);
-            } else {
-                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterSimon, false> fred(*this);
-                setupAndProcess(fred, args);
-            }
-            break;
-        case eFilterRifman:
-            if (clamp) {
-                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterRifman, true> fred(*this);
-                setupAndProcess(fred, args);
-            } else {
-                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterRifman, false> fred(*this);
-                setupAndProcess(fred, args);
-            }
-            break;
-        case eFilterMitchell:
-            if (clamp) {
-                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterMitchell, true> fred(*this);
-                setupAndProcess(fred, args);
-            } else {
-                TransformProcessor<PIX, nComponents, maxValue, masked, eFilterMitchell, false> fred(*this);
-                setupAndProcess(fred, args);
-            }
-            break;
-        case eFilterParzen:
-        {
-            TransformProcessor<PIX, nComponents, maxValue, masked, eFilterParzen, false> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case eFilterNotch:
-        {
-            TransformProcessor<PIX, nComponents, maxValue, masked, eFilterNotch, false> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-    }
-}
-
-// the internal render function
-template <int nComponents, bool masked>
-void
-TransformPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
-{
-    switch(dstBitDepth)
-    {
-        case OFX::eBitDepthUByte :
-            renderInternalForBitDepth<unsigned char, nComponents, 255, masked>(args);
-            break;
-        case OFX::eBitDepthUShort :
-            renderInternalForBitDepth<unsigned short, nComponents, 65535, masked>(args);
-            break;
-        case OFX::eBitDepthFloat :
-            renderInternalForBitDepth<float, nComponents, 1, masked>(args);
-            break;
-        default :
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-    }
-}
-
-// the overridden render function
-void
-TransformPlugin::render(const OFX::RenderArguments &args)
-{
-    
-    // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
-
-    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
-    if (dstComponents == OFX::ePixelComponentRGBA) {
-        if (_masked) {
-            renderInternal<4,true>(args, dstBitDepth);
-        } else {
-            renderInternal<4,false>(args, dstBitDepth);
-        }
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
-        if (_masked) {
-            renderInternal<3,true>(args, dstBitDepth);
-        } else {
-            renderInternal<3,false>(args, dstBitDepth);
-        }
-    } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
-        if (_masked) {
-            renderInternal<1,true>(args, dstBitDepth);
-        } else {
-            renderInternal<1,false>(args, dstBitDepth);
-        }
-    }
-}
-
 // overridden is identity
-bool TransformPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+bool TransformPlugin::isIdentity(double time)
 {
     // NON-GENERIC
     OfxPointD scale;
     OfxPointD translate;
     double rotate;
     double skewX, skewY;
-    _scale->getValueAtTime(args.time, scale.x, scale.y);
+    _scale->getValueAtTime(time, scale.x, scale.y);
     bool scaleUniform;
     _scaleUniform->getValue(scaleUniform);
     if (scaleUniform) {
         scale.y = scale.x;
     }
-    _translate->getValueAtTime(args.time, translate.x, translate.y);
-    _rotate->getValueAtTime(args.time, rotate);
-    _skewX->getValueAtTime(args.time, skewX);
-    _skewY->getValueAtTime(args.time, skewY);
+    _translate->getValueAtTime(time, translate.x, translate.y);
+    _rotate->getValueAtTime(time, rotate);
+    _skewX->getValueAtTime(time, skewX);
+    _skewY->getValueAtTime(time, skewY);
     
     if (scale.x == 1. && scale.y == 1. && translate.x == 0. && translate.y == 0. && rotate == 0. && skewX == 0. && skewY == 0.) {
-        identityClip = srcClip_;
-        identityTime = args.time;
         return true;
     }
-    
-    // GENERIC
-    if (_masked) {
-        double mix;
-        _mix->getValueAtTime(args.time, mix);
-        if (mix == 0.) {
-            identityClip = srcClip_;
-            identityTime = args.time;
-            return true;
-        }
-    }
-    
+
     return false;
 }
 
-#ifdef OFX_EXTENSIONS_NUKE
-// overridden getTransform
-bool TransformPlugin::getTransform(const TransformArguments &args, Clip * &transformClip, double transformMatrix[9])
+bool TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform)
 {
     double scaleX, scaleY;
     double translateX, translateY;
@@ -703,52 +207,31 @@ bool TransformPlugin::getTransform(const TransformArguments &args, Clip * &trans
     double skewX, skewY;
     int skewOrder;
     double centerX, centerY;
-    bool invert;
 
-    std::cout << "getTransform called!" << std::endl;
     // NON-GENERIC
-    _scale->getValueAtTime(args.time, scaleX, scaleY);
+    _scale->getValueAtTime(time, scaleX, scaleY);
     bool scaleUniform;
     _scaleUniform->getValue(scaleUniform);
     if (scaleUniform) {
         scaleY = scaleX;
     }
-    _translate->getValueAtTime(args.time, translateX, translateY);
-    _rotate->getValueAtTime(args.time, rotate);
+    _translate->getValueAtTime(time, translateX, translateY);
+    _rotate->getValueAtTime(time, rotate);
     rotate = OFX::ofxsToRadians(rotate);
 
-    _skewX->getValueAtTime(args.time, skewX);
-    _skewY->getValueAtTime(args.time, skewY);
-    _skewOrder->getValueAtTime(args.time, skewOrder);
+    _skewX->getValueAtTime(time, skewX);
+    _skewY->getValueAtTime(time, skewY);
+    _skewOrder->getValueAtTime(time, skewOrder);
 
-    _center->getValueAtTime(args.time, centerX, centerY);
+    _center->getValueAtTime(time, centerX, centerY);
 
-    _invert->getValueAtTime(args.time, invert);
-
-    OFX::Matrix3x3 invtransform;
     if (!invert) {
-        invtransform = OFX::ofxsMatInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+        *invtransform = OFX::ofxsMatInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
     } else {
-        invtransform = OFX::ofxsMatTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+        *invtransform = OFX::ofxsMatTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
     }
-    double pixelaspectratio = srcClip_->getPixelAspectRatio();
-    bool fielded = args.fieldToRender == eFieldLower || args.fieldToRender == eFieldUpper;
-    OFX::Matrix3x3 invtransformpixel = (OFX::ofxsMatCanonicalToPixel(pixelaspectratio, args.renderScale.x, args.renderScale.y, fielded) *
-                                                invtransform *
-                                                OFX::ofxsMatPixelToCanonical(pixelaspectratio, args.renderScale.x, args.renderScale.y, fielded));
-    transformClip = srcClip_;
-    transformMatrix[0] = invtransformpixel.a;
-    transformMatrix[1] = invtransformpixel.b;
-    transformMatrix[2] = invtransformpixel.c;
-    transformMatrix[3] = invtransformpixel.d;
-    transformMatrix[4] = invtransformpixel.e;
-    transformMatrix[5] = invtransformpixel.f;
-    transformMatrix[6] = invtransformpixel.g;
-    transformMatrix[7] = invtransformpixel.h;
-    transformMatrix[8] = invtransformpixel.i;
     return true;
 }
-#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // stuff for the interact
@@ -809,7 +292,7 @@ class TransformInteract : public OFX::OverlayInteract {
         _skewY = _plugin->fetchDoubleParam(kSkewYParamName);
         _skewOrder = _plugin->fetchChoiceParam(kSkewOrderParamName);
         _center = _plugin->fetchDouble2DParam(kCenterParamName);
-        _invert = _plugin->fetchBooleanParam(kInvertParamName);
+        _invert = _plugin->fetchBooleanParam(kTransform3x3InvertParamName);
         addParamToSlaveTo(_translate);
         addParamToSlaveTo(_rotate);
         addParamToSlaveTo(_scale);
@@ -1794,8 +1277,8 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     center->setDefault(0.5, 0.5);
     page->addChild(*center);
     
-    BooleanParamDescriptor* invert = desc.defineBooleanParam(kInvertParamName);
-    invert->setLabels(kInvertParamName, kInvertParamName, kInvertParamName);
+    BooleanParamDescriptor* invert = desc.defineBooleanParam(kTransform3x3InvertParamName);
+    invert->setLabels(kTransform3x3InvertParamName, kTransform3x3InvertParamName, kTransform3x3InvertParamName);
     invert->setDefault(false);
     invert->setAnimates(false);
     page->addChild(*invert);
@@ -1966,8 +1449,8 @@ void TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     center->setDefault(0.5, 0.5);
     page->addChild(*center);
 
-    BooleanParamDescriptor* invert = desc.defineBooleanParam(kInvertParamName);
-    invert->setLabels(kInvertParamName, kInvertParamName, kInvertParamName);
+    BooleanParamDescriptor* invert = desc.defineBooleanParam(kTransform3x3InvertParamName);
+    invert->setLabels(kTransform3x3InvertParamName, kTransform3x3InvertParamName, kTransform3x3InvertParamName);
     invert->setDefault(false);
     invert->setAnimates(false);
     page->addChild(*invert);
