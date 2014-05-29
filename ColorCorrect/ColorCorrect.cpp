@@ -703,9 +703,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     defineColorGroup(kColorCorrectMidtonesGroupName, "",page, desc,false);
     defineColorGroup(kColorCorrectHighlightsGroupName, "",page, desc,false);
     
-    GroupParamDescriptor* curvesTab = desc.defineGroupParam("Ranges");
-    curvesTab->setLabels("Ranges", "Ranges", "Ranges");
-    curvesTab->setAsTab();
+    PageParamDescriptor* ranges = desc.definePageParam("Ranges");
     
     OFX::ParametricParamDescriptor* lookupTable = desc.defineParametricParam(kColorCorrectToneRangesParamName);
     assert(lookupTable);
@@ -737,8 +735,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     lookupTable->addControlPoint(1, 0.0, 0.5, 0.0,false);
     lookupTable->addControlPoint(1, 0.0, 1.0, 1.0,false);
     
-    lookupTable->setParent(*curvesTab);
-    page->addChild(*lookupTable);
+    ranges->addChild(*lookupTable);
 
     
 }
