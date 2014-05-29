@@ -431,19 +431,19 @@ bool CornerPinPlugin::isIdentity(double time)
 
 static void copyPoint(OFX::Double2DParam* from,OFX::Double2DParam* to)
 {
-    OfxPointD p;
-    unsigned int keyCount = from->getNumKeys();
-    to->deleteAllKeys();
-    for (unsigned int i = 0; i < keyCount; ++i) {
-        OfxTime time = from->getKeyTime(i);
-        from->getValueAtTime(time, p.x, p.y);
-        to->setValueAtTime(time, p.x, p.y);
-    }
-    if (keyCount == 0) {
-        from->getValue(p.x, p.y);
-        to->setValue(p.x, p.y);
-    }
-
+//    OfxPointD p;
+//    unsigned int keyCount = from->getNumKeys();
+//    to->deleteAllKeys();
+//    for (unsigned int i = 0; i < keyCount; ++i) {
+//        OfxTime time = from->getKeyTime(i);
+//        from->getValueAtTime(time, p.x, p.y);
+//        to->setValueAtTime(time, p.x, p.y);
+//    }
+//    if (keyCount == 0) {
+//        from->getValue(p.x, p.y);
+//        to->setValue(p.x, p.y);
+//    }
+    to->copy(*from, 0);
 }
 
 void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
