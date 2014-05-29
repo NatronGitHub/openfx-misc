@@ -224,6 +224,8 @@ private:
     // override the roi call
     virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois);
     
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod);
+    
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
     
@@ -308,6 +310,22 @@ RotoPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OF
     rois.setRegionOfInterest(*srcClip_, args.regionOfInterest);
 }
 
+
+bool
+RotoPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
+    rod = srcRoD;
+    ContextEnum context = getContext();
+    if (context == eContextGeneral || context == eContextPaint) {
+        OfxRectD maskRoD = maskClip_->getRegionOfDefinition(args.time);
+        rod.x1 = std::min(rod.x1, maskRoD.x1);
+        rod.x2 = std::max(rod.x2, maskRoD.x2);
+        rod.y1 = std::min(rod.y1, maskRoD.y1);
+        rod.y2 = std::max(rod.y2, maskRoD.y2);
+    }
+    return true;
+}
 
 // the internal render function
 template <int nComponents>
