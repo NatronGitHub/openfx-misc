@@ -443,7 +443,7 @@ static void copyPoint(OFX::Double2DParam* from,OFX::Double2DParam* to)
 //        from->getValue(p.x, p.y);
 //        to->setValue(p.x, p.y);
 //    }
-    to->copy(*from, 0);
+    to->copyFrom(*from, 0, NULL);
 }
 
 void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
@@ -944,9 +944,12 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     defineCornerPinToDouble2DParam(desc, toPoints, kTopRightParamName, 1, 1);
     defineCornerPinToDouble2DParam(desc, toPoints, kBtmRightParamName, 1, 0);
     defineCornerPinToDouble2DParam(desc, toPoints, kBtmLeftParamName,  0, 0);
+    PushButtonParamDescriptor* copyFrom = desc.definePushButtonParam(kCopyFromParamName);
+    copyFrom->setLabels(kCopyFromParamName, kCopyFromParamName, kCopyFromParamName);
+    copyFrom->setHint("Copy the content from the \"to\" points to the \"from\" points.");
+    copyFrom->setParent(*toPoints);
     page->addChild(*toPoints);
 
-    
     GroupParamDescriptor* fromPoints = desc.defineGroupParam(kFromParamGroupName);
     fromPoints->setLabels(kFromParamGroupName, kFromParamGroupName, kFromParamGroupName);
     fromPoints->setAsTab();
@@ -954,24 +957,16 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom2ParamName, 1, 1);
     defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom3ParamName, 1, 0);
     defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom4ParamName, 0, 0);
-
-    PushButtonParamDescriptor* copyFrom = desc.definePushButtonParam(kCopyFromParamName);
-    copyFrom->setLabels(kCopyFromParamName, kCopyFromParamName, kCopyFromParamName);
-    copyFrom->setHint("Copy the content from the \"to\" points to the \"from\" points.");
-    copyFrom->setParent(*toPoints);
-    
-    
     PushButtonParamDescriptor* setToInput = desc.definePushButtonParam(kCopyInputRoDParamName);
     setToInput->setLabels(kCopyInputRoDParamName, kCopyInputRoDParamName, kCopyInputRoDParamName);
     setToInput->setHint("Copy the values from the source region of definition into the \"to\" points.");
     setToInput->setLayoutHint(OFX::eLayoutHintNoNewLine);
     setToInput->setParent(*fromPoints);
-    
     PushButtonParamDescriptor* copyTo = desc.definePushButtonParam(kCopyToParamName);
     copyTo->setLabels(kCopyToParamName, kCopyToParamName, kCopyToParamName);
     copyTo->setHint("Copy the content from the \"from\" points to the \"to\" points.");
     copyTo->setParent(*fromPoints);
-
+    page->addChild(*fromPoints);
     
     GroupParamDescriptor* extraMatrix = desc.defineGroupParam("Extra matrix");
     extraMatrix->setHint("This matrix gets concatenated to the transform defined by the other parameters.");
@@ -982,8 +977,6 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     defineExtraMatrixRow(desc, page, extraMatrix,"row3",0,0,1);
     page->addChild(*extraMatrix);
 
-
-   
     ChoiceParamDescriptor* overlayChoice = desc.defineChoiceParam(kOverlayPointsParamName);
     overlayChoice->setHint("Whether to display the \"from\" or the \"to\" points in the overlay");
     overlayChoice->setLabels(kOverlayPointsParamName, kOverlayPointsParamName, kOverlayPointsParamName);
