@@ -145,7 +145,9 @@ struct Matrix3x3 {
     { a = m.a; b = m.b; c = m.c; d = m.d; e = m.e; f = m.f; g = m.g; h = m.h; i = m.i; return *this; }
     
     bool isIdentity() const {
-        return a == 1 && b == 0 && c == 0 && d == 0 && e == 1 && f && 0 && g == 0 && h == 0 && i == 1;
+        return a == 1 && b == 0 && c == 0 &&
+        d == 0 && e == 1 && f == 0 &&
+        g == 0 && h == 0 && i == 1;
     }
 };
 
