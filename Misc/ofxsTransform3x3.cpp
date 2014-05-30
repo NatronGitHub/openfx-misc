@@ -172,7 +172,9 @@ Transform3x3Plugin::getRegionOfDefinition(const RegionOfDefinitionArguments &arg
     OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
 
     ///if is identity return the input rod instead of transforming
-    if (isIdentity(args.time)) {
+    OFX::Clip* identityClip;
+    double identityTime;
+    if (isIdentity_internal(args.time,identityClip,identityTime)) {
         rod = srcRoD;
         return true;
     }
@@ -439,28 +441,33 @@ Transform3x3Plugin::render(const OFX::RenderArguments &args)
     }
 }
 
-// overridden is identity
-bool Transform3x3Plugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+bool Transform3x3Plugin::isIdentity_internal(double time, OFX::Clip * &identityClip, double &identityTime)
 {
     // Transform3x3-GENERIC
-    if (isIdentity(args.time)) {
+    if (isIdentity(time)) {
         identityClip = srcClip_;
-        identityTime = args.time;
+        identityTime = time;
         return true;
     }
-
+    
     // GENERIC
     if (_masked) {
         double mix;
-        _mix->getValueAtTime(args.time, mix);
+        _mix->getValueAtTime(time, mix);
         if (mix == 0.) {
             identityClip = srcClip_;
-            identityTime = args.time;
+            identityTime = time;
             return true;
         }
     }
-
+    
     return false;
+}
+
+// overridden is identity
+bool Transform3x3Plugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+{
+    return isIdentity_internal(args.time, identityClip, identityTime);
 }
 
 #ifdef OFX_EXTENSIONS_NUKE

@@ -94,6 +94,8 @@ private:
     /* set up and run a processor */
     void setupAndProcess(Transform3x3ProcessorBase &, const OFX::RenderArguments &args);
 
+    bool isIdentity_internal(double time, OFX::Clip * &identityClip, double &identityTime);
+    
 private:
     // Transform3x3-GENERIC
     OFX::BooleanParam* _invert;
