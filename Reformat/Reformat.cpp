@@ -854,8 +854,8 @@ ReformatPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEn
     center->setLabels(kCenterParamName, kCenterParamName, kCenterParamName);
     center->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     center->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
-    center->setDefault(0.5,0.5);
-    center->setHint("This is the center point of the scaling.");
+    center->setDefault(0.,0.);
+    center->setHint("This is the point where the scaling occurs.");
     page->addChild(*center);
 }
 
