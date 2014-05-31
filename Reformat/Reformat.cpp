@@ -117,7 +117,7 @@ using namespace OFX;
 
 namespace  {
 
-static void getSizesFromFormatIndex(int index,double* width,double* height,double* par)
+static void getSizesFromFormatIndex(int index,int* width,int* height,double* par)
 {
     switch (index) {
         case 0:
@@ -272,7 +272,8 @@ public:
     
     virtual bool isIdentity(double time) /*OVERRIDE FINAL*/;
     
-    virtual bool getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) /*OVERRIDE FINAL*/;
+    virtual bool getInverseTransformCanonical(double time, bool invert,Transform3x3Plugin::eGetTransformReason reason,
+                                              OFX::Matrix3x3* invtransform) /*OVERRIDE FINAL*/;
     
 private:
     
@@ -283,76 +284,120 @@ private:
 
 
 
-bool ReformatPlugin::getInverseTransformCanonical(OfxTime time, bool invert, OFX::Matrix3x3* invtransform)
+bool ReformatPlugin::getInverseTransformCanonical(OfxTime time, bool invert,Transform3x3Plugin::eGetTransformReason reason,
+                                                  OFX::Matrix3x3* invtransform)
 {
     
-    double scaleX,scaleY;
+    double scaleX = INT_MIN,scaleY= INT_MIN;
     int type;
     _type->getValue(type);
     
+    int resizeType;
+    _resizeType->getValue(resizeType);
+    
+    bool fixedSize = true;
+    
+    OfxRectD srcRod = srcClip_->getRegionOfDefinition(time);
+    double srcW = srcRod.x2 - srcRod.x1;
+    double srcH = srcRod.y2 - srcRod.y1;
+    int w,h;
+    double dstPar;
     switch (type) {
         case 0:
         {
             int formatIndex;
             _format->getValue(formatIndex);
-            double w,h;
-            double par;
-            getSizesFromFormatIndex(formatIndex, &w, &h, &par);
-            OfxRectD srcRod = srcClip_->getRegionOfDefinition(time);
-            scaleX = w / (srcRod.x2 - srcRod.x1) * par;
-            scaleY = h / (srcRod.y2 - srcRod.y1);
+            getSizesFromFormatIndex(formatIndex, &w, &h, &dstPar);
+            scaleX = (double)w / srcW * dstPar;
+            scaleY = (double)h / srcH;
         }   break;
         case 1:
         {
-            int w,h;
-            double par;
             _width->getValue(w);
             _height->getValue(h);
-            _par->getValue(par);
-            OfxRectD srcRod = srcClip_->getRegionOfDefinition(time);
-            scaleX = (double)w / (srcRod.x2 - srcRod.x1) * par;
-            scaleY = (double)h / (srcRod.y2 - srcRod.y1);
-        }    break;
+            _par->getValue(dstPar);
+            _fixedSize->getValue(fixedSize);
+            scaleX = (double)w / srcW * dstPar;
+            scaleY = (double)h / srcH;
+        }   break;
         case 2:
+        {
             _scale->getValue(scaleX, scaleY);
-            break;
+            w = scaleX * srcW;
+            h = scaleY * srcH;
+            dstPar = 1.;
+        }   break;
         default:
             assert(false);
             break;
     }
     
-//    int resizeType;
-//    _resizeType->getValue(resizeType);
-//    switch (resizeType) {
-//        case 0:
-//            //not handled
-//            break;
-//        case 1:
-//            
-//            break;
-//        default:
-//            break;
-//    }
-//    
+    double scaleRatio = scaleX / scaleY;
+    
+    if (resizeType == 0) {
+        ///This is just a crop, pixels aren't transformed.
+        if(reason == Transform3x3Plugin::eGetTransformRender) {
+            scaleX = 1.;
+            scaleY = 1.;
+        }
+    } else if (resizeType == 1) {
+        if (h <= w) {
+            scaleY = scaleX;
+        } else {
+            if(reason == Transform3x3Plugin::eGetTransformRender) {
+                scaleY *= scaleRatio;
+            }
+        }
+    } else if (resizeType == 2) {
+        if (w <= h) {
+            scaleX = scaleY;
+        } else {
+            if(reason == Transform3x3Plugin::eGetTransformRender) {
+                scaleX /= scaleRatio;
+            }
+        }
+    } else if (resizeType == 3) {
+        //scaleX = std::min(scaleX, scaleY);
+        //scaleY = scaleX;
+        if (srcW <= srcH) {
+            scaleX /= scaleRatio;
+        } else {
+            scaleY *= scaleRatio;
+        }
+    } else if (resizeType == 4) {
+        if (srcW >= srcH) {
+            if (!fixedSize || reason == Transform3x3Plugin::eGetTransformRender) {
+                scaleX /= scaleRatio;
+            }
+            
+        } else {
+            if (!fixedSize  || reason == Transform3x3Plugin::eGetTransformRender) {
+                scaleY *= scaleRatio;
+            }
+        }
+    }
+    
     double centerX,centerY;
     _center->getValueAtTime(time, centerX, centerY);
     
+    bool flip,flop;
+    _flip->getValue(flip);
+    _flop->getValue(flop);
+
     if (!invert) {
         *invtransform = OFX::ofxsMatInverseTransformCanonical(0., 0., scaleX, scaleY, 0., 0., false, 0., centerX, centerY);
     } else {
         *invtransform = OFX::ofxsMatTransformCanonical(0., 0., scaleX, scaleY, 0., 0., false, 0., centerX, centerY);
     }
     
-    bool flip,flop;
-    _flip->getValue(flip);
-    _flop->getValue(flop);
+    
     
     if (flip && flop) {
-        *invtransform = *invtransform * OFX::ofxsMatScaleAroundPoint(-1, -1,centerX,centerY);
+        *invtransform = *invtransform * OFX::ofxsMatScaleAroundPoint(-1, -1,centerX ,centerY);
     } else if (flip && !flop) {
-        *invtransform = *invtransform * OFX::ofxsMatScaleAroundPoint(1, -1,centerX,centerY);
+        *invtransform = *invtransform * OFX::ofxsMatScaleAroundPoint(1, -1,centerX ,centerY);
     } else if (!flip && flop) {
-        *invtransform = *invtransform * OFX::ofxsMatScaleAroundPoint(-1, 1,centerX,centerY);
+        *invtransform = *invtransform * OFX::ofxsMatScaleAroundPoint(-1, 1,centerX ,centerY);
     }
     
     return true;
@@ -383,7 +428,7 @@ bool ReformatPlugin::isIdentity(double time)
             double srcPar = srcClip_->getPixelAspectRatio();
             int formatIndex;
             _format->getValue(formatIndex);
-            double width,height;
+            int width,height;
             double par;
             getSizesFromFormatIndex(formatIndex, &width, &height, &par);
             if (width == (rod.x2 - rod.x1) && height == (rod.y2 - rod.y1) && par == srcPar) {
@@ -774,6 +819,7 @@ ReformatPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEn
     Double2DParamDescriptor* scale = desc.defineDouble2DParam(kScaleParamName);
     scale->setLabels(kScaleParamName, kScaleParamName, kScaleParamName);
     scale->setDefault(1.,1.);
+    scale->setRange(0.01, 0.01, INT_MAX, INT_MAX);
     scale->setHint("The scale factor to apply. If non-uniform you should select a resize type of \"non uniform\".");
     scale->setIsSecret(true);
     page->addChild(*scale);

@@ -267,7 +267,8 @@ public:
 
     virtual bool isIdentity(double time) /*OVERRIDE FINAL*/;
 
-    virtual bool getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) /*OVERRIDE FINAL*/;
+    virtual bool getInverseTransformCanonical(double time, bool invert,Transform3x3Plugin::eGetTransformReason reason,
+                                              OFX::Matrix3x3* invtransform) /*OVERRIDE FINAL*/;
 
 private:
     
@@ -314,7 +315,8 @@ private:
 };
 
 
-bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, bool invert, OFX::Matrix3x3* invtransform)
+bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, bool invert,Transform3x3Plugin::eGetTransformReason /*reason*/,
+                                                   OFX::Matrix3x3* invtransform)
 {
     OFX::Point3D p1,p2,p3,p4;
     _from1->getValueAtTime(time, p1.x, p1.y);

@@ -1,4 +1,4 @@
-#include "Roto.h"
+#include "Reformat.h"
 
 namespace OFX
 {
@@ -6,7 +6,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            static RotoPluginFactory p("net.sf.openfx:RotoPlugin", 1, 0);
+            static ReformatPluginFactory p("net.sf.openfx:ReformatPlugin", 1, 0);
             ids.push_back(&p);
         }
     }
