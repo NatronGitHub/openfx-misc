@@ -87,6 +87,7 @@
 #include "Reformat.h"
 
 #include <cmath>
+#include <climits>
 
 #include "ofxsProcessing.H"
 #include "ofxsTransform3x3.h"
@@ -308,8 +309,8 @@ bool ReformatPlugin::getInverseTransformCanonical(OfxTime time, bool invert,Tran
             int formatIndex;
             _format->getValue(formatIndex);
             getSizesFromFormatIndex(formatIndex, &w, &h, &dstPar);
-            scaleX = (double)w / srcW * dstPar;
-            scaleY = (double)h / srcH;
+            scaleX = (double)w / srcW ;
+            scaleY = (double)h / srcH / dstPar;
         }   break;
         case 1:
         {
@@ -317,8 +318,8 @@ bool ReformatPlugin::getInverseTransformCanonical(OfxTime time, bool invert,Tran
             _height->getValue(h);
             _par->getValue(dstPar);
             _fixedSize->getValue(fixedSize);
-            scaleX = (double)w / srcW * dstPar;
-            scaleY = (double)h / srcH;
+            scaleX = (double)w / srcW ;
+            scaleY = (double)h / srcH / dstPar;
         }   break;
         case 2:
         {
@@ -332,47 +333,47 @@ bool ReformatPlugin::getInverseTransformCanonical(OfxTime time, bool invert,Tran
             break;
     }
     
-    double scaleRatio = scaleX / scaleY;
+    assert(dstPar != 0.);
+    
+    // double scaleRatio = scaleX / scaleY;
     
     if (resizeType == 0) {
         ///This is just a crop, pixels aren't transformed.
-        if(reason == Transform3x3Plugin::eGetTransformRender) {
+        if(!fixedSize || reason == Transform3x3Plugin::eGetTransformRender) {
             scaleX = 1.;
-            scaleY = 1.;
+            scaleY = 1. / dstPar;
         }
     } else if (resizeType == 1) {
-        if (h <= w) {
-            scaleY = scaleX;
-        } else {
-            if(reason == Transform3x3Plugin::eGetTransformRender) {
-                scaleY *= scaleRatio;
-            }
+        
+        if(!fixedSize || reason == Transform3x3Plugin::eGetTransformRender) {
+            scaleY = scaleX / dstPar;
         }
+        
     } else if (resizeType == 2) {
-        if (w <= h) {
+        
+        if(!fixedSize || reason == Transform3x3Plugin::eGetTransformRender) {
             scaleX = scaleY;
-        } else {
-            if(reason == Transform3x3Plugin::eGetTransformRender) {
-                scaleX /= scaleRatio;
-            }
         }
+        
     } else if (resizeType == 3) {
-        //scaleX = std::min(scaleX, scaleY);
-        //scaleY = scaleX;
         if (srcW <= srcH) {
-            scaleX /= scaleRatio;
+            if (!fixedSize || reason == Transform3x3Plugin::eGetTransformRender) {
+                scaleX = scaleY;
+            }
         } else {
-            scaleY *= scaleRatio;
+            if (!fixedSize || reason == Transform3x3Plugin::eGetTransformRender) {
+                scaleY = scaleX / dstPar;
+            }
         }
     } else if (resizeType == 4) {
         if (srcW >= srcH) {
             if (!fixedSize || reason == Transform3x3Plugin::eGetTransformRender) {
-                scaleX /= scaleRatio;
+                scaleX = scaleY;
             }
             
         } else {
             if (!fixedSize  || reason == Transform3x3Plugin::eGetTransformRender) {
-                scaleY *= scaleRatio;
+                scaleY = scaleX / dstPar;
             }
         }
     }
@@ -390,14 +391,12 @@ bool ReformatPlugin::getInverseTransformCanonical(OfxTime time, bool invert,Tran
         *invtransform = OFX::ofxsMatTransformCanonical(0., 0., scaleX, scaleY, 0., 0., false, 0., centerX, centerY);
     }
     
-    
-    
     if (flip && flop) {
-        *invtransform = *invtransform * OFX::ofxsMatScaleAroundPoint(-1, -1,centerX ,centerY);
+        *invtransform = *invtransform * OFX::ofxsMatScaleAroundPoint(-1, -1,centerX,centerY);
     } else if (flip && !flop) {
-        *invtransform = *invtransform * OFX::ofxsMatScaleAroundPoint(1, -1,centerX ,centerY);
+        *invtransform = *invtransform * OFX::ofxsMatScaleAroundPoint(1, -1,centerX,centerY);
     } else if (!flip && flop) {
-        *invtransform = *invtransform * OFX::ofxsMatScaleAroundPoint(-1, 1,centerX ,centerY);
+        *invtransform = *invtransform * OFX::ofxsMatScaleAroundPoint(-1, 1,centerX,centerY);
     }
     
     return true;
@@ -809,9 +808,8 @@ ReformatPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEn
     DoubleParamDescriptor* par = desc.defineDoubleParam(kParParamName);
     par->setLabels(kParParamName, kParParamName, kParParamName);
     par->setDefault(1.);
-    par->setRange(0.001, INT_MAX);
+    par->setRange(0.01, INT_MAX);
     par->setHint("The pixel aspect ratio of the output image.");
-    par->setRange(0., 10.);
     par->setIsSecret(true);
     par->setAnimates(false);
     page->addChild(*par);
