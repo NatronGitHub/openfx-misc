@@ -92,7 +92,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OFX_EXTENSIONS_VEGAS;OFX_EXTENSIONS_TUTTLE;OFX_EXTENSIONS_NUKE;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;WIN32;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\RGBLut;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\RGBLut;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir)..\Reformat;$(SolutionDir)..\Misc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -140,14 +140,16 @@
     <ClCompile Include="..\openfx\Support\Library\ofxsProperty.cpp" />
     <ClCompile Include="..\openfx\Support\Library\ofxsPropertyValidation.cpp" />
     <ClCompile Include="..\ReConverge\ReConverge.cpp" />
+    <ClCompile Include="..\Reformat\Reformat.cpp" />
     <ClCompile Include="..\RGBLut\RGBLut.cpp" />
     <ClCompile Include="..\Roto\Roto.cpp" />
     <ClCompile Include="..\SideBySide\SideBySide.cpp" />
     <ClCompile Include="..\Switch\Switch.cpp" />
     <ClCompile Include="..\TimeOffset\TimeOffset.cpp" />
     <ClCompile Include="..\Transform\Transform.cpp" />
-    <ClCompile Include="freeglut_font_data.cpp" />
+    <ClCompile Include="ofxsOGLFontData.cpp" />
     <ClCompile Include="ofxsOGLTextRenderer.cpp" />
+    <ClCompile Include="ofxsTransform3x3.cpp" />
     <ClCompile Include="PluginRegistrationCombined.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -172,6 +174,7 @@
     <ClInclude Include="..\openfx\Support\Plugins\include\ofxsImageBlender.H" />
     <ClInclude Include="..\openfx\Support\Plugins\include\ofxsProcessing.H" />
     <ClInclude Include="..\ReConverge\ReConverge.h" />
+    <ClInclude Include="..\Reformat\Reformat.h" />
     <ClInclude Include="..\RGBLut\RGBLut.h" />
     <ClInclude Include="..\Roto\Roto.h" />
     <ClInclude Include="..\SideBySide\SideBySide.h" />
