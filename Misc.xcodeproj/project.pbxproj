@@ -245,9 +245,6 @@
 		D7A74C501939039B00E834D5 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		D7A74C511939039B00E834D5 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		D7A74C531939039B00E834D5 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		D7A74C58193903AA00E834D5 /* Reformat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7A74C441939038100E834D5 /* Reformat.cpp */; };
-		D7A74C59193903AC00E834D5 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7A74C431939038100E834D5 /* PluginRegistration.cpp */; };
-		D7A74C5A193903B400E834D5 /* Reformat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7A74C441939038100E834D5 /* Reformat.cpp */; };
 		D7B4C97818D9DBE70004137D /* ColorCorrect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B4C95E18D9DA410004137D /* ColorCorrect.cpp */; };
 /* End PBXBuildFile section */
 
@@ -426,11 +423,6 @@
 		D792A2E219334C6300547CFF /* ofxsOGLTextRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsOGLTextRenderer.h; sourceTree = "<group>"; };
 		D792A2E919335BE100547CFF /* ofxsOGLFontUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsOGLFontUtils.h; sourceTree = "<group>"; };
 		D792A2EF1933691800547CFF /* ofxsOGLFontData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsOGLFontData.cpp; sourceTree = "<group>"; };
-		D7A74C411939038100E834D5 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D7A74C421939038100E834D5 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		D7A74C431939038100E834D5 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		D7A74C441939038100E834D5 /* Reformat.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Reformat.cpp; sourceTree = "<group>"; };
-		D7A74C451939038100E834D5 /* Reformat.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Reformat.h; sourceTree = "<group>"; };
 		D7A74C571939039B00E834D5 /* Reformat.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Reformat.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		D7B4C95E18D9DA410004137D /* ColorCorrect.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ColorCorrect.cpp; sourceTree = "<group>"; };
 		D7B4C95F18D9DA410004137D /* ColorCorrect.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorCorrect.h; sourceTree = "<group>"; };
@@ -758,7 +750,6 @@
 				1EDE1BE1182D8961002392CB /* MixViews */,
 				1EDE1BC8182D3F73002392CB /* OneView */,
 				1ECE544E185F23BD001ED442 /* ReConverge */,
-				D7A74C401939038100E834D5 /* Reformat */,
 				1E3E3CB117995CB1005F2132 /* RGBLut */,
 				D721EBFC1911209B0069DB1D /* Roto */,
 				1E235FEC18363CCA0019C45F /* SideBySide */,
@@ -948,18 +939,6 @@
 				D74121CF18F9C99300A81F8B /* PluginRegistration.cpp */,
 			);
 			path = Merge;
-			sourceTree = "<group>";
-		};
-		D7A74C401939038100E834D5 /* Reformat */ = {
-			isa = PBXGroup;
-			children = (
-				D7A74C411939038100E834D5 /* Info.plist */,
-				D7A74C421939038100E834D5 /* Makefile */,
-				D7A74C431939038100E834D5 /* PluginRegistration.cpp */,
-				D7A74C441939038100E834D5 /* Reformat.cpp */,
-				D7A74C451939038100E834D5 /* Reformat.h */,
-			);
-			path = Reformat;
 			sourceTree = "<group>";
 		};
 		D7B4C95D18D9DA410004137D /* ColorCorrect */ = {
@@ -1459,7 +1438,6 @@
 				D725A2E318E0D54E001A1E3E /* Grade.cpp in Sources */,
 				1E8B5D7F18B7828400C31FDC /* JoinViews.cpp in Sources */,
 				D74121D118F9C99300A81F8B /* Merge.cpp in Sources */,
-				D7A74C5A193903B400E834D5 /* Reformat.cpp in Sources */,
 				D721EC17191120F30069DB1D /* Roto.cpp in Sources */,
 				D792A2E319334C6300547CFF /* ofxsOGLTextRenderer.cpp in Sources */,
 				1E8B5D7218B7800800C31FDC /* MixViews.cpp in Sources */,
@@ -1654,10 +1632,8 @@
 				D7A74C481939039B00E834D5 /* ofxsCore.cpp in Sources */,
 				D7A74C491939039B00E834D5 /* ofxsImageEffect.cpp in Sources */,
 				D7A74C4A1939039B00E834D5 /* ofxsInteract.cpp in Sources */,
-				D7A74C58193903AA00E834D5 /* Reformat.cpp in Sources */,
 				D7A74C4B1939039B00E834D5 /* ofxsLog.cpp in Sources */,
 				D7A74C4C1939039B00E834D5 /* ofxsMultiThread.cpp in Sources */,
-				D7A74C59193903AC00E834D5 /* PluginRegistration.cpp in Sources */,
 				D7A74C4F1939039B00E834D5 /* ofxsParams.cpp in Sources */,
 				D7A74C501939039B00E834D5 /* ofxsProperty.cpp in Sources */,
 				D717F0791939B8DE00AFE80C /* ofxsOGLFontData.cpp in Sources */,

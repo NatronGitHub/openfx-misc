@@ -10,7 +10,6 @@ JoinViews \
 Merge \
 MixViews \
 OneView \
-Reformat \
 RGBLut \
 Roto \
 SideBySide \

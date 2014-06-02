@@ -8,7 +8,6 @@ JoinViews.o \
 Merge.o \
 MixViews.o \
 OneView.o \
-Reformat.o \
 RGBLut.o \
 Roto.o \
 SideBySide.o \
@@ -31,7 +30,6 @@ VPATH += \
 ../Merge \
 ../MixViews \
 ../OneView \
-../Reformat \
 ../RGBLut \
 ../Roto \
 ../SideBySide \
@@ -52,7 +50,6 @@ CXXFLAGS += \
 -I../Merge \
 -I../MixViews \
 -I../OneView \
--I../Reformat \
 -I../RGBLut \
 -I../Roto \
 -I../SideBySide \
