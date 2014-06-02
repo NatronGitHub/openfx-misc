@@ -826,7 +826,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
 
     OFX::Matrix3x3 rotation, transform, transformscale;
     ////for the rotation bar/translation/center dragging we dont use the same transform, we don't want to undo the rotation transform
-    if (_mouseState != eDraggingRotationBar && _mouseState != eDraggingTranslation && _mouseState != eDraggingCenter) {
+    if (_mouseState != eDraggingTranslation && _mouseState != eDraggingCenter) {
         ///undo skew + rotation to the current position
         rotation = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
         transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
@@ -990,7 +990,8 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         diffToCenter.y = rotationPos.y - center.y;
         diffToCenter.x = rotationPos.x - center.x;
         double angle = std::atan2(diffToCenter.y, diffToCenter.x);
-        _rotate->setValue(OFX::ofxsToDegrees(angle));
+
+        _rotate->setValue(currentRotation+OFX::ofxsToDegrees(angle));
         
     } else if (_mouseState == eDraggingSkewXBar) {
         // avoid division by zero
