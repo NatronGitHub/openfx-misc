@@ -414,11 +414,17 @@ bool CornerPinPlugin::isIdentity(double time)
     _from3->getValueAtTime(time,p3.x, p3.y);
     _from4->getValueAtTime(time,p4.x, p4.y);
 
-
-    if ((p1.x == topLeft.x && p1.y == topLeft.y) &&
-        (p2.x == topRight.x && p2.y == topRight.y) &&
-        (p3.x == btmRight.x && p3.y == btmRight.y) &&
-        (p4.x == btmLeft.x && p4.y == btmLeft.y) &&
+    bool topLeftEnabled, topRightEnabled, btmLeftEnabled, btmRightEnabled;
+    _topLeftEnabled->getValue(topLeftEnabled);
+    _topRightEnabled->getValue(topRightEnabled);
+    _btmRightEnabled->getValue(btmRightEnabled);
+    _btmLeftEnabled->getValue(btmLeftEnabled);
+    
+    // if topLeft is not enabled, q1 = p1 (see getInverseTransformCanonical()
+    if ((!topLeftEnabled || (p1.x == topLeft.x && p1.y == topLeft.y)) &&
+        (!topRightEnabled || (p2.x == topRight.x && p2.y == topRight.y)) &&
+        (!btmRightEnabled || (p3.x == btmRight.x && p3.y == btmRight.y)) &&
+        (!btmLeftEnabled || (p4.x == btmLeft.x && p4.y == btmLeft.y)) &&
         extraMat.isIdentity()) {
         return true;
     }
