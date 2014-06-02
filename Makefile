@@ -1,4 +1,7 @@
-SUBDIRS = RGBLut JoinViews OneView Anaglyph MixViews SideBySide Switch ColorCorrect Grade Transform Merge ChromaKeyer Roto CornerPin Reformat
+SUBDIRS = Misc
+
+SUBDIRS_NOMULTI = RGBLut JoinViews OneView Anaglyph MixViews SideBySide Switch ColorCorrect Grade Transform Merge ChromaKeyer Roto CornerPin Reformat
+
 ifneq ($(DEBUGFLAG),-O3)
   # DebugProxy is only useful to debug the communication between a host and a plugin
   SUBDIRS += DebugProxy
@@ -16,10 +19,10 @@ endif
 
 all: subdirs
 
-multibundle:
-	$(MAKE) SUBDIRS=Misc
+.PHONY: nomulti subdirs clean $(SUBDIRS)
 
-.PHONY: subdirs clean $(SUBDIRS)
+nomulti:
+	$(MAKE) SUBDIRS=$(SUBDIRS_NOMULTI)
 
 subdirs: $(SUBDIRS)
 
