@@ -1,6 +1,22 @@
 SUBDIRS = Misc
 
-SUBDIRS_NOMULTI = RGBLut JoinViews OneView Anaglyph MixViews SideBySide Switch ColorCorrect Grade Transform Merge ChromaKeyer Roto CornerPin Reformat
+SUBDIRS_NOMULTI = \
+Anaglyph \
+ChromaKeyer \
+ColorCorrect \
+CornerPin \
+Grade \
+JoinViews \
+Merge \
+MixViews \
+OneView \
+Reformat \
+RGBLut \
+Roto \
+SideBySide \
+Switch \
+TimeOffset \
+Transform
 
 ifneq ($(DEBUGFLAG),-O3)
   # DebugProxy is only useful to debug the communication between a host and a plugin

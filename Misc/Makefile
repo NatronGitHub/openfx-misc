@@ -1,28 +1,61 @@
 PLUGINOBJECTS = \
-    JoinViews.o \
-    OneView.o \
-    RGBLut.o \
-    SideBySide.o \
-    Switch.o \
-    TimeOffset.o \
-    MixViews.o \
-    Anaglyph.o \
-    ColorCorrect.o \
-	Grade.o \
-    Transform.o \
-    Merge.o \
-    Roto.o \
-	CornerPin.o \
-    ChromaKeyer.o \
-    Reformat.o \
-	ofxsTransform3x3.o \
-	ofxsOGLTextRenderer.o \
-	ofxsOGLFontData.o  \
-    PluginRegistrationCombined.o
+Anaglyph.o \
+ChromaKeyer.o \
+ColorCorrect.o \
+CornerPin.o \
+Grade.o \
+JoinViews.o \
+Merge.o \
+MixViews.o \
+OneView.o \
+Reformat.o \
+RGBLut.o \
+Roto.o \
+SideBySide.o \
+Switch.o \
+TimeOffset.o \
+Transform.o \
+ofxsOGLTextRenderer.o \
+ofxsOGLFontData.o  \
+ofxsTransform3x3.o \
+PluginRegistrationCombined.o
 
 PLUGINNAME = Misc
-VPATH += ../JoinViews ../OneView ../RGBLut ../SideBySide ../Switch ../TimeOffset ../MixViews  ../Anaglyph ../ColorCorrect ../Grade ../Transform ../Merge ../Roto ../CornerPin ../ChromaKeyer ../Reformat
+VPATH += \
+../Anaglyph \
+../ChromaKeyer \
+../ColorCorrect \
+../CornerPin \
+../Grade \
+../JoinViews \
+../Merge \
+../MixViews \
+../OneView \
+../Reformat \
+../RGBLut \
+../Roto \
+../SideBySide \
+../Switch \
+../TimeOffset \
+../Transform
 
 include ../Makefile.master
 
-CXXFLAGS += -I../JoinViews -I../OneView -I../RGBLut -I../SideBySide -I../Switch -I../TimeOffset -I../MixViews -I../Anaglyph -I../ColorCorrect -I../Grade -I../Transform -I../Merge -I../Roto -I../CornerPin -I../ChromaKeyer -I../Reformat
+CXXFLAGS += \
+-I. \
+-I../Anaglyph \
+-I../ChromaKeyer \
+-I../ColorCorrect \
+-I../CornerPin \
+-I../Grade \
+-I../JoinViews \
+-I../Merge \
+-I../MixViews \
+-I../OneView \
+-I../Reformat \
+-I../RGBLut \
+-I../Roto \
+-I../SideBySide \
+-I../Switch \
+-I../TimeOffset \
+-I../Transform
