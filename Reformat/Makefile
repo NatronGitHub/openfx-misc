@@ -1,7 +1,0 @@
-PLUGINOBJECTS = Reformat.o PluginRegistration.o ofxsTransform3x3.o ofxsOGLTextRenderer.o ofxsOGLFontData.o
-PLUGINNAME = Reformat
-
-include ../Makefile.master
-
-CXXFLAGS += -I../Misc
-VPATH += ../Misc

@@ -1,19 +1,19 @@
-#include "Switch.h"
-#include "TimeOffset.h"
-#include "RGBLut.h"
-#include "SideBySide.h"
+#include "Anaglyph.h"
+#include "ChromaKeyer.h"
+#include "ColorCorrect.h"
+#include "CornerPin.h"
+#include "Grade.h"
+#include "JoinViews.h"
+#include "Merge.h"
 #include "MixViews.h"
 #include "OneView.h"
-#include "JoinViews.h"
-#include "Anaglyph.h"
-#include "ColorCorrect.h"
-#include "Grade.h"
-#include "Transform.h"
-#include "Merge.h"
-#include "ChromaKeyer.h"
+#include "RGBLut.h"
 #include "Roto.h"
-#include "CornerPin.h"
-#include "Reformat.h"
+#include "SideBySide.h"
+#include "Switch.h"
+#include "TimeOffset.h"
+#include "Transform.h"
+
 namespace OFX
 {
     namespace Plugin
@@ -54,8 +54,6 @@ namespace OFX
             ids.push_back(&p16);
             static CornerPinMaskedPluginFactory p17("net.sf.openfx:CornerPinMaskedPlugin", 1, 0);
             ids.push_back(&p17);
-            static ReformatPluginFactory p18("net.sf.openfx:ReformatPlugin",1,0);
-            ids.push_back(&p18);
            // ReConverge is not finished/tested
             //static ReConvergePluginFactory p("net.sf.openfx:reConvergePlugin", 1, 0);
             //ids.push_back(&p);
