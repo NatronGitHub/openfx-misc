@@ -990,8 +990,13 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         diffToCenter.y = rotationPos.y - center.y;
         diffToCenter.x = rotationPos.x - center.x;
         double angle = std::atan2(diffToCenter.y, diffToCenter.x);
-
-        _rotate->setValue(currentRotation+OFX::ofxsToDegrees(angle));
+        double angledegrees = currentRotation+OFX::ofxsToDegrees(angle);
+        double closest90 = 90. * std::floor((angledegrees + 45.)/90.);
+        if (std::fabs(angledegrees - closest90) < 5.) {
+            // snap to closest multiple of 90.
+            angledegrees = closest90;
+        }
+        _rotate->setValue(angledegrees);
         
     } else if (_mouseState == eDraggingSkewXBar) {
         // avoid division by zero
