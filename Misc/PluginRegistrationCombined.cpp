@@ -13,7 +13,7 @@
 #include "Switch.h"
 #include "TimeOffset.h"
 #include "Transform.h"
-
+#include "Crop.h"
 namespace OFX
 {
     namespace Plugin
@@ -54,6 +54,8 @@ namespace OFX
             ids.push_back(&p16);
             static CornerPinMaskedPluginFactory p17("net.sf.openfx:CornerPinMaskedPlugin", 1, 0);
             ids.push_back(&p17);
+            static CropPluginFactory p18("net.sf.openfx:CropPlugin", 1, 0);
+            ids.push_back(&p18);
            // ReConverge is not finished/tested
             //static ReConvergePluginFactory p("net.sf.openfx:reConvergePlugin", 1, 0);
             //ids.push_back(&p);

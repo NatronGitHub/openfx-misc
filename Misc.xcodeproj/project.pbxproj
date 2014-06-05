@@ -181,9 +181,6 @@
 		1EDE1BDB182D8941002392CB /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1EDE1BE3182D8977002392CB /* MixViews.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDE1BE2182D8977002392CB /* MixViews.cpp */; };
 		1EFC1700180DCE6500AD7B86 /* RGBLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0C41E180DCAB500C25D1E /* RGBLut.cpp */; };
-		D717F0781939B8DB00AFE80C /* ofxsTransform3x3.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E71D9CB1935E61B00C98388 /* ofxsTransform3x3.cpp */; };
-		D717F0791939B8DE00AFE80C /* ofxsOGLFontData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D792A2EF1933691800547CFF /* ofxsOGLFontData.cpp */; };
-		D717F07A1939B8E100AFE80C /* ofxsOGLTextRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */; };
 		D721EC06191120B30069DB1D /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		D721EC07191120B30069DB1D /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		D721EC08191120B30069DB1D /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -232,19 +229,22 @@
 		D74121E118F9CF3D00A81F8B /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		D74121E718F9CF5900A81F8B /* Merge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D74121CD18F9C99300A81F8B /* Merge.cpp */; };
 		D74121E818F9CF5A00A81F8B /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D74121CF18F9C99300A81F8B /* PluginRegistration.cpp */; };
+		D74A80B5194059CC007C3E1C /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		D74A80B6194059CC007C3E1C /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		D74A80B7194059CC007C3E1C /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		D74A80B8194059CC007C3E1C /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		D74A80B9194059CC007C3E1C /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		D74A80BC194059CC007C3E1C /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		D74A80BD194059CC007C3E1C /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		D74A80BE194059CC007C3E1C /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		D74A80C0194059CC007C3E1C /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		D74A80C5194059E0007C3E1C /* Crop.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D74A80AE194059C0007C3E1C /* Crop.cpp */; };
+		D74A80C6194059E3007C3E1C /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D74A80B2194059C0007C3E1C /* PluginRegistration.cpp */; };
+		D74A80C719405A14007C3E1C /* Crop.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D74A80AE194059C0007C3E1C /* Crop.cpp */; };
 		D792A2E319334C6300547CFF /* ofxsOGLTextRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */; };
 		D792A2E419334C6300547CFF /* ofxsOGLTextRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */; };
 		D792A2F01933691800547CFF /* ofxsOGLFontData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D792A2EF1933691800547CFF /* ofxsOGLFontData.cpp */; };
 		D792A2F11933691800547CFF /* ofxsOGLFontData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D792A2EF1933691800547CFF /* ofxsOGLFontData.cpp */; };
-		D7A74C481939039B00E834D5 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
-		D7A74C491939039B00E834D5 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
-		D7A74C4A1939039B00E834D5 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
-		D7A74C4B1939039B00E834D5 /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
-		D7A74C4C1939039B00E834D5 /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
-		D7A74C4F1939039B00E834D5 /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
-		D7A74C501939039B00E834D5 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
-		D7A74C511939039B00E834D5 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
-		D7A74C531939039B00E834D5 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		D7B4C97818D9DBE70004137D /* ColorCorrect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B4C95E18D9DA410004137D /* ColorCorrect.cpp */; };
 /* End PBXBuildFile section */
 
@@ -419,11 +419,16 @@
 		D74121CF18F9C99300A81F8B /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		D74121D318F9CE3D00A81F8B /* ofxsMerging.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsMerging.h; sourceTree = "<group>"; };
 		D74121E518F9CF3D00A81F8B /* Merge.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Merge.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		D74A80AE194059C0007C3E1C /* Crop.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Crop.cpp; sourceTree = "<group>"; };
+		D74A80AF194059C0007C3E1C /* Crop.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Crop.h; sourceTree = "<group>"; };
+		D74A80B0194059C0007C3E1C /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D74A80B1194059C0007C3E1C /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		D74A80B2194059C0007C3E1C /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		D74A80C4194059CC007C3E1C /* Crop.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Crop.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsOGLTextRenderer.cpp; sourceTree = "<group>"; };
 		D792A2E219334C6300547CFF /* ofxsOGLTextRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsOGLTextRenderer.h; sourceTree = "<group>"; };
 		D792A2E919335BE100547CFF /* ofxsOGLFontUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsOGLFontUtils.h; sourceTree = "<group>"; };
 		D792A2EF1933691800547CFF /* ofxsOGLFontData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsOGLFontData.cpp; sourceTree = "<group>"; };
-		D7A74C571939039B00E834D5 /* Reformat.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Reformat.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		D7B4C95E18D9DA410004137D /* ColorCorrect.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ColorCorrect.cpp; sourceTree = "<group>"; };
 		D7B4C95F18D9DA410004137D /* ColorCorrect.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorCorrect.h; sourceTree = "<group>"; };
 		D7B4C96018D9DA410004137D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -576,11 +581,11 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D7A74C521939039B00E834D5 /* Frameworks */ = {
+		D74A80BF194059CC007C3E1C /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D7A74C531939039B00E834D5 /* OpenGL.framework in Frameworks */,
+				D74A80C0194059CC007C3E1C /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -703,6 +708,7 @@
 		1E551EB817994D4000A4135C = {
 			isa = PBXGroup;
 			children = (
+				D74A80AD194059C0007C3E1C /* Crop */,
 				1E3E3D30179960F9005F2132 /* Headers */,
 				1E551ED217994DEF00A4135C /* Sources */,
 				1E551EDA17994E8100A4135C /* Frameworks */,
@@ -731,7 +737,7 @@
 				1E1FB8F4190696F200F5515D /* Grade.ofx.bundle */,
 				D721EC13191120B30069DB1D /* Roto.ofx.bundle */,
 				D7257D5C192E91120040CD9C /* CornerPin.ofx.bundle */,
-				D7A74C571939039B00E834D5 /* Reformat.ofx.bundle */,
+				D74A80C4194059CC007C3E1C /* Crop.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -939,6 +945,18 @@
 				D74121CF18F9C99300A81F8B /* PluginRegistration.cpp */,
 			);
 			path = Merge;
+			sourceTree = "<group>";
+		};
+		D74A80AD194059C0007C3E1C /* Crop */ = {
+			isa = PBXGroup;
+			children = (
+				D74A80AE194059C0007C3E1C /* Crop.cpp */,
+				D74A80AF194059C0007C3E1C /* Crop.h */,
+				D74A80B0194059C0007C3E1C /* Info.plist */,
+				D74A80B1194059C0007C3E1C /* Makefile */,
+				D74A80B2194059C0007C3E1C /* PluginRegistration.cpp */,
+			);
+			path = Crop;
 			sourceTree = "<group>";
 		};
 		D7B4C95D18D9DA410004137D /* ColorCorrect */ = {
@@ -1244,20 +1262,20 @@
 			productReference = D74121E518F9CF3D00A81F8B /* Merge.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
-		D7A74C461939039B00E834D5 /* Reformat.ofx */ = {
+		D74A80B3194059CC007C3E1C /* Crop.ofx */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D7A74C541939039B00E834D5 /* Build configuration list for PBXNativeTarget "Reformat.ofx" */;
+			buildConfigurationList = D74A80C1194059CC007C3E1C /* Build configuration list for PBXNativeTarget "Crop.ofx" */;
 			buildPhases = (
-				D7A74C471939039B00E834D5 /* Sources */,
-				D7A74C521939039B00E834D5 /* Frameworks */,
+				D74A80B4194059CC007C3E1C /* Sources */,
+				D74A80BF194059CC007C3E1C /* Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = Reformat.ofx;
+			name = Crop.ofx;
 			productName = basic.ofx;
-			productReference = D7A74C571939039B00E834D5 /* Reformat.ofx.bundle */;
+			productReference = D74A80C4194059CC007C3E1C /* Crop.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
 /* End PBXNativeTarget section */
@@ -1300,7 +1318,7 @@
 				1E8B5D4A18B76A7500C31FDC /* Misc.ofx */,
 				D721EC02191120B30069DB1D /* Roto.ofx */,
 				D7257D4B192E91120040CD9C /* CornerPin.ofx */,
-				D7A74C461939039B00E834D5 /* Reformat.ofx */,
+				D74A80B3194059CC007C3E1C /* Crop.ofx */,
 			);
 		};
 /* End PBXProject section */
@@ -1440,6 +1458,7 @@
 				D74121D118F9C99300A81F8B /* Merge.cpp in Sources */,
 				D721EC17191120F30069DB1D /* Roto.cpp in Sources */,
 				D792A2E319334C6300547CFF /* ofxsOGLTextRenderer.cpp in Sources */,
+				D74A80C719405A14007C3E1C /* Crop.cpp in Sources */,
 				1E8B5D7218B7800800C31FDC /* MixViews.cpp in Sources */,
 				1E8B5D7718B7811500C31FDC /* OneView.cpp in Sources */,
 				1E8B5D6818B76F8700C31FDC /* RGBLut.cpp in Sources */,
@@ -1625,21 +1644,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D7A74C471939039B00E834D5 /* Sources */ = {
+		D74A80B4194059CC007C3E1C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D7A74C481939039B00E834D5 /* ofxsCore.cpp in Sources */,
-				D7A74C491939039B00E834D5 /* ofxsImageEffect.cpp in Sources */,
-				D7A74C4A1939039B00E834D5 /* ofxsInteract.cpp in Sources */,
-				D7A74C4B1939039B00E834D5 /* ofxsLog.cpp in Sources */,
-				D7A74C4C1939039B00E834D5 /* ofxsMultiThread.cpp in Sources */,
-				D7A74C4F1939039B00E834D5 /* ofxsParams.cpp in Sources */,
-				D7A74C501939039B00E834D5 /* ofxsProperty.cpp in Sources */,
-				D717F0791939B8DE00AFE80C /* ofxsOGLFontData.cpp in Sources */,
-				D717F07A1939B8E100AFE80C /* ofxsOGLTextRenderer.cpp in Sources */,
-				D717F0781939B8DB00AFE80C /* ofxsTransform3x3.cpp in Sources */,
-				D7A74C511939039B00E834D5 /* ofxsPropertyValidation.cpp in Sources */,
+				D74A80B5194059CC007C3E1C /* ofxsCore.cpp in Sources */,
+				D74A80B6194059CC007C3E1C /* ofxsImageEffect.cpp in Sources */,
+				D74A80B7194059CC007C3E1C /* ofxsInteract.cpp in Sources */,
+				D74A80B8194059CC007C3E1C /* ofxsLog.cpp in Sources */,
+				D74A80B9194059CC007C3E1C /* ofxsMultiThread.cpp in Sources */,
+				D74A80C6194059E3007C3E1C /* PluginRegistration.cpp in Sources */,
+				D74A80C5194059E0007C3E1C /* Crop.cpp in Sources */,
+				D74A80BC194059CC007C3E1C /* ofxsParams.cpp in Sources */,
+				D74A80BD194059CC007C3E1C /* ofxsProperty.cpp in Sources */,
+				D74A80BE194059CC007C3E1C /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2156,24 +2174,24 @@
 			};
 			name = Release;
 		};
-		D7A74C551939039B00E834D5 /* Debug */ = {
+		D74A80C2194059CC007C3E1C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = Reformat.ofx;
+				PRODUCT_NAME = Crop.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Debug;
 		};
-		D7A74C561939039B00E834D5 /* Release */ = {
+		D74A80C3194059CC007C3E1C /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = Reformat.ofx;
+				PRODUCT_NAME = Crop.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
@@ -2361,11 +2379,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D7A74C541939039B00E834D5 /* Build configuration list for PBXNativeTarget "Reformat.ofx" */ = {
+		D74A80C1194059CC007C3E1C /* Build configuration list for PBXNativeTarget "Crop.ofx" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D7A74C551939039B00E834D5 /* Debug */,
-				D7A74C561939039B00E834D5 /* Release */,
+				D74A80C2194059CC007C3E1C /* Debug */,
+				D74A80C3194059CC007C3E1C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

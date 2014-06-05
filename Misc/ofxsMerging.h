@@ -473,6 +473,43 @@ namespace MergeImages2D {
         intersection->y2 = std::min(r1.y2,r2.y2);
         return true;
     }
+    
+    /**
+     * @brief Scales down the rectangle by the given power of 2, and return the smallest *enclosing* rectangle
+     **/
+    inline OfxRectI downscalePowerOfTwoSmallestEnclosing(const OfxRectI& r,unsigned int thisLevel)
+    {
+        if (thisLevel == 0) {
+            return r;
+        }
+        OfxRectI ret;
+        int pot = (1<<thisLevel);
+        int pot_minus1 = pot - 1;
+        ret.x1 = r.x1 >> thisLevel;
+        ret.x2 = (r.x2 + pot_minus1) >> thisLevel;
+        ret.y1 = r.y1 >> thisLevel;
+        ret.y2 = (r.y2 + pot_minus1) >> thisLevel;
+        // check that it's enclosing
+        assert(ret.x1*pot <= r.x1 && ret.x2*pot >= r.x2 && ret.y1*pot <= r.y1 && ret.y2*pot >= r.y2);
+        return ret;
+    }
+
+    
+    inline double getScaleFromMipMapLevel(unsigned int level)
+    {
+        return 1./(1<<level);
+    }
+    
+#ifndef M_LN2
+#define M_LN2       0.693147180559945309417232121458176568  /* loge(2)        */
+#endif
+    inline unsigned int getLevelFromScale(double s)
+    {
+        assert(0. < s && s <= 1.);
+        int retval = -std::floor(std::log(s)/M_LN2 + 0.5);
+        assert(retval >= 0);
+        return retval;
+    }
 
 }
 

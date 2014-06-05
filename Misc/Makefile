@@ -3,6 +3,7 @@ Anaglyph.o \
 ChromaKeyer.o \
 ColorCorrect.o \
 CornerPin.o \
+Crop.o \
 Grade.o \
 JoinViews.o \
 Merge.o \
@@ -35,7 +36,8 @@ VPATH += \
 ../SideBySide \
 ../Switch \
 ../TimeOffset \
-../Transform
+../Transform \
+../Crop
 
 include ../Makefile.master
 
@@ -56,3 +58,4 @@ CXXFLAGS += \
 -I../Switch \
 -I../TimeOffset \
 -I../Transform
+-I../Crop
