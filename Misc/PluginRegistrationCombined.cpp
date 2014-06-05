@@ -2,6 +2,7 @@
 #include "ChromaKeyer.h"
 #include "ColorCorrect.h"
 #include "CornerPin.h"
+#include "Crop.h"
 #include "Grade.h"
 #include "JoinViews.h"
 #include "Merge.h"
@@ -13,7 +14,7 @@
 #include "Switch.h"
 #include "TimeOffset.h"
 #include "Transform.h"
-#include "Crop.h"
+
 namespace OFX
 {
     namespace Plugin

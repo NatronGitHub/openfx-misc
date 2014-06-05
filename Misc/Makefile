@@ -26,6 +26,7 @@ VPATH += \
 ../ChromaKeyer \
 ../ColorCorrect \
 ../CornerPin \
+../Crop \
 ../Grade \
 ../JoinViews \
 ../Merge \
@@ -36,8 +37,7 @@ VPATH += \
 ../SideBySide \
 ../Switch \
 ../TimeOffset \
-../Transform \
-../Crop
+../Transform
 
 include ../Makefile.master
 
@@ -47,6 +47,7 @@ CXXFLAGS += \
 -I../ChromaKeyer \
 -I../ColorCorrect \
 -I../CornerPin \
+-I../Crop \
 -I../Grade \
 -I../JoinViews \
 -I../Merge \
@@ -58,4 +59,3 @@ CXXFLAGS += \
 -I../Switch \
 -I../TimeOffset \
 -I../Transform
--I../Crop

@@ -87,6 +87,7 @@
 #include "Crop.h"
 
 #include <cmath>
+#include <algorithm>
 
 
 #ifdef __APPLE__
@@ -173,43 +174,39 @@ private:
             
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             
-            bool useBlack = (y == _dstRoDPix.y1 || y == (_dstRoDPix.y2 - 1)) && _blackOutside;
-            
-            double yMultipler = (double)(y - _dstRoDPix.y1) / _softness;
-            
-            ///test with top
-            if (yMultipler > 1.) {
-                yMultipler = (double)(_dstRoDPix.y2 - 1 - y) / _softness;
-                
-                ///clamp to 1
-                if (yMultipler > 1.) {
-                    yMultipler = 1.;
-                }
-            }
-            
-            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents)
-            {
-                if (!useBlack && _blackOutside) {
-                    useBlack = (x == _dstRoDPix.x1 || (x == _dstRoDPix.x2 - 1));
-                }
-                if (!useBlack) {
-                    double xMultipler = (double)(x - _dstRoDPix.x1) / _softness;
-                    
-                    ///test with right
-                    if (xMultipler > 1.) {
-                        xMultipler = (double)(_dstRoDPix.x2 - 1 - x) / _softness;
-                        //clamp to 1
-                        if (xMultipler > 1.) {
-                            xMultipler = 1.;
-                        }
-                    }
-                    PIX *srcPix = (PIX*)  (_srcImg ? _srcImg->getPixelAddress(x + _translation.x, y + _translation.y) : 0);
-                    for (int k = 0; k < nComponents; ++k) {
-                        dstPix[k] =  srcPix ? srcPix[k] * xMultipler * yMultipler : 0.;
-                    }
-                } else {
+            bool yblack = _blackOutside && (y == _dstRoDPix.y1 || y == (_dstRoDPix.y2 - 1));
+
+            // distance to the nearest crop area horizontal edge
+            int yDistance = _blackOutside + std::min(y - _dstRoDPix.y1, _dstRoDPix.y2 - 1 - y);
+            // handle softness
+            double yMultiplier = yDistance < _softness ? (double)yDistance / _softness : 1.;
+
+            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
+                bool xblack = _blackOutside && (x == _dstRoDPix.x1 || x == (_dstRoDPix.x2 - 1));
+                // treat the black case separately
+                if (xblack || yblack || !_srcImg) {
                     for (int k = 0; k < nComponents; ++k) {
                         dstPix[k] =  0.;
+                    }
+                } else {
+                    // distance to the nearest crop area vertical edge
+                    int xDistance = _blackOutside + std::min(x - _dstRoDPix.x1, _dstRoDPix.x2 - 1 - x);
+                    // handle softness
+                    double xMultiplier = xDistance < _softness ? (double)xDistance / _softness : 1.;
+
+                    PIX *srcPix = (PIX*)_srcImg->getPixelAddress(x + _translation.x, y + _translation.y);
+                    if (!srcPix) {
+                        for (int k = 0; k < nComponents; ++k) {
+                            dstPix[k] =  0.;
+                        }
+                    } else if (xMultiplier != 1. || yMultiplier != 1.) {
+                        for (int k = 0; k < nComponents; ++k) {
+                            dstPix[k] =  srcPix[k] * xMultiplier * yMultiplier;
+                        }
+                    } else {
+                        for (int k = 0; k < nComponents; ++k) {
+                            dstPix[k] =  srcPix[k];
+                        }
                     }
                 }
             }
