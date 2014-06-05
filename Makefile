@@ -5,6 +5,7 @@ Anaglyph \
 ChromaKeyer \
 ColorCorrect \
 CornerPin \
+Crop \
 Grade \
 JoinViews \
 Merge \
@@ -15,8 +16,7 @@ Roto \
 SideBySide \
 Switch \
 TimeOffset \
-Transform \
-Crop
+Transform
 
 ifneq ($(DEBUGFLAG),-O3)
   # DebugProxy is only useful to debug the communication between a host and a plugin
