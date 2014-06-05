@@ -1089,7 +1089,6 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(true);
     srcClip->setIsMask(false);
-    srcClip->setOptional(true);
     
 
     // create the mandated output clip
