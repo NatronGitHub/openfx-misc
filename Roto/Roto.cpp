@@ -167,7 +167,8 @@ private:
                 } else {
                     for (int k = 0; k < std::min(nComponents,3); ++k) {
                         if (_premult) {
-                            dstPix[k] = srcPix ? (srcPix[k] * *maskPix) / maxValue : 0.;
+                            PIX m = maskPix ? *maskPix : 0;
+                            dstPix[k] = srcPix ? (srcPix[k] *  m) / maxValue : 0.;
                         } else {
                             dstPix[k] = srcPix ? srcPix[k] : 0.;
                         }
@@ -212,7 +213,7 @@ public:
         assert(srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
         // name of mask clip depends on the context
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-        assert(maskClip_->getPixelComponents() == ePixelComponentAlpha);
+        assert((maskClip_ && maskClip_->getPixelComponents() == ePixelComponentAlpha) || !maskClip_);
         
         _premult = fetchBooleanParam(kPremultParamName);
         assert(_premult);
