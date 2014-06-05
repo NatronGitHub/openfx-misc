@@ -87,7 +87,7 @@
 #include "Crop.h"
 
 #include <cmath>
-#include <>
+#include <algorithm>
 
 #include "ofxsProcessing.H"
 #include "ofxsMerging.h"
