@@ -119,7 +119,7 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
         }
 
         OFX::Matrix3x3 invtransform;
-        bool success = getInverseTransformCanonical(args.time, invert, eGetTransformRender ,&invtransform); // virtual function
+        bool success = getInverseTransformCanonical(args.time, invert, &invtransform); // virtual function
         if (!success) {
             invtransform.a = 0.;
             invtransform.b = 0.;
@@ -194,7 +194,7 @@ Transform3x3Plugin::getRegionOfDefinition(const RegionOfDefinitionArguments &arg
     _invert->getValue(invert);
     
     OFX::Matrix3x3 transform;
-    bool success = getInverseTransformCanonical(args.time, !invert,eGetTransformRoD, &transform); // RoD is computed using the *DIRECT* transform
+    bool success = getInverseTransformCanonical(args.time, !invert, &transform); // RoD is computed using the *DIRECT* transform, which is why we use !invert
     if (!success) {
         return false; // can't compute - use default values
     }
@@ -255,7 +255,7 @@ Transform3x3Plugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
     _invert->getValue(invert);
 
     OFX::Matrix3x3 invtransform;
-    bool success = getInverseTransformCanonical(args.time, invert,eGetTransformRoD, &invtransform);
+    bool success = getInverseTransformCanonical(args.time, invert, &invtransform);
     if (!success) {
         // can't compute inverse transform, use default value (render will probably fail anyway)
         return;
@@ -484,7 +484,7 @@ bool Transform3x3Plugin::getTransform(const TransformArguments &args, Clip * &tr
     _invert->getValueAtTime(args.time, invert);
 
     OFX::Matrix3x3 invtransform;
-    bool success = getInverseTransformCanonical(args.time, invert,eGetTransformRoD, &invtransform);
+    bool success = getInverseTransformCanonical(args.time, invert, &invtransform);
     if (!success) {
         return false;
     }

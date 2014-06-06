@@ -61,14 +61,8 @@ public:
     // a default implementation of isIdentity is provided, which may be overridden by the derived class
     virtual bool isIdentity(double time) { return false; };
 
-    enum eGetTransformReason {
-        eGetTransformRoD = 0, //< called to find out the destination region of definition
-        eGetTransformRender //< called to find out the transform to apply to source pixels in the processor.
-    };
-    
     /** @brief recover a transform matrix from an effect */
-    virtual bool getInverseTransformCanonical(double time, bool invert,Transform3x3Plugin::eGetTransformReason reason,
-                                              OFX::Matrix3x3* invtransform) = 0;
+    virtual bool getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) = 0;
 
 
 

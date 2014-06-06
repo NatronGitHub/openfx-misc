@@ -159,8 +159,7 @@ public:
 
     virtual bool isIdentity(double time) /*OVERRIDE FINAL*/;
 
-    virtual bool getInverseTransformCanonical(double time, bool invert,Transform3x3Plugin::eGetTransformReason reason,
-                                              OFX::Matrix3x3* invtransform) /*OVERRIDE FINAL*/;
+    virtual bool getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) /*OVERRIDE FINAL*/;
 
 private:
     // NON-GENERIC
@@ -200,8 +199,7 @@ bool TransformPlugin::isIdentity(double time)
     return false;
 }
 
-bool TransformPlugin::getInverseTransformCanonical(double time, bool invert,Transform3x3Plugin::eGetTransformReason /*reason*/,
-                                                   OFX::Matrix3x3* invtransform)
+bool TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform)
 {
     double scaleX, scaleY;
     double translateX, translateY;
