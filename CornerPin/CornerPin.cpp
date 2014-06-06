@@ -109,16 +109,28 @@
 #endif
 
 #define kToParamGroupName "To"
-#define kTopLeftParamName "to1"
-#define kTopRightParamName "to2"
-#define kBtmLeftParamName "to3"
-#define kBtmRightParamName "to4"
+static const char* const kToParamName[4] = {
+    "to1",
+    "to2",
+    "to3",
+    "to4"
+};
+
+static const char* const kEnableParamName[4] = {
+    "enable1",
+    "enable2",
+    "enable3",
+    "enable4"
+};
 
 #define kFromParamGroupName "From"
-#define kFrom1ParamName "from1"
-#define kFrom2ParamName "from2"
-#define kFrom3ParamName "from3"
-#define kFrom4ParamName "from4"
+static const char* const kFromParamName[4] = {
+    "from1",
+    "from2",
+    "from3",
+    "from4"
+};
+
 
 #define kCopyFromParamName "Copy \"From\" points"
 #define kCopyToParamName "Copy \"To\" points"
@@ -219,45 +231,26 @@ public:
     /** @brief ctor */
     CornerPinPlugin(OfxImageEffectHandle handle, bool masked)
     : Transform3x3Plugin(handle, masked)
-    , _topLeft(0)
-    , _topRight(0)
-    , _btmLeft(0)
-    , _btmRight(0)
     , _extraMatrixRow1(0)
     , _extraMatrixRow2(0)
     , _extraMatrixRow3(0)
-    , _from1(0)
-    , _from2(0)
-    , _from3(0)
-    , _from4(0)
     , _copyFromButton(0)
     , _copyToButton(0)
     , _copyInputButton(0)
     {
         // NON-GENERIC
-        _topLeft = fetchDouble2DParam(kTopLeftParamName);
-        _topRight = fetchDouble2DParam(kTopRightParamName);
-        _btmLeft = fetchDouble2DParam(kBtmLeftParamName);
-        _btmRight = fetchDouble2DParam(kBtmRightParamName);
-        assert(_topLeft && _topRight && _btmLeft && _btmRight);
-        
-        _topLeftEnabled = fetchBooleanParam(std::string("enable ") + kTopLeftParamName);
-        _topRightEnabled = fetchBooleanParam(std::string("enable ") + kTopRightParamName);
-        _btmLeftEnabled = fetchBooleanParam(std::string("enable ") + kBtmLeftParamName);
-        _btmRightEnabled = fetchBooleanParam(std::string("enable ") + kBtmRightParamName);
-        assert(_topLeftEnabled && _topRightEnabled && _btmLeftEnabled && _btmRightEnabled);
-        
+        for (int i = 0; i < 4; ++i) {
+            _to[i] = fetchDouble2DParam(kToParamName[i]);
+            _enable[i] = fetchBooleanParam(kEnableParamName[i]);
+            _from[i] = fetchDouble2DParam(kFromParamName[i]);
+            assert(_to[i] && _enable[i] && _from[i]);
+        }
+
         _extraMatrixRow1 = fetchDouble3DParam("row1");
         _extraMatrixRow2 = fetchDouble3DParam("row2");
         _extraMatrixRow3 = fetchDouble3DParam("row3");
         assert(_extraMatrixRow1 && _extraMatrixRow2 && _extraMatrixRow3);
-        
-        _from1 = fetchDouble2DParam(kFrom1ParamName);
-        _from2 = fetchDouble2DParam(kFrom2ParamName);
-        _from3 = fetchDouble2DParam(kFrom3ParamName);
-        _from4 = fetchDouble2DParam(kFrom4ParamName);
-        assert(_from1 && _from2 && _from3 && _from4);
-        
+
         _copyFromButton = fetchPushButtonParam(kCopyFromParamName);
         _copyToButton = fetchPushButtonParam(kCopyToParamName);
         _copyInputButton = fetchPushButtonParam(kCopyInputRoDParamName);
@@ -292,21 +285,12 @@ private:
 
 private:
     // NON-GENERIC
-    OFX::Double2DParam* _topLeft;
-    OFX::Double2DParam* _topRight;
-    OFX::Double2DParam* _btmLeft;
-    OFX::Double2DParam* _btmRight;
-    OFX::BooleanParam* _topLeftEnabled;
-    OFX::BooleanParam* _topRightEnabled;
-    OFX::BooleanParam* _btmLeftEnabled;
-    OFX::BooleanParam* _btmRightEnabled;
+    OFX::Double2DParam* _to[4];
+    OFX::BooleanParam* _enable[4];
     OFX::Double3DParam* _extraMatrixRow1;
     OFX::Double3DParam* _extraMatrixRow2;
     OFX::Double3DParam* _extraMatrixRow3;
-    OFX::Double2DParam* _from1;
-    OFX::Double2DParam* _from2;
-    OFX::Double2DParam* _from3;
-    OFX::Double2DParam* _from4;
+    OFX::Double2DParam* _from[4];
     
     OFX::PushButtonParam* _copyFromButton;
     OFX::PushButtonParam* _copyToButton;
@@ -316,121 +300,134 @@ private:
 
 bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, bool invert, OFX::Matrix3x3* invtransform)
 {
-    OFX::Point3D p1,p2,p3,p4;
-    _from1->getValueAtTime(time, p1.x, p1.y);
-    _from2->getValueAtTime(time, p2.x, p2.y);
-    _from3->getValueAtTime(time, p3.x, p3.y);
-    _from4->getValueAtTime(time, p4.x, p4.y);
-    p1.z = 1.;
-    p2.z = 1.;
-    p3.z = 1.;
-    p4.z = 1.;
+#if 1
+    OFX::Point3D p[4];
+    bool enable[4];
+    for (int i = 0; i < 4; ++i) {
+        _enable[i]->getValue(enable[i]);
+        _from[i]->getValueAtTime(time, p[i].x, p[i].y);
+        p[i].z = 1.;
+    }
 
-    bool topLeftEnabled,topRightEnabled,btmLeftEnabled,btmRightEnabled;
-    _topLeftEnabled->getValue(topLeftEnabled);
-    _topRightEnabled->getValue(topRightEnabled);
-    _btmRightEnabled->getValue(btmRightEnabled);
-    _btmLeftEnabled->getValue(btmLeftEnabled);
+    OFX::Point3D q[4];
+    for (int i = 0; i < 4; ++i) {
+        if (enable[i]) {
+            _to[i]->getValueAtTime(time, q[i].x, q[i].y);
+            q[i].z = 1.;
+        } else {
+            q[i] = p[i];
+        }
+    }
 
-    OFX::Point3D q1,q2,q3,q4;
-    if (topLeftEnabled) {
-        OfxPointD topLeft;
-        _topLeft->getValueAtTime(time,topLeft.x, topLeft.y);
-        q1.x = topLeft.x;
-        q1.y = topLeft.y;
-        q1.z = 1.;
-    } else {
-        q1 = p1;
-    }
-    
-    if (topRightEnabled) {
-        OfxPointD topRight;
-        _topRight->getValueAtTime(time,topRight.x, topRight.y);
-        q2.x = topRight.x;
-        q2.y = topRight.y;
-        q2.z = 1.;
-    } else {
-        q2 = p2;
-    }
-    
-    if (btmRightEnabled) {
-        OfxPointD btmRight;
-        _btmRight->getValueAtTime(time,btmRight.x, btmRight.y);
-        q3.x = btmRight.x;
-        q3.y = btmRight.y;
-        q3.z = 1.;
-    } else {
-        q3 = p3;
-    }
-    
-    if (btmLeftEnabled) {
-        OfxPointD btmLeft;
-        _btmLeft->getValueAtTime(time,btmLeft.x, btmLeft.y);
-        q4.x = btmLeft.x;
-        q4.y = btmLeft.y;
-        q4.z = 1.;
-    } else {
-        q4 = p4;
-    }
-    
-    
     OFX::Matrix3x3 homo3x3;
     bool success;
     if (invert) {
-        success = homography_from_four_points(p1, p2, p3, p4, q1, q2, q3, q4, &homo3x3);
+        success = homography_from_four_points(p[0], p[1], p[2], p[3], q[0], q[1], q[2], q[3], &homo3x3);
     } else {
-        success = homography_from_four_points(q1, q2, q3, q4, p1, p2, p3, p4, &homo3x3);
+        success = homography_from_four_points(q[0], q[1], q[2], q[3], p[0], p[1], p[2], p[3], &homo3x3);
     }
 
     if (!success) {
         ///cannot compute the homography when 3 points are aligned
         return false;
     }
-    
+
     OFX::Matrix3x3 extraMat = getExtraMatrix(time);
     *invtransform = homo3x3 * extraMat;
 
     return true;
+#else
+    // in this new version, both from and to are enableds/disabled at the same time
+    bool enable[4];
+    OFX::Point3D p[2][4];
+    int f = invert ? 1 : 0;
+    int t = invert ? 0 : 1;
+    int k = 0;
+
+    for (int i=0; i < 4; ++i) {
+        _enable[i]->getValue(enable[i]);
+        if (enable[i]) {
+            _from[i]->getValueAtTime(time, p[f][k].x, p[f][k].y);
+            _to[i]->getValueAtTime(time, p[t][k].x, p[t][k].y);
+            ++k;
+        }
+        p[0][i].z = p[1][i].z = 1.;
+    }
+
+    // k contains the number of valid points
+    OFX::Matrix3x3 homo3x3;
+    bool success = false;
+
+    assert(0 <= k && k <= 4);
+    if (k == 0) {
+        // no points, only apply extraMat;
+        *invtransform = getExtraMatrix(time);
+        return true;
+    }
+
+    switch (k) {
+        case 4:
+            success = homography_from_four_points(p[0][0], p[0][1], p[0][2], p[0][3], p[1][0], p[1][1], p[1][2], p[1][3], &homo3x3);
+            break;
+        case 3:
+            //success = affine_from_three_points(p[0][0], p[0][1], p[0][2], p[1][0], p[1][1], p[1][2], &homo3x3);
+            break;
+        case 2:
+            //success = similarity_from_two_points(p[0][0], p[0][1], p[1][0], p[1][1], &homo3x3);
+            break;
+        case 1:
+            //success = translation_from_one_point(p[0][0], p[1][0], &homo3x3);
+            homo3x3.a = 1.;
+            homo3x3.b = 0.;
+            homo3x3.c = p[1][0].x - p[0][0].x;
+            homo3x3.d = 0.;
+            homo3x3.e = 1.;
+            homo3x3.f = p[1][0].y - p[0][0].y;
+            homo3x3.g = 0.;
+            homo3x3.h = 0.;
+            homo3x3.i = 1.;
+            success = true;
+            break;
+    }
+    if (!success) {
+        ///cannot compute the homography when 3 points are aligned
+        return false;
+    }
+
+    OFX::Matrix3x3 extraMat = getExtraMatrix(time);
+    *invtransform = homo3x3 * extraMat;
+
+    return true;
+#endif
 }
 
 
 // overridden is identity
 bool CornerPinPlugin::isIdentity(double time)
 {
-    
-    OfxPointD topLeft,topRight,btmLeft,btmRight;
-    _topLeft->getValue(topLeft.x, topLeft.y);
-    _topRight->getValue(topRight.x, topRight.y);
-    _btmLeft->getValue(btmLeft.x, btmLeft.y);
-    _btmRight->getValue(btmRight.x, btmRight.y);
-    
     OFX::Matrix3x3 extraMat = getExtraMatrix(time);
-    
-    OfxPointD p1,p2,p3,p4;
-    _from1->getValueAtTime(time,p1.x, p1.y);
-    _from2->getValueAtTime(time,p2.x, p2.y);
-    _from3->getValueAtTime(time,p3.x, p3.y);
-    _from4->getValueAtTime(time,p4.x, p4.y);
-
-    bool topLeftEnabled, topRightEnabled, btmLeftEnabled, btmRightEnabled;
-    _topLeftEnabled->getValue(topLeftEnabled);
-    _topRightEnabled->getValue(topRightEnabled);
-    _btmRightEnabled->getValue(btmRightEnabled);
-    _btmLeftEnabled->getValue(btmLeftEnabled);
-    
-    // if topLeft is not enabled, q1 = p1 (see getInverseTransformCanonical()
-    if ((!topLeftEnabled || (p1.x == topLeft.x && p1.y == topLeft.y)) &&
-        (!topRightEnabled || (p2.x == topRight.x && p2.y == topRight.y)) &&
-        (!btmRightEnabled || (p3.x == btmRight.x && p3.y == btmRight.y)) &&
-        (!btmLeftEnabled || (p4.x == btmLeft.x && p4.y == btmLeft.y)) &&
-        extraMat.isIdentity()) {
-        return true;
+    if (!extraMat.isIdentity()) {
+        return false;
     }
-    
-    return false;
+
+    // all enabled points must be equal
+    for (int i = 0; i < 4; ++i) {
+        bool enable;
+        _enable[i]->getValue(enable);
+        if (enable) {
+            OfxPointD p, q;
+            _from[i]->getValueAtTime(time, p.x, p.y);
+            _to[i]->getValueAtTime(time, q.x, q.y);
+            if ((p.x != q.x) || (p.y != q.y)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
-static void copyPoint(OFX::Double2DParam* from,OFX::Double2DParam* to)
+static void copyPoint(OFX::Double2DParam* from, OFX::Double2DParam* to)
 {
 //    OfxPointD p;
 //    unsigned int keyCount = from->getNumKeys();
@@ -451,88 +448,48 @@ void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const s
 {
     if (paramName == kCopyInputRoDParamName) {
         const OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
-        _from1->setValue(srcRoD.x1, srcRoD.y2);
-        _from2->setValue(srcRoD.x2, srcRoD.y2);
-        _from3->setValue(srcRoD.x2, srcRoD.y1);
-        _from4->setValue(srcRoD.x1, srcRoD.y1);
+        _from[0]->setValue(srcRoD.x1, srcRoD.y1);
+        _from[1]->setValue(srcRoD.x2, srcRoD.y1);
+        _from[2]->setValue(srcRoD.x2, srcRoD.y2);
+        _from[3]->setValue(srcRoD.x1, srcRoD.y2);
     } else if (paramName == kCopyFromParamName) {
-        copyPoint(_from1,_topLeft);
-        copyPoint(_from2,_topRight);
-        copyPoint(_from3,_btmRight);
-        copyPoint(_from4,_btmLeft);
+        for (int i=0; i<4; ++i) {
+            copyPoint(_from[i],_to[i]);
+        }
     } else if (paramName == kCopyToParamName) {
-        copyPoint(_topLeft,_from1);
-        copyPoint(_topRight,_from2);
-        copyPoint(_btmRight,_from3);
-        copyPoint(_btmLeft,_from4);
+        for (int i=0; i<4; ++i) {
+            copyPoint(_to[i],_from[i]);
+        }
     }
 }
 
 
 class CornerPinTransformInteract : public OFX::OverlayInteract
 {
-    
-    enum MouseState
-    {
-        eIdle = 0,
-        eDraggingTopLeft,
-        eDraggingTopRight,
-        eDraggingBottomLeft,
-        eDraggingBottomRight
-    };
-    
-    enum DrawState
-    {
-        eInactive = 0,
-        eHoveringTopLeft,
-        eHoveringTopRight,
-        eHoveringBottomLeft,
-        eHoveringBottomRight
-    };
-    
 public:
     
     CornerPinTransformInteract(OfxInteractHandle handle, OFX::ImageEffect* effect)
     : OFX::OverlayInteract(handle)
-    , _topLeft(0)
-    , _topRight(0)
-    , _btmLeft(0)
-    , _btmRight(0)
     , _invert(0)
-    , _from1(0)
-    , _from2(0)
-    , _from3(0)
-    , _from4(0)
     , _overlayChoice(0)
-    , _ms(eIdle)
-    , _ds(eInactive)
+    , _dragging(-1)
+    , _hovering(-1)
     , _lastMousePos()
     , _lastPenDownPos()
-    , _topLeftDraggedPos()
-    , _topRightDraggedPos()
-    , _btmRightDraggedPos()
-    , _btmLeftDraggedPos()
     {
-        _topLeft = effect->fetchDouble2DParam(kTopLeftParamName);
-        _topRight = effect->fetchDouble2DParam(kTopRightParamName);
-        _btmRight = effect->fetchDouble2DParam(kBtmRightParamName);
-        _btmLeft = effect->fetchDouble2DParam(kBtmLeftParamName);
+        for (int i = 0; i < 4; ++i) {
+            _to[i] = effect->fetchDouble2DParam(kToParamName[i]);
+            _from[i] = effect->fetchDouble2DParam(kFromParamName[i]);
+            assert(_to[i] && _from[i]);
+            addParamToSlaveTo(_to[i]);
+            addParamToSlaveTo(_from[i]);
+        }
         _invert = effect->fetchBooleanParam(kTransform3x3InvertParamName);
-        
-        _from1 = effect->fetchDouble2DParam(kFrom1ParamName);
-        _from2 = effect->fetchDouble2DParam(kFrom2ParamName);
-        _from3 = effect->fetchDouble2DParam(kFrom3ParamName);
-        _from4 = effect->fetchDouble2DParam(kFrom4ParamName);
-        
-        _overlayChoice = effect->fetchChoiceParam(kOverlayPointsParamName);
-        
-        addParamToSlaveTo(_topLeft);
-        addParamToSlaveTo(_topRight);
-        addParamToSlaveTo(_btmRight);
-        addParamToSlaveTo(_btmLeft);
         addParamToSlaveTo(_invert);
+        _overlayChoice = effect->fetchChoiceParam(kOverlayPointsParamName);
+        addParamToSlaveTo(_overlayChoice);
     }
-    
+
     // overridden functions from OFX::Interact to do things
     virtual bool draw(const OFX::DrawArgs &args);
     virtual bool penMotion(const OFX::PenArgs &args);
@@ -554,214 +511,66 @@ private:
         return v == 1;
     }
     
-    bool isNearbyTopLeft(const OfxPointD& pos,bool useFromPoints,double tolerance) const;
-    bool isNearbyTopRight(const OfxPointD& pos,bool useFromPoints,double tolerance) const;
-    bool isNearbyBtmLeft(const OfxPointD& pos,bool useFromPoints,double tolerance) const;
-    bool isNearbyBtmRight(const OfxPointD& pos,bool useFromPoints,double tolerance) const;
-    
-    OFX::Double2DParam* _topLeft;
-    OFX::Double2DParam* _topRight;
-    OFX::Double2DParam* _btmLeft;
-    OFX::Double2DParam* _btmRight;
+    bool isNearbyTo(int i, const OfxPointD& pos,bool useFromPoints,double tolerance) const;
+
+    OFX::Double2DParam* _to[4];
+    OFX::Double2DParam* _from[4];
     OFX::BooleanParam* _invert;
-    
-    OFX::Double2DParam* _from1;
-    OFX::Double2DParam* _from2;
-    OFX::Double2DParam* _from3;
-    OFX::Double2DParam* _from4;
-    
     OFX::ChoiceParam* _overlayChoice;
     
-    MouseState _ms;
-    DrawState _ds;
+    int _dragging; // -1: idle, else dragging point number
+    int _hovering; // -1: idle, else hovering point number
     OfxPointD _lastMousePos;
     OfxPointD _lastPenDownPos;
     
-    OfxPointD _topLeftDraggedPos;
-    OfxPointD _topRightDraggedPos;
-    OfxPointD _btmRightDraggedPos;
-    OfxPointD _btmLeftDraggedPos;
-    
+    OfxPointD _draggedPos[4];
 };
 
 
-bool CornerPinTransformInteract::isNearbyTopLeft(const OfxPointD& pos,bool useFromPoints,double tolerance) const
-{
-    OfxPointD topLeft;
-    useFromPoints ? _from1->getValue(topLeft.x, topLeft.y) : _topLeft->getValue(topLeft.x, topLeft.y);
-    if (pos.x >= (topLeft.x - tolerance) && pos.x <= (topLeft.x + tolerance) &&
-        pos.y >= (topLeft.y - tolerance) && pos.y <= (topLeft.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-}
 
-bool CornerPinTransformInteract::isNearbyTopRight(const OfxPointD& pos,bool useFromPoints,double tolerance) const
-{
-    OfxPointD topRight;
-    useFromPoints ? _from2->getValue(topRight.x, topRight.y) : _topRight->getValue(topRight.x, topRight.y);
-    if (pos.x >= (topRight.x - tolerance) && pos.x <= (topRight.x + tolerance) &&
-        pos.y >= (topRight.y - tolerance) && pos.y <= (topRight.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-}
 
-bool CornerPinTransformInteract::isNearbyBtmLeft(const OfxPointD& pos,bool useFromPoints,double tolerance) const
+bool CornerPinTransformInteract::isNearbyTo(int i, const OfxPointD& pos,bool useFromPoints,double tolerance) const
 {
-    OfxPointD btmLeft;
-    useFromPoints ? _from4->getValue(btmLeft.x, btmLeft.y) :_btmLeft->getValue(btmLeft.x, btmLeft.y);
-    if (pos.x >= (btmLeft.x - tolerance) && pos.x <= (btmLeft.x + tolerance) &&
-        pos.y >= (btmLeft.y - tolerance) && pos.y <= (btmLeft.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool CornerPinTransformInteract::isNearbyBtmRight(const OfxPointD& pos,bool useFromPoints,double tolerance) const
-{
-    OfxPointD btmRight;
-    useFromPoints ? _from3->getValue(btmRight.x, btmRight.y) : _btmRight->getValue(btmRight.x, btmRight.y);
-    if (pos.x >= (btmRight.x - tolerance) && pos.x <= (btmRight.x + tolerance) &&
-        pos.y >= (btmRight.y - tolerance) && pos.y <= (btmRight.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
+    OfxPointD p;
+    useFromPoints ? _from[i]->getValue(p.x, p.y) :_to[i]->getValue(p.x, p.y);
+    return std::fabs(pos.x-p.x) < tolerance && std::fabs(pos.y-p.y) < tolerance;
 }
 
 bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
 {
-
     bool useFrom = isFromPoints();
-    
-    OfxPointD topLeft,topRight,btmLeft,btmRight;
-    if (_ms == eDraggingTopLeft) {
-        topLeft = _topLeftDraggedPos;
-    } else {
-        useFrom ? _from1->getValue(topLeft.x, topLeft.y) : _topLeft->getValue(topLeft.x, topLeft.y);
+
+    OfxPointD p[4];
+    for (int i = 0; i < 4; ++i) {
+        if (_dragging == i) {
+            p[i] = _draggedPos[i];
+        } else {
+            useFrom ? _from[i]->getValue(p[i].x, p[i].y) :_to[i]->getValue(p[i].x, p[i].y);
+        }
     }
     
-    if (_ms == eDraggingTopRight) {
-        topRight = _topRightDraggedPos;
-    } else {
-        useFrom ? _from2->getValue(topRight.x, topRight.y) :_topRight->getValue(topRight.x, topRight.y);
-    }
-    
-    if (_ms == eDraggingBottomLeft) {
-        btmLeft = _btmLeftDraggedPos;
-    } else {
-        useFrom ? _from4->getValue(btmLeft.x, btmLeft.y) :_btmLeft->getValue(btmLeft.x, btmLeft.y);
-    }
-    
-    if (_ms == eDraggingBottomRight) {
-        btmRight = _btmRightDraggedPos;
-    } else {
-        useFrom ? _from3->getValue(btmRight.x, btmRight.y) : _btmRight->getValue(btmRight.x, btmRight.y);
-    }
-    
+    glPushAttrib(GL_POINT_BIT);
     glPointSize(5);
     glBegin(GL_POINTS);
-    
-    if (_ds == eHoveringTopLeft || _ms == eDraggingTopLeft) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1., 1., 1., 1.);
+    for (int i = 0; i < 4; ++i) {
+        if (_hovering == i || _dragging == i) {
+            glColor4f(0., 1., 0., 1.);
+        } else {
+            glColor4f(1., 1., 1., 1.);
+        }
+        glVertex2d(p[i].x, p[i].y);
     }
-    glVertex2d(topLeft.x, topLeft.y);
-    
-    if (_ds == eHoveringTopRight || _ms == eDraggingTopRight) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1., 1., 1., 1.);
-    }
-    glVertex2d(topRight.x, topRight.y);
-    
-    if (_ds == eHoveringBottomLeft || _ms == eDraggingBottomLeft) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1., 1., 1., 1.);
-    }
-    
-    glVertex2d(btmLeft.x, btmLeft.y);
-    
-    if (_ds == eHoveringBottomRight || _ms == eDraggingBottomRight) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1., 1., 1., 1.);
-    }
-    glVertex2d(btmRight.x, btmRight.y);
     glEnd();
 
-    double offset = 10 * args.pixelScale.x;
-    TextRenderer::bitmapString(topLeft.x - offset,topLeft.y + offset,useFrom ? kFrom1ParamName : kTopLeftParamName);
-    TextRenderer::bitmapString(topRight.x + offset,topRight.y + offset,useFrom ? kFrom2ParamName : kTopRightParamName);
-    TextRenderer::bitmapString(btmRight.x + offset,btmRight.y - offset,useFrom ? kFrom3ParamName : kBtmRightParamName);
-    TextRenderer::bitmapString(btmLeft.x - offset,btmLeft.y - offset,useFrom ? kFrom4ParamName : kBtmLeftParamName);
-
-    glPointSize(1.);
-    
-    bool inverted;
-    _invert->getValue(inverted);
-    if (inverted) {
-        double arrowXPosition = 0;
-        double arrowXHalfSize = 10 * args.pixelScale.x;
-        double arrowHeadOffsetX = 3 * args.pixelScale.x;
-        double arrowHeadOffsetY = 3 * args.pixelScale.x;
-        
-        glPushMatrix ();
-        glTranslatef (arrowXPosition, 0., 0);
-        
-        glBegin(GL_LINES);
-        ///draw the central bar
-        glVertex2d(- arrowXHalfSize, 0.);
-        glVertex2d(+ arrowXHalfSize, 0.);
-        
-        ///left triangle
-        glVertex2d(- arrowXHalfSize, 0.);
-        glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, arrowHeadOffsetY);
-        
-        glVertex2d(- arrowXHalfSize, 0.);
-        glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, -arrowHeadOffsetY);
-        
-        ///right triangle
-        glVertex2d(+ arrowXHalfSize, 0.);
-        glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, arrowHeadOffsetY);
-        
-        glVertex2d(+ arrowXHalfSize, 0.);
-        glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, -arrowHeadOffsetY);
-        glEnd();
-        
-        glRotated(90., 0., 0., 1.);
-        
-        glBegin(GL_LINES);
-        ///draw the central bar
-        glVertex2d(- arrowXHalfSize, 0.);
-        glVertex2d(+ arrowXHalfSize, 0.);
-        
-        ///left triangle
-        glVertex2d(- arrowXHalfSize, 0.);
-        glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, arrowHeadOffsetY);
-        
-        glVertex2d(- arrowXHalfSize, 0.);
-        glVertex2d(- arrowXHalfSize + arrowHeadOffsetX, -arrowHeadOffsetY);
-        
-        ///right triangle
-        glVertex2d(+ arrowXHalfSize, 0.);
-        glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, arrowHeadOffsetY);
-        
-        glVertex2d(+ arrowXHalfSize, 0.);
-        glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, -arrowHeadOffsetY);
-        glEnd();
-        
-        glPopMatrix ();
+    for (int i = 0; i < 4; ++i) {
+        TextRenderer::bitmapString(p[i].x, p[i].y, useFrom ? kFromParamName[i] : kToParamName[i]);
     }
+
+    glPopAttrib();
 
     return true;
 }
+
 bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
 {
 
@@ -773,103 +582,67 @@ bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
     bool useFrom = isFromPoints();
     
     double selectionTol = 15. * args.pixelScale.x;
-    if (isNearbyBtmLeft(args.penPosition, useFrom,selectionTol)) {
-        _ds = eHoveringBottomLeft;
-        didSomething = true;
-    } else if (isNearbyBtmRight(args.penPosition, useFrom,selectionTol)) {
-        _ds = eHoveringBottomRight;
-        didSomething = true;
-    } else if (isNearbyTopRight(args.penPosition, useFrom,selectionTol)) {
-        _ds = eHoveringTopRight;
-        didSomething = true;
-    } else if (isNearbyTopLeft(args.penPosition, useFrom,selectionTol)) {
-        _ds = eHoveringTopLeft;
-        didSomething = true;
-    } else {
-        _ds = eInactive;
-        didSomething = true;
+    _hovering = -1;
+    didSomething = false;
+
+    for (int i = 0; i < 4; ++i) {
+        if (_dragging == i) {
+            _draggedPos[i].x += delta.x;
+            _draggedPos[i].y += delta.y;
+            didSomething = true;
+        } else if (isNearbyTo(i, args.penPosition, useFrom, selectionTol)) {
+            _hovering = i;
+            didSomething = true;
+        }
     }
-    
-    if (_ms == eDraggingBottomLeft) {
-        _btmLeftDraggedPos.x += delta.x;
-        _btmLeftDraggedPos.y += delta.y;
-        didSomething = true;
-    } else if (_ms == eDraggingBottomRight) {
-        _btmRightDraggedPos.x += delta.x;
-        _btmRightDraggedPos.y += delta.y;
-        didSomething = true;
-    } else if (_ms == eDraggingTopLeft) {
-        _topLeftDraggedPos.x += delta.x;
-        _topLeftDraggedPos.y += delta.y;
-        didSomething = true;
-    } else if (_ms == eDraggingTopRight) {
-        _topRightDraggedPos.x += delta.x;
-        _topRightDraggedPos.y += delta.y;
-        didSomething = true;
-    }
+
     _lastMousePos = args.penPosition;
     return didSomething;
 }
+
 bool CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
 {
     bool didSomething = false;
     
     double selectionTol = 15. * args.pixelScale.x;
     bool useFrom = isFromPoints();
-    
-    if (isNearbyBtmLeft(args.penPosition,useFrom, selectionTol)) {
-        _ms = eDraggingBottomLeft;
-        _btmLeftDraggedPos = args.penPosition;
-        didSomething = true;
-    } else if (isNearbyBtmRight(args.penPosition,useFrom, selectionTol)) {
-        _ms = eDraggingBottomRight;
-        _btmRightDraggedPos = args.penPosition;
-        didSomething = true;
-    } else if (isNearbyTopRight(args.penPosition,useFrom, selectionTol)) {
-        _ms = eDraggingTopRight;
-        _topRightDraggedPos = args.penPosition;
-        didSomething = true;
-    } else if (isNearbyTopLeft(args.penPosition,useFrom, selectionTol)) {
-        _ms = eDraggingTopLeft;
-        _topLeftDraggedPos = args.penPosition;
-        didSomething = true;
+
+    for (int i = 0; i < 4; ++i) {
+        if (isNearbyTo(i, args.penPosition, useFrom, selectionTol)) {
+            _dragging = i;
+            _draggedPos[i] = args.penPosition;
+            didSomething = true;
+        }
     }
-    
+
     _lastMousePos = args.penPosition;
     return didSomething;
 }
+
 bool CornerPinTransformInteract::penUp(const OFX::PenArgs &args)
 {
     bool didSomething = false;
-    
+
     bool useFrom = isFromPoints();
-    
-    if (_ms == eDraggingBottomLeft) {
-        useFrom ? _from4->setValue(_btmLeftDraggedPos.x, _btmLeftDraggedPos.y)
-        : _btmLeft->setValue(_btmLeftDraggedPos.x,_btmLeftDraggedPos.y);
-        didSomething = true;
-    } else if (_ms == eDraggingBottomRight) {
-        useFrom ? _from3->setValue(_btmRightDraggedPos.x, _btmRightDraggedPos.y)
-        : _btmRight->setValue(_btmRightDraggedPos.x,_btmRightDraggedPos.y);
-        didSomething = true;
-    } else if (_ms == eDraggingTopLeft) {
-        useFrom ? _from1->setValue(_topLeftDraggedPos.x, _topLeftDraggedPos.y)
-        :_topLeft->setValue(_topLeftDraggedPos.x,_topLeftDraggedPos.y);
-        didSomething = true;
-    } else if (_ms == eDraggingTopRight) {
-        useFrom ? _from2->setValue(_topRightDraggedPos.x, _topRightDraggedPos.y)
-        :_topRight->setValue(_topRightDraggedPos.x,_topRightDraggedPos.y);
-        didSomething = true;
+
+    for (int i = 0; i < 4; ++i) {
+        if (_dragging == i) {
+            useFrom ? _from[i]->setValue(_draggedPos[i].x, _draggedPos[i].y)
+            : _to[i]->setValue(_draggedPos[i].x,_draggedPos[i].y);
+            didSomething = true;
+        }
     }
     
-    _ms = eIdle;
+    _dragging = -1;
     return didSomething;
 }
+
 bool CornerPinTransformInteract::keyDown(const OFX::KeyArgs &args)
 {
     bool didSomething = false;
     return didSomething;
 }
+
 bool CornerPinTransformInteract::keyUp(const OFX::KeyArgs &args)
 {
     bool didSomething = false;
@@ -884,12 +657,12 @@ class CornerPinOverlayDescriptor : public DefaultEffectOverlayDescriptor<CornerP
 
 static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
                                            GroupParamDescriptor* group,
-                                           const std::string& name,
+                                           int i,
                                            double x,
                                            double y)
 {
-    Double2DParamDescriptor* size = desc.defineDouble2DParam(name);
-    size->setLabels(name, name, name);
+    Double2DParamDescriptor* size = desc.defineDouble2DParam(kToParamName[i]);
+    size->setLabels(kToParamName[i], kToParamName[i], kToParamName[i]);
     size->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     size->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     size->setAnimates(true);
@@ -898,9 +671,8 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
     size->setLayoutHint(OFX::eLayoutHintNoNewLine);
     size->setParent(*group);
 
-    std::string enableName("enable " + name);
-    BooleanParamDescriptor* enable = desc.defineBooleanParam(enableName);
-    enable->setLabels(enableName, enableName, enableName);
+    BooleanParamDescriptor* enable = desc.defineBooleanParam(kEnableParamName[i]);
+    enable->setLabels(kEnableParamName[i], kEnableParamName[i], kEnableParamName[i]);
     enable->setDefault(true);
     enable->setAnimates(false);
     enable->setHint("Enables the point on the left.");
@@ -909,12 +681,12 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
 
 static void defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
                                               GroupParamDescriptor* group,
-                                              const std::string& name,
+                                              int i,
                                               double x,
                                               double y)
 {
-    Double2DParamDescriptor* size = desc.defineDouble2DParam(name);
-    size->setLabels(name, name, name);
+    Double2DParamDescriptor* size = desc.defineDouble2DParam(kFromParamName[i]);
+    size->setLabels(kFromParamName[i], kFromParamName[i], kFromParamName[i]);
     size->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     size->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     size->setAnimates(true);
@@ -941,10 +713,10 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     GroupParamDescriptor* toPoints = desc.defineGroupParam(kToParamGroupName);
     toPoints->setLabels(kToParamGroupName, kToParamGroupName, kToParamGroupName);
     toPoints->setAsTab();
-    defineCornerPinToDouble2DParam(desc, toPoints, kTopLeftParamName,  0, 1);
-    defineCornerPinToDouble2DParam(desc, toPoints, kTopRightParamName, 1, 1);
-    defineCornerPinToDouble2DParam(desc, toPoints, kBtmRightParamName, 1, 0);
-    defineCornerPinToDouble2DParam(desc, toPoints, kBtmLeftParamName,  0, 0);
+    defineCornerPinToDouble2DParam(desc, toPoints, 0, 0, 0);
+    defineCornerPinToDouble2DParam(desc, toPoints, 1, 1, 0);
+    defineCornerPinToDouble2DParam(desc, toPoints, 2, 1, 1);
+    defineCornerPinToDouble2DParam(desc, toPoints, 3, 0, 1);
     PushButtonParamDescriptor* copyFrom = desc.definePushButtonParam(kCopyFromParamName);
     copyFrom->setLabels(kCopyFromParamName, kCopyFromParamName, kCopyFromParamName);
     copyFrom->setHint("Copy the content from the \"to\" points to the \"from\" points.");
@@ -954,10 +726,10 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     GroupParamDescriptor* fromPoints = desc.defineGroupParam(kFromParamGroupName);
     fromPoints->setLabels(kFromParamGroupName, kFromParamGroupName, kFromParamGroupName);
     fromPoints->setAsTab();
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom1ParamName, 0, 1);
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom2ParamName, 1, 1);
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom3ParamName, 1, 0);
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, kFrom4ParamName, 0, 0);
+    defineCornerPinFromsDouble2DParam(desc, fromPoints, 0, 0, 0);
+    defineCornerPinFromsDouble2DParam(desc, fromPoints, 1, 1, 0);
+    defineCornerPinFromsDouble2DParam(desc, fromPoints, 2, 1, 1);
+    defineCornerPinFromsDouble2DParam(desc, fromPoints, 3, 0, 1);
     PushButtonParamDescriptor* setToInput = desc.definePushButtonParam(kCopyInputRoDParamName);
     setToInput->setLabels(kCopyInputRoDParamName, kCopyInputRoDParamName, kCopyInputRoDParamName);
     setToInput->setHint("Copy the values from the source region of definition into the \"to\" points.");

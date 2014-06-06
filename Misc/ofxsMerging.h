@@ -153,6 +153,16 @@ namespace MergeImages2D {
         }
     }
     
+    template <typename PIX,int maxValue>
+    PIX softLightFunctor(PIX A,PIX B)
+    {
+        if (A < ((double)maxValue / 2.)) {
+            return B - ((double)maxValue - 2 * A) * B * ((double)maxValue - B);
+        } else {
+            return B + (2 * A - (double)maxValue) * (4 * B * (4 * B + (double)maxValue) * (B - (double)maxValue) + 7 * B);
+        }
+    }
+    
     template <typename PIX>
     PIX hypotFunctor(PIX A,PIX B)
     {
