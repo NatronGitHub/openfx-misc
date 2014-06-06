@@ -218,9 +218,89 @@ homography_from_four_points(const OFX::Point3D &p1, const OFX::Point3D &p2, cons
     return true;
 }
 
+inline bool
+affine_from_three_points(const OFX::Point3D &p1, const OFX::Point3D &p2, const OFX::Point3D &p3,
+                            const OFX::Point3D &q1, const OFX::Point3D &q2, const OFX::Point3D &q3,
+                            OFX::Matrix3x3 *H)
+{
+    OFX::Matrix3x3 invHp;
+    OFX::Matrix3x3 Hp = matrix33_from_columns(p1,p2,p3);
+    double detHp = ofxsMatDeterminant(Hp);
+    if (detHp == 0.) {
+        return false;
+    }
+    OFX::Matrix3x3  Hq = matrix33_from_columns(q1,q2,q3);
+    double detHq = ofxsMatDeterminant(Hq);
+    if (detHq == 0.) {
+        return false;
+    }
+    invHp = ofxsMatInverse(Hp,detHp);
+    *H = Hq * invHp;
+    return true;
+}
+
+inline bool
+similarity_from_two_points(const OFX::Point3D &p1, const OFX::Point3D &p2,
+                           const OFX::Point3D &q1, const OFX::Point3D &q2,
+                           OFX::Matrix3x3 *H)
+{
+    // Generate a third point so that p1p3 is orthogonal to p1p2, and compute the affine transform
+    OFX::Point3D p3, q3;
+    p3.x = p1.x - (p2.y - p1.y);
+    p3.y = p1.y + (p2.x - p1.x);
+    p3.z = 1.;
+    q3.x = q1.x - (q2.y - q1.y);
+    q3.y = q1.y + (q2.x - q1.x);
+    q3.z = 1.;
+    return affine_from_three_points(p1, p2, p3, q1, q2, q3, H);
+    /*
+     there is probably a better solution.
+     we have to solve for H in
+                  [x1 x2]
+     [ h1 -h2 h3] [y1 y2]   [x1' x2']
+     [ h2  h1 h4] [ 1  1] = [y1' y2']
+
+     which is equivalent to
+     [x1 -y1 1 0] [h1]   [x1']
+     [x2 -y2 1 0] [h2]   [x2']
+     [y1  x1 0 1] [h3] = [y1']
+     [y2  x2 0 1] [h4]   [y2']
+     The 4x4 matrix should be easily invertible
+     
+     with(linalg);
+     M := Matrix([[x1, -y1, 1, 0], [x2, -y2, 1, 0], [y1, x1, 0, 1], [y2, x2, 0, 1]]);
+     inverse(M);
+     */
+    /*
+    double det = p1.x*p1.x - 2*p2.x*p1.x + p2.x*p2.x +p1.y*p1.y -2*p1.y*p2.y +p2.y*p2.y;
+    if (det == 0.) {
+        return false;
+    }
+    double h1 = (p1.x-p2.x)*(q1.x-q2.x) + (p1.y-p2.y)*(q1.y-q2.y);
+    double h2 = (p1.x-p2.x)*(q1.y-q2.y) - (p1.y-p2.y)*(q1.x-q2.x);
+    double h3 =
+     todo...
+     */
+}
 
 
 
+inline bool
+translation_from_one_point(const OFX::Point3D &p1,
+                           const OFX::Point3D &q1,
+                           OFX::Matrix3x3 *H)
+{
+    H->a = 1.;
+    H->b = 0.;
+    H->c = q1.x - p1.x;
+    H->d = 0.;
+    H->e = 1.;
+    H->f = q1.y - p1.y;
+    H->g = 0.;
+    H->h = 0.;
+    H->i = 1.;
+    return true;
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -300,48 +380,11 @@ private:
 
 bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, bool invert, OFX::Matrix3x3* invtransform)
 {
-#if 1
-    OFX::Point3D p[4];
-    bool enable[4];
-    for (int i = 0; i < 4; ++i) {
-        _enable[i]->getValue(enable[i]);
-        _from[i]->getValueAtTime(time, p[i].x, p[i].y);
-        p[i].z = 1.;
-    }
-
-    OFX::Point3D q[4];
-    for (int i = 0; i < 4; ++i) {
-        if (enable[i]) {
-            _to[i]->getValueAtTime(time, q[i].x, q[i].y);
-            q[i].z = 1.;
-        } else {
-            q[i] = p[i];
-        }
-    }
-
-    OFX::Matrix3x3 homo3x3;
-    bool success;
-    if (invert) {
-        success = homography_from_four_points(p[0], p[1], p[2], p[3], q[0], q[1], q[2], q[3], &homo3x3);
-    } else {
-        success = homography_from_four_points(q[0], q[1], q[2], q[3], p[0], p[1], p[2], p[3], &homo3x3);
-    }
-
-    if (!success) {
-        ///cannot compute the homography when 3 points are aligned
-        return false;
-    }
-
-    OFX::Matrix3x3 extraMat = getExtraMatrix(time);
-    *invtransform = homo3x3 * extraMat;
-
-    return true;
-#else
     // in this new version, both from and to are enableds/disabled at the same time
     bool enable[4];
     OFX::Point3D p[2][4];
-    int f = invert ? 1 : 0;
-    int t = invert ? 0 : 1;
+    int f = invert ? 0 : 1;
+    int t = invert ? 1 : 0;
     int k = 0;
 
     for (int i=0; i < 4; ++i) {
@@ -370,22 +413,13 @@ bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, bool invert, OF
             success = homography_from_four_points(p[0][0], p[0][1], p[0][2], p[0][3], p[1][0], p[1][1], p[1][2], p[1][3], &homo3x3);
             break;
         case 3:
-            //success = affine_from_three_points(p[0][0], p[0][1], p[0][2], p[1][0], p[1][1], p[1][2], &homo3x3);
+            success = affine_from_three_points(p[0][0], p[0][1], p[0][2], p[1][0], p[1][1], p[1][2], &homo3x3);
             break;
         case 2:
-            //success = similarity_from_two_points(p[0][0], p[0][1], p[1][0], p[1][1], &homo3x3);
+            success = similarity_from_two_points(p[0][0], p[0][1], p[1][0], p[1][1], &homo3x3);
             break;
         case 1:
-            //success = translation_from_one_point(p[0][0], p[1][0], &homo3x3);
-            homo3x3.a = 1.;
-            homo3x3.b = 0.;
-            homo3x3.c = p[1][0].x - p[0][0].x;
-            homo3x3.d = 0.;
-            homo3x3.e = 1.;
-            homo3x3.f = p[1][0].y - p[0][0].y;
-            homo3x3.g = 0.;
-            homo3x3.h = 0.;
-            homo3x3.i = 1.;
+            success = translation_from_one_point(p[0][0], p[1][0], &homo3x3);
             success = true;
             break;
     }
@@ -398,7 +432,6 @@ bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, bool invert, OF
     *invtransform = homo3x3 * extraMat;
 
     return true;
-#endif
 }
 
 
