@@ -200,34 +200,52 @@ Transform3x3Plugin::getRegionOfDefinition(const RegionOfDefinitionArguments &arg
     }
 
     /// now transform the 4 corners of the source clip to the output image
-    OFX::Point3D topLeft = transform * OFX::Point3D(srcRoD.x1,srcRoD.y2,1);
-    OFX::Point3D topRight = transform * OFX::Point3D(srcRoD.x2,srcRoD.y2,1);
-    OFX::Point3D bottomLeft = transform * OFX::Point3D(srcRoD.x1,srcRoD.y1,1);
-    OFX::Point3D bottomRight = transform * OFX::Point3D(srcRoD.x2,srcRoD.y1,1);
+    OFX::Point3D p[4];
+    p[0] = transform * OFX::Point3D(srcRoD.x1,srcRoD.y1,1);
+    p[1] = transform * OFX::Point3D(srcRoD.x1,srcRoD.y2,1);
+    p[2] = transform * OFX::Point3D(srcRoD.x2,srcRoD.y2,1);
+    p[3] = transform * OFX::Point3D(srcRoD.x2,srcRoD.y1,1);
 
-    if (topLeft.z == 0. || topRight.z == 0. || bottomLeft.z == 0. || bottomRight.z == 0.) {
-        // at least on of the corners is at infinity
-        return false;
+    // extract the x/y bounds
+    double x1, y1, x2, y2;
+
+    // if all z's have the same sign, we can compute a reasonable ROI, else we give the whole image (the line at infinity crosses the rectangle)
+    bool allpositive = true;
+    bool allnegative = true;
+    for (int i = 0; i < 4; ++i) {
+        allnegative = allnegative && (p[i].z < 0.);
+        allpositive = allpositive && (p[i].z > 0.);
     }
-    topLeft.x /= topLeft.z;
-    topLeft.y /= topLeft.z;
-    topRight.x /= topRight.z;
-    topRight.y /= topRight.z;
-    bottomLeft.x /= bottomLeft.z;
-    bottomLeft.y /= bottomLeft.z;
-    bottomRight.x /= bottomRight.z;
-    bottomRight.y /= bottomRight.z;
 
-    double l = std::min(std::min(topLeft.x, bottomLeft.x),std::min(topRight.x,bottomRight.x));
-    double b = std::min(std::min(topLeft.y, bottomLeft.y),std::min(topRight.y,bottomRight.y));
-    double r = std::max(std::max(topLeft.x, bottomLeft.x),std::max(topRight.x,bottomRight.x));
-    double t = std::max(std::max(topLeft.y, bottomLeft.y),std::max(topRight.y,bottomRight.y));
+    if (!allpositive && !allnegative) {
+        return false;
+    } else {
+        for (int i = 0; i < 4; ++i) {
+            p[i].x /= p[i].z;
+            p[i].y /= p[i].z;
+        }
+
+        x1 = x2 = p[0].x;
+        y1 = y2 = p[0].y;
+        for (int i = 1; i < 4; ++i) {
+            if (p[i].x < x1) {
+                x1 = p[i].x;
+            } else if (p[i].x > x2) {
+                x2 = p[i].x;
+            }
+            if (p[i].y < y1) {
+                y1 = p[i].y;
+            } else if (p[i].y > y2) {
+                y2 = p[i].y;
+            }
+        }
+    }
 
     // GENERIC
-    rod.x1 = l;
-    rod.x2 = r;
-    rod.y1 = b;
-    rod.y2 = t;
+    rod.x1 = x1;
+    rod.x2 = x2;
+    rod.y1 = y1;
+    rod.y2 = y2;
     assert(rod.x1 < rod.x2 && rod.y1 < rod.y2);
 
     bool blackOutside;
@@ -268,29 +286,42 @@ Transform3x3Plugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
     p[2] = invtransform * OFX::Point3D(roi.x2,roi.y2,1);
     p[3] = invtransform * OFX::Point3D(roi.x1,roi.y2,1);
 
-    for (int i = 0; i < 4; ++i) {
-        if (p[i].z == 0.) {
-            // at least one of the corners is at infinity
-            return;
-        }
-        p[i].x /= p[i].z;
-        p[i].y /= p[i].z;
-    }
-
     // extract the x/y bounds
     double x1, y1, x2, y2;
-    x1 = x2 = p[0].x;
-    y1 = y2 = p[0].y;
-    for (int i = 1; i < 4; ++i) {
-        if (p[i].x < x1) {
-            x1 = p[i].x;
-        } else if (p[i].x > x2) {
-            x2 = p[i].x;
+
+    // if all z's have the same sign, we can compute a reasonable ROI, else we give the whole image (the line at infinity crosses the rectangle)
+    bool allpositive = true;
+    bool allnegative = true;
+    for (int i = 0; i < 4; ++i) {
+        allnegative = allnegative && (p[i].z < 0.);
+        allpositive = allpositive && (p[i].z > 0.);
+   }
+
+    if (!allpositive && !allnegative) {
+        OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
+        x1 = srcRoD.x1;
+        x2 = srcRoD.x2;
+        y1 = srcRoD.y1;
+        y2 = srcRoD.y2;
+    } else {
+        for (int i = 0; i < 4; ++i) {
+            p[i].x /= p[i].z;
+            p[i].y /= p[i].z;
         }
-        if (p[i].y < y1) {
-            y1 = p[i].y;
-        } else if (p[i].y > y2) {
-            y2 = p[i].y;
+
+        x1 = x2 = p[0].x;
+        y1 = y2 = p[0].y;
+        for (int i = 1; i < 4; ++i) {
+            if (p[i].x < x1) {
+                x1 = p[i].x;
+            } else if (p[i].x > x2) {
+                x2 = p[i].x;
+            }
+            if (p[i].y < y1) {
+                y1 = p[i].y;
+            } else if (p[i].y > y2) {
+                y2 = p[i].y;
+            }
         }
     }
 
