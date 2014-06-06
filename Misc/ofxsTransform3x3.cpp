@@ -262,28 +262,37 @@ Transform3x3Plugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
     }
 
     /// now find the positions in the src clip of the 4 corners of the roi
-    OFX::Point3D topLeft = invtransform * OFX::Point3D(roi.x1,roi.y2,1);
-    OFX::Point3D topRight = invtransform * OFX::Point3D(roi.x2,roi.y2,1);
-    OFX::Point3D bottomLeft = invtransform * OFX::Point3D(roi.x1,roi.y1,1);
-    OFX::Point3D bottomRight = invtransform * OFX::Point3D(roi.x2,roi.y1,1);
+    OFX::Point3D p[4];
+    p[0] = invtransform * OFX::Point3D(roi.x1,roi.y1,1);
+    p[1] = invtransform * OFX::Point3D(roi.x2,roi.y1,1);
+    p[2] = invtransform * OFX::Point3D(roi.x2,roi.y2,1);
+    p[3] = invtransform * OFX::Point3D(roi.x1,roi.y2,1);
 
-    if (topLeft.z == 0. || topRight.z == 0. || bottomLeft.z == 0. || bottomRight.z == 0.) {
-        // at least on of the corners is at infinity
-        return;
+    for (int i = 0; i < 4; ++i) {
+        if (p[i].z == 0.) {
+            // at least one of the corners is at infinity
+            return;
+        }
+        p[i].x /= p[i].z;
+        p[i].y /= p[i].z;
     }
-    topLeft.x /= topLeft.z;
-    topLeft.y /= topLeft.z;
-    topRight.x /= topRight.z;
-    topRight.y /= topRight.z;
-    bottomLeft.x /= bottomLeft.z;
-    bottomLeft.y /= bottomLeft.z;
-    bottomRight.x /= bottomRight.z;
-    bottomRight.y /= bottomRight.z;
 
-    double l = std::min(std::min(topLeft.x, bottomLeft.x),std::min(topRight.x,bottomRight.x));
-    double b = std::min(std::min(topLeft.y, bottomLeft.y),std::min(topRight.y,bottomRight.y));
-    double r = std::max(std::max(topLeft.x, bottomLeft.x),std::max(topRight.x,bottomRight.x));
-    double t = std::max(std::max(topLeft.y, bottomLeft.y),std::max(topRight.y,bottomRight.y));
+    // extract the x/y bounds
+    double x1, y1, x2, y2;
+    x1 = x2 = p[0].x;
+    y1 = y2 = p[0].y;
+    for (int i = 1; i < 4; ++i) {
+        if (p[i].x < x1) {
+            x1 = p[i].x;
+        } else if (p[i].x > x2) {
+            x2 = p[i].x;
+        }
+        if (p[i].y < y1) {
+            y1 = p[i].y;
+        } else if (p[i].y > y2) {
+            y2 = p[i].y;
+        }
+    }
 
     // GENERIC
     int filter;
@@ -298,11 +307,11 @@ Transform3x3Plugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
 
 
     OfxRectD srcRoI;
-    srcRoI.x1 = l;
-    srcRoI.x2 = r;
-    srcRoI.y1 = b;
-    srcRoI.y2 = t;
-    assert(srcRoI.x1 < srcRoI.x2 && srcRoI.y1 < srcRoI.y2);
+    srcRoI.x1 = x1;
+    srcRoI.x2 = x2;
+    srcRoI.y1 = y1;
+    srcRoI.y2 = y2;
+    assert(srcRoI.x1 <= srcRoI.x2 && srcRoI.y1 <= srcRoI.y2);
 
     ofxsFilterExpandRoI(roi, srcClip_->getPixelAspectRatio(), args.renderScale, (FilterEnum)filter, doMasking, mix, &srcRoI);
 
