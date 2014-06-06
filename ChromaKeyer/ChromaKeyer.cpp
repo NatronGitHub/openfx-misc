@@ -329,13 +329,11 @@ public :
                 const double fgg_orig = fgg;
                 const double fgb_orig = fgb;
 
+                // we want to be able to play with the matte even if the background is not connected
                 if (!srcPix) {
                     // no source, take only background
                     Kbg = 1.;
                     fgr = fgg = fgb = 0.;
-                } else if (!bgPix) {
-                    // no background, take source only
-                    Kbg = 0.;
                 } else if (outMask >= 1.) { // optimize
                     Kbg = 1.;
                     fgr = fgg = fgb = 0.;
