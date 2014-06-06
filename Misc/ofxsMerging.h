@@ -40,6 +40,10 @@
 #include <cmath>
 #include "ofxsImageEffect.h"
 
+#ifndef M_PI
+#define M_PI        3.14159265358979323846264338327950288   /* pi             */
+#endif
+
 namespace MergeImages2D {
 
     
@@ -75,6 +79,7 @@ namespace MergeImages2D {
         Merge_Plus,
         Merge_Reflect,
         Merge_Screen,
+        Merge_SoftLight,
         Merge_Stencil,
         Merge_Under,
         Merge_XOR
@@ -113,10 +118,10 @@ namespace MergeImages2D {
         return A / B;
     }
     
-    template <typename PIX>
+    template <typename PIX,int maxValue>
     PIX exclusionFunctor(PIX A,PIX B)
     {
-        return A + B - 2 * A * B;
+        return A + B - 2 * A * B/(double)maxValue;
     }
     
     template <typename PIX>
@@ -128,45 +133,50 @@ namespace MergeImages2D {
     template <typename PIX>
     PIX geometricFunctor(PIX A,PIX B)
     {
-        return 2 * A * B / ( A + B );
+        return 2 * A * B / (A + B);
     }
 
-    template <typename PIX>
+    template <typename PIX,int maxValue>
     PIX multiplyFunctor(PIX A,PIX B)
     {
-        return A * B;
+        return A * B/(double)maxValue;
     }
     
-    template <typename PIX>
+    template <typename PIX,int maxValue>
     PIX screenFunctor(PIX A,PIX B)
     {
-        return A + B - A * B;
+        return A + B - A * B/(double)maxValue;
     }
     
     template <typename PIX,int maxValue>
     PIX hardLightFunctor(PIX A,PIX B)
     {
         if (A < ((double)maxValue / 2.)) {
-            return 2 * A * B;
+            return 2 * A * B / (double)maxValue;
         } else {
-            return maxValue - 2 * ( maxValue - A ) * ( maxValue - B );
+            return maxValue * (1. - 2 * (1. - A /(double)maxValue) * (1. - B/(double)maxValue));
         }
     }
     
     template <typename PIX,int maxValue>
     PIX softLightFunctor(PIX A,PIX B)
     {
-        if (A < ((double)maxValue / 2.)) {
-            return B - ((double)maxValue - 2 * A) * B * ((double)maxValue - B);
+        double An = A/(double)maxValue;
+        double Bn = B/(double)maxValue;
+
+        if (2*An <= 1) {
+            return maxValue * (Bn - (1 - 2 * An) * Bn * (1 - Bn));
+        } else if (4*Bn <= 1) {
+            return maxValue * (Bn + (2 * An - 1) * (4 * Bn * (4 * Bn + 1) * (Bn - 1) + 7 * Bn));
         } else {
-            return B + (2 * A - (double)maxValue) * (4 * B * (4 * B + (double)maxValue) * (B - (double)maxValue) + 7 * B);
+            return maxValue * (Bn + (2 * An - 1) * (sqrt(Bn) - Bn));
         }
     }
     
     template <typename PIX>
     PIX hypotFunctor(PIX A,PIX B)
     {
-        return std::sqrt((double)( A * A + B * B ));
+        return std::sqrt((double)(A * A + B * B));
     }
     
     template <typename PIX>
@@ -190,52 +200,49 @@ namespace MergeImages2D {
     template <typename PIX,int maxValue>
     PIX overlayFunctor(PIX A,PIX B)
     {
-        if(B < ((double)maxValue / 2.)) {
+        double An = A/(double)maxValue;
+        double Bn = B/(double)maxValue;
+
+        if (2*Bn <= 1.) {
 			// multiply
-			return 2 * A * B;
+			return maxValue * (2 * An * Bn);
         } else {
 			// screen
-			return maxValue - 2 * ( maxValue - A ) * ( maxValue - B );
+			return maxValue * (1 - 2 * (1 - Bn) * (1 - An));
         }
     }
     
     template <typename PIX,int maxValue>
     PIX colorDodgeFunctor(PIX A,PIX B)
     {
-        if(A < maxValue) {
-			PIX dst = B / (maxValue - A);
-            return dst > maxValue ? maxValue : dst;
+        if (A >= maxValue) {
+			return A;
 		} else {
-			return maxValue;
+			return maxValue * std::min(1., B/(maxValue - (double)A));
         }
     }
 
     template <typename PIX,int maxValue>
     PIX colorBurnFunctor(PIX A,PIX B)
     {
-        if(B != 0) {
-			PIX ret = maxValue - (maxValue - A) / B ;
-			if(ret <= 0)
-				return 0;
-            else
-                return ret;
-		}
-		else
-			return 0;
+        if (A <= 0) {
+            return A;
+        } else {
+			return maxValue * (1. - std::min(1., (maxValue - B)/(double)A));
+        }
     }
     
     template <typename PIX,int maxValue>
     PIX pinLightFunctor(PIX A,PIX B)
     {
         PIX max2 = PIX((double)maxValue / 2.);
-        return B >= max2 ? std::max(A,(B - max2) * 2)
-        : std::min( A,B * 2);
+        return B >= max2 ? std::max(A,(B - max2) * 2) : std::min(A,B * 2);
     }
     
     template <typename PIX,int maxValue>
     PIX reflectFunctor(PIX A,PIX B)
     {
-        if(B >= maxValue) {
+        if (B >= maxValue) {
 			return maxValue;
 		} else {
 			PIX ret = PIX((double)A * A / (double)(maxValue - B));
@@ -246,26 +253,29 @@ namespace MergeImages2D {
     template <typename PIX,int maxValue>
     PIX freezeFunctor(PIX A,PIX B)
     {
-        if(B == 0) {
+        if (B <= 0) {
 			return 0;
 		} else {
-			PIX ret = maxValue - std::sqrt((double)maxValue - A) / B;
-            return ret <= 0 ? 0 : ret;
+            double An = A/(double)maxValue;
+            double Bn = B/(double)maxValue;
+
+			return std::max(0., maxValue * (1 - std::sqrt(1. - An) / Bn));
 		}
     }
     
     template <typename PIX,int maxValue>
     PIX interpolatedFunctor(PIX A,PIX B)
     {
-        static const double pi =  3.14159265358979323846264338327950288419717;
-        PIX max4 = PIX((double)maxValue / 4.);
-        return  ((double)maxValue / 2.) - max4 * std::cos(pi * (double)A) - max4 * std::cos(pi* (double)B);
+        double An = A/(double)maxValue;
+        double Bn = B/(double)maxValue;
+
+        return maxValue * (0.5 - 0.25 * (std::cos(M_PI * An) - std::cos(M_PI * Bn)));
     }
     
     template <typename PIX,int maxValue>
     PIX atopFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
-        return A * alphaB + B * (maxValue - alphaA);
+        return A * alphaB/(double)maxValue + B * (1. - alphaA/(double)maxValue);
     }
 
     template <typename PIX,int maxValue>
@@ -291,49 +301,49 @@ namespace MergeImages2D {
     template <typename PIX,int maxValue>
     PIX inFunctor(PIX A,PIX /*B*/,PIX /*alphaA*/,PIX alphaB)
     {
-        return A * alphaB;
+        return A * alphaB/(double)maxValue;
     }
     
     template <typename PIX,int maxValue>
     PIX matteFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
-        return A * alphaA + B * (maxValue - alphaA);
+        return A * alphaA/(double)maxValue + B * (1. - alphaA/(double)maxValue);
     }
     
     template <typename PIX,int maxValue>
     PIX maskFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
-        return B * alphaA;
+        return B * alphaA/(double)maxValue;
     }
     
     template <typename PIX,int maxValue>
     PIX outFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
-        return  A * (maxValue - alphaB);
+        return  A * (1. - alphaB/(double)maxValue);
     }
     
     template <typename PIX,int maxValue>
     PIX overFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
-        return  A + B * (maxValue - alphaA);
+        return  A + B * (1 - alphaA/(double)maxValue);
     }
     
     template <typename PIX,int maxValue>
     PIX stencilFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
-        return  B * (maxValue - alphaA);
+        return  B * (1 - alphaA/(double)maxValue);
     }
     
     template <typename PIX,int maxValue>
     PIX underFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
-        return  A * (maxValue - alphaB) + B;
+        return  A * (1 - alphaB/(double)maxValue) + B;
     }
     
     template <typename PIX,int maxValue>
     PIX xorFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
-        return   A * (maxValue - alphaB) + B * (maxValue - alphaA);
+        return   A * (1 - alphaB/(double)maxValue) + B * (1 - alphaA/(double)maxValue);
     }
 
     template <typename PIX,int nComponents,int maxValue>
@@ -345,7 +355,7 @@ namespace MergeImages2D {
         ///When doAlphaMasking is enabled and we're in RGBA the output alpha is set to alphaA+alphaB-alphA*alphaB
         int maxComp = doAlphaMasking && nComponents == 4 ? 3 : nComponents;
         if (doAlphaMasking && nComponents == 4) {
-            dst[3] = A[3] + B[3] - A[3] * B[3];
+            dst[3] = A[3] + B[3] - A[3] * B[3]/(double)maxValue;
         }
         for (int i = 0; i < maxComp; ++i) {
             switch (f) {
@@ -377,7 +387,7 @@ namespace MergeImages2D {
                     dst[i] = divideFunctor(A[i], B[i]);
                     break;
                 case Merge_Exclusion:
-                    dst[i] = exclusionFunctor(A[i], B[i]);
+                    dst[i] = exclusionFunctor<PIX, maxValue>(A[i], B[i]);
                     break;
                 case Merge_Freeze:
                     dst[i] = freezeFunctor<PIX, maxValue>(A[i], B[i]);
@@ -416,7 +426,7 @@ namespace MergeImages2D {
                     dst[i] = minusFunctor(A[i], B[i]);
                     break;
                 case Merge_Multiply:
-                    dst[i] = multiplyFunctor(A[i], B[i]);
+                    dst[i] = multiplyFunctor<PIX, maxValue>(A[i], B[i]);
                     break;
                 case Merge_Out:
                     dst[i] = outFunctor<PIX, maxValue>(A[i], B[i], a, b);
@@ -437,7 +447,10 @@ namespace MergeImages2D {
                     dst[i] = reflectFunctor<PIX, maxValue>(A[i], B[i]);
                     break;
                 case Merge_Screen:
-                    dst[i] = screenFunctor(A[i], B[i]);
+                    dst[i] = screenFunctor<PIX, maxValue>(A[i], B[i]);
+                    break;
+                case Merge_SoftLight:
+                    dst[i] = softLightFunctor<PIX, maxValue>(A[i], B[i]);
                     break;
                 case Merge_Stencil:
                     dst[i] = stencilFunctor<PIX, maxValue>(A[i], B[i], a, b);
@@ -455,13 +468,13 @@ namespace MergeImages2D {
         }
     }
     
-    inline OfxRectD rectanglesBoundingBox( const OfxRectD& a, const OfxRectD& b )
+    inline OfxRectD rectanglesBoundingBox(const OfxRectD& a, const OfxRectD& b)
     {
         OfxRectD res;
-        res.x1 = std::min( a.x1, b.x1 );
-        res.x2 = std::max( res.x1, std::max( a.x2, b.x2 ) );
-        res.y1 = std::min( a.y1, b.y1 );
-        res.y2 = std::max( res.y1, std::max( a.y2, b.y2 ) );
+        res.x1 = std::min(a.x1, b.x1);
+        res.x2 = std::max(res.x1, std::max(a.x2, b.x2));
+        res.y1 = std::min(a.y1, b.y1);
+        res.y2 = std::max(res.y1, std::max(a.y2, b.y2));
         return res;
     }
     
