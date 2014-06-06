@@ -69,21 +69,6 @@
  England
  
  */
-
-/*
-   Although the indications from nuke/fnOfxExtensions.h were followed, and the
-   kFnOfxImageEffectActionGetTransform action was implemented in the Support
-   library, that action is never called by the Nuke host, so it cannot be tested.
-   The code is left here for reference or for further extension.
-
-   There is also an open question about how the last plugin in a transform chain
-   may get the concatenated transform from upstream, the untransformed source image,
-   concatenate its own transform and apply the resulting transform in its render
-   action. Should the host be doing this instead?
-*/
-// Uncomment the following to enable the experimental host transform code.
-//#define ENABLE_HOST_TRANSFORM
-
 #include "Crop.h"
 
 #include <cmath>
@@ -532,12 +517,15 @@ public:
     , _ds(eInactive)
     , _btmLeft(0)
     , _size(0)
+    , _reformat(0)
     {
         _btmLeft = effect->fetchDouble2DParam(kBtmLeftParamName);
         _size = effect->fetchDouble2DParam(kSizeParamName);
+        _reformat = effect->fetchBooleanParam(kReformatParamName);
         addParamToSlaveTo(_btmLeft);
         addParamToSlaveTo(_size);
-        assert(_btmLeft && _size);
+        addParamToSlaveTo(_reformat);
+        assert(_btmLeft && _size && _reformat);
     }
     
     // overridden functions from OFX::Interact to do things
@@ -566,6 +554,7 @@ private:
     DrawState _ds;
     Double2DParam* _btmLeft;
     Double2DParam* _size;
+    BooleanParam* _reformat;
     OfxPointD _btmLeftDragPos;
     OfxPointD _sizeDrag;
     
@@ -700,7 +689,13 @@ bool CropInteract::draw(const OFX::DrawArgs &args)
         btmLeft = _btmLeftDragPos;
         size = _sizeDrag;
     } else {
-        _btmLeft->getValue(btmLeft.x, btmLeft.y);
+        bool reformat;
+        _reformat->getValue(reformat);
+        if (!reformat) {
+            _btmLeft->getValue(btmLeft.x, btmLeft.y);
+        } else {
+            btmLeft.x = btmLeft.y = 0.;
+        }
         _size->getValue(size.x, size.y);
     }
     
@@ -814,21 +809,29 @@ bool CropInteract::penMotion(const OFX::PenArgs &args)
     
     OfxPointD size;
     _size->getValue(size.x, size.y);
-    OfxPointD btmLeft;
-    _btmLeft->getValue(btmLeft.x, btmLeft.y);
     
+    bool reformat;
+    _reformat->getValue(reformat);
+    OfxPointD btmLeft;
+    if (!reformat) {
+        _btmLeft->getValue(btmLeft.x, btmLeft.y);
+    } else {
+        btmLeft.x = btmLeft.y = 0.;
+    }
     bool lastStateWasHovered = _ds != eInactive;
     
-    if (isNearbyBtmLeft(args.penPosition, selectionTol, size, btmLeft)) {
+    
+    
+    if (isNearbyBtmLeft(args.penPosition, selectionTol, size, btmLeft) && !reformat) {
         _ds = eHoveringBottomLeft;
         didSomething = true;
-    } else if (isNearbyBtmRight(args.penPosition, selectionTol, size, btmLeft)) {
+    } else if (isNearbyBtmRight(args.penPosition, selectionTol, size, btmLeft)  && !reformat) {
         _ds = eHoveringBottomRight;
         didSomething = true;
     } else if (isNearbyTopRight(args.penPosition, selectionTol, size, btmLeft)) {
         _ds = eHoveringTopRight;
         didSomething = true;
-    } else if (isNearbyTopLeft(args.penPosition, selectionTol, size, btmLeft)) {
+    } else if (isNearbyTopLeft(args.penPosition, selectionTol, size, btmLeft)  && !reformat) {
         _ds = eHoveringTopLeft;
         didSomething = true;
     } else if (isNearbyMidTop(args.penPosition, selectionTol, size, btmLeft)) {
@@ -837,13 +840,13 @@ bool CropInteract::penMotion(const OFX::PenArgs &args)
     } else if (isNearbyMidRight(args.penPosition, selectionTol, size, btmLeft)) {
         _ds = eHoveringMidRight;
         didSomething = true;
-    } else if (isNearbyMidBtm(args.penPosition, selectionTol, size, btmLeft)) {
+    } else if (isNearbyMidBtm(args.penPosition, selectionTol, size, btmLeft)  && !reformat) {
         _ds = eHoveringMidBtm;
         didSomething = true;
-    } else if (isNearbyMidLeft(args.penPosition, selectionTol, size, btmLeft)) {
+    } else if (isNearbyMidLeft(args.penPosition, selectionTol, size, btmLeft)  && !reformat) {
         _ds = eHoveringMidLeft;
         didSomething = true;
-    } else if (isNearbyCenter(args.penPosition, selectionTol, size, btmLeft)) {
+    } else if (isNearbyCenter(args.penPosition, selectionTol, size, btmLeft)  && !reformat) {
         _ds = eHoveringCenter;
         didSomething = true;
     } else {
@@ -965,19 +968,28 @@ bool CropInteract::penDown(const OFX::PenArgs &args)
     
     OfxPointD size;
     _size->getValue(size.x, size.y);
-    OfxPointD btmLeft;
-    _btmLeft->getValue(btmLeft.x, btmLeft.y);
     
-    if (isNearbyBtmLeft(args.penPosition, selectionTol, size, btmLeft)) {
+    bool reformat;
+    _reformat->getValue(reformat);
+    
+    OfxPointD btmLeft;
+    if (!reformat) {
+        _btmLeft->getValue(btmLeft.x, btmLeft.y);
+    } else {
+        btmLeft.x = btmLeft.y = 0.;
+    }
+    
+   
+    if (isNearbyBtmLeft(args.penPosition, selectionTol, size, btmLeft)  && !reformat) {
         _ms = eDraggingBottomLeft;
         didSomething = true;
-    } else if (isNearbyBtmRight(args.penPosition, selectionTol, size, btmLeft)) {
+    } else if (isNearbyBtmRight(args.penPosition, selectionTol, size, btmLeft)  && !reformat) {
         _ms = eDraggingBottomRight;
         didSomething = true;
     } else if (isNearbyTopRight(args.penPosition, selectionTol, size, btmLeft)) {
         _ms = eDraggingTopRight;
         didSomething = true;
-    } else if (isNearbyTopLeft(args.penPosition, selectionTol, size, btmLeft)) {
+    } else if (isNearbyTopLeft(args.penPosition, selectionTol, size, btmLeft)  && !reformat) {
         _ms = eDraggingTopLeft;
         didSomething = true;
     } else if (isNearbyMidTop(args.penPosition, selectionTol, size, btmLeft)) {
@@ -986,18 +998,19 @@ bool CropInteract::penDown(const OFX::PenArgs &args)
     } else if (isNearbyMidRight(args.penPosition, selectionTol, size, btmLeft)) {
         _ms = eDraggingMidRight;
         didSomething = true;
-    } else if (isNearbyMidBtm(args.penPosition, selectionTol, size, btmLeft)) {
+    } else if (isNearbyMidBtm(args.penPosition, selectionTol, size, btmLeft)  && !reformat) {
         _ms = eDraggingMidBtm;
         didSomething = true;
-    } else if (isNearbyMidLeft(args.penPosition, selectionTol, size, btmLeft)) {
+    } else if (isNearbyMidLeft(args.penPosition, selectionTol, size, btmLeft)  && !reformat) {
         _ms = eDraggingMidLeft;
         didSomething = true;
-    } else if (isNearbyCenter(args.penPosition, selectionTol, size, btmLeft)) {
+    } else if (isNearbyCenter(args.penPosition, selectionTol, size, btmLeft)  && !reformat) {
         _ms = eDraggingCenter;
         didSomething = true;
     } else {
         _ms = eIdle;
     }
+    
     _btmLeftDragPos = btmLeft;
     _sizeDrag = size;
     _lastMousePos = args.penPosition;
@@ -1076,7 +1089,6 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(true);
     srcClip->setIsMask(false);
-    srcClip->setOptional(true);
     
 
     // create the mandated output clip
