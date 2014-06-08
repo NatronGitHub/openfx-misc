@@ -280,7 +280,7 @@ namespace MergeImages2D {
     PIX pinLightFunctor(PIX A,PIX B)
     {
         PIX max2 = PIX((double)maxValue / 2.);
-        return B >= max2 ? std::max(A,(B - max2) * 2) : std::min(A,B * 2);
+        return A >= max2 ? std::max(B,(A - max2) * 2) : std::min(B,A * 2);
     }
 
     template <typename PIX,int maxValue>
