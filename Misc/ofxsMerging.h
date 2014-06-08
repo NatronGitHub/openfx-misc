@@ -1,22 +1,22 @@
 /*
  OFX Merge helpers
- 
+
  Copyright (C) 2014 INRIA
- 
+
  Redistribution and use in source and binary forms, with or without modification,
  are permitted provided that the following conditions are met:
- 
+
  Redistributions of source code must retain the above copyright notice, this
  list of conditions and the following disclaimer.
- 
+
  Redistributions in binary form must reproduce the above copyright notice, this
  list of conditions and the following disclaimer in the documentation and/or
  other materials provided with the distribution.
- 
+
  Neither the name of the {organization} nor the names of its
  contributors may be used to endorse or promote products derived from
  this software without specific prior written permission.
- 
+
  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -27,7 +27,7 @@
  ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- 
+
  INRIA
  Domaine de Voluceau
  Rocquencourt - B.P. 105
@@ -46,69 +46,113 @@
 
 namespace MergeImages2D {
 
-    
-    enum MergingFunction
+
+    enum MergingFunctionEnum
     {
-        Merge_ATop = 0,
-        Merge_Average,
-        Merge_ColorBurn,
-        Merge_ColorDodge,
-        Merge_ConjointOver,
-        Merge_Copy,
-        Merge_Difference,
-        Merge_DisjointOver,
-        Merge_Divide,
-        Merge_Exclusion,
-        Merge_Freeze,
-        Merge_From,
-        Merge_Geometric,
-        Merge_HardLight,
-        Merge_Hypot,
-        Merge_In,
-        Merge_Interpolated,
-        Merge_Mask,
-        Merge_Matte,
-        Merge_Lighten,
-        Merge_Darken,
-        Merge_Minus,
-        Merge_Multiply,
-        Merge_Out,
-        Merge_Over,
-        Merge_Overlay,
-        Merge_PinLight,
-        Merge_Plus,
-        Merge_Reflect,
-        Merge_Screen,
-        Merge_SoftLight,
-        Merge_Stencil,
-        Merge_Under,
-        Merge_XOR
+        eMergeATop = 0,
+        eMergeAverage,
+        eMergeColorBurn,
+        eMergeColorDodge,
+        eMergeConjointOver,
+        eMergeCopy,
+        eMergeDifference,
+        eMergeDisjointOver,
+        eMergeDivide,
+        eMergeExclusion,
+        eMergeFreeze,
+        eMergeFrom,
+        eMergeGeometric,
+        eMergeHardLight,
+        eMergeHypot,
+        eMergeIn,
+        eMergeInterpolated,
+        eMergeMask,
+        eMergeMatte,
+        eMergeLighten,
+        eMergeDarken,
+        eMergeMinus,
+        eMergeMultiply,
+        eMergeOut,
+        eMergeOver,
+        eMergeOverlay,
+        eMergePinLight,
+        eMergePlus,
+        eMergeReflect,
+        eMergeScreen,
+        eMergeSoftLight,
+        eMergeStencil,
+        eMergeUnder,
+        eMergeXOR
     };
+
+    inline bool
+    isMaskable(MergingFunctionEnum operation)
+    {
+        switch (operation) {
+            case eMergeAverage:
+            case eMergeColorBurn:
+            case eMergeColorDodge:
+            case eMergeDifference:
+            case eMergeDivide:
+            case eMergeExclusion:
+            case eMergeFrom:
+            case eMergeFreeze:
+            case eMergeGeometric:
+            case eMergeHardLight:
+            case eMergeHypot:
+            case eMergeInterpolated:
+            case eMergeLighten:
+            case eMergeDarken:
+            case eMergeMinus:
+            case eMergeMultiply:
+            case eMergeOverlay:
+            case eMergePinLight:
+            case eMergePlus:
+            case eMergeReflect:
+            case eMergeSoftLight:
+                return true;
+            case eMergeATop:
+            case eMergeConjointOver:
+            case eMergeCopy:
+            case eMergeDisjointOver:
+            case eMergeIn:
+            case eMergeMask:
+            case eMergeMatte:
+            case eMergeOut:
+            case eMergeOver:
+            case eMergeScreen:
+            case eMergeStencil:
+            case eMergeUnder:
+            case eMergeXOR:
+                return false;
+        }
+    }
     
+
     template <typename PIX>
     PIX averageFunctor(PIX A,PIX B)
     {
         return (A + B) * 0.5;
     }
-    
+
     template <typename PIX>
     PIX copyFunctor(PIX A,PIX /*B*/)
     {
         return A;
     }
-    
+
     template <typename PIX>
     PIX plusFunctor(PIX A,PIX B)
     {
         return A + B;
     }
-    
+
     template <typename PIX>
     PIX differenceFunctor(PIX A,PIX B)
     {
         return std::abs(A - B);
     }
-    
+
     template <typename PIX>
     PIX divideFunctor(PIX A,PIX B)
     {
@@ -117,19 +161,19 @@ namespace MergeImages2D {
         }
         return A / B;
     }
-    
+
     template <typename PIX,int maxValue>
     PIX exclusionFunctor(PIX A,PIX B)
     {
         return A + B - 2 * A * B/(double)maxValue;
     }
-    
+
     template <typename PIX>
     PIX fromFunctor(PIX A,PIX B)
     {
         return B - A;
     }
-    
+
     template <typename PIX>
     PIX geometricFunctor(PIX A,PIX B)
     {
@@ -141,13 +185,13 @@ namespace MergeImages2D {
     {
         return A * B/(double)maxValue;
     }
-    
+
     template <typename PIX,int maxValue>
     PIX screenFunctor(PIX A,PIX B)
     {
         return A + B - A * B/(double)maxValue;
     }
-    
+
     template <typename PIX,int maxValue>
     PIX hardLightFunctor(PIX A,PIX B)
     {
@@ -157,7 +201,7 @@ namespace MergeImages2D {
             return maxValue * (1. - 2 * (1. - A /(double)maxValue) * (1. - B/(double)maxValue));
         }
     }
-    
+
     template <typename PIX,int maxValue>
     PIX softLightFunctor(PIX A,PIX B)
     {
@@ -172,25 +216,25 @@ namespace MergeImages2D {
             return maxValue * (Bn + (2 * An - 1) * (sqrt(Bn) - Bn));
         }
     }
-    
+
     template <typename PIX>
     PIX hypotFunctor(PIX A,PIX B)
     {
         return std::sqrt((double)(A * A + B * B));
     }
-    
+
     template <typename PIX>
     PIX minusFunctor(PIX A,PIX B)
     {
         return A - B;
     }
-    
+
     template <typename PIX>
     PIX darkenFunctor(PIX A,PIX B)
     {
         return std::min(A,B);
     }
-    
+
     template <typename PIX>
     PIX lightenFunctor(PIX A,PIX B)
     {
@@ -204,21 +248,21 @@ namespace MergeImages2D {
         double Bn = B/(double)maxValue;
 
         if (2*Bn <= 1.) {
-			// multiply
-			return maxValue * (2 * An * Bn);
+            // multiply
+            return maxValue * (2 * An * Bn);
         } else {
-			// screen
-			return maxValue * (1 - 2 * (1 - Bn) * (1 - An));
+            // screen
+            return maxValue * (1 - 2 * (1 - Bn) * (1 - An));
         }
     }
-    
+
     template <typename PIX,int maxValue>
     PIX colorDodgeFunctor(PIX A,PIX B)
     {
         if (A >= maxValue) {
-			return A;
-		} else {
-			return maxValue * std::min(1., B/(maxValue - (double)A));
+            return A;
+        } else {
+            return maxValue * std::min(1., B/(maxValue - (double)A));
         }
     }
 
@@ -228,41 +272,40 @@ namespace MergeImages2D {
         if (A <= 0) {
             return A;
         } else {
-			return maxValue * (1. - std::min(1., (maxValue - B)/(double)A));
+            return maxValue * (1. - std::min(1., (maxValue - B)/(double)A));
         }
     }
-    
+
     template <typename PIX,int maxValue>
     PIX pinLightFunctor(PIX A,PIX B)
     {
         PIX max2 = PIX((double)maxValue / 2.);
         return B >= max2 ? std::max(A,(B - max2) * 2) : std::min(A,B * 2);
     }
-    
+
     template <typename PIX,int maxValue>
     PIX reflectFunctor(PIX A,PIX B)
     {
         if (B >= maxValue) {
-			return maxValue;
-		} else {
-			PIX ret = PIX((double)A * A / (double)(maxValue - B));
-            return ret > maxValue ? maxValue : ret;
-		}
+            return maxValue;
+        } else {
+            return std::min((double)maxValue, A * A / (double)(maxValue - B));
+        }
     }
-    
+
     template <typename PIX,int maxValue>
     PIX freezeFunctor(PIX A,PIX B)
     {
         if (B <= 0) {
-			return 0;
-		} else {
+            return 0;
+        } else {
             double An = A/(double)maxValue;
             double Bn = B/(double)maxValue;
 
-			return std::max(0., maxValue * (1 - std::sqrt(1. - An) / Bn));
-		}
+            return std::max(0., maxValue * (1 - std::sqrt(1. - An) / Bn));
+        }
     }
-    
+
     template <typename PIX,int maxValue>
     PIX interpolatedFunctor(PIX A,PIX B)
     {
@@ -271,7 +314,7 @@ namespace MergeImages2D {
 
         return maxValue * (0.5 - 0.25 * (std::cos(M_PI * An) - std::cos(M_PI * Bn)));
     }
-    
+
     template <typename PIX,int maxValue>
     PIX atopFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
@@ -282,64 +325,64 @@ namespace MergeImages2D {
     PIX conjointOverFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
         if (alphaA > alphaB) {
-			return A;
-		} else {
-			return A + B * (maxValue - alphaA) / alphaB;
+            return A;
+        } else {
+            return A + B * (maxValue - alphaA) / alphaB;
         }
     }
-    
+
     template <typename PIX,int maxValue>
     PIX disjointOverFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
         if ((alphaA + alphaB) < maxValue) {
-			return A + B;
-		} else {
-			return A + B * (maxValue - alphaA) / alphaB;
+            return A + B;
+        } else {
+            return A + B * (maxValue - alphaA) / alphaB;
         }
     }
-    
+
     template <typename PIX,int maxValue>
     PIX inFunctor(PIX A,PIX /*B*/,PIX /*alphaA*/,PIX alphaB)
     {
         return A * alphaB/(double)maxValue;
     }
-    
+
     template <typename PIX,int maxValue>
     PIX matteFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
         return A * alphaA/(double)maxValue + B * (1. - alphaA/(double)maxValue);
     }
-    
+
     template <typename PIX,int maxValue>
     PIX maskFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
         return B * alphaA/(double)maxValue;
     }
-    
+
     template <typename PIX,int maxValue>
     PIX outFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
         return  A * (1. - alphaB/(double)maxValue);
     }
-    
+
     template <typename PIX,int maxValue>
     PIX overFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
         return  A + B * (1 - alphaA/(double)maxValue);
     }
-    
+
     template <typename PIX,int maxValue>
     PIX stencilFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
         return  B * (1 - alphaA/(double)maxValue);
     }
-    
+
     template <typename PIX,int maxValue>
     PIX underFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
         return  A * (1 - alphaB/(double)maxValue) + B;
     }
-    
+
     template <typename PIX,int maxValue>
     PIX xorFunctor(PIX A,PIX B,PIX alphaA,PIX alphaB)
     {
@@ -347,11 +390,11 @@ namespace MergeImages2D {
     }
 
     template <typename PIX,int nComponents,int maxValue>
-    void mergePixel(MergingFunction f,bool doAlphaMasking,const PIX* A,const PIX* B,PIX* dst)
+    void mergePixel(MergingFunctionEnum f, bool doAlphaMasking, const PIX* A, const PIX* B, PIX* dst)
     {
         PIX a = nComponents == 4 ? A[3] : maxValue;
         PIX b = nComponents == 4 ? B[3] : maxValue;
-        
+
         ///When doAlphaMasking is enabled and we're in RGBA the output alpha is set to alphaA+alphaB-alphA*alphaB
         int maxComp = doAlphaMasking && nComponents == 4 ? 3 : nComponents;
         if (doAlphaMasking && nComponents == 4) {
@@ -359,106 +402,106 @@ namespace MergeImages2D {
         }
         for (int i = 0; i < maxComp; ++i) {
             switch (f) {
-                case Merge_ATop:
+                case eMergeATop:
                     dst[i] = atopFunctor<PIX, maxValue>(A[i], B[i], a, b);
                     break;
-                case Merge_Average:
+                case eMergeAverage:
                     dst[i] = averageFunctor(A[i], B[i]);
                     break;
-                case Merge_ColorBurn:
+                case eMergeColorBurn:
                     dst[i] = colorBurnFunctor<PIX, maxValue>(A[i], B[i]);
                     break;
-                case Merge_ColorDodge:
+                case eMergeColorDodge:
                     dst[i] = colorDodgeFunctor<PIX, maxValue>(A[i], B[i]);
                     break;
-                case Merge_ConjointOver:
+                case eMergeConjointOver:
                     dst[i] = conjointOverFunctor<PIX, maxValue>(A[i], B[i], a, b);
                     break;
-                case Merge_Copy:
+                case eMergeCopy:
                     dst[i] = copyFunctor(A[i], B[i]);
                     break;
-                case Merge_Difference:
+                case eMergeDifference:
                     dst[i] = differenceFunctor(A[i], B[i]);
                     break;
-                case Merge_DisjointOver:
+                case eMergeDisjointOver:
                     dst[i] = disjointOverFunctor<PIX, maxValue>(A[i], B[i], a, b);
                     break;
-                case Merge_Divide:
+                case eMergeDivide:
                     dst[i] = divideFunctor(A[i], B[i]);
                     break;
-                case Merge_Exclusion:
+                case eMergeExclusion:
                     dst[i] = exclusionFunctor<PIX, maxValue>(A[i], B[i]);
                     break;
-                case Merge_Freeze:
+                case eMergeFreeze:
                     dst[i] = freezeFunctor<PIX, maxValue>(A[i], B[i]);
                     break;
-                case Merge_From:
+                case eMergeFrom:
                     dst[i] = fromFunctor(A[i], B[i]);
                     break;
-                case Merge_Geometric:
+                case eMergeGeometric:
                     dst[i] = geometricFunctor(A[i], B[i]);
                     break;
-                case Merge_HardLight:
+                case eMergeHardLight:
                     dst[i] = hardLightFunctor<PIX, maxValue>(A[i], B[i]);
                     break;
-                case Merge_Hypot:
+                case eMergeHypot:
                     dst[i] = hypotFunctor(A[i], B[i]);
                     break;
-                case Merge_In:
+                case eMergeIn:
                     dst[i] = inFunctor<PIX, maxValue>(A[i], B[i], a, b);
                     break;
-                case Merge_Interpolated:
+                case eMergeInterpolated:
                     dst[i] = interpolatedFunctor<PIX, maxValue>(A[i], B[i]);
                     break;
-                case Merge_Mask:
+                case eMergeMask:
                     dst[i] = maskFunctor<PIX, maxValue>(A[i], B[i], a, b);
                     break;
-                case Merge_Matte:
+                case eMergeMatte:
                     dst[i] = matteFunctor<PIX, maxValue>(A[i], B[i], a, b);
                     break;
-                case Merge_Lighten:
+                case eMergeLighten:
                     dst[i] = lightenFunctor(A[i], B[i]);
                     break;
-                case Merge_Darken:
+                case eMergeDarken:
                     dst[i] = darkenFunctor(A[i], B[i]);
                     break;
-                case Merge_Minus:
+                case eMergeMinus:
                     dst[i] = minusFunctor(A[i], B[i]);
                     break;
-                case Merge_Multiply:
+                case eMergeMultiply:
                     dst[i] = multiplyFunctor<PIX, maxValue>(A[i], B[i]);
                     break;
-                case Merge_Out:
+                case eMergeOut:
                     dst[i] = outFunctor<PIX, maxValue>(A[i], B[i], a, b);
                     break;
-                case Merge_Over:
+                case eMergeOver:
                     dst[i] = overFunctor<PIX, maxValue>(A[i], B[i], a, b);
                     break;
-                case Merge_Overlay:
+                case eMergeOverlay:
                     dst[i] = overlayFunctor<PIX, maxValue>(A[i], B[i]);
                     break;
-                case Merge_PinLight:
+                case eMergePinLight:
                     dst[i] = pinLightFunctor<PIX, maxValue>(A[i], B[i]);
                     break;
-                case Merge_Plus:
+                case eMergePlus:
                     dst[i] = plusFunctor(A[i], B[i]);
                     break;
-                case Merge_Reflect:
+                case eMergeReflect:
                     dst[i] = reflectFunctor<PIX, maxValue>(A[i], B[i]);
                     break;
-                case Merge_Screen:
+                case eMergeScreen:
                     dst[i] = screenFunctor<PIX, maxValue>(A[i], B[i]);
                     break;
-                case Merge_SoftLight:
+                case eMergeSoftLight:
                     dst[i] = softLightFunctor<PIX, maxValue>(A[i], B[i]);
                     break;
-                case Merge_Stencil:
+                case eMergeStencil:
                     dst[i] = stencilFunctor<PIX, maxValue>(A[i], B[i], a, b);
                     break;
-                case Merge_Under:
+                case eMergeUnder:
                     dst[i] = underFunctor<PIX,maxValue>(A[i], B[i], a, b);
                     break;
-                case Merge_XOR:
+                case eMergeXOR:
                     dst[i] = xorFunctor<PIX, maxValue>(A[i], B[i], a, b);
                     break;
                 default:
@@ -467,7 +510,7 @@ namespace MergeImages2D {
             }
         }
     }
-    
+
     inline OfxRectD rectanglesBoundingBox(const OfxRectD& a, const OfxRectD& b)
     {
         OfxRectD res;
@@ -477,26 +520,26 @@ namespace MergeImages2D {
         res.y2 = std::max(res.y1, std::max(a.y2, b.y2));
         return res;
     }
-    
-    
+
+
     template <typename Rect>
     bool isRectNull(const Rect& r) { return (r.x2 <= r.x1) || (r.y2 <= r.y1); }
-    
+
     template <typename Rect>
     bool rectangleIntersect(const Rect& r1,const Rect& r2,Rect* intersection) {
         if (isRectNull(r1) || isRectNull(r2))
             return false;
-        
+
         if (r1.x1 > r2.x2 || r2.x1 > r1.x2 || r1.y1 > r2.y2 || r2.y1 > r1.y2)
             return false;
-        
+
         intersection->x1 = std::max(r1.x1,r2.x1);
         intersection->x2 = std::min(r1.x2,r2.x2);
         intersection->y1 = std::max(r1.y1,r2.y1);
         intersection->y2 = std::min(r1.y2,r2.y2);
         return true;
     }
-    
+
     /**
      * @brief Scales down the rectangle by the given power of 2, and return the smallest *enclosing* rectangle
      **/
@@ -517,12 +560,12 @@ namespace MergeImages2D {
         return ret;
     }
 
-    
+
     inline double getScaleFromMipMapLevel(unsigned int level)
     {
         return 1./(1<<level);
     }
-    
+
 #ifndef M_LN2
 #define M_LN2       0.693147180559945309417232121458176568  /* loge(2)        */
 #endif
