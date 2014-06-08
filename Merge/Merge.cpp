@@ -81,9 +81,17 @@
 #include "ofxsMerging.h"
 #include "ofxsFilter.h"
 
-#define kOperationParamName "Operation"
-#define kAlphaMaskingParamName "Alpha masking"
-#define kBboxParamName "Bounding Box"
+#define kOperationParamName "operation"
+#define kOperationParamLabel "Operation"
+#define kOperationParamHint "The operation used to merge the input A and B images."
+#define kAlphaMaskingParamName "screen_alpha"
+#define kAlphaMaskingParamLabel "Alpha masking"
+#define kAlphaMaskingParamHint "When enabled, the input images are unchanged where the other image has 0 alpha, and" \
+    " the output alpha is set to a+b - a*b. When disabled the alpha channel is processed as " \
+    "any other channel. Option is disabled for operations where it does not apply or makes no difference."
+#define kBboxParamName "bbox"
+#define kBboxParamLabel "Bounding Box"
+#define kBboxParamHint "What to use to produce the output image's bounding box."
 #define kSourceClipAName "A"
 #define kSourceClipBName "B"
 
@@ -97,7 +105,7 @@ protected:
     OFX::Image *_srcImgB;
     OFX::Image *_maskImg;
     bool   _doMasking;
-    MergingFunction _operation;
+    MergingFunctionEnum _operation;
     int _bbox;
     double _mix;
     bool _alphaMasking;
@@ -110,7 +118,7 @@ public:
     , _srcImgB(0)
     , _maskImg(0)
     , _doMasking(false)
-    , _operation(Merge_Plus)
+    , _operation(eMergePlus)
     , _bbox(0)
     , _mix(0)
     , _alphaMasking(false)
@@ -124,12 +132,12 @@ public:
     
     void doMasking(bool v) {_doMasking = v;}
 
-    void setValues(MergingFunction operation,int bboxChoice,double mix,bool alphaMasking)
+    void setValues(MergingFunctionEnum operation, int bboxChoice, double mix, bool alphaMasking)
     {
         _operation = operation;
         _bbox = bboxChoice;
         _mix = mix;
-        _alphaMasking = alphaMasking;
+        _alphaMasking = MergeImages2D::isMaskable(operation) ? alphaMasking : false;
     }
     
 };
@@ -223,6 +231,8 @@ public :
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
     
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
+
     /* set up and run a processor */
     void setupAndProcess(MergeProcessorBase &, const OFX::RenderArguments &args);
 
@@ -343,7 +353,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     _operation->getValue(operation);
     _bbox->getValue(bboxChoice);
     _mix->getValueAtTime(args.time, mix);
-    processor.setValues((MergingFunction)operation, bboxChoice, mix,alphaMasking);
+    processor.setValues((MergingFunctionEnum)operation, bboxChoice, mix,alphaMasking);
     processor.setDstImg(dst.get());
     processor.setSrcImg(srcA.get(),srcB.get());
     processor.setRenderWindow(args.renderWindow);
@@ -443,6 +453,17 @@ MergePlugin::render(const OFX::RenderArguments &args)
 }
 
 
+void
+MergePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kOperationParamName) {
+        int operation_i;
+        _operation->getValue(operation_i);
+        // depending on the operation, enable/disable alpha masking
+        _alphaMasking->setEnabled(MergeImages2D::isMaskable((MergingFunctionEnum)operation_i));
+    }
+}
+
 void MergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
@@ -508,92 +529,92 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     PageParamDescriptor *page = desc.definePageParam("Controls");
  
     ChoiceParamDescriptor* operation = desc.defineChoiceParam(kOperationParamName);
-    operation->setLabels(kOperationParamName, kOperationParamName, kOperationParamName);
+    operation->setLabels(kOperationParamLabel, kOperationParamLabel, kOperationParamLabel);
     operation->setScriptName(kOperationParamName);
-    operation->setHint("The operation used to merge the input A and B images.");
-    assert(operation->getNOptions() == Merge_ATop);
+    operation->setHint(kOperationParamHint);
+    assert(operation->getNOptions() == eMergeATop);
     operation->appendOption( "atop", "Ab + B(1 - a)" );
-    assert(operation->getNOptions() == Merge_Average);
+    assert(operation->getNOptions() == eMergeAverage);
 	operation->appendOption( "average", "(A + B) / 2" );
-    assert(operation->getNOptions() == Merge_ColorBurn);
+    assert(operation->getNOptions() == eMergeColorBurn);
 	operation->appendOption( "color-burn", "darken B towards A" );
-    assert(operation->getNOptions() == Merge_ColorDodge);
+    assert(operation->getNOptions() == eMergeColorDodge);
 	operation->appendOption( "color-dodge", "brighten B towards A" );
-    assert(operation->getNOptions() == Merge_ConjointOver);
+    assert(operation->getNOptions() == eMergeConjointOver);
 	operation->appendOption( "conjoint-over", "A + B(1-a)/b, A if a > b" );
-    assert(operation->getNOptions() == Merge_Copy);
+    assert(operation->getNOptions() == eMergeCopy);
 	operation->appendOption( "copy", "A" );
-    assert(operation->getNOptions() == Merge_Difference);
+    assert(operation->getNOptions() == eMergeDifference);
 	operation->appendOption( "difference", "abs(A-B)" );
-    assert(operation->getNOptions() == Merge_DisjointOver);
+    assert(operation->getNOptions() == eMergeDisjointOver);
 	operation->appendOption( "disjoint-over", "A+B(1-a)/b, A+B if a+b < 1" );
-    assert(operation->getNOptions() == Merge_Divide);
+    assert(operation->getNOptions() == eMergeDivide);
 	operation->appendOption( "divide", "A/B, 0 if A < 0 and B < 0" );
-    assert(operation->getNOptions() == Merge_Exclusion);
+    assert(operation->getNOptions() == eMergeExclusion);
 	operation->appendOption( "exclusion", "A+B-2AB" );
-    assert(operation->getNOptions() == Merge_Freeze);
+    assert(operation->getNOptions() == eMergeFreeze);
 	operation->appendOption( "freeze", "1-sqrt(1-A)/B" );
-    assert(operation->getNOptions() == Merge_From);
+    assert(operation->getNOptions() == eMergeFrom);
 	operation->appendOption( "from", "B-A" );
-    assert(operation->getNOptions() == Merge_Geometric);
+    assert(operation->getNOptions() == eMergeGeometric);
 	operation->appendOption( "geometric", "2AB/(A+B)" );
-    assert(operation->getNOptions() == Merge_HardLight);
+    assert(operation->getNOptions() == eMergeHardLight);
 	operation->appendOption( "hard-light", "multiply if A < 0.5, screen if A > 0.5" );
-    assert(operation->getNOptions() == Merge_Hypot);
+    assert(operation->getNOptions() == eMergeHypot);
 	operation->appendOption( "hypot", "sqrt(A*A+B*B)" );
-    assert(operation->getNOptions() == Merge_In);
+    assert(operation->getNOptions() == eMergeIn);
 	operation->appendOption( "in", "Ab" );
-    assert(operation->getNOptions() == Merge_Interpolated);
+    assert(operation->getNOptions() == eMergeInterpolated);
 	operation->appendOption( "interpolated", "(like average but better and slower)" );
-    assert(operation->getNOptions() == Merge_Mask);
+    assert(operation->getNOptions() == eMergeMask);
 	operation->appendOption( "mask", "Ba" );
-    assert(operation->getNOptions() == Merge_Matte);
+    assert(operation->getNOptions() == eMergeMatte);
 	operation->appendOption( "matte", "Aa + B(1-a) (unpremultiplied over)" );
-    assert(operation->getNOptions() == Merge_Lighten);
+    assert(operation->getNOptions() == eMergeLighten);
 	operation->appendOption( "max", "max(A, B)" );
-    assert(operation->getNOptions() == Merge_Darken);
+    assert(operation->getNOptions() == eMergeDarken);
 	operation->appendOption( "min", "min(A, B)" );
-    assert(operation->getNOptions() == Merge_Minus);
+    assert(operation->getNOptions() == eMergeMinus);
 	operation->appendOption( "minus", "A-B" );
-    assert(operation->getNOptions() == Merge_Multiply);
+    assert(operation->getNOptions() == eMergeMultiply);
 	operation->appendOption( "multiply", "AB, 0 if A < 0 and B < 0" );
-    assert(operation->getNOptions() == Merge_Out);
+    assert(operation->getNOptions() == eMergeOut);
 	operation->appendOption( "out", "A(1-b)" );
-    assert(operation->getNOptions() == Merge_Over);
+    assert(operation->getNOptions() == eMergeOver);
 	operation->appendOption( "over", "A+B(1-a)" );
-    assert(operation->getNOptions() == Merge_Overlay);
+    assert(operation->getNOptions() == eMergeOverlay);
 	operation->appendOption( "overlay", ": multiply if B<0.5, screen if B>0.5" );
-    assert(operation->getNOptions() == Merge_PinLight);
+    assert(operation->getNOptions() == eMergePinLight);
 	operation->appendOption( "pinlight", "if B >= 0.5 then max(A, 2*B - 1), min(A, B * 2.0 ) else" );
-    assert(operation->getNOptions() == Merge_Plus);
+    assert(operation->getNOptions() == eMergePlus);
 	operation->appendOption( "plus", "A+B" );
-    assert(operation->getNOptions() == Merge_Reflect);
+    assert(operation->getNOptions() == eMergeReflect);
 	operation->appendOption( "reflect", "A*A / (1 - B)" );
-    assert(operation->getNOptions() == Merge_Screen);
+    assert(operation->getNOptions() == eMergeScreen);
 	operation->appendOption( "screen", "A+B-AB" );
-    assert(operation->getNOptions() == Merge_SoftLight);
+    assert(operation->getNOptions() == eMergeSoftLight);
 	operation->appendOption( "soft-light", "burn-in if A < 0.5, lighten if A > 0.5" );
-    assert(operation->getNOptions() == Merge_Stencil);
+    assert(operation->getNOptions() == eMergeStencil);
 	operation->appendOption( "stencil", "B(1-a)" );
-    assert(operation->getNOptions() == Merge_Under);
+    assert(operation->getNOptions() == eMergeUnder);
 	operation->appendOption( "under", "A(1-b)+B" );
-    assert(operation->getNOptions() == Merge_XOR);
+    assert(operation->getNOptions() == eMergeXOR);
 	operation->appendOption( "xor", ": A(1-b)+B(1-a)" );
-    operation->setDefault(Merge_Over);
+    operation->setDefault(eMergeOver);
     operation->setAnimates(false);
+    operation->setLayoutHint(OFX::eLayoutHintNoNewLine);
     page->addChild(*operation);
     
     BooleanParamDescriptor* alphaMasking = desc.defineBooleanParam(kAlphaMaskingParamName);
-    alphaMasking->setLabels(kAlphaMaskingParamName, kAlphaMaskingParamName, kAlphaMaskingParamName);
+    alphaMasking->setLabels(kAlphaMaskingParamLabel, kAlphaMaskingParamLabel, kAlphaMaskingParamLabel);
     alphaMasking->setAnimates(false);
     alphaMasking->setDefault(false);
-    alphaMasking->setHint("When enabled, the input images are unchanged where the other image has 0 alpha and"
-                          " the output alpha is set to a+b - a*b. When disabled the alpha channel is processed as "
-                          "any other channel.");
+    alphaMasking->setEnabled(MergeImages2D::isMaskable(eMergeOver));
+    alphaMasking->setHint(kAlphaMaskingParamHint);
     
     ChoiceParamDescriptor* boundingBox = desc.defineChoiceParam(kBboxParamName);
-    boundingBox->setLabels(kBboxParamName, kBboxParamName, kBboxParamName);
-    boundingBox->setHint("What to use to produce the output image's bounding box.");
+    boundingBox->setLabels(kBboxParamLabel, kBboxParamLabel, kBboxParamLabel);
+    boundingBox->setHint(kBboxParamHint);
     boundingBox->appendOption("Union");
     boundingBox->appendOption("Intersection");
     boundingBox->appendOption("A");
