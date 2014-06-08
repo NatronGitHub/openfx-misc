@@ -44,6 +44,25 @@
 #define M_PI        3.14159265358979323846264338327950288   /* pi             */
 #endif
 
+// References:
+//
+// SVG Compositing Specification:
+//   http://www.w3.org/TR/SVGCompositing/
+// PDF Reference v1.7:
+//   http://www.adobe.com/content/dam/Adobe/en/devnet/acrobat/pdfs/pdf_reference_1-7.pdf
+//   http://www.adobe.com/devnet/pdf/pdf_reference_archive.html
+// Adobe photoshop blending modes:
+//   http://helpx.adobe.com/en/photoshop/using/blending-modes.html
+//   http://www.deepskycolors.com/archive/2010/04/21/formulas-for-Photoshop-blending-modes.html
+// ImageMagick:
+//   http://www.imagemagick.org/Usage/compose/
+//
+// Note about the Soft-Light operation:
+// Soft-light as implemented in Nuke comes from the SVG 2004 specification, which is wrong.
+// In SVG 2004, 'Soft_Light' did not work as expected, producing a brightening for any non-gray shade
+// image overlay.
+// It was fixed in the March 2009 SVG specification, which was used for this implementation.
+
 namespace MergeImages2D {
 
 
