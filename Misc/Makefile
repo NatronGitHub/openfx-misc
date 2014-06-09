@@ -4,6 +4,7 @@ ChromaKeyer.o \
 ColorCorrect.o \
 CornerPin.o \
 Crop.o \
+Difference.o \
 Grade.o \
 JoinViews.o \
 Merge.o \
@@ -27,6 +28,7 @@ VPATH += \
 ../ColorCorrect \
 ../CornerPin \
 ../Crop \
+../Difference \
 ../Grade \
 ../JoinViews \
 ../Merge \
@@ -48,6 +50,7 @@ CXXFLAGS += \
 -I../ColorCorrect \
 -I../CornerPin \
 -I../Crop \
+-I../Difference \
 -I../Grade \
 -I../JoinViews \
 -I../Merge \

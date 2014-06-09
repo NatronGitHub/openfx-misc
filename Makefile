@@ -6,6 +6,7 @@ ChromaKeyer \
 ColorCorrect \
 CornerPin \
 Crop \
+Difference \
 Grade \
 JoinViews \
 Merge \

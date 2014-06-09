@@ -180,6 +180,21 @@
 		1EDE1BD9182D8941002392CB /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1EDE1BDB182D8941002392CB /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1EDE1BE3182D8977002392CB /* MixViews.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDE1BE2182D8977002392CB /* MixViews.cpp */; };
+		1EFB4E0C19461B13005932AF /* ColorCorrect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B4C95E18D9DA410004137D /* ColorCorrect.cpp */; };
+		1EFB4E0D19461B13005932AF /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B4C96218D9DA410004137D /* PluginRegistration.cpp */; };
+		1EFB4E0E19461B13005932AF /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1EFB4E0F19461B13005932AF /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1EFB4E1019461B13005932AF /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1EFB4E1119461B13005932AF /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1EFB4E1219461B13005932AF /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1EFB4E1319461B13005932AF /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1EFB4E1419461B13005932AF /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1EFB4E1519461B13005932AF /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1EFB4E1719461B13005932AF /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1EFB4E1F19461B76005932AF /* Difference.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFB4E1D19461B76005932AF /* Difference.cpp */; };
+		1EFB4E2019461B76005932AF /* Difference.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFB4E1D19461B76005932AF /* Difference.cpp */; };
+		1EFB4E2419461B86005932AF /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = 1EFB4E2219461B86005932AF /* Makefile */; };
+		1EFB4E2519461B86005932AF /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFB4E2319461B86005932AF /* PluginRegistration.cpp */; };
 		1EFC1700180DCE6500AD7B86 /* RGBLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0C41E180DCAB500C25D1E /* RGBLut.cpp */; };
 		D721EC06191120B30069DB1D /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		D721EC07191120B30069DB1D /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
@@ -389,6 +404,12 @@
 		1EDE1BE8182D8B18002392CB /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EF33E0F18F556CB003E62EF /* ofxsFilter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsFilter.h; sourceTree = "<group>"; };
 		1EF33E1018F556CB003E62EF /* ofxsMatrix2D.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsMatrix2D.h; sourceTree = "<group>"; };
+		1EFB4E1B19461B13005932AF /* Difference.ofx copy.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Difference.ofx copy.bundle"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EFB4E1D19461B76005932AF /* Difference.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Difference.cpp; sourceTree = "<group>"; };
+		1EFB4E1E19461B76005932AF /* Difference.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Difference.h; sourceTree = "<group>"; };
+		1EFB4E2119461B86005932AF /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1EFB4E2219461B86005932AF /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EFB4E2319461B86005932AF /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		D721EBFD1911209B0069DB1D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D721EBFE1911209B0069DB1D /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D721EBFF1911209B0069DB1D /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
@@ -546,6 +567,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				1EDE1BDB182D8941002392CB /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EFB4E1619461B13005932AF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EFB4E1719461B13005932AF /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -737,6 +766,7 @@
 				D721EC13191120B30069DB1D /* Roto.ofx.bundle */,
 				D7257D5C192E91120040CD9C /* CornerPin.ofx.bundle */,
 				D74A80C4194059CC007C3E1C /* Crop.ofx.bundle */,
+				1EFB4E1B19461B13005932AF /* Difference.ofx copy.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -750,6 +780,7 @@
 				D7257D45192E910C0040CD9C /* CornerPin */,
 				D74A80AD194059C0007C3E1C /* Crop */,
 				1ECE5453185F240A001ED442 /* DebugProxy */,
+				1EFB4E0919461AE7005932AF /* Difference */,
 				D725A2C818E0D308001A1E3E /* Grade */,
 				1EDE1BAF182D39DA002392CB /* JoinViews */,
 				D74121CA18F9C99300A81F8B /* Merge */,
@@ -885,6 +916,18 @@
 				1E8B5D6E18B77F5900C31FDC /* PluginRegistration.cpp */,
 			);
 			path = MixViews;
+			sourceTree = "<group>";
+		};
+		1EFB4E0919461AE7005932AF /* Difference */ = {
+			isa = PBXGroup;
+			children = (
+				1EFB4E1D19461B76005932AF /* Difference.cpp */,
+				1EFB4E1E19461B76005932AF /* Difference.h */,
+				1EFB4E2119461B86005932AF /* Info.plist */,
+				1EFB4E2219461B86005932AF /* Makefile */,
+				1EFB4E2319461B86005932AF /* PluginRegistration.cpp */,
+			);
+			path = Difference;
 			sourceTree = "<group>";
 		};
 		D721EBFC1911209B0069DB1D /* Roto */ = {
@@ -1198,6 +1241,22 @@
 			productReference = 1EDE1BDF182D8941002392CB /* MixViews.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
+		1EFB4E0A19461B13005932AF /* Difference.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1EFB4E1819461B13005932AF /* Build configuration list for PBXNativeTarget "Difference.ofx" */;
+			buildPhases = (
+				1EFB4E0B19461B13005932AF /* Sources */,
+				1EFB4E1619461B13005932AF /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Difference.ofx;
+			productName = basic.ofx;
+			productReference = 1EFB4E1B19461B13005932AF /* Difference.ofx copy.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 		D721EC02191120B30069DB1D /* Roto.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D721EC10191120B30069DB1D /* Build configuration list for PBXNativeTarget "Roto.ofx" */;
@@ -1303,6 +1362,9 @@
 				1EDE1B7B182D04D9002392CB /* Anaglyph.ofx */,
 				1E3451E11906952D0080D699 /* ChromaKeyer.ofx */,
 				1E3451FD190695DC0080D699 /* ColorCorrect.ofx */,
+				D7257D4B192E91120040CD9C /* CornerPin.ofx */,
+				D74A80B3194059CC007C3E1C /* Crop.ofx */,
+				1EFB4E0A19461B13005932AF /* Difference.ofx */,
 				1ECE5459185F2433001ED442 /* DebugProxy.ofx */,
 				1E1FB8E3190696F200F5515D /* Grade.ofx */,
 				1EDE1B9D182D3985002392CB /* JoinViews.ofx */,
@@ -1311,14 +1373,12 @@
 				1EDE1BB6182D3F38002392CB /* OneView.ofx */,
 				1ECE543C185F2374001ED442 /* ReConverge.ofx */,
 				1E3E3CA317995BEE005F2132 /* RGBLut.ofx */,
+				D721EC02191120B30069DB1D /* Roto.ofx */,
 				1E235FD918363C850019C45F /* SideBySide.ofx */,
 				1E3AC8C618B6207600F228A6 /* Switch.ofx */,
 				1E235FF418369E4C0019C45F /* TimeOffset.ofx */,
 				D7349E8F18E7767D0097DB1D /* Transform.ofx */,
 				1E8B5D4A18B76A7500C31FDC /* Misc.ofx */,
-				D721EC02191120B30069DB1D /* Roto.ofx */,
-				D7257D4B192E91120040CD9C /* CornerPin.ofx */,
-				D74A80B3194059CC007C3E1C /* Crop.ofx */,
 			);
 		};
 /* End PBXProject section */
@@ -1473,6 +1533,7 @@
 				1E8B5D5118B76A7500C31FDC /* ofxsMultiThread.cpp in Sources */,
 				1E8B5D5218B76A7500C31FDC /* ofxsParams.cpp in Sources */,
 				1E8B5D5418B76A7500C31FDC /* ofxsProperty.cpp in Sources */,
+				1EFB4E2019461B76005932AF /* Difference.cpp in Sources */,
 				1E71D9D01935FBFD00C98388 /* ofxsTransform3x3.cpp in Sources */,
 				1E8B5D5518B76A7500C31FDC /* ofxsPropertyValidation.cpp in Sources */,
 			);
@@ -1569,6 +1630,26 @@
 				1EDE1BD7182D8941002392CB /* ofxsParams.cpp in Sources */,
 				1EDE1BD8182D8941002392CB /* ofxsProperty.cpp in Sources */,
 				1EDE1BD9182D8941002392CB /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EFB4E0B19461B13005932AF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EFB4E2519461B86005932AF /* PluginRegistration.cpp in Sources */,
+				1EFB4E0C19461B13005932AF /* ColorCorrect.cpp in Sources */,
+				1EFB4E0D19461B13005932AF /* PluginRegistration.cpp in Sources */,
+				1EFB4E0E19461B13005932AF /* ofxsCore.cpp in Sources */,
+				1EFB4E0F19461B13005932AF /* ofxsImageEffect.cpp in Sources */,
+				1EFB4E1019461B13005932AF /* ofxsInteract.cpp in Sources */,
+				1EFB4E1119461B13005932AF /* ofxsLog.cpp in Sources */,
+				1EFB4E2419461B86005932AF /* Makefile in Sources */,
+				1EFB4E1219461B13005932AF /* ofxsMultiThread.cpp in Sources */,
+				1EFB4E1319461B13005932AF /* ofxsParams.cpp in Sources */,
+				1EFB4E1F19461B76005932AF /* Difference.cpp in Sources */,
+				1EFB4E1419461B13005932AF /* ofxsProperty.cpp in Sources */,
+				1EFB4E1519461B13005932AF /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2086,6 +2167,28 @@
 			};
 			name = Release;
 		};
+		1EFB4E1919461B13005932AF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Difference/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "Difference.ofx copy";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1EFB4E1A19461B13005932AF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Difference/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "Difference.ofx copy";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
 		D721EC11191120B30069DB1D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -2339,6 +2442,15 @@
 			buildConfigurations = (
 				1EDE1BDD182D8941002392CB /* Debug */,
 				1EDE1BDE182D8941002392CB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1EFB4E1819461B13005932AF /* Build configuration list for PBXNativeTarget "Difference.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1EFB4E1919461B13005932AF /* Debug */,
+				1EFB4E1A19461B13005932AF /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

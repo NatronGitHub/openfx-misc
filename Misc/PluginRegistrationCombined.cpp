@@ -3,6 +3,7 @@
 #include "ColorCorrect.h"
 #include "CornerPin.h"
 #include "Crop.h"
+#include "Difference.h"
 #include "Grade.h"
 #include "JoinViews.h"
 #include "Merge.h"
@@ -57,6 +58,8 @@ namespace OFX
             ids.push_back(&p17);
             static CropPluginFactory p18("net.sf.openfx:CropPlugin", 1, 0);
             ids.push_back(&p18);
+            static DifferencePluginFactory p19("net.sf.openfx:DifferencePlugin", 1, 0);
+            ids.push_back(&p19);
            // ReConverge is not finished/tested
             //static ReConvergePluginFactory p("net.sf.openfx:reConvergePlugin", 1, 0);
             //ids.push_back(&p);
