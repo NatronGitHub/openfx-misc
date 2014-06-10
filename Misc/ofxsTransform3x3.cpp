@@ -68,9 +68,29 @@ Transform3x3Plugin::Transform3x3Plugin(OfxImageEffectHandle handle, bool masked)
     _filter = fetchChoiceParam(kFilterTypeParamName);
     _clamp = fetchBooleanParam(kFilterClampParamName);
     _blackOutside = fetchBooleanParam(kFilterBlackOutsideParamName);
+    _motionblur = fetchDoubleParam(kTransform3x3MotionBlurParamName);
+    _shutter = fetchDoubleParam(kTransform3x3ShutterParamName);
+    _shutteroffset = fetchChoiceParam(kTransform3x3ShutterOffsetParamName);
+    _shuttercustomoffset = fetchDoubleParam(kTransform3x3ShutterCustomOffsetParamName);
     if (masked) {
         _mix = fetchDoubleParam(kFilterMixParamName);
     }
+}
+
+bool
+Transform3x3Plugin::hasMotionBlur(double time)
+{
+    double motionblur;
+    _motionblur->getValueAtTime(time, motionblur);
+    double shutter;
+    _shutter->getValueAtTime(time, shutter);
+    int shutteroffset_i;
+    _shutteroffset->getValueAtTime(time, shutteroffset_i);
+    double shuttercustomoffset;
+    _shuttercustomoffset->getValueAtTime(time, shuttercustomoffset);
+    // even without motion blur, a custom shutter offset may be set
+    return ((shutter != 0. && motionblur != 0.) ||
+            (shutteroffset_i == kTransform3x3ShutterOffsetCustom && shuttercustomoffset != 0.));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -118,25 +138,83 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
             _mix->getValueAtTime(args.time, mix);
         }
 
-        OFX::Matrix3x3 invtransform;
-        bool success = getInverseTransformCanonical(args.time, invert, &invtransform); // virtual function
-        if (!success) {
-            invtransform.a = 0.;
-            invtransform.b = 0.;
-            invtransform.c = 0.;
-            invtransform.d = 0.;
-            invtransform.e = 0.;
-            invtransform.f = 0.;
-            invtransform.g = 0.;
-            invtransform.h = 0.;
-            invtransform.i = 1.;
+
+        std::vector<OFX::Matrix3x3> invtransform;
+        int motionsamples;
+
+        if (hasMotionBlur(args.time)) {
+            double motionblur;
+            _motionblur->getValueAtTime(args.time, motionblur);
+            double shutter;
+            _shutter->getValueAtTime(args.time, shutter);
+            int shutteroffset_i;
+            _shutteroffset->getValueAtTime(args.time, shutteroffset_i);
+            double shuttercustomoffset;
+            _shuttercustomoffset->getValueAtTime(args.time, shuttercustomoffset);
+
+            motionsamples = std::max(1, (int)(motionblur * 100));
+            // use 10 times more transforms than there are samples
+            int nbtransforms = (motionsamples - 1)*10 + 1;
+            invtransform.resize(nbtransforms);
+            double t_start, t_end; // shutter time
+            switch (shutteroffset_i) {
+                case kTransform3x3ShutterOffsetCentered:
+                    t_start = args.time - shutter/2;
+                    t_end = args.time + shutter/2;
+                    break;
+                case kTransform3x3ShutterOffsetStart:
+                    t_start = args.time;
+                    t_end = args.time + shutter;
+                    break;
+                case kTransform3x3ShutterOffsetEnd:
+                    t_start = args.time - shutter;
+                    t_end = args.time;
+                    break;
+                case kTransform3x3ShutterOffsetCustom:
+                    t_start = args.time + shuttercustomoffset;
+                    t_end = args.time + shuttercustomoffset + shutter;
+                    break;
+            }
+
+            for (int i=0; i < nbtransforms; ++i) {
+                double t = (i == 0) ? t_start : (t_start + i*(t_end-t_start)/(double)(nbtransforms-1));
+                bool success = getInverseTransformCanonical(t, invert, &invtransform[i]); // virtual function
+                if (!success) {
+                    invtransform[i].a = 0.;
+                    invtransform[i].b = 0.;
+                    invtransform[i].c = 0.;
+                    invtransform[i].d = 0.;
+                    invtransform[i].e = 0.;
+                    invtransform[i].f = 0.;
+                    invtransform[i].g = 0.;
+                    invtransform[i].h = 0.;
+                    invtransform[i].i = 1.;
+                }
+            }
+        } else {
+            invtransform.resize(1);
+            bool success = getInverseTransformCanonical(args.time, invert, &invtransform[0]); // virtual function
+            if (!success) {
+                invtransform[0].a = 0.;
+                invtransform[0].b = 0.;
+                invtransform[0].c = 0.;
+                invtransform[0].d = 0.;
+                invtransform[0].e = 0.;
+                invtransform[0].f = 0.;
+                invtransform[0].g = 0.;
+                invtransform[0].h = 0.;
+                invtransform[0].i = 1.;
+            }
+            motionsamples  = 1;
         }
         processor.setValues(invtransform,
                             srcClip_->getPixelAspectRatio(),
                             args.renderScale, //!< 0.5 for a half-resolution image
                             args.fieldToRender,
                             //(FilterEnum)filter, clamp,
-                            blackOutside, mix);
+                            blackOutside,
+                            motionsamples,
+                            mix);
     }
 
     // auto ptr for the mask.
@@ -169,6 +247,11 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
 bool
 Transform3x3Plugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
+    // if there is motion blur, we use default values
+    if (hasMotionBlur(args.time)) {
+        return false;
+    }
+    
     OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
 
     ///if is identity return the input rod instead of transforming
@@ -269,35 +352,40 @@ Transform3x3Plugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
     const OfxRectD roi = args.regionOfInterest;
     bool invert;
 
-    // Transform3x3-GENERIC
-    _invert->getValueAtTime(args.time, invert);
-
-    OFX::Matrix3x3 invtransform;
-    bool success = getInverseTransformCanonical(args.time, invert, &invtransform);
-    if (!success) {
-        // can't compute inverse transform, use default value (render will probably fail anyway)
-        return;
-    }
-
-    /// now find the positions in the src clip of the 4 corners of the roi
-    OFX::Point3D p[4];
-    p[0] = invtransform * OFX::Point3D(roi.x1,roi.y1,1);
-    p[1] = invtransform * OFX::Point3D(roi.x2,roi.y1,1);
-    p[2] = invtransform * OFX::Point3D(roi.x2,roi.y2,1);
-    p[3] = invtransform * OFX::Point3D(roi.x1,roi.y2,1);
+    // if there is motion blur, we return the whole RoD
+    bool hasmotionblur = hasMotionBlur(args.time);
 
     // extract the x/y bounds
     double x1, y1, x2, y2;
-
-    // if all z's have the same sign, we can compute a reasonable ROI, else we give the whole image (the line at infinity crosses the rectangle)
+    OFX::Point3D p[4];
     bool allpositive = true;
     bool allnegative = true;
-    for (int i = 0; i < 4; ++i) {
-        allnegative = allnegative && (p[i].z < 0.);
-        allpositive = allpositive && (p[i].z > 0.);
-   }
 
-    if (!allpositive && !allnegative) {
+    if (!hasmotionblur) {
+        // Transform3x3-GENERIC
+        _invert->getValueAtTime(args.time, invert);
+
+        OFX::Matrix3x3 invtransform;
+        bool success = getInverseTransformCanonical(args.time, invert, &invtransform);
+        if (!success) {
+            // can't compute inverse transform, use default value (render will probably fail anyway)
+            return;
+        }
+
+        /// now find the positions in the src clip of the 4 corners of the roi
+        p[0] = invtransform * OFX::Point3D(roi.x1,roi.y1,1);
+        p[1] = invtransform * OFX::Point3D(roi.x2,roi.y1,1);
+        p[2] = invtransform * OFX::Point3D(roi.x2,roi.y2,1);
+        p[3] = invtransform * OFX::Point3D(roi.x1,roi.y2,1);
+
+
+        // if all z's have the same sign, we can compute a reasonable ROI, else we give the whole image (the line at infinity crosses the rectangle)
+        for (int i = 0; i < 4; ++i) {
+            allnegative = allnegative && (p[i].z < 0.);
+            allpositive = allpositive && (p[i].z > 0.);
+        }
+    }
+    if (hasmotionblur || (!allpositive && !allnegative)) {
         OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
         x1 = srcRoD.x1;
         x2 = srcRoD.x2;
@@ -493,6 +581,22 @@ Transform3x3Plugin::render(const OFX::RenderArguments &args)
 bool Transform3x3Plugin::isIdentity(const RenderArguments &args, OFX::Clip * &identityClip, double &identityTime)
 {
     // Transform3x3-GENERIC
+
+    // if there is motion blur, we suppose the transform is not identity
+    double motionblur;
+    _motionblur->getValueAtTime(args.time, motionblur);
+    double shutter;
+    _shutter->getValueAtTime(args.time, shutter);
+    int shutteroffset_i;
+    _shutteroffset->getValueAtTime(args.time, shutteroffset_i);
+    double shuttercustomoffset;
+    _shuttercustomoffset->getValueAtTime(args.time, shuttercustomoffset);
+    // even without motion blur, a custom shutter offset may be set
+    if ((shutter != 0. && motionblur != 0.) ||
+        (shutteroffset_i == kTransform3x3ShutterOffsetCustom && shuttercustomoffset != 0.)) {
+        return false;
+    }
+
     if (isIdentity(args.time)) { // let's call the Transform-specific one first
         identityClip = srcClip_;
         identityTime = args.time;
@@ -649,7 +753,6 @@ void OFX::Transform3x3DescribeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX
 
     ofxsFilterDescribeParamsInterpolate2D(desc, page);
 
-#if 0
     DoubleParamDescriptor* motionblur = desc.defineDoubleParam(kTransform3x3MotionBlurParamName);
     motionblur->setLabels(kTransform3x3MotionBlurParamLabel, kTransform3x3MotionBlurParamLabel, kTransform3x3MotionBlurParamLabel);
     motionblur->setHint(kTransform3x3MotionBlurParamHint);
@@ -677,6 +780,7 @@ void OFX::Transform3x3DescribeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX
     shutteroffset->appendOption(kTransform3x3ShutterOffsetEndLabel, kTransform3x3ShutterOffsetEndHint);
     assert(shutteroffset->getNOptions() == kTransform3x3ShutterOffsetCustom);
     shutteroffset->appendOption(kTransform3x3ShutterOffsetCustomLabel, kTransform3x3ShutterOffsetCustomHint);
+    shutteroffset->setAnimates(true);
     page->addChild(*shutteroffset);
 
     DoubleParamDescriptor* shuttercustomoffset = desc.defineDoubleParam(kTransform3x3ShutterCustomOffsetParamName);
@@ -686,7 +790,6 @@ void OFX::Transform3x3DescribeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX
     shuttercustomoffset->setRange(-1., 1.);
     shuttercustomoffset->setDisplayRange(-1., 1.);
     page->addChild(*shuttercustomoffset);
-#endif
 
     if (masked) {
         // GENERIC (MASKED)

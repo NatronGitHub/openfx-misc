@@ -125,6 +125,8 @@ private:
     void setupAndProcess(Transform3x3ProcessorBase &, const OFX::RenderArguments &args);
 
     bool isIdentity(double time, OFX::Clip * &identityClip, double &identityTime);
+
+    bool hasMotionBlur(double time);
     
 private:
     // Transform3x3-GENERIC
@@ -133,6 +135,11 @@ private:
     OFX::ChoiceParam* _filter;
     OFX::BooleanParam* _clamp;
     OFX::BooleanParam* _blackOutside;
+    OFX::DoubleParam* _motionblur;
+    OFX::DoubleParam* _shutter;
+    OFX::ChoiceParam* _shutteroffset;
+    OFX::DoubleParam* _shuttercustomoffset;
+
     bool _masked;
     OFX::DoubleParam* _mix;
 };
