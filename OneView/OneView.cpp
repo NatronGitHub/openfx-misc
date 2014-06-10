@@ -198,7 +198,7 @@ OneViewPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArguments
   OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
   int view;
-  view_->getValue(view);
+  view_->getValueAtTime(args.time, view);
   // fetch main input image
   std::auto_ptr<OFX::Image> src(srcClip_->fetchStereoscopicImage(args.time,view));
 
@@ -382,7 +382,7 @@ void OneViewPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
   view->appendOption("Left", "Left");
   view->appendOption("Right", "Right");
   view->setDefault(0);
-  view->setAnimates(false);
+  view->setAnimates(true);
 
   page->addChild(*view);
 }

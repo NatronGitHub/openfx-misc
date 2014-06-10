@@ -340,16 +340,16 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     processor.setRenderWindow(args.renderWindow);
     
     RGBAValues blackPoint,whitePoint,black,white,multiply,offset,gamma;
-    _blackPoint->getValue(blackPoint.r, blackPoint.g, blackPoint.b, blackPoint.a);
-    _whitePoint->getValue(whitePoint.r, whitePoint.g, whitePoint.b, whitePoint.a);
-    _black->getValue(black.r, black.g, black.b, black.a);
-    _white->getValue(white.r, white.g, white.b, white.a);
-    _multiply->getValue(multiply.r, multiply.g, multiply.b, multiply.a);
-    _offset->getValue(offset.r, offset.g, offset.b, offset.a);
-    _gamma->getValue(gamma.r, gamma.g, gamma.b, gamma.a);
+    _blackPoint->getValueAtTime(args.time, blackPoint.r, blackPoint.g, blackPoint.b, blackPoint.a);
+    _whitePoint->getValueAtTime(args.time, whitePoint.r, whitePoint.g, whitePoint.b, whitePoint.a);
+    _black->getValueAtTime(args.time, black.r, black.g, black.b, black.a);
+    _white->getValueAtTime(args.time, white.r, white.g, white.b, white.a);
+    _multiply->getValueAtTime(args.time, multiply.r, multiply.g, multiply.b, multiply.a);
+    _offset->getValueAtTime(args.time, offset.r, offset.g, offset.b, offset.a);
+    _gamma->getValueAtTime(args.time, gamma.r, gamma.g, gamma.b, gamma.a);
     bool clampBlack,clampWhite;
-    _clampBlack->getValue(clampBlack);
-    _clampWhite->getValue(clampWhite);
+    _clampBlack->getValueAtTime(args.time, clampBlack);
+    _clampWhite->getValueAtTime(args.time, clampWhite);
     processor.setValues(blackPoint, whitePoint, black, white, multiply, offset, gamma, clampBlack, clampWhite);
     processor.process();
 }
@@ -513,7 +513,7 @@ void GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     clampBlackParam->setScriptName(kClampBlackParamName);
     clampBlackParam->setHint("All colors below 0 will be set to 0.");
     clampBlackParam->setDefault(true);
-    clampBlackParam->setAnimates(false);
+    clampBlackParam->setAnimates(true);
     page->addChild(*clampBlackParam);
     
     BooleanParamDescriptor *clampWhiteParam = desc.defineBooleanParam(kClampWhiteParamName);
@@ -521,7 +521,7 @@ void GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     clampWhiteParam->setScriptName(kClampWhiteParamName);
     clampWhiteParam->setHint("All colors above 1 will be set to 1.");
     clampWhiteParam->setDefault(true);
-    clampWhiteParam->setAnimates(false);
+    clampWhiteParam->setAnimates(true);
     page->addChild(*clampWhiteParam);
 
 }

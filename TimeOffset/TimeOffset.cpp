@@ -147,9 +147,9 @@ checkComponents(const OFX::Image &src,
 double
 TimeOffsetPlugin::getSourceTime(double t) const
 {
-    double sourceTime = t - time_offset_->getValue(); // no animation
+    double sourceTime = t - time_offset_->getValueAtTime(t); // no animation
     OfxRangeD range = srcClip_->getFrameRange();
-    bool reverse_input = reverse_input_->getValue();
+    bool reverse_input = reverse_input_->getValueAtTime(t);
     if (reverse_input) {
         sourceTime = range.max - sourceTime + range.min;
     }
@@ -168,13 +168,11 @@ TimeOffsetPlugin::getTimeDomain(OfxRangeD &range)
 {
     // this should only be called in the general context, ever!
     if(getContext() == OFX::eContextGeneral) {
-        int time_offset = time_offset_->getValue(); //don't animate
-        
         // how many frames on the input clip
         OfxRangeD srcRange = srcClip_->getFrameRange();
         
-        range.min = srcRange.min + time_offset;
-        range.max = srcRange.max + time_offset;
+        range.min = srcRange.min + time_offset_->getValueAtTime(srcRange.min);
+        range.max = srcRange.max + time_offset_->getValueAtTime(srcRange.max);
         return true;
     }
 
@@ -280,7 +278,7 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
   // keep default range (INT_MIN..INT_MAX)
   // no display range
   // time_offset->setDisplayRange(0, 0);
-  time_offset->setAnimates(false); // no animation here!
+  time_offset->setAnimates(true);
 
   page->addChild(*time_offset);
 
@@ -288,7 +286,7 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
   reverse_input->setDefault(false);
   reverse_input->setHint("Reverse the order of the input frames so that last one is first");
   reverse_input->setLabels("reverse input", "reverse input", "reverse input");
-  reverse_input->setAnimates(false); // no animation here!
+  reverse_input->setAnimates(true);
 
   page->addChild(*reverse_input);
 

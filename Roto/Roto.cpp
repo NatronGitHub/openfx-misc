@@ -288,7 +288,7 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     processor.setRenderWindow(args.renderWindow);
     
     bool premult;
-    _premult->getValue(premult);
+    _premult->getValueAtTime(args.time, premult);
     processor.setValues(premult);
     
     // Call the base class process member, this will call the derived templated process code
@@ -462,7 +462,7 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     BooleanParamDescriptor* premult = desc.defineBooleanParam(kPremultParamName);
     premult->setLabels(kPremultParamName, kPremultParamName, kPremultParamName);
     premult->setDefault(false);
-    premult->setAnimates(false);
+    premult->setAnimates(true);
     premult->setHint("Premultiply the red,green and blue channels with the alpha channel produced by the mask.");
     page->addChild(*premult);
 

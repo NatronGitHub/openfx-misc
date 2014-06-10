@@ -138,7 +138,7 @@ bool
 SwitchPlugin::isIdentity(const OFX::RenderArguments &args, OFX::Clip * &identityClip, double &identityTime)
 {
     int input;
-    which_->getValue(input);
+    which_->getValueAtTime(args.time, input);
     identityClip = srcClip_[input];
     return true;
 }
@@ -148,7 +148,7 @@ SwitchPlugin::isIdentity(const OFX::RenderArguments &args, OFX::Clip * &identity
 bool SwitchPlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9])
 {
     int input;
-    which_->getValue(input);
+    which_->getValueAtTime(args.time, input);
     transformClip = srcClip_[input];
 
     transformMatrix[0] = 1.;

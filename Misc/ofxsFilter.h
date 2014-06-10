@@ -117,7 +117,7 @@ ofxsFilterDescribeParamsInterpolate2D(OFX::ImageEffectDescriptor &desc, OFX::Pag
     assert(filter->getNOptions() == eFilterNotch);
     filter->appendOption(kFilterNotch, kFilterNotchHint);
     filter->setDefault(eFilterCubic);
-    filter->setAnimates(false);
+    filter->setAnimates(true);
     filter->setLayoutHint(OFX::eLayoutHintNoNewLine);
     page->addChild(*filter);
 
@@ -125,7 +125,7 @@ ofxsFilterDescribeParamsInterpolate2D(OFX::ImageEffectDescriptor &desc, OFX::Pag
     clamp->setLabels(kFilterClampParamLabel, kFilterClampParamLabel, kFilterClampParamLabel);
     clamp->setHint(kFilterClampParamHint);
     clamp->setDefault(false);
-    clamp->setAnimates(false);
+    clamp->setAnimates(true);
     clamp->setLayoutHint(OFX::eLayoutHintNoNewLine);
     page->addChild(*clamp);
 
@@ -133,7 +133,7 @@ ofxsFilterDescribeParamsInterpolate2D(OFX::ImageEffectDescriptor &desc, OFX::Pag
     blackOutside->setLabels(kFilterBlackOutsideParamLabel, kFilterBlackOutsideParamLabel, kFilterBlackOutsideParamLabel);
     blackOutside->setHint(kFilterBlackOutsideParamHint);
     blackOutside->setDefault(true);
-    blackOutside->setAnimates(false);
+    blackOutside->setAnimates(true);
     page->addChild(*blackOutside);
 }
 

@@ -127,11 +127,11 @@ class PositionInteract : public OFX::OverlayInteract
     retVal.y = y * size.y + offset.y;
     return retVal; 
   }
-  void setCanonicalPosition(double x, double y, double time)
+  void setCanonicalPosition(double x, double y)
   {
     OfxPointD offset = _effect->getProjectOffset();
     OfxPointD size = _effect->getProjectSize();
-    _position->setValueAtTime(time, (x - offset.x) / size.x, (y - offset.y) / size.y);
+    _position->setValue((x - offset.x) / size.x, (y - offset.y) / size.y);
   }
 };
 
@@ -230,7 +230,7 @@ bool PositionInteract::penMotion(const OFX::PenArgs &args)
 
     case ePicked   : 
       {
-        setCanonicalPosition(penPos.x, penPos.y, args.time);
+        setCanonicalPosition(penPos.x, penPos.y);
         _effect->redrawOverlays();
       }
       break;
@@ -246,7 +246,7 @@ bool PositionInteract::penDown(const OFX::PenArgs &args)
   penMotion(args);
   if(_state == ePoised) {
     _state = ePicked;
-    setCanonicalPosition(args.penPosition.x, args.penPosition.y, args.time);
+    setCanonicalPosition(args.penPosition.x, args.penPosition.y);
     _effect->redrawOverlays();
   }
 
@@ -421,7 +421,7 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor, const OFX::RenderArg
 
   int offset = offset_->getValueAtTime(args.time);
   int convergemode;
-  convergemode_->getValue(convergemode);
+  convergemode_->getValueAtTime(args.time, convergemode);
 
   // set the images
   processor.setDstImg(dst.get());
@@ -641,7 +641,7 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
   convergemode->appendOption("shift right", "shift right");
   convergemode->appendOption("shift left", "shift left");
   convergemode->appendOption("shift both", "shift both");
-  convergemode->setAnimates(false); // no animation here!
+  convergemode->setAnimates(true);
 
   page->addChild(*convergemode);
 }

@@ -291,7 +291,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor, const OFX::RenderArgume
   }
 
   double amtcolour = amtcolour_->getValueAtTime(args.time);
-  bool swap = swap_->getValue();
+  bool swap = swap_->getValueAtTime(args.time);
   int offset = offset_->getValueAtTime(args.time);
 
   // set the images
@@ -429,7 +429,7 @@ void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
   swap->setDefault(false);
   swap->setHint("Swap left and right views");
   swap->setLabels("(right=red)", "(right=red)", "(right=red)");
-  swap->setAnimates(false); // no animation here!
+  swap->setAnimates(true);
 
   page->addChild(*swap);
 

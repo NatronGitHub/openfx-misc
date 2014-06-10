@@ -260,7 +260,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
     OfxRectD rodB = srcClipB_->getRegionOfDefinition(args.time);
     
     int bboxChoice;
-    _bbox->getValue(bboxChoice);
+    _bbox->getValueAtTime(args.time, bboxChoice);
     
 	switch(bboxChoice)
 	{
@@ -349,9 +349,9 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     int bboxChoice;
     double mix;
     bool alphaMasking;
-    _alphaMasking->getValue(alphaMasking);
-    _operation->getValue(operation);
-    _bbox->getValue(bboxChoice);
+    _alphaMasking->getValueAtTime(args.time, alphaMasking);
+    _operation->getValueAtTime(args.time, operation);
+    _bbox->getValueAtTime(args.time, bboxChoice);
     _mix->getValueAtTime(args.time, mix);
     processor.setValues((MergingFunctionEnum)operation, bboxChoice, mix,alphaMasking);
     processor.setDstImg(dst.get());
@@ -458,7 +458,7 @@ MergePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::strin
 {
     if (paramName == kOperationParamName) {
         int operation_i;
-        _operation->getValue(operation_i);
+        _operation->getValueAtTime(args.time, operation_i);
         // depending on the operation, enable/disable alpha masking
         _alphaMasking->setEnabled(MergeImages2D::isMaskable((MergingFunctionEnum)operation_i));
     }
@@ -601,13 +601,13 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     assert(operation->getNOptions() == eMergeXOR);
     operation->appendOption( "xor", ": A(1-b)+B(1-a)" );
     operation->setDefault(eMergeOver);
-    operation->setAnimates(false);
+    operation->setAnimates(true);
     operation->setLayoutHint(OFX::eLayoutHintNoNewLine);
     page->addChild(*operation);
     
     BooleanParamDescriptor* alphaMasking = desc.defineBooleanParam(kAlphaMaskingParamName);
     alphaMasking->setLabels(kAlphaMaskingParamLabel, kAlphaMaskingParamLabel, kAlphaMaskingParamLabel);
-    alphaMasking->setAnimates(false);
+    alphaMasking->setAnimates(true);
     alphaMasking->setDefault(false);
     alphaMasking->setEnabled(MergeImages2D::isMaskable(eMergeOver));
     alphaMasking->setHint(kAlphaMaskingParamHint);
@@ -619,7 +619,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     boundingBox->appendOption("Intersection");
     boundingBox->appendOption("A");
     boundingBox->appendOption("B");
-    boundingBox->setAnimates(false);
+    boundingBox->setAnimates(true);
     boundingBox->setDefault(0);
     page->addChild(*boundingBox);
     

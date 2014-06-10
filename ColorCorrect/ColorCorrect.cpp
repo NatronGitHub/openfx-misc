@@ -119,9 +119,9 @@ namespace {
         double b;
         double a;
 
-        void getValueFrom(OFX::RGBAParam* p)
+        void getValueFrom(double time, OFX::RGBAParam* p)
         {
-            p->getValue(r, g, b, a);
+            p->getValueAtTime(time, r, g, b, a);
         }
     };
 
@@ -429,7 +429,7 @@ private:
         group->offset = fetchRGBAParam(groupName + '.' + kColorCorrectOffsetName);
     }
     
-    void getColorCorrectGroupValues(ColorControlGroup* groupValues,ColorCorrectGroupType type);
+    void getColorCorrectGroupValues(double time, ColorControlGroup* groupValues, ColorCorrectGroupType type);
 
     ColorControlParamGroup& getGroup(ColorCorrectGroupType type) {
         switch (type) {
@@ -461,14 +461,14 @@ private :
 };
 
 
-void ColorCorrectPlugin::getColorCorrectGroupValues(ColorControlGroup* groupValues, ColorCorrectGroupType type)
+void ColorCorrectPlugin::getColorCorrectGroupValues(double time, ColorControlGroup* groupValues, ColorCorrectGroupType type)
 {
     ColorControlParamGroup& group = getGroup(type);
-    groupValues->saturation.getValueFrom(group.saturation);
-    groupValues->contrast.getValueFrom(group.contrast);
-    groupValues->gamma.getValueFrom(group.gamma);
-    groupValues->gain.getValueFrom(group.gain);
-    groupValues->offset.getValueFrom(group.offset);
+    groupValues->saturation.getValueFrom(time, group.saturation);
+    groupValues->contrast.getValueFrom(time, group.contrast);
+    groupValues->gamma.getValueFrom(time, group.gamma);
+    groupValues->gain.getValueFrom(time, group.gain);
+    groupValues->offset.getValueFrom(time, group.offset);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -525,10 +525,10 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
     processor.setRenderWindow(args.renderWindow);
     
     ColorControlGroup masterValues,shadowValues,midtoneValues,highlightValues;
-    getColorCorrectGroupValues(&masterValues,eGroupMaster);
-    getColorCorrectGroupValues(&shadowValues,eGroupShadow);
-    getColorCorrectGroupValues(&midtoneValues,eGroupMidtone);
-    getColorCorrectGroupValues(&highlightValues,eGroupHighlight);
+    getColorCorrectGroupValues(args.time, &masterValues,    eGroupMaster);
+    getColorCorrectGroupValues(args.time, &shadowValues,    eGroupShadow);
+    getColorCorrectGroupValues(args.time, &midtoneValues,   eGroupMidtone);
+    getColorCorrectGroupValues(args.time, &highlightValues, eGroupHighlight);
     processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues);
     processor.process();
 }

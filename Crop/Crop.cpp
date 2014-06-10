@@ -273,29 +273,29 @@ CropPlugin::getCropRectangle_canonical(OfxTime time,bool useReformat,bool forceI
     
     bool intersect;
     if (!forceIntersect) {
-        _intersect->getValue(intersect);
+        _intersect->getValueAtTime(time, intersect);
     } else {
         intersect = true;
     }
     
     bool reformat;
     if (useReformat) {
-        _reformat->getValue(reformat);
+        _reformat->getValueAtTime(time, reformat);
     } else {
         reformat = false;
     }
     
     bool blackOutside;
-    _blackOutside->getValue(blackOutside);
+    _blackOutside->getValueAtTime(time, blackOutside);
     
     if (reformat) {
         cropRect.x1 = cropRect.y1 = 0.;
     } else {
-        _btmLeft->getValue(cropRect.x1, cropRect.y1);
+        _btmLeft->getValueAtTime(time, cropRect.x1, cropRect.y1);
     }
     
     double w,h;
-    _size->getValue(w, h);
+    _size->getValueAtTime(time, w, h);
     cropRect.x2 = cropRect.x1 + w;
     cropRect.y2 = cropRect.y1 + h;
     
@@ -355,9 +355,9 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
     processor.setRenderWindow(args.renderWindow);
     
     bool reformat;
-    _reformat->getValue(reformat);
+    _reformat->getValueAtTime(args.time, reformat);
     bool blackOutside;
-    _blackOutside->getValue(blackOutside);
+    _blackOutside->getValueAtTime(args.time, blackOutside);
     
     OfxRectD cropRectCanonical;
     getCropRectangle_canonical(args.time, false, false, cropRectCanonical);
@@ -371,7 +371,7 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
     cropRectPixel = MergeImages2D::downscalePowerOfTwoSmallestEnclosing(cropRectPixel, mipMapLevel);
     
     double softness;
-    _softness->getValue(softness);
+    _softness->getValueAtTime(args.time, softness);
     softness *= args.renderScale.x;
     
     OfxRectD dstRoD = dstClip_->getRegionOfDefinition(args.time);
@@ -467,7 +467,7 @@ CropPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string
 {
     if (paramName == kReformatParamName) {
         bool reformat;
-        _reformat->getValue(reformat);
+        _reformat->getValueAtTime(args.time, reformat);
         _btmLeft->setEnabled(!reformat);
     }
 }
@@ -690,13 +690,13 @@ bool CropInteract::draw(const OFX::DrawArgs &args)
         size = _sizeDrag;
     } else {
         bool reformat;
-        _reformat->getValue(reformat);
+        _reformat->getValueAtTime(args.time, reformat);
         if (!reformat) {
-            _btmLeft->getValue(btmLeft.x, btmLeft.y);
+            _btmLeft->getValueAtTime(args.time, btmLeft.x, btmLeft.y);
         } else {
             btmLeft.x = btmLeft.y = 0.;
         }
-        _size->getValue(size.x, size.y);
+        _size->getValueAtTime(args.time, size.x, size.y);
     }
     
     OfxPointD topLeft,midTop,topRight,midRight,btmRight,midBtm,midLeft,center;
@@ -808,13 +808,13 @@ bool CropInteract::penMotion(const OFX::PenArgs &args)
     double selectionTol = 15. * args.pixelScale.x;
     
     OfxPointD size;
-    _size->getValue(size.x, size.y);
+    _size->getValueAtTime(args.time, size.x, size.y);
     
     bool reformat;
-    _reformat->getValue(reformat);
+    _reformat->getValueAtTime(args.time, reformat);
     OfxPointD btmLeft;
     if (!reformat) {
-        _btmLeft->getValue(btmLeft.x, btmLeft.y);
+        _btmLeft->getValueAtTime(args.time, btmLeft.x, btmLeft.y);
     } else {
         btmLeft.x = btmLeft.y = 0.;
     }
@@ -967,14 +967,14 @@ bool CropInteract::penDown(const OFX::PenArgs &args)
     double selectionTol = 15. * args.pixelScale.x;
     
     OfxPointD size;
-    _size->getValue(size.x, size.y);
+    _size->getValueAtTime(args.time, size.x, size.y);
     
     bool reformat;
-    _reformat->getValue(reformat);
+    _reformat->getValueAtTime(args.time, reformat);
     
     OfxPointD btmLeft;
     if (!reformat) {
-        _btmLeft->getValue(btmLeft.x, btmLeft.y);
+        _btmLeft->getValueAtTime(args.time, btmLeft.x, btmLeft.y);
     } else {
         btmLeft.x = btmLeft.y = 0.;
     }
@@ -1135,7 +1135,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     reformat->setLabels(kReformatParamName, kReformatParamName, kReformatParamName);
     reformat->setHint("Translates the bottom left corner of the crop rectangle to be in (0,0).");
     reformat->setDefault(false);
-    reformat->setAnimates(false);
+    reformat->setAnimates(true);
     reformat->setLayoutHint(OFX::eLayoutHintNoNewLine);
     page->addChild(*reformat);
     
@@ -1144,13 +1144,13 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     intersect->setHint("Intersects the crop rectangle with the input region of definition instead of extending it");
     intersect->setLayoutHint(OFX::eLayoutHintNoNewLine);
     intersect->setDefault(false);
-    intersect->setAnimates(false);
+    intersect->setAnimates(true);
     page->addChild(*intersect);
     
     BooleanParamDescriptor* blackOutside = desc.defineBooleanParam(kBlackOutsideParamName);
     blackOutside->setLabels(kBlackOutsideParamName, kBlackOutsideParamName, kBlackOutsideParamName);
     blackOutside->setDefault(false);
-    blackOutside->setAnimates(false);
+    blackOutside->setAnimates(true);
     blackOutside->setHint("Add 1 black pixel to the region of definition so that all the area outside the crop rectangle is black");
     page->addChild(*blackOutside);
     

@@ -388,7 +388,7 @@ bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, bool invert, OF
     int k = 0;
 
     for (int i=0; i < 4; ++i) {
-        _enable[i]->getValue(enable[i]);
+        _enable[i]->getValueAtTime(time, enable[i]);
         if (enable[i]) {
             _from[i]->getValueAtTime(time, p[f][k].x, p[f][k].y);
             _to[i]->getValueAtTime(time, p[t][k].x, p[t][k].y);
@@ -420,7 +420,6 @@ bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, bool invert, OF
             break;
         case 1:
             success = translation_from_one_point(p[0][0], p[1][0], &homo3x3);
-            success = true;
             break;
     }
     if (!success) {
@@ -446,7 +445,7 @@ bool CornerPinPlugin::isIdentity(double time)
     // all enabled points must be equal
     for (int i = 0; i < 4; ++i) {
         bool enable;
-        _enable[i]->getValue(enable);
+        _enable[i]->getValueAtTime(time, enable);
         if (enable) {
             OfxPointD p, q;
             _from[i]->getValueAtTime(time, p.x, p.y);
@@ -471,7 +470,7 @@ static void copyPoint(OFX::Double2DParam* from, OFX::Double2DParam* to)
 //        to->setValueAtTime(time, p.x, p.y);
 //    }
 //    if (keyCount == 0) {
-//        from->getValue(p.x, p.y);
+//        from->getValueAtTime(time, p.x, p.y);
 //        to->setValue(p.x, p.y);
 //    }
     to->copyFrom(*from, 0, NULL);
@@ -537,14 +536,14 @@ private:
      * @brief Returns true if the points that should be used by the overlay are
      * the "from" points, otherwise the overlay is assumed to use the "to" points.
      **/
-    bool isFromPoints() const
+    bool isFromPoints(double time) const
     {
         int v;
-        _overlayChoice->getValue(v);
+        _overlayChoice->getValueAtTime(time, v);
         return v == 1;
     }
     
-    bool isNearbyTo(int i, const OfxPointD& pos,bool useFromPoints,double tolerance) const;
+    bool isNearbyTo(double time, int i, const OfxPointD& pos,bool useFromPoints,double tolerance) const;
 
     OFX::Double2DParam* _to[4];
     OFX::Double2DParam* _from[4];
@@ -562,23 +561,23 @@ private:
 
 
 
-bool CornerPinTransformInteract::isNearbyTo(int i, const OfxPointD& pos,bool useFromPoints,double tolerance) const
+bool CornerPinTransformInteract::isNearbyTo(double time, int i, const OfxPointD& pos,bool useFromPoints,double tolerance) const
 {
     OfxPointD p;
-    useFromPoints ? _from[i]->getValue(p.x, p.y) :_to[i]->getValue(p.x, p.y);
+    useFromPoints ? _from[i]->getValueAtTime(time, p.x, p.y) :_to[i]->getValueAtTime(time, p.x, p.y);
     return std::fabs(pos.x-p.x) < tolerance && std::fabs(pos.y-p.y) < tolerance;
 }
 
 bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
 {
-    bool useFrom = isFromPoints();
+    bool useFrom = isFromPoints(args.time);
 
     OfxPointD p[4];
     for (int i = 0; i < 4; ++i) {
         if (_dragging == i) {
             p[i] = _draggedPos[i];
         } else {
-            useFrom ? _from[i]->getValue(p[i].x, p[i].y) :_to[i]->getValue(p[i].x, p[i].y);
+            useFrom ? _from[i]->getValueAtTime(args.time, p[i].x, p[i].y) :_to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
         }
     }
     
@@ -612,7 +611,7 @@ bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
     delta.x = args.penPosition.x - _lastMousePos.x;
     delta.y = args.penPosition.y - _lastMousePos.y;
     
-    bool useFrom = isFromPoints();
+    bool useFrom = isFromPoints(args.time);
     
     double selectionTol = 15. * args.pixelScale.x;
     _hovering = -1;
@@ -623,7 +622,7 @@ bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
             _draggedPos[i].x += delta.x;
             _draggedPos[i].y += delta.y;
             didSomething = true;
-        } else if (isNearbyTo(i, args.penPosition, useFrom, selectionTol)) {
+        } else if (isNearbyTo(args.time, i, args.penPosition, useFrom, selectionTol)) {
             _hovering = i;
             didSomething = true;
         }
@@ -638,10 +637,10 @@ bool CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
     bool didSomething = false;
     
     double selectionTol = 15. * args.pixelScale.x;
-    bool useFrom = isFromPoints();
+    bool useFrom = isFromPoints(args.time);
 
     for (int i = 0; i < 4; ++i) {
-        if (isNearbyTo(i, args.penPosition, useFrom, selectionTol)) {
+        if (isNearbyTo(args.time, i, args.penPosition, useFrom, selectionTol)) {
             _dragging = i;
             _draggedPos[i] = args.penPosition;
             didSomething = true;
@@ -656,7 +655,7 @@ bool CornerPinTransformInteract::penUp(const OFX::PenArgs &args)
 {
     bool didSomething = false;
 
-    bool useFrom = isFromPoints();
+    bool useFrom = isFromPoints(args.time);
 
     for (int i = 0; i < 4; ++i) {
         if (_dragging == i) {
@@ -707,7 +706,7 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
     BooleanParamDescriptor* enable = desc.defineBooleanParam(kEnableParamName[i]);
     enable->setLabels(kEnableParamName[i], kEnableParamName[i], kEnableParamName[i]);
     enable->setDefault(true);
-    enable->setAnimates(false);
+    enable->setAnimates(true);
     enable->setHint("Enables the point on the left.");
     enable->setParent(*group);
 }
@@ -789,7 +788,7 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     overlayChoice->appendOption("To");
     overlayChoice->appendOption("From");
     overlayChoice->setDefault(0);
-    overlayChoice->setAnimates(false);
+    overlayChoice->setAnimates(true);
     page->addChild(*overlayChoice);
 }
 

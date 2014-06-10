@@ -227,9 +227,9 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
 
   // fetch main input image
   int view1;
-  view1_->getValue(view1);
+  view1_->getValueAtTime(args.time, view1);
   int view2;
-  view2_->getValue(view2);
+  view2_->getValueAtTime(args.time, view2);
   std::auto_ptr<OFX::Image> src1(srcClip_->fetchStereoscopicImage(args.time,view1));
   std::auto_ptr<OFX::Image> src2(srcClip_->fetchStereoscopicImage(args.time,view2));
 
@@ -251,7 +251,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
       throw int(1); // HACK!! need to throw an sensible exception here!
   }
 
-  bool vertical = vertical_->getValue();
+  bool vertical = vertical_->getValueAtTime(args.time);
   OfxPointD offset = getProjectOffset();
   OfxPointD size = getProjectSize();
 
@@ -283,7 +283,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
 bool
 SideBySidePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
-  bool vertical = vertical_->getValue();
+  bool vertical = vertical_->getValueAtTime(args.time);
   OfxPointD offset = getProjectOffset();
   OfxPointD size = getProjectSize();
 
@@ -310,7 +310,7 @@ SideBySidePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
 void 
 SideBySidePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
-  bool vertical = vertical_->getValue();
+  bool vertical = vertical_->getValueAtTime(args.time);
   OfxPointD offset = getProjectOffset();
   OfxPointD size = getProjectSize();
 
@@ -495,7 +495,7 @@ void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
   vertical->setDefault(false);
   vertical->setHint("Stack views vertically instead of horizontally");
   vertical->setLabels("vertical", "vertical", "vertical");
-  vertical->setAnimates(false); // no animation here!
+  vertical->setAnimates(true);
 
   page->addChild(*vertical);
 
@@ -505,7 +505,7 @@ void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
   view1->appendOption("Left", "Left");
   view1->appendOption("Right", "Right");
   view1->setDefault(0);
-  view1->setAnimates(false); // no animation here!
+  view1->setAnimates(true);
 
   page->addChild(*view1);
 
@@ -515,7 +515,7 @@ void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
   view2->appendOption("Left", "Left");
   view2->appendOption("Right", "Right");
   view2->setDefault(1);
-  view2->setAnimates(false); // no animation here!
+  view2->setAnimates(true);
 
   page->addChild(*view2);
 }

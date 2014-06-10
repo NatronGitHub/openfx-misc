@@ -183,7 +183,7 @@ bool TransformPlugin::isIdentity(double time)
     double skewX, skewY;
     _scale->getValueAtTime(time, scale.x, scale.y);
     bool scaleUniform;
-    _scaleUniform->getValue(scaleUniform);
+    _scaleUniform->getValueAtTime(time, scaleUniform);
     if (scaleUniform) {
         scale.y = scale.x;
     }
@@ -211,7 +211,7 @@ bool TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX
     // NON-GENERIC
     _scale->getValueAtTime(time, scaleX, scaleY);
     bool scaleUniform;
-    _scaleUniform->getValue(scaleUniform);
+    _scaleUniform->getValueAtTime(time, scaleUniform);
     if (scaleUniform) {
         scaleY = scaleX;
     }
@@ -313,29 +313,29 @@ class TransformInteract : public OFX::OverlayInteract {
 
 private:
 
-    void getCenter(OfxPointD *center)
+    void getCenter(double time, OfxPointD *center)
     {
         OfxPointD translate;
-        _center->getValue(center->x, center->y);
-        _translate->getValue(translate.x, translate.y);
+        _center->getValueAtTime(time, center->x, center->y);
+        _translate->getValueAtTime(time, translate.x, translate.y);
         center->x += translate.x;
         center->y += translate.y;
     }
     
-    void getScale(OfxPointD* scale)
+    void getScale(double time, OfxPointD* scale)
     {
-        _scale->getValue(scale->x, scale->y);
+        _scale->getValueAtTime(time, scale->x, scale->y);
         bool scaleUniform;
-        _scaleUniform->getValue(scaleUniform);
+        _scaleUniform->getValueAtTime(time, scaleUniform);
         if (scaleUniform) {
             scale->y = scale->x;
         }
     }
     
-    void getCircleRadius(const OfxPointD& pixelScale, OfxPointD* radius)
+    void getCircleRadius(double time, const OfxPointD& pixelScale, OfxPointD* radius)
     {
         OfxPointD scale;
-        getScale(&scale);
+        getScale(time, &scale);
         radius->x = scale.x * CIRCLE_RADIUS_BASE;
         radius->y = scale.y * CIRCLE_RADIUS_BASE;
         // don't draw too small. 15 pixels is the limit
@@ -353,16 +353,17 @@ private:
         radius->y *= meanPixelScale;
     }
     
-    void getPoints(const OfxPointD& pixelScale,
+    void getPoints(double time,
+                   const OfxPointD& pixelScale,
                    OfxPointD *center,
                    OfxPointD *left,
                    OfxPointD *bottom,
                    OfxPointD *top,
                    OfxPointD *right)
     {
-        getCenter(center);
+        getCenter(time, center);
         OfxPointD radius;
-        getCircleRadius(pixelScale, &radius);
+        getCircleRadius(time, pixelScale, &radius);
         left->x = center->x - radius.x ;
         left->y = center->y;
         right->x = center->x + radius.x ;
@@ -631,22 +632,22 @@ TransformInteract::draw(const OFX::DrawArgs &args)
 
     pscale.x = args.pixelScale.x / args.renderScale.x;
     pscale.y = args.pixelScale.y / args.renderScale.y;
-    getPoints(pscale, &center, &left, &bottom, &top, &right);
+    getPoints(args.time, pscale, &center, &left, &bottom, &top, &right);
 
     double angle;
-    _rotate->getValue(angle);
+    _rotate->getValueAtTime(args.time, angle);
     
     double skewX, skewY;
     int skewOrderYX;
-    _skewX->getValue(skewX);
-    _skewY->getValue(skewY);
-    _skewOrder->getValue(skewOrderYX);
+    _skewX->getValueAtTime(args.time, skewX);
+    _skewY->getValueAtTime(args.time, skewY);
+    _skewOrder->getValueAtTime(args.time, skewOrderYX);
 
     bool inverted;
-    _invert->getValue(inverted);
+    _invert->getValueAtTime(args.time, inverted);
 
     OfxPointD radius;
-    getCircleRadius(pscale, &radius);
+    getCircleRadius(args.time, pscale, &radius);
 
     glPushMatrix();
     glTranslated(center.x, center.y, 0.);
@@ -669,9 +670,9 @@ TransformInteract::draw(const OFX::DrawArgs &args)
     double flip = 0.;
     if (_drawState == eSkewXBarHoverered || _drawState == eSkewYBarHoverered) {
         OfxPointD scale;
-        _scale->getValue(scale.x, scale.y);
+        _scale->getValueAtTime(args.time, scale.x, scale.y);
         bool scaleUniform;
-        _scaleUniform->getValue(scaleUniform);
+        _scaleUniform->getValueAtTime(args.time, scaleUniform);
         if (scaleUniform) {
             scale.y = scale.x;
         }
@@ -782,7 +783,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
 
     pscale.x = args.pixelScale.x / args.renderScale.x;
     pscale.y = args.pixelScale.y / args.renderScale.y;
-    getPoints(pscale, &center, &left, &bottom, &top, &right);
+    getPoints(args.time, pscale, &center, &left, &bottom, &top, &right);
 
     OfxRectD centerPoint = rectFromCenterPoint(center);
     OfxRectD leftPoint = rectFromCenterPoint(left);
@@ -791,25 +792,25 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     OfxRectD bottomPoint = rectFromCenterPoint(bottom);
     
     OfxPointD ellipseRadius;
-    getCircleRadius(pscale, &ellipseRadius);
+    getCircleRadius(args.time, pscale, &ellipseRadius);
     
     //double dx = args.penPosition.x - _lastMousePos.x;
     //double dy = args.penPosition.y - _lastMousePos.y;
     
     double currentRotation;
-    _rotate->getValue(currentRotation);
+    _rotate->getValueAtTime(args.time, currentRotation);
     double rot = OFX::ofxsToRadians(currentRotation);
     
     double skewX, skewY;
     int skewOrderYX;
-    _skewX->getValue(skewX);
-    _skewY->getValue(skewY);
-    _skewOrder->getValue(skewOrderYX);
+    _skewX->getValueAtTime(args.time, skewX);
+    _skewY->getValueAtTime(args.time, skewY);
+    _skewOrder->getValueAtTime(args.time, skewOrderYX);
     
     OfxPointD scale;
-    _scale->getValue(scale.x, scale.y);
+    _scale->getValueAtTime(args.time, scale.x, scale.y);
     bool scaleUniform;
-    _scaleUniform->getValue(scaleUniform);
+    _scaleUniform->getValueAtTime(args.time, scaleUniform);
     if (scaleUniform) {
         scale.y = scale.x;
     }
@@ -929,7 +930,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         }
     } else if (_mouseState == eDraggingTranslation) {
         OfxPointD currentTranslation;
-        _translate->getValue(currentTranslation.x, currentTranslation.y);
+        _translate->getValueAtTime(args.time, currentTranslation.x, currentTranslation.y);
         
         double dx = args.penPosition.x - _lastMousePos.x;
         double dy = args.penPosition.y - _lastMousePos.y;
@@ -946,9 +947,9 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         _translate->setValue(newx,newy);
     } else if (_mouseState == eDraggingCenter) {
         OfxPointD currentTranslation;
-        _translate->getValue(currentTranslation.x, currentTranslation.y);
+        _translate->getValueAtTime(args.time, currentTranslation.x, currentTranslation.y);
         OfxPointD currentCenter;
-        _center->getValue(currentCenter.x, currentCenter.y);
+        _center->getValueAtTime(args.time, currentCenter.x, currentCenter.y);
         OFX::Matrix3x3 R = ofxsMatRotation(rot);
 
         double dx = args.penPosition.x - _lastMousePos.x;
@@ -1026,7 +1027,7 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
 
     pscale.x = args.pixelScale.x / args.renderScale.x;
     pscale.y = args.pixelScale.y / args.renderScale.y;
-    getPoints(pscale, &center, &left, &bottom, &top, &right);
+    getPoints(args.time, pscale, &center, &left, &bottom, &top, &right);
     OfxRectD centerPoint = rectFromCenterPoint(center);
     OfxRectD leftPoint = rectFromCenterPoint(left);
     OfxRectD rightPoint = rectFromCenterPoint(right);
@@ -1034,17 +1035,17 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     OfxRectD bottomPoint = rectFromCenterPoint(bottom);
     
     OfxPointD ellipseRadius;
-    getCircleRadius(pscale, &ellipseRadius);
+    getCircleRadius(args.time, pscale, &ellipseRadius);
     
     
     double currentRotation;
-    _rotate->getValue(currentRotation);
+    _rotate->getValueAtTime(args.time, currentRotation);
     
     double skewX, skewY;
     int skewOrderYX;
-    _skewX->getValue(skewX);
-    _skewY->getValue(skewY);
-    _skewOrder->getValue(skewOrderYX);
+    _skewX->getValueAtTime(args.time, skewX);
+    _skewY->getValueAtTime(args.time, skewY);
+    _skewOrder->getValueAtTime(args.time, skewOrderYX);
     
     OFX::Point3D transformedPos, rotationPos;
     transformedPos.x = args.penPosition.x;
@@ -1175,7 +1176,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     scaleUniform->setLabels(kScaleUniformParamName, kScaleUniformParamName, kScaleUniformParamName);
     scaleUniform->setHint(kScaleUniformParamHint);
     scaleUniform->setDefault(true);
-    scaleUniform->setAnimates(false);
+    scaleUniform->setAnimates(true);
     page->addChild(*scaleUniform);
 
     DoubleParamDescriptor* skewX = desc.defineDoubleParam(kSkewXParamName);
@@ -1195,7 +1196,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     skewOrder->setDefault(0);
     skewOrder->appendOption("XY");
     skewOrder->appendOption("YX");
-    skewOrder->setAnimates(false);
+    skewOrder->setAnimates(true);
     page->addChild(*skewOrder);
 
     Double2DParamDescriptor* center = desc.defineDouble2DParam(kCenterParamName);

@@ -733,9 +733,9 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
     suppressionAngle_->getValueAtTime(args.time, suppressionAngle);
     keyLift_->getValueAtTime(args.time, keyLift);
     keyGain_->getValueAtTime(args.time, keyGain);
-    outputMode_->getValue(outputModeI);
+    outputMode_->getValueAtTime(args.time, outputModeI);
     outputMode = (OutputModeEnum)outputModeI;
-    sourceAlpha_->getValue(sourceAlphaI);
+    sourceAlpha_->getValueAtTime(args.time, sourceAlphaI);
     sourceAlpha = (SourceAlphaEnum)sourceAlphaI;
     processor.setValues(keyColor, acceptanceAngle, suppressionAngle, keyLift, keyGain, outputMode, sourceAlpha);
     processor.setDstImg(dst.get());
@@ -940,7 +940,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     assert(outputMode->getNOptions() == (int)eOutputModeComposite);
     outputMode->appendOption(kOutputModeCompositeOption, kOutputModeCompositeHint);
     outputMode->setDefault((int)eOutputModeComposite);
-    outputMode->setAnimates(false);
+    outputMode->setAnimates(true);
     page->addChild(*outputMode);
 
     ChoiceParamDescriptor* sourceAlpha = desc.defineChoiceParam(kSourceAlphaParamName);
@@ -952,7 +952,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     assert(sourceAlpha->getNOptions() == (int)eSourceAlphaNormal);
     sourceAlpha->appendOption(kSourceAlphaNormalOption, kSourceAlphaNormalHint);
     sourceAlpha->setDefault((int)eSourceAlphaIgnore);
-    sourceAlpha->setAnimates(false);
+    sourceAlpha->setAnimates(true);
     page->addChild(*sourceAlpha);
 }
 

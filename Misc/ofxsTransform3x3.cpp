@@ -110,10 +110,10 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
         double mix = 1.;
 
         // Transform3x3-GENERIC
-        _invert->getValue(invert);
+        _invert->getValueAtTime(args.time, invert);
 
         // GENERIC
-        _blackOutside->getValue(blackOutside);
+        _blackOutside->getValueAtTime(args.time, blackOutside);
         if (_masked) {
             _mix->getValueAtTime(args.time, mix);
         }
@@ -191,7 +191,7 @@ Transform3x3Plugin::getRegionOfDefinition(const RegionOfDefinitionArguments &arg
     bool invert;
 
     // Transform3x3-GENERIC
-    _invert->getValue(invert);
+    _invert->getValueAtTime(args.time, invert);
     
     OFX::Matrix3x3 transform;
     bool success = getInverseTransformCanonical(args.time, !invert, &transform); // RoD is computed using the *DIRECT* transform, which is why we use !invert
@@ -249,7 +249,7 @@ Transform3x3Plugin::getRegionOfDefinition(const RegionOfDefinitionArguments &arg
     assert(rod.x1 < rod.x2 && rod.y1 < rod.y2);
 
     bool blackOutside;
-    _blackOutside->getValue(blackOutside);
+    _blackOutside->getValueAtTime(args.time, blackOutside);
 
     ofxsFilterExpandRoD(this, dstClip_->getPixelAspectRatio(), args.renderScale, blackOutside, &rod);
 
@@ -270,7 +270,7 @@ Transform3x3Plugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
     bool invert;
 
     // Transform3x3-GENERIC
-    _invert->getValue(invert);
+    _invert->getValueAtTime(args.time, invert);
 
     OFX::Matrix3x3 invtransform;
     bool success = getInverseTransformCanonical(args.time, invert, &invtransform);
@@ -327,9 +327,9 @@ Transform3x3Plugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
 
     // GENERIC
     int filter;
-    _filter->getValue(filter);
+    _filter->getValueAtTime(args.time, filter);
     bool blackOutside;
-    _blackOutside->getValue(blackOutside);
+    _blackOutside->getValueAtTime(args.time, blackOutside);
     const bool doMasking = _masked && getContext() != OFX::eContextFilter && maskClip_->isConnected();
     double mix = 1.;
     if (_masked) {
@@ -361,9 +361,9 @@ void
 Transform3x3Plugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
 {
     int filter;
-    _filter->getValue(filter);
+    _filter->getValueAtTime(args.time, filter);
     bool clamp;
-    _clamp->getValue(clamp);
+    _clamp->getValueAtTime(args.time, clamp);
 
     // as you may see below, some filters don't need explicit clamping, since they are
     // "clamped" by construction.
@@ -640,7 +640,7 @@ void OFX::Transform3x3DescribeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX
     BooleanParamDescriptor* invert = desc.defineBooleanParam(kTransform3x3InvertParamName);
     invert->setLabels(kTransform3x3InvertParamName, kTransform3x3InvertParamName, kTransform3x3InvertParamName);
     invert->setDefault(false);
-    invert->setAnimates(false);
+    invert->setAnimates(true);
     page->addChild(*invert);
 
     // GENERIC PARAMETERS
