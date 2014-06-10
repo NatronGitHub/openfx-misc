@@ -757,7 +757,7 @@ void OFX::Transform3x3DescribeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX
     motionblur->setLabels(kTransform3x3MotionBlurParamLabel, kTransform3x3MotionBlurParamLabel, kTransform3x3MotionBlurParamLabel);
     motionblur->setHint(kTransform3x3MotionBlurParamHint);
     motionblur->setDefault(0.);
-    motionblur->setRange(0., INT_MAX);
+    motionblur->setRange(0., 10.);
     motionblur->setDisplayRange(0., 4.);
     page->addChild(*motionblur);
 
@@ -765,7 +765,7 @@ void OFX::Transform3x3DescribeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX
     shutter->setLabels(kTransform3x3ShutterParamLabel, kTransform3x3ShutterParamLabel, kTransform3x3ShutterParamLabel);
     shutter->setHint(kTransform3x3ShutterParamHint);
     shutter->setDefault(0.);
-    shutter->setRange(0., INT_MAX);
+    shutter->setRange(0., 2.);
     shutter->setDisplayRange(0., 2.);
     page->addChild(*shutter);
 
