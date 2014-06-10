@@ -176,6 +176,7 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
                     break;
             }
 
+            bool allequal = true;
             for (int i=0; i < nbtransforms; ++i) {
                 double t = (i == 0) ? t_start : (t_start + i*(t_end-t_start)/(double)(nbtransforms-1));
                 bool success = getInverseTransformCanonical(t, invert, &invtransform[i]); // virtual function
@@ -190,6 +191,19 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
                     invtransform[i].h = 0.;
                     invtransform[i].i = 1.;
                 }
+                allequal = allequal && (invtransform[i].a == invtransform[0].a &&
+                                        invtransform[i].b == invtransform[0].b &&
+                                        invtransform[i].c == invtransform[0].c &&
+                                        invtransform[i].d == invtransform[0].d &&
+                                        invtransform[i].e == invtransform[0].e &&
+                                        invtransform[i].f == invtransform[0].f &&
+                                        invtransform[i].g == invtransform[0].g &&
+                                        invtransform[i].h == invtransform[0].h &&
+                                        invtransform[i].i == invtransform[0].i);
+            }
+            if (allequal) { // there is only one transform, no need to do motion blur!
+                invtransform.resize(1);
+                motionsamples = 1;
             }
         } else {
             invtransform.resize(1);
@@ -591,13 +605,16 @@ bool Transform3x3Plugin::isIdentity(const RenderArguments &args, OFX::Clip * &id
     _shutteroffset->getValueAtTime(args.time, shutteroffset_i);
     double shuttercustomoffset;
     _shuttercustomoffset->getValueAtTime(args.time, shuttercustomoffset);
-    // even without motion blur, a custom shutter offset may be set
-    if ((shutter != 0. && motionblur != 0.) ||
-        (shutteroffset_i == kTransform3x3ShutterOffsetCustom && shuttercustomoffset != 0.)) {
+    if (shutter != 0. && motionblur != 0.) {
         return false;
     }
 
-    if (isIdentity(args.time)) { // let's call the Transform-specific one first
+    double transform_time = args.time;
+    if (shutteroffset_i == kTransform3x3ShutterOffsetCustom) {
+        transform_time += shuttercustomoffset;
+    }
+
+    if (isIdentity(transform_time)) { // let's call the Transform-specific one first
         identityClip = srcClip_;
         identityTime = args.time;
         return true;
