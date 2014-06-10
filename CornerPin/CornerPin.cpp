@@ -108,7 +108,8 @@
 #undef OFX_EXTENSIONS_NUKE // host transform is the only nuke extension used
 #endif
 
-#define kToParamGroupName "To"
+#define kToParamGroupName "to"
+#define kToParamGroupLabel "To"
 static const char* const kToParamName[4] = {
     "to1",
     "to2",
@@ -122,8 +123,10 @@ static const char* const kEnableParamName[4] = {
     "enable3",
     "enable4"
 };
+#define kEnableParamHint "Enables the point on the left."
 
-#define kFromParamGroupName "From"
+#define kFromParamGroupName "from"
+#define kFromParamGroupLabel "From"
 static const char* const kFromParamName[4] = {
     "from1",
     "from2",
@@ -132,11 +135,25 @@ static const char* const kFromParamName[4] = {
 };
 
 
-#define kCopyFromParamName "Copy \"From\" points"
-#define kCopyToParamName "Copy \"To\" points"
-#define kCopyInputRoDParamName "Set to input rod"
+#define kCopyFromParamName "copy_from"
+#define kCopyFromParamLabel "Copy \"From\" points"
+#define kCopyFromParamHint "Copy the content from the \"to\" points to the \"from\" points."
 
-#define kOverlayPointsParamName "Overlay points"
+#define kCopyToParamName "copy_to"
+#define kCopyToParamLabel "Copy \"To\" points"
+#define kCopyToParamHint "Copy the content from the \"from\" points to the \"to\" points."
+
+#define kCopyInputRoDParamName "set_to_input_rod"
+#define kCopyInputRoDParamLabel "Set to input rod"
+#define kCopyInputRoDParamHint "Copy the values from the source region of definition into the \"to\" points."
+
+#define kOverlayPointsParamName "overlay_points"
+#define kOverlayPointsParamLabel "Overlay points"
+#define kOverlayPointsParamHint "Whether to display the \"from\" or the \"to\" points in the overlay"
+
+#define kExtraMatrixParamName "transform_matrix"
+#define kExtraMatrixParamLabel "Extra matrix"
+#define kExtraMatrixParamHint "This matrix gets concatenated to the transform defined by the other parameters."
 
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
 
@@ -707,7 +724,7 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
     enable->setLabels(kEnableParamName[i], kEnableParamName[i], kEnableParamName[i]);
     enable->setDefault(true);
     enable->setAnimates(true);
-    enable->setHint("Enables the point on the left.");
+    enable->setHint(kEnableParamHint);
     enable->setParent(*group);
 }
 
@@ -750,8 +767,8 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     defineCornerPinToDouble2DParam(desc, toPoints, 2, 1, 1);
     defineCornerPinToDouble2DParam(desc, toPoints, 3, 0, 1);
     PushButtonParamDescriptor* copyFrom = desc.definePushButtonParam(kCopyFromParamName);
-    copyFrom->setLabels(kCopyFromParamName, kCopyFromParamName, kCopyFromParamName);
-    copyFrom->setHint("Copy the content from the \"to\" points to the \"from\" points.");
+    copyFrom->setLabels(kCopyFromParamLabel, kCopyFromParamLabel, kCopyFromParamLabel);
+    copyFrom->setHint(kCopyFromParamHint);
     copyFrom->setParent(*toPoints);
     page->addChild(*toPoints);
 
@@ -763,19 +780,19 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     defineCornerPinFromsDouble2DParam(desc, fromPoints, 2, 1, 1);
     defineCornerPinFromsDouble2DParam(desc, fromPoints, 3, 0, 1);
     PushButtonParamDescriptor* setToInput = desc.definePushButtonParam(kCopyInputRoDParamName);
-    setToInput->setLabels(kCopyInputRoDParamName, kCopyInputRoDParamName, kCopyInputRoDParamName);
-    setToInput->setHint("Copy the values from the source region of definition into the \"to\" points.");
+    setToInput->setLabels(kCopyInputRoDParamLabel, kCopyInputRoDParamLabel, kCopyInputRoDParamLabel);
+    setToInput->setHint(kCopyInputRoDParamHint);
     setToInput->setLayoutHint(OFX::eLayoutHintNoNewLine);
     setToInput->setParent(*fromPoints);
     PushButtonParamDescriptor* copyTo = desc.definePushButtonParam(kCopyToParamName);
-    copyTo->setLabels(kCopyToParamName, kCopyToParamName, kCopyToParamName);
-    copyTo->setHint("Copy the content from the \"from\" points to the \"to\" points.");
+    copyTo->setLabels(kCopyToParamLabel, kCopyToParamLabel, kCopyToParamLabel);
+    copyTo->setHint(kCopyToParamHint);
     copyTo->setParent(*fromPoints);
     page->addChild(*fromPoints);
     
-    GroupParamDescriptor* extraMatrix = desc.defineGroupParam("Extra matrix");
-    extraMatrix->setHint("This matrix gets concatenated to the transform defined by the other parameters.");
-    extraMatrix->setLabels("Extra matrix", "Extra matrix", "Extra matrix");
+    GroupParamDescriptor* extraMatrix = desc.defineGroupParam(kExtraMatrixParamName);
+    extraMatrix->setLabels(kExtraMatrixParamLabel, kExtraMatrixParamLabel, kExtraMatrixParamLabel);
+    extraMatrix->setHint(kExtraMatrixParamHint);
     extraMatrix->setOpen(false);
     defineExtraMatrixRow(desc, page, extraMatrix,"row1",1,0,0);
     defineExtraMatrixRow(desc, page, extraMatrix,"row2",0,1,0);
@@ -783,8 +800,8 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     page->addChild(*extraMatrix);
 
     ChoiceParamDescriptor* overlayChoice = desc.defineChoiceParam(kOverlayPointsParamName);
-    overlayChoice->setHint("Whether to display the \"from\" or the \"to\" points in the overlay");
-    overlayChoice->setLabels(kOverlayPointsParamName, kOverlayPointsParamName, kOverlayPointsParamName);
+    overlayChoice->setLabels(kOverlayPointsParamLabel, kOverlayPointsParamLabel, kOverlayPointsParamLabel);
+    overlayChoice->setHint(kOverlayPointsParamHint);
     overlayChoice->appendOption("To");
     overlayChoice->appendOption("From");
     overlayChoice->setDefault(0);

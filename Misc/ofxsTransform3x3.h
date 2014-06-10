@@ -40,7 +40,37 @@
 #include "ofxsImageEffect.h"
 #include "ofxsTransform3x3Processor.h"
 
-#define kTransform3x3InvertParamName "Invert"
+#define kTransform3x3InvertParamName "invert"
+#define kTransform3x3InvertParamLabel "Invert"
+#define kTransform3x3InvertParamHint "Invert the transform"
+
+#define kTransform3x3MotionBlurParamName "motionblur"
+#define kTransform3x3MotionBlurParamLabel "Motion Blur"
+#define kTransform3x3MotionBlurParamHint "Number of motion blur samples. 0 disables motion blur, 1 is a good value. Increasing this slows down rendering."
+
+#define kTransform3x3ShutterParamName "shutter"
+#define kTransform3x3ShutterParamLabel "Shutter"
+#define kTransform3x3ShutterParamHint "Controls how long (in frames) the shutter should remain open."
+
+#define kTransform3x3ShutterOffsetParamName "shutteroffset"
+#define kTransform3x3ShutterOffsetParamLabel "Shutter Offset"
+#define kTransform3x3ShutterOffsetParamHint "Controls when the shutter should be open/closed."
+#define kTransform3x3ShutterOffsetCentered 0
+#define kTransform3x3ShutterOffsetCenteredLabel "centred"
+#define kTransform3x3ShutterOffsetCenteredHint "centers the shutter around the frame (from t-shutter/2 to t+shutter/2)"
+#define kTransform3x3ShutterOffsetStart 1
+#define kTransform3x3ShutterOffsetStartLabel "start"
+#define kTransform3x3ShutterOffsetStartHint "open the shutter at the frame (from t to t+shutter)"
+#define kTransform3x3ShutterOffsetEnd 2
+#define kTransform3x3ShutterOffsetEndLabel "end"
+#define kTransform3x3ShutterOffsetEndHint "close the shutter at the frame (from t-shutter to t)"
+#define kTransform3x3ShutterOffsetCustom 3
+#define kTransform3x3ShutterOffsetCustomLabel "custom"
+#define kTransform3x3ShutterOffsetCustomHint "open the shutter at t+shuttercustomoffset (from t+shuttercustomoffset to t+shuttercustomoffset+shutter)"
+
+#define kTransform3x3ShutterCustomOffsetParamName "shuttercustomoffset"
+#define kTransform3x3ShutterCustomOffsetParamLabel "Custom Offset"
+#define kTransform3x3ShutterCustomOffsetParamHint "When custom is selected, the shutter is open at current time plus this offset (in frames)."
 
 namespace OFX {
 
