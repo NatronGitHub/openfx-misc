@@ -197,7 +197,7 @@ void SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
     // set a few flags
     desc.setSingleInstance(false);
-    desc.setHostFrameThreading(true);
+    desc.setHostFrameThreading(false);
     desc.setSupportsMultiResolution(true);
     desc.setSupportsTiles(true);
     desc.setTemporalClipAccess(false);
