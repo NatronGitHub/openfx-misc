@@ -140,10 +140,9 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
 
 
         std::vector<OFX::Matrix3x3> invtransform;
-        int motionsamples;
+        double motionblur;
 
         if (hasMotionBlur(args.time)) {
-            double motionblur;
             _motionblur->getValueAtTime(args.time, motionblur);
             double shutter;
             _shutter->getValueAtTime(args.time, shutter);
@@ -152,9 +151,9 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
             double shuttercustomoffset;
             _shuttercustomoffset->getValueAtTime(args.time, shuttercustomoffset);
 
-            motionsamples = std::max(1, (int)(motionblur * 100));
-            // use 10 times more transforms than there are samples
-            int nbtransforms = (motionsamples - 1)*10 + 1;
+
+            // generate 1000 transforms uniformly
+            int nbtransforms = 1000;
             invtransform.resize(nbtransforms);
             double t_start, t_end; // shutter time
             switch (shutteroffset_i) {
@@ -203,7 +202,7 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
             }
             if (allequal) { // there is only one transform, no need to do motion blur!
                 invtransform.resize(1);
-                motionsamples = 1;
+                motionblur = 0.;
             }
         } else {
             invtransform.resize(1);
@@ -219,7 +218,7 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
                 invtransform[0].h = 0.;
                 invtransform[0].i = 1.;
             }
-            motionsamples  = 1;
+            motionblur  = 0.;
         }
         processor.setValues(invtransform,
                             srcClip_->getPixelAspectRatio(),
@@ -227,7 +226,7 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
                             args.fieldToRender,
                             //(FilterEnum)filter, clamp,
                             blackOutside,
-                            motionsamples,
+                            motionblur,
                             mix);
     }
 
@@ -774,7 +773,7 @@ void OFX::Transform3x3DescribeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX
     motionblur->setLabels(kTransform3x3MotionBlurParamLabel, kTransform3x3MotionBlurParamLabel, kTransform3x3MotionBlurParamLabel);
     motionblur->setHint(kTransform3x3MotionBlurParamHint);
     motionblur->setDefault(0.);
-    motionblur->setRange(0., 10.);
+    motionblur->setRange(0., 100.);
     motionblur->setDisplayRange(0., 4.);
     page->addChild(*motionblur);
 
