@@ -157,11 +157,13 @@ public:
         _center = fetchDouble2DParam(kCenterParamName);
     }
 
+private:
     virtual bool isIdentity(double time) /*OVERRIDE FINAL*/;
 
-    virtual bool getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) /*OVERRIDE FINAL*/;
+    virtual bool getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) const /*OVERRIDE FINAL*/;
 
-private:
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) /*OVERRIDE FINAL*/;
+
     // NON-GENERIC
     OFX::Double2DParam* _translate;
     OFX::DoubleParam* _rotate;
@@ -199,7 +201,7 @@ bool TransformPlugin::isIdentity(double time)
     return false;
 }
 
-bool TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform)
+bool TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) const
 {
     double scaleX, scaleY;
     double translateX, translateY;
@@ -231,6 +233,22 @@ bool TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX
         *invtransform = OFX::ofxsMatTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
     }
     return true;
+}
+
+void TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kTranslateParamName ||
+        paramName == kRotateParamName ||
+        paramName == kScaleParamName ||
+        paramName == kScaleUniformParamName ||
+        paramName == kSkewXParamName ||
+        paramName == kSkewYParamName ||
+        paramName == kSkewOrderParamName ||
+        paramName == kCenterParamName) {
+        changedTransform(args);
+    } else {
+        Transform3x3Plugin::changedParam(args, paramName);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

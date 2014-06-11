@@ -154,6 +154,9 @@ static const char* const kFromParamName[4] = {
 #define kExtraMatrixParamName "transform_matrix"
 #define kExtraMatrixParamLabel "Extra matrix"
 #define kExtraMatrixParamHint "This matrix gets concatenated to the transform defined by the other parameters."
+#define kExtraMatrixRow1ParamName "row1"
+#define kExtraMatrixRow2ParamName "row2"
+#define kExtraMatrixRow3ParamName "row3"
 
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
 
@@ -343,9 +346,9 @@ public:
             assert(_to[i] && _enable[i] && _from[i]);
         }
 
-        _extraMatrixRow1 = fetchDouble3DParam("row1");
-        _extraMatrixRow2 = fetchDouble3DParam("row2");
-        _extraMatrixRow3 = fetchDouble3DParam("row3");
+        _extraMatrixRow1 = fetchDouble3DParam(kExtraMatrixRow1ParamName);
+        _extraMatrixRow2 = fetchDouble3DParam(kExtraMatrixRow2ParamName);
+        _extraMatrixRow3 = fetchDouble3DParam(kExtraMatrixRow3ParamName);
         assert(_extraMatrixRow1 && _extraMatrixRow2 && _extraMatrixRow3);
 
         _copyFromButton = fetchPushButtonParam(kCopyFromParamName);
@@ -353,15 +356,9 @@ public:
         _copyInputButton = fetchPushButtonParam(kCopyInputRoDParamName);
         assert(_copyInputButton && _copyToButton && _copyFromButton);
     }
-
-
-    virtual bool isIdentity(double time) /*OVERRIDE FINAL*/;
-
-    virtual bool getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) /*OVERRIDE FINAL*/;
-
 private:
     
-    OFX::Matrix3x3 getExtraMatrix(OfxTime time)
+    OFX::Matrix3x3 getExtraMatrix(OfxTime time) const
     {
         OFX::Matrix3x3 ret;
         _extraMatrixRow1->getValueAtTime(time,ret.a, ret.b, ret.c);
@@ -378,6 +375,12 @@ private:
                        const OFX::Point3D& p4,
                        OFX::Matrix3x3& m);
 
+
+
+    virtual bool isIdentity(double time) /*OVERRIDE FINAL*/;
+
+    virtual bool getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) const /*OVERRIDE FINAL*/;
+    
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) /*OVERRIDE FINAL*/;
 
 private:
@@ -395,7 +398,7 @@ private:
 };
 
 
-bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, bool invert, OFX::Matrix3x3* invtransform)
+bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, bool invert, OFX::Matrix3x3* invtransform) const
 {
     // in this new version, both from and to are enableds/disabled at the same time
     bool enable[4];
@@ -501,14 +504,35 @@ void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const s
         _from[1]->setValue(srcRoD.x2, srcRoD.y1);
         _from[2]->setValue(srcRoD.x2, srcRoD.y2);
         _from[3]->setValue(srcRoD.x1, srcRoD.y2);
+        changedTransform(args);
     } else if (paramName == kCopyFromParamName) {
         for (int i=0; i<4; ++i) {
             copyPoint(_from[i],_to[i]);
         }
+        changedTransform(args);
     } else if (paramName == kCopyToParamName) {
         for (int i=0; i<4; ++i) {
             copyPoint(_to[i],_from[i]);
         }
+        changedTransform(args);
+    } else if (paramName == kToParamName[0] ||
+               paramName == kToParamName[1] ||
+               paramName == kToParamName[2] ||
+               paramName == kToParamName[3] ||
+               paramName == kEnableParamName[0] ||
+               paramName == kEnableParamName[1] ||
+               paramName == kEnableParamName[2] ||
+               paramName == kEnableParamName[3] ||
+               paramName == kFromParamName[0] ||
+               paramName == kFromParamName[1] ||
+               paramName == kFromParamName[2] ||
+               paramName == kFromParamName[3] ||
+               paramName == kExtraMatrixRow1ParamName ||
+               paramName == kExtraMatrixRow2ParamName ||
+               paramName == kExtraMatrixRow3ParamName) {
+        changedTransform(args);
+    } else {
+        Transform3x3Plugin::changedParam(args, paramName);
     }
 }
 
@@ -794,9 +818,9 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     extraMatrix->setLabels(kExtraMatrixParamLabel, kExtraMatrixParamLabel, kExtraMatrixParamLabel);
     extraMatrix->setHint(kExtraMatrixParamHint);
     extraMatrix->setOpen(false);
-    defineExtraMatrixRow(desc, page, extraMatrix,"row1",1,0,0);
-    defineExtraMatrixRow(desc, page, extraMatrix,"row2",0,1,0);
-    defineExtraMatrixRow(desc, page, extraMatrix,"row3",0,0,1);
+    defineExtraMatrixRow(desc, page, extraMatrix,kExtraMatrixRow1ParamName,1,0,0);
+    defineExtraMatrixRow(desc, page, extraMatrix,kExtraMatrixRow2ParamName,0,1,0);
+    defineExtraMatrixRow(desc, page, extraMatrix,kExtraMatrixRow3ParamName,0,0,1);
     page->addChild(*extraMatrix);
 
     ChoiceParamDescriptor* overlayChoice = desc.defineChoiceParam(kOverlayPointsParamName);

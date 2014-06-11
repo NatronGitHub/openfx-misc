@@ -56,7 +56,8 @@ protected:
     OFX::Image *_srcImg;
     OFX::Image *_maskImg;
     // NON-GENERIC PARAMETERS:
-    std::vector<OFX::Matrix3x3> _invtransform; // the set of transforms to sample from
+    const OFX::Matrix3x3* _invtransform; // the set of transforms to sample from (in PIXEL coords)
+    size_t _invtransformsize;
     // GENERIC PARAMETERS:
     bool _blackOutside;
     double _motionblur; // quality of the motion blur. 0 means disabled
@@ -70,6 +71,7 @@ public:
     , _srcImg(0)
     , _maskImg(0)
     , _invtransform()
+    , _invtransformsize(0)
     , _blackOutside(false)
     , _motionblur(0.)
     , _domask(false)
@@ -93,23 +95,16 @@ public:
     // Are we masking. We can't derive this from the mask image being set as NULL is a valid value for an input image
     void doMasking(bool v) {_domask = v;}
 
-    void setValues(const std::vector<OFX::Matrix3x3>& invtransform, //!< non-generic
+    void setValues(const OFX::Matrix3x3* invtransform, //!< non-generic - must be in PIXEL coords
+                   size_t invtransformsize,
                    // all generic parameters below
-                   double pixelaspectratio, //!< 1.067 for PAL, where 720x576 pixels occupy 768x576 in canonical coords
-                   const OfxPointD& renderscale, //!< 0.5 for a half-resolution image
-                   OFX::FieldEnum fieldToRender,
                    bool blackOutside, //!< generic
                    double motionblur,
                    double mix)          //!< generic
     {
-        bool fielded = fieldToRender == OFX::eFieldLower || fieldToRender == OFX::eFieldUpper;
         // NON-GENERIC
-        OFX::Matrix3x3 canonicalToPixel = OFX::ofxsMatCanonicalToPixel(pixelaspectratio, renderscale.x, renderscale.y, fielded);
-        OFX::Matrix3x3 pixelToCanonical = OFX::ofxsMatPixelToCanonical(pixelaspectratio, renderscale.x, renderscale.y, fielded);
-        _invtransform.resize(invtransform.size());
-        for (size_t i=0; i < invtransform.size(); ++i) {
-            _invtransform[i] = canonicalToPixel * invtransform[i] * pixelToCanonical;
-        }
+        _invtransform = invtransform;
+        _invtransformsize = invtransformsize;
         // GENERIC
         _blackOutside = blackOutside;
         _motionblur = motionblur;
@@ -209,9 +204,9 @@ class Transform3x3Processor : public Transform3x3ProcessorBase
                             int t;
                             if (sample < minsamples) {
                                 // distribute the first samples evenly over the interval
-                                t = (sample  + van_der_corput<2>(seed)) * _invtransform.size()/(double)minsamples;
+                                t = (sample  + van_der_corput<2>(seed)) * _invtransformsize/(double)minsamples;
                             } else {
-                                t = van_der_corput<2>(seed) * _invtransform.size();
+                                t = van_der_corput<2>(seed) * _invtransformsize;
                             }
                             // NON-GENERIC TRANSFORM
 

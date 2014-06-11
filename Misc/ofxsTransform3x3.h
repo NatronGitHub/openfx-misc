@@ -88,11 +88,14 @@ public:
     /** @brief ctor */
     Transform3x3Plugin(OfxImageEffectHandle handle, bool masked);
 
+    /** @brief destructor */
+    virtual ~Transform3x3Plugin();
+
     // a default implementation of isIdentity is provided, which may be overridden by the derived class
     virtual bool isIdentity(double time) { return false; };
 
     /** @brief recover a transform matrix from an effect */
-    virtual bool getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) = 0;
+    virtual bool getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) const = 0;
 
 
 
@@ -113,6 +116,15 @@ public:
     virtual bool getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9]);
 #endif
 
+    // override changedParam. note that the derived class MUST explicitely call this method after handling its own parameter changes
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
+
+    // override purgeCaches.
+    virtual void purgeCaches();
+
+    // this method must be called by the derived class when the transform was changed
+    void changedTransform(const OFX::InstanceChangedArgs &args);
+
 private:
     /* internal render function */
     template <class PIX, int nComponents, int maxValue, bool masked>
@@ -127,8 +139,26 @@ private:
     bool isIdentity(double time, OFX::Clip * &identityClip, double &identityTime);
 
     bool hasMotionBlur(double time);
-    
+
+    size_t getInverseTransforms(double time,
+                                OfxPointD renderscale,
+                                bool fielded,
+                                double pixelaspectratio,
+                                bool invert,
+                                double shutter,
+                                int shutteroffset,
+                                double shuttercustomoffset,
+                                OFX::Matrix3x3* invtransform,
+                                size_t invtransformsizealloc) const;
+
 private:
+    class CacheID;
+
+    template<class ID>
+    class Cache;
+
+    Cache<CacheID>* _cache;
+
     // Transform3x3-GENERIC
     OFX::BooleanParam* _invert;
     // GENERIC
