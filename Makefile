@@ -4,6 +4,7 @@ SUBDIRS_NOMULTI = \
 Anaglyph \
 ChromaKeyer \
 ColorCorrect \
+Constant \
 CornerPin \
 Crop \
 Difference \

@@ -1,6 +1,7 @@
 #include "Anaglyph.h"
 #include "ChromaKeyer.h"
 #include "ColorCorrect.h"
+#include "Constant.h"
 #include "CornerPin.h"
 #include "Crop.h"
 #include "Difference.h"
@@ -60,6 +61,8 @@ namespace OFX
             ids.push_back(&p18);
             static DifferencePluginFactory p19("net.sf.openfx:DifferencePlugin", 1, 0);
             ids.push_back(&p19);
+            static ConstantPluginFactory p20("net.sf.openfx:ConstantPlugin", 1, 0);
+            ids.push_back(&p20);
            // ReConverge is not finished/tested
             //static ReConvergePluginFactory p("net.sf.openfx:reConvergePlugin", 1, 0);
             //ids.push_back(&p);

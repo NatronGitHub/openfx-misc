@@ -2,6 +2,7 @@ PLUGINOBJECTS = \
 Anaglyph.o \
 ChromaKeyer.o \
 ColorCorrect.o \
+Constant.o \
 CornerPin.o \
 Crop.o \
 Difference.o \
@@ -26,6 +27,7 @@ VPATH += \
 ../Anaglyph \
 ../ChromaKeyer \
 ../ColorCorrect \
+../Constant \
 ../CornerPin \
 ../Crop \
 ../Difference \
@@ -48,6 +50,7 @@ CXXFLAGS += \
 -I../Anaglyph \
 -I../ChromaKeyer \
 -I../ColorCorrect \
+-I../Constant \
 -I../CornerPin \
 -I../Crop \
 -I../Difference \
