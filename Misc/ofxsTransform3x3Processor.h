@@ -103,6 +103,7 @@ public:
                    double mix)          //!< generic
     {
         // NON-GENERIC
+        assert(invtransform);
         _invtransform = invtransform;
         _invtransformsize = invtransformsize;
         // GENERIC
@@ -132,7 +133,7 @@ class Transform3x3Processor : public Transform3x3ProcessorBase
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         float tmpPix[nComponents];
-
+        assert(_invtransform);
         if (_motionblur == 0.) { // no motion blur
             const OFX::Matrix3x3& H = _invtransform[0];
             for (int y = procWindow.y1; y < procWindow.y2; ++y) {
