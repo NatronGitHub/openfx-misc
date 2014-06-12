@@ -13,6 +13,7 @@ MixViews.o \
 OneView.o \
 RGBLut.o \
 Roto.o \
+Shuffle.o \
 SideBySide.o \
 Switch.o \
 TimeOffset.o \
@@ -38,6 +39,7 @@ VPATH += \
 ../OneView \
 ../RGBLut \
 ../Roto \
+../Shuffle \
 ../SideBySide \
 ../Switch \
 ../TimeOffset \
@@ -61,6 +63,7 @@ CXXFLAGS += \
 -I../OneView \
 -I../RGBLut \
 -I../Roto \
+-I../Shuffle \
 -I../SideBySide \
 -I../Switch \
 -I../TimeOffset \
