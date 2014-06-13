@@ -509,11 +509,13 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     if (srcA.get()) {
         srcBitDepth      = srcA->getPixelDepth();
         srcComponents = srcA->getPixelComponents();
+        assert(srcClipA_->getPixelComponents() == srcComponents);
     }
 
     if (srcB.get()) {
         OFX::BitDepthEnum    srcBBitDepth      = srcB->getPixelDepth();
         OFX::PixelComponentEnum srcBComponents = srcB->getPixelComponents();
+        assert(srcClipB_->getPixelComponents() == srcBComponents);
         // both input must have the same bit depth and components
         if ((srcBitDepth != eBitDepthNone && srcBitDepth != srcBBitDepth) ||
             (srcComponents != ePixelComponentNone && srcComponents != srcBComponents)) {
@@ -630,7 +632,19 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
     _outputComponents->getValue(outputComponents_i);
     PixelComponentEnum outputComponents = gOutputComponentsMap[outputComponents_i];
     if (dstComponents != outputComponents) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Shuffle: OFX Host dit not take into account output components");
         OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+    }
+
+    if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
+        // get the bitDepth of dstClip_
+        int outputBitDepth_i;
+        _outputBitDepth->getValue(outputBitDepth_i);
+        BitDepthEnum outputBitDepth = gOutputBitDepthMap[outputBitDepth_i];
+        if (dstBitDepth != outputBitDepth) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Shuffle: OFX Host dit not take into account output bit depth");
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
     }
 
     OFX::BitDepthEnum       srcBitDepth = eBitDepthNone;
@@ -646,6 +660,7 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
         // both input must have the same bit depth and components
         if ((srcBitDepth != eBitDepthNone && srcBitDepth != srcBBitDepth) ||
             (srcComponents != ePixelComponentNone && srcComponents != srcBComponents)) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Shuffle: both inputs must have the same components");
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
