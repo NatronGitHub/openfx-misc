@@ -488,7 +488,7 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     page->addChild(*premult);
 
     ChoiceParamDescriptor* outputComps = desc.defineChoiceParam(kOutputCompsParamName);
-    outputComps->setLabels("Output compoonents", "Output compoonents", "Output compoonents");
+    outputComps->setLabels("Output components", "Output components", "Output components");
     outputComps->setScriptName(kOutputCompsParamName);
     outputComps->setAnimates(false);
     outputComps->appendOption("Alpha");
