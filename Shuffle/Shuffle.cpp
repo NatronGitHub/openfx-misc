@@ -452,13 +452,16 @@ class ShufflePlugin : public OFX::ImageEffect
     }
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) /* OVERRIDE FINAL */;
 
     /** @brief get the clip preferences */
-    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences);
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) /* OVERRIDE FINAL */;
 
     /* override changedParam */
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) /* OVERRIDE FINAL */;
+
+    /** @brief called when a clip has just been changed in some way (a rewire maybe) */
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) /* OVERRIDE FINAL */;
 
 private:
     void enableComponents(void);
@@ -650,20 +653,16 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-    OFX::BitDepthEnum       srcBitDepth = eBitDepthNone;
-    OFX::PixelComponentEnum srcComponents = ePixelComponentNone;
+    OFX::BitDepthEnum srcBitDepth = eBitDepthNone;
     if (srcClipA_) {
         srcBitDepth   = srcClipA_->getPixelDepth();
-        srcComponents = srcClipA_->getPixelComponents();
     }
 
     if (srcClipB_) {
-        OFX::BitDepthEnum    srcBBitDepth      = srcClipB_->getPixelDepth();
-        OFX::PixelComponentEnum srcBComponents = srcClipB_->getPixelComponents();
-        // both input must have the same bit depth and components
-        if ((srcBitDepth != eBitDepthNone && srcBitDepth != srcBBitDepth) ||
-            (srcComponents != ePixelComponentNone && srcComponents != srcBComponents)) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "Shuffle: both inputs must have the same components");
+        OFX::BitDepthEnum srcBBitDepth = srcClipB_->getPixelDepth();
+        // both input must have the same bit depth
+        if (srcBitDepth != eBitDepthNone && srcBitDepth != srcBBitDepth) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Shuffle: both inputs must have the same bit depth");
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
@@ -775,6 +774,28 @@ ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::str
         }
         msg += "\n";
         sendMessage(OFX::Message::eMessageMessage, "", msg);
+    }
+}
+
+void
+ShufflePlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+{
+    if (getContext() == eContextGeneral &&
+        (clipName == kSourceClipAName || clipName == kSourceClipBName)) {
+        // check that A and B are compatible if they're both connected
+        OFX::BitDepthEnum srcBitDepth = eBitDepthNone;
+        if (srcClipA_) {
+            srcBitDepth   = srcClipA_->getPixelDepth();
+        }
+
+        if (srcClipB_) {
+            OFX::BitDepthEnum srcBBitDepth = srcClipB_->getPixelDepth();
+            // both input must have the same bit depth
+            if (srcBitDepth != eBitDepthNone && srcBitDepth != srcBBitDepth) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "Shuffle: both inputs must have the same bit depth");
+                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            }
+        }
     }
 }
 
