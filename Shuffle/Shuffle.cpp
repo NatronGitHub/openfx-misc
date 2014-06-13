@@ -238,7 +238,7 @@ class ShufflePlugin : public OFX::ImageEffect
     , srcClipB_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
+        assert(dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha);
         srcClipA_ = fetchClip(context == eContextGeneral ? kSourceClipAName : kOfxImageEffectSimpleSourceClipName);
         assert(srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA || srcClipA_->getPixelComponents() == ePixelComponentAlpha);
         if (context == eContextGeneral) {
@@ -246,7 +246,9 @@ class ShufflePlugin : public OFX::ImageEffect
             assert(srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA || srcClipB_->getPixelComponents() == ePixelComponentAlpha);
         }
         _outputComponents = fetchChoiceParam(kOutputComponentsParamName);
-        _outputBitDepth = fetchChoiceParam(kOutputBitDepthParamName);
+        if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
+            _outputBitDepth = fetchChoiceParam(kOutputBitDepthParamName);
+        }
         _r = fetchChoiceParam(kOutputRParamName);
         _g = fetchChoiceParam(kOutputGParamName);
         _b = fetchChoiceParam(kOutputBParamName);
@@ -304,20 +306,24 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     std::auto_ptr<OFX::Image> srcA(srcClipA_->fetchImage(args.time));
     std::auto_ptr<OFX::Image> srcB(srcClipB_->fetchImage(args.time));
-    if(srcA.get())
-    {
-        OFX::BitDepthEnum    srcBitDepth      = srcA->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = srcA->getPixelComponents();
-        if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
-            throw int(1);
+    OFX::BitDepthEnum    srcBitDepth = eBitDepthNone;
+    OFX::PixelComponentEnum srcComponents = ePixelComponentNone;
+    if(srcA.get()) {
+        srcBitDepth      = srcA->getPixelDepth();
+        srcComponents = srcA->getPixelComponents();
+        //if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+        //    throw int(1);
     }
 
     if(srcB.get())
     {
-        OFX::BitDepthEnum    srcBitDepth      = srcB->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = srcB->getPixelComponents();
-        if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+        OFX::BitDepthEnum    srcBBitDepth      = srcB->getPixelDepth();
+        OFX::PixelComponentEnum srcBComponents = srcB->getPixelComponents();
+        // both input must have the same bit depth and components
+        if((srcBitDepth != eBitDepthNone && srcBitDepth != srcBBitDepth) ||
+           (srcComponents != ePixelComponentNone && srcComponents != srcBComponents)) {
             throw int(1);
+        }
     }
 
     int outputComponents_i;
@@ -367,12 +373,13 @@ ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     PixelComponentEnum outputComponents = gOutputComponentsMap[outputComponents_i];
     clipPreferences.setClipComponents(*dstClip_, outputComponents);
 
-    // set the bitDepth of dstClip_
-    int outputBitDepth_i;
-    _outputBitDepth->getValue(outputBitDepth_i);
-    BitDepthEnum outputBitDepth = gOutputBitDepthMap[outputBitDepth_i];
-    clipPreferences.setClipBitDepth(*dstClip_, outputBitDepth);
-
+    if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
+        // set the bitDepth of dstClip_
+        int outputBitDepth_i;
+        _outputBitDepth->getValue(outputBitDepth_i);
+        BitDepthEnum outputBitDepth = gOutputBitDepthMap[outputBitDepth_i];
+        clipPreferences.setClipBitDepth(*dstClip_, outputBitDepth);
+    }
 }
 
 void
@@ -460,7 +467,7 @@ void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
             gOutputBitDepthMap[i] = eBitDepthUByte;
             ++i;
         }
-         gOutputBitDepthMap[i] = eBitDepthNone;
+        gOutputBitDepthMap[i] = eBitDepthNone;
     }
     for (ImageEffectHostDescription::PixelComponentArray::const_iterator it = getImageEffectHostDescription()->_supportedComponents.begin();
          it != getImageEffectHostDescription()->_supportedComponents.end();
