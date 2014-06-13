@@ -15,6 +15,7 @@ MixViews \
 OneView \
 RGBLut \
 Roto \
+Shuffle \
 SideBySide \
 Switch \
 TimeOffset \
