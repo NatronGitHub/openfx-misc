@@ -108,6 +108,9 @@
 #define kOutputAParamName "outputA"
 #define kOutputAParamLabel "Output A"
 #define kOutputAParamHint "Input channel for the output alpha channel"
+#define kClipInfoParamName "clipInfo"
+#define kClipInfoParamLabel "Clip Info..."
+#define kClipInfoParamHint "Display information about the inputs"
 
 #define kInputChannelAROption "A.r"
 #define kInputChannelARHint "R channel from input A"
@@ -694,11 +697,84 @@ ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     }
 }
 
+static std::string
+imageFormatString(PixelComponentEnum components, BitDepthEnum bitDepth)
+{
+    std::string s;
+    switch (components) {
+        case OFX::ePixelComponentRGBA:
+            s += "RGBA";
+            break;
+        case OFX::ePixelComponentRGB:
+            s += "RGB";
+            break;
+        case OFX::ePixelComponentAlpha:
+            s += "Alpha";
+            break;
+        case OFX::ePixelComponentCustom:
+            s += "Custom";
+            break;
+        case OFX::ePixelComponentNone:
+            s += "None";
+            break;
+        default:
+            s += "[unknown components]";
+            break;
+    }
+    switch (bitDepth) {
+        case OFX::eBitDepthUByte:
+            s += "8u";
+            break;
+        case OFX::eBitDepthUShort:
+            s += "16u";
+            break;
+        case OFX::eBitDepthFloat:
+            s += "32f";
+            break;
+        case OFX::eBitDepthCustom:
+            s += "x";
+            break;
+        case OFX::ePixelComponentNone:
+            s += "0";
+            break;
+        default:
+            s += "[unknown bit depth]";
+            break;
+    }
+    return s;
+}
+
 void
 ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
     if (paramName == kOutputComponentsParamName) {
         enableComponents();
+    } else if (paramName == kClipInfoParamName) {
+        std::string msg;
+        msg += "Input A: ";
+        if (!srcClipA_) {
+            msg += "N/A";
+        } else {
+            msg += imageFormatString(srcClipA_->getPixelComponents(), srcClipA_->getPixelDepth());
+        }
+        msg += "\n";
+        if (getContext() == eContextGeneral) {
+            msg += "Input B: ";
+            if (!srcClipB_) {
+                msg += "N/A";
+            } else {
+                msg += imageFormatString(srcClipB_->getPixelComponents(), srcClipB_->getPixelDepth());
+            }
+            msg += "\n";
+        }
+        msg += "Output: ";
+        if (!dstClip_) {
+            msg += "N/A";
+        } else {
+            msg += imageFormatString(dstClip_->getPixelComponents(), dstClip_->getPixelDepth());
+        }
+        msg += "\n";
+        sendMessage(OFX::Message::eMessageMessage, "", msg);
     }
 }
 
@@ -962,6 +1038,11 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         addInputChannelOtions(outputA, eInputChannelAA, context);
         page->addChild(*outputA);
     }
+
+    PushButtonParamDescriptor *clipInfo = desc.definePushButtonParam(kClipInfoParamName);
+    clipInfo->setLabels(kClipInfoParamLabel, kClipInfoParamLabel, kClipInfoParamLabel);
+    clipInfo->setHint(kClipInfoParamHint);
+    page->addChild(*clipInfo);
 }
 
 OFX::ImageEffect* ShufflePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
