@@ -348,10 +348,28 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
     }
     std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
     size_t invtransformsizealloc = 0;
+    size_t invtransformsize = 0;
     OFX::Matrix3x3* invtransform = NULL;
 
-    if (src.get() && dst.get())
-    {
+    double motionblur = 0.;
+    bool blackOutside = true;
+    double mix = 1.;
+
+    if (!src.get()) {
+        // no source image, use a dummy transform
+        invtransformsizealloc = 1;
+        invtransform = new OFX::Matrix3x3[invtransformsizealloc];
+        invtransformsize = 1;
+        invtransform[0].a = 0.;
+        invtransform[0].b = 0.;
+        invtransform[0].c = 0.;
+        invtransform[0].d = 0.;
+        invtransform[0].e = 0.;
+        invtransform[0].f = 0.;
+        invtransform[0].g = 0.;
+        invtransform[0].h = 0.;
+        invtransform[0].i = 1.;
+    } else {
         OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
@@ -362,8 +380,6 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
         // Transform3x3-GENERIC
         bool invert;
         // GENERIC
-        bool blackOutside;
-        double mix = 1.;
 
         // Transform3x3-GENERIC
         _invert->getValueAtTime(args.time, invert);
@@ -374,11 +390,8 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
             _mix->getValueAtTime(args.time, mix);
         }
 
-
-        size_t invtransformsize = 0;
         const bool fielded = args.fieldToRender == OFX::eFieldLower || args.fieldToRender == OFX::eFieldUpper;
         const double pixelAspectRatio = src->getPixelAspectRatio();
-        double motionblur;
 
         if (hasMotionBlur(args.time)) {
             invtransformsizealloc = kTransform3x3MotionBlurCount;
@@ -418,11 +431,6 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
         if (invtransformsize == 1) {
             motionblur  = 0.;
         }
-        processor.setValues(invtransform,
-                            invtransformsize,
-                            blackOutside,
-                            motionblur,
-                            mix);
     }
 
     // auto ptr for the mask.
@@ -443,6 +451,12 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
 
     // set the render window
     processor.setRenderWindow(args.renderWindow);
+    assert(invtransform && invtransformsize);
+    processor.setValues(invtransform,
+                        invtransformsize,
+                        blackOutside,
+                        motionblur,
+                        mix);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
