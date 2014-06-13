@@ -91,6 +91,7 @@
 #include "ofxsProcessing.H"
 
 #define kPremultParamName "Premultiply"
+#define kOutputCompsParamName "OutputComponents"
 
 using namespace OFX;
 
@@ -101,7 +102,6 @@ protected:
     OFX::Image *_maskImg;
 
     bool _premult;
-
 
 public:
     RotoProcessorBase(OFX::ImageEffect &instance)
@@ -197,7 +197,7 @@ protected:
     OFX::Clip *srcClip_;
     OFX::Clip *maskClip_;
     BooleanParam* _premult;
-    
+    ChoiceParam* _outputComps;
 public:
     /** @brief ctor */
     RotoPlugin(OfxImageEffectHandle handle, bool masked)
@@ -217,7 +217,8 @@ public:
         _premult = fetchBooleanParam(kPremultParamName);
         assert(_premult);
         
-        
+        _outputComps = fetchChoiceParam(kOutputCompsParamName);
+        assert(_outputComps);
     }
     
 private:
@@ -225,6 +226,9 @@ private:
     virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois);
     
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod);
+    
+    /** @brief get the clip preferences */
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences);
     
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
@@ -374,7 +378,25 @@ RotoPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
-
+void RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
+{
+    int index;
+    _outputComps->getValue(index);
+    PixelComponentEnum outputComponents;
+    switch (index) {
+        case 0:
+            outputComponents = ePixelComponentAlpha;
+            break;
+        case 1:
+            outputComponents = ePixelComponentRGBA;
+            break;
+            
+        default:
+            assert(false);
+            break;
+    }
+    clipPreferences.setClipComponents(*dstClip_, outputComponents);
+}
 
 using namespace OFX;
 
@@ -451,7 +473,6 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(true);
 
@@ -466,6 +487,14 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     premult->setHint("Premultiply the red,green and blue channels with the alpha channel produced by the mask.");
     page->addChild(*premult);
 
+    ChoiceParamDescriptor* outputComps = desc.defineChoiceParam(kOutputCompsParamName);
+    outputComps->setLabels("Output compoonents", "Output compoonents", "Output compoonents");
+    outputComps->setScriptName(kOutputCompsParamName);
+    outputComps->setAnimates(false);
+    outputComps->appendOption("Alpha");
+    outputComps->appendOption("RGBA");
+    outputComps->setDefault(0);
+    desc.addClipPreferencesSlaveParam(*outputComps);
 
 }
 
