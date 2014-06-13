@@ -81,7 +81,7 @@
 
 #define kShufflePluginLabel "ShuffleOFX"
 #define kShufflePluginGrouping "Channel"
-#define kShufflePluginDescription "Rearrange channels from one or two inputs and/or convert to different bit depth or components."
+#define kShufflePluginDescription "Rearrange channels from one or two inputs and/or convert to different bit depth or components. No colorspace conversion is done (mapping is linear, even for 8-bit and 16-bit types)."
 
 
 #define kOutputComponentsParamName "outputComponents"
@@ -161,6 +161,20 @@ static OFX::BitDepthEnum gOutputBitDepthMap[4];
 using namespace OFX;
 
 
+static int nComps(PixelComponentEnum e)
+{
+    switch(e) {
+        case OFX::ePixelComponentRGBA:
+            return 4;
+        case OFX::ePixelComponentRGB:
+            return 3;
+        case OFX::ePixelComponentAlpha:
+            return 1;
+        default:
+            return 0;
+    }
+}
+
 class ShufflerBase : public OFX::ImageProcessor
 {
 protected:
@@ -168,16 +182,17 @@ protected:
     OFX::Image *_srcImgB;
     PixelComponentEnum _outputComponents;
     BitDepthEnum _outputBitDepth;
-    InputChannelEnum _r;
-    InputChannelEnum _g;
-    InputChannelEnum _b;
-    InputChannelEnum _a;
+    int _nComponentsDst;
+    InputChannelEnum _channelMap[4];
 
     public :
     ShufflerBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _srcImgA(0)
     , _srcImgB(0)
+    , _outputComponents(ePixelComponentNone)
+    , _outputBitDepth(eBitDepthNone)
+    , _nComponentsDst(0)
     {
     }
 
@@ -185,23 +200,93 @@ protected:
 
     void setValues(PixelComponentEnum outputComponents,
                    BitDepthEnum outputBitDepth,
-                   InputChannelEnum r,
-                   InputChannelEnum g,
-                   InputChannelEnum b,
-                   InputChannelEnum a)
+                   InputChannelEnum *channelMap)
     {
         _outputComponents = outputComponents,
         _outputBitDepth = outputBitDepth;
-        _r = r;
-        _g = g;
-        _b = b;
-        _a = a;
+        _nComponentsDst = nComps(outputComponents);
+        for (int c = 0; c < _nComponentsDst; ++c) {
+            _channelMap[c] = channelMap[c];
+        }
     }
 };
 
+//////////////////////////////
+// PIXEL CONVERSION ROUTINES
+
+/// maps 0-(numvals-1) to 0.-1.
+template<int numvals>
+static float intToFloat(int value)
+{
+    return value / (float)(numvals-1);
+}
+
+/// maps °.-1. to 0-(numvals-1)
+template<int numvals>
+static int floatToInt(float value)
+{
+    if (value <= 0) {
+        return 0;
+    } else if (value >= 1.) {
+        return numvals - 1;
+    }
+    return value * (numvals-1) + 0.5;
+}
+
+template <typename SRCPIX,typename DSTPIX>
+static DSTPIX convertPixelDepth(SRCPIX pix);
+
+///explicit template instantiations
+
+template <> float convertPixelDepth(unsigned char pix)
+{
+    return intToFloat<65536>(pix);
+}
+
+template <> unsigned short convertPixelDepth(unsigned char pix)
+{
+    // 0x01 -> 0x0101, 0x02 -> 0x0202, ..., 0xff -> 0xffff
+    return (unsigned short)((pix << 8) + pix);
+}
+
+template <> unsigned char convertPixelDepth(unsigned char pix)
+{
+    return pix;
+}
+
+template <> unsigned char convertPixelDepth(unsigned short pix)
+{
+    // the following is from ImageMagick's quantum.h
+    return (unsigned char)(((pix+128UL)-((pix+128UL) >> 8)) >> 8);
+}
+
+template <> float convertPixelDepth(unsigned short pix)
+{
+    return intToFloat<65536>(pix);
+}
+
+template <> unsigned short convertPixelDepth(unsigned short pix)
+{
+    return pix;
+}
+
+template <> unsigned char convertPixelDepth(float pix)
+{
+    return (unsigned char)floatToInt<256>(pix);
+}
+
+template <> unsigned short convertPixelDepth(float pix)
+{
+    return (unsigned short)floatToInt<65536>(pix);
+}
+
+template <> float convertPixelDepth(float pix)
+{
+    return pix;
+}
 
 
-template <class PIXSRC, class PIXDST, int nComponentsSrc, int nComponentsDst, int maxValueSrc, int maxValueDst>
+template <class PIXSRC, class PIXDST, int nComponentsDst>
 class Shuffler : public ShufflerBase
 {
     public :
@@ -212,13 +297,114 @@ class Shuffler : public ShufflerBase
 
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        for(int y = procWindow.y1; y < procWindow.y2; y++) {
-            PIXDST *dstPix = (PIXDST *) _dstImg->getPixelAddress(procWindow.x1, y);
-            for(int x = procWindow.x1; x < procWindow.x2; x++) {
-                PIXSRC *srcPixA = (PIXSRC *)  (_srcImgA ? _srcImgA->getPixelAddress(x, y) : 0);
-                PIXSRC *srcPixB = (PIXSRC *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
-#warning "TODO: process"
-                dstPix += nComponentsDst;
+        OFX::Image* channelMapImg[nComponentsDst];
+        int channelMapComp[nComponentsDst]; // channel component, or value if no image
+        int srcMapComp[4]; // R,G,B,A components for src
+        PixelComponentEnum srcComponents = ePixelComponentNone;
+        if (_srcImgA) {
+            srcComponents = _srcImgA->getPixelComponents();
+        } else if (_srcImgB) {
+            srcComponents = _srcImgB->getPixelComponents();
+        }
+        switch (srcComponents) {
+            case OFX::ePixelComponentRGBA:
+                srcMapComp[0] = 0;
+                srcMapComp[1] = 1;
+                srcMapComp[2] = 2;
+                srcMapComp[3] = 3;
+                break;
+            case OFX::ePixelComponentRGB:
+                srcMapComp[0] = 0;
+                srcMapComp[1] = 1;
+                srcMapComp[2] = 2;
+                srcMapComp[3] = -1;
+                break;
+            case OFX::ePixelComponentAlpha:
+                srcMapComp[0] = -1;
+                srcMapComp[1] = -1;
+                srcMapComp[2] = -1;
+                srcMapComp[3] = 0;
+                break;
+            default:
+                srcMapComp[0] = -1;
+                srcMapComp[1] = -1;
+                srcMapComp[2] = -1;
+                srcMapComp[3] = -1;
+                break;
+        }
+        for (int c = 0; c < nComponentsDst; ++c) {
+            channelMapImg[c] = NULL;
+            channelMapComp[c] = 0;
+            switch (_channelMap[c]) {
+                case eInputChannelAR:
+                    if (_srcImgA && srcMapComp[0] >= 0) {
+                        channelMapImg[c] = _srcImgA;
+                        channelMapComp[c] = srcMapComp[0]; // srcImg may not have R!!!
+                    }
+                    break;
+                case eInputChannelAG:
+                    if (_srcImgA && srcMapComp[1] >= 0) {
+                        channelMapImg[c] = _srcImgA;
+                        channelMapComp[c] = srcMapComp[1];
+                    }
+                    break;
+                case eInputChannelAB:
+                    if (_srcImgA && srcMapComp[2] >= 0) {
+                        channelMapImg[c] = _srcImgA;
+                        channelMapComp[c] = srcMapComp[2];
+                    }
+                    break;
+                case eInputChannelAA:
+                    if (_srcImgA && srcMapComp[3] >= 0) {
+                        channelMapImg[c] = _srcImgA;
+                        channelMapComp[c] = srcMapComp[3];
+                    }
+                    break;
+                case eInputChannel0:
+                    channelMapComp[c] = 0;
+                    break;
+                case eInputChannel1:
+                    channelMapComp[c] = 1;
+                    break;
+                case eInputChannelBR:
+                    if (_srcImgB && srcMapComp[0] >= 0) {
+                        channelMapImg[c] = _srcImgB;
+                        channelMapComp[c] = srcMapComp[0];
+                    }
+                    break;
+                case eInputChannelBG:
+                    if (_srcImgB && srcMapComp[1] >= 0) {
+                        channelMapImg[c] = _srcImgB;
+                        channelMapComp[c] = srcMapComp[1];
+                    }
+                    break;
+                case eInputChannelBB:
+                    if (_srcImgB && srcMapComp[2] >= 0) {
+                        channelMapImg[c] = _srcImgB;
+                        channelMapComp[c] = srcMapComp[2];
+                    }
+                    break;
+                case eInputChannelBA:
+                    if (_srcImgB && srcMapComp[3] >= 0) {
+                        channelMapImg[c] = _srcImgB;
+                        channelMapComp[c] = srcMapComp[3];
+                    }
+                    break;
+            }
+        }
+        // now compute the transformed image, component by component
+        for (int c = 0; c < nComponentsDst; ++c) {
+            OFX::Image* srcImg = channelMapImg[c];
+            int srcComp = channelMapComp[c];
+
+            for(int y = procWindow.y1; y < procWindow.y2; y++) {
+                PIXDST *dstPix = (PIXDST *) _dstImg->getPixelAddress(procWindow.x1, y);
+                for(int x = procWindow.x1; x < procWindow.x2; x++) {
+                    PIXSRC *srcPix = (PIXSRC *)  (srcImg ? srcImg->getPixelAddress(x, y) : 0);
+
+                    dstPix[c] = srcPix ? convertPixelDepth<PIXSRC,PIXDST>(srcPix[srcComp]) : convertPixelDepth<float,PIXDST>(srcComp);
+                    dstPix += nComponentsDst;
+                }
             }
         }
     }
@@ -265,12 +451,18 @@ class ShufflePlugin : public OFX::ImageEffect
     /* override changedParam */
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
 
+private:
+    void enableComponents(void);
+
+    /* internal render function */
+    template <class DSTPIX, int nComponentsDst>
+    void renderInternalForDstBitDepth(const OFX::RenderArguments &args, OFX::BitDepthEnum srcBitDepth);
+
+    template <int nComponentsDst>
+    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum srcBitDepth, OFX::BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
     void setupAndProcess(ShufflerBase &, const OFX::RenderArguments &args);
-
-private:
-    void enableComponents(void);
 
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
@@ -302,27 +494,24 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+    //OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     std::auto_ptr<OFX::Image> srcA(srcClipA_->fetchImage(args.time));
     std::auto_ptr<OFX::Image> srcB(srcClipB_->fetchImage(args.time));
     OFX::BitDepthEnum    srcBitDepth = eBitDepthNone;
     OFX::PixelComponentEnum srcComponents = ePixelComponentNone;
-    if(srcA.get()) {
+    if (srcA.get()) {
         srcBitDepth      = srcA->getPixelDepth();
         srcComponents = srcA->getPixelComponents();
-        //if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
-        //    throw int(1);
     }
 
-    if(srcB.get())
-    {
+    if (srcB.get()) {
         OFX::BitDepthEnum    srcBBitDepth      = srcB->getPixelDepth();
         OFX::PixelComponentEnum srcBComponents = srcB->getPixelComponents();
         // both input must have the same bit depth and components
-        if((srcBitDepth != eBitDepthNone && srcBitDepth != srcBBitDepth) ||
-           (srcComponents != ePixelComponentNone && srcComponents != srcBComponents)) {
-            throw int(1);
+        if ((srcBitDepth != eBitDepthNone && srcBitDepth != srcBBitDepth) ||
+            (srcComponents != ePixelComponentNone && srcComponents != srcBComponents)) {
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
@@ -345,12 +534,77 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     _a->getValue(a_i);
     InputChannelEnum a = InputChannelEnum(a_i);
 
-    processor.setValues(outputComponents, outputBitDepth, r, g, b, a);
+    // compute the components mapping tables
+    InputChannelEnum channelMap[4];
+    switch(dstComponents) {
+        case OFX::ePixelComponentRGBA:
+            channelMap[0] = r;
+            channelMap[1] = g;
+            channelMap[2] = b;
+            channelMap[3] = a;
+            break;
+        case OFX::ePixelComponentRGB:
+            channelMap[0] = r;
+            channelMap[1] = g;
+            channelMap[2] = b;
+            break;
+        case OFX::ePixelComponentAlpha:
+            channelMap[0] = a;
+            break;
+        default:
+            break;
+    }
+    processor.setValues(outputComponents, outputBitDepth, channelMap);
     processor.setDstImg(dst.get());
     processor.setSrcImg(srcA.get(),srcB.get());
     processor.setRenderWindow(args.renderWindow);
 
     processor.process();
+}
+
+template <class DSTPIX, int nComponentsDst>
+void
+ShufflePlugin::renderInternalForDstBitDepth(const OFX::RenderArguments &args, OFX::BitDepthEnum srcBitDepth)
+{
+    switch(srcBitDepth) {
+        case OFX::eBitDepthUByte : {
+            Shuffler<unsigned char, DSTPIX, nComponentsDst> fred(*this);
+            setupAndProcess(fred, args);
+        }
+            break;
+        case OFX::eBitDepthUShort : {
+            Shuffler<unsigned short, DSTPIX, nComponentsDst> fred(*this);
+            setupAndProcess(fred, args);
+        }
+            break;
+        case OFX::eBitDepthFloat : {
+            Shuffler<float, DSTPIX, nComponentsDst> fred(*this);
+            setupAndProcess(fred, args);
+        }
+            break;
+        default :
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
+// the internal render function
+template <int nComponentsDst>
+void
+ShufflePlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum srcBitDepth, OFX::BitDepthEnum dstBitDepth)
+{
+    switch(dstBitDepth) {
+        case OFX::eBitDepthUByte :
+            renderInternalForDstBitDepth<unsigned char, nComponentsDst>(args, srcBitDepth);
+            break;
+        case OFX::eBitDepthUShort :
+            renderInternalForDstBitDepth<unsigned short, nComponentsDst>(args, srcBitDepth);
+            break;
+        case OFX::eBitDepthFloat :
+            renderInternalForDstBitDepth<float, nComponentsDst>(args, srcBitDepth);
+            break;
+        default :
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
 }
 
 // the overridden render function
@@ -360,7 +614,41 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
-#warning "TODO: render"
+    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == ePixelComponentAlpha);
+
+    // get the components of dstClip_
+    int outputComponents_i;
+    _outputComponents->getValue(outputComponents_i);
+    PixelComponentEnum outputComponents = gOutputComponentsMap[outputComponents_i];
+    if (dstComponents != outputComponents) {
+        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+    }
+
+    OFX::BitDepthEnum       srcBitDepth = eBitDepthNone;
+    OFX::PixelComponentEnum srcComponents = ePixelComponentNone;
+    if (srcClipA_) {
+        srcBitDepth   = srcClipA_->getPixelDepth();
+        srcComponents = srcClipA_->getPixelComponents();
+    }
+
+    if (srcClipB_) {
+        OFX::BitDepthEnum    srcBBitDepth      = srcClipB_->getPixelDepth();
+        OFX::PixelComponentEnum srcBComponents = srcClipB_->getPixelComponents();
+        // both input must have the same bit depth and components
+        if ((srcBitDepth != eBitDepthNone && srcBitDepth != srcBBitDepth) ||
+            (srcComponents != ePixelComponentNone && srcComponents != srcBComponents)) {
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
+    }
+
+    if (dstComponents == OFX::ePixelComponentRGBA) {
+            renderInternal<4>(args, srcBitDepth, dstBitDepth);
+    } else if (dstComponents == OFX::ePixelComponentRGB) {
+            renderInternal<3>(args, srcBitDepth, dstBitDepth);
+    } else {
+        assert(dstComponents == OFX::ePixelComponentAlpha);
+            renderInternal<1>(args, srcBitDepth, dstBitDepth);
+    }
 }
 
 /* Override the clip preferences */
@@ -601,6 +889,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     outputComponents->setDefault(0);
     outputComponents->setAnimates(false);
     page->addChild(*outputComponents);
+    desc.addClipPreferencesSlaveParam(*outputComponents);
 
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         ChoiceParamDescriptor *outputBitDepth = desc.defineChoiceParam(kOutputBitDepthParamName);
@@ -622,6 +911,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         outputBitDepth->setDefault(0);
         outputBitDepth->setAnimates(false);
         page->addChild(*outputBitDepth);
+        desc.addClipPreferencesSlaveParam(*outputBitDepth);
     }
 
     if (gSupportsRGB || gSupportsRGBA) {
