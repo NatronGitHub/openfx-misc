@@ -64,7 +64,7 @@ namespace OFX
             ids.push_back(&p19);
             static ConstantPluginFactory p20("net.sf.openfx:ConstantPlugin", 1, 0);
             ids.push_back(&p20);
-            static ConstantPluginFactory p21("net.sf.openfx:ShufflePlugin", 1, 0);
+            static ShufflePluginFactory p21("net.sf.openfx:ShufflePlugin", 1, 0);
             ids.push_back(&p21);
            // ReConverge is not finished/tested
             //static ReConvergePluginFactory p("net.sf.openfx:reConvergePlugin", 1, 0);

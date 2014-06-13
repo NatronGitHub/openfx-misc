@@ -87,8 +87,8 @@
 #define kOutputComponentsParamName "outputComponents"
 #define kOutputComponentsParamLabel "Output Components"
 #define kOutputComponentsParamHint "Components in the output"
-#define kOutputComponentsRGBOption "RGB"
 #define kOutputComponentsRGBAOption "RGBA"
+#define kOutputComponentsRGBOption "RGB"
 #define kOutputComponentsAlphaOption "Alpha"
 #define kOutputBitDepthParamName "outputBitDepth"
 #define kOutputBitDepthParamLabel "Output Bit Depth"
@@ -145,21 +145,18 @@ enum InputChannelEnum {
     eInputChannelBA,
 };
 
-enum OutputComponentsEnum {
-    eOutputComponentsRGB = 0,
-    eOutputComponentsRGBA,
-    eOutputComponentsAlpha,
-};
-
-enum OutputBitDepthEnum {
-    eOutputBitDepthByte = 0,
-    eOutputBitDepthShort,
-    eOutputBitDepthFloat,
-};
-
 #define kSourceClipAName "A"
 #define kSourceClipBName "B"
 
+static bool gSupportsBytes  = false;
+static bool gSupportsShorts = false;
+static bool gSupportsFloats = false;
+static bool gSupportsRGBA   = false;
+static bool gSupportsRGB    = false;
+static bool gSupportsAlpha  = false;
+
+static OFX::PixelComponentEnum gOutputComponentsMap[4];
+static OFX::BitDepthEnum gOutputBitDepthMap[4];
 
 using namespace OFX;
 
@@ -169,8 +166,8 @@ class ShufflerBase : public OFX::ImageProcessor
 protected:
     OFX::Image *_srcImgA;
     OFX::Image *_srcImgB;
-    OutputComponentsEnum _outputComponents;
-    OutputBitDepthEnum _outputBitDepth;
+    PixelComponentEnum _outputComponents;
+    BitDepthEnum _outputBitDepth;
     InputChannelEnum _r;
     InputChannelEnum _g;
     InputChannelEnum _b;
@@ -186,8 +183,8 @@ protected:
 
     void setSrcImg(OFX::Image *A, OFX::Image *B) {_srcImgA = A; _srcImgB = B;}
 
-    void setValues(OutputComponentsEnum outputComponents,
-                   OutputBitDepthEnum outputBitDepth,
+    void setValues(PixelComponentEnum outputComponents,
+                   BitDepthEnum outputBitDepth,
                    InputChannelEnum r,
                    InputChannelEnum g,
                    InputChannelEnum b,
@@ -234,7 +231,7 @@ class ShufflePlugin : public OFX::ImageEffect
     public :
 
     /** @brief ctor */
-    ShufflePlugin(OfxImageEffectHandle handle)
+    ShufflePlugin(OfxImageEffectHandle handle, OFX::ContextEnum context)
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClipA_(0)
@@ -242,25 +239,37 @@ class ShufflePlugin : public OFX::ImageEffect
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
-        srcClipA_ = fetchClip(kSourceClipAName);
+        srcClipA_ = fetchClip(context == eContextGeneral ? kSourceClipAName : kOfxImageEffectSimpleSourceClipName);
         assert(srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA || srcClipA_->getPixelComponents() == ePixelComponentAlpha);
-        srcClipB_ = fetchClip(kSourceClipBName);
-        assert(srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA || srcClipB_->getPixelComponents() == ePixelComponentAlpha);
+        if (context == eContextGeneral) {
+            srcClipB_ = fetchClip(kSourceClipBName);
+            assert(srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA || srcClipB_->getPixelComponents() == ePixelComponentAlpha);
+        }
         _outputComponents = fetchChoiceParam(kOutputComponentsParamName);
         _outputBitDepth = fetchChoiceParam(kOutputBitDepthParamName);
         _r = fetchChoiceParam(kOutputRParamName);
         _g = fetchChoiceParam(kOutputGParamName);
         _b = fetchChoiceParam(kOutputBParamName);
         _a = fetchChoiceParam(kOutputAParamName);
+        enableComponents();
     }
 
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
 
+    /** @brief get the clip preferences */
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences);
+
+    /* override changedParam */
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
+
+
     /* set up and run a processor */
     void setupAndProcess(ShufflerBase &, const OFX::RenderArguments &args);
 
 private:
+    void enableComponents(void);
+
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
     OFX::Clip *srcClipA_;
@@ -312,29 +321,23 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     }
 
     int outputComponents_i;
-    OutputComponentsEnum outputComponents;
     _outputComponents->getValue(outputComponents_i);
-    outputComponents = OutputComponentsEnum(outputComponents_i);
+    PixelComponentEnum outputComponents = gOutputComponentsMap[outputComponents_i];
     int outputBitDepth_i;
-    OutputBitDepthEnum outputBitDepth;
     _outputBitDepth->getValue(outputBitDepth_i);
-    outputBitDepth = OutputBitDepthEnum(outputBitDepth_i);
+    BitDepthEnum outputBitDepth = gOutputBitDepthMap[outputBitDepth_i];
     int r_i;
-    InputChannelEnum r;
     _r->getValue(r_i);
-    r = InputChannelEnum(r_i);
+    InputChannelEnum r = InputChannelEnum(r_i);
     int g_i;
-    InputChannelEnum g;
     _g->getValue(g_i);
-    g = InputChannelEnum(g_i);
+    InputChannelEnum g = InputChannelEnum(g_i);
     int b_i;
-    InputChannelEnum b;
     _b->getValue(b_i);
-    b = InputChannelEnum(b_i);
+    InputChannelEnum b = InputChannelEnum(b_i);
     int a_i;
-    InputChannelEnum a;
     _a->getValue(a_i);
-    a = InputChannelEnum(a_i);
+    InputChannelEnum a = InputChannelEnum(a_i);
 
     processor.setValues(outputComponents, outputBitDepth, r, g, b, a);
     processor.setDstImg(dst.get());
@@ -354,6 +357,62 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
 #warning "TODO: render"
 }
 
+/* Override the clip preferences */
+void
+ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    // set the components of dstClip_
+    int outputComponents_i;
+    _outputComponents->getValue(outputComponents_i);
+    PixelComponentEnum outputComponents = gOutputComponentsMap[outputComponents_i];
+    clipPreferences.setClipComponents(*dstClip_, outputComponents);
+
+    // set the bitDepth of dstClip_
+    int outputBitDepth_i;
+    _outputBitDepth->getValue(outputBitDepth_i);
+    BitDepthEnum outputBitDepth = gOutputBitDepthMap[outputBitDepth_i];
+    clipPreferences.setClipBitDepth(*dstClip_, outputBitDepth);
+
+}
+
+void
+ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kOutputComponentsParamName) {
+        enableComponents();
+    }
+}
+
+void
+ShufflePlugin::enableComponents(void)
+{
+    int outputComponents_i;
+    _outputComponents->getValue(outputComponents_i);
+    switch (gOutputComponentsMap[outputComponents_i]) {
+        case ePixelComponentRGBA:
+            _r->setEnabled(true);
+            _g->setEnabled(true);
+            _b->setEnabled(true);
+            _a->setEnabled(true);
+            break;
+        case ePixelComponentRGB:
+            _r->setEnabled(true);
+            _g->setEnabled(true);
+            _b->setEnabled(true);
+            _a->setEnabled(false);
+            break;
+        case ePixelComponentAlpha:
+            _r->setEnabled(false);
+            _g->setEnabled(false);
+            _b->setEnabled(false);
+            _a->setEnabled(true);
+            break;
+        default:
+            assert(0);
+            break;
+    }
+}
+
 void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
@@ -367,6 +426,77 @@ void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
 
+    if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
+        for (ImageEffectHostDescription::PixelDepthArray::const_iterator it = getImageEffectHostDescription()->_supportedPixelDepths.begin();
+             it != getImageEffectHostDescription()->_supportedPixelDepths.end();
+             ++it) {
+            switch (*it) {
+                case eBitDepthUByte:
+                    gSupportsBytes  = true;
+                    break;
+                case eBitDepthUShort:
+                    gSupportsShorts = true;
+                    break;
+                case eBitDepthFloat:
+                    gSupportsFloats = true;
+                    break;
+                default:
+                    // other bitdepths are not supported by this plugin
+                    break;
+            }
+        }
+    }
+    {
+        int i = 0;
+        if (gSupportsFloats) {
+            gOutputBitDepthMap[i] = eBitDepthFloat;
+            ++i;
+        }
+        if (gSupportsShorts) {
+            gOutputBitDepthMap[i] = eBitDepthUShort;
+            ++i;
+        }
+        if (gSupportsBytes) {
+            gOutputBitDepthMap[i] = eBitDepthUByte;
+            ++i;
+        }
+         gOutputBitDepthMap[i] = eBitDepthNone;
+    }
+    for (ImageEffectHostDescription::PixelComponentArray::const_iterator it = getImageEffectHostDescription()->_supportedComponents.begin();
+         it != getImageEffectHostDescription()->_supportedComponents.end();
+         ++it) {
+        switch (*it) {
+            case ePixelComponentRGBA:
+                gSupportsRGBA  = true;
+                break;
+            case ePixelComponentRGB:
+                gSupportsRGB = true;
+                break;
+            case ePixelComponentAlpha:
+                gSupportsAlpha = true;
+                break;
+            default:
+                // other components are not supported by this plugin
+                break;
+        }
+    }
+    {
+        int i = 0;
+        if (gSupportsRGBA) {
+            gOutputComponentsMap[i] = ePixelComponentRGBA;
+            ++i;
+        }
+        if (gSupportsRGB) {
+            gOutputComponentsMap[i] = ePixelComponentRGB;
+            ++i;
+        }
+        if (gSupportsAlpha) {
+            gOutputComponentsMap[i] = ePixelComponentAlpha;
+            ++i;
+        }
+        gOutputComponentsMap[i] = ePixelComponentNone;
+    }
+
     // set a few flags
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
@@ -375,6 +505,36 @@ void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
+    // say we can support multiple pixel depths on in and out
+    desc.setSupportsMultipleClipDepths(true);
+}
+
+static void
+addInputChannelOtions(ChoiceParamDescriptor* outputR, InputChannelEnum def, OFX::ContextEnum context)
+{
+    assert(outputR->getNOptions() == eInputChannelAR);
+    outputR->appendOption(kInputChannelAROption,kInputChannelARHint);
+    assert(outputR->getNOptions() == eInputChannelAG);
+    outputR->appendOption(kInputChannelAGOption,kInputChannelAGHint);
+    assert(outputR->getNOptions() == eInputChannelAB);
+    outputR->appendOption(kInputChannelABOption,kInputChannelABHint);
+    assert(outputR->getNOptions() == eInputChannelAA);
+    outputR->appendOption(kInputChannelAAOption,kInputChannelAAHint);
+    assert(outputR->getNOptions() == eInputChannel0);
+    outputR->appendOption(kInputChannel0Option,kInputChannel0Hint);
+    assert(outputR->getNOptions() == eInputChannel1);
+    outputR->appendOption(kInputChannel1Option,kInputChannel1Hint);
+    if (context == eContextGeneral) {
+        assert(outputR->getNOptions() == eInputChannelBR);
+        outputR->appendOption(kInputChannelBROption,kInputChannelBRHint);
+        assert(outputR->getNOptions() == eInputChannelBG);
+        outputR->appendOption(kInputChannelBGOption,kInputChannelBGHint);
+        assert(outputR->getNOptions() == eInputChannelBB);
+        outputR->appendOption(kInputChannelBBOption,kInputChannelBBHint);
+        assert(outputR->getNOptions() == eInputChannelBA);
+        outputR->appendOption(kInputChannelBAOption,kInputChannelBAHint);
+    }
+    outputR->setDefault(def);
 }
 
 void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
@@ -402,7 +562,6 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         srcClip->addSupportedComponent(ePixelComponentAlpha);
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(true);
-        srcClip->setOptional(true);
     }
     {
         // create the mandated output clip
@@ -412,15 +571,80 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         dstClip->addSupportedComponent(ePixelComponentAlpha);
         dstClip->setSupportsTiles(true);
     }
+
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     ChoiceParamDescriptor *outputComponents = desc.defineChoiceParam(kOutputComponentsParamName);
+    outputComponents->setLabels(kOutputComponentsParamLabel, kOutputComponentsParamLabel, kOutputComponentsParamLabel);
+    outputComponents->setHint(kOutputComponentsParamHint);
+    // the following must be in the same order as in describe(), so that the map works
+    if (gSupportsRGBA) {
+        assert(gOutputComponentsMap[outputComponents->getNOptions()] == ePixelComponentRGBA);
+        outputComponents->appendOption(kOutputComponentsRGBAOption);
+    }
+    if (gSupportsRGB) {
+        assert(gOutputComponentsMap[outputComponents->getNOptions()] == ePixelComponentRGB);
+        outputComponents->appendOption(kOutputComponentsRGBOption);
+    }
+    if (gSupportsAlpha) {
+        assert(gOutputComponentsMap[outputComponents->getNOptions()] == ePixelComponentAlpha);
+        outputComponents->appendOption(kOutputComponentsAlphaOption);
+    }
+    outputComponents->setDefault(0);
+    outputComponents->setAnimates(false);
     page->addChild(*outputComponents);
+
+    if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
+        ChoiceParamDescriptor *outputBitDepth = desc.defineChoiceParam(kOutputBitDepthParamName);
+        outputBitDepth->setLabels(kOutputBitDepthParamLabel, kOutputBitDepthParamLabel, kOutputBitDepthParamLabel);
+        outputBitDepth->setHint(kOutputBitDepthParamHint);
+        // the following must be in the same order as in describe(), so that the map works
+        if (gSupportsFloats) {
+            assert(gOutputBitDepthMap[outputBitDepth->getNOptions()] == eBitDepthFloat);
+            outputBitDepth->appendOption(kOutputBitDepthFloatOption);
+        }
+        if (gSupportsShorts) {
+            assert(gOutputBitDepthMap[outputBitDepth->getNOptions()] == eBitDepthUShort);
+            outputBitDepth->appendOption(kOutputBitDepthShortOption);
+        }
+        if (gSupportsBytes) {
+            assert(gOutputBitDepthMap[outputBitDepth->getNOptions()] == eBitDepthUByte);
+            outputBitDepth->appendOption(kOutputBitDepthByteOption);
+        }
+        outputBitDepth->setDefault(0);
+        outputBitDepth->setAnimates(false);
+        page->addChild(*outputBitDepth);
+    }
+
+    if (gSupportsRGB || gSupportsRGBA) {
+        ChoiceParamDescriptor *outputR = desc.defineChoiceParam(kOutputRParamName);
+        outputR->setLabels(kOutputRParamLabel, kOutputRParamLabel, kOutputRParamLabel);
+        outputR->setHint(kOutputRParamHint);
+        addInputChannelOtions(outputR, eInputChannelAR, context);
+        page->addChild(*outputR);
+        ChoiceParamDescriptor *outputG = desc.defineChoiceParam(kOutputGParamName);
+        outputG->setLabels(kOutputGParamLabel, kOutputGParamLabel, kOutputGParamLabel);
+        outputG->setHint(kOutputGParamHint);
+        addInputChannelOtions(outputG, eInputChannelAG, context);
+        page->addChild(*outputG);
+        ChoiceParamDescriptor *outputB = desc.defineChoiceParam(kOutputBParamName);
+        outputB->setLabels(kOutputBParamLabel, kOutputBParamLabel, kOutputBParamLabel);
+        outputB->setHint(kOutputBParamHint);
+        addInputChannelOtions(outputB, eInputChannelAB, context);
+        page->addChild(*outputB);
+    }
+    if (gSupportsRGBA || gSupportsAlpha) {
+        ChoiceParamDescriptor *outputA = desc.defineChoiceParam(kOutputAParamName);
+        outputA->setLabels(kOutputAParamLabel, kOutputAParamLabel, kOutputAParamLabel);
+        outputA->setHint(kOutputAParamHint);
+        addInputChannelOtions(outputA, eInputChannelAA, context);
+        page->addChild(*outputA);
+    }
 }
 
 OFX::ImageEffect* ShufflePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
-    return new ShufflePlugin(handle);
+    return new ShufflePlugin(handle, context);
 }
 
