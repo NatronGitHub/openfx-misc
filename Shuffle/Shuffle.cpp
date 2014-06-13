@@ -422,6 +422,12 @@ class ShufflePlugin : public OFX::ImageEffect
     , dstClip_(0)
     , srcClipA_(0)
     , srcClipB_(0)
+    , _outputComponents(0)
+    , _outputBitDepth(0)
+    , _r(0)
+    , _g(0)
+    , _b(0)
+    , _a(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha);
@@ -518,9 +524,12 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     int outputComponents_i;
     _outputComponents->getValue(outputComponents_i);
     PixelComponentEnum outputComponents = gOutputComponentsMap[outputComponents_i];
-    int outputBitDepth_i;
-    _outputBitDepth->getValue(outputBitDepth_i);
-    BitDepthEnum outputBitDepth = gOutputBitDepthMap[outputBitDepth_i];
+    BitDepthEnum outputBitDepth = srcBitDepth;
+    if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
+        int outputBitDepth_i;
+        _outputBitDepth->getValue(outputBitDepth_i);
+        outputBitDepth = gOutputBitDepthMap[outputBitDepth_i];
+    }
     int r_i;
     _r->getValue(r_i);
     InputChannelEnum r = InputChannelEnum(r_i);
