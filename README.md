@@ -94,7 +94,7 @@ These plugins are distributed precompiled with each version of
 [Natron](http://natron.inria.fr).
 
 If you want to compile the plugins from source, you may either use the
-provided Unix Makefile, or the Xcode project
+provided Unix Makefile, the Xcode project, or the Visual Studio project.
 
 ### Unix/Linux/OS X, using Makefiles
 
