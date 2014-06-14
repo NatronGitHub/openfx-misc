@@ -11,6 +11,7 @@ JoinViews.o \
 Merge.o \
 MixViews.o \
 OneView.o \
+ReConverge.o \
 RGBLut.o \
 Roto.o \
 Shuffle.o \
@@ -37,6 +38,7 @@ VPATH += \
 ../Merge \
 ../MixViews \
 ../OneView \
+../ReConverge \
 ../RGBLut \
 ../Roto \
 ../Shuffle \
@@ -61,6 +63,7 @@ CXXFLAGS += \
 -I../Merge \
 -I../MixViews \
 -I../OneView \
+-I../ReConverge \
 -I../RGBLut \
 -I../Roto \
 -I../Shuffle \
