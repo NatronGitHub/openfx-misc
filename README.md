@@ -15,7 +15,8 @@ Contents
 --------
 
 Below is a short description of each plugin. The title of each section
-is the plugin grouping (the host may classify plugins by grouping).
+is the plugin grouping (the OpenFX host may classify plugins by
+grouping).
 
 ### Image
 
@@ -105,7 +106,7 @@ BITS=32 to compile a 32-bits version.
 
 The compiled plugins will be placed in subdiecories named after the
 configuration, for example Linux-64-realease for a 64-bits Linux
-compilation. In each of these directories, you will find a *.bundle
+compilation. In each of these directories, you will find a `*.bundle`
 file, which has to be moved to the proper place (`/usr/OFX/Plugins`on
 Linus, or `/Library/OFX/Plugins`on OS X), using a command like:
 	sudo mv */*/*.bundle /usr/OFX/Plugins
