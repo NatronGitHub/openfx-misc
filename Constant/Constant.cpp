@@ -70,7 +70,7 @@
 
  */
 
-#include "ColorCorrect.h"
+#include "Constant.h"
 
 #include <cmath>
 #ifdef _WINDOWS
@@ -375,8 +375,6 @@ ConstantPlugin::getTimeDomain(OfxRangeD &range)
 
     return false;
 }
-
-mDeclarePluginFactory(ConstantPluginFactory, {}, {});
 
 using namespace OFX;
 
