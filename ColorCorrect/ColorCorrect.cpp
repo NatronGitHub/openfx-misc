@@ -598,6 +598,9 @@ ColorCorrectPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+
+mDeclarePluginFactory(ColorCorrectPluginFactory, {}, {});
+
 void ColorCorrectPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
@@ -743,5 +746,11 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
 OFX::ImageEffect* ColorCorrectPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
     return new ColorCorrectPlugin(handle);
+}
+
+void getColorCorrectPluginID(OFX::PluginFactoryArray &ids)
+{
+    static ColorCorrectPluginFactory p("net.sf.openfx:ColorCorrectPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
 }
 

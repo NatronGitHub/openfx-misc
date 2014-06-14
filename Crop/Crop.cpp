@@ -1032,6 +1032,9 @@ bool CropInteract::penUp(const OFX::PenArgs &args)
 class CropOverlayDescriptor : public DefaultEffectOverlayDescriptor<CropOverlayDescriptor, CropInteract> {};
 
 
+
+mDeclarePluginFactory(CropPluginFactory, {}, {});
+
 void CropPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
@@ -1153,6 +1156,11 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     blackOutside->setAnimates(true);
     blackOutside->setHint("Add 1 black pixel to the region of definition so that all the area outside the crop rectangle is black");
     page->addChild(*blackOutside);
-    
+}
+
+void getCropPluginID(OFX::PluginFactoryArray &ids)
+{
+    static CropPluginFactory p("net.sf.openfx:CropPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
 }
 

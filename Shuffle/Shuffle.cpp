@@ -823,6 +823,9 @@ ShufflePlugin::enableComponents(void)
     }
 }
 
+
+mDeclarePluginFactory(ShufflePluginFactory, {}, {});
+
 void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
@@ -1063,5 +1066,11 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
 OFX::ImageEffect* ShufflePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
     return new ShufflePlugin(handle, context);
+}
+
+void getShufflePluginID(OFX::PluginFactoryArray &ids)
+{
+    static ShufflePluginFactory p("net.sf.openfx:ShufflePlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
 }
 

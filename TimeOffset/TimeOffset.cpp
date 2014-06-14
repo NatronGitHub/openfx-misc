@@ -209,6 +209,7 @@ TimeOffsetPlugin::isIdentity(const OFX::RenderArguments &args, OFX::Clip * &iden
 
 using namespace OFX;
 
+mDeclarePluginFactory(TimeOffsetPluginFactory, ;, {});
 
 void TimeOffsetPluginFactory::load()
 {
@@ -296,4 +297,10 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 ImageEffect* TimeOffsetPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum context)
 {
   return new TimeOffsetPlugin(handle);
+}
+
+void getTimeOffsetPluginID(OFX::PluginFactoryArray &ids)
+{
+    static TimeOffsetPluginFactory p("net.sf.openfx:timeOffset", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
 }

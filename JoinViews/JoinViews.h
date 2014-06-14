@@ -41,7 +41,6 @@
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(JoinViewsPluginFactory, ;, {});
-
+void getJoinViewsPluginID(OFX::PluginFactoryArray &ids);
 
 #endif

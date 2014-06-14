@@ -311,6 +311,8 @@ JoinViewsPlugin::render(const OFX::RenderArguments &args)
 
 using namespace OFX;
 
+mDeclarePluginFactory(JoinViewsPluginFactory, ;, {});
+
 void JoinViewsPluginFactory::load()
 {
   // we can't be used on hosts that don't support the stereoscopic suite
@@ -388,3 +390,10 @@ OFX::ImageEffect* JoinViewsPluginFactory::createInstance(OfxImageEffectHandle ha
 {
   return new JoinViewsPlugin(handle);
 }
+
+void getJoinViewsPluginID(OFX::PluginFactoryArray &ids)
+{
+    static JoinViewsPluginFactory p("net.sf.openfx:joinViewsPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
+}
+

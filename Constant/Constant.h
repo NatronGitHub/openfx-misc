@@ -75,6 +75,6 @@
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(ConstantPluginFactory, {}, {});
+void getConstantPluginID(OFX::PluginFactoryArray &ids);
 
 #endif

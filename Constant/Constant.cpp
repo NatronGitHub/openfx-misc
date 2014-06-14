@@ -378,6 +378,8 @@ ConstantPlugin::getTimeDomain(OfxRangeD &range)
 
 using namespace OFX;
 
+mDeclarePluginFactory(ConstantPluginFactory, {}, {});
+
 void ConstantPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     desc.setLabels(kPluginName, kPluginName, kPluginName);
@@ -435,4 +437,10 @@ void ConstantPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 ImageEffect* ConstantPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
     return new ConstantPlugin(handle);
+}
+
+void getConstantPluginID(OFX::PluginFactoryArray &ids)
+{
+    static ConstantPluginFactory p("net.sf.openfx:ConstantPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
 }

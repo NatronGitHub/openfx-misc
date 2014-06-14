@@ -322,6 +322,9 @@ MixViewsPlugin::render(const OFX::RenderArguments &args)
 
 
 using namespace OFX;
+
+mDeclarePluginFactory(MixViewsPluginFactory, ;, {});
+
 void MixViewsPluginFactory::load()
 {
   // we can't be used on hosts that don't support the stereoscopic suite
@@ -404,4 +407,10 @@ void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 OFX::ImageEffect* MixViewsPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
   return new MixViewsPlugin(handle);
+}
+
+void getMixViewsPluginID(OFX::PluginFactoryArray &ids)
+{
+    static MixViewsPluginFactory p("net.sf.openfx:mixViewsPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
 }

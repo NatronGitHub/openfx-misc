@@ -6,8 +6,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            static ColorCorrectPluginFactory p("net.sf.openfx:ColorCorrectPlugin", 1, 0);
-            ids.push_back(&p);
+            getColorCorrectPluginID(ids);
         }
     }
 }

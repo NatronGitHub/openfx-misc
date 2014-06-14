@@ -76,6 +76,6 @@ England
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(RGBLutPluginFactory, {}, {});
+void getRGBLutPluginID(OFX::PluginFactoryArray &ids);
 
 #endif // Misc_RGBLut_h

@@ -40,6 +40,6 @@
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(ChromaKeyerPluginFactory, {}, {});
+void getChromaKeyerPluginID(OFX::PluginFactoryArray &ids);
 
 #endif // Misc_ChromaKeyer_h

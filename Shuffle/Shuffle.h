@@ -75,6 +75,6 @@
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(ShufflePluginFactory, {}, {});
+void getShufflePluginID(OFX::PluginFactoryArray &ids);
 
 #endif

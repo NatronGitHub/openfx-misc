@@ -41,6 +41,6 @@
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(OneViewPluginFactory, ;, {});
+void getOneViewPluginID(OFX::PluginFactoryArray &ids);
 
 #endif

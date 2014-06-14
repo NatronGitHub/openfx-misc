@@ -42,6 +42,6 @@
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(ReConvergePluginFactory, {}, {});
+void getReConvergePluginID(OFX::PluginFactoryArray &ids);
 
 #endif

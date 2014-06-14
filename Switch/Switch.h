@@ -77,6 +77,6 @@
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(SwitchPluginFactory, {}, {});
+void getSwitchPluginID(OFX::PluginFactoryArray &ids);
 
 #endif

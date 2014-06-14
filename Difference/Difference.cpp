@@ -359,6 +359,9 @@ DifferencePlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+
+mDeclarePluginFactory(DifferencePluginFactory, {}, {});
+
 void DifferencePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
@@ -430,3 +433,9 @@ OFX::ImageEffect* DifferencePluginFactory::createInstance(OfxImageEffectHandle h
     return new DifferencePlugin(handle);
 }
 
+
+void getDifferencePluginID(OFX::PluginFactoryArray &ids)
+{
+    static DifferencePluginFactory p("net.sf.openfx:DifferencePlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
+}

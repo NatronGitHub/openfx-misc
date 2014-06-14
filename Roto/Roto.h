@@ -39,6 +39,6 @@
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(RotoPluginFactory, {}, {});
+void getRotoPluginID(OFX::PluginFactoryArray &ids);
 
 #endif // MISC_ROTO_H

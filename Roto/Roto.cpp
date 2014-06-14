@@ -396,7 +396,11 @@ void RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     clipPreferences.setClipComponents(*dstClip_, outputComponents);
 }
 
+
+
 using namespace OFX;
+
+mDeclarePluginFactory(RotoPluginFactory, {}, {});
 
 void RotoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -494,5 +498,11 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     outputComps->setDefault(0);
     desc.addClipPreferencesSlaveParam(*outputComps);
 
+}
+
+void getRotoPluginID(OFX::PluginFactoryArray &ids)
+{
+    static RotoPluginFactory p("net.sf.openfx:RotoPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
 }
 

@@ -6,8 +6,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            static ChromaKeyerPluginFactory p("net.sf.openfx:ChromaKeyerPlugin", 1, 0);
-            ids.push_back(&p);
+            getChromaKeyerPluginID(ids);
         }
     }
 }

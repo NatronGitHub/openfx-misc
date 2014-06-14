@@ -455,7 +455,11 @@ void RGBLutPlugin::render(const OFX::RenderArguments &args)
   } 
 }
 
+
 using namespace OFX;
+
+mDeclarePluginFactory(RGBLutPluginFactory, {}, {});
+
 void RGBLutPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   desc.setLabels("RGBLutOFX", "RGBLutOFX", "RGBLutOFX");
@@ -562,5 +566,11 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 OFX::ImageEffect* RGBLutPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
   return new RGBLutPlugin(handle);
+}
+
+void getRGBLutPluginID(OFX::PluginFactoryArray &ids)
+{
+    static RGBLutPluginFactory p("net.sf.openfx:RGBLutPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
 }
 

@@ -40,6 +40,6 @@
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(AnaglyphPluginFactory, ;, {});
+void getAnaglyphPluginID(OFX::PluginFactoryArray &ids);
 
 #endif

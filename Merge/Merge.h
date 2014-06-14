@@ -75,6 +75,6 @@
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(MergePluginFactory, {}, {});
+void getMergePluginID(OFX::PluginFactoryArray &ids);
 
 #endif // Misc_Merge_h

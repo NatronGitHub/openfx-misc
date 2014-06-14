@@ -420,6 +420,8 @@ GradePlugin::render(const OFX::RenderArguments &args)
 }
 
 
+mDeclarePluginFactory(GradePluginFactory, {}, {});
+
 void GradePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
@@ -529,5 +531,11 @@ void GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
 OFX::ImageEffect* GradePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
     return new GradePlugin(handle);
+}
+
+void getGradePluginID(OFX::PluginFactoryArray &ids)
+{
+    static GradePluginFactory p("net.sf.openfx:GradePlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
 }
 

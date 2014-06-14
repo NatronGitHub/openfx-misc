@@ -1155,7 +1155,10 @@ bool TransformInteract::keyUp(const OFX::KeyArgs &args)
     return false;
 }
 
+
 using namespace OFX;
+
+mDeclarePluginFactory(TransformPluginFactory, {}, {});
 
 class TransformOverlayDescriptor : public DefaultEffectOverlayDescriptor<TransformOverlayDescriptor, TransformInteract> {};
 
@@ -1255,6 +1258,8 @@ OFX::ImageEffect* TransformPluginFactory::createInstance(OfxImageEffectHandle ha
 }
 
 
+mDeclarePluginFactory(TransformMaskedPluginFactory, {}, {});
+
 void TransformMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
@@ -1283,3 +1288,14 @@ OFX::ImageEffect* TransformMaskedPluginFactory::createInstance(OfxImageEffectHan
     return new TransformPlugin(handle, true);
 }
 
+void getTransformPluginID(OFX::PluginFactoryArray &ids)
+{
+    static TransformPluginFactory p("net.sf.openfx:TransformPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
+}
+
+void getTransformMaskedPluginID(OFX::PluginFactoryArray &ids)
+{
+    static TransformMaskedPluginFactory p("net.sf.openfx:TransformMaskedPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
+}

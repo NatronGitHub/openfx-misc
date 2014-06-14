@@ -76,6 +76,6 @@
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(SideBySidePluginFactory, ;, {});
+void getSideBySidePluginID(OFX::PluginFactoryArray &ids);
 
 #endif

@@ -39,6 +39,6 @@
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(CropPluginFactory, {}, {});
+void getCropPluginID(OFX::PluginFactoryArray &ids);
 
 #endif // MISC_CROP_H

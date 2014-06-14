@@ -810,6 +810,7 @@ ChromaKeyerPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+mDeclarePluginFactory(ChromaKeyerPluginFactory, {}, {});
 
 void ChromaKeyerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -961,3 +962,8 @@ OFX::ImageEffect* ChromaKeyerPluginFactory::createInstance(OfxImageEffectHandle 
     return new ChromaKeyerPlugin(handle);
 }
 
+void getChromaKeyerPluginID(OFX::PluginFactoryArray &ids)
+{
+    static ChromaKeyerPluginFactory p("net.sf.openfx:ChromaKeyerPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
+}

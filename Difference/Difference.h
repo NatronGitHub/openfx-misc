@@ -75,6 +75,6 @@
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(DifferencePluginFactory, {}, {});
+void getDifferencePluginID(OFX::PluginFactoryArray &ids);
 
 #endif

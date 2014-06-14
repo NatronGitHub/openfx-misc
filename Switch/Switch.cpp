@@ -179,6 +179,8 @@ SwitchPlugin::changedClip(const OFX::InstanceChangedArgs &args, const std::strin
 
 using namespace OFX;
 
+mDeclarePluginFactory(SwitchPluginFactory, {}, {});
+
 void SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
@@ -262,3 +264,8 @@ OFX::ImageEffect* SwitchPluginFactory::createInstance(OfxImageEffectHandle handl
     return new SwitchPlugin(handle);
 }
 
+void getSwitchPluginID(OFX::PluginFactoryArray &ids)
+{
+    static SwitchPluginFactory p("net.sf.openfx:switchPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
+}

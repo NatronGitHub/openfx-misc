@@ -544,6 +544,8 @@ ReConvergePlugin::render(const OFX::RenderArguments &args)
 class PositionOverlayDescriptor : public OFX::DefaultEffectOverlayDescriptor<PositionOverlayDescriptor, PositionInteract> {};
 
 
+mDeclarePluginFactory(ReConvergePluginFactory, {}, {});
+
 using namespace OFX;
 void ReConvergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -649,5 +651,11 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 OFX::ImageEffect* ReConvergePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
   return new ReConvergePlugin(handle);
+}
+
+void getReConvergePluginID(OFX::PluginFactoryArray &ids)
+{
+    static ReConvergePluginFactory p("net.sf.openfx:reConvergePlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
 }
 

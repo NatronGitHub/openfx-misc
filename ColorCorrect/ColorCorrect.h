@@ -75,6 +75,6 @@
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(ColorCorrectPluginFactory, {}, {});
+void getColorCorrectPluginID(OFX::PluginFactoryArray &ids);
 
 #endif

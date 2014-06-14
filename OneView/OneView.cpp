@@ -310,6 +310,9 @@ OneViewPlugin::render(const OFX::RenderArguments &args)
 
 
 using namespace OFX;
+
+mDeclarePluginFactory(OneViewPluginFactory, ;, {});
+
 void OneViewPluginFactory::load()
 {
   // we can't be used on hosts that don't support the stereoscopic suite
@@ -390,4 +393,10 @@ void OneViewPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
 OFX::ImageEffect* OneViewPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
   return new OneViewPlugin(handle);
+}
+
+void getOneViewPluginID(OFX::PluginFactoryArray &ids)
+{
+    static OneViewPluginFactory p("net.sf.openfx:oneViewPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
 }

@@ -464,6 +464,9 @@ MergePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::strin
     }
 }
 
+
+mDeclarePluginFactory(MergePluginFactory, {}, {});
+
 void MergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
@@ -630,5 +633,11 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
 OFX::ImageEffect* MergePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
     return new MergePlugin(handle);
+}
+
+void getMergePluginID(OFX::PluginFactoryArray &ids)
+{
+    static MergePluginFactory p("net.sf.openfx:MergePlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
 }
 

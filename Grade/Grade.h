@@ -75,6 +75,6 @@
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(GradePluginFactory, {}, {});
+void getGradePluginID(OFX::PluginFactoryArray &ids);
 
 #endif // Misc_Grade_h

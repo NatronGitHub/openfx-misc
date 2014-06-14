@@ -426,6 +426,9 @@ SideBySidePlugin::render(const OFX::RenderArguments &args)
 
 
 using namespace OFX;
+
+mDeclarePluginFactory(SideBySidePluginFactory, ;, {});
+
 void SideBySidePluginFactory::load()
 {
   // we can't be used on hosts that don't support the stereoscopic suite
@@ -523,4 +526,10 @@ void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 OFX::ImageEffect* SideBySidePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
   return new SideBySidePlugin(handle);
+}
+
+void getSideBySidePluginID(OFX::PluginFactoryArray &ids)
+{
+    static SideBySidePluginFactory p("net.sf.openfx:sideBySidePlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
 }

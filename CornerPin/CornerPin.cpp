@@ -833,6 +833,8 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     page->addChild(*overlayChoice);
 }
 
+mDeclarePluginFactory(CornerPinPluginFactory, {}, {});
+
 void CornerPinPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
@@ -862,6 +864,10 @@ OFX::ImageEffect* CornerPinPluginFactory::createInstance(OfxImageEffectHandle ha
 }
 
 
+
+
+mDeclarePluginFactory(CornerPinMaskedPluginFactory, {}, {});
+
 void CornerPinMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
@@ -889,4 +895,17 @@ OFX::ImageEffect* CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHan
     return new CornerPinPlugin(handle, true);
 }
 
+
+
+void getCornerPinPluginID(OFX::PluginFactoryArray &ids)
+{
+    static CornerPinPluginFactory p("net.sf.openfx:CornerPinPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
+}
+
+void getCornerPinMaskedPluginID(OFX::PluginFactoryArray &ids)
+{
+    static CornerPinMaskedPluginFactory p("net.sf.openfx:CornerPinMaskedPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
+}
 

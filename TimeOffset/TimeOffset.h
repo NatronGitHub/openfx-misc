@@ -43,6 +43,6 @@ Rocquencourt - B.P. 105
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(TimeOffsetPluginFactory, ;, {});
+void getTimeOffsetPluginID(OFX::PluginFactoryArray &ids);
 
 #endif // Misc_TimeOffset_h

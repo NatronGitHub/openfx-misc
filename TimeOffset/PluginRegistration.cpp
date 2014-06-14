@@ -6,8 +6,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            static TimeOffsetPluginFactory p("net.sf.openfx:timeOffset", 1, 0);
-            ids.push_back(&p);
+            getTimeOffsetPluginID(ids);
         }
     }
 }

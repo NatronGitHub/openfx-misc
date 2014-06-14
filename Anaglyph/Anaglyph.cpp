@@ -351,6 +351,9 @@ AnaglyphPlugin::render(const OFX::RenderArguments &args)
 
 
 using namespace OFX;
+
+mDeclarePluginFactory(AnaglyphPluginFactory, ;, {});
+
 void AnaglyphPluginFactory::load()
 {
   // we can't be used on hosts that don't support the stereoscopic suite
@@ -449,5 +452,11 @@ void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 OFX::ImageEffect* AnaglyphPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
   return new AnaglyphPlugin(handle);
+}
+
+void getAnaglyphPluginID(OFX::PluginFactoryArray &ids)
+{
+    static AnaglyphPluginFactory p("net.sf.openfx:anaglyphPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    ids.push_back(&p);
 }
 

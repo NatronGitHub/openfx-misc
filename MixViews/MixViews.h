@@ -41,6 +41,6 @@
 
 #include "ofxsImageEffect.h"
 
-mDeclarePluginFactory(MixViewsPluginFactory, ;, {});
+void getMixViewsPluginID(OFX::PluginFactoryArray &ids);
 
 #endif
