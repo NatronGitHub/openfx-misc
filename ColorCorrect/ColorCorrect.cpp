@@ -714,7 +714,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     
     OFX::ParametricParamDescriptor* lookupTable = desc.defineParametricParam(kColorCorrectToneRangesParamName);
     assert(lookupTable);
-    lookupTable->setLabel(kColorCorrectToneRangesParamLabel);
+    lookupTable->setLabels(kColorCorrectToneRangesParamLabel, kColorCorrectToneRangesParamLabel, kColorCorrectToneRangesParamLabel);
     lookupTable->setHint(kColorCorrectToneRangesParamHint);
 
     // define it as two dimensional
