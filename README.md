@@ -118,7 +118,9 @@ provided Unix Makefile, the Xcode project, or the Visual Studio project.
 
 To compile an optimized version for a 64-bits machine: open a shell in
 the toplevel directory, and type
+
 	make DEBUGFLAG=-O3 BITS=64
+
 Without the DEBUGFLAG flag, a debug version will be compiled, and use
 BITS=32 to compile a 32-bits version.
 
