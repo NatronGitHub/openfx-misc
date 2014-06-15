@@ -542,7 +542,6 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     StringParamDescriptor* operationString = desc.defineStringParam(kOperationStringParamName);
     operationString->setLabels(kOperationStringParamName,kOperationStringParamName,kOperationStringParamName);
     operationString->setIsSecret(true);
-    operationString->setIsPersistant(false);
     operationString->setEvaluateOnChange(false);
     operationString->setDefault(getOperationString(eMergeOver));
     page->addChild(*operationString);
