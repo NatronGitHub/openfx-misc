@@ -92,7 +92,10 @@ static const std::string kColorCorrectGammaName = std::string("Gamma");
 static const std::string kColorCorrectGainName = std::string("Gain");
 static const std::string kColorCorrectOffsetName = std::string("Offset");
 
-#define kColorCorrectToneRangesParamName "ToneRanges"
+#define kColorCorrectToneRangesParamName "toneRanges"
+#define kColorCorrectToneRangesParamLabel "Tone Ranges"
+#define kColorCorrectToneRangesParamHint "Tone ranges lookup table"
+
 #define LUT_MAX_PRECISION 100
 
 // Rec.709 luminance:
@@ -646,9 +649,10 @@ defineRGBAScaleParam(OFX::ImageEffectDescriptor &desc,
     param->setDefault(def,def,def,def);
     param->setRange(min,min,min,min, max,max,max,max);
     param->setDisplayRange(min,min,min,min,max,max,max,max);
-    if(parent) {
+    if (parent) {
         param->setParent(*parent);
     }
+    page->addChild(*param);
 }
 
 static void
@@ -669,7 +673,7 @@ defineColorGroup(const std::string& groupName,
     defineRGBAScaleParam(desc, groupName + '.' + kColorCorrectGammaName, kColorCorrectGammaName, hint, groupDesc, page, 1, 0.2, 5);
     defineRGBAScaleParam(desc, groupName + '.' + kColorCorrectGainName, kColorCorrectGainName, hint, groupDesc, page, 1, 0, 4);
     defineRGBAScaleParam(desc, groupName + '.' + kColorCorrectOffsetName, kColorCorrectOffsetName, hint, groupDesc, page, 0, -1, 1);
-
+     page->addChild(*groupDesc);
 }
 
 void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
@@ -710,10 +714,10 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     
     OFX::ParametricParamDescriptor* lookupTable = desc.defineParametricParam(kColorCorrectToneRangesParamName);
     assert(lookupTable);
-    lookupTable->setLabel(kColorCorrectToneRangesParamName);
-    lookupTable->setScriptName(kColorCorrectToneRangesParamName);
-    
-    // define it as three dimensional
+    lookupTable->setLabel(kColorCorrectToneRangesParamLabel);
+    lookupTable->setHint(kColorCorrectToneRangesParamHint);
+
+    // define it as two dimensional
     lookupTable->setDimension(2);
     
     lookupTable->setDimensionLabel("Shadow", 0);
