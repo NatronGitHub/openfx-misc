@@ -259,6 +259,10 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
 {
     //OfxRectD srcRodA = translateRegion( _clipSrcA->getCanonicalRod( args.time ), params._offsetA );
 	//OfxRectD srcRodB = translateRegion( _clipSrcB->getCanonicalRod( args.time ), params._offsetB );
+    if (!srcClipA_->isConnected() && !srcClipB_->isConnected()) {
+        throwSuiteStatusException(kOfxStatFailed);
+    }
+    
     OfxRectD rodA = srcClipA_->getRegionOfDefinition(args.time);
     OfxRectD rodB = srcClipB_->getRegionOfDefinition(args.time);
     
