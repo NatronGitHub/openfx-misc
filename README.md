@@ -87,6 +87,24 @@ with Nuke).
 * Stereo/SideBySideOFX: Put the left and right view of the input next
   to each other.
 
+Notes & Caveats
+---------------
+
+### What does the Roto plugin do?
+
+If you use the Roto plugin in any other host than [Natron](http://natron.inria.fr), you will notice that it doesn't do much. It's role is just to provide an entry point for a host-based rotoscoping tool, which provides a roto mask to this plugin.
+
+### RGBLut and ColorCorrect don't work on Nuke 8
+
+The plugins using parametric parameters (RGBLut, ColorCorrect) don't work in Nuke 8 on OS X, and maybe on other platforms. The plugins cannot be instanciated, nothing seems to happen, and the following message appears on the console:
+
+    Exception thrown
+      basic_string::_S_construct NULL not valid
+
+The same happens with other plugins using parametric parameters, such as [TuttleHistogramKeyer](http://www.tuttleofx.org/).
+
+Parametric parameters seem to work in older versions of Nuke (at least up to Nuke 6).
+
 Installation
 ------------
 
@@ -118,6 +136,7 @@ The plugins may be compiled by compiling the Xcode project called
 this project have to be moved to `/Library/OFX/Plugins`.
 
 Alternatively, you can compile from the command-line using:
+
 	xcodebuild -project Misc.xcodeproj -configuration Release install
 	sudo mkdir /Library/OFX/Plugins
 	sudo mv /tmp/Misc.dst/Library/OFX/Plugins/Misc /Library/OFX/Plugins
