@@ -513,7 +513,7 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
   // define it
   OFX::ParametricParamDescriptor* lookupTable = desc.defineParametricParam("lookupTable");
   assert(lookupTable);
-  lookupTable->setLabel("Lookup Table");
+  lookupTable->setLabels("Lookup Table", "Lookup Table", "Lookup Table");
   lookupTable->setHint("Colour lookup table");
   lookupTable->setScriptName("lookupTable");
 
@@ -536,6 +536,7 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
   // set the min/max parametric range to 0..1
   lookupTable->setRange(0.0, 1.0);
 
+  /*
   // set a default curve, this example sets identity
   for(int component = 0; component < 3; ++component) {
     // add a control point at 0, value is 0
@@ -547,6 +548,8 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     // add a control point at 1, value is 1
     lookupTable->addControlPoint(component, 0.0, 1.0, 1.0, false);
   }
+  */
+  lookupTable->setIdentity();
 
   page->addChild(*lookupTable);
 
