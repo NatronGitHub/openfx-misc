@@ -729,6 +729,7 @@ using namespace OFX;
 class CornerPinOverlayDescriptor : public DefaultEffectOverlayDescriptor<CornerPinOverlayDescriptor, CornerPinTransformInteract> {};
 
 static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
+                                           PageParamDescriptor *page,
                                            GroupParamDescriptor* group,
                                            int i,
                                            double x,
@@ -743,6 +744,7 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
     size->setDimensionLabels("x", "y");
     size->setLayoutHint(OFX::eLayoutHintNoNewLine);
     size->setParent(*group);
+    page->addChild(*size);
 
     BooleanParamDescriptor* enable = desc.defineBooleanParam(kEnableParamName[i]);
     enable->setLabels(kEnableParamName[i], kEnableParamName[i], kEnableParamName[i]);
@@ -750,9 +752,11 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
     enable->setAnimates(true);
     enable->setHint(kEnableParamHint);
     enable->setParent(*group);
+    page->addChild(*enable);
 }
 
 static void defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
+                                              PageParamDescriptor *page,
                                               GroupParamDescriptor* group,
                                               int i,
                                               double x,
@@ -766,9 +770,16 @@ static void defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
     size->setDefault(x, y);
     size->setDimensionLabels("x", "y");
     size->setParent(*group);
+    page->addChild(*size);
 }
 
-static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,PageParamDescriptor *page,GroupParamDescriptor* group,const std::string& name,double x,double y,double z)
+static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
+                                 PageParamDescriptor *page,
+                                 GroupParamDescriptor* group,
+                                 const std::string& name,
+                                 double x,
+                                 double y,
+                                 double z)
 {
     Double3DParamDescriptor* row = desc.defineDouble3DParam(name);
     row->setLabels("", "", "");
@@ -776,6 +787,7 @@ static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,PageParamDescr
     row->setAnimates(true);
     row->setDefault(x,y,z);
     row->setParent(*group);
+    page->addChild(*row);
 }
 
 static void
@@ -786,10 +798,10 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     GroupParamDescriptor* toPoints = desc.defineGroupParam(kToParamGroupName);
     toPoints->setLabels(kToParamGroupName, kToParamGroupName, kToParamGroupName);
     toPoints->setAsTab();
-    defineCornerPinToDouble2DParam(desc, toPoints, 0, 0, 0);
-    defineCornerPinToDouble2DParam(desc, toPoints, 1, 1, 0);
-    defineCornerPinToDouble2DParam(desc, toPoints, 2, 1, 1);
-    defineCornerPinToDouble2DParam(desc, toPoints, 3, 0, 1);
+    defineCornerPinToDouble2DParam(desc, page, toPoints, 0, 0, 0);
+    defineCornerPinToDouble2DParam(desc, page, toPoints, 1, 1, 0);
+    defineCornerPinToDouble2DParam(desc, page, toPoints, 2, 1, 1);
+    defineCornerPinToDouble2DParam(desc, page, toPoints, 3, 0, 1);
     PushButtonParamDescriptor* copyFrom = desc.definePushButtonParam(kCopyFromParamName);
     copyFrom->setLabels(kCopyFromParamLabel, kCopyFromParamLabel, kCopyFromParamLabel);
     copyFrom->setHint(kCopyFromParamHint);
@@ -799,10 +811,10 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     GroupParamDescriptor* fromPoints = desc.defineGroupParam(kFromParamGroupName);
     fromPoints->setLabels(kFromParamGroupName, kFromParamGroupName, kFromParamGroupName);
     fromPoints->setAsTab();
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, 0, 0, 0);
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, 1, 1, 0);
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, 2, 1, 1);
-    defineCornerPinFromsDouble2DParam(desc, fromPoints, 3, 0, 1);
+    defineCornerPinFromsDouble2DParam(desc, page, fromPoints, 0, 0, 0);
+    defineCornerPinFromsDouble2DParam(desc, page, fromPoints, 1, 1, 0);
+    defineCornerPinFromsDouble2DParam(desc, page, fromPoints, 2, 1, 1);
+    defineCornerPinFromsDouble2DParam(desc, page, fromPoints, 3, 0, 1);
     PushButtonParamDescriptor* setToInput = desc.definePushButtonParam(kCopyInputRoDParamName);
     setToInput->setLabels(kCopyInputRoDParamLabel, kCopyInputRoDParamLabel, kCopyInputRoDParamLabel);
     setToInput->setHint(kCopyInputRoDParamHint);
