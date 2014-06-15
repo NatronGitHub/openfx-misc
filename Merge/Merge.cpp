@@ -82,6 +82,7 @@
 #include "ofxsFilter.h"
 
 #define kOperationParamName "operation"
+#define kOperationStringParamName "operationString"
 #define kOperationParamLabel "Operation"
 #define kOperationParamHint "The operation used to merge the input A and B images."
 #define kAlphaMaskingParamName "screen_alpha"
@@ -223,6 +224,7 @@ public :
         _bbox = fetchChoiceParam(kBboxParamName);
         _mix = fetchDoubleParam(kFilterMixParamName);
         _alphaMasking = fetchBooleanParam(kAlphaMaskingParamName);
+        _operationString = fetchStringParam(kOperationStringParamName);
     }
     
     // override the rod call
@@ -244,6 +246,7 @@ private:
     OFX::Clip *maskClip_;
     
     OFX::ChoiceParam *_operation;
+    OFX::StringParam *_operationString;
     OFX::ChoiceParam *_bbox;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam *_alphaMasking;
@@ -461,6 +464,7 @@ MergePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::strin
         _operation->getValueAtTime(args.time, operation_i);
         // depending on the operation, enable/disable alpha masking
         _alphaMasking->setEnabled(MergeImages2D::isMaskable((MergingFunctionEnum)operation_i));
+        _operationString->setValue(MergeImages2D::getOperationString((MergingFunctionEnum)operation_i));
     }
 }
 
@@ -530,6 +534,14 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
+    
+    StringParamDescriptor* operationString = desc.defineStringParam(kOperationStringParamName);
+    operationString->setLabels(kOperationStringParamName,kOperationStringParamName,kOperationStringParamName);
+    operationString->setIsSecret(true);
+    operationString->setIsPersistant(false);
+    operationString->setEvaluateOnChange(false);
+    operationString->setDefault(getOperationString(eMergeOver));
+    page->addChild(*operationString);
  
     ChoiceParamDescriptor* operation = desc.defineChoiceParam(kOperationParamName);
     operation->setLabels(kOperationParamLabel, kOperationParamLabel, kOperationParamLabel);
@@ -608,12 +620,6 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     operation->setLayoutHint(OFX::eLayoutHintNoNewLine);
     page->addChild(*operation);
     
-    BooleanParamDescriptor* alphaMasking = desc.defineBooleanParam(kAlphaMaskingParamName);
-    alphaMasking->setLabels(kAlphaMaskingParamLabel, kAlphaMaskingParamLabel, kAlphaMaskingParamLabel);
-    alphaMasking->setAnimates(true);
-    alphaMasking->setDefault(false);
-    alphaMasking->setEnabled(MergeImages2D::isMaskable(eMergeOver));
-    alphaMasking->setHint(kAlphaMaskingParamHint);
     
     ChoiceParamDescriptor* boundingBox = desc.defineChoiceParam(kBboxParamName);
     boundingBox->setLabels(kBboxParamLabel, kBboxParamLabel, kBboxParamLabel);
@@ -625,6 +631,14 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     boundingBox->setAnimates(true);
     boundingBox->setDefault(0);
     page->addChild(*boundingBox);
+    
+    BooleanParamDescriptor* alphaMasking = desc.defineBooleanParam(kAlphaMaskingParamName);
+    alphaMasking->setLabels(kAlphaMaskingParamLabel, kAlphaMaskingParamLabel, kAlphaMaskingParamLabel);
+    alphaMasking->setAnimates(true);
+    alphaMasking->setDefault(false);
+    alphaMasking->setEnabled(MergeImages2D::isMaskable(eMergeOver));
+    alphaMasking->setHint(kAlphaMaskingParamHint);
+    page->addChild(*alphaMasking);
     
     ofxsFilterDescribeParamsMaskMix(desc, page);
  

@@ -147,6 +147,82 @@ namespace MergeImages2D {
         }
     }
     
+    inline std::string
+    getOperationString(MergingFunctionEnum operation) {
+        switch (operation) {
+            case eMergeATop:
+                return "atop";
+            case eMergeAverage:
+                return "average";
+            case eMergeColorBurn:
+                return "color-burn";
+            case eMergeColorDodge:
+                return "color-dodge";
+            case eMergeConjointOver:
+                return "conjoint-over";
+            case eMergeCopy:
+                return "copy";
+            case eMergeDifference:
+                return "difference";
+            case eMergeDisjointOver:
+                return "disjoint-over";
+            case eMergeDivide:
+                return "divide";
+            case eMergeExclusion:
+                return "exclusion";
+            case eMergeFreeze:
+                return "freeze";
+            case eMergeFrom:
+                return "from";
+            case eMergeGeometric:
+                return "geometric";
+            case eMergeHardLight:
+                return "hard-light";
+            case eMergeHypot:
+                return "hypot";
+            case eMergeIn:
+                return "in";
+            case eMergeInterpolated:
+                return "interpolated";
+            case eMergeMask:
+                return "mask";
+            case eMergeMatte:
+                return "matte";
+            case eMergeLighten:
+                return "max";
+            case eMergeDarken:
+                return "min";
+            case eMergeMinus:
+                return "minus";
+            case eMergeMultiply:
+                return "multiply";
+            case eMergeOut:
+                return "out";
+            case eMergeOver:
+                return "over";
+            case eMergeOverlay:
+                return "overlay";
+            case eMergePinLight:
+                return "pinlight";
+            case eMergePlus:
+                return "plus";
+            case eMergeReflect:
+                return "reflect";
+            case eMergeScreen:
+                return "screen";
+            case eMergeSoftLight:
+                return "soft-light";
+            case eMergeStencil:
+                return "stencil";
+            case eMergeUnder:
+                return "under";
+            case eMergeXOR:
+                return "xor";
+            default:
+                break;
+        }
+    }
+    
 
     template <typename PIX>
     PIX averageFunctor(PIX A,PIX B)
