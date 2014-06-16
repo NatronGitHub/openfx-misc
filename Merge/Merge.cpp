@@ -81,8 +81,9 @@
 #include "ofxsMerging.h"
 #include "ofxsFilter.h"
 
+#include "ofxNatron.h"
+
 #define kOperationParamName "operation"
-#define kOperationStringParamName "operationString"
 #define kOperationParamLabel "Operation"
 #define kOperationParamHint "The operation used to merge the input A and B images."
 #define kAlphaMaskingParamName "screen_alpha"
@@ -224,7 +225,7 @@ public :
         _bbox = fetchChoiceParam(kBboxParamName);
         _mix = fetchDoubleParam(kFilterMixParamName);
         _alphaMasking = fetchBooleanParam(kAlphaMaskingParamName);
-        _operationString = fetchStringParam(kOperationStringParamName);
+        _operationString = fetchStringParam(kOfxParamStringSublabelName);
     }
     
     // override the rod call
@@ -539,9 +540,11 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    StringParamDescriptor* operationString = desc.defineStringParam(kOperationStringParamName);
-    operationString->setLabels(kOperationStringParamName,kOperationStringParamName,kOperationStringParamName);
+    StringParamDescriptor* operationString = desc.defineStringParam(kOfxParamStringSublabelName);
+    operationString->setLabels(kOfxParamStringSublabelName,kOfxParamStringSublabelName,kOfxParamStringSublabelName);
     operationString->setIsSecret(true);
+    operationString->setEnabled(false);
+    operationString->setIsPersistant(true);
     operationString->setEvaluateOnChange(false);
     operationString->setDefault(getOperationString(eMergeOver));
     page->addChild(*operationString);
