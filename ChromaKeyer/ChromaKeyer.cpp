@@ -659,7 +659,7 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
 {
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
     if (!dst.get()) {
-        return; // nothing to do
+        OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
         dst->getRenderScale().y != args.renderScale.y ||

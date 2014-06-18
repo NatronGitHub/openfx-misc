@@ -302,6 +302,9 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
 {
     // get a dst image
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
