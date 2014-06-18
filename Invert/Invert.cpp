@@ -230,8 +230,7 @@ private:
                             tmpPix[3] = doalpha ? (maxValue - srcPix[3]) : srcPix[3];
                             break;
                     }
-                    // TODO: pass srcPix to ofxsMaskMix
-                    ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImg, _doMasking, _maskImg, _mix, dstPix);
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, dstPix);
                 } else {
                     // no src pixel here, be black and transparent
                     for(int c = 0; c < nComponents; c++) {

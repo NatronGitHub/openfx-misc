@@ -545,6 +545,51 @@ ofxsMaskMix(const float *tmpPix, //!< interpolated pixel
     }
 }
 
+template <class PIX, int nComponents, int maxValue, bool masked>
+void
+ofxsMaskMixPix(const float *tmpPix, //!< interpolated pixel
+            int x, //!< coordinates for the pixel to be computed (PIXEL coordinates)
+            int y,
+            PIX *srcPix, //!< the background image (the output is srcImg where maskImg=0, else it is tmpPix)
+            bool domask, //!< apply the mask?
+            const OFX::Image *maskImg, //!< the mask image (ignored if masked=false or domask=false)
+            float mix, //!< mix factor between the output and bkImg
+            PIX *dstPix) //!< destination pixel
+{
+    PIX *maskPix = NULL;
+    float maskScale = 1.;
+
+    // are we doing masking
+    if (masked && srcPix) {
+        if (domask && maskImg) {
+            // we do, get the pixel from the mask
+            maskPix = (PIX *)maskImg->getPixelAddress(x, y);
+            // figure the scale factor from that pixel
+            maskScale = maskPix != 0 ? float(*maskPix)/float(maxValue) : 0.0f;
+        }
+        float alpha = maskScale * mix;
+        for (int c = 0; c < nComponents; ++c) {
+            float v = tmpPix[c] * alpha + (1. - alpha) * srcPix[c];
+            if (maxValue == 1) { // implies floating point and so no clamping
+                dstPix[c] = PIX(v);
+            } else { // integer based and we need to clamp
+                // (e.g. bicubic filter may overflow)
+                dstPix[c] = PIX(Clamp(v, 0, maxValue));
+            }
+        }
+    } else {
+        // no mask, no mix
+        for (int c = 0; c < nComponents; ++c) {
+            if (maxValue == 1) { // implies floating point and so no clamping
+                dstPix[c] = tmpPix[c];
+            } else { // integer based and we need to clamp
+                // (e.g. bicubic filter may overflow)
+                dstPix[c] = PIX(Clamp(tmpPix[c], 0, maxValue));
+            }
+        }
+    }
+}
+
 inline void
 ofxsFilterExpandRoD(OFX::ImageEffect* effect, double pixelAspectRatio, const OfxPointD& renderScale, bool blackOutside, OfxRectD *rod)
 {
