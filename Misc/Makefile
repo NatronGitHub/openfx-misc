@@ -3,6 +3,7 @@ Anaglyph.o \
 ChromaKeyer.o \
 ColorCorrect.o \
 Constant.o \
+CopyRectangle.o \
 CornerPin.o \
 Crop.o \
 Difference.o \
@@ -22,6 +23,7 @@ Transform.o \
 ofxsOGLTextRenderer.o \
 ofxsOGLFontData.o  \
 ofxsTransform3x3.o \
+ofxsRectangleInteract.o \
 PluginRegistrationCombined.o
 
 PLUGINNAME = Misc
@@ -30,6 +32,7 @@ VPATH += \
 ../ChromaKeyer \
 ../ColorCorrect \
 ../Constant \
+../CopyRectangle \
 ../CornerPin \
 ../Crop \
 ../Difference \
@@ -55,6 +58,7 @@ CXXFLAGS += \
 -I../ChromaKeyer \
 -I../ColorCorrect \
 -I../Constant \
+-I../CopyRectangle \
 -I../CornerPin \
 -I../Crop \
 -I../Difference \

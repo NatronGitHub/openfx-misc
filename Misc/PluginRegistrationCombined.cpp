@@ -2,6 +2,7 @@
 #include "ChromaKeyer.h"
 #include "ColorCorrect.h"
 #include "Constant.h"
+#include "CopyRectangle.h"
 #include "CornerPin.h"
 #include "Crop.h"
 #include "Difference.h"
@@ -29,6 +30,7 @@ namespace OFX
             getChromaKeyerPluginID(ids);
             getColorCorrectPluginID(ids);
             getConstantPluginID(ids);
+            getCopyRectanglePluginID(ids);
             getCornerPinPluginID(ids);
             getCornerPinMaskedPluginID(ids);
             getCropPluginID(ids);
