@@ -7,6 +7,7 @@ CornerPin.o \
 Crop.o \
 Difference.o \
 Grade.o \
+Invert.o \
 JoinViews.o \
 Merge.o \
 MixViews.o \
@@ -34,6 +35,7 @@ VPATH += \
 ../Crop \
 ../Difference \
 ../Grade \
+../Invert \
 ../JoinViews \
 ../Merge \
 ../MixViews \
@@ -59,6 +61,7 @@ CXXFLAGS += \
 -I../Crop \
 -I../Difference \
 -I../Grade \
+-I../Invert \
 -I../JoinViews \
 -I../Merge \
 -I../MixViews \

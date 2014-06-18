@@ -6,6 +6,7 @@
 #include "Crop.h"
 #include "Difference.h"
 #include "Grade.h"
+#include "Invert.h"
 #include "JoinViews.h"
 #include "Merge.h"
 #include "MixViews.h"
@@ -34,6 +35,7 @@ namespace OFX
             getCropPluginID(ids);
             getDifferencePluginID(ids);
             getGradePluginID(ids);
+            getInvertPluginID(ids);
             getJoinViewsPluginID(ids);
             getMergePluginID(ids);
             getMixViewsPluginID(ids);
