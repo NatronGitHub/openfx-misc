@@ -82,18 +82,15 @@
 #define kSrcClipAName "A"
 #define kSrcClipBName "B"
 #define kSoftnessParamName "Softness"
-#define kChannelsParamName "Channels"
+#define kRedParamName "red"
+#define kRedParamLabel "Red"
+#define kGreenParamName "green"
+#define kGreenParamLabel "Green"
+#define kBlueParamName "blue"
+#define kBlueParamLabel "Blue"
+#define kAlphaParamName "alpha"
+#define kAlphaParamLabel "Alpha"
 
-
-enum ChannelChoice
-{
-    CHANNEL_R = 0,
-    CHANNEL_G,
-    CHANNEL_B,
-    CHANNEL_A,
-    CHANNEL_RGB,
-    CHANNEL_RGBA
-};
 
 using namespace OFX;
 
@@ -106,7 +103,7 @@ protected:
     OFX::Image *_srcImgB;
     double _softness;
     double _mix;
-    ChannelChoice _channels;
+    bool _enabled[4];
     OFX::PixelComponentEnum _srcAComponents;
     OfxRectI _rectangle;
     
@@ -126,13 +123,17 @@ public:
         _srcImgB = B;
     }
     
-    void setValues(const OfxRectI& rectangle,double softness,ChannelChoice channels,double mix,OFX::PixelComponentEnum srcAComponents)
+    void setValues(const OfxRectI& rectangle,double softness,double mix,OFX::PixelComponentEnum srcAComponents,
+                   bool red,bool green,bool blue,bool alpha)
     {
         _rectangle = rectangle;
         _softness = softness;
-        _channels = channels;
         _mix = mix;
         _srcAComponents = srcAComponents;
+        _enabled[0] = red;
+        _enabled[1] = green;
+        _enabled[2] = blue;
+        _enabled[3] = alpha;
     }
 
 };
@@ -197,81 +198,33 @@ private:
 
                     double multiplier = xMultiplier * yMultiplier * _mix;
                     
-                    switch (_channels) {
-                        case CHANNEL_R:
-                        case CHANNEL_G:
-                        case CHANNEL_B: {
-                            int index = (int)_channels;
-                            if (_srcAComponents == OFX::ePixelComponentRGB || _srcAComponents == OFX::ePixelComponentRGBA) {
-                                PIX A = srcPixA ? srcPixA[index] : 0.;
-                                PIX B = srcPixB ? srcPixB[index] : 0.;
-                                dstPix[index] = A *  multiplier + B * (1. - multiplier) ;
-                                ///fill in other channels with B
-                                for (int k = 0; k < nComponents; ++k) {
-                                    if (k != index) {
-                                        dstPix[k] = srcPixB ? srcPixB[k] : 0.;
-                                    }
-                                }
+                    switch (_srcAComponents) {
+                        case OFX::ePixelComponentAlpha: {
+                            if (!_enabled[3]) {
+                                ///copy B
+                                dstPix[0] = srcPixB ? *srcPixB : 0.;
                             } else {
-                                ///we're in alpha case
-                                dstPix[0] = srcPixB ? srcPixB[0] : 0.;
+                                PIX A = srcPixA ? *srcPixA : 0.;
+                                PIX B = srcPixB ? *srcPixB : 0.;
+                                *dstPix = A *  multiplier + B * (1. - multiplier) ;
                             }
-                            
-                            
                         }   break;
-                        case CHANNEL_A: {
-                            int index;
-                            if (_srcAComponents == OFX::ePixelComponentAlpha) {
-                                index = 0;
-                            } else if (_srcAComponents == OFX::ePixelComponentRGBA) {
-                                index = 3;
-                            } else {
-                                ///nothing to render
-                                break;
-                            }
-                            PIX A = srcPixA ? srcPixA[index] : 0.;
-                            PIX B = srcPixB ? srcPixB[index] : 0.;
-                            dstPix[index] = A *  multiplier + B * (1. - multiplier) ;
-                            
-                            ///copy rgb of B if any
-                            if (_srcAComponents == OFX::ePixelComponentRGBA) {
-                                for (int k = 0; k < nComponents; ++k) {
+                        case OFX::ePixelComponentRGB:
+                        case OFX::ePixelComponentRGBA: {
+                            for (int k = 0; k < nComponents; ++k) {
+                                if (!_enabled[k]) {
                                     dstPix[k] = srcPixB ? srcPixB[k] : 0.;
-                                }
-                            }
-                            
-                        }   break;
-                        case CHANNEL_RGB: {
-                            if (_srcAComponents == OFX::ePixelComponentRGB || _srcAComponents == OFX::ePixelComponentRGBA) {
-                                for (int k = 0; k < 3; ++k) {
+                                } else {
                                     PIX A = srcPixA ? srcPixA[k] : 0.;
                                     PIX B = srcPixB ? srcPixB[k] : 0.;
                                     dstPix[k] = A *  multiplier + B * (1. - multiplier) ;
                                 }
-                                
-                                ///copy the alpha if any of B
-                                if (_srcAComponents == OFX::ePixelComponentRGBA) {
-                                    dstPix[3] = srcPixB ? srcPixB[3] : 0.;
-                                }
-                            }
-                        }   break;
-                        case CHANNEL_RGBA: {
-                            if (_srcAComponents == OFX::ePixelComponentRGBA) {
-                                for (int k = 0; k < nComponents; ++k) {
-                                    PIX A = srcPixA ? srcPixA[k] : 0.;
-                                    PIX B = srcPixB ? srcPixB[k] : 0.;
-                                    dstPix[k] = A *  multiplier + B * (1. - multiplier) ;
-                                }
-                            } else if (_srcAComponents == OFX::ePixelComponentAlpha) {
-                                ///copy just the alpha
-                                PIX A = srcPixA ? srcPixA[0] : 0.;
-                                PIX B = srcPixB ? srcPixB[0] : 0.;
-                                dstPix[0] = A *  multiplier + B * (1. - multiplier) ;
                             }
                         }   break;
                         default:
                             break;
                     }
+                  
                     
                 } else {
                     for (int k = 0; k < nComponents; ++k) {
@@ -301,7 +254,10 @@ protected:
     OFX::Double2DParam* _btmLeft;
     OFX::Double2DParam* _size;
     OFX::DoubleParam* _softness;
-    OFX::ChoiceParam* _channels;
+    OFX::BooleanParam* _red;
+    OFX::BooleanParam* _green;
+    OFX::BooleanParam* _blue;
+    OFX::BooleanParam* _alpha;
     OFX::DoubleParam* _mix;
     
 public:
@@ -314,7 +270,10 @@ public:
     , _btmLeft(0)
     , _size(0)
     , _softness(0)
-    , _channels(0)
+    , _red(0)
+    , _green(0)
+    , _blue(0)
+    , _alpha(0)
     , _mix(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
@@ -327,10 +286,13 @@ public:
         _btmLeft = fetchDouble2DParam(kRectInteractBtmLeftParamName);
         _size = fetchDouble2DParam(kRectInteractSizeParamName);
         _softness = fetchDoubleParam(kSoftnessParamName);
-        _channels = fetchChoiceParam(kChannelsParamName);
+        _red = fetchBooleanParam(kRedParamName);
+        _green = fetchBooleanParam(kGreenParamName);
+        _blue = fetchBooleanParam(kBlueParamName);
+        _alpha = fetchBooleanParam(kAlphaParamName);
         _mix = fetchDoubleParam(kFilterMixParamName);
         
-        assert(_btmLeft && _size && _softness && _channels && _mix);
+        assert(_btmLeft && _size && _softness && _red && _green && _blue && _alpha && _mix);
     }
     
 private:
@@ -439,13 +401,16 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     dstRoDPix.y2 = dstRoD.y2;
     dstRoDPix = MergeImages2D::downscalePowerOfTwoSmallestEnclosing(dstRoDPix, mipMapLevel);
    
-    int channels;
-    _channels->getValueAtTime(args.time,channels);
+    bool red,green,blue,alpha;
+    _red->getValueAtTime(args.time,red);
+    _green->getValueAtTime(args.time,green);
+    _blue->getValueAtTime(args.time,blue);
+    _alpha->getValueAtTime(args.time,alpha);
     
     double mix;
     _mix->getValueAtTime(args.time, mix);
     
-    processor.setValues(rectanglePixel, softness, (ChannelChoice)channels, mix,srcAComponents);
+    processor.setValues(rectanglePixel, softness, mix,srcAComponents,red,green,blue,alpha);
     
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -578,7 +543,14 @@ OFX::ImageEffect* CopyRectanglePluginFactory::createInstance(OfxImageEffectHandl
 }
 
 
-
+static void defineComponentParam(OFX::ImageEffectDescriptor &desc,PageParamDescriptor* page,const std::string& name,const std::string& label)
+{
+    BooleanParamDescriptor* comp = desc.defineBooleanParam(name);
+    comp->setLabels(label, label, label);
+    comp->setDefault(true);
+    comp->setHint("Copy " + name);
+    page->addChild(*comp);
+}
 
 void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
@@ -633,17 +605,11 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     size->setDigits(0);
     page->addChild(*size);
     
-    ChoiceParamDescriptor* channels = desc.defineChoiceParam(kChannelsParamName);
-    channels->setLabels(kChannelsParamName, kChannelsParamName, kChannelsParamName);
-    channels->setHint("The channels that will be copied to the B image.");
-    channels->appendOption("R");
-    channels->appendOption("G");
-    channels->appendOption("B");
-    channels->appendOption("A");
-    channels->appendOption("RGB");
-    channels->appendOption("RGBA");
-    channels->setDefault((ChannelChoice)CHANNEL_RGBA);
-    page->addChild(*channels);
+    
+    defineComponentParam(desc, page, kRedParamName, kRedParamLabel);
+    defineComponentParam(desc, page, kGreenParamName, kGreenParamLabel);
+    defineComponentParam(desc, page, kBlueParamName, kBlueParamLabel);
+    defineComponentParam(desc, page, kAlphaParamName, kAlphaParamLabel);
     
     DoubleParamDescriptor* softness = desc.defineDoubleParam(kSoftnessParamName);
     softness->setLabels(kSoftnessParamName, kSoftnessParamName, kSoftnessParamName);
