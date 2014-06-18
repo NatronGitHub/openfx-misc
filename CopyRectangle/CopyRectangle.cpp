@@ -77,54 +77,58 @@
 #include "ofxsProcessing.H"
 #include "ofxsMerging.h"
 #include "ofxsRectangleInteract.h"
+#include "ofxsFilter.h"
 
-#define kBtmLeftParamName "Bottom left"
-#define kSizeParamName "Size"
-#define kReformatParamName "Reformat"
-#define kIntersectParamName "Intersect"
-#define kBlackOutsideParamName "Black outside"
+#define kSrcClipAName "A"
+#define kSrcClipBName "B"
 #define kSoftnessParamName "Softness"
+#define kChannelsParamName "Channels"
+
+
+enum ChannelChoice
+{
+    CHANNEL_R = 0,
+    CHANNEL_G,
+    CHANNEL_B,
+    CHANNEL_A,
+    CHANNEL_RGB,
+    CHANNEL_RGBA
+};
 
 using namespace OFX;
 
-class CropProcessorBase : public OFX::ImageProcessor
+class CopyRectangleProcessorBase : public OFX::ImageProcessor
 {
    
     
 protected:
-    OFX::Image *_srcImg;
-    
+    OFX::Image *_srcImgA;
+    OFX::Image *_srcImgB;
     double _softness;
-    bool _blackOutside;
-    OfxPointI _translation;
-    OfxRectI _dstRoDPix;
-    
+    double _mix;
+    ChannelChoice _channels;
+    OfxRectI _rectangle;
 public:
-    CropProcessorBase(OFX::ImageEffect &instance)
+    CopyRectangleProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
-    , _srcImg(0)
+    , _srcImgA(0)
+    , _srcImgB(0)
     {
     }
 
     /** @brief set the src image */
-    void setSrcImg(OFX::Image *v)
+    void setSrcImgs(OFX::Image *A,OFX::Image* B)
     {
-        _srcImg = v;
+        _srcImgA = A;
+        _srcImgB = B;
     }
-
     
-    void setValues(const OfxRectI& cropRect,const OfxRectI& dstRoDPix,bool bo,bool reformat,double softness)
+    void setValues(const OfxRectI& rectangle,double softness,ChannelChoice channels,double mix)
     {
+        _rectangle = rectangle;
         _softness = softness;
-        _blackOutside = bo;
-        _dstRoDPix = dstRoDPix;
-        if (reformat) {
-            _translation.x = cropRect.x1;
-            _translation.y = cropRect.y1;
-        } else {
-            _translation.x = 0;
-            _translation.y = 0;
-        }
+        _channels = channels;
+        _mix = mix;
     }
 
 };
@@ -133,18 +137,19 @@ public:
 // The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
 // by the compiler, using the same generic code for all filters.
 template <class PIX, int nComponents, int maxValue>
-class CropProcessor : public CropProcessorBase
+class CopyRectangleProcessor : public CopyRectangleProcessorBase
 {
 public:
-    CropProcessor(OFX::ImageEffect &instance)
-    : CropProcessorBase(instance)
+    CopyRectangleProcessor(OFX::ImageEffect &instance)
+    : CopyRectangleProcessorBase(instance)
     {
     }
 
 private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        
+        double yMultiplier,xMultiplier;
+
         //assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; ++y)
         {
@@ -152,41 +157,39 @@ private:
             
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             
-            bool yblack = _blackOutside && (y == _dstRoDPix.y1 || y == (_dstRoDPix.y2 - 1));
 
-            // distance to the nearest crop area horizontal edge
-            int yDistance = _blackOutside + std::min(y - _dstRoDPix.y1, _dstRoDPix.y2 - 1 - y);
+            // distance to the nearest rectangle area horizontal edge
+            int yDistance =  std::min(y - _rectangle.y1, _rectangle.y2 - 1 - y);
+            
             // handle softness
-            double yMultiplier = yDistance < _softness ? (double)yDistance / _softness : 1.;
+            if (y >= _rectangle.y1 && y < _rectangle.y2) {
+                ///apply softness only within the rectangle
+                yMultiplier = yDistance < _softness ? (double)yDistance / _softness : 1.;
+            } else {
+                yMultiplier = 1.;
+            }
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
-                bool xblack = _blackOutside && (x == _dstRoDPix.x1 || x == (_dstRoDPix.x2 - 1));
-                // treat the black case separately
-                if (xblack || yblack || !_srcImg) {
-                    for (int k = 0; k < nComponents; ++k) {
-                        dstPix[k] =  0.;
-                    }
+                
+                // distance to the nearest rectangle area vertical edge
+                int xDistance =  std::min(x - _rectangle.x1, _rectangle.x2 - 1 - x);
+                // handle softness
+                if (x >= _rectangle.x1 && x < _rectangle.x2) {
+                    ///apply softness only within the rectangle
+                    xMultiplier = xDistance < _softness ? (double)xDistance / _softness : 1.;
                 } else {
-                    // distance to the nearest crop area vertical edge
-                    int xDistance = _blackOutside + std::min(x - _dstRoDPix.x1, _dstRoDPix.x2 - 1 - x);
-                    // handle softness
-                    double xMultiplier = xDistance < _softness ? (double)xDistance / _softness : 1.;
-
-                    PIX *srcPix = (PIX*)_srcImg->getPixelAddress(x + _translation.x, y + _translation.y);
-                    if (!srcPix) {
-                        for (int k = 0; k < nComponents; ++k) {
-                            dstPix[k] =  0.;
-                        }
-                    } else if (xMultiplier != 1. || yMultiplier != 1.) {
-                        for (int k = 0; k < nComponents; ++k) {
-                            dstPix[k] =  srcPix[k] * xMultiplier * yMultiplier;
-                        }
-                    } else {
-                        for (int k = 0; k < nComponents; ++k) {
-                            dstPix[k] =  srcPix[k];
-                        }
-                    }
+                    xMultiplier = 1.;
                 }
+                
+                PIX *srcPixA = (PIX*)_srcImgA->getPixelAddress(x, y);
+                PIX *srcPixB = (PIX*)_srcImgB->getPixelAddress(x, y);
+                
+                for (int k = 0; k < nComponents; ++k) {
+                    PIX A = srcPixA ? *srcPixA : 0.;
+                    PIX B = srcPixB ? *srcPixB : 0.;
+                    dstPix[k] = (A * (1. - _mix) + B * _mix) * xMultiplier * yMultiplier;
+                }
+                
             }
         }
     }
@@ -203,41 +206,42 @@ class CopyRectanglePlugin : public OFX::ImageEffect
 protected:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
+    OFX::Clip *srcClipA_;
+    OFX::Clip *srcClipB_;
     
     OFX::Double2DParam* _btmLeft;
     OFX::Double2DParam* _size;
     OFX::DoubleParam* _softness;
-    OFX::BooleanParam* _reformat;
-    OFX::BooleanParam* _intersect;
-    OFX::BooleanParam* _blackOutside;
+    OFX::ChoiceParam* _channels;
+    OFX::DoubleParam* _mix;
     
 public:
     /** @brief ctor */
     CopyRectanglePlugin(OfxImageEffectHandle handle, bool masked)
     : ImageEffect(handle)
     , dstClip_(0)
-    , srcClip_(0)
+    , srcClipA_(0)
+    , srcClipB_(0)
     , _btmLeft(0)
     , _size(0)
     , _softness(0)
-    , _reformat(0)
-    , _intersect(0)
-    , _blackOutside(0)
+    , _channels(0)
+    , _mix(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
+        srcClipA_ = fetchClip(kSrcClipAName);
+        assert(srcClipA_->getPixelComponents() == ePixelComponentAlpha || srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA);
+        srcClipB_ = fetchClip(kSrcClipBName);
+        assert(srcClipB_->getPixelComponents() == ePixelComponentAlpha || srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA);
         
-        _btmLeft = fetchDouble2DParam(kBtmLeftParamName);
-        _size = fetchDouble2DParam(kSizeParamName);
+        _btmLeft = fetchDouble2DParam(kRectInteractBtmLeftParamName);
+        _size = fetchDouble2DParam(kRectInteractSizeParamName);
         _softness = fetchDoubleParam(kSoftnessParamName);
-        _reformat = fetchBooleanParam(kReformatParamName);
-        _intersect = fetchBooleanParam(kIntersectParamName);
-        _blackOutside = fetchBooleanParam(kBlackOutsideParamName);
+        _channels = fetchChoiceParam(kChannelsParamName);
+        _mix = fetchDoubleParam(kFilterMixParamName);
         
-        assert(_btmLeft && _size && _softness && _reformat && _intersect && _blackOutside);
+        assert(_btmLeft && _size && _softness && _channels && _mix);
     }
     
 private:
@@ -253,55 +257,19 @@ private:
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
-    void setupAndProcess(CropProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(CopyRectangleProcessorBase &, const OFX::RenderArguments &args);
     
-    void getCropRectangle_canonical(OfxTime time,bool useReformat,bool forceIntersect,OfxRectD& cropRect) const;
+    void getRectanglecanonical(OfxTime time,OfxRectD& rect) const;
 };
 
 void
-CropPlugin::getCropRectangle_canonical(OfxTime time,bool useReformat,bool forceIntersect,OfxRectD& cropRect) const
+CopyRectanglePlugin::getRectanglecanonical(OfxTime time,OfxRectD& rect) const
 {
-    
-    bool intersect;
-    if (!forceIntersect) {
-        _intersect->getValueAtTime(time, intersect);
-    } else {
-        intersect = true;
-    }
-    
-    bool reformat;
-    if (useReformat) {
-        _reformat->getValueAtTime(time, reformat);
-    } else {
-        reformat = false;
-    }
-    
-    bool blackOutside;
-    _blackOutside->getValueAtTime(time, blackOutside);
-    
-    if (reformat) {
-        cropRect.x1 = cropRect.y1 = 0.;
-    } else {
-        _btmLeft->getValueAtTime(time, cropRect.x1, cropRect.y1);
-    }
-    
+    _btmLeft->getValueAtTime(time, rect.x1, rect.y1);
     double w,h;
     _size->getValueAtTime(time, w, h);
-    cropRect.x2 = cropRect.x1 + w;
-    cropRect.y2 = cropRect.y1 + h;
-    
-    if (blackOutside) {
-        cropRect.x1 -= 1;
-        cropRect.y1 -= 1;
-        cropRect.x2 += 1;
-        cropRect.y2 += 1;
-    }
-    
-    if (intersect) {
-        OfxRectD srcRoD = srcClip_->getRegionOfDefinition(time);
-        MergeImages2D::rectangleIntersect(cropRect, srcRoD, &cropRect);
-    }
-    
+    rect.x2 = rect.x1 + w;
+    rect.y2 = rect.y1 + h;
 
 }
 
@@ -313,7 +281,7 @@ CropPlugin::getCropRectangle_canonical(OfxTime time,bool useReformat,bool forceI
 
 /* set up and run a processor */
 void
-CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArguments &args)
+CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, const OFX::RenderArguments &args)
 {
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
     if (!dst.get()) {
@@ -325,41 +293,44 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
-    if (src.get() && dst.get())
+    std::auto_ptr<OFX::Image> srcA(srcClipA_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> srcB(srcClipB_->fetchImage(args.time));
+    if (srcA.get() && dst.get())
     {
         OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        OFX::BitDepthEnum    srcBitDepth      = srcA->getPixelDepth();
+        OFX::PixelComponentEnum srcComponents = srcA->getPixelComponents();
         if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
             OFX::throwSuiteStatusException(kOfxStatFailed);
-        
-        
+    }
+    if (srcB.get() && dst.get())
+    {
+        OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+        OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+        OFX::BitDepthEnum    srcBitDepth      = srcB->getPixelDepth();
+        OFX::PixelComponentEnum srcComponents = srcB->getPixelComponents();
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+            OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     
     // set the images
     processor.setDstImg(dst.get());
-    processor.setSrcImg(src.get());
+    processor.setSrcImgs(srcA.get(),srcB.get());
     
     // set the render window
     processor.setRenderWindow(args.renderWindow);
     
-    bool reformat;
-    _reformat->getValueAtTime(args.time, reformat);
-    bool blackOutside;
-    _blackOutside->getValueAtTime(args.time, blackOutside);
-    
-    OfxRectD cropRectCanonical;
-    getCropRectangle_canonical(args.time, false, false, cropRectCanonical);
-    OfxRectI cropRectPixel;
-    cropRectPixel.x1 = cropRectCanonical.x1;
-    cropRectPixel.y1 = cropRectCanonical.y1;
-    cropRectPixel.x2 = cropRectCanonical.x2;
-    cropRectPixel.y2 = cropRectCanonical.y2;
+    OfxRectD rectangle;
+    getRectanglecanonical(args.time, rectangle);
+    OfxRectI rectanglePixel;
+    rectanglePixel.x1 = rectangle.x1;
+    rectanglePixel.y1 = rectangle.y1;
+    rectanglePixel.x2 = rectangle.x2;
+    rectanglePixel.y2 = rectangle.y2;
     
     unsigned int mipMapLevel = MergeImages2D::getLevelFromScale(args.renderScale.x);
-    cropRectPixel = MergeImages2D::downscalePowerOfTwoSmallestEnclosing(cropRectPixel, mipMapLevel);
+    rectanglePixel = MergeImages2D::downscalePowerOfTwoSmallestEnclosing(rectanglePixel, mipMapLevel);
     
     double softness;
     _softness->getValueAtTime(args.time, softness);
@@ -373,7 +344,13 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
     dstRoDPix.y2 = dstRoD.y2;
     dstRoDPix = MergeImages2D::downscalePowerOfTwoSmallestEnclosing(dstRoDPix, mipMapLevel);
    
-    processor.setValues(cropRectPixel,dstRoDPix,blackOutside,reformat,softness);
+    int channels;
+    _channels->getValueAtTime(args.time,channels);
+    
+    double mix;
+    _mix->getValueAtTime(args.time, mix);
+    
+    processor.setValues(rectanglePixel, softness, (ChannelChoice)channels, mix);
     
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -386,45 +363,49 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
 // It may be difficult to implement for complicated transforms:
 // consequently, these transforms cannot support tiles.
 void
-CropPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+CopyRectanglePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
 
-    OfxRectD cropRect;
-    getCropRectangle_canonical(args.time, false, true, cropRect);
+    OfxRectD rectangle;
+    getRectanglecanonical(args.time, rectangle);
+    OfxRectD srcB_rod = srcClipB_->getRegionOfDefinition(args.time);
     
     // set it on the mask only if we are in an interesting context
     // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
-    rois.setRegionOfInterest(*srcClip_, cropRect);
+    rois.setRegionOfInterest(*srcClipB_, srcB_rod);
+    rois.setRegionOfInterest(*srcClipA_, rectangle);
 }
 
 
 bool
-CropPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+CopyRectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
-    getCropRectangle_canonical(args.time, true, false, rod);
+    getRectanglecanonical(args.time, rod);
+    OfxRectD srcB_rod = srcClipB_->getRegionOfDefinition(args.time);
+    rod = MergeImages2D::rectanglesBoundingBox(rod, srcB_rod);
     return true;
 }
 
 // the internal render function
 template <int nComponents>
 void
-CropPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+CopyRectanglePlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
     switch(dstBitDepth)
     {
         case OFX::eBitDepthUByte :
         {
-            CropProcessor<unsigned char, nComponents, 255> fred(*this);
+            CopyRectangleProcessor<unsigned char, nComponents, 255> fred(*this);
             setupAndProcess(fred, args);
         }   break;
         case OFX::eBitDepthUShort :
         {
-            CropProcessor<unsigned short, nComponents, 65535> fred(*this);
+            CopyRectangleProcessor<unsigned short, nComponents, 65535> fred(*this);
             setupAndProcess(fred, args);
         }   break;
         case OFX::eBitDepthFloat :
         {
-            CropProcessor<float, nComponents, 1> fred(*this);
+            CopyRectangleProcessor<float, nComponents, 1> fred(*this);
             setupAndProcess(fred, args);
         }   break;
         default :
@@ -434,7 +415,7 @@ CropPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum d
 
 // the overridden render function
 void
-CropPlugin::render(const OFX::RenderArguments &args)
+CopyRectanglePlugin::render(const OFX::RenderArguments &args)
 {
     
     // instantiate the render code based on the pixel depth of the dst clip
@@ -469,7 +450,6 @@ void CopyRectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
                               "to a rectangle of the original image by plugging the original image into the input B.");
     
     desc.addSupportedContext(eContextGeneral);
-    desc.addSupportedContext(eContextFilter);
 
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
@@ -491,7 +471,7 @@ void CopyRectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // and scale the transform appropriately.
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(true);
-    desc.setOverlayInteractDescriptor(new CropOverlayDescriptor);
+    desc.setOverlayInteractDescriptor(new RectangleOverlayDescriptor);
 
 }
 
@@ -511,13 +491,21 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     // create the mandated source clip
     // always declare the source clip first, because some hosts may consider
     // it as the default input clip (e.g. Nuke)
-    ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
-    srcClip->addSupportedComponent(ePixelComponentAlpha);
-    srcClip->setTemporalClipAccess(false);
-    srcClip->setSupportsTiles(true);
-    srcClip->setIsMask(false);
+    ClipDescriptor *srcClipA = desc.defineClip(kSrcClipAName);
+    srcClipA->addSupportedComponent(ePixelComponentRGBA);
+    srcClipA->addSupportedComponent(ePixelComponentRGB);
+    srcClipA->addSupportedComponent(ePixelComponentAlpha);
+    srcClipA->setTemporalClipAccess(false);
+    srcClipA->setSupportsTiles(true);
+    srcClipA->setIsMask(false);
+    
+    ClipDescriptor *srcClipB = desc.defineClip(kSrcClipBName);
+    srcClipB->addSupportedComponent(ePixelComponentRGBA);
+    srcClipB->addSupportedComponent(ePixelComponentRGB);
+    srcClipB->addSupportedComponent(ePixelComponentAlpha);
+    srcClipB->setTemporalClipAccess(false);
+    srcClipB->setSupportsTiles(true);
+    srcClipB->setIsMask(false);
     
 
     // create the mandated output clip
@@ -532,56 +520,47 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
     
-    Double2DParamDescriptor* btmLeft = desc.defineDouble2DParam(kBtmLeftParamName);
-    btmLeft->setLabels(kBtmLeftParamName,kBtmLeftParamName,kBtmLeftParamName);
+    Double2DParamDescriptor* btmLeft = desc.defineDouble2DParam(kRectInteractBtmLeftParamName);
+    btmLeft->setLabels(kRectInteractBtmLeftParamLabel,kRectInteractBtmLeftParamLabel,kRectInteractBtmLeftParamLabel);
     btmLeft->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     btmLeft->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     btmLeft->setDefault(0., 0.);
     btmLeft->setIncrement(1.);
-    btmLeft->setHint("Coordinates of the bottom left corner of the crop rectangle");
+    btmLeft->setHint("Coordinates of the bottom left corner of the rectangle");
     btmLeft->setDigits(0);
     page->addChild(*btmLeft);
     
-    Double2DParamDescriptor* size = desc.defineDouble2DParam(kSizeParamName);
-    size->setLabels(kSizeParamName, kSizeParamName, kSizeParamName);
+    Double2DParamDescriptor* size = desc.defineDouble2DParam(kRectInteractSizeParamName);
+    size->setLabels(kRectInteractSizeParamLabel, kRectInteractSizeParamLabel, kRectInteractSizeParamLabel);
     size->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     size->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     size->setDefault(1., 1.);
     size->setDimensionLabels("width", "height");
-    size->setHint("Width and height of the crop rectangle");
+    size->setHint("Width and height of the rectangle");
     size->setIncrement(1.);
     size->setDigits(0);
     page->addChild(*size);
+    
+    ChoiceParamDescriptor* channels = desc.defineChoiceParam(kChannelsParamName);
+    channels->setLabels(kChannelsParamName, kChannelsParamName, kChannelsParamName);
+    channels->setHint("The channels that will be copied to the B image.");
+    channels->appendOption("R");
+    channels->appendOption("G");
+    channels->appendOption("B");
+    channels->appendOption("A");
+    channels->appendOption("RGB");
+    channels->appendOption("RGBA");
+    channels->setDefault((ChannelChoice)CHANNEL_RGBA);
+    page->addChild(*channels);
     
     DoubleParamDescriptor* softness = desc.defineDoubleParam(kSoftnessParamName);
     softness->setLabels(kSoftnessParamName, kSoftnessParamName, kSoftnessParamName);
     softness->setDefault(0);
     softness->setRange(0., 100.);
-    softness->setHint("Size of the fade to black around edges to apply");
+    softness->setHint("Size of the fade around edges of the rectangle to apply");
     page->addChild(*softness);
     
-    BooleanParamDescriptor* reformat = desc.defineBooleanParam(kReformatParamName);
-    reformat->setLabels(kReformatParamName, kReformatParamName, kReformatParamName);
-    reformat->setHint("Translates the bottom left corner of the crop rectangle to be in (0,0).");
-    reformat->setDefault(false);
-    reformat->setAnimates(true);
-    reformat->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    page->addChild(*reformat);
-    
-    BooleanParamDescriptor* intersect = desc.defineBooleanParam(kIntersectParamName);
-    intersect->setLabels(kIntersectParamName, kIntersectParamName, kIntersectParamName);
-    intersect->setHint("Intersects the crop rectangle with the input region of definition instead of extending it");
-    intersect->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    intersect->setDefault(false);
-    intersect->setAnimates(true);
-    page->addChild(*intersect);
-    
-    BooleanParamDescriptor* blackOutside = desc.defineBooleanParam(kBlackOutsideParamName);
-    blackOutside->setLabels(kBlackOutsideParamName, kBlackOutsideParamName, kBlackOutsideParamName);
-    blackOutside->setDefault(false);
-    blackOutside->setAnimates(true);
-    blackOutside->setHint("Add 1 black pixel to the region of definition so that all the area outside the crop rectangle is black");
-    page->addChild(*blackOutside);
+    ofxsFilterDescribeParamsMaskMix(desc,page);
 }
 
 void getCopyRectanglePluginID(OFX::PluginFactoryArray &ids)

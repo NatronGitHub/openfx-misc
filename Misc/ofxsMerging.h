@@ -606,6 +606,7 @@ namespace MergeImages2D {
         }
     }
 
+    ///Union of rectangles
     inline OfxRectD rectanglesBoundingBox(const OfxRectD& a, const OfxRectD& b)
     {
         OfxRectD res;
