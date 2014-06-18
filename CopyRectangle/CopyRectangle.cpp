@@ -107,7 +107,10 @@ protected:
     double _softness;
     double _mix;
     ChannelChoice _channels;
+    OFX::PixelComponentEnum _srcAComponents;
     OfxRectI _rectangle;
+    
+    
 public:
     CopyRectangleProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
@@ -123,12 +126,13 @@ public:
         _srcImgB = B;
     }
     
-    void setValues(const OfxRectI& rectangle,double softness,ChannelChoice channels,double mix)
+    void setValues(const OfxRectI& rectangle,double softness,ChannelChoice channels,double mix,OFX::PixelComponentEnum srcAComponents)
     {
         _rectangle = rectangle;
         _softness = softness;
         _channels = channels;
         _mix = mix;
+        _srcAComponents = srcAComponents;
     }
 
 };
@@ -146,6 +150,8 @@ public:
     }
 
 private:
+  
+    
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         double yMultiplier,xMultiplier;
@@ -162,7 +168,8 @@ private:
             int yDistance =  std::min(y - _rectangle.y1, _rectangle.y2 - 1 - y);
             
             // handle softness
-            if (y >= _rectangle.y1 && y < _rectangle.y2) {
+            bool yInRectangle = y >= _rectangle.y1 && y < _rectangle.y2;
+            if (yInRectangle) {
                 ///apply softness only within the rectangle
                 yMultiplier = yDistance < _softness ? (double)yDistance / _softness : 1.;
             } else {
@@ -174,20 +181,102 @@ private:
                 // distance to the nearest rectangle area vertical edge
                 int xDistance =  std::min(x - _rectangle.x1, _rectangle.x2 - 1 - x);
                 // handle softness
-                if (x >= _rectangle.x1 && x < _rectangle.x2) {
+                bool xInRectangle = x >= _rectangle.x1 && x < _rectangle.x2;
+                
+                if (xInRectangle) {
                     ///apply softness only within the rectangle
                     xMultiplier = xDistance < _softness ? (double)xDistance / _softness : 1.;
                 } else {
                     xMultiplier = 1.;
                 }
                 
-                PIX *srcPixA = (PIX*)_srcImgA->getPixelAddress(x, y);
-                PIX *srcPixB = (PIX*)_srcImgB->getPixelAddress(x, y);
-                
-                for (int k = 0; k < nComponents; ++k) {
-                    PIX A = srcPixA ? *srcPixA : 0.;
-                    PIX B = srcPixB ? *srcPixB : 0.;
-                    dstPix[k] = (A * (1. - _mix) + B * _mix) * xMultiplier * yMultiplier;
+                PIX *srcPixB = _srcImgB ?(PIX*)_srcImgB->getPixelAddress(x, y) : NULL;
+
+                if (xInRectangle && yInRectangle) {
+                    PIX *srcPixA = _srcImgA ? (PIX*)_srcImgA->getPixelAddress(x, y) : NULL;
+
+                    double multiplier = xMultiplier * yMultiplier * _mix;
+                    
+                    switch (_channels) {
+                        case CHANNEL_R:
+                        case CHANNEL_G:
+                        case CHANNEL_B: {
+                            int index = (int)_channels;
+                            if (_srcAComponents == OFX::ePixelComponentRGB || _srcAComponents == OFX::ePixelComponentRGBA) {
+                                PIX A = srcPixA ? srcPixA[index] : 0.;
+                                PIX B = srcPixB ? srcPixB[index] : 0.;
+                                dstPix[index] = A *  multiplier + B * (1. - multiplier) ;
+                                ///fill in other channels with B
+                                for (int k = 0; k < nComponents; ++k) {
+                                    if (k != index) {
+                                        dstPix[k] = srcPixB ? srcPixB[k] : 0.;
+                                    }
+                                }
+                            } else {
+                                ///we're in alpha case
+                                dstPix[0] = srcPixB ? srcPixB[0] : 0.;
+                            }
+                            
+                            
+                        }   break;
+                        case CHANNEL_A: {
+                            int index;
+                            if (_srcAComponents == OFX::ePixelComponentAlpha) {
+                                index = 0;
+                            } else if (_srcAComponents == OFX::ePixelComponentRGBA) {
+                                index = 3;
+                            } else {
+                                ///nothing to render
+                                break;
+                            }
+                            PIX A = srcPixA ? srcPixA[index] : 0.;
+                            PIX B = srcPixB ? srcPixB[index] : 0.;
+                            dstPix[index] = A *  multiplier + B * (1. - multiplier) ;
+                            
+                            ///copy rgb of B if any
+                            if (_srcAComponents == OFX::ePixelComponentRGBA) {
+                                for (int k = 0; k < nComponents; ++k) {
+                                    dstPix[k] = srcPixB ? srcPixB[k] : 0.;
+                                }
+                            }
+                            
+                        }   break;
+                        case CHANNEL_RGB: {
+                            if (_srcAComponents == OFX::ePixelComponentRGB || _srcAComponents == OFX::ePixelComponentRGBA) {
+                                for (int k = 0; k < 3; ++k) {
+                                    PIX A = srcPixA ? srcPixA[k] : 0.;
+                                    PIX B = srcPixB ? srcPixB[k] : 0.;
+                                    dstPix[k] = A *  multiplier + B * (1. - multiplier) ;
+                                }
+                                
+                                ///copy the alpha if any of B
+                                if (_srcAComponents == OFX::ePixelComponentRGBA) {
+                                    dstPix[3] = srcPixB ? srcPixB[3] : 0.;
+                                }
+                            }
+                        }   break;
+                        case CHANNEL_RGBA: {
+                            if (_srcAComponents == OFX::ePixelComponentRGBA) {
+                                for (int k = 0; k < nComponents; ++k) {
+                                    PIX A = srcPixA ? srcPixA[k] : 0.;
+                                    PIX B = srcPixB ? srcPixB[k] : 0.;
+                                    dstPix[k] = A *  multiplier + B * (1. - multiplier) ;
+                                }
+                            } else if (_srcAComponents == OFX::ePixelComponentAlpha) {
+                                ///copy just the alpha
+                                PIX A = srcPixA ? srcPixA[0] : 0.;
+                                PIX B = srcPixB ? srcPixB[0] : 0.;
+                                dstPix[0] = A *  multiplier + B * (1. - multiplier) ;
+                            }
+                        }   break;
+                        default:
+                            break;
+                    }
+                    
+                } else {
+                    for (int k = 0; k < nComponents; ++k) {
+                        dstPix[k] = srcPixB ? srcPixB[k] : 0.;
+                    }
                 }
                 
             }
@@ -295,22 +384,28 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     }
     std::auto_ptr<OFX::Image> srcA(srcClipA_->fetchImage(args.time));
     std::auto_ptr<OFX::Image> srcB(srcClipB_->fetchImage(args.time));
+    
+    OFX::PixelComponentEnum srcAComponents;
     if (srcA.get() && dst.get())
     {
         OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-        OFX::BitDepthEnum    srcBitDepth      = srcA->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = srcA->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+        OFX::BitDepthEnum    srcABitDepth      = srcA->getPixelDepth();
+        srcAComponents = srcA->getPixelComponents();
+        if (srcABitDepth != dstBitDepth || srcAComponents != dstComponents)
             OFX::throwSuiteStatusException(kOfxStatFailed);
+    } else {
+        srcAComponents = OFX::ePixelComponentNone;
     }
+    
+    
     if (srcB.get() && dst.get())
     {
         OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-        OFX::BitDepthEnum    srcBitDepth      = srcB->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = srcB->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+        OFX::BitDepthEnum    srcBBitDepth      = srcB->getPixelDepth();
+        OFX::PixelComponentEnum srcBComponents = srcB->getPixelComponents();
+        if (srcBBitDepth != dstBitDepth || srcBComponents != dstComponents)
             OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     
@@ -350,7 +445,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     double mix;
     _mix->getValueAtTime(args.time, mix);
     
-    processor.setValues(rectanglePixel, softness, (ChannelChoice)channels, mix);
+    processor.setValues(rectanglePixel, softness, (ChannelChoice)channels, mix,srcAComponents);
     
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -487,17 +582,6 @@ OFX::ImageEffect* CopyRectanglePluginFactory::createInstance(OfxImageEffectHandl
 
 void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
-    // Source clip only in the filter context
-    // create the mandated source clip
-    // always declare the source clip first, because some hosts may consider
-    // it as the default input clip (e.g. Nuke)
-    ClipDescriptor *srcClipA = desc.defineClip(kSrcClipAName);
-    srcClipA->addSupportedComponent(ePixelComponentRGBA);
-    srcClipA->addSupportedComponent(ePixelComponentRGB);
-    srcClipA->addSupportedComponent(ePixelComponentAlpha);
-    srcClipA->setTemporalClipAccess(false);
-    srcClipA->setSupportsTiles(true);
-    srcClipA->setIsMask(false);
     
     ClipDescriptor *srcClipB = desc.defineClip(kSrcClipBName);
     srcClipB->addSupportedComponent(ePixelComponentRGBA);
@@ -506,6 +590,14 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     srcClipB->setTemporalClipAccess(false);
     srcClipB->setSupportsTiles(true);
     srcClipB->setIsMask(false);
+    
+    ClipDescriptor *srcClipA = desc.defineClip(kSrcClipAName);
+    srcClipA->addSupportedComponent(ePixelComponentRGBA);
+    srcClipA->addSupportedComponent(ePixelComponentRGB);
+    srcClipA->addSupportedComponent(ePixelComponentAlpha);
+    srcClipA->setTemporalClipAccess(false);
+    srcClipA->setSupportsTiles(true);
+    srcClipA->setIsMask(false);
     
 
     // create the mandated output clip
