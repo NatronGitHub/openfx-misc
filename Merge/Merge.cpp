@@ -239,6 +239,8 @@ public :
     /* set up and run a processor */
     void setupAndProcess(MergeProcessorBase &, const OFX::RenderArguments &args);
 
+    bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime);
+    
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
@@ -470,6 +472,20 @@ MergePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::strin
         // depending on the operation, enable/disable alpha masking
         _alphaMasking->setEnabled(MergeImages2D::isMaskable((MergingFunctionEnum)operation_i));
         _operationString->setValue(MergeImages2D::getOperationString((MergingFunctionEnum)operation_i));
+    }
+}
+
+bool
+MergePlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+{
+    double mix;
+    _mix->getValueAtTime(args.time, mix);
+
+    if (mix == 0.) {
+        identityClip = srcClipB_;
+        return true;
+    } else {
+        return false;
     }
 }
 

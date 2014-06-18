@@ -270,11 +270,13 @@ public:
     }
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) /*OVERRIDE FINAL*/;
 
     /* set up and run a processor */
     void setupAndProcess(InvertBase &, const OFX::RenderArguments &args);
-    
+
+    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) /*OVERRIDE FINAL*/;
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
@@ -430,6 +432,25 @@ InvertPlugin::render(const OFX::RenderArguments &args)
             default :
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
+    }
+}
+
+bool
+InvertPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+{
+    bool red, green, blue, alpha;
+    double mix;
+    _paramProcessR->getValueAtTime(args.time, red);
+    _paramProcessG->getValueAtTime(args.time, green);
+    _paramProcessB->getValueAtTime(args.time, blue);
+    _paramProcessA->getValueAtTime(args.time, alpha);
+    _mix->getValueAtTime(args.time, mix);
+
+    if (mix == 0. || (!red && !green && !blue && !alpha)) {
+        identityClip = srcClip_;
+        return true;
+    } else {
+        return false;
     }
 }
 
