@@ -209,7 +209,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor, const OFX::RenderArgume
 
     // see if they have the same depths and bytes and all
     if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
-      throw int(1); // HACK!! need to throw an sensible exception here!
+      OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
   }
   if(srcRight.get()) {
     OFX::BitDepthEnum    srcBitDepth      = srcRight->getPixelDepth();
@@ -217,7 +217,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor, const OFX::RenderArgume
 
     // see if they have the same depths and bytes and all
     if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
-      throw int(1); // HACK!! need to throw an sensible exception here!
+      OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
   }
 
   double mix = mix_->getValueAtTime(args.time);
