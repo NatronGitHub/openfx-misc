@@ -9,6 +9,7 @@ CornerPin \
 Crop \
 Difference \
 Grade \
+Invert \
 JoinViews \
 Merge \
 MixViews \

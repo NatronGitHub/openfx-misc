@@ -210,7 +210,7 @@ JoinViewsPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArgumen
 
     // see if they have the same depths and bytes and all
     if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
-      throw int(1); // HACK!! need to throw an sensible exception here!
+      OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
   }
 
   // set the images

@@ -416,7 +416,7 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor, const OFX::RenderArg
 
     // see if they have the same depths and bytes and all
     if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
-      throw int(1); // HACK!! need to throw an sensible exception here!
+      OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
   }
 
   int offset = offset_->getValueAtTime(args.time);

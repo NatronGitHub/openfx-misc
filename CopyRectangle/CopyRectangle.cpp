@@ -254,7 +254,7 @@ private:
 
     /* set up and run a processor */
     void setupAndProcess(CropProcessorBase &, const OFX::RenderArguments &args);
-        
+    
     void getCropRectangle_canonical(OfxTime time,bool useReformat,bool forceIntersect,OfxRectD& cropRect) const;
 };
 
