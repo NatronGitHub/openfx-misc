@@ -433,12 +433,12 @@ class ShufflePlugin : public OFX::ImageEffect
     , _a(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha);
+        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha));
         srcClipA_ = fetchClip(context == eContextGeneral ? kSourceClipAName : kOfxImageEffectSimpleSourceClipName);
-        assert(srcClipA_ && srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA || srcClipA_->getPixelComponents() == ePixelComponentAlpha);
+        assert(srcClipA_ && (srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA || srcClipA_->getPixelComponents() == ePixelComponentAlpha));
         if (context == eContextGeneral) {
             srcClipB_ = fetchClip(kSourceClipBName);
-            assert(srcClipB_ && srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA || srcClipB_->getPixelComponents() == ePixelComponentAlpha);
+            assert(srcClipB_ && (srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA || srcClipB_->getPixelComponents() == ePixelComponentAlpha));
         }
         _outputComponents = fetchChoiceParam(kOutputComponentsParamName);
         if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
@@ -508,8 +508,8 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     }
     //OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<OFX::Image> srcA(srcClipA_->fetchImage(args.time));
-    std::auto_ptr<OFX::Image> srcB(srcClipB_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> srcA(srcClipA_ ? srcClipA_->fetchImage(args.time) : 0);
+    std::auto_ptr<OFX::Image> srcB(srcClipB_ ? srcClipB_->fetchImage(args.time) : 0);
     OFX::BitDepthEnum    srcBitDepth = eBitDepthNone;
     OFX::PixelComponentEnum srcComponents = ePixelComponentNone;
     if (srcA.get()) {
@@ -564,11 +564,19 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
             channelMap[0] = r;
             channelMap[1] = g;
             channelMap[2] = b;
+            channelMap[3] = eInputChannel0;
             break;
         case OFX::ePixelComponentAlpha:
             channelMap[0] = a;
+            channelMap[1] = eInputChannel0;
+            channelMap[2] = eInputChannel0;
+            channelMap[3] = eInputChannel0;
             break;
         default:
+            channelMap[0] = eInputChannel0;
+            channelMap[1] = eInputChannel0;
+            channelMap[2] = eInputChannel0;
+            channelMap[3] = eInputChannel0;
             break;
     }
     processor.setValues(outputComponents, outputBitDepth, channelMap);
