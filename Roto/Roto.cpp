@@ -108,8 +108,6 @@ public:
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
-    , _domask(false)
-    , _mix(1.0)
     {
     }
 
@@ -122,17 +120,10 @@ public:
     /** @brief set the optional mask image */
     void setMaskImg(OFX::Image *v) {_maskImg = v;}
 
-    // Are we masking. We can't derive this from the mask image being set as NULL is a valid value for an input image
-    void doMasking(bool v) {_domask = v;}
-    
     void setValues(bool premult)
     {
         _premult = premult;
     }
-
-private:
-    bool _domask;
-    double _mix;
 };
 
 
