@@ -104,6 +104,16 @@
 #include "nuke/fnOfxExtensions.h"
 #endif
 
+#define kPluginName "CornerPinOFX"
+#define kPluginMaskedName "CornerPinMaskedOFX"
+#define kPluginGrouping "Transform"
+#define kPluginDescription "Allows an image to fit another in translation, rotation and scale."
+#define kPluginIdentifier "net.sf.openfx:CornerPinPlugin"
+#define kPluginMaskedIdentifier "net.sf.openfx:CornerPinMaskedPlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
+
 #ifndef ENABLE_HOST_TRANSFORM
 #undef OFX_EXTENSIONS_NUKE // host transform is the only nuke extension used
 #endif
@@ -783,7 +793,6 @@ static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
 {
     Double3DParamDescriptor* row = desc.defineDouble3DParam(name);
     row->setLabels("", "", "");
-    row->setScriptName(name);
     row->setAnimates(true);
     row->setDefault(x,y,z);
     row->setParent(*group);
@@ -850,9 +859,9 @@ mDeclarePluginFactory(CornerPinPluginFactory, {}, {});
 void CornerPinPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels("CornerPinOFX", "CornerPinOFX", "CornerPinOFX");
-    desc.setPluginGrouping("Transform");
-    desc.setPluginDescription("Allows an image to fit another in translation,rotation and scale.");
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
 
     Transform3x3Describe(desc, false);
 
@@ -883,9 +892,9 @@ mDeclarePluginFactory(CornerPinMaskedPluginFactory, {}, {});
 void CornerPinMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels("CornerPinMaskedOFX", "CornerPinMaskedOFX", "CornerPinMaskedOFX");
-    desc.setPluginGrouping("Transform");
-    desc.setPluginDescription("Allows an image to fit another in translation,rotation and scale.");
+    desc.setLabels(kPluginMaskedName, kPluginMaskedName, kPluginMaskedName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
 
     Transform3x3Describe(desc, true);
 
@@ -911,13 +920,13 @@ OFX::ImageEffect* CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHan
 
 void getCornerPinPluginID(OFX::PluginFactoryArray &ids)
 {
-    static CornerPinPluginFactory p("net.sf.openfx:CornerPinPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static CornerPinPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 
 void getCornerPinMaskedPluginID(OFX::PluginFactoryArray &ids)
 {
-    static CornerPinMaskedPluginFactory p("net.sf.openfx:CornerPinMaskedPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static CornerPinMaskedPluginFactory p(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 

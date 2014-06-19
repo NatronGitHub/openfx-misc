@@ -103,20 +103,37 @@
 #include "nuke/fnOfxExtensions.h"
 #endif
 
+#define kPluginName "TransformOFX"
+#define kPluginMaskedName "TransformMaskedOFX"
+#define kPluginGrouping "Transform"
+#define kPluginDescription "Translate / Rotate / Scale a 2D image."
+#define kPluginIdentifier "net.sf.openfx:TransformPlugin"
+#define kPluginMaskedIdentifier "net.sf.openfx:TransformMaskedPlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
 #ifndef ENABLE_HOST_TRANSFORM
 #undef OFX_EXTENSIONS_NUKE // host transform is the only nuke extension used
 #endif
 
 // NON-GENERIC
-#define kTranslateParamName "Translate"
-#define kRotateParamName "Rotate"
-#define kScaleParamName "Scale"
-#define kScaleUniformParamName "Uniform"
+#define kTranslateParamName "translate"
+#define kTranslateParamLabel "Translate"
+#define kRotateParamName "rotate"
+#define kRotateParamLabel "Rotate"
+#define kScaleParamName "scale"
+#define kScaleParamLabel "Scale"
+#define kScaleUniformParamName "uniform"
+#define kScaleUniformParamLabel "Uniform"
 #define kScaleUniformParamHint "Use same scale for both directions"
-#define kSkewXParamName "Skew X"
-#define kSkewYParamName "Skew Y"
-#define kSkewOrderParamName "Skew order"
-#define kCenterParamName "Center"
+#define kSkewXParamName "skewX"
+#define kSkewXParamLabel "Skew X"
+#define kSkewYParamName "skewY"
+#define kSkewYParamLabel "Skew Y"
+#define kSkewOrderParamName "skewOrder"
+#define kSkewOrderParamLabel "Skew Order"
+#define kCenterParamName "center"
+#define kCenterParamLabel "Center"
 
 
 #define CIRCLE_RADIUS_BASE 30.0
@@ -1168,7 +1185,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     // NON-GENERIC PARAMETERS
     //
     Double2DParamDescriptor* translate = desc.defineDouble2DParam(kTranslateParamName);
-    translate->setLabels(kTranslateParamName, kTranslateParamName, kTranslateParamName);
+    translate->setLabels(kTranslateParamLabel, kTranslateParamLabel, kTranslateParamLabel);
     //translate->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
     translate->setDoubleType(eDoubleTypeXYAbsolute);
     translate->setDimensionLabels("x","y");
@@ -1176,7 +1193,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     page->addChild(*translate);
 
     DoubleParamDescriptor* rotate = desc.defineDoubleParam(kRotateParamName);
-    rotate->setLabels(kRotateParamName, kRotateParamName, kRotateParamName);
+    rotate->setLabels(kRotateParamLabel, kRotateParamLabel, kRotateParamLabel);
     rotate->setDoubleType(eDoubleTypeAngle);
     rotate->setDefault(0);
     //rotate->setRange(-180, 180); // the angle may be -infinity..+infinity
@@ -1184,7 +1201,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     page->addChild(*rotate);
 
     Double2DParamDescriptor* scale = desc.defineDouble2DParam(kScaleParamName);
-    scale->setLabels(kScaleParamName, kScaleParamName, kScaleParamName);
+    scale->setLabels(kScaleParamLabel, kScaleParamLabel, kScaleParamLabel);
     scale->setDoubleType(eDoubleTypeScale);
     scale->setDimensionLabels("w","h");
     scale->setDefault(1,1);
@@ -1207,13 +1224,13 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     page->addChild(*skewX);
 
     DoubleParamDescriptor* skewY = desc.defineDoubleParam(kSkewYParamName);
-    skewY->setLabels(kSkewYParamName, kSkewYParamName, kSkewYParamName);
+    skewY->setLabels(kSkewYParamLabel, kSkewYParamLabel, kSkewYParamLabel);
     skewY->setDefault(0);
     skewY->setDisplayRange(-1,1);
     page->addChild(*skewY);
 
     ChoiceParamDescriptor* skewOrder = desc.defineChoiceParam(kSkewOrderParamName);
-    skewOrder->setLabels(kSkewOrderParamName, kSkewOrderParamName, kSkewOrderParamName);
+    skewOrder->setLabels(kSkewOrderParamLabel, kSkewOrderParamLabel, kSkewOrderParamLabel);
     skewOrder->setDefault(0);
     skewOrder->appendOption("XY");
     skewOrder->appendOption("YX");
@@ -1221,7 +1238,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     page->addChild(*skewOrder);
 
     Double2DParamDescriptor* center = desc.defineDouble2DParam(kCenterParamName);
-    center->setLabels(kCenterParamName, kCenterParamName, kCenterParamName);
+    center->setLabels(kCenterParamLabel, kCenterParamLabel, kCenterParamLabel);
     //center->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
     center->setDoubleType(eDoubleTypeXYAbsolute);
     center->setDimensionLabels("x","y");
@@ -1233,9 +1250,9 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
 void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels("TransformOFX", "TransformOFX", "TransformOFX");
-    desc.setPluginGrouping("Transform");
-    desc.setPluginDescription("Translate / Rotate / Scale a 2D image.");
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
 
     Transform3x3Describe(desc, false);
 
@@ -1263,9 +1280,9 @@ mDeclarePluginFactory(TransformMaskedPluginFactory, {}, {});
 void TransformMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels("TransformMaskedOFX", "TransformMaskedOFX", "TransformMaskedOFX");
-    desc.setPluginGrouping("Transform");
-    desc.setPluginDescription("Translate / Rotate / Scale a 2D image.");
+    desc.setLabels(kPluginMaskedName, kPluginMaskedName, kPluginMaskedName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
 
     Transform3x3Describe(desc, true);
 
@@ -1290,12 +1307,12 @@ OFX::ImageEffect* TransformMaskedPluginFactory::createInstance(OfxImageEffectHan
 
 void getTransformPluginID(OFX::PluginFactoryArray &ids)
 {
-    static TransformPluginFactory p("net.sf.openfx:TransformPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static TransformPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 
 void getTransformMaskedPluginID(OFX::PluginFactoryArray &ids)
 {
-    static TransformMaskedPluginFactory p("net.sf.openfx:TransformMaskedPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static TransformMaskedPluginFactory p(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

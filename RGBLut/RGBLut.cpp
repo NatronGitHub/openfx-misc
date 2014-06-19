@@ -85,6 +85,13 @@ England
 
 #include "ofxsProcessing.H"
 
+#define kPluginName "RGBLutOFX"
+#define kPluginGrouping "Color"
+#define kPluginDescription "Apply a parametric lookup curve to each channel separately."
+#define kPluginIdentifier "net.sf.openfx:RGBLutPlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
 class RGBLutBase : public OFX::ImageProcessor {
 protected :
   OFX::Image *_srcImg;
@@ -462,9 +469,9 @@ mDeclarePluginFactory(RGBLutPluginFactory, {}, {});
 
 void RGBLutPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
-  desc.setLabels("RGBLutOFX", "RGBLutOFX", "RGBLutOFX");
-  desc.setPluginGrouping("Color");
-  desc.setPluginDescription("Apply a parametric lookup curve to each channel separately.");
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
 
   desc.addSupportedContext(eContextFilter);
   desc.addSupportedBitDepth(eBitDepthUByte);
@@ -573,7 +580,7 @@ OFX::ImageEffect* RGBLutPluginFactory::createInstance(OfxImageEffectHandle handl
 
 void getRGBLutPluginID(OFX::PluginFactoryArray &ids)
 {
-    static RGBLutPluginFactory p("net.sf.openfx:RGBLutPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static RGBLutPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 

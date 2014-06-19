@@ -79,10 +79,13 @@
 
 #include "ofxsProcessing.H"
 
-#define kDifferencePluginLabel "DifferenceOFX"
-#define kDifferencePluginGrouping "Keyer"
-#define kDifferencePluginDescription "Produce a rough matte from the difference of two input images. A is the background without the subject (clean plate). B is the subject with the background. RGB is copied from B, the difference is output to alpha, after applying offset & gain."
-    
+#define kPluginLabel "DifferenceOFX"
+#define kPluginGrouping "Keyer"
+#define kPluginDescription "Produce a rough matte from the difference of two input images. A is the background without the subject (clean plate). B is the subject with the background. RGB is copied from B, the difference is output to alpha, after applying offset & gain."
+#define kPluginIdentifier "net.sf.openfx:DifferencePlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
 
 #define kOffsetParamName "offset"
 #define kOffsetParamLabel "Offset"
@@ -365,9 +368,9 @@ mDeclarePluginFactory(DifferencePluginFactory, {}, {});
 void DifferencePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kDifferencePluginLabel, kDifferencePluginLabel, kDifferencePluginLabel);
-    desc.setPluginGrouping(kDifferencePluginGrouping);
-    desc.setPluginDescription(kDifferencePluginDescription);
+    desc.setLabels(kPluginLabel, kPluginLabel, kPluginLabel);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
     
     //desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -436,6 +439,6 @@ OFX::ImageEffect* DifferencePluginFactory::createInstance(OfxImageEffectHandle h
 
 void getDifferencePluginID(OFX::PluginFactoryArray &ids)
 {
-    static DifferencePluginFactory p("net.sf.openfx:DifferencePlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static DifferencePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

@@ -90,6 +90,19 @@ England
 
 #include "ofxsProcessing.H"
 
+#define kPluginName "ReConvergeOFX"
+#define kPluginGrouping "Views/Stereo"
+#define kPluginDescription "Shift convergence so that a tracked point appears at screen-depth. " \
+                          "Horizontal disparity may be provided in the red channel of the " \
+                          "disparity input if it has RGBA components, or the Alpha channel " \
+                          "if it only has Alpha. " \
+                          "If no disparity is given, only the offset is taken into account. " \
+                          "The amount of shift in pixels is rounded to the closest integer. " \
+                          "The ReConverge node only shifts views horizontally, not vertically."
+#define kPluginIdentifier "net.sf.openfx:reConvergePlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
 static const OfxPointD kXHairSize = {5, 5};
 
 class PositionInteract : public OFX::OverlayInteract 
@@ -550,15 +563,9 @@ using namespace OFX;
 void ReConvergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels
-  desc.setLabels("ReConvergeOFX", "ReConvergeOFX", "ReConvergeOFX");
-  desc.setPluginGrouping("Views/Stereo");
-  desc.setPluginDescription("Shift convergence so that a tracked point appears at screen-depth. "
-                            "Horizontal disparity may be provided in the red channel of the "
-                            "disparity input if it has RGBA components, or the Alpha channel "
-                            "if it only has Alpha. "
-                            "If no disparity is given, only the offset is taken into account. "
-                            "The amount of shift in pixels is rounded to the closest integer. "
-                            "The ReConverge node only shifts views horizontally, not vertically.");
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
 
   // add the supported contexts
   desc.addSupportedContext(eContextFilter); // parameters are offset and convergemode
@@ -655,7 +662,7 @@ OFX::ImageEffect* ReConvergePluginFactory::createInstance(OfxImageEffectHandle h
 
 void getReConvergePluginID(OFX::PluginFactoryArray &ids)
 {
-    static ReConvergePluginFactory p("net.sf.openfx:reConvergePlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static ReConvergePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 

@@ -80,6 +80,16 @@ England
 
 #include "ofxsProcessing.H"
 
+#define kPluginName "MixViewsOFX"
+#define kPluginGrouping "Views/Stereo"
+#define kPluginDescription "Mix two views together."
+#define kPluginIdentifier "net.sf.openfx:mixViewsPlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
+#define kMixParamName "mix"
+#define kMixParamLabel "Mix"
+#define kMixParamHint "Mix factor for the right view"
 
 // Base class for the RGBA and the Alpha processor
 class MixViewsBase : public OFX::ImageProcessor {
@@ -337,9 +347,9 @@ void MixViewsPluginFactory::load()
 void MixViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels
-  desc.setLabels("MixViewsOFX", "MixViewsOFX", "MixViewsOFX");
-  desc.setPluginGrouping("Views/Stereo");
-  desc.setPluginDescription("Mix two views together.");
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
 
   // add the supported contexts, only filter at the moment
   desc.addSupportedContext(eContextFilter);
@@ -390,10 +400,9 @@ void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
   // make some pages and to things in 
   PageParamDescriptor *page = desc.definePageParam("Controls");
 
-  DoubleParamDescriptor *mix = desc.defineDoubleParam("mix");
-  mix->setLabels("mix", "mix", "mix");
-  mix->setScriptName("mix");
-  mix->setHint("Mix factor for the right view");
+  DoubleParamDescriptor *mix = desc.defineDoubleParam(kMixParamName);
+  mix->setLabels(kMixParamLabel, kMixParamLabel, kMixParamLabel);
+  mix->setHint(kMixParamHint);
   mix->setDefault(0.);
   mix->setRange(0., 1.);
   mix->setIncrement(0.01);
@@ -411,6 +420,6 @@ OFX::ImageEffect* MixViewsPluginFactory::createInstance(OfxImageEffectHandle han
 
 void getMixViewsPluginID(OFX::PluginFactoryArray &ids)
 {
-    static MixViewsPluginFactory p("net.sf.openfx:mixViewsPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static MixViewsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

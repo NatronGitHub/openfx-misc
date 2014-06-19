@@ -84,6 +84,13 @@
 #include "nuke/fnOfxExtensions.h"
 #endif
 
+#define kPluginName "SwitchOFX"
+#define kPluginGrouping "Merge"
+#define kPluginDescription "Lets you switch between any number of inputs."
+#define kPluginIdentifier "net.sf.openfx:switchPlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
 #define kSwitchPluginSourceClipCount 10
 #define kSwitchPluginParamWhich "which"
 
@@ -184,9 +191,9 @@ mDeclarePluginFactory(SwitchPluginFactory, {}, {});
 void SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels("SwitchOFX", "SwitchOFX", "SwitchOFX");
-    desc.setPluginGrouping("Merge");
-    desc.setPluginDescription("Lets you switch between any number of inputs.");
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
 
     // add the supported contexts
     desc.addSupportedContext(eContextGeneral);
@@ -266,6 +273,6 @@ OFX::ImageEffect* SwitchPluginFactory::createInstance(OfxImageEffectHandle handl
 
 void getSwitchPluginID(OFX::PluginFactoryArray &ids)
 {
-    static SwitchPluginFactory p("net.sf.openfx:switchPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static SwitchPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

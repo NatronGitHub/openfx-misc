@@ -80,6 +80,25 @@ England
 
 #include "ofxsProcessing.H"
 
+#define kPluginName "AnaglyphOFX"
+#define kPluginGrouping "Views/Stereo"
+#define kPluginDescription "Make an anaglyph image out of the two views of the input."
+#define kPluginIdentifier "net.sf.openfx:anaglyphPlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
+#define kAmtColourParamName "amtcolor"
+#define kAmtColourParamLabel "Color Amount"
+#define kAmtColourParamHint "Amount of colour in the anaglyph: 0 = grayscale anaglyph, 1 = full-color anaglyph. Fusion is more difficult with full-color anaglyphs."
+#define kSwapParamName "swap"
+#define kSwapParamLabel "(right=red)"
+#define kSwapParamHint "Swap left and right views"
+
+#define kOffsetParamName "offset"
+#define kOffsetParamLabel "Horizontal Offset"
+#define kOffsetParamHint "Horizontal offset. " \
+  "The red view is shifted to the left by half this amount, " \
+  "and the cyan view is shifted to the right by half this amount (in pixels)."  // rounded up // rounded down
 
 // Base class for the RGBA and the Alpha processor
 class AnaglyphBase : public OFX::ImageProcessor {
@@ -214,9 +233,9 @@ public :
     assert(dstClip_->getPixelComponents() == ePixelComponentRGBA);
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_->getPixelComponents() == ePixelComponentRGBA);
-    amtcolour_  = fetchDoubleParam("amtcolour");
-    swap_ = fetchBooleanParam("swap");
-    offset_ = fetchIntParam("offset");
+    amtcolour_  = fetchDoubleParam(kAmtColourParamName);
+    swap_ = fetchBooleanParam(kSwapParamName);
+    offset_ = fetchIntParam(kOffsetParamName);
   }
 
   /* Override the render */
@@ -366,9 +385,9 @@ void AnaglyphPluginFactory::load()
 void AnaglyphPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels
-  desc.setLabels("AnaglyphOFX", "AnaglyphOFX", "AnaglyphOFX");
-  desc.setPluginGrouping("Views/Stereo");
-  desc.setPluginDescription("Make an anaglyph image out of the two views of the input.");
+  desc.setLabels(kPluginName, kPluginName, kPluginName);
+  desc.setPluginGrouping(kPluginGrouping);
+  desc.setPluginDescription(kPluginDescription);
 
   // add the supported contexts, only filter at the moment
   desc.addSupportedContext(eContextFilter);
@@ -415,10 +434,9 @@ void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
   // make some pages and to things in 
   PageParamDescriptor *page = desc.definePageParam("Controls");
 
-  DoubleParamDescriptor *amtcolour = desc.defineDoubleParam("amtcolour");
-  amtcolour->setLabels("amtcolour", "amtcolour", "amtcolour");
-  amtcolour->setScriptName("amtcolour");
-  amtcolour->setHint("Amount of colour in the anaglyph");
+  DoubleParamDescriptor *amtcolour = desc.defineDoubleParam(kAmtColourParamName);
+  amtcolour->setLabels(kAmtColourParamLabel, kAmtColourParamLabel, kAmtColourParamLabel);
+  amtcolour->setHint(kAmtColourParamHint);
   amtcolour->setDefault(0.);
   amtcolour->setRange(0., 1.);
   amtcolour->setIncrement(0.01);
@@ -428,19 +446,17 @@ void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 
   page->addChild(*amtcolour);
 
-  BooleanParamDescriptor *swap = desc.defineBooleanParam("swap");
+  BooleanParamDescriptor *swap = desc.defineBooleanParam(kSwapParamName);
+  swap->setLabels(kSwapParamLabel, kSwapParamLabel, kSwapParamLabel);
   swap->setDefault(false);
-  swap->setHint("Swap left and right views");
-  swap->setLabels("(right=red)", "(right=red)", "(right=red)");
+  swap->setHint(kSwapParamHint);
   swap->setAnimates(true);
 
   page->addChild(*swap);
 
-  IntParamDescriptor *offset = desc.defineIntParam("offset");
-  offset->setLabels("horizontal offset", "horizontal offset", "horizontal offset");
-  offset->setHint("Horizontal offset. "
-                  "The red view is shifted to the left by half this amount, " // rounded up
-                  "and the cyan view is shifted to the right by half this amount (in pixels)."); // rounded down
+  IntParamDescriptor *offset = desc.defineIntParam(kOffsetParamName);
+  offset->setLabels(kOffsetParamLabel, kOffsetParamLabel, kOffsetParamLabel);
+  offset->setHint(kOffsetParamHint);
   offset->setDefault(0);
   offset->setRange(-1000, 1000);
   offset->setDisplayRange(-100, 100);
@@ -456,7 +472,7 @@ OFX::ImageEffect* AnaglyphPluginFactory::createInstance(OfxImageEffectHandle han
 
 void getAnaglyphPluginID(OFX::PluginFactoryArray &ids)
 {
-    static AnaglyphPluginFactory p("net.sf.openfx:anaglyphPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static AnaglyphPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 

@@ -1,5 +1,5 @@
 /*
- OFX Crop plugin.
+ OFX CopyRectangle plugin.
  
  Copyright (C) 2014 INRIA
  
@@ -79,9 +79,18 @@
 #include "ofxsRectangleInteract.h"
 #include "ofxsFilter.h"
 
+#define kPluginName "CopyRectangleOFX"
+#define kPluginGrouping "Merge"
+#define kPluginDescription "Copies a rectangle from the input A to the input B in output. It can be used to limit an effect to a rectangle of the original image by plugging the original image into the input B."
+#define kPluginIdentifier "net.sf.openfx:CopyRectanglePlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
 #define kSrcClipAName "A"
 #define kSrcClipBName "B"
-#define kSoftnessParamName "Softness"
+#define kSoftnessParamName "softness"
+#define kSoftnessParamLabel "Softness"
+#define kSoftnessParamHint "Size of the fade around edges of the rectangle to apply"
 #define kRedParamName "red"
 #define kRedParamLabel "Red"
 #define kGreenParamName "green"
@@ -504,10 +513,9 @@ mDeclarePluginFactory(CopyRectanglePluginFactory, {}, {});
 void CopyRectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels("CopyRectangleOFX", "CopyRectangleOFX", "CopyRectangleOFX");
-    desc.setPluginGrouping("Merge");
-    desc.setPluginDescription("Copies a rectangle from the input A to the input B in output. It can be used to limit an effect "
-                              "to a rectangle of the original image by plugging the original image into the input B.");
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
     
     desc.addSupportedContext(eContextGeneral);
 
@@ -585,12 +593,12 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     
     
     Double2DParamDescriptor* btmLeft = desc.defineDouble2DParam(kRectInteractBtmLeftParamName);
-    btmLeft->setLabels(kRectInteractBtmLeftParamLabel,kRectInteractBtmLeftParamLabel,kRectInteractBtmLeftParamLabel);
+    btmLeft->setLabels(kRectInteractBtmLeftParamLabel, kRectInteractBtmLeftParamLabel, kRectInteractBtmLeftParamLabel);
     btmLeft->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     btmLeft->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     btmLeft->setDefault(0., 0.);
     btmLeft->setIncrement(1.);
-    btmLeft->setHint("Coordinates of the bottom left corner of the rectangle");
+    btmLeft->setHint(kRectInteractBtmLeftParamHint);
     btmLeft->setDigits(0);
     page->addChild(*btmLeft);
     
@@ -599,8 +607,8 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     size->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     size->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     size->setDefault(1., 1.);
-    size->setDimensionLabels("width", "height");
-    size->setHint("Width and height of the rectangle");
+    size->setDimensionLabels(kRectInteractSizeParamDim1, kRectInteractSizeParamDim2);
+    size->setHint(kRectInteractSizeParamHint);
     size->setIncrement(1.);
     size->setDigits(0);
     page->addChild(*size);
@@ -612,10 +620,10 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     defineComponentParam(desc, page, kAlphaParamName, kAlphaParamLabel);
     
     DoubleParamDescriptor* softness = desc.defineDoubleParam(kSoftnessParamName);
-    softness->setLabels(kSoftnessParamName, kSoftnessParamName, kSoftnessParamName);
+    softness->setLabels(kSoftnessParamLabel, kSoftnessParamLabel, kSoftnessParamLabel);
     softness->setDefault(0);
     softness->setRange(0., 100.);
-    softness->setHint("Size of the fade around edges of the rectangle to apply");
+    softness->setHint(kSoftnessParamHint);
     page->addChild(*softness);
     
     ofxsFilterDescribeParamsMaskMix(desc,page);
@@ -623,7 +631,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
 
 void getCopyRectanglePluginID(OFX::PluginFactoryArray &ids)
 {
-    static CopyRectanglePluginFactory p("net.sf.openfx:CopyRectanglePlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static CopyRectanglePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 

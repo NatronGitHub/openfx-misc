@@ -79,10 +79,12 @@
 
 #include "ofxsProcessing.H"
 
-#define kShufflePluginLabel "ShuffleOFX"
-#define kShufflePluginGrouping "Channel"
-#define kShufflePluginDescription "Rearrange channels from one or two inputs and/or convert to different bit depth or components. No colorspace conversion is done (mapping is linear, even for 8-bit and 16-bit types)."
-
+#define kPluginLabel "ShuffleOFX"
+#define kPluginGrouping "Channel"
+#define kPluginDescription "Rearrange channels from one or two inputs and/or convert to different bit depth or components. No colorspace conversion is done (mapping is linear, even for 8-bit and 16-bit types)."
+#define kPluginIdentifier "net.sf.openfx:ShufflePlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kOutputComponentsParamName "outputComponents"
 #define kOutputComponentsParamLabel "Output Components"
@@ -837,9 +839,9 @@ mDeclarePluginFactory(ShufflePluginFactory, {}, {});
 void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kShufflePluginLabel, kShufflePluginLabel, kShufflePluginLabel);
-    desc.setPluginGrouping(kShufflePluginGrouping);
-    desc.setPluginDescription(kShufflePluginDescription);
+    desc.setLabels(kPluginLabel, kPluginLabel, kPluginLabel);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -1078,7 +1080,7 @@ OFX::ImageEffect* ShufflePluginFactory::createInstance(OfxImageEffectHandle hand
 
 void getShufflePluginID(OFX::PluginFactoryArray &ids)
 {
-    static ShufflePluginFactory p("net.sf.openfx:ShufflePlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static ShufflePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 

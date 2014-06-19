@@ -87,10 +87,10 @@
 
 #define kPluginName "InvertOFX"
 #define kPluginGrouping "Color"
+#define kPluginDescription "Inverse the selected channels"
 #define kPluginIdentifier "net.sf.openfx:Invert"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
-#define kPluginDescription "Inverse the selected channels"
 
 #define kParamProcessR      "r"
 #define kParamProcessRLabel "R"
@@ -462,6 +462,7 @@ void InvertPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabels(kPluginName, kPluginName, kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
 
     // add the supported contexts
     desc.addSupportedContext(eContextFilter);

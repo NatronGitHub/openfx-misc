@@ -83,6 +83,13 @@
 
 #include "ofxNatron.h"
 
+#define kPluginName "MergeOFX"
+#define kPluginGrouping "Merge"
+#define kPluginDescription "Pixel-by-pixel merge operation between the two inputs."
+#define kPluginIdentifier "net.sf.openfx:MergePlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
 #define kOperationParamName "operation"
 #define kOperationParamLabel "Operation"
 #define kOperationParamHint "The operation used to merge the input A and B images."
@@ -495,10 +502,10 @@ mDeclarePluginFactory(MergePluginFactory, {}, {});
 void MergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels("MergeOFX", "MergeOFX", "MergeOFX");
-    desc.setPluginGrouping("Merge");
-    desc.setPluginDescription("Pixel-by-pixel merge operation between the two inputs.");
-    
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
+
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedBitDepth(eBitDepthUByte);
@@ -557,7 +564,6 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
     StringParamDescriptor* operationString = desc.defineStringParam(kOfxParamStringSublabelName);
-    operationString->setLabels(kOfxParamStringSublabelName,kOfxParamStringSublabelName,kOfxParamStringSublabelName);
     operationString->setIsSecret(true);
     operationString->setEnabled(false);
     operationString->setIsPersistant(true);
@@ -567,7 +573,6 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
  
     ChoiceParamDescriptor* operation = desc.defineChoiceParam(kOperationParamName);
     operation->setLabels(kOperationParamLabel, kOperationParamLabel, kOperationParamLabel);
-    operation->setScriptName(kOperationParamName);
     operation->setHint(kOperationParamHint);
     assert(operation->getNOptions() == eMergeATop);
     operation->appendOption( "atop", "Ab + B(1 - a)" );
@@ -673,7 +678,7 @@ OFX::ImageEffect* MergePluginFactory::createInstance(OfxImageEffectHandle handle
 
 void getMergePluginID(OFX::PluginFactoryArray &ids)
 {
-    static MergePluginFactory p("net.sf.openfx:MergePlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static MergePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 
