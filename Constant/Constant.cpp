@@ -82,6 +82,9 @@
 #define kPluginName "ConstantOFX"
 #define kPluginGrouping "Image"
 #define kPluginDescription "Generate an image with a constant color. A frame range may be specified for operators that need it."
+#define kPluginIdentifier "net.sf.openfx:ConstantPlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kColorParamName "color"
 #define kColorParamLabel "Color"
@@ -441,6 +444,6 @@ ImageEffect* ConstantPluginFactory::createInstance(OfxImageEffectHandle handle, 
 
 void getConstantPluginID(OFX::PluginFactoryArray &ids)
 {
-    static ConstantPluginFactory p("net.sf.openfx:ConstantPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static ConstantPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

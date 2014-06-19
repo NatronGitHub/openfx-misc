@@ -40,10 +40,16 @@
 #include <ofxsInteract.h>
 #include <ofxsImageEffect.h>
 
-#define kRectInteractBtmLeftParamName "BottomLeft"
+#define kRectInteractBtmLeftParamName "bottomLeft"
 #define kRectInteractBtmLeftParamLabel "Bottom Left"
-#define kRectInteractSizeParamName "Size"
+#define kRectInteractBtmLeftParamHint "Coordinates of the bottom left corner of the rectangle"
+
+#define kRectInteractSizeParamName "size"
 #define kRectInteractSizeParamLabel "Size"
+#define kRectInteractSizeParamHint "Width and height of the rectangle"
+#define kRectInteractSizeParamDim1 "width"
+#define kRectInteractSizeParamDim2 "height"
+
 /**
  * @brief In order to work the plug-in using this interact must have 2 parameters named after
  * the defines above.

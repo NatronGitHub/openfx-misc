@@ -77,6 +77,14 @@ England
 
 #include "ofxsProcessing.H"
 
+#define kPluginName "TimeOffsetOFX"
+#define kPluginGrouping "Time"
+#define kPluginDescription "Move the input clip forward or backward in time. " \
+                          "This can also reverse the order of the input frames so that last one is first."
+#define kPluginIdentifier "net.sf.openfx:timeOffset"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
 namespace OFX {
   extern ImageEffectHostDescription gHostDescription;
 }
@@ -223,10 +231,9 @@ void TimeOffsetPluginFactory::load()
 void TimeOffsetPluginFactory::describe(OFX::ImageEffectDescriptor &desc) 
 {
   // basic labels
-  desc.setLabels("TimeOffsetOFX", "TimeOffsetOFX", "TimeOffsetOFX");
-  desc.setPluginGrouping("Time");
-  desc.setPluginDescription("Move the input clip forward or backward in time. "
-                            "This can also reverse the order of the input frames so that last one is first.");
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
 
   // Say we are a filer context
   desc.addSupportedContext(OFX::eContextFilter);
@@ -301,6 +308,6 @@ ImageEffect* TimeOffsetPluginFactory::createInstance(OfxImageEffectHandle handle
 
 void getTimeOffsetPluginID(OFX::PluginFactoryArray &ids)
 {
-    static TimeOffsetPluginFactory p("net.sf.openfx:timeOffset", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static TimeOffsetPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

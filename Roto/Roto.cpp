@@ -90,8 +90,18 @@
 
 #include "ofxsProcessing.H"
 
-#define kPremultParamName "Premultiply"
-#define kOutputCompsParamName "OutputComponents"
+#define kPluginName "RotoOFX"
+#define kPluginGrouping "Draw"
+#define kPluginDescription "Create masks and shapes."
+#define kPluginIdentifier "net.sf.openfx:RotoPlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
+#define kPremultParamName "premultiply"
+#define kPremultParamLabel "Premultiply"
+#define kPremultParamHint "Premultiply the red,green and blue channels with the alpha channel produced by the mask."
+#define kOutputCompsParamName "outputComponents"
+#define kOutputCompsParamLabel "Output components"
 
 using namespace OFX;
 
@@ -389,9 +399,9 @@ mDeclarePluginFactory(RotoPluginFactory, {}, {});
 void RotoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels("RotoOFX", "RotoOFX", "RotoOFX");
-    desc.setPluginGrouping("Draw");
-    desc.setPluginDescription("Create masks and shapes.");
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
     
     desc.addSupportedContext(eContextPaint);
     desc.addSupportedContext(eContextGeneral);
@@ -467,15 +477,14 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
     BooleanParamDescriptor* premult = desc.defineBooleanParam(kPremultParamName);
-    premult->setLabels(kPremultParamName, kPremultParamName, kPremultParamName);
+    premult->setLabels(kPremultParamLabel, kPremultParamLabel, kPremultParamLabel);
     premult->setDefault(false);
     premult->setAnimates(true);
-    premult->setHint("Premultiply the red,green and blue channels with the alpha channel produced by the mask.");
+    premult->setHint(kPremultParamHint);
     page->addChild(*premult);
 
     ChoiceParamDescriptor* outputComps = desc.defineChoiceParam(kOutputCompsParamName);
-    outputComps->setLabels("Output components", "Output components", "Output components");
-    outputComps->setScriptName(kOutputCompsParamName);
+    outputComps->setLabels(kOutputCompsParamLabel, kOutputCompsParamLabel, kOutputCompsParamLabel);
     outputComps->setAnimates(false);
     outputComps->appendOption("Alpha");
     outputComps->appendOption("RGBA");
@@ -486,7 +495,7 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
 
 void getRotoPluginID(OFX::PluginFactoryArray &ids)
 {
-    static RotoPluginFactory p("net.sf.openfx:RotoPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static RotoPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 

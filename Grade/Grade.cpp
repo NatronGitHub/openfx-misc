@@ -79,16 +79,39 @@
 
 #include "ofxsProcessing.H"
 
+#define kPluginName "GradeOFX"
+#define kPluginGrouping "Color"
+#define kPluginDescription "Modify the tonal spread of an image from the white and black points. " \
+                          "This node can also be used to match colors of 2 images: The darkest and lightest points of " \
+                          "the target image are converted to black and white using the blackpoint and whitepoint values. " \
+                          "These 2 values are then moved to new values using the black(for dark point) and white(for white point). " \
+                          "You can also apply multiply/offset/gamma for other color fixing you may need. " \
+                          "Here is the formula used: \n" \
+                          "A = multiply * (white - black) / (whitepoint - blackpoint) \n" \
+                          "B = offset + black - A * blackpoint \n" \
+                          "output = pow(A * input + B, 1 / gamma)."
+#define kPluginIdentifier "net.sf.openfx:GradePlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kBlackPointParamName "BlackPoint"
-#define kWhitePointParamName "WhitePoint"
-#define kBlackParamName "Black"
-#define kWhiteParamName "White"
-#define kMultiplyParamName "Multiply"
-#define kOffsetParamName "Offset"
-#define kGammaParamName "Gamma"
-#define kClampBlackParamName "Clamp Black"
-#define kClampWhiteParamName "Clamp White"
+#define kBlackPointParamName "blackPoint"
+#define kBlackPointParamLabel "Black Point"
+#define kWhitePointParamName "whitePoint"
+#define kWhitePointParamLabel "White Point"
+#define kBlackParamName "black"
+#define kBlackParamLabel "Black"
+#define kWhiteParamName "white"
+#define kWhiteParamLabel "White"
+#define kMultiplyParamName "multiply"
+#define kMultiplyParamLabel "Multiply"
+#define kOffsetParamName "offset"
+#define kOffsetParamLabel "Offset"
+#define kGammaParamName "gamma"
+#define kGammaParamLabel "Gamma"
+#define kClampBlackParamName "clampBlack"
+#define kClampBlackParamLabel "Clamp Black"
+#define kClampWhiteParamName "clampWhite"
+#define kClampWhiteParamLabel "Clamp White"
 
 
 using namespace OFX;
@@ -425,18 +448,10 @@ mDeclarePluginFactory(GradePluginFactory, {}, {});
 void GradePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels("GradeOFX", "GradeOFX", "GradeOFX");
-    desc.setPluginGrouping("Color");
-    desc.setPluginDescription("Modify the tonal spread of an image from the white and black points. "
-                              "This node can also be used to match colors of 2 images: The darkest and lightest points of "
-                              "the target image are converted to black and white using the blackpoint and whitepoint values. "
-                              "These 2 values are then moved to new values using the black(for dark point) and white(for white point). "
-                              "You can also apply multiply/offset/gamma for other color fixing you may need. "
-                              "Here is the formula used: \n"
-                              "A = multiply * (white - black) / (whitepoint - blackpoint) \n"
-                              "B = offset + black - A * blackpoint \n"
-                              "output = pow(A * input + B, 1 / gamma).");
-    
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
+
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextPaint);
@@ -461,7 +476,6 @@ void defineRGBAScaleParam(OFX::ImageEffectDescriptor &desc,
 {
     RGBAParamDescriptor *param = desc.defineRGBAParam(name);
     param->setLabels(label, label, label);
-    param->setScriptName(name);
     param->setHint(hint);
     param->setDefault(def,def,def,def);
     param->setRange(min,min,min,min, max,max,max,max);
@@ -511,16 +525,14 @@ void GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     defineRGBAScaleParam(desc, kGammaParamName, kGammaParamName, "Final gamma correction", page, 1., 0.2, 5.);
     
     BooleanParamDescriptor *clampBlackParam = desc.defineBooleanParam(kClampBlackParamName);
-    clampBlackParam->setLabels(kClampBlackParamName, kClampBlackParamName, kClampBlackParamName);
-    clampBlackParam->setScriptName(kClampBlackParamName);
+    clampBlackParam->setLabels(kClampBlackParamLabel, kClampBlackParamLabel, kClampBlackParamLabel);
     clampBlackParam->setHint("All colors below 0 will be set to 0.");
     clampBlackParam->setDefault(true);
     clampBlackParam->setAnimates(true);
     page->addChild(*clampBlackParam);
     
     BooleanParamDescriptor *clampWhiteParam = desc.defineBooleanParam(kClampWhiteParamName);
-    clampWhiteParam->setLabels(kClampWhiteParamName, kClampWhiteParamName, kClampWhiteParamName);
-    clampWhiteParam->setScriptName(kClampWhiteParamName);
+    clampWhiteParam->setLabels(kClampWhiteParamLabel, kClampWhiteParamLabel, kClampWhiteParamLabel);
     clampWhiteParam->setHint("All colors above 1 will be set to 1.");
     clampWhiteParam->setDefault(true);
     clampWhiteParam->setAnimates(true);
@@ -535,7 +547,7 @@ OFX::ImageEffect* GradePluginFactory::createInstance(OfxImageEffectHandle handle
 
 void getGradePluginID(OFX::PluginFactoryArray &ids)
 {
-    static GradePluginFactory p("net.sf.openfx:GradePlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static GradePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 

@@ -78,10 +78,21 @@
 #include "ofxsMerging.h"
 #include "ofxsRectangleInteract.h"
 
-#define kReformatParamName "Reformat"
-#define kIntersectParamName "Intersect"
-#define kBlackOutsideParamName "Black outside"
-#define kSoftnessParamName "Softness"
+#define kPluginName "CropOFX"
+#define kPluginGrouping "Transform"
+#define kPluginDescription "Removes everything outside the defined rectangle and adds black edges so everything outside is black."
+#define kPluginIdentifier "net.sf.openfx:CropPlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
+#define kReformatParamName "reformat"
+#define kReformatParamLabel "Reformat"
+#define kIntersectParamName "intersect"
+#define kIntersectParamLabel "Intersect"
+#define kBlackOutsideParamName "blackOutside"
+#define kBlackOutsideParamLabel "Black Outside"
+#define kSoftnessParamName "softness"
+#define kSoftnessParamLabel "Softness"
 
 using namespace OFX;
 
@@ -520,10 +531,10 @@ mDeclarePluginFactory(CropPluginFactory, {}, {});
 void CropPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels("CropOFX", "CropOFX", "CropOFX");
-    desc.setPluginGrouping("Transform");
-    desc.setPluginDescription("Removes everything outside the defined rectangle and adds black edges so everything outside is black.");
-    
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
+
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextFilter);
 
@@ -610,14 +621,14 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     page->addChild(*size);
     
     DoubleParamDescriptor* softness = desc.defineDoubleParam(kSoftnessParamName);
-    softness->setLabels(kSoftnessParamName, kSoftnessParamName, kSoftnessParamName);
+    softness->setLabels(kSoftnessParamLabel, kSoftnessParamLabel, kSoftnessParamLabel);
     softness->setDefault(0);
     softness->setRange(0., 100.);
     softness->setHint("Size of the fade to black around edges to apply");
     page->addChild(*softness);
     
     BooleanParamDescriptor* reformat = desc.defineBooleanParam(kReformatParamName);
-    reformat->setLabels(kReformatParamName, kReformatParamName, kReformatParamName);
+    reformat->setLabels(kReformatParamLabel, kReformatParamLabel, kReformatParamLabel);
     reformat->setHint("Translates the bottom left corner of the crop rectangle to be in (0,0).");
     reformat->setDefault(false);
     reformat->setAnimates(true);
@@ -625,7 +636,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     page->addChild(*reformat);
     
     BooleanParamDescriptor* intersect = desc.defineBooleanParam(kIntersectParamName);
-    intersect->setLabels(kIntersectParamName, kIntersectParamName, kIntersectParamName);
+    intersect->setLabels(kIntersectParamLabel, kIntersectParamLabel, kIntersectParamLabel);
     intersect->setHint("Intersects the crop rectangle with the input region of definition instead of extending it");
     intersect->setLayoutHint(OFX::eLayoutHintNoNewLine);
     intersect->setDefault(false);
@@ -633,7 +644,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     page->addChild(*intersect);
     
     BooleanParamDescriptor* blackOutside = desc.defineBooleanParam(kBlackOutsideParamName);
-    blackOutside->setLabels(kBlackOutsideParamName, kBlackOutsideParamName, kBlackOutsideParamName);
+    blackOutside->setLabels(kBlackOutsideParamLabel, kBlackOutsideParamLabel, kBlackOutsideParamLabel);
     blackOutside->setDefault(false);
     blackOutside->setAnimates(true);
     blackOutside->setHint("Add 1 black pixel to the region of definition so that all the area outside the crop rectangle is black");
@@ -642,7 +653,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
 
 void getCropPluginID(OFX::PluginFactoryArray &ids)
 {
-    static CropPluginFactory p("net.sf.openfx:CropPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static CropPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 

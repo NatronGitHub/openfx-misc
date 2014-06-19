@@ -80,6 +80,12 @@ England
 
 #include "ofxsProcessing.H"
 
+#define kPluginName "SideBySideOFX"
+#define kPluginGrouping "Views/Stereo"
+#define kPluginDescription "Put the left and right view of the input next to each other."
+#define kPluginIdentifier "net.sf.openfx:sideBySidePlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 // Base class for the RGBA and the Alpha processor
 class SideBySideBase : public OFX::ImageProcessor {
@@ -441,9 +447,9 @@ void SideBySidePluginFactory::load()
 void SideBySidePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels
-  desc.setLabels("SideBySideOFX", "SideBySideOFX", "SideBySideOFX");
-  desc.setPluginGrouping("Views/Stereo");
-  desc.setPluginDescription("Put the left and right view of the input next to each other.");
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
 
   // add the supported contexts, only filter at the moment
   desc.addSupportedContext(eContextFilter);
@@ -530,6 +536,6 @@ OFX::ImageEffect* SideBySidePluginFactory::createInstance(OfxImageEffectHandle h
 
 void getSideBySidePluginID(OFX::PluginFactoryArray &ids)
 {
-    static SideBySidePluginFactory p("net.sf.openfx:sideBySidePlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static SideBySidePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

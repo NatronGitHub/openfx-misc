@@ -1024,7 +1024,6 @@
 		1E551EB817994D4000A4135C = {
 			isa = PBXGroup;
 			children = (
-				D73030FE19518ACE0024BCA4 /* CopyRectangle */,
 				1E3E3D30179960F9005F2132 /* Headers */,
 				1E551ED217994DEF00A4135C /* Sources */,
 				1E551EDA17994E8100A4135C /* Frameworks */,
@@ -1070,6 +1069,7 @@
 				1E3451E0190695070080D699 /* ChromaKeyer */,
 				D7B4C95D18D9DA410004137D /* ColorCorrect */,
 				1E59336B194A0C3F00804448 /* Constant */,
+				D73030FE19518ACE0024BCA4 /* CopyRectangle */,
 				D7257D45192E910C0040CD9C /* CornerPin */,
 				D74A80AD194059C0007C3E1C /* Crop */,
 				1ECE5453185F240A001ED442 /* DebugProxy */,
@@ -1761,6 +1761,7 @@
 				1E3451E11906952D0080D699 /* ChromaKeyer.ofx */,
 				1E3451FD190695DC0080D699 /* ColorCorrect.ofx */,
 				1E59336C194A0C6300804448 /* Constant.ofx */,
+				D730310519518B6B0024BCA4 /* CopyRectangle.ofx */,
 				D7257D4B192E91120040CD9C /* CornerPin.ofx */,
 				D74A80B3194059CC007C3E1C /* Crop.ofx */,
 				1EFB4E0A19461B13005932AF /* Difference.ofx */,
@@ -1780,7 +1781,6 @@
 				1E235FF418369E4C0019C45F /* TimeOffset.ofx */,
 				D7349E8F18E7767D0097DB1D /* Transform.ofx */,
 				1E8B5D4A18B76A7500C31FDC /* Misc.ofx */,
-				D730310519518B6B0024BCA4 /* CopyRectangle.ofx */,
 			);
 		};
 /* End PBXProject section */
@@ -1945,40 +1945,40 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1E8B5D5D18B76AB300C31FDC /* PluginRegistrationCombined.cpp in Sources */,
 				1E8B5D8018B7828800C31FDC /* Anaglyph.cpp in Sources */,
-				D792A2F01933691800547CFF /* ofxsOGLFontData.cpp in Sources */,
 				1E47341D1907FB9400DC26E1 /* ChromaKeyer.cpp in Sources */,
+				1E593382194A0CF400804448 /* Constant.cpp in Sources */,
+				D730310419518B560024BCA4 /* CopyRectangle.cpp in Sources */,
 				D7257D5F192E91510040CD9C /* CornerPin.cpp in Sources */,
 				D7B4C97818D9DBE70004137D /* ColorCorrect.cpp in Sources */,
+				D74A80C719405A14007C3E1C /* Crop.cpp in Sources */,
+				1EFB4E2019461B76005932AF /* Difference.cpp in Sources */,
 				D725A2E318E0D54E001A1E3E /* Grade.cpp in Sources */,
+				1E181B0219518E0000FAB9A9 /* Invert.cpp in Sources */,
 				1E8B5D7F18B7828400C31FDC /* JoinViews.cpp in Sources */,
 				D74121D118F9C99300A81F8B /* Merge.cpp in Sources */,
-				D721EC17191120F30069DB1D /* Roto.cpp in Sources */,
-				1E181B0219518E0000FAB9A9 /* Invert.cpp in Sources */,
-				D792A2E319334C6300547CFF /* ofxsOGLTextRenderer.cpp in Sources */,
-				D730311D19518E7B0024BCA4 /* ofxsRectangleInteract.cpp in Sources */,
-				D74A80C719405A14007C3E1C /* Crop.cpp in Sources */,
 				1E8B5D7218B7800800C31FDC /* MixViews.cpp in Sources */,
 				1E8B5D7718B7811500C31FDC /* OneView.cpp in Sources */,
 				1E0E4EA2194CAF9E0072248F /* ReConverge.cpp in Sources */,
-				D730310419518B560024BCA4 /* CopyRectangle.cpp in Sources */,
 				1E8B5D6818B76F8700C31FDC /* RGBLut.cpp in Sources */,
+				D721EC17191120F30069DB1D /* Roto.cpp in Sources */,
+				1EF46F48194A39C800825BDF /* Shuffle.cpp in Sources */,
 				1E8B5D6D18B77F1600C31FDC /* SideBySide.cpp in Sources */,
 				1E8B5D4E18B76A7500C31FDC /* Switch.cpp in Sources */,
-				1E593382194A0CF400804448 /* Constant.cpp in Sources */,
 				1E8B5D6718B76F8700C31FDC /* TimeOffset.cpp in Sources */,
 				D7349E8E18E776780097DB1D /* Transform.cpp in Sources */,
+				1E8B5D5D18B76AB300C31FDC /* PluginRegistrationCombined.cpp in Sources */,
+				D792A2E319334C6300547CFF /* ofxsOGLTextRenderer.cpp in Sources */,
+				D730311D19518E7B0024BCA4 /* ofxsRectangleInteract.cpp in Sources */,
+				D792A2F01933691800547CFF /* ofxsOGLFontData.cpp in Sources */,
+				1E71D9D01935FBFD00C98388 /* ofxsTransform3x3.cpp in Sources */,
 				1E8B5D4C18B76A7500C31FDC /* ofxsCore.cpp in Sources */,
 				1E8B5D4D18B76A7500C31FDC /* ofxsImageEffect.cpp in Sources */,
-				1EF46F48194A39C800825BDF /* Shuffle.cpp in Sources */,
 				1E8B5D4F18B76A7500C31FDC /* ofxsInteract.cpp in Sources */,
 				1E8B5D5018B76A7500C31FDC /* ofxsLog.cpp in Sources */,
 				1E8B5D5118B76A7500C31FDC /* ofxsMultiThread.cpp in Sources */,
 				1E8B5D5218B76A7500C31FDC /* ofxsParams.cpp in Sources */,
 				1E8B5D5418B76A7500C31FDC /* ofxsProperty.cpp in Sources */,
-				1EFB4E2019461B76005932AF /* Difference.cpp in Sources */,
-				1E71D9D01935FBFD00C98388 /* ofxsTransform3x3.cpp in Sources */,
 				1E8B5D5518B76A7500C31FDC /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2152,14 +2152,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D730311819518B790024BCA4 /* CopyRectangle.cpp in Sources */,
+				D730311919518B7A0024BCA4 /* PluginRegistration.cpp in Sources */,
+				D730311E19518E7B0024BCA4 /* ofxsRectangleInteract.cpp in Sources */,
 				D730310919518B6B0024BCA4 /* ofxsCore.cpp in Sources */,
 				D730310A19518B6B0024BCA4 /* ofxsImageEffect.cpp in Sources */,
-				D730311819518B790024BCA4 /* CopyRectangle.cpp in Sources */,
 				D730310B19518B6B0024BCA4 /* ofxsInteract.cpp in Sources */,
 				D730310C19518B6B0024BCA4 /* ofxsLog.cpp in Sources */,
-				D730311E19518E7B0024BCA4 /* ofxsRectangleInteract.cpp in Sources */,
 				D730310D19518B6B0024BCA4 /* ofxsMultiThread.cpp in Sources */,
-				D730311919518B7A0024BCA4 /* PluginRegistration.cpp in Sources */,
 				D730310E19518B6B0024BCA4 /* ofxsParams.cpp in Sources */,
 				D730310F19518B6B0024BCA4 /* ofxsProperty.cpp in Sources */,
 				D730311019518B6B0024BCA4 /* ofxsPropertyValidation.cpp in Sources */,
@@ -2894,7 +2894,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_FILE = CopyRectangle/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = CopyRectangle.ofx;
 				WRAPPER_EXTENSION = bundle;
@@ -2905,7 +2905,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_FILE = CopyRectangle/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = CopyRectangle.ofx;
 				WRAPPER_EXTENSION = bundle;

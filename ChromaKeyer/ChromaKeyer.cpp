@@ -80,6 +80,13 @@
 
 #include "ofxsProcessing.H"
 
+#define kPluginName "ChromaKeyerOFX"
+#define kPluginGrouping "Keyer"
+#define kPluginDescription "Apply chroma keying"
+#define kPluginIdentifier "net.sf.openfx:ChromaKeyerPlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
 #ifndef M_PI
 #define M_PI        3.14159265358979323846264338327950288   /* pi             */
 #endif
@@ -815,10 +822,10 @@ mDeclarePluginFactory(ChromaKeyerPluginFactory, {}, {});
 void ChromaKeyerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels("ChromaKeyerOFX", "ChromaKeyerOFX", "ChromaKeyerOFX");
-    desc.setPluginGrouping("Keyer");
-    desc.setPluginDescription("Apply chroma keying");
-    
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
+
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
     //desc.addSupportedBitDepth(eBitDepthUByte);
@@ -964,6 +971,6 @@ OFX::ImageEffect* ChromaKeyerPluginFactory::createInstance(OfxImageEffectHandle 
 
 void getChromaKeyerPluginID(OFX::PluginFactoryArray &ids)
 {
-    static ChromaKeyerPluginFactory p("net.sf.openfx:ChromaKeyerPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static ChromaKeyerPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

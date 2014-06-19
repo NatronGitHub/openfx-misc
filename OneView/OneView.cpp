@@ -80,6 +80,19 @@ England
 
 #include "ofxsProcessing.H"
 
+#define kPluginName "OneViewOFX"
+#define kPluginGrouping "Views"
+#define kPluginDescription "Takes one view from the input."
+#define kPluginIdentifier "net.sf.openfx:oneViewPlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
+#define kViewParamName "view"
+#define kViewParamLabel "View"
+#define kViewParamHint "View to take from the input"
+#define kViewParamOptionLeft "Left"
+#define kViewParamOptionRight "Right"
+
 // Base class for the RGBA and the Alpha processor
 class CopierBase : public OFX::ImageProcessor {
 protected :
@@ -325,9 +338,9 @@ void OneViewPluginFactory::load()
 void OneViewPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels
-  desc.setLabels("OneViewOFX", "OneViewOFX", "OneViewOFX");
-  desc.setPluginGrouping("Views");
-  desc.setPluginDescription("Takes one view from the input.");
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
 
   // add the supported contexts, only filter at the moment
   desc.addSupportedContext(eContextFilter);
@@ -378,12 +391,11 @@ void OneViewPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
   // make some pages and to things in 
   PageParamDescriptor *page = desc.definePageParam("Controls");
 
-  ChoiceParamDescriptor *view = desc.defineChoiceParam("view");
-  view->setLabels("view", "view", "view");
-  view->setScriptName("view");
-  view->setHint("View to take from the input");
-  view->appendOption("Left", "Left");
-  view->appendOption("Right", "Right");
+  ChoiceParamDescriptor *view = desc.defineChoiceParam(kViewParamName);
+  view->setLabels(kViewParamLabel, kViewParamLabel, kViewParamLabel);
+  view->setHint(kViewParamHint);
+  view->appendOption(kViewParamOptionLeft);
+  view->appendOption(kViewParamOptionRight);
   view->setDefault(0);
   view->setAnimates(true);
 
@@ -397,6 +409,6 @@ OFX::ImageEffect* OneViewPluginFactory::createInstance(OfxImageEffectHandle hand
 
 void getOneViewPluginID(OFX::PluginFactoryArray &ids)
 {
-    static OneViewPluginFactory p("net.sf.openfx:oneViewPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static OneViewPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }

@@ -79,6 +79,14 @@
 
 #include "ofxsProcessing.H"
 
+#define kPluginName "ColorCorrectOFX"
+#define kPluginGrouping "Color"
+#define kPluginDescription "Adjusts the saturation, constrast, gamma, gain and offset of an image. " \
+                          "The ranges of the shadows, midtones and highlights are controlled by the curves " \
+                          "in the \"Ranges\" tab. "
+#define kPluginIdentifier "net.sf.openfx:ColorCorrectPlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 ////std strings because we need them in changedParam
 static const std::string kColorCorrectMasterGroupName = std::string("Master");
@@ -95,6 +103,8 @@ static const std::string kColorCorrectOffsetName = std::string("Offset");
 #define kColorCorrectToneRangesParamName "toneRanges"
 #define kColorCorrectToneRangesParamLabel "Tone Ranges"
 #define kColorCorrectToneRangesParamHint "Tone ranges lookup table"
+#define kColorCorrectToneRangesParamDim0 "Shadow"
+#define kColorCorrectToneRangesParamDim1 "Highlight"
 
 #define LUT_MAX_PRECISION 100
 
@@ -607,12 +617,10 @@ mDeclarePluginFactory(ColorCorrectPluginFactory, {}, {});
 void ColorCorrectPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels("ColorCorrectOFX", "ColorCorrectOFX", "ColorCorrectOFX");
-    desc.setPluginGrouping("Color");
-    desc.setPluginDescription("Adjusts the saturation, constrast, gamma, gain and offset of an image. "
-                              "The ranges of the shadows, midtones and highlights are controlled by the curves "
-                              "in the \"Ranges\" tab. ");
-    
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
+
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextPaint);
@@ -644,7 +652,6 @@ defineRGBAScaleParam(OFX::ImageEffectDescriptor &desc,
 {
     RGBAParamDescriptor *param = desc.defineRGBAParam(name);
     param->setLabels(label, label, label);
-    param->setScriptName(name);
     param->setHint(hint);
     param->setDefault(def,def,def,def);
     param->setRange(min,min,min,min, max,max,max,max);
@@ -705,10 +712,10 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    defineColorGroup(kColorCorrectMasterGroupName,"", page, desc,true);
-    defineColorGroup(kColorCorrectShadowsGroupName,"" ,page, desc,false);
-    defineColorGroup(kColorCorrectMidtonesGroupName, "",page, desc,false);
-    defineColorGroup(kColorCorrectHighlightsGroupName, "",page, desc,false);
+    defineColorGroup(kColorCorrectMasterGroupName, "", page, desc, true);
+    defineColorGroup(kColorCorrectShadowsGroupName, "", page, desc, false);
+    defineColorGroup(kColorCorrectMidtonesGroupName, "", page, desc, false);
+    defineColorGroup(kColorCorrectHighlightsGroupName, "", page, desc, false);
     
     PageParamDescriptor* ranges = desc.definePageParam("Ranges");
     
@@ -720,8 +727,8 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     // define it as two dimensional
     lookupTable->setDimension(2);
     
-    lookupTable->setDimensionLabel("Shadow", 0);
-    lookupTable->setDimensionLabel("Highlight", 1);
+    lookupTable->setDimensionLabel(kColorCorrectToneRangesParamDim0, 0);
+    lookupTable->setDimensionLabel(kColorCorrectToneRangesParamDim1, 1);
     
     // set the UI colour for each dimension
     const OfxRGBColourD shadow   = {0.6,0.4,0.6};
@@ -754,7 +761,7 @@ OFX::ImageEffect* ColorCorrectPluginFactory::createInstance(OfxImageEffectHandle
 
 void getColorCorrectPluginID(OFX::PluginFactoryArray &ids)
 {
-    static ColorCorrectPluginFactory p("net.sf.openfx:ColorCorrectPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static ColorCorrectPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 

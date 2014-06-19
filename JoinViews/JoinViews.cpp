@@ -80,6 +80,13 @@ England
 
 #include "ofxsProcessing.H"
 
+#define kPluginName "JoinViewsOFX"
+#define kPluginGrouping "Views"
+#define kPluginDescription "JoinView inputs to make a stereo output. " \
+                          "The first view from each input is copied to the left and right views of the output."
+#define kPluginIdentifier "net.sf.openfx:joinViewsPlugin"
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 // Base class for the RGBA and the Alpha processor
 class CopierBase : public OFX::ImageProcessor {
@@ -325,10 +332,9 @@ void JoinViewsPluginFactory::load()
 void JoinViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
   // basic labels
-  desc.setLabels("JoinViewsOFX", "JoinViewsOFX", "JoinViewsOFX");
-  desc.setPluginGrouping("Views");
-  desc.setPluginDescription("JoinView inputs to make a stereo output. "
-                            "The first view from each input is copied to the left and right views of the output.");
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
 
   // add the supported contexts, only general at the moment, because there are several inputs
   // (see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#kOfxImageEffectContextFilter)
@@ -393,7 +399,7 @@ OFX::ImageEffect* JoinViewsPluginFactory::createInstance(OfxImageEffectHandle ha
 
 void getJoinViewsPluginID(OFX::PluginFactoryArray &ids)
 {
-    static JoinViewsPluginFactory p("net.sf.openfx:joinViewsPlugin", /*pluginVersionMajor=*/1, /*pluginVersionMinor=*/0);
+    static JoinViewsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 
