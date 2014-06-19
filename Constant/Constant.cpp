@@ -96,9 +96,10 @@
 
 /** @brief  Base class used to blend two images together */
 class ConstantGeneratorBase : public OFX::ImageProcessor {
-    protected :
+protected:
     OfxRGBAColourD _color;
-    public :
+
+public:
     /** @brief no arg ctor */
     ConstantGeneratorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
@@ -120,24 +121,28 @@ static int floatToInt(float value)
     return value * max + 0.5;
 }
 
-static inline float to_func_srgb(float v){
-    if (v < 0.0031308f)
+static inline float to_func_srgb(float v)
+{
+    if (v < 0.0031308f) {
         return (v < 0.0f) ? 0.0f : v * 12.92f;
-    else
+    } else {
         return 1.055f * std::pow(v, 1.0f / 2.4f) - 0.055f;
+    }
 }
 
 
 /** @brief templated class to blend between two images */
 template <class PIX, int nComponents, int max>
-class ConstantGenerator : public ConstantGeneratorBase {
-    public :
+class ConstantGenerator : public ConstantGeneratorBase
+{
+public:
     // ctor
     ConstantGenerator(OFX::ImageEffect &instance)
     : ConstantGeneratorBase(instance)
     {
     }
 
+private:
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
@@ -162,30 +167,30 @@ class ConstantGenerator : public ConstantGeneratorBase {
 
         PIX color[nComponents];
         if (max == 1) { // implies float, don't clamp
-            for(int c = 0; c < nComponents; ++c) {
+            for (int c = 0; c < nComponents; ++c) {
                 color[c] = colorf[c];
             }
         } else {
             // color is supposed to be linear: delinearize first
             if (nComponents == 3 || nComponents == 4) {
-                for(int c = 0; c < nComponents; ++c) {
+                for (int c = 0; c < nComponents; ++c) {
                     colorf[c] = to_func_srgb(colorf[c]);
                 }
             }
             // clamp and convert to the destination type
-            for(int c = 0; c < nComponents; ++c) {
+            for (int c = 0; c < nComponents; ++c) {
                 color[c] = floatToInt<max>(colorf[c]);
             }
         }
 
         // push pixels
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if(_effect.abort()) break;
+            if (_effect.abort()) break;
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
-            for(int x = procWindow.x1; x < procWindow.x2; x++) {
-                for(int c = 0; c < nComponents; ++c) {
+            for (int x = procWindow.x1; x < procWindow.x2; x++) {
+                for (int c = 0; c < nComponents; ++c) {
                     dstPix[c] = color[c];
                 }
                 dstPix += nComponents;
@@ -197,15 +202,16 @@ class ConstantGenerator : public ConstantGeneratorBase {
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class ConstantPlugin : public OFX::ImageEffect {
-    protected :
+class ConstantPlugin : public OFX::ImageEffect
+{
+protected:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
 
     OFX::RGBAParam  *color_;
     OFX::Int2DParam  *range_;
 
-    public :
+public:
     /** @brief ctor */
     ConstantPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
@@ -218,6 +224,7 @@ class ConstantPlugin : public OFX::ImageEffect {
         range_   = fetchInt2DParam(kRangeParamName);
     }
 
+private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
 
@@ -283,7 +290,7 @@ ConstantPlugin::render(const OFX::RenderArguments &args)
 
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
-        switch(dstBitDepth) {
+        switch (dstBitDepth) {
             case OFX::eBitDepthUByte : {
                 ConstantGenerator<unsigned char, 4, 255> fred(*this);
                 setupAndProcess(fred, args);
@@ -307,7 +314,7 @@ ConstantPlugin::render(const OFX::RenderArguments &args)
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     } else if (dstComponents == OFX::ePixelComponentRGB) {
-        switch(dstBitDepth) {
+        switch (dstBitDepth) {
             case OFX::eBitDepthUByte : {
                 ConstantGenerator<unsigned char, 3, 255> fred(*this);
                 setupAndProcess(fred, args);
@@ -332,7 +339,7 @@ ConstantPlugin::render(const OFX::RenderArguments &args)
         }
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        switch(dstBitDepth)
+        switch (dstBitDepth)
         {
             case OFX::eBitDepthUByte :
             {
@@ -365,7 +372,7 @@ bool
 ConstantPlugin::getTimeDomain(OfxRangeD &range)
 {
     // this should only be called in the general context, ever!
-    if(getContext() == OFX::eContextGeneral) {
+    if (getContext() == OFX::eContextGeneral) {
         // how many frames on the input clip
         //OfxRangeD srcRange = srcClip_->getFrameRange();
 

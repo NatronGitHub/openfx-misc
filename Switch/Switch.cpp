@@ -96,17 +96,13 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class SwitchPlugin : public OFX::ImageEffect {
-    protected :
-    // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *srcClip_[kSwitchPluginSourceClipCount];
-
-    OFX::IntParam *which_;
-
-    public :
+class SwitchPlugin : public OFX::ImageEffect
+{
+public:
     /** @brief ctor */
     SwitchPlugin(OfxImageEffectHandle handle);
 
+private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
 
@@ -120,6 +116,12 @@ class SwitchPlugin : public OFX::ImageEffect {
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName);
+
+private:
+    // do not need to delete these, the ImageEffect is managing them for us
+    OFX::Clip *srcClip_[kSwitchPluginSourceClipCount];
+
+    OFX::IntParam *which_;
 };
 
 SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle)

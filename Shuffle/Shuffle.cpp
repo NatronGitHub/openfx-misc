@@ -168,7 +168,7 @@ using namespace OFX;
 
 static int nComps(PixelComponentEnum e)
 {
-    switch(e) {
+    switch (e) {
         case OFX::ePixelComponentRGBA:
             return 4;
         case OFX::ePixelComponentRGB:
@@ -190,7 +190,7 @@ protected:
     int _nComponentsDst;
     InputChannelEnum _channelMap[4];
 
-    public :
+    public:
     ShufflerBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _srcImgA(0)
@@ -294,12 +294,13 @@ template <> float convertPixelDepth(float pix)
 template <class PIXSRC, class PIXDST, int nComponentsDst>
 class Shuffler : public ShufflerBase
 {
-    public :
+public:
     Shuffler(OFX::ImageEffect &instance)
     : ShufflerBase(instance)
     {
     }
 
+private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         OFX::Image* channelMapImg[nComponentsDst];
@@ -402,9 +403,9 @@ class Shuffler : public ShufflerBase
             OFX::Image* srcImg = channelMapImg[c];
             int srcComp = channelMapComp[c];
 
-            for(int y = procWindow.y1; y < procWindow.y2; y++) {
+            for (int y = procWindow.y1; y < procWindow.y2; y++) {
                 PIXDST *dstPix = (PIXDST *) _dstImg->getPixelAddress(procWindow.x1, y);
-                for(int x = procWindow.x1; x < procWindow.x2; x++) {
+                for (int x = procWindow.x1; x < procWindow.x2; x++) {
                     PIXSRC *srcPix = (PIXSRC *)  (srcImg ? srcImg->getPixelAddress(x, y) : 0);
 
                     dstPix[c] = srcPix ? convertPixelDepth<PIXSRC,PIXDST>(srcPix[srcComp]) : convertPixelDepth<float,PIXDST>(srcComp);
@@ -419,8 +420,7 @@ class Shuffler : public ShufflerBase
 /** @brief The plugin that does our work */
 class ShufflePlugin : public OFX::ImageEffect
 {
-    public :
-
+public:
     /** @brief ctor */
     ShufflePlugin(OfxImageEffectHandle handle, OFX::ContextEnum context)
     : ImageEffect(handle)
@@ -453,6 +453,7 @@ class ShufflePlugin : public OFX::ImageEffect
         enableComponents();
     }
 
+private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) /* OVERRIDE FINAL */;
 
@@ -555,7 +556,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
 
     // compute the components mapping tables
     InputChannelEnum channelMap[4];
-    switch(dstComponents) {
+    switch (dstComponents) {
         case OFX::ePixelComponentRGBA:
             channelMap[0] = r;
             channelMap[1] = g;
@@ -593,7 +594,7 @@ template <class DSTPIX, int nComponentsDst>
 void
 ShufflePlugin::renderInternalForDstBitDepth(const OFX::RenderArguments &args, OFX::BitDepthEnum srcBitDepth)
 {
-    switch(srcBitDepth) {
+    switch (srcBitDepth) {
         case OFX::eBitDepthUByte : {
             Shuffler<unsigned char, DSTPIX, nComponentsDst> fred(*this);
             setupAndProcess(fred, args);
@@ -619,7 +620,7 @@ template <int nComponentsDst>
 void
 ShufflePlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum srcBitDepth, OFX::BitDepthEnum dstBitDepth)
 {
-    switch(dstBitDepth) {
+    switch (dstBitDepth) {
         case OFX::eBitDepthUByte :
             renderInternalForDstBitDepth<unsigned char, nComponentsDst>(args, srcBitDepth);
             break;

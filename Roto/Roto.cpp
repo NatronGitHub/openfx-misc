@@ -102,6 +102,8 @@
 #define kPremultParamHint "Premultiply the red,green and blue channels with the alpha channel produced by the mask."
 #define kOutputCompsParamName "outputComponents"
 #define kOutputCompsParamLabel "Output components"
+#define kOutputCompsParamOptionAlpha "Alpha"
+#define kOutputCompsParamOptionRGBA "RGBA"
 
 using namespace OFX;
 
@@ -152,14 +154,12 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         //assert(filter == _filter);
-        for (int y = procWindow.y1; y < procWindow.y2; ++y)
-        {
-            if(_effect.abort()) break;
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if (_effect.abort()) break;
             
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
       
-            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents)
-            {
+            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
                 PIX *srcPix = (PIX*)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 PIX *maskPix = (PIX*) (_maskImg ? _maskImg->getPixelAddress(x, y) : 0);
                 
@@ -192,13 +192,6 @@ private:
 /** @brief The plugin that does our work */
 class RotoPlugin : public OFX::ImageEffect
 {
-protected:
-    // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
-    OFX::Clip *maskClip_;
-    BooleanParam* _premult;
-    ChoiceParam* _outputComps;
 public:
     /** @brief ctor */
     RotoPlugin(OfxImageEffectHandle handle, bool masked)
@@ -239,6 +232,14 @@ private:
 
     /* set up and run a processor */
     void setupAndProcess(RotoProcessorBase &, const OFX::RenderArguments &args);
+
+private:
+    // do not need to delete these, the ImageEffect is managing them for us
+    OFX::Clip *dstClip_;
+    OFX::Clip *srcClip_;
+    OFX::Clip *maskClip_;
+    BooleanParam* _premult;
+    ChoiceParam* _outputComps;
 };
 
 
@@ -264,8 +265,7 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
-    if (src.get() && dst.get())
-    {
+    if (src.get() && dst.get()) {
         OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         if (srcBitDepth != dstBitDepth)
@@ -328,8 +328,7 @@ template <int nComponents>
 void
 RotoPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
-    switch(dstBitDepth)
-    {
+    switch (dstBitDepth) {
         case OFX::eBitDepthUByte :
         {
             RotoProcessor<unsigned char, nComponents, 255> fred(*this);
@@ -486,8 +485,8 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     ChoiceParamDescriptor* outputComps = desc.defineChoiceParam(kOutputCompsParamName);
     outputComps->setLabels(kOutputCompsParamLabel, kOutputCompsParamLabel, kOutputCompsParamLabel);
     outputComps->setAnimates(false);
-    outputComps->appendOption("Alpha");
-    outputComps->appendOption("RGBA");
+    outputComps->appendOption(kOutputCompsParamOptionAlpha);
+    outputComps->appendOption(kOutputCompsParamOptionRGBA);
     outputComps->setDefault(0);
     desc.addClipPreferencesSlaveParam(*outputComps);
 

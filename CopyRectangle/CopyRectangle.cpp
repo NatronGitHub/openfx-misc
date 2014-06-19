@@ -160,16 +160,13 @@ public:
     }
 
 private:
-  
-    
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         double yMultiplier,xMultiplier;
 
         //assert(filter == _filter);
-        for (int y = procWindow.y1; y < procWindow.y2; ++y)
-        {
-            if(_effect.abort()) break;
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if (_effect.abort()) break;
             
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             
@@ -254,21 +251,6 @@ private:
 /** @brief The plugin that does our work */
 class CopyRectanglePlugin : public OFX::ImageEffect
 {
-protected:
-    // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClipA_;
-    OFX::Clip *srcClipB_;
-    
-    OFX::Double2DParam* _btmLeft;
-    OFX::Double2DParam* _size;
-    OFX::DoubleParam* _softness;
-    OFX::BooleanParam* _red;
-    OFX::BooleanParam* _green;
-    OFX::BooleanParam* _blue;
-    OFX::BooleanParam* _alpha;
-    OFX::DoubleParam* _mix;
-    
 public:
     /** @brief ctor */
     CopyRectanglePlugin(OfxImageEffectHandle handle, bool masked)
@@ -320,6 +302,21 @@ private:
     void setupAndProcess(CopyRectangleProcessorBase &, const OFX::RenderArguments &args);
     
     void getRectanglecanonical(OfxTime time,OfxRectD& rect) const;
+
+private:
+    // do not need to delete these, the ImageEffect is managing them for us
+    OFX::Clip *dstClip_;
+    OFX::Clip *srcClipA_;
+    OFX::Clip *srcClipB_;
+
+    OFX::Double2DParam* _btmLeft;
+    OFX::Double2DParam* _size;
+    OFX::DoubleParam* _softness;
+    OFX::BooleanParam* _red;
+    OFX::BooleanParam* _green;
+    OFX::BooleanParam* _blue;
+    OFX::BooleanParam* _alpha;
+    OFX::DoubleParam* _mix;
 };
 
 void
@@ -357,8 +354,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     std::auto_ptr<OFX::Image> srcB(srcClipB_->fetchImage(args.time));
     
     OFX::PixelComponentEnum srcAComponents;
-    if (srcA.get() && dst.get())
-    {
+    if (srcA.get() && dst.get()) {
         OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
         OFX::BitDepthEnum    srcABitDepth      = srcA->getPixelDepth();
@@ -370,8 +366,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     }
     
     
-    if (srcB.get() && dst.get())
-    {
+    if (srcB.get() && dst.get()) {
         OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
         OFX::BitDepthEnum    srcBBitDepth      = srcB->getPixelDepth();
@@ -461,8 +456,7 @@ template <int nComponents>
 void
 CopyRectanglePlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
-    switch(dstBitDepth)
-    {
+    switch(dstBitDepth) {
         case OFX::eBitDepthUByte :
         {
             CopyRectangleProcessor<unsigned char, nComponents, 255> fred(*this);

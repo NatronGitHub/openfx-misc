@@ -104,8 +104,8 @@ using namespace OFX;
 template <class T> inline T
 Clamp(T v, int min, int max)
 {
-    if(v < T(min)) return T(min);
-    if(v > T(max)) return T(max);
+    if (v < T(min)) return T(min);
+    if (v > T(max)) return T(max);
     return v;
 }
 
@@ -117,7 +117,7 @@ protected:
     double _offset;
     double _gain;
 
-public :
+public:
     DifferencerBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _srcImgA(0)
@@ -143,17 +143,18 @@ public :
 template <class PIX, int nComponents, int maxValue>
 class Differencer : public DifferencerBase
 {
-public :
+public:
     Differencer(OFX::ImageEffect &instance)
     : DifferencerBase(instance)
     {
     }
 
+private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        for(int y = procWindow.y1; y < procWindow.y2; y++) {
+        for (int y = procWindow.y1; y < procWindow.y2; y++) {
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            for(int x = procWindow.x1; x < procWindow.x2; x++) {
+            for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 PIX *srcPixA = (PIX *)  (_srcImgA ? _srcImgA->getPixelAddress(x, y) : 0);
                 PIX *srcPixB = (PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
 
@@ -185,7 +186,7 @@ public :
 /** @brief The plugin that does our work */
 class DifferencePlugin : public OFX::ImageEffect
 {
-public :
+public:
 
     /** @brief ctor */
     DifferencePlugin(OfxImageEffectHandle handle)
@@ -206,6 +207,7 @@ public :
         assert(_gain);
     }
     
+private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
     
@@ -243,19 +245,19 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor, const OFX::RenderA
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     std::auto_ptr<OFX::Image> srcA(srcClipA_->fetchImage(args.time));
     std::auto_ptr<OFX::Image> srcB(srcClipB_->fetchImage(args.time));
-    if(srcA.get())
+    if (srcA.get())
     {
         OFX::BitDepthEnum    srcBitDepth      = srcA->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcA->getPixelComponents();
-        if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
             throw int(1);
     }
 
-    if(srcB.get())
+    if (srcB.get())
     {
         OFX::BitDepthEnum    srcBitDepth      = srcB->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcB->getPixelComponents();
-        if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
             throw int(1);
     }
 
@@ -281,9 +283,9 @@ DifferencePlugin::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
     
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
-    if(dstComponents == OFX::ePixelComponentRGBA)
+    if (dstComponents == OFX::ePixelComponentRGBA)
     {
-        switch(dstBitDepth)
+        switch (dstBitDepth)
         {
             case OFX::eBitDepthUByte :
             {
@@ -309,7 +311,7 @@ DifferencePlugin::render(const OFX::RenderArguments &args)
     }
     else if (dstComponents == OFX::ePixelComponentRGB)
     {
-        switch(dstBitDepth)
+        switch (dstBitDepth)
         {
             case OFX::eBitDepthUByte :
             {
@@ -336,7 +338,7 @@ DifferencePlugin::render(const OFX::RenderArguments &args)
     else
     {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        switch(dstBitDepth)
+        switch (dstBitDepth)
         {
             case OFX::eBitDepthUByte :
             {

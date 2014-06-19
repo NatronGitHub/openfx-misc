@@ -119,9 +119,7 @@ public:
 template <class PIX, int nComponents, int maxValue, bool masked, FilterEnum filter, bool clamp>
 class Transform3x3Processor : public Transform3x3ProcessorBase
 {
-
-
-    public :
+public:
     Transform3x3Processor(OFX::ImageEffect &instance)
     : Transform3x3ProcessorBase(instance)
     {
@@ -130,6 +128,7 @@ class Transform3x3Processor : public Transform3x3ProcessorBase
     virtual FilterEnum getFilter() const { return filter; }
     virtual bool getClamp() const { return clamp; }
 
+private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         float tmpPix[nComponents];

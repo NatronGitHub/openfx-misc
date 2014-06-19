@@ -156,16 +156,15 @@ public:
 template <class PIX, int nComponents, int maxValue>
 class MergeProcessor : public MergeProcessorBase
 {
-public :
+public:
     MergeProcessor(OFX::ImageEffect &instance)
     : MergeProcessorBase(instance)
     {
-        
     }
     
+private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-       
         float tmpPix[nComponents];
         float tmpA[nComponents];
         float tmpB[nComponents];
@@ -210,7 +209,7 @@ public :
 /** @brief The plugin that does our work */
 class MergePlugin : public OFX::ImageEffect
 {
-public :
+public:
     /** @brief ctor */
     MergePlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
@@ -235,6 +234,7 @@ public :
         _operationString = fetchStringParam(kOfxParamStringSublabelName);
     }
     
+private:
     // override the rod call
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod);
 
@@ -279,7 +279,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
     int bboxChoice;
     _bbox->getValueAtTime(args.time, bboxChoice);
     
-	switch(bboxChoice)
+	switch (bboxChoice)
 	{
 		case 0: //union
 		{
@@ -334,19 +334,17 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     std::auto_ptr<OFX::Image> srcA(srcClipA_->fetchImage(args.time));
     std::auto_ptr<OFX::Image> srcB(srcClipB_->fetchImage(args.time));
-    if(srcA.get())
-    {
+    if (srcA.get()) {
         OFX::BitDepthEnum    srcBitDepth      = srcA->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcA->getPixelComponents();
-        if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
             throw int(1);
     }
     
-    if(srcB.get())
-    {
+    if (srcB.get()) {
         OFX::BitDepthEnum    srcBitDepth      = srcB->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcB->getPixelComponents();
-        if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
             throw int(1);
     }
     
@@ -388,9 +386,9 @@ MergePlugin::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
     
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentAlpha);
-    if(dstComponents == OFX::ePixelComponentRGBA)
+    if (dstComponents == OFX::ePixelComponentRGBA)
     {
-        switch(dstBitDepth)
+        switch (dstBitDepth)
         {
             case OFX::eBitDepthUByte :
             {
@@ -416,7 +414,7 @@ MergePlugin::render(const OFX::RenderArguments &args)
     }
     else if (dstComponents == OFX::ePixelComponentRGB)
     {
-        switch(dstBitDepth)
+        switch (dstBitDepth)
         {
             case OFX::eBitDepthUByte :
             {
@@ -443,7 +441,7 @@ MergePlugin::render(const OFX::RenderArguments &args)
     else
     {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        switch(dstBitDepth)
+        switch (dstBitDepth)
         {
             case OFX::eBitDepthUByte :
             {
@@ -554,7 +552,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
         maskClip->addSupportedComponent(ePixelComponentAlpha);
         maskClip->setTemporalClipAccess(false);
-        if(context == eContextGeneral)
+        if (context == eContextGeneral)
             maskClip->setOptional(true);
         maskClip->setSupportsTiles(true);
         maskClip->setIsMask(true);

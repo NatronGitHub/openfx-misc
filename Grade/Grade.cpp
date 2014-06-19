@@ -138,7 +138,6 @@ public:
     , _maskImg(0)
     ,_doMasking(false)
     {
-        
     }
     
     void setSrcImg(OFX::Image *v) {_srcImg = v;}
@@ -209,35 +208,30 @@ private:
 template <class PIX, int nComponents, int maxValue>
 class GradeProcessor : public GradeProcessorBase
 {
-public :
+public:
     GradeProcessor(OFX::ImageEffect &instance)
     : GradeProcessorBase(instance)
     {
-        
     }
     
+private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
        
         float maskScale = 1.0f;
-        for(int y = procWindow.y1; y < procWindow.y2; y++)
-        {
+        for (int y = procWindow.y1; y < procWindow.y2; y++) {
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            for(int x = procWindow.x1; x < procWindow.x2; x++)
-            {
+            for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                if(_doMasking)
-                {
-                    if(!_maskImg)
+                if (_doMasking) {
+                    if (!_maskImg) {
                         maskScale = 1.0f;
-                    else
-                    {
+                    } else {
                         PIX *maskPix = (PIX *)  (_maskImg ? _maskImg->getPixelAddress(x, y) : 0);
                         maskScale = maskPix != 0 ? float(*maskPix)/float(maxValue) : 0.0f;
                     }
                 }
-                if(srcPix)
-                {
+                if (srcPix) {
                     PIX r = srcPix[0];
                     PIX g = srcPix[1];
                     PIX b = srcPix[2];
@@ -255,11 +249,10 @@ public :
                     if (nComponents == 4) {
                         dstPix[3] = srcPix[3];
                     }
-                }
-                else
-                {
-                    for(int c = 0; c < nComponents; c++)
+                } else {
+                    for (int c = 0; c < nComponents; c++) {
                         dstPix[c] = 0;
+                    }
                 }
                 dstPix += nComponents;
             }
@@ -272,7 +265,7 @@ public :
 /** @brief The plugin that does our work */
 class GradePlugin : public OFX::ImageEffect
 {
-public :
+public:
     /** @brief ctor */
     GradePlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
@@ -298,6 +291,7 @@ public :
         _clampWhite = fetchBooleanParam(kClampWhiteParamName);
     }
     
+private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
     
@@ -344,16 +338,14 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
-    if(src.get())
-    {
+    if (src.get()) {
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
             throw int(1);
     }
     std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
-    if(getContext() != OFX::eContextFilter)
-    {
+    if (getContext() != OFX::eContextFilter) {
         processor.doMasking(true);
         processor.setMaskImg(mask.get());
     }
@@ -387,10 +379,8 @@ GradePlugin::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
     
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
-    if(dstComponents == OFX::ePixelComponentRGBA)
-    {
-        switch(dstBitDepth)
-        {
+    if (dstComponents == OFX::ePixelComponentRGBA) {
+        switch (dstBitDepth) {
             case OFX::eBitDepthUByte :
             {
                 GradeProcessor<unsigned char, 4, 255> fred(*this);
@@ -412,12 +402,9 @@ GradePlugin::render(const OFX::RenderArguments &args)
             default :
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
-    }
-    else
-    {
+    } else {
         assert(dstComponents == OFX::ePixelComponentRGB);
-        switch(dstBitDepth)
-        {
+        switch (dstBitDepth) {
             case OFX::eBitDepthUByte :
             {
                 GradeProcessor<unsigned char, 3, 255> fred(*this);
@@ -504,7 +491,7 @@ void GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
         maskClip->addSupportedComponent(ePixelComponentAlpha);
         maskClip->setTemporalClipAccess(false);
-        if(context == eContextGeneral)
+        if (context == eContextGeneral)
             maskClip->setOptional(true);
         maskClip->setSupportsTiles(true);
         maskClip->setIsMask(true);

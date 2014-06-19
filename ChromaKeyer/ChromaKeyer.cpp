@@ -299,13 +299,13 @@ static PIX floatToSample(float value)
 template <class PIX, int nComponents, int maxValue>
 class ChromaKeyerProcessor : public ChromaKeyerProcessorBase
 {
-public :
+public:
     ChromaKeyerProcessor(OFX::ImageEffect &instance)
     : ChromaKeyerProcessorBase(instance)
     {
-        
     }
-    
+
+private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
@@ -594,7 +594,7 @@ public :
 /** @brief The plugin that does our work */
 class ChromaKeyerPlugin : public OFX::ImageEffect
 {
-public :
+public:
     /** @brief ctor */
     ChromaKeyerPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
@@ -630,6 +630,7 @@ public :
         sourceAlpha_ = fetchChoiceParam(kSourceAlphaParamName);
     }
  
+private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
     
@@ -678,11 +679,10 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
     std::auto_ptr<OFX::Image> bg(bgClip_->fetchImage(args.time));
-    if(src.get())
-    {
+    if (src.get()) {
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
             throw int(1);
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -692,11 +692,10 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
         }
     }
     
-    if(bg.get())
-    {
+    if (bg.get()) {
         OFX::BitDepthEnum    srcBitDepth      = bg->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = bg->getPixelComponents();
-        if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
             throw int(1);
         if (bg->getRenderScale().x != args.renderScale.x ||
             bg->getRenderScale().y != args.renderScale.y ||
@@ -762,9 +761,9 @@ ChromaKeyerPlugin::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
     
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
-    if(dstComponents == OFX::ePixelComponentRGBA)
+    if (dstComponents == OFX::ePixelComponentRGBA)
     {
-        switch(dstBitDepth)
+        switch (dstBitDepth)
         {
             //case OFX::eBitDepthUByte :
             //{
@@ -791,7 +790,7 @@ ChromaKeyerPlugin::render(const OFX::RenderArguments &args)
     else
     {
         assert(dstComponents == OFX::ePixelComponentRGB);
-        switch(dstBitDepth)
+        switch (dstBitDepth)
         {
             //case OFX::eBitDepthUByte :
             //{

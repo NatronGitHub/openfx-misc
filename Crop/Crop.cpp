@@ -157,7 +157,7 @@ private:
         //assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; ++y)
         {
-            if(_effect.abort()) break;
+            if (_effect.abort()) break;
             
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             
@@ -209,18 +209,6 @@ private:
 /** @brief The plugin that does our work */
 class CropPlugin : public OFX::ImageEffect
 {
-protected:
-    // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
-    
-    OFX::Double2DParam* _btmLeft;
-    OFX::Double2DParam* _size;
-    OFX::DoubleParam* _softness;
-    OFX::BooleanParam* _reformat;
-    OFX::BooleanParam* _intersect;
-    OFX::BooleanParam* _blackOutside;
-    
 public:
     /** @brief ctor */
     CropPlugin(OfxImageEffectHandle handle, bool masked)
@@ -267,6 +255,18 @@ private:
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
     
     void getCropRectangle_canonical(OfxTime time,bool useReformat,bool forceIntersect,OfxRectD& cropRect) const;
+
+private:
+    // do not need to delete these, the ImageEffect is managing them for us
+    OFX::Clip *dstClip_;
+    OFX::Clip *srcClip_;
+
+    OFX::Double2DParam* _btmLeft;
+    OFX::Double2DParam* _size;
+    OFX::DoubleParam* _softness;
+    OFX::BooleanParam* _reformat;
+    OFX::BooleanParam* _intersect;
+    OFX::BooleanParam* _blackOutside;
 };
 
 void
@@ -421,7 +421,7 @@ template <int nComponents>
 void
 CropPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
-    switch(dstBitDepth)
+    switch (dstBitDepth)
     {
         case OFX::eBitDepthUByte :
         {

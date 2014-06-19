@@ -153,7 +153,7 @@ static OfxImageEffectSuiteV1imageMemoryUnlock imageMemoryUnlockNthFunc(int nth);
 
 /** @brief A class that lists all the properties of a host */
 struct ImageEffectHostDescription {
- public :
+ public:
     std::vector<int> apiVersion; // TODO
     std::string type;
   std::string hostName;
@@ -355,7 +355,7 @@ inline OfxStatus
 fetchHostSuites(int nth)
 {
     assert(nth < gHost.size());
-    if(!gHost[nth])
+    if (!gHost[nth])
         return kOfxStatErrMissingHostFeature;
 
     if (nth+1 > gEffectHost.size()) {
@@ -408,7 +408,7 @@ fetchHostSuites(int nth)
     gVegasKeyframeHost[nth]          = (OfxVegasKeyframeSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxVegasKeyframeSuite, 1);
 #endif
     gInteractHost[nth]   = (OfxInteractSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxInteractSuite, 1);
-    if(!gEffectHost[nth] || !gPropHost[nth] || !gParamHost[nth] || !gMemoryHost[nth] || !gThreadHost[nth])
+    if (!gEffectHost[nth] || !gPropHost[nth] || !gParamHost[nth] || !gMemoryHost[nth] || !gThreadHost[nth])
         return kOfxStatErrMissingHostFeature;
     // setup proxies
     gEffectProxy[nth] = *gEffectHost[nth];
@@ -432,7 +432,7 @@ inline OfxStatus
 fetchHostDescription(int nth)
 {
     assert(nth < gHost.size());
-    if(!gHost[nth])
+    if (!gHost[nth])
         return kOfxStatErrMissingHostFeature;
 
     if (nth+1 > gHostDescription.size()) {
@@ -476,7 +476,7 @@ fetchHostDescription(int nth)
     int numComponents;
     st = gPropHost[nth]->propGetDimension(host, kOfxImageEffectPropSupportedComponents, &numComponents);
     assert (st == kOfxStatOK);
-    for(int i=0; i<numComponents; ++i) {
+    for (int i=0; i<numComponents; ++i) {
         char *comp;
         st = gPropHost[nth]->propGetString(host, kOfxImageEffectPropSupportedComponents, i, &comp);
         assert (st == kOfxStatOK);
@@ -485,7 +485,7 @@ fetchHostDescription(int nth)
     int numContexts;
     st = gPropHost[nth]->propGetDimension(host, kOfxImageEffectPropSupportedContexts, &numContexts);
     assert (st == kOfxStatOK);
-    for(int i=0; i<numContexts; ++i) {
+    for (int i=0; i<numContexts; ++i) {
         char* cont;
         st = gPropHost[nth]->propGetString(host, kOfxImageEffectPropSupportedContexts, i, &cont);
         assert (st == kOfxStatOK);
@@ -494,7 +494,7 @@ fetchHostDescription(int nth)
 	int numPixelDepths;
     st = gPropHost[nth]->propGetDimension(host, kOfxImageEffectPropSupportedPixelDepths, &numPixelDepths);
     assert (st == kOfxStatOK);
-    for(int i=0; i<numPixelDepths; ++i) {
+    for (int i=0; i<numPixelDepths; ++i) {
         char *depth;
         st = gPropHost[nth]->propGetString(host, kOfxImageEffectPropSupportedPixelDepths, i, &depth);
         assert (st == kOfxStatOK);
@@ -693,22 +693,22 @@ overlayMain(int nth, const char *action, const void *handle, OfxPropertySetHandl
   OfxStatus st = kOfxStatErrUnknown;
   try {
     // pre-hooks on some actions (e.g. print or modify parameters)
-    if(strcmp(action, kOfxActionDescribe) == 0) {
+    if (strcmp(action, kOfxActionDescribe) == 0) {
       // no inArgs
 
       ss << "(" << handle << ")";
     }
-    else if(strcmp(action, kOfxActionCreateInstance) == 0) {
+    else if (strcmp(action, kOfxActionCreateInstance) == 0) {
       // no inArgs
 
       ss << "(" << handle << ")";
     } 
-    else if(strcmp(action, kOfxActionDestroyInstance) == 0) {
+    else if (strcmp(action, kOfxActionDestroyInstance) == 0) {
       // no inArgs
 
       ss << "(" << handle << ")";
     } 
-    else if(strcmp(action, kOfxInteractActionDraw) == 0) {
+    else if (strcmp(action, kOfxInteractActionDraw) == 0) {
       // inArgs has the following properties on an image effect plugin,
       //     kOfxPropEffectInstance - a handle to the effect for which the interact has been,
       //     kOfxInteractPropViewportSize - the openGL viewport size for the instance
@@ -719,7 +719,7 @@ overlayMain(int nth, const char *action, const void *handle, OfxPropertySetHandl
       
       ss << "(" << handle << ",TODO)";
     }
-    else if(strcmp(action, kOfxInteractActionPenMotion) == 0 ||
+    else if (strcmp(action, kOfxInteractActionPenMotion) == 0 ||
             strcmp(action, kOfxInteractActionPenDown) == 0 ||
             strcmp(action, kOfxInteractActionPenUp) == 0) {
       // inArgs has the following properties on an image effect plugin,
@@ -736,7 +736,7 @@ overlayMain(int nth, const char *action, const void *handle, OfxPropertySetHandl
 
       ss << "(" << handle << ",TODO)";
     }
-    else if(strcmp(action, kOfxInteractActionKeyDown) == 0 ||
+    else if (strcmp(action, kOfxInteractActionKeyDown) == 0 ||
             strcmp(action, kOfxInteractActionKeyUp) == 0 ||
             strcmp(action, kOfxInteractActionKeyRepeat) == 0) {
       // inArgs has the following properties on an image effect plugin,
@@ -748,7 +748,7 @@ overlayMain(int nth, const char *action, const void *handle, OfxPropertySetHandl
 
       ss << "(" << handle << ",TODO)";
     }
-    else if(strcmp(action, kOfxInteractActionGainFocus) == 0 ||
+    else if (strcmp(action, kOfxInteractActionGainFocus) == 0 ||
             strcmp(action, kOfxInteractActionLoseFocus) == 0) {
       // inArgs has the following properties on an image effect plugin,
       //     kOfxPropEffectInstance - a handle to the effect for which the interact is being used on,
@@ -772,29 +772,29 @@ overlayMain(int nth, const char *action, const void *handle, OfxPropertySetHandl
 
     // post-hooks on some actions (e.g. print or modify result)
     // get the outargs
-    if(strcmp(action, kOfxActionDescribe) == 0) {
+    if (strcmp(action, kOfxActionDescribe) == 0) {
       // no outArgs
     }
-    else if(strcmp(action, kOfxActionCreateInstance) == 0) {
+    else if (strcmp(action, kOfxActionCreateInstance) == 0) {
       // no outArgs
     } 
-    else if(strcmp(action, kOfxActionDestroyInstance) == 0) {
+    else if (strcmp(action, kOfxActionDestroyInstance) == 0) {
       // no outArgs
     } 
-    else if(strcmp(action, kOfxInteractActionDraw) == 0) {
+    else if (strcmp(action, kOfxInteractActionDraw) == 0) {
       // no outArgs
     } 
-    else if(strcmp(action, kOfxInteractActionPenMotion) == 0 ||
+    else if (strcmp(action, kOfxInteractActionPenMotion) == 0 ||
             strcmp(action, kOfxInteractActionPenDown) == 0 ||
             strcmp(action, kOfxInteractActionPenUp) == 0) {
       // no outArgs
     }
-    else if(strcmp(action, kOfxInteractActionKeyDown) == 0 ||
+    else if (strcmp(action, kOfxInteractActionKeyDown) == 0 ||
             strcmp(action, kOfxInteractActionKeyUp) == 0 ||
             strcmp(action, kOfxInteractActionKeyRepeat) == 0) {
       // no outArgs
     }
-    else if(strcmp(action, kOfxInteractActionGainFocus) == 0 ||
+    else if (strcmp(action, kOfxInteractActionGainFocus) == 0 ||
             strcmp(action, kOfxInteractActionLoseFocus) == 0) {
       // no outArgs
     }
@@ -895,12 +895,12 @@ static OfxStatus
 pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs)
 {
   // fetch the host suites and setup proxies
-  if(strcmp(action, kOfxActionLoad) == 0) {
+  if (strcmp(action, kOfxActionLoad) == 0) {
       // fetch the host APIs
       OfxStatus stat;
-      if((stat = fetchHostSuites(nth)) != kOfxStatOK)
+      if ((stat = fetchHostSuites(nth)) != kOfxStatOK)
           return stat;
-      if((stat = fetchHostDescription(nth)) != kOfxStatOK)
+      if ((stat = fetchHostDescription(nth)) != kOfxStatOK)
           return stat;
       printHostDescription(nth);
   }
@@ -911,32 +911,32 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
   OfxStatus st = kOfxStatErrUnknown;
   try {
     // pre-hooks on some actions (e.g. print or modify parameters)
-    if(strcmp(action, kOfxActionLoad) == 0) {
+    if (strcmp(action, kOfxActionLoad) == 0) {
       // no inArgs
 
       ss << "()";
     }
-    else if(strcmp(action, kOfxActionUnload) == 0) {
+    else if (strcmp(action, kOfxActionUnload) == 0) {
       // no inArgs
 
       ss << "()";
     }
-    else if(strcmp(action, kOfxActionDescribe) == 0) {
+    else if (strcmp(action, kOfxActionDescribe) == 0) {
       // no inArgs
 
       ss << "(" << handle << ")";
     }
-    else if(strcmp(action, kOfxActionCreateInstance) == 0) {
+    else if (strcmp(action, kOfxActionCreateInstance) == 0) {
       // no inArgs
 
       ss << "(" << handle << ")";
     } 
-    else if(strcmp(action, kOfxActionDestroyInstance) == 0) {
+    else if (strcmp(action, kOfxActionDestroyInstance) == 0) {
       // no inArgs
 
       ss << "(" << handle << ")";
     } 
-    else if(strcmp(action, kOfxActionBeginInstanceChanged) == 0 ||
+    else if (strcmp(action, kOfxActionBeginInstanceChanged) == 0 ||
             strcmp(action, kOfxActionEndInstanceChanged) == 0) {
       // inArgs has the following properties...
       //     kOfxPropChangeReason - what triggered the change, which will be one of...
@@ -947,7 +947,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
 
       ss << "(" << handle << "," << changeReason << ")";
     }
-    else if(strcmp(action, kOfxActionInstanceChanged) == 0) {
+    else if (strcmp(action, kOfxActionInstanceChanged) == 0) {
       // inArgs has the following properties...
       //     kOfxPropType - the type of the thing that changed which will be one of..
       //     kOfxPropName - the name of the thing that was changed in the instance
@@ -973,23 +973,23 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
 
       ss << "(" << handle << "," << typeChanged << "," << objChanged << "," << changeReason << "," << time << ",(" << renderScale.x << "," << renderScale.y << "))";
     }  
-    else if(strcmp(action, kOfxActionPurgeCaches) == 0) {
+    else if (strcmp(action, kOfxActionPurgeCaches) == 0) {
       // no inArgs
 
       ss << "(" << handle << ")";
     }  
-    else if(strcmp(action, kOfxActionSyncPrivateData) == 0) {
+    else if (strcmp(action, kOfxActionSyncPrivateData) == 0) {
       // no inArgs
 
       ss << "(" << handle << ")";
     }  
-    else if(strcmp(action, kOfxActionBeginInstanceEdit) == 0 ||
+    else if (strcmp(action, kOfxActionBeginInstanceEdit) == 0 ||
             strcmp(action, kOfxActionEndInstanceEdit) == 0) {
       // no inArgs
 
       ss << "(" << handle << ")";
     }  
-    else if(strcmp(action, kOfxImageEffectActionDescribeInContext) == 0) {
+    else if (strcmp(action, kOfxImageEffectActionDescribeInContext) == 0) {
       // inArgs has the following property...
       //     kOfxImageEffectPropContext the context being described.
 
@@ -1002,7 +1002,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       gContexts[(OfxImageEffectHandle)handle] = context;
 #endif
     }
-    else if(strcmp(action, kOfxImageEffectActionGetRegionOfDefinition) == 0) {
+    else if (strcmp(action, kOfxImageEffectActionGetRegionOfDefinition) == 0) {
       // inArgs has the following properties...
       //    kOfxPropTime the effect time for which a region of definition is being requested,
       //    kOfxImageEffectPropRenderScale the render scale that should be used in any calculations in this action,
@@ -1016,7 +1016,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
 
       ss << "(" << handle << "," << time << ",(" << renderScale.x << "," << renderScale.y << "))";
     }  
-    else if(strcmp(action, kOfxImageEffectActionGetRegionsOfInterest) == 0) {
+    else if (strcmp(action, kOfxImageEffectActionGetRegionsOfInterest) == 0) {
       // inArgs has the following properties...
       //     kOfxPropTime the effect time for which a region of definition is being requested,
       //     kOfxImageEffectPropRenderScale the render scale that should be used in any calculations in this action,
@@ -1035,7 +1035,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
 
       ss << "(" << handle << "," << time << ",(" << renderScale.x << "," << renderScale.y << "),(" << roi.x1 << "," << roi.y1 << "," << roi.x2 << "," << roi.y2 << "))";
     }  
-    else if(strcmp(action, kOfxImageEffectActionGetFramesNeeded) == 0) {
+    else if (strcmp(action, kOfxImageEffectActionGetFramesNeeded) == 0) {
       // inArgs has the following property...
       //     kOfxPropTime the effect time for which we need to calculate the frames needed on input
 
@@ -1045,7 +1045,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
 
       ss << "(" << handle << "," << time << ")";
     }    
-    else if(strcmp(action, kOfxImageEffectActionIsIdentity) == 0) {
+    else if (strcmp(action, kOfxImageEffectActionIsIdentity) == 0) {
       // inArgs has the following properties...
       //     kOfxPropTime - the time at which to test for identity
       //     kOfxImageEffectPropFieldToRender - the field to test for identity
@@ -1067,7 +1067,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
 
       ss << "(" << handle << "," << time << "," << field << ",(" << renderWindow.x1 << "," << renderWindow.y1 << "," << renderWindow.x2 << "," << renderWindow.y2 << "),(" << renderScale.x << "," << renderScale.y << "))";
     }    
-    else if(strcmp(action, kOfxImageEffectActionRender) == 0) {
+    else if (strcmp(action, kOfxImageEffectActionRender) == 0) {
       // inArgs has the following properties...
       //     kOfxPropTime - the time at which to test for identity
       //     kOfxImageEffectPropFieldToRender - the field to test for identity
@@ -1118,7 +1118,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
 #     endif
         << ")";
     }    
-    else if(strcmp(action, kOfxImageEffectActionBeginSequenceRender) == 0 ||
+    else if (strcmp(action, kOfxImageEffectActionBeginSequenceRender) == 0 ||
             strcmp(action, kOfxImageEffectActionEndSequenceRender) == 0) {
       // inArgs has the following properties...
       //     kOfxImageEffectPropFrameRange - the range of frames (inclusive) that will be renderred,
@@ -1155,12 +1155,12 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
 #     endif
         << ")";
     }
-    else if(strcmp(action, kOfxImageEffectActionGetClipPreferences) == 0) {
+    else if (strcmp(action, kOfxImageEffectActionGetClipPreferences) == 0) {
       // no inArgs
 
       ss << "(" << handle << ")";
     }  
-    else if(strcmp(action, kOfxImageEffectActionGetTimeDomain) == 0) {
+    else if (strcmp(action, kOfxImageEffectActionGetTimeDomain) == 0) {
       // no inArgs
 
       ss << "(" << handle << ")";
@@ -1178,13 +1178,13 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
     
     // post-hooks on some actions (e.g. print or modify result)
     // get the outargs
-    if(strcmp(action, kOfxActionLoad) == 0) {
+    if (strcmp(action, kOfxActionLoad) == 0) {
       // no outArgs
     }
-    else if(strcmp(action, kOfxActionUnload) == 0) {
+    else if (strcmp(action, kOfxActionUnload) == 0) {
       // no outArgs
     }
-    else if(strcmp(action, kOfxActionDescribe) == 0) {
+    else if (strcmp(action, kOfxActionDescribe) == 0) {
       // no outArgs
         
       // see if the host supports overlays, in which case check if the plugin set kOfxImageEffectPluginPropOverlayInteractV1
@@ -1204,33 +1204,33 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
         }
       }
     }
-    else if(strcmp(action, kOfxActionCreateInstance) == 0) {
+    else if (strcmp(action, kOfxActionCreateInstance) == 0) {
       // no outArgs
     } 
-    else if(strcmp(action, kOfxActionDestroyInstance) == 0) {
+    else if (strcmp(action, kOfxActionDestroyInstance) == 0) {
       // no outArgs
     } 
-    else if(strcmp(action, kOfxActionBeginInstanceChanged) == 0 ||
+    else if (strcmp(action, kOfxActionBeginInstanceChanged) == 0 ||
             strcmp(action, kOfxActionEndInstanceChanged) == 0) {
       // no outArgs
     }
-    else if(strcmp(action, kOfxActionInstanceChanged) == 0) {
+    else if (strcmp(action, kOfxActionInstanceChanged) == 0) {
       // no outArgs
     }  
-    else if(strcmp(action, kOfxActionPurgeCaches) == 0) {
+    else if (strcmp(action, kOfxActionPurgeCaches) == 0) {
       // no outArgs
     }  
-    else if(strcmp(action, kOfxActionSyncPrivateData) == 0) {
+    else if (strcmp(action, kOfxActionSyncPrivateData) == 0) {
       // no outArgs
     }  
-    else if(strcmp(action, kOfxActionBeginInstanceEdit) == 0 ||
+    else if (strcmp(action, kOfxActionBeginInstanceEdit) == 0 ||
             strcmp(action, kOfxActionEndInstanceEdit) == 0) {
       // no outArgs
     }  
-    else if(strcmp(action, kOfxImageEffectActionDescribeInContext) == 0) {
+    else if (strcmp(action, kOfxImageEffectActionDescribeInContext) == 0) {
       // no outArgs
     }
-    else if(strcmp(action, kOfxImageEffectActionGetRegionOfDefinition) == 0) {
+    else if (strcmp(action, kOfxImageEffectActionGetRegionOfDefinition) == 0) {
       // outArgs has the following property which the plug-in may set...
       // kOfxImageEffectPropRegionOfDefinitiong, the calculated region of definition, initially set by the host to the default RoD (see below), in Canonical Coordinates.
       if (st == kOfxStatOK) {
@@ -1240,7 +1240,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
         ssr << "((" << rod.x1 << "," << rod.y1 << "," << rod.x2 << "," << rod.y2 << "))";
       }
     }  
-    else if(strcmp(action, kOfxImageEffectActionGetRegionsOfInterest) == 0) {
+    else if (strcmp(action, kOfxImageEffectActionGetRegionsOfInterest) == 0) {
       // outArgs has a set of 4 dimensional double properties, one for each of the input clips to the effect. The properties are each named "OfxImageClipPropRoI_" with the clip name post pended, for example "OfxImageClipPropRoI_Source". These are initialised to the default RoI. 
       if (st == kOfxStatOK) {
 #ifdef OFX_DEBUG_PROXY_CLIPS
@@ -1266,7 +1266,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
 #endif
       }
     }  
-    else if(strcmp(action, kOfxImageEffectActionGetFramesNeeded) == 0) {
+    else if (strcmp(action, kOfxImageEffectActionGetFramesNeeded) == 0) {
       // outArgs has a set of properties, one for each input clip, named "OfxImageClipPropFrameRange_" with the name of the clip post-pended. For example "OfxImageClipPropFrameRange_Source". All these properties are multi-dimensional doubles, with the dimension is a multiple of two. Each pair of values indicates a continuous range of frames that is needed on the given input. They are all initalised to the default value. 
       if (st == kOfxStatOK) {
 #ifdef OFX_DEBUG_PROXY_CLIPS
@@ -1303,7 +1303,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
 #endif
       }
     }
-    else if(strcmp(action, kOfxImageEffectActionIsIdentity) == 0) {
+    else if (strcmp(action, kOfxImageEffectActionIsIdentity) == 0) {
       // outArgs has the following properties which the plugin can set...
       //    kOfxPropName this to the name of the clip that should be used if the effect is an identity transform, defaults to the empty string
       //    kOfxPropTime the time to use from the indicated source clip as an identity image (allowing time slips to happen), defaults to the value in kOfxPropTime in inArgs
@@ -1315,14 +1315,14 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
         ssr << "(" << name << "," << time << ")";
       }
     }    
-    else if(strcmp(action, kOfxImageEffectActionRender) == 0) {
+    else if (strcmp(action, kOfxImageEffectActionRender) == 0) {
       // no outArgs
     }    
-    else if(strcmp(action, kOfxImageEffectActionBeginSequenceRender) == 0 ||
+    else if (strcmp(action, kOfxImageEffectActionBeginSequenceRender) == 0 ||
             strcmp(action, kOfxImageEffectActionEndSequenceRender) == 0) {
       // no outArgs
     }
-    else if(strcmp(action, kOfxImageEffectActionGetClipPreferences) == 0) {
+    else if (strcmp(action, kOfxImageEffectActionGetClipPreferences) == 0) {
       // outArgs has the following properties which the plugin can set...
 
       //  a set of char * X 1 properties, one for each of the input clips currently attached and the output clip, labelled with "OfxImageClipPropComponents_" post pended with the clip's name. This must be set to one of the component types which the host supports and the effect stated it can accept on that input,
@@ -1404,7 +1404,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
 #endif
       }
     }
-    else if(strcmp(action, kOfxImageEffectActionGetTimeDomain) == 0) {
+    else if (strcmp(action, kOfxImageEffectActionGetTimeDomain) == 0) {
       // outArgs has the following property
       //  kOfxImageEffectPropFrameRange - the frame range an effect can produce images for
       if (st == kOfxStatOK) {

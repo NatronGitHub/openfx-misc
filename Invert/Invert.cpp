@@ -110,7 +110,7 @@ using namespace OFX;
 // Base class for the RGBA and the Alpha processor
 class InvertBase : public OFX::ImageProcessor
 {
-protected :
+protected:
     OFX::Image *_srcImg;
     OFX::Image *_maskImg;
     bool   _doMasking;
@@ -119,7 +119,7 @@ protected :
 	bool _blue;
 	bool _alpha;
     double _mix;
-public :
+public:
     /** @brief no arg ctor */
     InvertBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
@@ -154,8 +154,10 @@ public:
     // ctor
     ImageInverter(OFX::ImageEffect &instance)
     : InvertBase(instance)
-    {}
+    {
+    }
 
+private:
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
@@ -233,7 +235,7 @@ private:
                     ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, dstPix);
                 } else {
                     // no src pixel here, be black and transparent
-                    for(int c = 0; c < nComponents; c++) {
+                    for (int c = 0; c < nComponents; c++) {
                         dstPix[c] = 0;
                     }
                 }
@@ -269,6 +271,7 @@ public:
         _mix = fetchDoubleParam(kFilterMixParamName);
     }
 
+private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) /*OVERRIDE FINAL*/;
 
@@ -319,7 +322,7 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
 
         // see if they have the same depths and bytes and all
-        if(srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
@@ -366,7 +369,7 @@ InvertPlugin::render(const OFX::RenderArguments &args)
 
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
-        switch(dstBitDepth) {
+        switch (dstBitDepth) {
             case OFX::eBitDepthUByte : {
                 ImageInverter<unsigned char, 4, 255> fred(*this);
                 setupAndProcess(fred, args);
@@ -388,7 +391,7 @@ InvertPlugin::render(const OFX::RenderArguments &args)
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     } else if (dstComponents == OFX::ePixelComponentRGB) {
-        switch(dstBitDepth) {
+        switch (dstBitDepth) {
             case OFX::eBitDepthUByte : {
                 ImageInverter<unsigned char, 3, 255> fred(*this);
                 setupAndProcess(fred, args);
@@ -411,7 +414,7 @@ InvertPlugin::render(const OFX::RenderArguments &args)
         }
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        switch(dstBitDepth) {
+        switch (dstBitDepth) {
             case OFX::eBitDepthUByte : {
                 ImageInverter<unsigned char, 1, 255> fred(*this);
                 setupAndProcess(fred, args);

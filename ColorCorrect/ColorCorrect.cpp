@@ -120,8 +120,8 @@ using namespace OFX;
 template <class T> inline T
 Clamp(T v, int min, int max)
 {
-    if(v < T(min)) return T(min);
-    if(v > T(max)) return T(max);
+    if (v < T(min)) return T(min);
+    if (v > T(max)) return T(max);
     return v;
 }
 
@@ -237,7 +237,7 @@ protected:
     OFX::Image *_maskImg;
     bool   _doMasking;
 
-public :
+public:
     ColorCorrecterBase(OFX::ImageEffect &instance,const OFX::RenderArguments &args)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
@@ -247,8 +247,8 @@ public :
         // build the LUT
         OFX::ParametricParam  *lookupTable = instance.fetchParametricParam(kColorCorrectToneRangesParamName);
         assert(lookupTable);
-        for(int curve = 0; curve < 2; ++curve) {
-            for(int position = 0; position <= LUT_MAX_PRECISION; ++position) {
+        for (int curve = 0; curve < 2; ++curve) {
+            for (int position = 0; position <= LUT_MAX_PRECISION; ++position) {
                 // position to evaluate the param at
                 float parametricPos = float(position)/LUT_MAX_PRECISION;
 
@@ -312,7 +312,7 @@ private:
         }
     }
 
-private :
+private:
     ColorControlGroup _masterValues;
     ColorControlGroup _shadowValues;
     ColorControlGroup _midtoneValues;
@@ -326,35 +326,32 @@ private :
 template <class PIX, int nComponents, int maxValue>
 class ColorCorrecter : public ColorCorrecterBase
 {
-public :
+public:
     ColorCorrecter(OFX::ImageEffect &instance,const OFX::RenderArguments &args)
     : ColorCorrecterBase(instance,args)
     {
-
     }
 
+private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
 
         float maskScale = 1.0f;
-        for(int y = procWindow.y1; y < procWindow.y2; y++)
+        for (int y = procWindow.y1; y < procWindow.y2; y++)
         {
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            for(int x = procWindow.x1; x < procWindow.x2; x++)
+            for (int x = procWindow.x1; x < procWindow.x2; x++)
             {
                 PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                if(_doMasking)
-                {
-                    if(!_maskImg)
+                if (_doMasking) {
+                    if (!_maskImg) {
                         maskScale = 1.0f;
-                    else
-                    {
+                    } else {
                         PIX *maskPix = (PIX *)  (_maskImg ? _maskImg->getPixelAddress(x, y) : 0);
                         maskScale = maskPix != 0 ? float(*maskPix)/float(maxValue) : 0.0f;
                     }
                 }
-                if(srcPix)
-                {
+                if (srcPix) {
                     PIX r = srcPix[0];
                     PIX g = srcPix[1];
                     PIX b = srcPix[2];
@@ -372,10 +369,8 @@ public :
                     if (nComponents == 4) {
                         dstPix[3] = srcPix[3];
                     }
-                }
-                else
-                {
-                    for(int c = 0; c < nComponents; c++)
+                } else {
+                    for (int c = 0; c < nComponents; c++)
                         dstPix[c] = 0;
                 }
                 dstPix += nComponents;
@@ -398,7 +393,7 @@ namespace {
 /** @brief The plugin that does our work */
 class ColorCorrectPlugin : public OFX::ImageEffect
 {
-public :
+public:
     
     enum ColorCorrectGroupType {
         eGroupMaster = 0,
@@ -427,13 +422,13 @@ public :
         _rangesParam = fetchParametricParam(kColorCorrectToneRangesParamName);
     }
     
+private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
     
     /* set up and run a processor */
     void setupAndProcess(ColorCorrecterBase &, const OFX::RenderArguments &args);
     
-private:
     void fetchColorControlGroup(const std::string& groupName, ColorControlParamGroup* group) {
         group->saturation = fetchRGBAParam(groupName + '.' + kColorCorrectSaturationName);
         group->contrast = fetchRGBAParam(groupName + '.' + kColorCorrectContrastName);
@@ -460,7 +455,7 @@ private:
         }
     }
 
-private :
+private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
@@ -510,7 +505,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
     if (src.get()) {
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if(srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
             throw int(1);
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -556,9 +551,9 @@ ColorCorrectPlugin::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
     
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
-    if(dstComponents == OFX::ePixelComponentRGBA)
+    if (dstComponents == OFX::ePixelComponentRGBA)
     {
-        switch(dstBitDepth)
+        switch (dstBitDepth)
         {
             case OFX::eBitDepthUByte :
             {
@@ -585,7 +580,7 @@ ColorCorrectPlugin::render(const OFX::RenderArguments &args)
     else
     {
         assert(dstComponents == OFX::ePixelComponentRGB);
-        switch(dstBitDepth)
+        switch (dstBitDepth)
         {
             case OFX::eBitDepthUByte :
             {
@@ -704,7 +699,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
         maskClip->addSupportedComponent(ePixelComponentAlpha);
         maskClip->setTemporalClipAccess(false);
-        if(context == eContextGeneral)
+        if (context == eContextGeneral)
             maskClip->setOptional(true);
         maskClip->setSupportsTiles(true);
         maskClip->setIsMask(true);

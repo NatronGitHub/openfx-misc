@@ -271,8 +271,9 @@ void TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args, const s
 ////////////////////////////////////////////////////////////////////////////////
 // stuff for the interact
 
-class TransformInteract : public OFX::OverlayInteract {
-    protected :
+class TransformInteract : public OFX::OverlayInteract
+{
+protected:
     enum DrawStateEnum {
         eInActive = 0, //< nothing happening
         eCircleHovered, //< the scale circle is hovered
@@ -306,7 +307,7 @@ class TransformInteract : public OFX::OverlayInteract {
     TransformPlugin* _plugin;
     OfxPointD _lastMousePos;
     
-    public :
+public:
     TransformInteract(OfxInteractHandle handle, OFX::ImageEffect* effect)
     : OFX::OverlayInteract(handle)
     , _drawState(eInActive)
@@ -347,7 +348,6 @@ class TransformInteract : public OFX::OverlayInteract {
     virtual bool keyUp(const OFX::KeyArgs &args);
 
 private:
-
     void getCenter(double time, OfxPointD *center)
     {
         OfxPointD translate;
@@ -417,6 +417,7 @@ private:
         ret.max = getProperties().propGetDouble(kOfxInteractPropViewportSize, 1);
         return ret;
     }
+
 private:
     // NON-GENERIC
     OFX::Double2DParam* _translate;
