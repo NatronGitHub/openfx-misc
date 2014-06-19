@@ -440,9 +440,10 @@ CopyRectanglePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments 
 bool
 CopyRectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
-    getRectanglecanonical(args.time, rod);
+    OfxRectD rect;
+    getRectanglecanonical(args.time, rect);
     OfxRectD srcB_rod = srcClipB_->getRegionOfDefinition(args.time);
-    rod = MergeImages2D::rectanglesBoundingBox(rod, srcB_rod);
+    rod = MergeImages2D::rectanglesBoundingBox(rect, srcB_rod);
     return true;
 }
 
