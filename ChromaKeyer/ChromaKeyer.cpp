@@ -633,7 +633,10 @@ public:
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
-    
+
+    /** @brief get the clip preferences */
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) /* OVERRIDE FINAL */;
+
     /* set up and run a processor */
     void setupAndProcess(ChromaKeyerProcessorBase &, const OFX::RenderArguments &args);
 
@@ -816,6 +819,29 @@ ChromaKeyerPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+
+/* Override the clip preferences */
+void
+ChromaKeyerPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    // set the premultiplication of dstClip_
+    int outputModeI;
+    OutputModeEnum outputMode;
+    outputMode_->getValue(outputModeI);
+    outputMode = (OutputModeEnum)outputModeI;
+
+    switch(outputMode) {
+        case eOutputModeIntermediate:
+        case eOutputModeUnpremultiplied:
+        case eOutputModeComposite:
+            clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
+            break;
+        case eOutputModePremultiplied:
+            clipPreferences.setOutputPremultiplication(eImagePreMultiplied);
+            break;
+    }
+}
+
 mDeclarePluginFactory(ChromaKeyerPluginFactory, {}, {});
 
 void ChromaKeyerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
@@ -949,6 +975,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     outputMode->setDefault((int)eOutputModeComposite);
     outputMode->setAnimates(true);
     page->addChild(*outputMode);
+    desc.addClipPreferencesSlaveParam(*outputMode);
 
     ChoiceParamDescriptor* sourceAlpha = desc.defineChoiceParam(kSourceAlphaParamName);
     sourceAlpha->setLabels(kSourceAlphaParamLabel, kSourceAlphaParamLabel, kSourceAlphaParamLabel);
