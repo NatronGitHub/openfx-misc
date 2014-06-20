@@ -281,7 +281,7 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    IntParamDescriptor *time_offset = desc.defineIntParam("time_offset");
+    IntParamDescriptor *time_offset = desc.defineIntParam("timeOffset");
     time_offset->setLabels("time offset (frames)", "time offset (frames)", "time offset (frames)");
     time_offset->setScriptName("time_offset");
     time_offset->setHint("Offset in frames (frame f from the input will be at f+offset)");
@@ -293,7 +293,7 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 
     page->addChild(*time_offset);
 
-    BooleanParamDescriptor *reverse_input = desc.defineBooleanParam("reverse_input");
+    BooleanParamDescriptor *reverse_input = desc.defineBooleanParam("reverseInput");
     reverse_input->setDefault(false);
     reverse_input->setHint("Reverse the order of the input frames so that last one is first");
     reverse_input->setLabels("reverse input", "reverse input", "reverse input");
