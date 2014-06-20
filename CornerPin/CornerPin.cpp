@@ -145,23 +145,23 @@ static const char* const kFromParamName[4] = {
 };
 
 
-#define kCopyFromParamName "copy_from"
+#define kCopyFromParamName "copyFrom"
 #define kCopyFromParamLabel "Copy \"From\" points"
 #define kCopyFromParamHint "Copy the content from the \"to\" points to the \"from\" points."
 
-#define kCopyToParamName "copy_to"
+#define kCopyToParamName "copyTo"
 #define kCopyToParamLabel "Copy \"To\" points"
 #define kCopyToParamHint "Copy the content from the \"from\" points to the \"to\" points."
 
-#define kCopyInputRoDParamName "set_to_input_rod"
+#define kCopyInputRoDParamName "setToInputRod"
 #define kCopyInputRoDParamLabel "Set to input rod"
 #define kCopyInputRoDParamHint "Copy the values from the source region of definition into the \"to\" points."
 
-#define kOverlayPointsParamName "overlay_points"
+#define kOverlayPointsParamName "overlayPoints"
 #define kOverlayPointsParamLabel "Overlay points"
 #define kOverlayPointsParamHint "Whether to display the \"from\" or the \"to\" points in the overlay"
 
-#define kExtraMatrixParamName "transform_matrix"
+#define kExtraMatrixParamName "transformMatrix"
 #define kExtraMatrixParamLabel "Extra matrix"
 #define kExtraMatrixParamHint "This matrix gets concatenated to the transform defined by the other parameters."
 #define kExtraMatrixRow1ParamName "row1"

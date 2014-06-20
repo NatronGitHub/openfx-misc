@@ -111,7 +111,7 @@
 #define kOffsetParamLabel "Convergence Offset"
 #define kOffsetParamHint "The disparity of the tracked point will be set to this"
 
-#define kConvergeModeParamName "convergemode"
+#define kConvergeModeParamName "convergeMode"
 #define kConvergeModeParamLabel "Mode"
 #define kConvergeModeParamHint "Select to view to be shifted in order to set convergence"
 #define kConvergeModeParamOptionShiftRight "Shift Right"
