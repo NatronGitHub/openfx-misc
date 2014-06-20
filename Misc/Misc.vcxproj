@@ -92,7 +92,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OFX_EXTENSIONS_VEGAS;OFX_EXTENSIONS_TUTTLE;OFX_EXTENSIONS_NUKE;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;WIN32;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\RGBLut;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir)..\Reformat;$(SolutionDir)..\Misc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\RGBLut;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -110,7 +110,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OFX_EXTENSIONS_VEGAS;OFX_EXTENSIONS_TUTTLE;OFX_EXTENSIONS_NUKE;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;WIN64;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\RGBLut;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\RGBLut;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -125,8 +125,13 @@
     <ClCompile Include="..\Anaglyph\Anaglyph.cpp" />
     <ClCompile Include="..\ChromaKeyer\ChromaKeyer.cpp" />
     <ClCompile Include="..\ColorCorrect\ColorCorrect.cpp" />
+    <ClCompile Include="..\Constant\Constant.cpp" />
+    <ClCompile Include="..\CopyRectangle\CopyRectangle.cpp" />
     <ClCompile Include="..\CornerPin\CornerPin.cpp" />
+    <ClCompile Include="..\Crop\Crop.cpp" />
+    <ClCompile Include="..\Difference\Difference.cpp" />
     <ClCompile Include="..\Grade\Grade.cpp" />
+    <ClCompile Include="..\Invert\Invert.cpp" />
     <ClCompile Include="..\JoinViews\JoinViews.cpp" />
     <ClCompile Include="..\Merge\Merge.cpp" />
     <ClCompile Include="..\MixViews\MixViews.cpp" />
@@ -140,15 +145,16 @@
     <ClCompile Include="..\openfx\Support\Library\ofxsProperty.cpp" />
     <ClCompile Include="..\openfx\Support\Library\ofxsPropertyValidation.cpp" />
     <ClCompile Include="..\ReConverge\ReConverge.cpp" />
-    <ClCompile Include="..\Reformat\Reformat.cpp" />
     <ClCompile Include="..\RGBLut\RGBLut.cpp" />
     <ClCompile Include="..\Roto\Roto.cpp" />
+    <ClCompile Include="..\Shuffle\Shuffle.cpp" />
     <ClCompile Include="..\SideBySide\SideBySide.cpp" />
     <ClCompile Include="..\Switch\Switch.cpp" />
     <ClCompile Include="..\TimeOffset\TimeOffset.cpp" />
     <ClCompile Include="..\Transform\Transform.cpp" />
     <ClCompile Include="ofxsOGLFontData.cpp" />
     <ClCompile Include="ofxsOGLTextRenderer.cpp" />
+    <ClCompile Include="ofxsRectangleInteract.cpp" />
     <ClCompile Include="ofxsTransform3x3.cpp" />
     <ClCompile Include="PluginRegistrationCombined.cpp" />
   </ItemGroup>
@@ -156,8 +162,13 @@
     <ClInclude Include="..\Anaglyph\Anaglyph.h" />
     <ClInclude Include="..\ChromaKeyer\ChromaKeyer.h" />
     <ClInclude Include="..\ColorCorrect\ColorCorrect.h" />
+    <ClInclude Include="..\Constant\Constant.h" />
+    <ClInclude Include="..\CopyRectangle\CopyRectangle.h" />
     <ClInclude Include="..\CornerPin\CornerPin.h" />
+    <ClInclude Include="..\Crop\Crop.h" />
+    <ClInclude Include="..\Difference\Difference.h" />
     <ClInclude Include="..\Grade\Grade.h" />
+    <ClInclude Include="..\Invert\Invert.h" />
     <ClInclude Include="..\JoinViews\JoinViews.h" />
     <ClInclude Include="..\Merge\Merge.h" />
     <ClInclude Include="..\MixViews\MixViews.h" />
@@ -174,13 +185,14 @@
     <ClInclude Include="..\openfx\Support\Plugins\include\ofxsImageBlender.H" />
     <ClInclude Include="..\openfx\Support\Plugins\include\ofxsProcessing.H" />
     <ClInclude Include="..\ReConverge\ReConverge.h" />
-    <ClInclude Include="..\Reformat\Reformat.h" />
     <ClInclude Include="..\RGBLut\RGBLut.h" />
     <ClInclude Include="..\Roto\Roto.h" />
+    <ClInclude Include="..\Shuffle\Shuffle.h" />
     <ClInclude Include="..\SideBySide\SideBySide.h" />
     <ClInclude Include="..\Switch\Switch.h" />
     <ClInclude Include="..\TimeOffset\TimeOffset.h" />
     <ClInclude Include="..\Transform\Transform.h" />
+    <ClInclude Include="ofxsRectangleInteract.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
