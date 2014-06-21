@@ -188,6 +188,18 @@ class PremultBase : public OFX::ImageProcessor
     }
 };
 
+template <class PIX, int maxValue>
+static
+PIX
+ClampNonFloat(float v)
+{
+    if (maxValue == 1) {
+        // assume float
+        return v;
+    }
+    return (v > maxValue) ? maxValue : v;
+}
+
 // template to do the RGBA processing
 template <class PIX, int nComponents, int maxValue, bool isPremult>
 class ImagePremulter : public PremultBase
@@ -244,7 +256,11 @@ class ImagePremulter : public PremultBase
     template<bool dored, bool dogreen, bool doblue, bool doalpha>
     void process(const OfxRectI& procWindow)
     {
-        float tmpPix[nComponents];
+        bool doc[4];
+        doc[0] = dored;
+        doc[1] = dogreen;
+        doc[2] = doblue;
+        doc[3] = doalpha;
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -259,10 +275,22 @@ class ImagePremulter : public PremultBase
                 // do we have a source image to scale up
                 if (srcPix) {
                     if (_p >= 0 && (dored || dogreen || doblue || doalpha)) {
-                        tmpPix[0] = dored   ? (isPremult ? ((srcPix[0]*srcPix[_p])/maxValue) : ((srcPix[0]*maxValue)/srcPix[_p])) : srcPix[0];
-                        tmpPix[1] = dogreen ? (isPremult ? ((srcPix[1]*srcPix[_p])/maxValue) : ((srcPix[1]*maxValue)/srcPix[_p])) : srcPix[1];
-                        tmpPix[2] = doblue  ? (isPremult ? ((srcPix[2]*srcPix[_p])/maxValue) : ((srcPix[2]*maxValue)/srcPix[_p])) : srcPix[2];
-                        tmpPix[3] = doalpha ? (isPremult ? ((srcPix[3]*srcPix[_p])/maxValue) : ((srcPix[3]*maxValue)/srcPix[_p])) : srcPix[3];
+                        PIX p = srcPix[_p];
+                        for (int c = 0; c < nComponents; c++) {
+                            if (isPremult) {
+                                dstPix[c] = doc[c] ? ((srcPix[c]*p)/maxValue) : srcPix[c];
+                            } else {
+                                PIX val;
+                                if (!doc[c]) {
+                                    val = srcPix[c];
+                                } else if (p == 0) {
+                                    val = maxValue;
+                                } else {
+                                    val = ClampNonFloat<PIX, maxValue>((srcPix[c]*maxValue)/p);
+                                }
+                                dstPix[c] = val;
+                            }
+                        }
                     } else {
                         for (int c = 0; c < nComponents; c++) {
                             dstPix[c] = srcPix[c];
@@ -512,7 +540,7 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std
                 break;
             case eImagePreMultiplied:
                 if (isPremult) {
-                    _paramPremult->setValue(eInputChannelNone);
+                    //_paramPremult->setValue(eInputChannelNone);
                 } else {
                     _paramProcessR->setValue(true);
                     _paramProcessG->setValue(true);
@@ -523,7 +551,7 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std
                 break;
             case eImageUnPreMultiplied:
                 if (!isPremult) {
-                    _paramPremult->setValue(eInputChannelNone);
+                    //_paramPremult->setValue(eInputChannelNone);
                 } else {
                     _paramProcessR->setValue(true);
                     _paramProcessG->setValue(true);
@@ -608,29 +636,30 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
+    const std::string premultString = isPremult ? "Multiply " : "Divide ";
     OFX::BooleanParamDescriptor* processR = desc.defineBooleanParam(kParamProcessR);
-    processR->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+    processR->setLabels(premultString+kParamProcessRLabel, premultString+kParamProcessRLabel, premultString+kParamProcessRLabel);
     processR->setHint(kParamProcessRHint);
     processR->setDefault(true);
     desc.addClipPreferencesSlaveParam(*processR);
     page->addChild(*processR);
 
     OFX::BooleanParamDescriptor* processG = desc.defineBooleanParam(kParamProcessG);
-    processG->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+    processG->setLabels(premultString+kParamProcessGLabel, premultString+kParamProcessGLabel, premultString+kParamProcessGLabel);
     processG->setHint(kParamProcessGHint);
     processG->setDefault(true);
     desc.addClipPreferencesSlaveParam(*processG);
     page->addChild(*processG);
 
     OFX::BooleanParamDescriptor* processB = desc.defineBooleanParam( kParamProcessB );
-    processB->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+    processB->setLabels(premultString+kParamProcessBLabel, premultString+kParamProcessBLabel, premultString+kParamProcessBLabel);
     processB->setHint(kParamProcessBHint);
     processB->setDefault(true);
     desc.addClipPreferencesSlaveParam(*processB);
     page->addChild(*processB);
 
     OFX::BooleanParamDescriptor* processA = desc.defineBooleanParam( kParamProcessA );
-    processA->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+    processA->setLabels(premultString+kParamProcessALabel, premultString+kParamProcessALabel, premultString+kParamProcessALabel);
     processA->setHint(kParamProcessAHint);
     processA->setDefault(false);
     desc.addClipPreferencesSlaveParam(*processA);
