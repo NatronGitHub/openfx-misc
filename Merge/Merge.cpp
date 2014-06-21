@@ -93,7 +93,7 @@
 #define kOperationParamName "operation"
 #define kOperationParamLabel "Operation"
 #define kOperationParamHint "The operation used to merge the input A and B images."
-#define kAlphaMaskingParamName "screen_alpha"
+#define kAlphaMaskingParamName "screenAlpha"
 #define kAlphaMaskingParamLabel "Alpha masking"
 #define kAlphaMaskingParamHint "When enabled, the input images are unchanged where the other image has 0 alpha, and" \
     " the output alpha is set to a+b - a*b. When disabled the alpha channel is processed as " \

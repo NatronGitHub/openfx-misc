@@ -103,6 +103,23 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kConvergePointParamName "convergePoint"
+#define kConvergePointParamLabel "Converge Upon"
+#define kConvergePointParamHint "Position of the tracked point when the convergence is set"
+
+#define kOffsetParamName "offset"
+#define kOffsetParamLabel "Convergence Offset"
+#define kOffsetParamHint "The disparity of the tracked point will be set to this"
+
+#define kConvergeModeParamName "convergeMode"
+#define kConvergeModeParamLabel "Mode"
+#define kConvergeModeParamHint "Select to view to be shifted in order to set convergence"
+#define kConvergeModeParamOptionShiftRight "Shift Right"
+#define kConvergeModeParamOptionShiftLeft "Shift Left"
+#define kConvergeModeParamOptionShiftBoth "Shift Both"
+
+#define kDisparityClipName "Disparity"
+
 static const OfxPointD kXHairSize = {5, 5};
 
 class PositionInteract : public OFX::OverlayInteract
@@ -121,7 +138,7 @@ public:
     : OFX::OverlayInteract(handle)
     , _state(eInActive)
     {
-        _position = effect->fetchDouble2DParam("convergepoint");
+        _position = effect->fetchDouble2DParam(kConvergePointParamName);
     }
 
     // overridden functions from OFX::Interact to do things
@@ -370,12 +387,12 @@ public:
         assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
-        dispClip_ = fetchClip("Disparity");
+        dispClip_ = fetchClip(kDisparityClipName);
         assert(dispClip_->getPixelComponents() == ePixelComponentAlpha || dispClip_->getPixelComponents() == ePixelComponentRGB || dispClip_->getPixelComponents() == ePixelComponentRGBA);
 
-        convergepoint_ = fetchDouble2DParam("convergepoint");
-        offset_ = fetchIntParam("offset");
-        convergemode_ = fetchChoiceParam("convergemode");
+        convergepoint_ = fetchDouble2DParam(kConvergePointParamName);
+        offset_ = fetchIntParam(kOffsetParamName);
+        convergemode_ = fetchChoiceParam(kConvergeModeParamName);
     }
 
 private:
@@ -608,7 +625,7 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 
     if (context == eContextGeneral) {
         // Optional disparity clip
-        ClipDescriptor *dispClip = desc.defineClip("Disparity");
+        ClipDescriptor *dispClip = desc.defineClip(kDisparityClipName);
         dispClip->addSupportedComponent(ePixelComponentRGB);
         dispClip->addSupportedComponent(ePixelComponentRGBA);
         dispClip->addSupportedComponent(ePixelComponentAlpha);
@@ -627,10 +644,9 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     if (context == eContextGeneral) {
-        Double2DParamDescriptor *convergepoint = desc.defineDouble2DParam("convergepoint");
-        convergepoint->setLabels("Converge upon", "Converge upon", "Converge upon");
-        convergepoint->setScriptName("convergepoint");
-        convergepoint->setHint("Position of the tracked point when the convergence is set");
+        Double2DParamDescriptor *convergepoint = desc.defineDouble2DParam(kConvergePointParamName);
+        convergepoint->setLabels(kConvergePointParamLabel, kConvergePointParamLabel, kConvergePointParamLabel);
+        convergepoint->setHint(kConvergePointParamHint);
         convergepoint->setDoubleType(eDoubleTypeXYAbsolute);
         convergepoint->setDefaultCoordinateSystem(eCoordinatesNormalised);
         convergepoint->setDefault(0.5, 0.5);
@@ -638,10 +654,9 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         page->addChild(*convergepoint);
     }
     
-    IntParamDescriptor *offset = desc.defineIntParam("offset");
-    offset->setLabels("Convergence offset", "Convergence offset", "Convergence offset");
-    offset->setScriptName("offset");
-    offset->setHint("The disparity of the tracked point will be set to this");
+    IntParamDescriptor *offset = desc.defineIntParam(kOffsetParamName);
+    offset->setLabels(kOffsetParamLabel, kOffsetParamLabel, kOffsetParamLabel);
+    offset->setHint(kOffsetParamHint);
     offset->setDefault(0);
     offset->setRange(-1000, 1000);
     offset->setDisplayRange(-100, 100);
@@ -649,13 +664,12 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     
     page->addChild(*offset);
     
-    ChoiceParamDescriptor *convergemode = desc.defineChoiceParam("convergemode");
-    convergemode->setLabels("Mode", "Mode", "Mode");
-    convergemode->setHint("Select to view to be shifted in order to set convergence");
-    convergemode->setScriptName("convergemode");
-    convergemode->appendOption("shift right", "shift right");
-    convergemode->appendOption("shift left", "shift left");
-    convergemode->appendOption("shift both", "shift both");
+    ChoiceParamDescriptor *convergemode = desc.defineChoiceParam(kConvergeModeParamName);
+    convergemode->setLabels(kConvergeModeParamLabel, kConvergeModeParamLabel, kConvergeModeParamLabel);
+    convergemode->setHint(kConvergeModeParamHint);
+    convergemode->appendOption(kConvergeModeParamOptionShiftRight);
+    convergemode->appendOption(kConvergeModeParamOptionShiftLeft);
+    convergemode->appendOption(kConvergeModeParamOptionShiftBoth);
     convergemode->setAnimates(true);
     
     page->addChild(*convergemode);
