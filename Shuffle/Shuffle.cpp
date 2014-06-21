@@ -94,7 +94,7 @@
 #define kOutputComponentsAlphaOption "Alpha"
 #define kOutputBitDepthParamName "outputBitDepth"
 #define kOutputBitDepthParamLabel "Output Bit Depth"
-#define kOutputBitDepthParamHint "Bit depth of the output"
+#define kOutputBitDepthParamHint "Bit depth of the output.\nWARNING: the conversion is linear, even for 8-bit or 16-bit depth. Use with care."
 #define kOutputBitDepthByteOption "Byte (8 bits)"
 #define kOutputBitDepthShortOption "Short (16 bits)"
 #define kOutputBitDepthFloatOption "Float (32 bits)"
