@@ -1039,6 +1039,11 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         }
         outputBitDepth->setDefault(0);
         outputBitDepth->setAnimates(false);
+#ifndef DEBUG
+        // Shuffle only does linear conversion, which is useless for 8-bits and 16-bits formats.
+        // Disable it for now (in the future, there may be colorspace conversion options)
+        outputBitDepth->setIsSecret(true);
+#endif
         page->addChild(*outputBitDepth);
         desc.addClipPreferencesSlaveParam(*outputBitDepth);
     }
