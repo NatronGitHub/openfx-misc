@@ -811,10 +811,13 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     defineCornerPinToDouble2DParam(desc, page, toPoints, 1, 1, 0);
     defineCornerPinToDouble2DParam(desc, page, toPoints, 2, 1, 1);
     defineCornerPinToDouble2DParam(desc, page, toPoints, 3, 0, 1);
+    
     PushButtonParamDescriptor* copyFrom = desc.definePushButtonParam(kCopyFromParamName);
     copyFrom->setLabels(kCopyFromParamLabel, kCopyFromParamLabel, kCopyFromParamLabel);
     copyFrom->setHint(kCopyFromParamHint);
     copyFrom->setParent(*toPoints);
+    page->addChild(*copyFrom);
+    
     page->addChild(*toPoints);
 
     GroupParamDescriptor* fromPoints = desc.defineGroupParam(kFromParamGroupName);
@@ -824,16 +827,22 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     defineCornerPinFromsDouble2DParam(desc, page, fromPoints, 1, 1, 0);
     defineCornerPinFromsDouble2DParam(desc, page, fromPoints, 2, 1, 1);
     defineCornerPinFromsDouble2DParam(desc, page, fromPoints, 3, 0, 1);
+    
     PushButtonParamDescriptor* setToInput = desc.definePushButtonParam(kCopyInputRoDParamName);
     setToInput->setLabels(kCopyInputRoDParamLabel, kCopyInputRoDParamLabel, kCopyInputRoDParamLabel);
     setToInput->setHint(kCopyInputRoDParamHint);
     setToInput->setLayoutHint(OFX::eLayoutHintNoNewLine);
     setToInput->setParent(*fromPoints);
+    page->addChild(*setToInput);
+    
     PushButtonParamDescriptor* copyTo = desc.definePushButtonParam(kCopyToParamName);
     copyTo->setLabels(kCopyToParamLabel, kCopyToParamLabel, kCopyToParamLabel);
     copyTo->setHint(kCopyToParamHint);
     copyTo->setParent(*fromPoints);
+    page->addChild(*copyTo);
+    
     page->addChild(*fromPoints);
+
     
     GroupParamDescriptor* extraMatrix = desc.defineGroupParam(kExtraMatrixParamName);
     extraMatrix->setLabels(kExtraMatrixParamLabel, kExtraMatrixParamLabel, kExtraMatrixParamLabel);
