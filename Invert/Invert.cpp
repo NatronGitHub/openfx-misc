@@ -1,5 +1,5 @@
 /*
- OFX Grade plugin.
+ OFX Invert plugin.
 
  Copyright (C) 2014 INRIA
 
@@ -77,7 +77,6 @@
 #include <windows.h>
 #endif
 
-#include <stdio.h>
 #include "ofxsImageEffect.h"
 #include "ofxsMultiThread.h"
 
@@ -110,23 +109,27 @@ using namespace OFX;
 // Base class for the RGBA and the Alpha processor
 class InvertBase : public OFX::ImageProcessor
 {
-protected:
+  protected:
     OFX::Image *_srcImg;
     OFX::Image *_maskImg;
     bool   _doMasking;
-	bool _red;
-	bool _green;
-	bool _blue;
-	bool _alpha;
+    bool _red;
+    bool _green;
+    bool _blue;
+    bool _alpha;
     double _mix;
-public:
+  public:
     /** @brief no arg ctor */
     InvertBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _srcImg(0)
-    , _maskImg(0)
-    , _doMasking(false)
-    , _mix(0)
+            : OFX::ImageProcessor(instance)
+            , _srcImg(0)
+            , _maskImg(0)
+            , _doMasking(false)
+            , _red(true)
+            , _green(true)
+            , _blue(true)
+            , _alpha(false)
+            , _mix(0)
     {
     }
 
@@ -142,6 +145,7 @@ public:
         _red = red;
         _green = green;
         _blue = blue;
+        _alpha = alpha;
         _mix = mix;
     }
 };
@@ -150,14 +154,14 @@ public:
 template <class PIX, int nComponents, int maxValue>
 class ImageInverter : public InvertBase
 {
-public:
+  public:
     // ctor
     ImageInverter(OFX::ImageEffect &instance)
-    : InvertBase(instance)
+            : InvertBase(instance)
     {
     }
 
-private:
+  private:
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
@@ -198,7 +202,7 @@ private:
         }
     }
 
-private:
+  private:
     template<bool dored, bool dogreen, bool doblue, bool doalpha>
     void process(const OfxRectI& procWindow)
     {
@@ -251,12 +255,12 @@ private:
 /** @brief The plugin that does our work */
 class InvertPlugin : public OFX::ImageEffect
 {
-public:
+  public:
     /** @brief ctor */
     InvertPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClip_(0)
+            : ImageEffect(handle)
+            , dstClip_(0)
+            , srcClip_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha));
@@ -271,7 +275,7 @@ public:
         _mix = fetchDoubleParam(kFilterMixParamName);
     }
 
-private:
+  private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) /*OVERRIDE FINAL*/;
 
@@ -280,16 +284,16 @@ private:
 
     virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) /*OVERRIDE FINAL*/;
 
-private:
+  private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::Clip *maskClip_;
 
-	OFX::BooleanParam* _paramProcessR;
-	OFX::BooleanParam* _paramProcessG;
-	OFX::BooleanParam* _paramProcessB;
-	OFX::BooleanParam* _paramProcessA;
+    OFX::BooleanParam* _paramProcessR;
+    OFX::BooleanParam* _paramProcessG;
+    OFX::BooleanParam* _paramProcessB;
+    OFX::BooleanParam* _paramProcessA;
     OFX::DoubleParam* _mix;
 };
 
@@ -522,27 +526,27 @@ void InvertPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     OFX::BooleanParamDescriptor* processR = desc.defineBooleanParam(kParamProcessR);
-	processR->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
-	processR->setHint(kParamProcessRHint);
-	processR->setDefault(true);
+    processR->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+    processR->setHint(kParamProcessRHint);
+    processR->setDefault(true);
     page->addChild(*processR);
 
-	OFX::BooleanParamDescriptor* processG = desc.defineBooleanParam(kParamProcessG);
-	processG->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
-	processG->setHint(kParamProcessGHint);
-	processG->setDefault(true);
+    OFX::BooleanParamDescriptor* processG = desc.defineBooleanParam(kParamProcessG);
+    processG->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+    processG->setHint(kParamProcessGHint);
+    processG->setDefault(true);
     page->addChild(*processG);
 
-	OFX::BooleanParamDescriptor* processB = desc.defineBooleanParam( kParamProcessB );
-	processB->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
-	processB->setHint(kParamProcessBHint);
-	processB->setDefault(true);
+    OFX::BooleanParamDescriptor* processB = desc.defineBooleanParam( kParamProcessB );
+    processB->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+    processB->setHint(kParamProcessBHint);
+    processB->setDefault(true);
     page->addChild(*processB);
 
-	OFX::BooleanParamDescriptor* processA = desc.defineBooleanParam( kParamProcessA );
-	processA->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
-	processA->setHint(kParamProcessAHint);
-	processA->setDefault(false);
+    OFX::BooleanParamDescriptor* processA = desc.defineBooleanParam( kParamProcessA );
+    processA->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+    processA->setHint(kParamProcessAHint);
+    processA->setDefault(false);
     page->addChild(*processA);
 
     ofxsFilterDescribeParamsMaskMix(desc, page);
