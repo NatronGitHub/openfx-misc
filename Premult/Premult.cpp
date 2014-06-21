@@ -120,6 +120,9 @@
 #define kInputChannelBHint "B channel from input"
 #define kInputChannelAOption "A"
 #define kInputChannelAHint "A channel from input"
+#define kClipInfoParamName "clipInfo"
+#define kClipInfoParamLabel "Clip Info..."
+#define kClipInfoParamHint "Display information about the inputs"
 
 // TODO: sRGB conversions for short and byte types
 
@@ -311,6 +314,14 @@ class PremultPlugin : public OFX::ImageEffect
 
     virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) /*OVERRIDE FINAL*/;
 
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences);
+
+    /* override changedParam */
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) /* OVERRIDE FINAL */;
+
+    /** @brief called when a clip has just been changed in some way (a rewire maybe) */
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) /* OVERRIDE FINAL */;
+
   private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
@@ -434,6 +445,97 @@ PremultPlugin<isPremult>::isIdentity(const RenderArguments &args, Clip * &identi
     }
 }
 
+
+/* Override the clip preferences */
+template<bool isPremult>
+void
+PremultPlugin<isPremult>::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    // set the premultiplication of dstClip_
+    bool red, green, blue, alpha;
+    int premult_i;
+    _paramProcessR->getValue(red);
+    _paramProcessG->getValue(green);
+    _paramProcessB->getValue(blue);
+    _paramProcessA->getValue(alpha);
+    _paramPremult->getValue(premult_i);
+    InputChannelEnum premult = InputChannelEnum(premult_i);
+
+    if (premult == eInputChannelA && red && green && blue && !alpha) {
+        clipPreferences.setOutputPremultiplication(isPremult ? eImagePreMultiplied : eImageUnPreMultiplied);
+    }
+ }
+
+static std::string premultString(PreMultiplicationEnum e)
+{
+    switch (e) {
+        case eImageOpaque:
+            return "Opaque";
+        case eImagePreMultiplied:
+            return "PreMultiplied";
+        case eImageUnPreMultiplied:
+            return "UnPreMultiplied";
+    }
+}
+
+template<bool isPremult>
+void
+PremultPlugin<isPremult>::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kClipInfoParamName) {
+        std::string msg;
+        msg += "Input; ";
+        if (!srcClip_) {
+            msg += "N/A";
+        } else {
+            msg += premultString(srcClip_->getPreMultiplication());
+        }
+        msg += "\n";
+        msg += "Output: ";
+        if (!dstClip_) {
+            msg += "N/A";
+        } else {
+            msg += premultString(dstClip_->getPreMultiplication());
+        }
+        msg += "\n";
+        sendMessage(OFX::Message::eMessageMessage, "", msg);
+    }
+}
+
+template<bool isPremult>
+void
+PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+{
+    if (srcClip_) {
+        switch (srcClip_->getPreMultiplication()) {
+            case eImageOpaque:
+                break;
+            case eImagePreMultiplied:
+                if (isPremult) {
+                    _paramPremult->setValue(eInputChannelNone);
+                } else {
+                    _paramProcessR->setValue(true);
+                    _paramProcessG->setValue(true);
+                    _paramProcessB->setValue(true);
+                    _paramProcessA->setValue(false);
+                    _paramPremult->setValue(eInputChannelA);
+                }
+                break;
+            case eImageUnPreMultiplied:
+                if (!isPremult) {
+                    _paramPremult->setValue(eInputChannelNone);
+                } else {
+                    _paramProcessR->setValue(true);
+                    _paramProcessG->setValue(true);
+                    _paramProcessB->setValue(true);
+                    _paramProcessA->setValue(false);
+                    _paramPremult->setValue(eInputChannelA);
+                }
+                break;
+        }
+    }
+}
+
 //mDeclarePluginFactory(PremultPluginFactory, {}, {});
 
 template<bool isPremult>
@@ -510,24 +612,28 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
     processR->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
     processR->setHint(kParamProcessRHint);
     processR->setDefault(true);
+    desc.addClipPreferencesSlaveParam(*processR);
     page->addChild(*processR);
 
     OFX::BooleanParamDescriptor* processG = desc.defineBooleanParam(kParamProcessG);
     processG->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
     processG->setHint(kParamProcessGHint);
     processG->setDefault(true);
+    desc.addClipPreferencesSlaveParam(*processG);
     page->addChild(*processG);
 
     OFX::BooleanParamDescriptor* processB = desc.defineBooleanParam( kParamProcessB );
     processB->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
     processB->setHint(kParamProcessBHint);
     processB->setDefault(true);
+    desc.addClipPreferencesSlaveParam(*processB);
     page->addChild(*processB);
 
     OFX::BooleanParamDescriptor* processA = desc.defineBooleanParam( kParamProcessA );
     processA->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
     processA->setHint(kParamProcessAHint);
     processA->setDefault(false);
+    desc.addClipPreferencesSlaveParam(*processA);
     page->addChild(*processA);
 
     ChoiceParamDescriptor *premultChannel = desc.defineChoiceParam(kParamPremultName);
@@ -544,7 +650,13 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
     assert(premultChannel->getNOptions() == eInputChannelA);
     premultChannel->appendOption(kInputChannelAOption, kInputChannelAHint);
     premultChannel->setDefault((int)eInputChannelA);
+    desc.addClipPreferencesSlaveParam(*premultChannel);
     page->addChild(*premultChannel);
+
+    PushButtonParamDescriptor *clipInfo = desc.definePushButtonParam(kClipInfoParamName);
+    clipInfo->setLabels(kClipInfoParamLabel, kClipInfoParamLabel, kClipInfoParamLabel);
+    clipInfo->setHint(kClipInfoParamHint);
+    page->addChild(*clipInfo);
 }
 
 template<bool isPremult>
