@@ -14,6 +14,7 @@ JoinViews \
 Merge \
 MixViews \
 OneView \
+Premult \
 RGBLut \
 Roto \
 Shuffle \

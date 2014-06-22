@@ -13,6 +13,7 @@
 #include "Merge.h"
 #include "MixViews.h"
 #include "OneView.h"
+#include "Premult.h"
 #include "ReConverge.h"
 #include "RGBLut.h"
 #include "Roto.h"
@@ -44,6 +45,7 @@ namespace OFX
             getMergePluginID(ids);
             getMixViewsPluginID(ids);
             getOneViewPluginID(ids);
+            getPremultPluginID(ids);
             getReConvergePluginID(ids);
             getRGBLutPluginID(ids);
             getRotoPluginID(ids);
@@ -53,6 +55,7 @@ namespace OFX
             getTimeOffsetPluginID(ids);
             getTransformPluginID(ids);
             getTransformMaskedPluginID(ids);
+            getUnpremultPluginID(ids);
         }
     }
 }

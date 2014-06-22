@@ -566,7 +566,7 @@ private:
                         break;
                     case eOutputModeUnpremultiplied:
                         if (fga == 0.) {
-                            dstPix[0] = dstPix[1] = dstPix[2] = 0.;
+                            dstPix[0] = dstPix[1] = dstPix[2] = maxValue;
                         } else {
                             dstPix[0] = floatToSample<PIX,maxValue>(fgr / fga);
                             dstPix[1] = floatToSample<PIX,maxValue>(fgg / fga);
@@ -909,11 +909,11 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
- 
+
     RGBParamDescriptor* keyColor = desc.defineRGBParam(kKeyColorParamName);
     keyColor->setLabels(kKeyColorParamLabel, kKeyColorParamLabel, kKeyColorParamLabel);
     keyColor->setHint(kKeyColorParamHint);
-    keyColor->setDefault(0.,1.,0.);
+    keyColor->setDefault(0., 0., 0.);
     // the following should be the default
     double kmin = -std::numeric_limits<double>::max();
     double kmax = std::numeric_limits<double>::max();

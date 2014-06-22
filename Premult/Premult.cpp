@@ -1,5 +1,5 @@
 /*
- OFX Invert plugin.
+ OFX Premult plugin.
 
  Copyright (C) 2014 INRIA
 
@@ -71,7 +71,7 @@
 
  */
 
-#include "Invert.h"
+#include "Premult.h"
 
 #ifdef _WINDOWS
 #include <windows.h>
@@ -81,83 +81,133 @@
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
-#include "ofxsFilter.h"
 
 
-#define kPluginName "InvertOFX"
-#define kPluginGrouping "Color"
-#define kPluginDescription "Inverse the selected channels"
-#define kPluginIdentifier "net.sf.openfx:Invert"
+#define kPluginPremultName "PremultOFX"
+#define kPluginPremultGrouping "Merge"
+#define kPluginPremultDescription "Multiply the selected channels by alpha (or another channel)"
+#define kPluginPremultIdentifier "net.sf.openfx:Premult"
+#define kPluginUnpremultName "UnpremultOFX"
+#define kPluginUnpremultGrouping "Merge"
+#define kPluginUnpremultDescription "Divide the selected channels by alpha (or another channel)"
+#define kPluginUnpremultIdentifier "net.sf.openfx:Unpremult"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kParamProcessR      "r"
 #define kParamProcessRLabel "R"
-#define kParamProcessRHint  "Invert red component"
+#define kParamProcessRHint  "Multiply/divide red component"
 #define kParamProcessG      "g"
 #define kParamProcessGLabel "G"
-#define kParamProcessGHint  "Invert green component"
+#define kParamProcessGHint  "Multiply/divide green component"
 #define kParamProcessB      "b"
 #define kParamProcessBLabel "B"
-#define kParamProcessBHint  "Invert blue component"
+#define kParamProcessBHint  "Multiply/divide blue component"
 #define kParamProcessA      "a"
 #define kParamProcessALabel "A"
-#define kParamProcessAHint  "Invert alpha component"
+#define kParamProcessAHint  "Multiply/divide alpha component"
+#define kParamPremultName   "premultChannel"
+#define kParamPremultLabel  "By"
+#define kParamPremultHint   "Multiply/divide by this input channel"
+
+#define kInputChannelNoneOption "None"
+#define kInputChannelNoneHint "Don't multiply/divide"
+#define kInputChannelROption "R"
+#define kInputChannelRHint "R channel from input"
+#define kInputChannelGOption "G"
+#define kInputChannelGHint "G channel from input"
+#define kInputChannelBOption "B"
+#define kInputChannelBHint "B channel from input"
+#define kInputChannelAOption "A"
+#define kInputChannelAHint "A channel from input"
+#define kClipInfoParamName "clipInfo"
+#define kClipInfoParamLabel "Clip Info..."
+#define kClipInfoParamHint "Display information about the inputs"
+
+// TODO: sRGB conversions for short and byte types
+
+enum InputChannelEnum {
+    eInputChannelNone = 0,
+    eInputChannelR,
+    eInputChannelG,
+    eInputChannelB,
+    eInputChannelA,
+};
 
 using namespace OFX;
 
 // Base class for the RGBA and the Alpha processor
-class InvertBase : public OFX::ImageProcessor
+class PremultBase : public OFX::ImageProcessor
 {
   protected:
     OFX::Image *_srcImg;
-    OFX::Image *_maskImg;
-    bool   _doMasking;
     bool _red;
     bool _green;
     bool _blue;
     bool _alpha;
-    double _mix;
+    int _p;
   public:
     /** @brief no arg ctor */
-    InvertBase(OFX::ImageEffect &instance)
+    PremultBase(OFX::ImageEffect &instance)
             : OFX::ImageProcessor(instance)
             , _srcImg(0)
-            , _maskImg(0)
-            , _doMasking(false)
             , _red(true)
             , _green(true)
             , _blue(true)
             , _alpha(false)
-            , _mix(0)
+            , _p(3)
     {
     }
 
     /** @brief set the src image */
     void setSrcImg(OFX::Image *v) {_srcImg = v;}
 
-    void setMaskImg(OFX::Image *v) {_maskImg = v;}
-
-    void doMasking(bool v) {_doMasking = v;}
-
-    void setValues(bool red, bool green, bool blue, bool alpha, double mix)
+    void setValues(bool red, bool green, bool blue, bool alpha, InputChannelEnum premultChannel)
     {
         _red = red;
         _green = green;
         _blue = blue;
         _alpha = alpha;
-        _mix = mix;
+        switch (premultChannel) {
+            case eInputChannelNone:
+                _p = -1;
+                break;
+            case eInputChannelR:
+                _p = 0;
+                break;
+            case eInputChannelG:
+                _p = 1;
+                break;
+            case eInputChannelB:
+                _p = 2;
+                break;
+            case eInputChannelA:
+                _p = 3;
+                break;
+        }
     }
 };
 
+template <class PIX, int maxValue>
+static
+PIX
+ClampNonFloat(float v)
+{
+    if (maxValue == 1) {
+        // assume float
+        return v;
+    }
+    return (v > maxValue) ? maxValue : v;
+}
+
 // template to do the RGBA processing
-template <class PIX, int nComponents, int maxValue>
-class ImageInverter : public InvertBase
+template <class PIX, int nComponents, int maxValue, bool isPremult>
+class ImagePremulter : public PremultBase
 {
   public:
     // ctor
-    ImageInverter(OFX::ImageEffect &instance)
-            : InvertBase(instance)
+    ImagePremulter(OFX::ImageEffect &instance)
+            : PremultBase(instance)
     {
     }
 
@@ -206,7 +256,11 @@ class ImageInverter : public InvertBase
     template<bool dored, bool dogreen, bool doblue, bool doalpha>
     void process(const OfxRectI& procWindow)
     {
-        float tmpPix[nComponents];
+        bool doc[4];
+        doc[0] = dored;
+        doc[1] = dogreen;
+        doc[2] = doblue;
+        doc[3] = doalpha;
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -220,23 +274,28 @@ class ImageInverter : public InvertBase
 
                 // do we have a source image to scale up
                 if (srcPix) {
-                    switch (nComponents) {
-                        case 1: // Alpha
-                            tmpPix[0] = doalpha ? (maxValue - srcPix[0]) : srcPix[0];
-                            break;
-                        case 3: // RGB
-                            tmpPix[0] = dored   ? (maxValue - srcPix[0]) : srcPix[0];
-                            tmpPix[1] = dogreen ? (maxValue - srcPix[1]) : srcPix[1];
-                            tmpPix[2] = doblue  ? (maxValue - srcPix[2]) : srcPix[2];
-                            break;
-                        case 4: // RGBA
-                            tmpPix[0] = dored   ? (maxValue - srcPix[0]) : srcPix[0];
-                            tmpPix[1] = dogreen ? (maxValue - srcPix[1]) : srcPix[1];
-                            tmpPix[2] = doblue  ? (maxValue - srcPix[2]) : srcPix[2];
-                            tmpPix[3] = doalpha ? (maxValue - srcPix[3]) : srcPix[3];
-                            break;
+                    if (_p >= 0 && (dored || dogreen || doblue || doalpha)) {
+                        PIX p = srcPix[_p];
+                        for (int c = 0; c < nComponents; c++) {
+                            if (isPremult) {
+                                dstPix[c] = doc[c] ? ((srcPix[c]*p)/maxValue) : srcPix[c];
+                            } else {
+                                PIX val;
+                                if (!doc[c]) {
+                                    val = srcPix[c];
+                                } else if (p == 0) {
+                                    val = maxValue;
+                                } else {
+                                    val = ClampNonFloat<PIX, maxValue>((srcPix[c]*maxValue)/p);
+                                }
+                                dstPix[c] = val;
+                            }
+                        }
+                    } else {
+                        for (int c = 0; c < nComponents; c++) {
+                            dstPix[c] = srcPix[c];
+                        }
                     }
-                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, dstPix);
                 } else {
                     // no src pixel here, be black and transparent
                     for (int c = 0; c < nComponents; c++) {
@@ -253,11 +312,12 @@ class ImageInverter : public InvertBase
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class InvertPlugin : public OFX::ImageEffect
+template<bool isPremult>
+class PremultPlugin : public OFX::ImageEffect
 {
   public:
     /** @brief ctor */
-    InvertPlugin(OfxImageEffectHandle handle)
+    PremultPlugin(OfxImageEffectHandle handle)
             : ImageEffect(handle)
             , dstClip_(0)
             , srcClip_(0)
@@ -266,13 +326,11 @@ class InvertPlugin : public OFX::ImageEffect
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha));
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA || srcClip_->getPixelComponents() == ePixelComponentAlpha));
-        maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-        assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
         _paramProcessR = fetchBooleanParam(kParamProcessR);
         _paramProcessG = fetchBooleanParam(kParamProcessG);
         _paramProcessB = fetchBooleanParam(kParamProcessB);
         _paramProcessA = fetchBooleanParam(kParamProcessA);
-        _mix = fetchDoubleParam(kFilterMixParamName);
+        _paramPremult = fetchChoiceParam(kParamPremultName);
     }
 
   private:
@@ -280,21 +338,28 @@ class InvertPlugin : public OFX::ImageEffect
     virtual void render(const OFX::RenderArguments &args) /*OVERRIDE FINAL*/;
 
     /* set up and run a processor */
-    void setupAndProcess(InvertBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(PremultBase &, const OFX::RenderArguments &args);
 
     virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) /*OVERRIDE FINAL*/;
+
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences);
+
+    /* override changedParam */
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) /* OVERRIDE FINAL */;
+
+    /** @brief called when a clip has just been changed in some way (a rewire maybe) */
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) /* OVERRIDE FINAL */;
 
   private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-    OFX::Clip *maskClip_;
 
     OFX::BooleanParam* _paramProcessR;
     OFX::BooleanParam* _paramProcessG;
     OFX::BooleanParam* _paramProcessB;
     OFX::BooleanParam* _paramProcessA;
-    OFX::DoubleParam* _mix;
+    OFX::ChoiceParam* _paramPremult;
 };
 
 
@@ -306,8 +371,9 @@ class InvertPlugin : public OFX::ImageEffect
 
 
 /* set up and run a processor */
+template<bool isPremult>
 void
-InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments &args)
+PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor, const OFX::RenderArguments &args)
 {
     // get a dst image
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
@@ -331,26 +397,15 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
         }
     }
 
-    // auto ptr for the mask.
-    std::auto_ptr<OFX::Image> mask((getContext() != OFX::eContextFilter) ? maskClip_->fetchImage(args.time) : 0);
-
-    // do we do masking
-    if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
-        // say we are masking
-        processor.doMasking(true);
-
-        // Set it in the processor
-        processor.setMaskImg(mask.get());
-    }
-
     bool red, green, blue, alpha;
-    double mix;
+    int premult_i;
     _paramProcessR->getValueAtTime(args.time, red);
     _paramProcessG->getValueAtTime(args.time, green);
     _paramProcessB->getValueAtTime(args.time, blue);
     _paramProcessA->getValueAtTime(args.time, alpha);
-    _mix->getValueAtTime(args.time, mix);
-    processor.setValues(red, green, blue, alpha, mix);
+    _paramPremult->getValue(premult_i);
+    InputChannelEnum premult = InputChannelEnum(premult_i);
+    processor.setValues(red, green, blue, alpha, premult);
 
     // set the images
     processor.setDstImg(dst.get());
@@ -364,96 +419,53 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
 }
 
 // the overridden render function
+template<bool isPremult>
 void
-InvertPlugin::render(const OFX::RenderArguments &args)
+PremultPlugin<isPremult>::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
 
     // do the rendering
-    if (dstComponents == OFX::ePixelComponentRGBA) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte : {
-                ImageInverter<unsigned char, 4, 255> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthUShort : {
-                ImageInverter<unsigned short, 4, 65535> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthFloat : {
-                ImageInverter<float, 4, 1> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    assert(dstComponents == OFX::ePixelComponentRGBA);
+    switch (dstBitDepth) {
+        case OFX::eBitDepthUByte : {
+            ImagePremulter<unsigned char, 4, 255, isPremult> fred(*this);
+            setupAndProcess(fred, args);
         }
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte : {
-                ImageInverter<unsigned char, 3, 255> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
+            break;
 
-            case OFX::eBitDepthUShort : {
-                ImageInverter<unsigned short, 3, 65535> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthFloat : {
-                ImageInverter<float, 3, 1> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        case OFX::eBitDepthUShort : {
+            ImagePremulter<unsigned short, 4, 65535, isPremult> fred(*this);
+            setupAndProcess(fred, args);
         }
-    } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte : {
-                ImageInverter<unsigned char, 1, 255> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
+            break;
 
-            case OFX::eBitDepthUShort : {
-                ImageInverter<unsigned short, 1, 65535> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthFloat : {
-                ImageInverter<float, 1, 1> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        case OFX::eBitDepthFloat : {
+            ImagePremulter<float, 4, 1, isPremult> fred(*this);
+            setupAndProcess(fred, args);
         }
+            break;
+        default :
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
+template<bool isPremult>
 bool
-InvertPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+PremultPlugin<isPremult>::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
 {
     bool red, green, blue, alpha;
-    double mix;
+    int premult_i;
     _paramProcessR->getValueAtTime(args.time, red);
     _paramProcessG->getValueAtTime(args.time, green);
     _paramProcessB->getValueAtTime(args.time, blue);
     _paramProcessA->getValueAtTime(args.time, alpha);
-    _mix->getValueAtTime(args.time, mix);
+    _paramPremult->getValueAtTime(args.time, premult_i);
+    InputChannelEnum premult = InputChannelEnum(premult_i);
 
-    if (mix == 0. || (!red && !green && !blue && !alpha)) {
+    if (premult == eInputChannelNone || (!red && !green && !blue && !alpha)) {
         identityClip = srcClip_;
         return true;
     } else {
@@ -461,20 +473,130 @@ InvertPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, doub
     }
 }
 
-mDeclarePluginFactory(InvertPluginFactory, {}, {});
+
+/* Override the clip preferences */
+template<bool isPremult>
+void
+PremultPlugin<isPremult>::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    // set the premultiplication of dstClip_
+    bool red, green, blue, alpha;
+    int premult_i;
+    _paramProcessR->getValue(red);
+    _paramProcessG->getValue(green);
+    _paramProcessB->getValue(blue);
+    _paramProcessA->getValue(alpha);
+    _paramPremult->getValue(premult_i);
+    InputChannelEnum premult = InputChannelEnum(premult_i);
+
+    if (premult == eInputChannelA && red && green && blue && !alpha) {
+        clipPreferences.setOutputPremultiplication(isPremult ? eImagePreMultiplied : eImageUnPreMultiplied);
+    }
+ }
+
+static std::string premultString(PreMultiplicationEnum e)
+{
+    switch (e) {
+        case eImageOpaque:
+            return "Opaque";
+        case eImagePreMultiplied:
+            return "PreMultiplied";
+        case eImageUnPreMultiplied:
+            return "UnPreMultiplied";
+    }
+}
+
+template<bool isPremult>
+void
+PremultPlugin<isPremult>::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kClipInfoParamName) {
+        std::string msg;
+        msg += "Input; ";
+        if (!srcClip_) {
+            msg += "N/A";
+        } else {
+            msg += premultString(srcClip_->getPreMultiplication());
+        }
+        msg += "\n";
+        msg += "Output: ";
+        if (!dstClip_) {
+            msg += "N/A";
+        } else {
+            msg += premultString(dstClip_->getPreMultiplication());
+        }
+        msg += "\n";
+        sendMessage(OFX::Message::eMessageMessage, "", msg);
+    }
+}
+
+template<bool isPremult>
+void
+PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+{
+    if (srcClip_) {
+        switch (srcClip_->getPreMultiplication()) {
+            case eImageOpaque:
+                break;
+            case eImagePreMultiplied:
+                if (isPremult) {
+                    //_paramPremult->setValue(eInputChannelNone);
+                } else {
+                    _paramProcessR->setValue(true);
+                    _paramProcessG->setValue(true);
+                    _paramProcessB->setValue(true);
+                    _paramProcessA->setValue(false);
+                    _paramPremult->setValue(eInputChannelA);
+                }
+                break;
+            case eImageUnPreMultiplied:
+                if (!isPremult) {
+                    //_paramPremult->setValue(eInputChannelNone);
+                } else {
+                    _paramProcessR->setValue(true);
+                    _paramProcessG->setValue(true);
+                    _paramProcessB->setValue(true);
+                    _paramProcessA->setValue(false);
+                    _paramPremult->setValue(eInputChannelA);
+                }
+                break;
+        }
+    }
+}
+
+//mDeclarePluginFactory(PremultPluginFactory, {}, {});
+
+template<bool isPremult>
+class PremultPluginFactory : public OFX::PluginFactoryHelper<PremultPluginFactory<isPremult> >
+{
+public:
+    PremultPluginFactory(const std::string& id, unsigned int verMaj, unsigned int verMin):OFX::PluginFactoryHelper<PremultPluginFactory<isPremult> >(id, verMaj, verMin){}
+    virtual void load() {};
+    virtual void unload() {};
+    virtual void describe(OFX::ImageEffectDescriptor &desc);
+    virtual void describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
+    virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context);
+};
 
 using namespace OFX;
-void InvertPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+
+template<bool isPremult>
+void PremultPluginFactory<isPremult>::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
-    desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+    if (isPremult) {
+        desc.setLabels(kPluginPremultName, kPluginPremultName, kPluginPremultName);
+        desc.setPluginGrouping(kPluginPremultGrouping);
+        desc.setPluginDescription(kPluginPremultDescription);
+    } else {
+        desc.setLabels(kPluginUnpremultName, kPluginUnpremultName, kPluginUnpremultName);
+        desc.setPluginGrouping(kPluginUnpremultGrouping);
+        desc.setPluginDescription(kPluginUnpremultDescription);
+    }
 
     // add the supported contexts
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
-    desc.addSupportedContext(eContextPaint);
 
     // add supported pixel depths
     desc.addSupportedBitDepth(eBitDepthUByte);
@@ -489,10 +611,10 @@ void InvertPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
-
 }
 
-void InvertPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+template<bool isPremult>
+void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -511,56 +633,78 @@ void InvertPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(true);
 
-    if (context == eContextGeneral || context == eContextPaint) {
-        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
-        maskClip->addSupportedComponent(ePixelComponentAlpha);
-        maskClip->setTemporalClipAccess(false);
-        if (context == eContextGeneral) {
-            maskClip->setOptional(true);
-        }
-        maskClip->setSupportsTiles(true);
-        maskClip->setIsMask(true);
-    }
-
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
+    const std::string premultString = isPremult ? "Multiply " : "Divide ";
     OFX::BooleanParamDescriptor* processR = desc.defineBooleanParam(kParamProcessR);
-    processR->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+    processR->setLabels(premultString+kParamProcessRLabel, premultString+kParamProcessRLabel, premultString+kParamProcessRLabel);
     processR->setHint(kParamProcessRHint);
     processR->setDefault(true);
+    desc.addClipPreferencesSlaveParam(*processR);
     page->addChild(*processR);
 
     OFX::BooleanParamDescriptor* processG = desc.defineBooleanParam(kParamProcessG);
-    processG->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+    processG->setLabels(premultString+kParamProcessGLabel, premultString+kParamProcessGLabel, premultString+kParamProcessGLabel);
     processG->setHint(kParamProcessGHint);
     processG->setDefault(true);
+    desc.addClipPreferencesSlaveParam(*processG);
     page->addChild(*processG);
 
     OFX::BooleanParamDescriptor* processB = desc.defineBooleanParam( kParamProcessB );
-    processB->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+    processB->setLabels(premultString+kParamProcessBLabel, premultString+kParamProcessBLabel, premultString+kParamProcessBLabel);
     processB->setHint(kParamProcessBHint);
     processB->setDefault(true);
+    desc.addClipPreferencesSlaveParam(*processB);
     page->addChild(*processB);
 
     OFX::BooleanParamDescriptor* processA = desc.defineBooleanParam( kParamProcessA );
-    processA->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+    processA->setLabels(premultString+kParamProcessALabel, premultString+kParamProcessALabel, premultString+kParamProcessALabel);
     processA->setHint(kParamProcessAHint);
     processA->setDefault(false);
+    desc.addClipPreferencesSlaveParam(*processA);
     page->addChild(*processA);
 
-    ofxsFilterDescribeParamsMaskMix(desc, page);
+    ChoiceParamDescriptor *premultChannel = desc.defineChoiceParam(kParamPremultName);
+    premultChannel->setLabels(kParamPremultLabel, kParamPremultLabel, kParamPremultLabel);
+    premultChannel->setHint(kParamPremultHint);
+    assert(premultChannel->getNOptions() == eInputChannelNone);
+    premultChannel->appendOption(kInputChannelNoneOption, kInputChannelNoneHint);
+    assert(premultChannel->getNOptions() == eInputChannelR);
+    premultChannel->appendOption(kInputChannelROption, kInputChannelRHint);
+    assert(premultChannel->getNOptions() == eInputChannelG);
+    premultChannel->appendOption(kInputChannelGOption, kInputChannelGHint);
+    assert(premultChannel->getNOptions() == eInputChannelB);
+    premultChannel->appendOption(kInputChannelBOption, kInputChannelBHint);
+    assert(premultChannel->getNOptions() == eInputChannelA);
+    premultChannel->appendOption(kInputChannelAOption, kInputChannelAHint);
+    premultChannel->setDefault((int)eInputChannelA);
+    desc.addClipPreferencesSlaveParam(*premultChannel);
+    page->addChild(*premultChannel);
+
+    PushButtonParamDescriptor *clipInfo = desc.definePushButtonParam(kClipInfoParamName);
+    clipInfo->setLabels(kClipInfoParamLabel, kClipInfoParamLabel, kClipInfoParamLabel);
+    clipInfo->setHint(kClipInfoParamHint);
+    page->addChild(*clipInfo);
 }
 
-OFX::ImageEffect* InvertPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+template<bool isPremult>
+OFX::ImageEffect*
+PremultPluginFactory<isPremult>::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
-    return new InvertPlugin(handle);
+    return new PremultPlugin<isPremult>(handle);
 }
 
 
-void getInvertPluginID(OFX::PluginFactoryArray &ids)
+void getPremultPluginID(OFX::PluginFactoryArray &ids)
 {
-    static InvertPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static PremultPluginFactory<true> p(kPluginPremultIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    ids.push_back(&p);
+}
+
+void getUnpremultPluginID(OFX::PluginFactoryArray &ids)
+{
+    static PremultPluginFactory<false> p(kPluginUnpremultIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 

@@ -117,7 +117,9 @@ static const double s_bLum = 0.0722;
 using namespace OFX;
 
 
-template <class T> inline T
+template <class T>
+static
+T
 Clamp(T v, int min, int max)
 {
     if (v < T(min)) return T(min);
