@@ -7,6 +7,7 @@ CopyRectangle.o \
 CornerPin.o \
 Crop.o \
 Difference.o \
+ESATracker.o \
 Grade.o \
 Invert.o \
 JoinViews.o \
@@ -23,6 +24,7 @@ TimeOffset.o \
 Transform.o \
 ofxsOGLTextRenderer.o \
 ofxsOGLFontData.o  \
+ofxsTracking.o \
 ofxsTransform3x3.o \
 ofxsRectangleInteract.o \
 PluginRegistrationCombined.o
@@ -37,6 +39,7 @@ VPATH += \
 ../CornerPin \
 ../Crop \
 ../Difference \
+../ESATracker \
 ../Grade \
 ../Invert \
 ../JoinViews \
@@ -64,6 +67,7 @@ CXXFLAGS += \
 -I../CornerPin \
 -I../Crop \
 -I../Difference \
+-I../ESATracker \
 -I../Grade \
 -I../Invert \
 -I../JoinViews \

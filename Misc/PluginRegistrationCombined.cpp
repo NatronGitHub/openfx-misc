@@ -6,6 +6,7 @@
 #include "CornerPin.h"
 #include "Crop.h"
 #include "Difference.h"
+#include "ESATracker.h"
 #include "Grade.h"
 #include "Invert.h"
 #include "JoinViews.h"
@@ -36,6 +37,7 @@ namespace OFX
             getCornerPinMaskedPluginID(ids);
             getCropPluginID(ids);
             getDifferencePluginID(ids);
+            getESATrackerPluginID(ids);
             getGradePluginID(ids);
             getInvertPluginID(ids);
             getJoinViewsPluginID(ids);
