@@ -54,6 +54,27 @@
 #define kTrackSearchBoxSizeParamName "searchBoxSize"
 #define kTrackSearchBoxSizeParamLabel "Search box size"
 
+#define kTrackPreviousParamName "trackPrevious"
+#define kTrackPreviousParamLabel "Track previous"
+
+#define kTrackNextParamName "trackNext"
+#define kTrackNextParamLabel "Track next"
+
+#define kTrackBackwardParamName "trackBackward"
+#define kTrackBackwardParamLabel "Track backward"
+
+#define kTrackForwardParamName "trackForward"
+#define kTrackForwardParamLabel "Track forward"
+
+namespace OFX
+{
+    struct TrackArguments {
+        ///first is not necesserarily lesser than last.
+        OfxTime first;
+        OfxTime last;
+        bool forward;
+    };
+}
 
 class GenericTrackerPlugin : public OFX::ImageEffect
 {
@@ -71,7 +92,21 @@ public:
      **/
     virtual bool isIdentity(const OFX::RenderArguments &args, OFX::Clip * &identityClip, double &identityTime) /*OVERRIDE FINAL*/;
     
+    /**
+     * @brief Handles the push buttons actions.
+     **/
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
+    
+
 protected:
+    
+    /**
+     * @brief Override to track the entire range between [first,last]. 
+     * @param forward If true then it should track from first to last, otherwise it should track
+     * from last to first.
+     * @param currentTime The current time at which the track has been requested.
+     **/
+    virtual void trackRange(const OFX::TrackArguments& args) = 0;
     
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
@@ -82,6 +117,12 @@ protected:
     OFX::Double2DParam* _innerSize;
     OFX::Double2DParam* _outterBtmLeft;
     OFX::Double2DParam* _outterSize;
+    
+    OFX::PushButtonParam* _backwardButton;
+    OFX::PushButtonParam* _prevButton;
+    OFX::PushButtonParam* _nextButton;
+    OFX::PushButtonParam* _forwardButton;
+    
     OFX::StringParam* _instanceName;
     
 private:

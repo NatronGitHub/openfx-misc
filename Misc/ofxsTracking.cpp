@@ -55,6 +55,11 @@ GenericTrackerPlugin::GenericTrackerPlugin(OfxImageEffectHandle handle)
 , _innerSize(0)
 , _outterBtmLeft(0)
 , _outterSize(0)
+, _backwardButton(0)
+, _prevButton(0)
+, _nextButton(0)
+, _forwardButton(0)
+, _instanceName(0)
 {
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
@@ -67,8 +72,12 @@ GenericTrackerPlugin::GenericTrackerPlugin(OfxImageEffectHandle handle)
     _innerSize = fetchDouble2DParam(kTrackSearchBoxSizeParamName);
     _outterBtmLeft = fetchDouble2DParam(kTrackSearchBoxPositionParamName);
     _outterSize = fetchDouble2DParam(kTrackSearchBoxSizeParamName);
-    
-    assert(_center && _innerSize && _innerBtmLeft && _outterSize && _outterBtmLeft);
+    _backwardButton = fetchPushButtonParam(kTrackBackwardParamName);
+    _prevButton = fetchPushButtonParam(kTrackPreviousParamName);
+    _nextButton = fetchPushButtonParam(kTrackNextParamName);
+    _forwardButton = fetchPushButtonParam(kTrackForwardParamName);
+    _instanceName = fetchStringParam(kOfxParamStringEffectInstanceLabel);
+    assert(_center && _innerSize && _innerBtmLeft && _outterSize && _outterBtmLeft && _backwardButton && _prevButton && _nextButton && _forwardButton && _instanceName);
 }
 
 bool GenericTrackerPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
@@ -79,6 +88,40 @@ bool GenericTrackerPlugin::isIdentity(const RenderArguments &args, Clip * &ident
 }
 
 
+void GenericTrackerPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    
+    if (paramName == kTrackBackwardParamName) {
+        OFX::TrackArguments trackArgs;
+        trackArgs.first = args.time;
+        double first,last;
+        timeLineGetBounds(first, last);
+        trackArgs.last = first;
+        trackArgs.forward = false;
+        trackRange(trackArgs);
+    } else if (paramName == kTrackPreviousParamName) {
+        OFX::TrackArguments trackArgs;
+        trackArgs.first = args.time;
+        trackArgs.last = trackArgs.first - 1;
+        trackArgs.forward = false;
+        trackRange(trackArgs);
+    } else if (paramName == kTrackNextParamName) {
+        OFX::TrackArguments trackArgs;
+        trackArgs.first = args.time;
+        trackArgs.last = trackArgs.first + 1;
+        trackArgs.forward = true;
+        trackRange(trackArgs);
+    } else if (paramName == kTrackForwardParamName) {
+        OFX::TrackArguments trackArgs;
+        trackArgs.first = args.time;
+        double first,last;
+        timeLineGetBounds(first, last);
+        trackArgs.last = last;
+        trackArgs.forward = true;
+        trackRange(trackArgs);
+    }
+    
+}
 
 void genericTrackerDescribe(OFX::ImageEffectDescriptor &desc)
 {
@@ -193,6 +236,27 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     outterSize->setDimensionLabels("width", "height");
     outterSize->setHint("This is the width and height of the search area.");
     page->addChild(*outterSize);
+    
+    OFX::PushButtonParamDescriptor* backward = desc.definePushButtonParam(kTrackBackwardParamName);
+    backward->setLabels(kTrackBackwardParamLabel, kTrackBackwardParamLabel,kTrackBackwardParamLabel);
+    backward->setLayoutHint(eLayoutHintNoNewLine);
+    page->addChild(*backward);
+
+    
+    OFX::PushButtonParamDescriptor* prev = desc.definePushButtonParam(kTrackPreviousParamName);
+    prev->setLabels(kTrackPreviousParamLabel, kTrackPreviousParamLabel, kTrackPreviousParamLabel);
+    prev->setLayoutHint(eLayoutHintNoNewLine);
+    page->addChild(*prev);
+    
+    OFX::PushButtonParamDescriptor* next = desc.definePushButtonParam(kTrackNextParamName);
+    next->setLabels(kTrackNextParamLabel, kTrackNextParamLabel, kTrackNextParamLabel);
+    next->setLayoutHint(eLayoutHintNoNewLine);
+    page->addChild(*next);
+
+    OFX::PushButtonParamDescriptor* forward = desc.definePushButtonParam(kTrackForwardParamName);
+    prev->setLabels(kTrackForwardParamLabel, kTrackForwardParamLabel, kTrackForwardParamLabel);
+    page->addChild(*forward);
+
 
     OFX::StringParamDescriptor* name = desc.defineStringParam(kOfxParamStringEffectInstanceLabel);
     name->setLabels(kOfxParamStringEffectInstanceLabel, kOfxParamStringEffectInstanceLabel, kOfxParamStringEffectInstanceLabel);
