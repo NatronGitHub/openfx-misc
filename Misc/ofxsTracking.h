@@ -37,6 +37,7 @@
 #define __Misc__ofxsTracking__
 
 #include "ofxsImageEffect.h"
+#include "ofxNatron.h"
 
 #define kTrackCenterPointParamName "center"
 #define kTrackCenterPointParamLabel "Center"
@@ -53,8 +54,6 @@
 #define kTrackSearchBoxSizeParamName "searchBoxSize"
 #define kTrackSearchBoxSizeParamLabel "Search box size"
 
-#define kTrackNameParamName "trackName"
-#define kTrackNameParamLabel "Track name"
 
 class GenericTrackerPlugin : public OFX::ImageEffect
 {
@@ -83,6 +82,7 @@ protected:
     OFX::Double2DParam* _innerSize;
     OFX::Double2DParam* _outterBtmLeft;
     OFX::Double2DParam* _outterSize;
+    OFX::StringParam* _instanceName;
     
 private:
     
@@ -183,7 +183,7 @@ public:
         _innerSize = effect->fetchDouble2DParam(kTrackPatternBoxSizeParamName);
         _outterBtmLeft = effect->fetchDouble2DParam(kTrackSearchBoxPositionParamName);
         _outterSize = effect->fetchDouble2DParam(kTrackSearchBoxSizeParamName);
-        _name = effect->fetchStringParam(kTrackNameParamName);
+        _name = effect->fetchStringParam(kOfxParamStringEffectInstanceLabel);
         addParamToSlaveTo(_center);
         addParamToSlaveTo(_innerBtmLeft);
         addParamToSlaveTo(_innerSize);

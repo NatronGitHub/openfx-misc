@@ -194,11 +194,14 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     outterSize->setHint("This is the width and height of the search area.");
     page->addChild(*outterSize);
 
-    OFX::StringParamDescriptor* name = desc.defineStringParam(kTrackNameParamName);
-    name->setLabels(kTrackNameParamLabel, kTrackNameParamLabel, kTrackNameParamLabel);
+    OFX::StringParamDescriptor* name = desc.defineStringParam(kOfxParamStringEffectInstanceLabel);
+    name->setLabels(kOfxParamStringEffectInstanceLabel, kOfxParamStringEffectInstanceLabel, kOfxParamStringEffectInstanceLabel);
     name->setIsSecret(true);
     name->setHint("The name of the instance of the plug-in. This is used internally by Natron to set the track instance name.");
     name->setDefault("Track");
+    name->setIsPersistant(false);
+    name->setEnabled(false);
+    name->setEvaluateOnChange(false);
     page->addChild(*name);
     
 }
