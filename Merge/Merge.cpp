@@ -116,8 +116,9 @@ protected:
     bool   _doMasking;
     MergingFunctionEnum _operation;
     int _bbox;
-    double _mix;
     bool _alphaMasking;
+    double _mix;
+    bool _maskInvert;
 
 public:
     
@@ -129,8 +130,9 @@ public:
     , _doMasking(false)
     , _operation(eMergePlus)
     , _bbox(0)
-    , _mix(0)
     , _alphaMasking(false)
+    , _mix(0)
+    , _maskInvert(false)
     {
         
     }
@@ -141,12 +143,13 @@ public:
     
     void doMasking(bool v) {_doMasking = v;}
 
-    void setValues(MergingFunctionEnum operation, int bboxChoice, double mix, bool alphaMasking)
+    void setValues(MergingFunctionEnum operation, int bboxChoice, bool alphaMasking, double mix, bool maskInvert)
     {
         _operation = operation;
         _bbox = bboxChoice;
-        _mix = mix;
         _alphaMasking = MergeImages2D::isMaskable(operation) ? alphaMasking : false;
+        _mix = mix;
+        _maskInvert = maskInvert;
     }
     
 };
@@ -183,7 +186,7 @@ private:
                         tmpB[c] = (float)srcPixB[c] / (float)maxValue;
                     }
                     mergePixel<float, nComponents, maxValue>(_operation,_alphaMasking, tmpA, tmpB, tmpPix);
-                    ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImgB, _doMasking, _maskImg, _mix, dstPix);
+                    ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImgB, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 } else if (srcPixA && !srcPixB) {
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = srcPixA[c];
@@ -228,10 +231,11 @@ public:
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
         _operation = fetchChoiceParam(kOperationParamName);
-        _bbox = fetchChoiceParam(kBboxParamName);
-        _mix = fetchDoubleParam(kFilterMixParamName);
-        _alphaMasking = fetchBooleanParam(kAlphaMaskingParamName);
         _operationString = fetchStringParam(kOfxParamStringSublabelName);
+        _bbox = fetchChoiceParam(kBboxParamName);
+        _alphaMasking = fetchBooleanParam(kAlphaMaskingParamName);
+        _mix = fetchDoubleParam(kFilterMixParamName);
+        _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
     }
     
 private:
@@ -258,8 +262,9 @@ private:
     OFX::ChoiceParam *_operation;
     OFX::StringParam *_operationString;
     OFX::ChoiceParam *_bbox;
-    OFX::DoubleParam* _mix;
     OFX::BooleanParam *_alphaMasking;
+    OFX::DoubleParam* _mix;
+    OFX::BooleanParam* _maskInvert;
 };
 
 
@@ -362,13 +367,15 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
 
     int operation;
     int bboxChoice;
-    double mix;
     bool alphaMasking;
-    _alphaMasking->getValueAtTime(args.time, alphaMasking);
     _operation->getValueAtTime(args.time, operation);
     _bbox->getValueAtTime(args.time, bboxChoice);
+    _alphaMasking->getValueAtTime(args.time, alphaMasking);
+    double mix;
     _mix->getValueAtTime(args.time, mix);
-    processor.setValues((MergingFunctionEnum)operation, bboxChoice, mix,alphaMasking);
+    bool maskInvert;
+    _maskInvert->getValueAtTime(args.time, maskInvert);
+    processor.setValues((MergingFunctionEnum)operation, bboxChoice, alphaMasking, mix, maskInvert);
     processor.setDstImg(dst.get());
     processor.setSrcImg(srcA.get(),srcB.get());
     processor.setRenderWindow(args.renderWindow);

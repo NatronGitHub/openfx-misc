@@ -109,7 +109,7 @@ using namespace OFX;
 // Base class for the RGBA and the Alpha processor
 class InvertBase : public OFX::ImageProcessor
 {
-  protected:
+protected:
     OFX::Image *_srcImg;
     OFX::Image *_maskImg;
     bool   _doMasking;
@@ -118,18 +118,21 @@ class InvertBase : public OFX::ImageProcessor
     bool _blue;
     bool _alpha;
     double _mix;
-  public:
+    bool _maskInvert;
+
+public:
     /** @brief no arg ctor */
     InvertBase(OFX::ImageEffect &instance)
-            : OFX::ImageProcessor(instance)
-            , _srcImg(0)
-            , _maskImg(0)
-            , _doMasking(false)
-            , _red(true)
-            , _green(true)
-            , _blue(true)
-            , _alpha(false)
-            , _mix(0)
+    : OFX::ImageProcessor(instance)
+    , _srcImg(0)
+    , _maskImg(0)
+    , _doMasking(false)
+    , _red(true)
+    , _green(true)
+    , _blue(true)
+    , _alpha(false)
+    , _mix(0)
+    , _maskInvert(false)
     {
     }
 
@@ -140,13 +143,14 @@ class InvertBase : public OFX::ImageProcessor
 
     void doMasking(bool v) {_doMasking = v;}
 
-    void setValues(bool red, bool green, bool blue, bool alpha, double mix)
+    void setValues(bool red, bool green, bool blue, bool alpha, double mix, bool maskInvert)
     {
         _red = red;
         _green = green;
         _blue = blue;
         _alpha = alpha;
         _mix = mix;
+        _maskInvert = maskInvert;
     }
 };
 
@@ -236,7 +240,7 @@ class ImageInverter : public InvertBase
                             tmpPix[3] = doalpha ? (maxValue - srcPix[3]) : srcPix[3];
                             break;
                     }
-                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, dstPix);
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 } else {
                     // no src pixel here, be black and transparent
                     for (int c = 0; c < nComponents; c++) {
@@ -273,6 +277,7 @@ class InvertPlugin : public OFX::ImageEffect
         _paramProcessB = fetchBooleanParam(kParamProcessB);
         _paramProcessA = fetchBooleanParam(kParamProcessA);
         _mix = fetchDoubleParam(kFilterMixParamName);
+        _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
     }
 
   private:
@@ -295,6 +300,7 @@ class InvertPlugin : public OFX::ImageEffect
     OFX::BooleanParam* _paramProcessB;
     OFX::BooleanParam* _paramProcessA;
     OFX::DoubleParam* _mix;
+    OFX::BooleanParam* _maskInvert;
 };
 
 
@@ -344,13 +350,15 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
     }
 
     bool red, green, blue, alpha;
-    double mix;
     _paramProcessR->getValueAtTime(args.time, red);
     _paramProcessG->getValueAtTime(args.time, green);
     _paramProcessB->getValueAtTime(args.time, blue);
     _paramProcessA->getValueAtTime(args.time, alpha);
+    double mix;
     _mix->getValueAtTime(args.time, mix);
-    processor.setValues(red, green, blue, alpha, mix);
+    bool maskInvert;
+    _maskInvert->getValueAtTime(args.time, maskInvert);
+    processor.setValues(red, green, blue, alpha, mix, maskInvert);
 
     // set the images
     processor.setDstImg(dst.get());

@@ -78,6 +78,7 @@
 #endif
 
 #include "ofxsProcessing.H"
+#include "ofxsFilter.h"
 
 #define kPluginName "GradeOFX"
 #define kPluginGrouping "Color"
@@ -129,6 +130,8 @@ protected:
     OFX::Image *_srcImg;
     OFX::Image *_maskImg;
     bool   _doMasking;
+    double _mix;
+    bool _maskInvert;
 
 public:
     
@@ -136,7 +139,9 @@ public:
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
-    ,_doMasking(false)
+    , _doMasking(false)
+    , _mix(0)
+    , _maskInvert(false)
     {
     }
     
@@ -154,7 +159,9 @@ public:
                    const RGBAValues& offset,
                    const RGBAValues& gamma,
                    bool clampBlack,
-                   bool clampWhite)
+                   bool clampWhite,
+                   double mix,
+                   bool maskInvert)
     {
         _blackPoint = blackPoint;
         _whitePoint = whitePoint;
@@ -165,6 +172,8 @@ public:
         _gamma = gamma;
         _clampBlack = clampBlack;
         _clampWhite = clampWhite;
+        _mix = mix;
+        _maskInvert = maskInvert;
     }
 
     void grade(float* v, float wp, float bp, float white, float black, float mutiply, float offset, float gamma)
@@ -217,38 +226,24 @@ public:
 private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-       
-        float maskScale = 1.0f;
+        assert(nComponents == 3 || nComponents == 4);
+        float tmpPix[nComponents];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                if (_doMasking) {
-                    if (!_maskImg) {
-                        maskScale = 1.0f;
-                    } else {
-                        PIX *maskPix = (PIX *)  (_maskImg ? _maskImg->getPixelAddress(x, y) : 0);
-                        maskScale = maskPix != 0 ? float(*maskPix)/float(maxValue) : 0.0f;
-                    }
-                }
                 if (srcPix) {
-                    PIX r = srcPix[0];
-                    PIX g = srcPix[1];
-                    PIX b = srcPix[2];
-                    float n_r = float(r) / float(maxValue);
-                    float n_g = float(g) / float(maxValue);
-                    float n_b = float(b) / float(maxValue);
-                    float t_r = n_r,t_g = n_g,t_b = n_b;
+                    float t_r = srcPix[0] / float(maxValue);
+                    float t_g = srcPix[1] / float(maxValue);
+                    float t_b = srcPix[2] / float(maxValue);
                     grade(&t_r, &t_g, &t_b);
-                    n_r = t_r * maskScale + (1.f - maskScale) * n_r;
-                    n_g = t_g * maskScale + (1.f - maskScale) * n_g;
-                    n_b = t_b * maskScale + (1.f - maskScale) * n_b;
-                    dstPix[0] = PIX(n_r * maxValue);
-                    dstPix[1] = PIX(n_g * maxValue);
-                    dstPix[2] = PIX(n_b * maxValue);
+                    tmpPix[0] = t_r * maxValue;
+                    tmpPix[1] = t_g * maxValue;
+                    tmpPix[2] = t_b * maxValue;
                     if (nComponents == 4) {
-                        dstPix[3] = srcPix[3];
+                        tmpPix[nComponents-1] = srcPix[nComponents-1];
                     }
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 } else {
                     for (int c = 0; c < nComponents; c++) {
                         dstPix[c] = 0;
@@ -289,6 +284,8 @@ public:
         _gamma = fetchRGBAParam(kGammaParamName);
         _clampBlack = fetchBooleanParam(kClampBlackParamName);
         _clampWhite = fetchBooleanParam(kClampWhiteParamName);
+        _mix = fetchDoubleParam(kFilterMixParamName);
+        _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
     }
     
 private:
@@ -297,6 +294,8 @@ private:
     
     /* set up and run a processor */
     void setupAndProcess(GradeProcessorBase &, const OFX::RenderArguments &args);
+
+    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) /*OVERRIDE FINAL*/;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -312,6 +311,8 @@ private:
     OFX::RGBAParam* _gamma;
     OFX::BooleanParam* _clampBlack;
     OFX::BooleanParam* _clampWhite;
+    OFX::DoubleParam* _mix;
+    OFX::BooleanParam* _maskInvert;
 };
 
 
@@ -365,7 +366,11 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     bool clampBlack,clampWhite;
     _clampBlack->getValueAtTime(args.time, clampBlack);
     _clampWhite->getValueAtTime(args.time, clampWhite);
-    processor.setValues(blackPoint, whitePoint, black, white, multiply, offset, gamma, clampBlack, clampWhite);
+    double mix;
+    _mix->getValueAtTime(args.time, mix);
+    bool maskInvert;
+    _maskInvert->getValueAtTime(args.time, maskInvert);
+    processor.setValues(blackPoint, whitePoint, black, white, multiply, offset, gamma, clampBlack, clampWhite, mix, maskInvert);
     processor.process();
 }
 
@@ -429,6 +434,27 @@ GradePlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+
+bool
+GradePlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+{
+    // TODO: handle all parameters correctly, not only mix
+
+    //bool red, green, blue, alpha;
+    double mix;
+    //_paramProcessR->getValueAtTime(args.time, red);
+    //_paramProcessG->getValueAtTime(args.time, green);
+    //_paramProcessB->getValueAtTime(args.time, blue);
+    //_paramProcessA->getValueAtTime(args.time, alpha);
+    _mix->getValueAtTime(args.time, mix);
+
+    if (mix == 0. /*|| (!red && !green && !blue && !alpha)*/) {
+        identityClip = srcClip_;
+        return true;
+    } else {
+        return false;
+    }
+}
 
 mDeclarePluginFactory(GradePluginFactory, {}, {});
 
@@ -525,6 +551,7 @@ void GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     clampWhiteParam->setAnimates(true);
     page->addChild(*clampWhiteParam);
 
+    ofxsFilterDescribeParamsMaskMix(desc, page);
 }
 
 OFX::ImageEffect* GradePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)

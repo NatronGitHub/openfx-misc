@@ -77,6 +77,7 @@
 #include <windows.h>
 #endif
 #include "ofxsProcessing.H"
+#include "ofxsFilter.h"
 
 #define kPluginName "ColorCorrectOFX"
 #define kPluginGrouping "Color"
@@ -115,16 +116,6 @@ static const double s_bLum = 0.0722;
 
 using namespace OFX;
 
-
-template <class T>
-static
-T
-Clamp(T v, int min, int max)
-{
-    if (v < T(min)) return T(min);
-    if (v > T(max)) return T(max);
-    return v;
-}
 
 namespace {
     struct ColorControlValues {
@@ -241,6 +232,8 @@ protected:
     OFX::Image *_srcImg;
     OFX::Image *_maskImg;
     bool   _doMasking;
+    double _mix;
+    bool _maskInvert;
 
 public:
     ColorCorrecterBase(OFX::ImageEffect &instance,const OFX::RenderArguments &args)
@@ -248,6 +241,8 @@ public:
     , _srcImg(0)
     , _maskImg(0)
     , _doMasking(false)
+    , _mix(0)
+    , _maskInvert(false)
     {
         // build the LUT
         OFX::ParametricParam  *lookupTable = instance.fetchParametricParam(kColorCorrectToneRangesParamName);
@@ -275,12 +270,16 @@ public:
     void setColorControlValues(const ColorControlGroup& master,
                                const ColorControlGroup& shadow,
                                const ColorControlGroup& midtone,
-                               const ColorControlGroup& hightlights)
+                               const ColorControlGroup& hightlights,
+                               double mix,
+                               bool maskInvert)
     {
         _masterValues = master;
         _shadowValues = shadow;
         _midtoneValues = midtone;
         _highlightsValues = hightlights;
+        _mix = mix;
+        _maskInvert = maskInvert;
     }
 
     void colorTransform(float *r,float *g,float *b)
@@ -340,40 +339,26 @@ public:
 private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-
-        float maskScale = 1.0f;
+        assert(nComponents == 3 || nComponents == 4);
+        float tmpPix[nComponents];
         for (int y = procWindow.y1; y < procWindow.y2; y++)
         {
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             for (int x = procWindow.x1; x < procWindow.x2; x++)
             {
                 PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                if (_doMasking) {
-                    if (!_maskImg) {
-                        maskScale = 1.0f;
-                    } else {
-                        PIX *maskPix = (PIX *)  (_maskImg ? _maskImg->getPixelAddress(x, y) : 0);
-                        maskScale = maskPix != 0 ? float(*maskPix)/float(maxValue) : 0.0f;
-                    }
-                }
                 if (srcPix) {
-                    PIX r = srcPix[0];
-                    PIX g = srcPix[1];
-                    PIX b = srcPix[2];
-                    float n_r = float(r) / float(maxValue);
-                    float n_g = float(g) / float(maxValue);
-                    float n_b = float(b) / float(maxValue);
-                    float t_r = n_r,t_g = n_g,t_b = n_b;
+                    float t_r = srcPix[0] / float(maxValue);
+                    float t_g = srcPix[1] / float(maxValue);
+                    float t_b = srcPix[2] / float(maxValue);
                     colorTransform(&t_r, &t_g, &t_b);
-                    n_r = t_r * maskScale + (1.f - maskScale) * n_r;
-                    n_g = t_g * maskScale + (1.f - maskScale) * n_g;
-                    n_b = t_b * maskScale + (1.f - maskScale) * n_b;
-                    dstPix[0] = PIX(Clamp(n_r * maxValue,0,maxValue));
-                    dstPix[1] = PIX(Clamp(n_g * maxValue,0,maxValue));
-                    dstPix[2] = PIX(Clamp(n_b * maxValue,0,maxValue));
+                    tmpPix[0] = t_r * maxValue;
+                    tmpPix[1] = t_g * maxValue;
+                    tmpPix[2] = t_b * maxValue;
                     if (nComponents == 4) {
-                        dstPix[3] = srcPix[3];
+                        tmpPix[nComponents-1] = srcPix[nComponents-1];
                     }
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 } else {
                     for (int c = 0; c < nComponents; c++)
                         dstPix[c] = 0;
@@ -425,15 +410,19 @@ public:
         fetchColorControlGroup(kColorCorrectMidtonesGroupName, &_midtonesParamsGroup);
         fetchColorControlGroup(kColorCorrectHighlightsGroupName, &_highlightsParamsGroup);
         _rangesParam = fetchParametricParam(kColorCorrectToneRangesParamName);
+        _mix = fetchDoubleParam(kFilterMixParamName);
+        _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
     }
-    
+
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
     
     /* set up and run a processor */
     void setupAndProcess(ColorCorrecterBase &, const OFX::RenderArguments &args);
-    
+
+    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) /*OVERRIDE FINAL*/;
+
     void fetchColorControlGroup(const std::string& groupName, ColorControlParamGroup* group) {
         group->saturation = fetchRGBAParam(groupName + '.' + kColorCorrectSaturationName);
         group->contrast = fetchRGBAParam(groupName + '.' + kColorCorrectContrastName);
@@ -471,6 +460,8 @@ private:
     ColorControlParamGroup _midtonesParamsGroup;
     ColorControlParamGroup _highlightsParamsGroup;
     OFX::ParametricParam* _rangesParam;
+    OFX::DoubleParam* _mix;
+    OFX::BooleanParam* _maskInvert;
 };
 
 
@@ -542,7 +533,11 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
     getColorCorrectGroupValues(args.time, &shadowValues,    eGroupShadow);
     getColorCorrectGroupValues(args.time, &midtoneValues,   eGroupMidtone);
     getColorCorrectGroupValues(args.time, &highlightValues, eGroupHighlight);
-    processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues);
+    double mix;
+    _mix->getValueAtTime(args.time, mix);
+    bool maskInvert;
+    _maskInvert->getValueAtTime(args.time, maskInvert);
+    processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, mix, maskInvert);
     processor.process();
 }
 
@@ -611,6 +606,27 @@ ColorCorrectPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+
+bool
+ColorCorrectPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+{
+    // TODO: handle all parameters correctly, not only mix
+
+    //bool red, green, blue, alpha;
+    double mix;
+    //_paramProcessR->getValueAtTime(args.time, red);
+    //_paramProcessG->getValueAtTime(args.time, green);
+    //_paramProcessB->getValueAtTime(args.time, blue);
+    //_paramProcessA->getValueAtTime(args.time, alpha);
+    _mix->getValueAtTime(args.time, mix);
+
+    if (mix == 0. /*|| (!red && !green && !blue && !alpha)*/) {
+        identityClip = srcClip_;
+        return true;
+    } else {
+        return false;
+    }
+}
 
 mDeclarePluginFactory(ColorCorrectPluginFactory, {}, {});
 
@@ -704,8 +720,9 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
         maskClip->addSupportedComponent(ePixelComponentAlpha);
         maskClip->setTemporalClipAccess(false);
-        if (context == eContextGeneral)
+        if (context == eContextGeneral) {
             maskClip->setOptional(true);
+        }
         maskClip->setSupportsTiles(true);
         maskClip->setIsMask(true);
     }
@@ -751,7 +768,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     
     ranges->addChild(*lookupTable);
 
-    
+    ofxsFilterDescribeParamsMaskMix(desc, page);
 }
 
 OFX::ImageEffect* ColorCorrectPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)

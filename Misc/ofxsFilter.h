@@ -57,6 +57,10 @@
 //#define kFilterMaskParamName "Mask"
 #define kFilterMixParamName "mix"
 #define kFilterMixParamLabel "Mix"
+#define kFilterMixParamHint "Mix factor between the original and the transformed image"
+#define kFilterMaskInvertParamName "maskInvert"
+#define kFilterMaskInvertParamLabel "Invert Mask"
+#define kFilterMaskInvertParamHint "When checked, the effect is fully applied where the mask is 0"
 
 enum FilterEnum {
     eFilterImpulse,
@@ -145,10 +149,15 @@ ofxsFilterDescribeParamsMaskMix(OFX::ImageEffectDescriptor &desc, OFX::PageParam
     //
     OFX::DoubleParamDescriptor* mix = desc.defineDoubleParam(kFilterMixParamName);
     mix->setLabels(kFilterMixParamLabel, kFilterMixParamLabel, kFilterMixParamLabel);
+    mix->setHint(kFilterMixParamHint);
     mix->setDefault(1.);
     mix->setRange(0.,1.);
     mix->setDisplayRange(0.,1.);
     page->addChild(*mix);
+    OFX::BooleanParamDescriptor* maskInvert = desc.defineBooleanParam(kFilterMaskInvertParamName);
+    maskInvert->setLabels(kFilterMaskInvertParamLabel, kFilterMaskInvertParamLabel, kFilterMaskInvertParamLabel);
+    maskInvert->setHint(kFilterMaskInvertParamHint);
+    page->addChild(*maskInvert);
 }
 
 /*
@@ -503,6 +512,7 @@ ofxsMaskMix(const float *tmpPix, //!< interpolated pixel
             bool domask, //!< apply the mask?
             const OFX::Image *maskImg, //!< the mask image (ignored if masked=false or domask=false)
             float mix, //!< mix factor between the output and bkImg
+            bool maskInvert, //<! invert mask behavior
             PIX *dstPix) //!< destination pixel
 {
     PIX *maskPix = NULL;
@@ -515,7 +525,14 @@ ofxsMaskMix(const float *tmpPix, //!< interpolated pixel
             // we do, get the pixel from the mask
             maskPix = (PIX *)maskImg->getPixelAddress(x, y);
             // figure the scale factor from that pixel
-            maskScale = maskPix != 0 ? float(*maskPix)/float(maxValue) : 0.0f;
+            if (maskPix == 0) {
+                maskScale = 0.;
+            } else {
+                maskScale = *maskPix/float(maxValue);
+                if (maskInvert) {
+                    maskScale = 1. - maskScale;
+                }
+            }
         }
         if ((domask && maskImg) || mix != 1.) {
             srcPix = (PIX *)srcImg->getPixelAddress(x, y);
@@ -554,6 +571,7 @@ ofxsMaskMixPix(const float *tmpPix, //!< interpolated pixel
             bool domask, //!< apply the mask?
             const OFX::Image *maskImg, //!< the mask image (ignored if masked=false or domask=false)
             float mix, //!< mix factor between the output and bkImg
+            bool maskInvert, //<! invert mask behavior
             PIX *dstPix) //!< destination pixel
 {
     PIX *maskPix = NULL;
@@ -565,7 +583,14 @@ ofxsMaskMixPix(const float *tmpPix, //!< interpolated pixel
             // we do, get the pixel from the mask
             maskPix = (PIX *)maskImg->getPixelAddress(x, y);
             // figure the scale factor from that pixel
-            maskScale = maskPix != 0 ? float(*maskPix)/float(maxValue) : 0.0f;
+            if (maskPix == 0) {
+                maskScale = 0.;
+            } else {
+                maskScale = *maskPix/float(maxValue);
+                if (maskInvert) {
+                    maskScale = 1. - maskScale;
+                }
+            }
         }
         float alpha = maskScale * mix;
         for (int c = 0; c < nComponents; ++c) {

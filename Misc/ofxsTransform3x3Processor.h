@@ -63,6 +63,7 @@ protected:
     double _motionblur; // quality of the motion blur. 0 means disabled
     bool _domask;
     double _mix;
+    bool _maskInvert;
 
 public:
 
@@ -76,6 +77,7 @@ public:
     , _motionblur(0.)
     , _domask(false)
     , _mix(1.0)
+    , _maskInvert(false)
     {
     }
 
@@ -100,7 +102,8 @@ public:
                    // all generic parameters below
                    bool blackOutside, //!< generic
                    double motionblur,
-                   double mix)          //!< generic
+                   double mix,//!< generic
+                   bool maskInvert)          //!< generic
     {
         // NON-GENERIC
         assert(invtransform);
@@ -110,6 +113,7 @@ public:
         _blackOutside = blackOutside;
         _motionblur = motionblur;
         _mix = mix;
+        _maskInvert = maskInvert;
     }
 };
 
@@ -165,7 +169,7 @@ private:
                         ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
                     }
                     
-                    ofxsMaskMix<PIX, nComponents, maxValue, masked>(tmpPix, x, y, _srcImg, _domask, _maskImg, _mix, dstPix);
+                    ofxsMaskMix<PIX, nComponents, maxValue, masked>(tmpPix, x, y, _srcImg, _domask, _maskImg, _mix, _maskInvert, dstPix);
                 }
             }
         } else { // motion blur
@@ -249,7 +253,7 @@ private:
                     for (int c = 0; c < nComponents; ++c) {
                         tmpPix[c] = mean[c];
                     }
-                    ofxsMaskMix<PIX, nComponents, maxValue, masked>(tmpPix, x, y, _srcImg, _domask, _maskImg, _mix, dstPix);
+                    ofxsMaskMix<PIX, nComponents, maxValue, masked>(tmpPix, x, y, _srcImg, _domask, _maskImg, _mix, _maskInvert, dstPix);
                 }
             }
 

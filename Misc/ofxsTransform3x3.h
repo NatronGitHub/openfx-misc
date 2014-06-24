@@ -172,6 +172,7 @@ private:
 
     bool _masked;
     OFX::DoubleParam* _mix;
+    OFX::BooleanParam* _maskInvert;
 };
 
 void Transform3x3Describe(OFX::ImageEffectDescriptor &desc, bool masked);

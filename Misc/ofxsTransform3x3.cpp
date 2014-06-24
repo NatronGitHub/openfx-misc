@@ -275,6 +275,7 @@ Transform3x3Plugin::Transform3x3Plugin(OfxImageEffectHandle handle, bool masked)
 , _shuttercustomoffset(0)
 , _masked(masked)
 , _mix(0)
+, _maskInvert(0)
 {
     dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
     assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
@@ -300,6 +301,7 @@ Transform3x3Plugin::Transform3x3Plugin(OfxImageEffectHandle handle, bool masked)
     _shuttercustomoffset = fetchDoubleParam(kTransform3x3ShutterCustomOffsetParamName);
     if (masked) {
         _mix = fetchDoubleParam(kFilterMixParamName);
+        _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
     }
 }
 
@@ -354,6 +356,7 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
     double motionblur = 0.;
     bool blackOutside = true;
     double mix = 1.;
+    bool maskInvert = false;
 
     if (!src.get()) {
         // no source image, use a dummy transform
@@ -388,6 +391,7 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
         _blackOutside->getValueAtTime(args.time, blackOutside);
         if (_masked) {
             _mix->getValueAtTime(args.time, mix);
+            _maskInvert->getValueAtTime(args.time, maskInvert);
         }
 
         const bool fielded = args.fieldToRender == OFX::eFieldLower || args.fieldToRender == OFX::eFieldUpper;
@@ -456,7 +460,8 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
                         invtransformsize,
                         blackOutside,
                         motionblur,
-                        mix);
+                        mix,
+                        maskInvert);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
