@@ -308,7 +308,7 @@ private:
         } else if (value >= 1.) {
             return _lookupTable[curve][LUT_MAX_PRECISION];
         } else {
-            double i_d = std::floor(value * LUT_MAX_PRECISION);
+            double i_d = std::floor((double)value * (double)LUT_MAX_PRECISION);
             int i = (int)i_d;
             assert(i < LUT_MAX_PRECISION);
             double alpha = value * LUT_MAX_PRECISION - i_d;
