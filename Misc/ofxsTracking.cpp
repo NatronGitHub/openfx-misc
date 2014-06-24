@@ -76,7 +76,7 @@ GenericTrackerPlugin::GenericTrackerPlugin(OfxImageEffectHandle handle)
     _prevButton = fetchPushButtonParam(kTrackPreviousParamName);
     _nextButton = fetchPushButtonParam(kTrackNextParamName);
     _forwardButton = fetchPushButtonParam(kTrackForwardParamName);
-    _instanceName = fetchStringParam(kOfxParamStringEffectInstanceLabel);
+    _instanceName = fetchStringParam(kOfxParamStringSublabelName);
     assert(_center && _innerSize && _innerBtmLeft && _outterSize && _outterBtmLeft && _backwardButton && _prevButton && _nextButton && _forwardButton && _instanceName);
 }
 
@@ -194,64 +194,67 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
 {
     OFX::Double2DParamDescriptor* center = desc.defineDouble2DParam(kTrackCenterPointParamName);
     center->setLabels(kTrackCenterPointParamLabel, kTrackCenterPointParamLabel, kTrackCenterPointParamLabel);
+    center->setHint(kTrackCenterPointParamHint);
     center->setDoubleType(eDoubleTypeXYAbsolute);
     center->setDefaultCoordinateSystem(eCoordinatesNormalised);
     center->setDefault(0.5, 0.5);
-    center->setHint("The center point to track");
     page->addChild(*center);
     
     
     OFX::Double2DParamDescriptor* innerBtmLeft = desc.defineDouble2DParam(kTrackPatternBoxPositionParamName);
     innerBtmLeft->setLabels(kTrackPatternBoxPositionParamLabel, kTrackPatternBoxPositionParamLabel, kTrackPatternBoxPositionParamLabel);
+    innerBtmLeft->setHint(kTrackPatternBoxPositionParamHint);
     innerBtmLeft->setDefaultCoordinateSystem(eCoordinatesNormalised);
     innerBtmLeft->setDoubleType(eDoubleTypeXYAbsolute);
     innerBtmLeft->setDefault(-0.05,-0.05);
     innerBtmLeft->setIsSecret(true);
-    innerBtmLeft->setHint("The bottom left corner of the inner pattern box. The coordinates are relative to the center point.");
     page->addChild(*innerBtmLeft);
     
     OFX::Double2DParamDescriptor* innerSize = desc.defineDouble2DParam(kTrackPatternBoxSizeParamName);
     innerSize->setLabels(kTrackPatternBoxSizeParamLabel, kTrackPatternBoxSizeParamLabel, kTrackPatternBoxSizeParamLabel);
+    innerSize->setHint(kTrackPatternBoxSizeParamHint);
     innerSize->setDefaultCoordinateSystem(eCoordinatesNormalised);
     innerSize->setDoubleType(eDoubleTypeXYAbsolute);
     innerSize->setDefault(0.1, 0.1);
     innerSize->setIsSecret(true);
     innerSize->setDimensionLabels("width", "height");
-    innerSize->setHint("This is the width and height of the pattern box.");
     page->addChild(*innerSize);
     
     OFX::Double2DParamDescriptor* outterBtmLeft = desc.defineDouble2DParam(kTrackSearchBoxPositionParamName);
     outterBtmLeft->setLabels(kTrackSearchBoxPositionParamLabel, kTrackSearchBoxPositionParamLabel, kTrackSearchBoxPositionParamLabel);
+    outterBtmLeft->setHint(kTrackSearchBoxPositionParamHint);
     outterBtmLeft->setDefaultCoordinateSystem(eCoordinatesNormalised);
     outterBtmLeft->setDoubleType(eDoubleTypeXYAbsolute);
     outterBtmLeft->setDefault(-0.1,-0.1);
     outterBtmLeft->setIsSecret(true);
-    outterBtmLeft->setHint("The bottom left corner of the search area. The coordinates are relative to the center point.");
     page->addChild(*outterBtmLeft);
     
     OFX::Double2DParamDescriptor* outterSize = desc.defineDouble2DParam(kTrackSearchBoxSizeParamName);
     outterSize->setLabels(kTrackSearchBoxSizeParamLabel, kTrackSearchBoxSizeParamLabel, kTrackSearchBoxSizeParamLabel);
+    outterSize->setHint(kTrackSearchBoxPositionParamHint);
     outterSize->setDefaultCoordinateSystem(eCoordinatesNormalised);
     outterSize->setDoubleType(eDoubleTypeXYAbsolute);
     outterSize->setDefault(0.2, 0.2);
     outterSize->setIsSecret(true);
     outterSize->setDimensionLabels("width", "height");
-    outterSize->setHint("This is the width and height of the search area.");
     page->addChild(*outterSize);
     
     OFX::PushButtonParamDescriptor* backward = desc.definePushButtonParam(kTrackBackwardParamName);
     backward->setLabels(kTrackBackwardParamLabel, kTrackBackwardParamLabel,kTrackBackwardParamLabel);
+    backward->setHint(kTrackBackwardParamHint);
     backward->setLayoutHint(eLayoutHintNoNewLine);
     page->addChild(*backward);
 
     
     OFX::PushButtonParamDescriptor* prev = desc.definePushButtonParam(kTrackPreviousParamName);
     prev->setLabels(kTrackPreviousParamLabel, kTrackPreviousParamLabel, kTrackPreviousParamLabel);
+    prev->setHint(kTrackPreviousParamHint);
     prev->setLayoutHint(eLayoutHintNoNewLine);
     page->addChild(*prev);
     
     OFX::PushButtonParamDescriptor* next = desc.definePushButtonParam(kTrackNextParamName);
     next->setLabels(kTrackNextParamLabel, kTrackNextParamLabel, kTrackNextParamLabel);
+    next->setHint(kTrackNextParamHint);
     next->setLayoutHint(eLayoutHintNoNewLine);
     page->addChild(*next);
 
@@ -260,13 +263,13 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     page->addChild(*forward);
 
 
-    OFX::StringParamDescriptor* name = desc.defineStringParam(kOfxParamStringEffectInstanceLabel);
-    name->setLabels(kOfxParamStringEffectInstanceLabel, kOfxParamStringEffectInstanceLabel, kOfxParamStringEffectInstanceLabel);
-    name->setIsSecret(true);
-    name->setHint("The name of the instance of the plug-in. This is used internally by Natron to set the track instance name.");
+    OFX::StringParamDescriptor* name = desc.defineStringParam(kOfxParamStringSublabelName);
+    name->setLabels(kOfxParamStringSublabelName, kOfxParamStringSublabelName, kOfxParamStringSublabelName);
+    name->setHint("The name of the track, as it appears in the user interface.");
     name->setDefault("Track");
-    name->setIsPersistant(false);
-    name->setEnabled(false);
+    name->setIsSecret(false); // it has to be user-editable
+    name->setEnabled(true); // it has to be user-editable
+    name->setIsPersistant(true); // it has to be saved with the instance parameters
     name->setEvaluateOnChange(false);
     page->addChild(*name);
     

@@ -41,30 +41,39 @@
 
 #define kTrackCenterPointParamName "center"
 #define kTrackCenterPointParamLabel "Center"
+#define kTrackCenterPointParamHint "The center point to track"
 
 #define kTrackPatternBoxPositionParamName "patternBoxPosition"
 #define kTrackPatternBoxPositionParamLabel "Pattern box position"
+#define kTrackPatternBoxPositionParamHint "The bottom left corner of the inner pattern box. The coordinates are relative to the center point."
 
 #define kTrackPatternBoxSizeParamName "patternBoxSize"
 #define kTrackPatternBoxSizeParamLabel "patternBoxLabel"
+#define kTrackPatternBoxSizeParamHint "Width and height of the pattern box."
 
 #define kTrackSearchBoxPositionParamName "searchBoxPosition"
 #define kTrackSearchBoxPositionParamLabel "Search box position"
+#define kTrackSearchBoxPositionParamHint "The bottom left corner of the search area. The coordinates are relative to the center point."
 
 #define kTrackSearchBoxSizeParamName "searchBoxSize"
 #define kTrackSearchBoxSizeParamLabel "Search box size"
+#define kTrackSearchBoxSizeParamHint "Width and height of the search area."
 
 #define kTrackPreviousParamName "trackPrevious"
 #define kTrackPreviousParamLabel "Track previous"
+#define kTrackPreviousParamHint "Track pattern to previous frame"
 
 #define kTrackNextParamName "trackNext"
 #define kTrackNextParamLabel "Track next"
+#define kTrackNextParamHint "Track pattern to next frame"
 
 #define kTrackBackwardParamName "trackBackward"
 #define kTrackBackwardParamLabel "Track backward"
+#define kTrackBackwardParamHint "Track pattern to the beginning of the sequence"
 
 #define kTrackForwardParamName "trackForward"
 #define kTrackForwardParamLabel "Track forward"
+#define kTrackForwardParamHint "Track pattern to the end of the sequence"
 
 namespace OFX
 {
@@ -224,7 +233,7 @@ public:
         _innerSize = effect->fetchDouble2DParam(kTrackPatternBoxSizeParamName);
         _outterBtmLeft = effect->fetchDouble2DParam(kTrackSearchBoxPositionParamName);
         _outterSize = effect->fetchDouble2DParam(kTrackSearchBoxSizeParamName);
-        _name = effect->fetchStringParam(kOfxParamStringEffectInstanceLabel);
+        _name = effect->fetchStringParam(kOfxParamStringSublabelName);
         addParamToSlaveTo(_center);
         addParamToSlaveTo(_innerBtmLeft);
         addParamToSlaveTo(_innerSize);
