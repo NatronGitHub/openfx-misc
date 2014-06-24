@@ -6,7 +6,6 @@
 #include "CornerPin.h"
 #include "Crop.h"
 #include "Difference.h"
-#include "ESATracker.h"
 #include "Grade.h"
 #include "Invert.h"
 #include "JoinViews.h"
@@ -21,6 +20,7 @@
 #include "SideBySide.h"
 #include "Switch.h"
 #include "TimeOffset.h"
+#include "TrackSSD.h"
 #include "Transform.h"
 
 namespace OFX
@@ -38,7 +38,6 @@ namespace OFX
             getCornerPinMaskedPluginID(ids);
             getCropPluginID(ids);
             getDifferencePluginID(ids);
-            getESATrackerPluginID(ids);
             getGradePluginID(ids);
             getInvertPluginID(ids);
             getJoinViewsPluginID(ids);
@@ -53,6 +52,7 @@ namespace OFX
             getSideBySidePluginID(ids);
             getSwitchPluginID(ids);
             getTimeOffsetPluginID(ids);
+            getTrackSSDPluginID(ids);
             getTransformPluginID(ids);
             getTransformMaskedPluginID(ids);
             getUnpremultPluginID(ids);

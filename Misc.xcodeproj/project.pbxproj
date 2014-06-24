@@ -317,6 +317,9 @@
 		D730311C19518E7B0024BCA4 /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D730311A19518E7B0024BCA4 /* ofxsRectangleInteract.cpp */; };
 		D730311D19518E7B0024BCA4 /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D730311A19518E7B0024BCA4 /* ofxsRectangleInteract.cpp */; };
 		D730311E19518E7B0024BCA4 /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D730311A19518E7B0024BCA4 /* ofxsRectangleInteract.cpp */; };
+		D733F6FF1959769800028B57 /* TrackSSD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D733F6FD1959765100028B57 /* TrackSSD.cpp */; };
+		D733F7001959769F00028B57 /* TrackSSD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D733F6FD1959765100028B57 /* TrackSSD.cpp */; };
+		D733F7011959773E00028B57 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D733F6FC1959765100028B57 /* PluginRegistration.cpp */; };
 		D7349E8E18E776780097DB1D /* Transform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7349E8C18E7766F0097DB1D /* Transform.cpp */; };
 		D7349E9118E7767D0097DB1D /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		D7349E9218E7767D0097DB1D /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
@@ -366,9 +369,6 @@
 		D7BB85C21955C00100A86649 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		D7BB85C31955C00100A86649 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		D7BB85C51955C00100A86649 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		D7BB85CB1955C01C00A86649 /* ESATracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7BB85B31955BFB000A86649 /* ESATracker.cpp */; };
-		D7BB85CC1955C01F00A86649 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7BB85B71955BFB000A86649 /* PluginRegistration.cpp */; };
-		D7BB85CD1955C03400A86649 /* ESATracker.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7BB85B31955BFB000A86649 /* ESATracker.cpp */; };
 		D7BB85D01955C4AD00A86649 /* ofxsTracking.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7BB85CE1955C4AD00A86649 /* ofxsTracking.cpp */; };
 		D7BB85D11955C4AD00A86649 /* ofxsTracking.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7BB85CE1955C4AD00A86649 /* ofxsTracking.cpp */; };
 		D7BB85D2195638F900A86649 /* ofxsOGLTextRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */; };
@@ -730,6 +730,11 @@
 		D730311619518B6B0024BCA4 /* CopyRectangle.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CopyRectangle.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		D730311A19518E7B0024BCA4 /* ofxsRectangleInteract.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsRectangleInteract.cpp; sourceTree = "<group>"; };
 		D730311B19518E7B0024BCA4 /* ofxsRectangleInteract.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsRectangleInteract.h; sourceTree = "<group>"; };
+		D733F6FA1959765100028B57 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D733F6FB1959765100028B57 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		D733F6FC1959765100028B57 /* PluginRegistration.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		D733F6FD1959765100028B57 /* TrackSSD.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TrackSSD.cpp; sourceTree = "<group>"; };
+		D733F6FE1959765100028B57 /* TrackSSD.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TrackSSD.h; sourceTree = "<group>"; };
 		D7349E8918E7766F0097DB1D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D7349E8A18E7766F0097DB1D /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D7349E8B18E7766F0097DB1D /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
@@ -758,12 +763,7 @@
 		D7B4C96018D9DA410004137D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D7B4C96118D9DA410004137D /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D7B4C96218D9DA410004137D /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		D7BB85B31955BFB000A86649 /* ESATracker.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ESATracker.cpp; sourceTree = "<group>"; };
-		D7BB85B41955BFB000A86649 /* ESATracker.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ESATracker.h; sourceTree = "<group>"; };
-		D7BB85B51955BFB000A86649 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D7BB85B61955BFB000A86649 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		D7BB85B71955BFB000A86649 /* PluginRegistration.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		D7BB85C91955C00100A86649 /* ESATracker.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ESATracker.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		D7BB85C91955C00100A86649 /* TrackSSD.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TrackSSD.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		D7BB85CE1955C4AD00A86649 /* ofxsTracking.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsTracking.cpp; sourceTree = "<group>"; };
 		D7BB85CF1955C4AD00A86649 /* ofxsTracking.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsTracking.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -1152,7 +1152,7 @@
 				1EF46F43194A394E00825BDF /* Shuffle.ofx.bundle */,
 				D730311619518B6B0024BCA4 /* CopyRectangle.ofx.bundle */,
 				1E181AFB19518CCF00FAB9A9 /* Invert.ofx.bundle */,
-				D7BB85C91955C00100A86649 /* ESATracker.ofx.bundle */,
+				D7BB85C91955C00100A86649 /* TrackSSD.ofx.bundle */,
 				1E52FFCB1955CE120000FB79 /* Premult.ofx.bundle */,
 			);
 			name = Products;
@@ -1161,7 +1161,7 @@
 		1E551ED217994DEF00A4135C /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				D7BB85B21955BFB000A86649 /* ESATracker */,
+				D733F6F91959765100028B57 /* TrackSSD */,
 				1EDE1B8E182D0511002392CB /* Anaglyph */,
 				1E3451E0190695070080D699 /* ChromaKeyer */,
 				D7B4C95D18D9DA410004137D /* ColorCorrect */,
@@ -1399,6 +1399,18 @@
 			path = CopyRectangle;
 			sourceTree = "<group>";
 		};
+		D733F6F91959765100028B57 /* TrackSSD */ = {
+			isa = PBXGroup;
+			children = (
+				D733F6FA1959765100028B57 /* Info.plist */,
+				D733F6FB1959765100028B57 /* Makefile */,
+				D733F6FC1959765100028B57 /* PluginRegistration.cpp */,
+				D733F6FD1959765100028B57 /* TrackSSD.cpp */,
+				D733F6FE1959765100028B57 /* TrackSSD.h */,
+			);
+			path = TrackSSD;
+			sourceTree = "<group>";
+		};
 		D7349E8818E7766F0097DB1D /* Transform */ = {
 			isa = PBXGroup;
 			children = (
@@ -1445,18 +1457,6 @@
 				D7B4C96218D9DA410004137D /* PluginRegistration.cpp */,
 			);
 			path = ColorCorrect;
-			sourceTree = "<group>";
-		};
-		D7BB85B21955BFB000A86649 /* ESATracker */ = {
-			isa = PBXGroup;
-			children = (
-				D7BB85B31955BFB000A86649 /* ESATracker.cpp */,
-				D7BB85B41955BFB000A86649 /* ESATracker.h */,
-				D7BB85B51955BFB000A86649 /* Info.plist */,
-				D7BB85B61955BFB000A86649 /* Makefile */,
-				D7BB85B71955BFB000A86649 /* PluginRegistration.cpp */,
-			);
-			path = ESATracker;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1862,9 +1862,9 @@
 			productReference = D74A80C4194059CC007C3E1C /* Crop.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
-		D7BB85B81955C00100A86649 /* ESATracker.ofx */ = {
+		D7BB85B81955C00100A86649 /* TrackSSD.ofx */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D7BB85C61955C00100A86649 /* Build configuration list for PBXNativeTarget "ESATracker.ofx" */;
+			buildConfigurationList = D7BB85C61955C00100A86649 /* Build configuration list for PBXNativeTarget "TrackSSD.ofx" */;
 			buildPhases = (
 				D7BB85B91955C00100A86649 /* Sources */,
 				D7BB85C41955C00100A86649 /* Frameworks */,
@@ -1873,9 +1873,9 @@
 			);
 			dependencies = (
 			);
-			name = ESATracker.ofx;
+			name = TrackSSD.ofx;
 			productName = basic.ofx;
-			productReference = D7BB85C91955C00100A86649 /* ESATracker.ofx.bundle */;
+			productReference = D7BB85C91955C00100A86649 /* TrackSSD.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
 /* End PBXNativeTarget section */
@@ -1926,7 +1926,7 @@
 				1E235FF418369E4C0019C45F /* TimeOffset.ofx */,
 				D7349E8F18E7767D0097DB1D /* Transform.ofx */,
 				1E8B5D4A18B76A7500C31FDC /* Misc.ofx */,
-				D7BB85B81955C00100A86649 /* ESATracker.ofx */,
+				D7BB85B81955C00100A86649 /* TrackSSD.ofx */,
 			);
 		};
 /* End PBXProject section */
@@ -2117,13 +2117,13 @@
 				D74A80C719405A14007C3E1C /* Crop.cpp in Sources */,
 				1EFB4E2019461B76005932AF /* Difference.cpp in Sources */,
 				D725A2E318E0D54E001A1E3E /* Grade.cpp in Sources */,
-				D7BB85CD1955C03400A86649 /* ESATracker.cpp in Sources */,
 				1E52FFD01955CE720000FB79 /* Premult.cpp in Sources */,
 				1E181B0219518E0000FAB9A9 /* Invert.cpp in Sources */,
 				1E8B5D7F18B7828400C31FDC /* JoinViews.cpp in Sources */,
 				D74121D118F9C99300A81F8B /* Merge.cpp in Sources */,
 				1E8B5D7218B7800800C31FDC /* MixViews.cpp in Sources */,
 				1E8B5D7718B7811500C31FDC /* OneView.cpp in Sources */,
+				D733F7001959769F00028B57 /* TrackSSD.cpp in Sources */,
 				1E0E4EA2194CAF9E0072248F /* ReConverge.cpp in Sources */,
 				1E8B5D6818B76F8700C31FDC /* RGBLut.cpp in Sources */,
 				D721EC17191120F30069DB1D /* Roto.cpp in Sources */,
@@ -2390,17 +2390,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				D7BB85BC1955C00100A86649 /* ofxsCore.cpp in Sources */,
-				D7BB85CB1955C01C00A86649 /* ESATracker.cpp in Sources */,
 				D7BB85BD1955C00100A86649 /* ofxsImageEffect.cpp in Sources */,
-				D7BB85CC1955C01F00A86649 /* PluginRegistration.cpp in Sources */,
 				D7BB85BE1955C00100A86649 /* ofxsInteract.cpp in Sources */,
 				D7BB85BF1955C00100A86649 /* ofxsLog.cpp in Sources */,
 				D7BB85C01955C00100A86649 /* ofxsMultiThread.cpp in Sources */,
 				D7BB85C11955C00100A86649 /* ofxsParams.cpp in Sources */,
 				D7BB85D2195638F900A86649 /* ofxsOGLTextRenderer.cpp in Sources */,
 				D7BB85D3195638FB00A86649 /* ofxsOGLFontData.cpp in Sources */,
+				D733F6FF1959769800028B57 /* TrackSSD.cpp in Sources */,
 				D7BB85C21955C00100A86649 /* ofxsProperty.cpp in Sources */,
 				D7BB85D11955C4AD00A86649 /* ofxsTracking.cpp in Sources */,
+				D733F7011959773E00028B57 /* PluginRegistration.cpp in Sources */,
 				D7BB85C31955C00100A86649 /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3207,7 +3207,7 @@
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = ESATracker.ofx;
+				PRODUCT_NAME = TrackSSD.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Debug;
@@ -3218,7 +3218,7 @@
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = ESATracker.ofx;
+				PRODUCT_NAME = TrackSSD.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
@@ -3478,7 +3478,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D7BB85C61955C00100A86649 /* Build configuration list for PBXNativeTarget "ESATracker.ofx" */ = {
+		D7BB85C61955C00100A86649 /* Build configuration list for PBXNativeTarget "TrackSSD.ofx" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D7BB85C71955C00100A86649 /* Debug */,

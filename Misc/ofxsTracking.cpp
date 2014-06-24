@@ -152,7 +152,9 @@ void genericTrackerDescribe(OFX::ImageEffectDescriptor &desc)
     // in order to support multiresolution, render() must take into account the pixelaspectratio and the renderscale
     // and scale the transform appropriately.
     // All other functions are usually in canonical coordinates.
-    desc.setSupportsMultiResolution(true);
+    
+    ///We don't support multi-resolution
+    desc.setSupportsMultiResolution(false);
     
 
 }
@@ -1059,21 +1061,21 @@ bool TrackerRegionInteract::penUp(const OFX::PenArgs &args)
         btmLeft.x = _innerBtmLeftDragPos.x - center.x;
         btmLeft.y = _innerBtmLeftDragPos.y - center.y;
         
-        _innerBtmLeft->setValue(btmLeft.x, btmLeft.y);
-        _innerSize->setValue(_innerSizeDrag.x, _innerSizeDrag.y);
+        _innerBtmLeft->setValueAtTime(args.time,btmLeft.x, btmLeft.y);
+        _innerSize->setValueAtTime(args.time,_innerSizeDrag.x, _innerSizeDrag.y);
     }
     {
         OfxPointD btmLeft;
         btmLeft.x = _outterBtmLeftDragPos.x - center.x;
         btmLeft.y = _outterBtmLeftDragPos.y - center.y;
-        _outterBtmLeft->setValue(btmLeft.x, btmLeft.y);
-        _outterSize->setValue(_outterSizeDrag.x, _outterSizeDrag.y);
+        _outterBtmLeft->setValueAtTime(args.time,btmLeft.x, btmLeft.y);
+        _outterSize->setValueAtTime(args.time,_outterSizeDrag.x, _outterSizeDrag.y);
         didSmthing = true;
 
     }
     
     if (_ms == eDraggingCenter) {
-        _center->setValue(_centerDragPos.x, _centerDragPos.y);
+        _center->setValueAtTime(args.time,_centerDragPos.x, _centerDragPos.y);
     }
     
     _ms = eIdle;

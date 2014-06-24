@@ -69,19 +69,20 @@
  England
  
  */
-#include "ESATracker.h"
+#include "TrackSSD.h"
 
 #include <cmath>
 #include <map>
+#include <climits>
 
 #include "ofxsProcessing.H"
 #include "ofxsTracking.h"
 #include "ofxsMerging.h"
 
-#define kPluginName "ESATracker"
+#define kPluginName "TrackSSD"
 #define kPluginGrouping "Transform"
 #define kPluginDescription ""
-#define kPluginIdentifier "net.sf.openfx:ESATrackerPlugin"
+#define kPluginIdentifier "net.sf.openfx:TrackSSDPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -92,14 +93,14 @@ using namespace OFX;
 
 
 
-class ESATrackerProcessorBase;
+class TrackSSDProcessorBase;
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class ESATrackerPlugin : public GenericTrackerPlugin
+class TrackSSDPlugin : public GenericTrackerPlugin
 {
 public:
     /** @brief ctor */
-    ESATrackerPlugin(OfxImageEffectHandle handle)
+    TrackSSDPlugin(OfxImageEffectHandle handle)
     : GenericTrackerPlugin(handle)
     {
 
@@ -123,7 +124,7 @@ private:
     void trackInternal(OfxTime ref,OfxTime other);
 
     /* set up and run a processor */
-    void setupAndProcess(ESATrackerProcessorBase &,OfxTime refTime,OfxTime otherTime,OFX::Image* refImg,OFX::Image* otherImg);
+    void setupAndProcess(TrackSSDProcessorBase &,OfxTime refTime,OfxTime otherTime,OFX::Image* refImg,OFX::Image* otherImg);
 
     OfxRectD getTrackSearchWindowCanonical(OfxTime time) const;
 
@@ -135,7 +136,7 @@ private:
 };
 
 
-class ESATrackerProcessorBase : public OFX::ImageProcessor
+class TrackSSDProcessorBase : public OFX::ImageProcessor
 {
 protected:
     
@@ -143,16 +144,16 @@ protected:
     OFX::Image *_otherImg;
     OfxRectI _patternWindow;
     OfxPointD _center;
-    ESATrackerPlugin* _plugin;
+    TrackSSDPlugin* _plugin;
     
 public:
-    ESATrackerProcessorBase(OFX::ImageEffect &instance)
+    TrackSSDProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _refImg(0)
     , _otherImg(0)
     , _patternWindow()
     , _center()
-    , _plugin(dynamic_cast<ESATrackerPlugin*>(&instance))
+    , _plugin(dynamic_cast<TrackSSDPlugin*>(&instance))
     {
         assert(_plugin);
     }
@@ -179,11 +180,11 @@ public:
 // The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
 // by the compiler, using the same generic code for all filters.
 template <class PIX, int nComponents, int maxValue>
-class ESATrackerProcessor : public ESATrackerProcessorBase
+class TrackSSDProcessor : public TrackSSDProcessorBase
 {
 public:
-    ESATrackerProcessor(OFX::ImageEffect &instance)
-    : ESATrackerProcessorBase(instance)
+    TrackSSDProcessor(OFX::ImageEffect &instance)
+    : TrackSSDProcessorBase(instance)
     {
     }
     
@@ -194,6 +195,13 @@ private:
         double minSSD = INT_MAX;
         OfxPointD point;
         //assert(filter == _filter);
+        
+        ///For every pixel in the sub window of the search area we find the pixel
+        ///that minimize the sum of squared differences between the pattern in the ref image
+        ///and the pattern in the other image.
+        
+        ///we're not interested in the alpha channel for RGBA images
+        int maxComp = std::max(nComponents, 3);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if (_effect.abort()) break;
             
@@ -204,9 +212,17 @@ private:
                     for (int j = _patternWindow.x1; j < _patternWindow.x2; ++j) {
                         PIX *otherPix = (PIX *) _otherImg->getPixelAddress(x + j, y + i);
                         PIX *refPix = (PIX*) _refImg->getPixelAddress(_center.x + j, _center.y + i);
-                        if (otherPix && refPix) {
-                            for (int k = 0; k < nComponents; ++k) {
+                        
+                        ///the search window & pattern window have been intersected to the reference image's bounds
+                        assert(refPix);
+                        
+                        if (otherPix) {
+                            for (int k = 0; k < maxComp; ++k) {
                                 ssd += (otherPix[k] - refPix[k]) * (otherPix[k] - refPix[k]);
+                            }
+                        } else {
+                            for (int k = 0; k < maxComp; ++k) {
+                                ssd += refPix[k] * refPix[k];
                             }
                         }
                     }
@@ -225,7 +241,7 @@ private:
 
 
 void
-ESATrackerPlugin::updateSSD(const OfxPointD& point,double ssd)
+TrackSSDPlugin::updateSSD(const OfxPointD& point,double ssd)
 {
     OFX::MultiThread::AutoMutex lock(_lock);
     if (_ssd.second > ssd) {
@@ -236,7 +252,7 @@ ESATrackerPlugin::updateSSD(const OfxPointD& point,double ssd)
 }
 
 void
-ESATrackerPlugin::trackRange(const OFX::TrackArguments& args)
+TrackSSDPlugin::trackRange(const OFX::TrackArguments& args)
 {
     OfxTime t = args.first;
     std::string name;
@@ -284,7 +300,7 @@ ESATrackerPlugin::trackRange(const OFX::TrackArguments& args)
 
 /* set up and run a processor */
 void
-ESATrackerPlugin::setupAndProcess(ESATrackerProcessorBase &processor,OfxTime refTime,OfxTime otherTime,OFX::Image* refImg,OFX::Image* otherImg)
+TrackSSDPlugin::setupAndProcess(TrackSSDProcessorBase &processor,OfxTime refTime,OfxTime otherTime,OFX::Image* refImg,OFX::Image* otherImg)
 {
     
     // set an uninitialized image for the dst image
@@ -357,7 +373,7 @@ ESATrackerPlugin::setupAndProcess(ESATrackerProcessorBase &processor,OfxTime ref
 }
 
 OfxRectD
-ESATrackerPlugin::getPatternCanonical(OfxTime time) const
+TrackSSDPlugin::getPatternCanonical(OfxTime time) const
 {
     OfxRectD ret;
     OfxPointD innerBtmLeft,innerSize;
@@ -371,7 +387,7 @@ ESATrackerPlugin::getPatternCanonical(OfxTime time) const
 }
 
 OfxRectD
-ESATrackerPlugin::getTrackSearchWindowCanonical(OfxTime time) const
+TrackSSDPlugin::getTrackSearchWindowCanonical(OfxTime time) const
 {
     OfxPointD outterBtmLeft,outterSize,center;
     _outterBtmLeft->getValueAtTime(time, outterBtmLeft.x, outterBtmLeft.y);
@@ -392,7 +408,7 @@ ESATrackerPlugin::getTrackSearchWindowCanonical(OfxTime time) const
 // It may be difficult to implement for complicated transforms:
 // consequently, these transforms cannot support tiles.
 void
-ESATrackerPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+TrackSSDPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
     
     OfxRectD roi = getTrackSearchWindowCanonical(args.time);
@@ -406,7 +422,7 @@ ESATrackerPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
 // the internal render function
 template <int nComponents>
 void
-ESATrackerPlugin::trackInternal(OfxTime ref,OfxTime other)
+TrackSSDPlugin::trackInternal(OfxTime ref,OfxTime other)
 {
     std::auto_ptr<OFX::Image> srcRef(srcClip_->fetchImage(ref));
     std::auto_ptr<OFX::Image> srcOther(srcClip_->fetchImage(other));
@@ -423,17 +439,17 @@ ESATrackerPlugin::trackInternal(OfxTime ref,OfxTime other)
     switch (srcBitDepth) {
         case OFX::eBitDepthUByte :
         {
-            ESATrackerProcessor<unsigned char, nComponents, 255> fred(*this);
+            TrackSSDProcessor<unsigned char, nComponents, 255> fred(*this);
             setupAndProcess(fred,ref,other, srcRef.get(),srcOther.get());
         }   break;
         case OFX::eBitDepthUShort :
         {
-            ESATrackerProcessor<unsigned short, nComponents, 65535> fred(*this);
+            TrackSSDProcessor<unsigned short, nComponents, 65535> fred(*this);
             setupAndProcess(fred,ref,other, srcRef.get(),srcOther.get());
         }   break;
         case OFX::eBitDepthFloat :
         {
-            ESATrackerProcessor<float, nComponents, 1> fred(*this);
+            TrackSSDProcessor<float, nComponents, 1> fred(*this);
             setupAndProcess(fred,ref,other,srcRef.get(),srcOther.get());
         }   break;
         default :
@@ -444,9 +460,9 @@ ESATrackerPlugin::trackInternal(OfxTime ref,OfxTime other)
 
 using namespace OFX;
 
-mDeclarePluginFactory(ESATrackerPluginFactory, {}, {});
+mDeclarePluginFactory(TrackSSDPluginFactory, {}, {});
 
-void ESATrackerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void TrackSSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabels(kPluginName, kPluginName, kPluginName);
@@ -458,24 +474,24 @@ void ESATrackerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 
 
-OFX::ImageEffect* ESATrackerPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* TrackSSDPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
-    return new ESATrackerPlugin(handle);
+    return new TrackSSDPlugin(handle);
 }
 
 
 
 
-void ESATrackerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void TrackSSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     PageParamDescriptor* page = genericTrackerDescribeInContextBegin(desc, context);
     genericTrackerDescribePointParameters(desc, page);
 
 }
 
-void getESATrackerPluginID(OFX::PluginFactoryArray &ids)
+void getTrackSSDPluginID(OFX::PluginFactoryArray &ids)
 {
-    static ESATrackerPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static TrackSSDPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 
