@@ -430,6 +430,12 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
                 invtransform[0].g = 0.;
                 invtransform[0].h = 0.;
                 invtransform[0].i = 1.;
+            } else {
+                OFX::Matrix3x3 canonicalToPixel = OFX::ofxsMatCanonicalToPixel(pixelAspectRatio, args.renderScale.x,
+                                                                               args.renderScale.y, fielded);
+                OFX::Matrix3x3 pixelToCanonical = OFX::ofxsMatPixelToCanonical(pixelAspectRatio,  args.renderScale.x,
+                                                                               args.renderScale.y, fielded);
+                *invtransform = canonicalToPixel * *invtransform * pixelToCanonical;
             }
         }
         if (invtransformsize == 1) {
