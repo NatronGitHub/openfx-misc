@@ -75,6 +75,11 @@
 #define kTrackForwardParamLabel "Track forward"
 #define kTrackForwardParamHint "Track pattern to the end of the sequence"
 
+#define kTrackLabelParamName kOfxParamStringSublabelName // defined in ofxNatron.h
+#define kTrackLabelParamLabel "Track name"
+#define kTrackLabelParamHint "The name of the track, as it appears in the user interface."
+#define kTrackLabelParamDefault "Track"
+
 namespace OFX
 {
     struct TrackArguments {

@@ -263,10 +263,10 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     page->addChild(*forward);
 
 
-    OFX::StringParamDescriptor* name = desc.defineStringParam(kOfxParamStringSublabelName);
-    name->setLabels(kOfxParamStringSublabelName, kOfxParamStringSublabelName, kOfxParamStringSublabelName);
-    name->setHint("The name of the track, as it appears in the user interface.");
-    name->setDefault("Track");
+    OFX::StringParamDescriptor* name = desc.defineStringParam(kTrackLabelParamName);
+    name->setLabels(kTrackLabelParamLabel, kTrackLabelParamLabel, kTrackLabelParamLabel);
+    name->setHint(kTrackLabelParamHint);
+    name->setDefault(kTrackLabelParamDefault);
     name->setIsSecret(false); // it has to be user-editable
     name->setEnabled(true); // it has to be user-editable
     name->setIsPersistant(true); // it has to be saved with the instance parameters
