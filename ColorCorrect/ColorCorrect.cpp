@@ -139,9 +139,9 @@ namespace {
     };
 
     struct RGBPixel {
-        float r, g, b;
+        double r, g, b;
 
-        RGBPixel(float r_, float g_, float b_)
+        RGBPixel(double r_, double g_, double b_)
         : r(r_)
         , g(g_)
         , b(b_)
@@ -176,13 +176,13 @@ namespace {
         void applyGamma(const ColorControlValues &c)
         {
             if (r > 0) {
-                r = std::pow(r ,1.f / (float)c.r);
+                r = std::pow(r ,1. / c.r);
             }
             if (g > 0) {
-                g = std::pow(g ,1.f / (float)c.g);
+                g = std::pow(g ,1. / c.g);
             }
             if (b > 0) {
-                b = std::pow(b ,1.f / (float)c.b);
+                b = std::pow(b ,1. / c.b);
             }
         }
 
@@ -250,13 +250,13 @@ public:
         for (int curve = 0; curve < 2; ++curve) {
             for (int position = 0; position <= LUT_MAX_PRECISION; ++position) {
                 // position to evaluate the param at
-                float parametricPos = float(position)/LUT_MAX_PRECISION;
+                double parametricPos = double(position)/LUT_MAX_PRECISION;
 
                 // evaluate the parametric param
                 double value = lookupTable->getValue(curve, args.time, parametricPos);
 
                 // set that in the lut
-                _lookupTable[curve][position] = std::max(0.f,std::min(float(value*LUT_MAX_PRECISION+0.5), float(LUT_MAX_PRECISION)));
+                _lookupTable[curve][position] = (float)std::max(0.,std::min(value*LUT_MAX_PRECISION+0.5, double(LUT_MAX_PRECISION)));
             }
         }
     }
@@ -282,12 +282,12 @@ public:
         _maskInvert = maskInvert;
     }
 
-    void colorTransform(float *r,float *g,float *b)
+    void colorTransform(double *r, double *g, double *b)
     {
-        float luminance = *r * s_rLum + *g * s_gLum + *b * s_bLum;
-        float s_scale = interpolate(0, luminance);
-        float h_scale = interpolate(1, luminance);
-        float m_scale = 1.f - s_scale - h_scale;
+        double luminance = *r * s_rLum + *g * s_gLum + *b * s_bLum;
+        double s_scale = interpolate(0, luminance);
+        double h_scale = interpolate(1, luminance);
+        double m_scale = 1.f - s_scale - h_scale;
 
         RGBPixel p(*r, *g, *b);
         p.applySMH(_shadowValues, s_scale,
@@ -300,14 +300,14 @@ public:
     }
 
 private:
-    float interpolate(int curve, float value)
+    float interpolate(int curve, double value)
     {
         if (value < 0.) {
             return _lookupTable[curve][0];
         } else if (value >= 1.) {
             return _lookupTable[curve][LUT_MAX_PRECISION];
         } else {
-            double i_d = std::floor((double)value * (double)LUT_MAX_PRECISION);
+            double i_d = std::floor(value * LUT_MAX_PRECISION);
             int i = (int)i_d;
             assert(i < LUT_MAX_PRECISION);
             double alpha = value * LUT_MAX_PRECISION - i_d;
@@ -322,7 +322,7 @@ private:
     ColorControlGroup _midtoneValues;
     ColorControlGroup _highlightsValues;
 
-    float _lookupTable[2][LUT_MAX_PRECISION + 1];
+    double _lookupTable[2][LUT_MAX_PRECISION + 1];
 };
 
 
@@ -348,9 +348,9 @@ private:
             {
                 PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 if (srcPix) {
-                    float t_r = srcPix[0] / float(maxValue);
-                    float t_g = srcPix[1] / float(maxValue);
-                    float t_b = srcPix[2] / float(maxValue);
+                    double t_r = srcPix[0] / double(maxValue);
+                    double t_g = srcPix[1] / double(maxValue);
+                    double t_b = srcPix[2] / double(maxValue);
                     colorTransform(&t_r, &t_g, &t_b);
                     tmpPix[0] = t_r * maxValue;
                     tmpPix[1] = t_g * maxValue;

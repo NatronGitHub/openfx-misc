@@ -176,27 +176,27 @@ public:
         _maskInvert = maskInvert;
     }
 
-    void grade(float* v, float wp, float bp, float white, float black, float mutiply, float offset, float gamma)
+    void grade(double* v, double wp, double bp, double white, double black, double mutiply, double offset, double gamma)
     {
-        float A = mutiply * (white - black) / (wp - bp);
-        float B = offset + black - A * bp;
-        *v = std::pow((A * *v) + B,1.f / gamma);
+        double A = mutiply * (white - black) / (wp - bp);
+        double B = offset + black - A * bp;
+        *v = std::pow((A * *v) + B, 1. / gamma);
     }
     
-    void grade(float *r,float *g,float *b)
+    void grade(double *r, double *g, double *b)
     {
         grade(r, _whitePoint.r, _blackPoint.r, _white.r, _black.r, _multiply.r, _offset.r, _gamma.r);
         grade(g, _whitePoint.g, _blackPoint.g, _white.g, _black.g, _multiply.g, _offset.g, _gamma.g);
         grade(b, _whitePoint.b, _blackPoint.b, _white.b, _black.b, _multiply.b, _offset.b, _gamma.b);
         if (_clampBlack) {
-            *r = std::max(0.f,*r);
-            *g = std::max(0.f,*g);
-            *b = std::max(0.f,*b);
+            *r = std::max(0.,*r);
+            *g = std::max(0.,*g);
+            *b = std::max(0.,*b);
         }
         if (_clampBlack) {
-            *r = std::min(1.f,*r);
-            *g = std::min(1.f,*g);
-            *b = std::min(1.f,*b);
+            *r = std::min(1.,*r);
+            *g = std::min(1.,*g);
+            *b = std::min(1.,*b);
         }
     }
 
@@ -233,9 +233,9 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 if (srcPix) {
-                    float t_r = srcPix[0] / float(maxValue);
-                    float t_g = srcPix[1] / float(maxValue);
-                    float t_b = srcPix[2] / float(maxValue);
+                    double t_r = srcPix[0] / double(maxValue);
+                    double t_g = srcPix[1] / double(maxValue);
+                    double t_b = srcPix[2] / double(maxValue);
                     grade(&t_r, &t_g, &t_b);
                     tmpPix[0] = t_r * maxValue;
                     tmpPix[1] = t_g * maxValue;
