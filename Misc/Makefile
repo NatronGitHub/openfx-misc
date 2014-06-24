@@ -7,7 +7,6 @@ CopyRectangle.o \
 CornerPin.o \
 Crop.o \
 Difference.o \
-ESATracker.o \
 Grade.o \
 Invert.o \
 JoinViews.o \
@@ -22,6 +21,7 @@ Shuffle.o \
 SideBySide.o \
 Switch.o \
 TimeOffset.o \
+TrackSSD.o \
 Transform.o \
 ofxsOGLTextRenderer.o \
 ofxsOGLFontData.o  \
@@ -40,7 +40,6 @@ VPATH += \
 ../CornerPin \
 ../Crop \
 ../Difference \
-../ESATracker \
 ../Grade \
 ../Invert \
 ../JoinViews \
@@ -55,6 +54,7 @@ VPATH += \
 ../SideBySide \
 ../Switch \
 ../TimeOffset \
+../TrackSSD \
 ../Transform
 
 include ../Makefile.master
@@ -69,7 +69,6 @@ CXXFLAGS += \
 -I../CornerPin \
 -I../Crop \
 -I../Difference \
--I../ESATracker \
 -I../Grade \
 -I../Invert \
 -I../JoinViews \
@@ -84,4 +83,5 @@ CXXFLAGS += \
 -I../SideBySide \
 -I../Switch \
 -I../TimeOffset \
+-I../TrackSSD \
 -I../Transform

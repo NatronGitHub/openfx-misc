@@ -614,7 +614,7 @@ bool TrackerRegionInteract::penMotion(const OFX::PenArgs &args)
     delta.x = args.penPosition.x - _lastMousePos.x;
     delta.y = args.penPosition.y - _lastMousePos.y;
     
-    double selectionTol = 15. * args.pixelScale.x;
+    double selectionTol = 8. * args.pixelScale.x;
     
     OfxPointD innerSize,outterSize,innerBtmLeft,outterBtmLeft,center;
     _innerSize->getValueAtTime(args.time, innerSize.x, innerSize.y);
@@ -937,7 +937,7 @@ bool TrackerRegionInteract::penDown(const OFX::PenArgs &args)
 {
     bool didSomething = false;
     
-    double selectionTol = 15. * args.pixelScale.x;
+    double selectionTol = 8. * args.pixelScale.x;
     
     OfxPointD innerSize,outterSize,innerBtmLeft,outterBtmLeft,center;
     _innerSize->getValueAtTime(args.time, innerSize.x, innerSize.y);
