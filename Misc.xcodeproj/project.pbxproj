@@ -13,6 +13,7 @@
 			buildPhases = (
 			);
 			dependencies = (
+				D733F7031959803600028B57 /* PBXTargetDependency */,
 				1E0E4EAC194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4EAE194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4EB0194CB2C30072248F /* PBXTargetDependency */,
@@ -557,6 +558,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 1ECE5459185F2433001ED442;
 			remoteInfo = DebugProxy.ofx;
+		};
+		D733F7021959803600028B57 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D7BB85B81955C00100A86649;
+			remoteInfo = TrackSSD.ofx;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -2538,6 +2546,11 @@
 			target = 1ECE5459185F2433001ED442 /* DebugProxy.ofx */;
 			targetProxy = 1ECE5471185F24B7001ED442 /* PBXContainerItemProxy */;
 		};
+		D733F7031959803600028B57 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D7BB85B81955C00100A86649 /* TrackSSD.ofx */;
+			targetProxy = D733F7021959803600028B57 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
@@ -3205,7 +3218,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_FILE = TrackSSD/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = TrackSSD.ofx;
 				WRAPPER_EXTENSION = bundle;
@@ -3216,7 +3229,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_FILE = TrackSSD/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = TrackSSD.ofx;
 				WRAPPER_EXTENSION = bundle;
