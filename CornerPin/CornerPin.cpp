@@ -927,15 +927,14 @@ OFX::ImageEffect* CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHan
 
 
 
-void getCornerPinPluginID(OFX::PluginFactoryArray &ids)
+void getCornerPinPluginIDs(OFX::PluginFactoryArray &ids)
 {
-    static CornerPinPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
+    {
+        static CornerPinPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static CornerPinMaskedPluginFactory p(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
 }
-
-void getCornerPinMaskedPluginID(OFX::PluginFactoryArray &ids)
-{
-    static CornerPinMaskedPluginFactory p(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
-

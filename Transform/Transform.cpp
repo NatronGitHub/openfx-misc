@@ -1306,14 +1306,14 @@ OFX::ImageEffect* TransformMaskedPluginFactory::createInstance(OfxImageEffectHan
     return new TransformPlugin(handle, true);
 }
 
-void getTransformPluginID(OFX::PluginFactoryArray &ids)
+void getTransformPluginIDs(OFX::PluginFactoryArray &ids)
 {
-    static TransformPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
-
-void getTransformMaskedPluginID(OFX::PluginFactoryArray &ids)
-{
-    static TransformMaskedPluginFactory p(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
+    {
+        static TransformPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static TransformMaskedPluginFactory p(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
 }

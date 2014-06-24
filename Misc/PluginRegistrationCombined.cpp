@@ -34,8 +34,7 @@ namespace OFX
             getColorCorrectPluginID(ids);
             getConstantPluginID(ids);
             getCopyRectanglePluginID(ids);
-            getCornerPinPluginID(ids);
-            getCornerPinMaskedPluginID(ids);
+            getCornerPinPluginIDs(ids);
             getCropPluginID(ids);
             getDifferencePluginID(ids);
             getGradePluginID(ids);
@@ -44,7 +43,7 @@ namespace OFX
             getMergePluginID(ids);
             getMixViewsPluginID(ids);
             getOneViewPluginID(ids);
-            getPremultPluginID(ids);
+            getPremultPluginIDs(ids);
             getReConvergePluginID(ids);
             getRGBLutPluginID(ids);
             getRotoPluginID(ids);
@@ -54,9 +53,7 @@ namespace OFX
             getTimeOffsetPluginID(ids);
             ///Not production ready
             //getTrackSSDPluginID(ids);
-            getTransformPluginID(ids);
-            getTransformMaskedPluginID(ids);
-            getUnpremultPluginID(ids);
+            getTransformPluginIDs(ids);
         }
     }
 }

@@ -6,8 +6,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            getTransformPluginID(ids);
-            getTransformMaskedPluginID(ids);
+            getTransformPluginIDs(ids);
         }
     }
 }

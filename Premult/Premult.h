@@ -3,7 +3,6 @@
 
 #include "ofxsImageEffect.h"
 
-void getPremultPluginID(OFX::PluginFactoryArray &ids);
-void getUnpremultPluginID(OFX::PluginFactoryArray &ids);
+void getPremultPluginIDs(OFX::PluginFactoryArray &ids);
 
 #endif // Misc_Premult_h

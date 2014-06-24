@@ -39,7 +39,6 @@
 
 #include "ofxsImageEffect.h"
 
-void getTransformPluginID(OFX::PluginFactoryArray &ids);
-void getTransformMaskedPluginID(OFX::PluginFactoryArray &ids);
+void getTransformPluginIDs(OFX::PluginFactoryArray &ids);
 
 #endif // MISC_TRANSFORM_H

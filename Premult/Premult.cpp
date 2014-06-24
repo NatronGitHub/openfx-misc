@@ -696,15 +696,15 @@ PremultPluginFactory<isPremult>::createInstance(OfxImageEffectHandle handle, OFX
 }
 
 
-void getPremultPluginID(OFX::PluginFactoryArray &ids)
+void getPremultPluginIDs(OFX::PluginFactoryArray &ids)
 {
-    static PremultPluginFactory<true> p(kPluginPremultIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
-
-void getUnpremultPluginID(OFX::PluginFactoryArray &ids)
-{
-    static PremultPluginFactory<false> p(kPluginUnpremultIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
+    {
+        static PremultPluginFactory<true> p(kPluginPremultIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static PremultPluginFactory<false> p(kPluginUnpremultIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
 }
 

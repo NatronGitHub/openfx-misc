@@ -6,8 +6,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            getCornerPinPluginID(ids);
-            getCornerPinMaskedPluginID(ids);
+            getCornerPinPluginIDs(ids);
         }
     }
 }
