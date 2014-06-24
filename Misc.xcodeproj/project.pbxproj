@@ -13,7 +13,6 @@
 			buildPhases = (
 			);
 			dependencies = (
-				D733F7031959803600028B57 /* PBXTargetDependency */,
 				1E0E4EAC194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4EAE194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4EB0194CB2C30072248F /* PBXTargetDependency */,
@@ -37,6 +36,7 @@
 				1E0E4ECC194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4ECE194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4ED0194CB2C30072248F /* PBXTargetDependency */,
+				D733F7031959803600028B57 /* PBXTargetDependency */,
 				1E0E4ED2194CB2C30072248F /* PBXTargetDependency */,
 			);
 			name = "all (no multibundle)";
@@ -58,8 +58,6 @@
 
 /* Begin PBXBuildFile section */
 		1E0E4EA2194CAF9E0072248F /* ReConverge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ECE544F185F23E3001ED442 /* ReConverge.cpp */; };
-		1E181AEC19518CCF00FAB9A9 /* Grade.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D725A2C918E0D308001A1E3E /* Grade.cpp */; };
-		1E181AED19518CCF00FAB9A9 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D725A2CD18E0D308001A1E3E /* PluginRegistration.cpp */; };
 		1E181AEE19518CCF00FAB9A9 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E181AEF19518CCF00FAB9A9 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E181AF019518CCF00FAB9A9 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -1169,7 +1167,6 @@
 		1E551ED217994DEF00A4135C /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				D733F6F91959765100028B57 /* TrackSSD */,
 				1EDE1B8E182D0511002392CB /* Anaglyph */,
 				1E3451E0190695070080D699 /* ChromaKeyer */,
 				D7B4C95D18D9DA410004137D /* ColorCorrect */,
@@ -1193,6 +1190,7 @@
 				1E235FEC18363CCA0019C45F /* SideBySide */,
 				1E3AC8D818B6211800F228A6 /* Switch */,
 				1E235FF318369E2B0019C45F /* TimeOffset */,
+				D733F6F91959765100028B57 /* TrackSSD */,
 				D7349E8818E7766F0097DB1D /* Transform */,
 				1E8B5D4618B769B400C31FDC /* Misc */,
 				1E3E3CB417995D15005F2132 /* Library */,
@@ -1410,11 +1408,11 @@
 		D733F6F91959765100028B57 /* TrackSSD */ = {
 			isa = PBXGroup;
 			children = (
+				D733F6FD1959765100028B57 /* TrackSSD.cpp */,
+				D733F6FE1959765100028B57 /* TrackSSD.h */,
 				D733F6FA1959765100028B57 /* Info.plist */,
 				D733F6FB1959765100028B57 /* Makefile */,
 				D733F6FC1959765100028B57 /* PluginRegistration.cpp */,
-				D733F6FD1959765100028B57 /* TrackSSD.cpp */,
-				D733F6FE1959765100028B57 /* TrackSSD.h */,
 			);
 			path = TrackSSD;
 			sourceTree = "<group>";
@@ -1932,9 +1930,9 @@
 				1E235FD918363C850019C45F /* SideBySide.ofx */,
 				1E3AC8C618B6207600F228A6 /* Switch.ofx */,
 				1E235FF418369E4C0019C45F /* TimeOffset.ofx */,
+				D7BB85B81955C00100A86649 /* TrackSSD.ofx */,
 				D7349E8F18E7767D0097DB1D /* Transform.ofx */,
 				1E8B5D4A18B76A7500C31FDC /* Misc.ofx */,
-				D7BB85B81955C00100A86649 /* TrackSSD.ofx */,
 			);
 		};
 /* End PBXProject section */
@@ -1944,9 +1942,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1E181AEC19518CCF00FAB9A9 /* Grade.cpp in Sources */,
+				1E181B0019518DF500FAB9A9 /* Invert.cpp in Sources */,
 				1E181B0119518DF500FAB9A9 /* PluginRegistration.cpp in Sources */,
-				1E181AED19518CCF00FAB9A9 /* PluginRegistration.cpp in Sources */,
 				1E181AEE19518CCF00FAB9A9 /* ofxsCore.cpp in Sources */,
 				1E181AEF19518CCF00FAB9A9 /* ofxsImageEffect.cpp in Sources */,
 				1E181AF019518CCF00FAB9A9 /* ofxsInteract.cpp in Sources */,
@@ -1955,7 +1952,6 @@
 				1E181AF319518CCF00FAB9A9 /* ofxsParams.cpp in Sources */,
 				1E181AF419518CCF00FAB9A9 /* ofxsProperty.cpp in Sources */,
 				1E181AF519518CCF00FAB9A9 /* ofxsPropertyValidation.cpp in Sources */,
-				1E181B0019518DF500FAB9A9 /* Invert.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2131,7 +2127,6 @@
 				D74121D118F9C99300A81F8B /* Merge.cpp in Sources */,
 				1E8B5D7218B7800800C31FDC /* MixViews.cpp in Sources */,
 				1E8B5D7718B7811500C31FDC /* OneView.cpp in Sources */,
-				D733F7001959769F00028B57 /* TrackSSD.cpp in Sources */,
 				1E0E4EA2194CAF9E0072248F /* ReConverge.cpp in Sources */,
 				1E8B5D6818B76F8700C31FDC /* RGBLut.cpp in Sources */,
 				D721EC17191120F30069DB1D /* Roto.cpp in Sources */,
@@ -2139,6 +2134,7 @@
 				1E8B5D6D18B77F1600C31FDC /* SideBySide.cpp in Sources */,
 				1E8B5D4E18B76A7500C31FDC /* Switch.cpp in Sources */,
 				1E8B5D6718B76F8700C31FDC /* TimeOffset.cpp in Sources */,
+				D733F7001959769F00028B57 /* TrackSSD.cpp in Sources */,
 				D7349E8E18E776780097DB1D /* Transform.cpp in Sources */,
 				1E8B5D5D18B76AB300C31FDC /* PluginRegistrationCombined.cpp in Sources */,
 				D792A2E319334C6300547CFF /* ofxsOGLTextRenderer.cpp in Sources */,
@@ -2397,18 +2393,18 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D733F6FF1959769800028B57 /* TrackSSD.cpp in Sources */,
+				D733F7011959773E00028B57 /* PluginRegistration.cpp in Sources */,
+				D7BB85D11955C4AD00A86649 /* ofxsTracking.cpp in Sources */,
+				D7BB85D2195638F900A86649 /* ofxsOGLTextRenderer.cpp in Sources */,
+				D7BB85D3195638FB00A86649 /* ofxsOGLFontData.cpp in Sources */,
 				D7BB85BC1955C00100A86649 /* ofxsCore.cpp in Sources */,
 				D7BB85BD1955C00100A86649 /* ofxsImageEffect.cpp in Sources */,
 				D7BB85BE1955C00100A86649 /* ofxsInteract.cpp in Sources */,
 				D7BB85BF1955C00100A86649 /* ofxsLog.cpp in Sources */,
 				D7BB85C01955C00100A86649 /* ofxsMultiThread.cpp in Sources */,
 				D7BB85C11955C00100A86649 /* ofxsParams.cpp in Sources */,
-				D7BB85D2195638F900A86649 /* ofxsOGLTextRenderer.cpp in Sources */,
-				D7BB85D3195638FB00A86649 /* ofxsOGLFontData.cpp in Sources */,
-				D733F6FF1959769800028B57 /* TrackSSD.cpp in Sources */,
 				D7BB85C21955C00100A86649 /* ofxsProperty.cpp in Sources */,
-				D7BB85D11955C4AD00A86649 /* ofxsTracking.cpp in Sources */,
-				D733F7011959773E00028B57 /* PluginRegistration.cpp in Sources */,
 				D7BB85C31955C00100A86649 /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
