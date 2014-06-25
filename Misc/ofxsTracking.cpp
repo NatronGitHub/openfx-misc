@@ -478,120 +478,82 @@ bool TrackerRegionInteract::draw(const OFX::DrawArgs &args)
     //////DRAWING INNER POINTS
     if (_ds == eHoveringInnerBottomLeft || _ms == eDraggingInnerBottomLeft) {
         glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
+        glVertex2d(innerBtmLeft.x, innerBtmLeft.y);
     }
-    
-    glVertex2d(innerBtmLeft.x, innerBtmLeft.y);
-    
     if (_ds == eHoveringInnerMidLeft || _ms == eDraggingInnerMidLeft) {
         glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
+        glVertex2d(innerMidLeft.x, innerMidLeft.y);
     }
-    glVertex2d(innerMidLeft.x, innerMidLeft.y);
-    
     if (_ds == eHoveringInnerTopLeft || _ms == eDraggingInnerTopLeft) {
         glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
+        glVertex2d(innerTopLeft.x, innerTopLeft.y);
     }
-    glVertex2d(innerTopLeft.x, innerTopLeft.y);
     
     if (_ds == eHoveringInnerMidTop || _ms == eDraggingInnerMidTop) {
         glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
+        glVertex2d(innerMidTop.x, innerMidTop.y);
     }
-    glVertex2d(innerMidTop.x, innerMidTop.y);
     
     if (_ds == eHoveringInnerTopRight || _ms == eDraggingInnerTopRight) {
         glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
+        glVertex2d(innerTopRight.x, innerTopRight.y);
     }
-    glVertex2d(innerTopRight.x, innerTopRight.y);
     
     if (_ds == eHoveringInnerMidRight || _ms == eDraggingInnerMidRight) {
         glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
+        glVertex2d(innerMidRight.x, innerMidRight.y);
     }
-    glVertex2d(innerMidRight.x, innerMidRight.y);
     
     if (_ds == eHoveringInnerBottomRight || _ms == eDraggingInnerBottomRight) {
         glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
+        glVertex2d(innerBtmRight.x, innerBtmRight.y);
     }
-    glVertex2d(innerBtmRight.x, innerBtmRight.y);
     
     if (_ds == eHoveringInnerMidBtm || _ms == eDraggingInnerMidBtm) {
         glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
+        glVertex2d(innerMidBtm.x, innerMidBtm.y);
     }
-    glVertex2d(innerMidBtm.x, innerMidBtm.y);
     
     //////DRAWING OUTTER POINTS
     
     if (_ds == eHoveringOutterBottomLeft || _ms == eDraggingOutterBottomLeft) {
         glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
+        glVertex2d(outterBtmLeft.x, outterBtmLeft.y);
     }
-    
-    glVertex2d(outterBtmLeft.x, outterBtmLeft.y);
     
     if (_ds == eHoveringOutterMidLeft || _ms == eDraggingOutterMidLeft) {
         glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
+        glVertex2d(outterMidLeft.x, outterMidLeft.y);
     }
-    glVertex2d(outterMidLeft.x, outterMidLeft.y);
     
     if (_ds == eHoveringOutterTopLeft || _ms == eDraggingOutterTopLeft) {
         glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
+        glVertex2d(outterTopLeft.x, outterTopLeft.y);
     }
-    glVertex2d(outterTopLeft.x, outterTopLeft.y);
-    
     if (_ds == eHoveringOutterMidTop || _ms == eDraggingOutterMidTop) {
         glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
+        glVertex2d(outterMidTop.x, outterMidTop.y);
     }
-    glVertex2d(outterMidTop.x, outterMidTop.y);
     
     if (_ds == eHoveringOutterTopRight || _ms == eDraggingOutterTopRight) {
         glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
+        glVertex2d(outterTopRight.x, outterTopRight.y);
     }
-    glVertex2d(outterTopRight.x, outterTopRight.y);
     
     if (_ds == eHoveringOutterMidRight || _ms == eDraggingOutterMidRight) {
         glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
+        glVertex2d(outterMidRight.x, outterMidRight.y);
     }
-    glVertex2d(outterMidRight.x, outterMidRight.y);
     
     if (_ds == eHoveringOutterBottomRight || _ms == eDraggingOutterBottomRight) {
         glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
+        glVertex2d(outterBtmRight.x, outterBtmRight.y);
     }
-    glVertex2d(outterBtmRight.x, outterBtmRight.y);
     
     if (_ds == eHoveringOutterMidBtm || _ms == eDraggingOutterMidBtm) {
         glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
+        glVertex2d(outterMidBtm.x, outterMidBtm.y);
     }
-    glVertex2d(outterMidBtm.x, outterMidBtm.y);
-    
     ///draw center
     if (_ds == eHoveringCenter || _ms == eDraggingCenter) {
         glColor4f(0., 1., 0., 1.);
@@ -602,6 +564,84 @@ bool TrackerRegionInteract::draw(const OFX::DrawArgs &args)
     glEnd();
     glPointSize(1);
 
+    double handleSizeX = 10. * args.pixelScale.x;
+    double handleSizeY = 10. * args.pixelScale.y;
+    
+    ///now show small lines at handle positions
+    glBegin(GL_LINES);
+
+    if (_ds == eHoveringInnerMidLeft || _ms == eDraggingInnerMidLeft) {
+        glColor4f(0., 1., 0., 1.);
+    } else {
+        glColor4f(0.8, 0.8, 0.8, 0.8);
+    }
+    glVertex2d(innerMidLeft.x, innerMidLeft.y);
+    glVertex2d(innerMidLeft.x - handleSizeX, innerMidLeft.y);
+    
+    if (_ds == eHoveringInnerMidTop || _ms == eDraggingInnerMidTop) {
+        glColor4f(0., 1., 0., 1.);
+    } else {
+        glColor4f(0.8, 0.8, 0.8, 0.8);
+    }
+    glVertex2d(innerMidTop.x, innerMidTop.y);
+    glVertex2d(innerMidTop.x, innerMidTop.y + handleSizeY);
+    
+
+    if (_ds == eHoveringInnerMidRight || _ms == eDraggingInnerMidRight) {
+        glColor4f(0., 1., 0., 1.);
+    } else {
+        glColor4f(0.8, 0.8, 0.8, 0.8);
+    }
+    glVertex2d(innerMidRight.x, innerMidRight.y);
+    glVertex2d(innerMidRight.x + handleSizeX, innerMidRight.y);
+
+    if (_ds == eHoveringInnerMidBtm || _ms == eDraggingInnerMidBtm) {
+        glColor4f(0., 1., 0., 1.);
+    } else {
+        glColor4f(0.8, 0.8, 0.8, 0.8);
+    }
+    glVertex2d(innerMidBtm.x, innerMidBtm.y);
+    glVertex2d(innerMidBtm.x, innerMidBtm.y - handleSizeY);
+    
+    //////DRAWING OUTTER HANDLES
+    
+    if (_ds == eHoveringOutterMidLeft || _ms == eDraggingOutterMidLeft) {
+        glColor4f(0., 1., 0., 1.);
+    } else {
+        glColor4f(0.8, 0.8, 0.8, 0.8);
+    }
+    glVertex2d(outterMidLeft.x, outterMidLeft.y);
+    glVertex2d(outterMidLeft.x - handleSizeX, outterMidLeft.y);
+
+    if (_ds == eHoveringOutterMidTop || _ms == eDraggingOutterMidTop) {
+        glColor4f(0., 1., 0., 1.);
+    } else {
+        glColor4f(0.8, 0.8, 0.8, 0.8);
+    }
+    glVertex2d(outterMidTop.x, outterMidTop.y);
+    glVertex2d(outterMidTop.x, outterMidTop.y + handleSizeY);
+    
+    if (_ds == eHoveringOutterMidRight || _ms == eDraggingOutterMidRight) {
+        glColor4f(0., 1., 0., 1.);
+    } else {
+        glColor4f(0.8, 0.8, 0.8, 0.8);
+    }
+    glVertex2d(outterMidRight.x + handleSizeX, outterMidRight.y);
+    glVertex2d(outterMidRight.x, outterMidRight.y);
+
+
+    
+    if (_ds == eHoveringOutterMidBtm || _ms == eDraggingOutterMidBtm) {
+        glColor4f(0., 1., 0., 1.);
+    } else {
+        glColor4f(0.8, 0.8, 0.8, 0.8);
+    }
+    glVertex2d(outterMidBtm.x, outterMidBtm.y);
+    glVertex2d(outterMidBtm.x, outterMidBtm.y - handleSizeY);
+
+
+    glEnd();
+    
     
     std::string name;
     _name->getValue(name);
@@ -694,89 +734,81 @@ bool TrackerRegionInteract::penMotion(const OFX::PenArgs &args)
     if (_ms == eDraggingInnerBottomLeft) {
         _innerBtmLeftDragPos.x += delta.x;
         _innerBtmLeftDragPos.y += delta.y;
-        _innerSizeDrag.x -= multiplier * delta.x;
-        _innerSizeDrag.y -= multiplier * delta.y;
+        _innerSizeDrag.x -= 2 * delta.x;
+        _innerSizeDrag.y -= 2 * delta.y;
         ///also move the outter rect
         _outterBtmLeftDragPos.x += delta.x;
         _outterBtmLeftDragPos.y += delta.y;
-        _outterSizeDrag.x -= multiplier * delta.x;
-        _outterSizeDrag.y -= multiplier * delta.y;
+        _outterSizeDrag.x -= 2 * delta.x;
+        _outterSizeDrag.y -= 2 * delta.y;
         didSomething = true;
     } else if (_ms == eDraggingInnerTopLeft) {
         _innerBtmLeftDragPos.x += delta.x;
-        if (!_controlDown) {
-            _innerBtmLeftDragPos.y -= delta.y;
-        }
-        _innerSizeDrag.y += multiplier * delta.y;
-        _innerSizeDrag.x -= multiplier * delta.x;
+        _innerBtmLeftDragPos.y -= delta.y;
+    
+        _innerSizeDrag.y += 2 * delta.y;
+        _innerSizeDrag.x -= 2 * delta.x;
         
         _outterBtmLeftDragPos.x += delta.x;
-        if (!_controlDown) {
-            _outterBtmLeftDragPos.y -= delta.y;
-        }
-        _outterSizeDrag.y += multiplier * delta.y;
-        _outterSizeDrag.x -= multiplier * delta.x;
+        _outterBtmLeftDragPos.y -= delta.y;
+        
+        _outterSizeDrag.y += 2 * delta.y;
+        _outterSizeDrag.x -= 2 * delta.x;
         didSomething = true;
     } else if (_ms == eDraggingInnerTopRight) {
-        if (!_controlDown) {
-            _innerBtmLeftDragPos.x -= delta.x;
-            _innerBtmLeftDragPos.y -= delta.y;
-        }
-        _innerSizeDrag.y += multiplier * delta.y;
-        _innerSizeDrag.x += multiplier * delta.x;
+        _innerBtmLeftDragPos.x -= delta.x;
+        _innerBtmLeftDragPos.y -= delta.y;
         
-        if (!_controlDown) {
-            _outterBtmLeftDragPos.x -= delta.x;
-            _outterBtmLeftDragPos.y -= delta.y;
-        }
-        _outterSizeDrag.y += multiplier * delta.y;
-        _outterSizeDrag.x += multiplier * delta.x;
+        _innerSizeDrag.y += 2 * delta.y;
+        _innerSizeDrag.x += 2 * delta.x;
+        
+        _outterBtmLeftDragPos.x -= delta.x;
+        _outterBtmLeftDragPos.y -= delta.y;
+        
+        _outterSizeDrag.y += 2 * delta.y;
+        _outterSizeDrag.x += 2 * delta.x;
         didSomething = true;
     } else if (_ms == eDraggingInnerBottomRight) {
-        _innerSizeDrag.y -= multiplier * delta.y;
-        _innerSizeDrag.x += multiplier * delta.x;
+        _innerSizeDrag.y -= 2 * delta.y;
+        _innerSizeDrag.x += 2 * delta.x;
         _innerBtmLeftDragPos.y += delta.y;
-        if (!_controlDown) {
-            _innerBtmLeftDragPos.x -= delta.x;
-        }
+        _innerBtmLeftDragPos.x -= delta.x;
         
-        _outterSizeDrag.y -= multiplier * delta.y;
-        _outterSizeDrag.x += multiplier * delta.x;
+        
+        _outterSizeDrag.y -= 2 * delta.y;
+        _outterSizeDrag.x += 2 * delta.x;
         _outterBtmLeftDragPos.y += delta.y;
-        if (!_controlDown) {
-            _outterBtmLeftDragPos.x -= delta.x;
-        }
+        _outterBtmLeftDragPos.x -= delta.x;
+        
 
         didSomething = true;
     } else if (_ms == eDraggingInnerMidTop) {
-        if (!_controlDown) {
-            _innerBtmLeftDragPos.y -= delta.y;
-            _outterBtmLeftDragPos.y -= delta.y;
-        }
-        _innerSizeDrag.y += multiplier * delta.y;
-        _outterSizeDrag.y += multiplier * delta.y;
+        _innerBtmLeftDragPos.y -= delta.y;
+        _outterBtmLeftDragPos.y -= delta.y;
+        
+        _innerSizeDrag.y += 2 * delta.y;
+        _outterSizeDrag.y += 2 * delta.y;
 
         didSomething = true;
     } else if (_ms == eDraggingInnerMidRight) {
-        _innerSizeDrag.x += multiplier * delta.x;
-        _outterSizeDrag.x += multiplier * delta.x;
-        if (!_controlDown) {
-            _innerBtmLeftDragPos.x -= delta.x;
-            _outterBtmLeftDragPos.x -= delta.x;
-        }
+        _innerSizeDrag.x += 2 * delta.x;
+        _outterSizeDrag.x += 2 * delta.x;
+        _innerBtmLeftDragPos.x -= delta.x;
+        _outterBtmLeftDragPos.x -= delta.x;
+        
         
         didSomething = true;
     } else if (_ms == eDraggingInnerMidBtm) {
         _innerBtmLeftDragPos.y += delta.y;
-        _innerSizeDrag.y -= multiplier * delta.y;
+        _innerSizeDrag.y -= 2 * delta.y;
         
         _outterBtmLeftDragPos.y += delta.y;
-        _outterSizeDrag.y -= multiplier * delta.y;
+        _outterSizeDrag.y -= 2 * delta.y;
 
         didSomething = true;
     } else if (_ms == eDraggingInnerMidLeft) {
         _innerBtmLeftDragPos.x += delta.x;
-        _innerSizeDrag.x -= multiplier * delta.x;
+        _innerSizeDrag.x -= 2 * delta.x;
         
         _outterBtmLeftDragPos.x += delta.x;
         _outterSizeDrag.x -= multiplier * delta.x;
@@ -895,21 +927,21 @@ bool TrackerRegionInteract::penMotion(const OFX::PenArgs &args)
             _outterSizeDrag.y += multiplier * diffY;
             _innerSizeDrag.y += multiplier * diffY;
         }
-        
-        if (_controlDown) {
-            if ((_innerBtmLeftDragPos.x + _innerSizeDrag.x) < center.x) {
-                double diffX = center.x - _innerBtmLeftDragPos.x - _innerSizeDrag.x;
-                _innerSizeDrag.x = center.x - _innerBtmLeftDragPos.x;
-                _outterSizeDrag.x +=  diffX;
-            }
-            
-            if ((_innerBtmLeftDragPos.y + _innerSizeDrag.y) < center.y) {
-                double diffY = center.y - _innerBtmLeftDragPos.y - _innerSizeDrag.y;
-                _innerSizeDrag.y = center.y - _innerBtmLeftDragPos.y;
-                _outterSizeDrag.y += diffY;
-            }
-            
-        }
+//        
+//        if (_controlDown) {
+//            if ((_innerBtmLeftDragPos.x + _innerSizeDrag.x) < center.x) {
+//                double diffX = center.x - _innerBtmLeftDragPos.x - _innerSizeDrag.x;
+//                _innerSizeDrag.x = center.x - _innerBtmLeftDragPos.x;
+//                _outterSizeDrag.x +=  diffX;
+//            }
+//            
+//            if ((_innerBtmLeftDragPos.y + _innerSizeDrag.y) < center.y) {
+//                double diffY = center.y - _innerBtmLeftDragPos.y - _innerSizeDrag.y;
+//                _innerSizeDrag.y = center.y - _innerBtmLeftDragPos.y;
+//                _outterSizeDrag.y += diffY;
+//            }
+//            
+//        }
     }
     
     ///forbid 0 pixels wide rectangles

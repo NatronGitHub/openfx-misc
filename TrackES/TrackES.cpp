@@ -69,7 +69,7 @@
  England
  
  */
-#include "TrackSSD.h"
+#include "TrackES.h"
 
 #include <cmath>
 #include <map>
@@ -79,28 +79,35 @@
 #include "ofxsTracking.h"
 #include "ofxsMerging.h"
 
-#define kPluginName "TrackSSD"
+#define kPluginName "TrackES"
 #define kPluginGrouping "Transform"
-#define kPluginDescription ""
-#define kPluginIdentifier "net.sf.openfx:TrackSSDPlugin"
+#define kPluginDescription "Tracker implemented using exhastive search algorithms."
+#define kPluginIdentifier "net.sf.openfx:TrackESPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-
+#define kAlgorithmParamName "algorithm"
+#define kAlgorithmParamLabel "Algorithm"
 
 using namespace OFX;
 
 
+enum TrackerType
+{
+    TRACKER_SSD = 0,
+    TRACKER_SAD,
+    TRACKER_NCC,
+    TRACKER_ZNCC
+};
 
-
-class TrackSSDProcessorBase;
+class TrackESProcessorBase;
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class TrackSSDPlugin : public GenericTrackerPlugin
+class TrackESPlugin : public GenericTrackerPlugin
 {
 public:
     /** @brief ctor */
-    TrackSSDPlugin(OfxImageEffectHandle handle)
+    TrackESPlugin(OfxImageEffectHandle handle)
     : GenericTrackerPlugin(handle)
     {
 
@@ -124,19 +131,19 @@ private:
     void trackInternal(OfxTime ref,OfxTime other);
 
     /* set up and run a processor */
-    void setupAndProcess(TrackSSDProcessorBase &,OfxTime refTime,OfxTime otherTime,OFX::Image* refImg,OFX::Image* otherImg);
+    void setupAndProcess(TrackESProcessorBase &,OfxTime refTime,OfxTime otherTime,OFX::Image* refImg,OFX::Image* otherImg);
 
     OfxRectD getTrackSearchWindowCanonical(OfxTime time) const;
 
     ///The pattern is in coordinates relative to the center point
     OfxRectD getPatternCanonical(OfxTime time) const;
     
-    std::pair<OfxPointD,double> _ssd; //< the results for the current processor
+    std::pair<OfxPointD,double> _result; //< the results for the current processor
     OFX::MultiThread::Mutex _lock; //< this is used so we can multi-thread the tracking and protect the shared results
 };
 
 
-class TrackSSDProcessorBase : public OFX::ImageProcessor
+class TrackESProcessorBase : public OFX::ImageProcessor
 {
 protected:
     
@@ -144,16 +151,16 @@ protected:
     OFX::Image *_otherImg;
     OfxRectI _patternWindow;
     OfxPointD _center;
-    TrackSSDPlugin* _plugin;
+    TrackESPlugin* _plugin;
     
 public:
-    TrackSSDProcessorBase(OFX::ImageEffect &instance)
+    TrackESProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _refImg(0)
     , _otherImg(0)
     , _patternWindow()
     , _center()
-    , _plugin(dynamic_cast<TrackSSDPlugin*>(&instance))
+    , _plugin(dynamic_cast<TrackESPlugin*>(&instance))
     {
         assert(_plugin);
     }
@@ -180,11 +187,11 @@ public:
 // The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
 // by the compiler, using the same generic code for all filters.
 template <class PIX, int nComponents, int maxValue>
-class TrackSSDProcessor : public TrackSSDProcessorBase
+class TrackESProcessor : public TrackESProcessorBase
 {
 public:
-    TrackSSDProcessor(OFX::ImageEffect &instance)
-    : TrackSSDProcessorBase(instance)
+    TrackESProcessor(OFX::ImageEffect &instance)
+    : TrackESProcessorBase(instance)
     {
     }
     
@@ -221,10 +228,17 @@ private:
                                 ssd += (otherPix ? *otherPix : 0 - *refPix) * (otherPix ? *otherPix : 0 - *refPix);
                             } else {
                                 assert(maxComp >= 3);
-                                PIX r,g,b;
-                                r = (refPix[0] - (otherPix ? otherPix[0] : 0));
-                                g = (refPix[1] - (otherPix ? otherPix[1] : 0));
-                                b = (refPix[2] - (otherPix ? otherPix[2] : 0));
+                                double r,g,b;
+                                if (otherPix) {
+                                    r = refPix[0] - otherPix[0];
+                                    g = refPix[1] - otherPix[1];
+                                    b = refPix[2] - otherPix[2];
+                                } else {
+                                    r = (refPix[0] - 0);
+                                    g = (refPix[1] - 0);
+                                    b = (refPix[2] - 0);
+                                }
+                                
                                 ssd += (r*r +  g*g + b*b);
                             }
                     }
@@ -243,18 +257,18 @@ private:
 
 
 void
-TrackSSDPlugin::updateSSD(const OfxPointD& point,double ssd)
+TrackESPlugin::updateSSD(const OfxPointD& point,double ssd)
 {
     OFX::MultiThread::AutoMutex lock(_lock);
-    if (_ssd.second > ssd) {
-        _ssd.second = ssd;
-        _ssd.first.x = point.x;
-        _ssd.first.y = point.y;
+    if (_result.second > ssd) {
+        _result.second = ssd;
+        _result.first.x = point.x;
+        _result.first.y = point.y;
     }
 }
 
 void
-TrackSSDPlugin::trackRange(const OFX::TrackArguments& args)
+TrackESPlugin::trackRange(const OFX::TrackArguments& args)
 {
     OfxTime t = args.first;
     std::string name;
@@ -302,7 +316,7 @@ TrackSSDPlugin::trackRange(const OFX::TrackArguments& args)
 
 /* set up and run a processor */
 void
-TrackSSDPlugin::setupAndProcess(TrackSSDProcessorBase &processor,OfxTime refTime,OfxTime otherTime,OFX::Image* refImg,OFX::Image* otherImg)
+TrackESPlugin::setupAndProcess(TrackESProcessorBase &processor,OfxTime refTime,OfxTime otherTime,OFX::Image* refImg,OFX::Image* otherImg)
 {
     
     // set an uninitialized image for the dst image
@@ -365,17 +379,17 @@ TrackSSDPlugin::setupAndProcess(TrackSSDProcessorBase &processor,OfxTime refTime
     
     processor.setCenter(center);
     
-    _ssd.second = INT_MAX;
+    _result.second = INT_MAX;
     
     // Call the base class process member, this will call the derived templated process code
     processor.process();
     
     ///ok the ssd is now computed, update the center
-    _center->setValueAtTime(otherTime, _ssd.first.x, _ssd.first.y);
+    _center->setValueAtTime(otherTime, _result.first.x, _result.first.y);
 }
 
 OfxRectD
-TrackSSDPlugin::getPatternCanonical(OfxTime time) const
+TrackESPlugin::getPatternCanonical(OfxTime time) const
 {
     OfxRectD ret;
     OfxPointD innerBtmLeft,innerSize;
@@ -389,7 +403,7 @@ TrackSSDPlugin::getPatternCanonical(OfxTime time) const
 }
 
 OfxRectD
-TrackSSDPlugin::getTrackSearchWindowCanonical(OfxTime time) const
+TrackESPlugin::getTrackSearchWindowCanonical(OfxTime time) const
 {
     OfxPointD outterBtmLeft,outterSize,center;
     _outterBtmLeft->getValueAtTime(time, outterBtmLeft.x, outterBtmLeft.y);
@@ -410,7 +424,7 @@ TrackSSDPlugin::getTrackSearchWindowCanonical(OfxTime time) const
 // It may be difficult to implement for complicated transforms:
 // consequently, these transforms cannot support tiles.
 void
-TrackSSDPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+TrackESPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
     
     OfxRectD roi = getTrackSearchWindowCanonical(args.time);
@@ -424,7 +438,7 @@ TrackSSDPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args
 // the internal render function
 template <int nComponents>
 void
-TrackSSDPlugin::trackInternal(OfxTime ref,OfxTime other)
+TrackESPlugin::trackInternal(OfxTime ref,OfxTime other)
 {
     std::auto_ptr<OFX::Image> srcRef(srcClip_->fetchImage(ref));
     std::auto_ptr<OFX::Image> srcOther(srcClip_->fetchImage(other));
@@ -441,17 +455,17 @@ TrackSSDPlugin::trackInternal(OfxTime ref,OfxTime other)
     switch (srcBitDepth) {
         case OFX::eBitDepthUByte :
         {
-            TrackSSDProcessor<unsigned char, nComponents, 255> fred(*this);
+            TrackESProcessor<unsigned char, nComponents, 255> fred(*this);
             setupAndProcess(fred,ref,other, srcRef.get(),srcOther.get());
         }   break;
         case OFX::eBitDepthUShort :
         {
-            TrackSSDProcessor<unsigned short, nComponents, 65535> fred(*this);
+            TrackESProcessor<unsigned short, nComponents, 65535> fred(*this);
             setupAndProcess(fred,ref,other, srcRef.get(),srcOther.get());
         }   break;
         case OFX::eBitDepthFloat :
         {
-            TrackSSDProcessor<float, nComponents, 1> fred(*this);
+            TrackESProcessor<float, nComponents, 1> fred(*this);
             setupAndProcess(fred,ref,other,srcRef.get(),srcOther.get());
         }   break;
         default :
@@ -462,9 +476,9 @@ TrackSSDPlugin::trackInternal(OfxTime ref,OfxTime other)
 
 using namespace OFX;
 
-mDeclarePluginFactory(TrackSSDPluginFactory, {}, {});
+mDeclarePluginFactory(TrackESPluginFactory, {}, {});
 
-void TrackSSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void TrackESPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabels(kPluginName, kPluginName, kPluginName);
@@ -476,24 +490,33 @@ void TrackSSDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 
 
-OFX::ImageEffect* TrackSSDPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* TrackESPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
-    return new TrackSSDPlugin(handle);
+    return new TrackESPlugin(handle);
 }
 
 
 
 
-void TrackSSDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void TrackESPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     PageParamDescriptor* page = genericTrackerDescribeInContextBegin(desc, context);
     genericTrackerDescribePointParameters(desc, page);
+    
+    ChoiceParamDescriptor* type = desc.defineChoiceParam(kAlgorithmParamName);
+    type->setLabels(kAlgorithmParamLabel, kAlgorithmParamLabel, kAlgorithmParamLabel);
+    type->appendOption("SSD","Sum of squared differences");
+    type->appendOption("SAD","Sum of absolute differences");
+    type->appendOption("NCC","Normalized cross-correlation");
+    type->appendOption("ZNCC","Zero mean normalized cross-correlation");
+    type->setDefault((int)TRACKER_ZNCC);
+    page->addChild(*type);
 
 }
 
-void getTrackSSDPluginID(OFX::PluginFactoryArray &ids)
+void getTrackESPluginID(OFX::PluginFactoryArray &ids)
 {
-    static TrackSSDPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static TrackESPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 

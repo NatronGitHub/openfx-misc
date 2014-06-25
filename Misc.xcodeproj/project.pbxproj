@@ -316,9 +316,6 @@
 		D730311C19518E7B0024BCA4 /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D730311A19518E7B0024BCA4 /* ofxsRectangleInteract.cpp */; };
 		D730311D19518E7B0024BCA4 /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D730311A19518E7B0024BCA4 /* ofxsRectangleInteract.cpp */; };
 		D730311E19518E7B0024BCA4 /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D730311A19518E7B0024BCA4 /* ofxsRectangleInteract.cpp */; };
-		D733F6FF1959769800028B57 /* TrackSSD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D733F6FD1959765100028B57 /* TrackSSD.cpp */; };
-		D733F7001959769F00028B57 /* TrackSSD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D733F6FD1959765100028B57 /* TrackSSD.cpp */; };
-		D733F7011959773E00028B57 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D733F6FC1959765100028B57 /* PluginRegistration.cpp */; };
 		D7349E8E18E776780097DB1D /* Transform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7349E8C18E7766F0097DB1D /* Transform.cpp */; };
 		D7349E9118E7767D0097DB1D /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		D7349E9218E7767D0097DB1D /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
@@ -354,6 +351,8 @@
 		D74A80C5194059E0007C3E1C /* Crop.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D74A80AE194059C0007C3E1C /* Crop.cpp */; };
 		D74A80C6194059E3007C3E1C /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D74A80B2194059C0007C3E1C /* PluginRegistration.cpp */; };
 		D74A80C719405A14007C3E1C /* Crop.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D74A80AE194059C0007C3E1C /* Crop.cpp */; };
+		D7704C7A195B5E78002E163E /* TrackES.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7704C78195B5E4F002E163E /* TrackES.cpp */; };
+		D7704C7B195B62C0002E163E /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7704C77195B5E4F002E163E /* PluginRegistration.cpp */; };
 		D792A2E319334C6300547CFF /* ofxsOGLTextRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */; };
 		D792A2E419334C6300547CFF /* ofxsOGLTextRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */; };
 		D792A2F01933691800547CFF /* ofxsOGLFontData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D792A2EF1933691800547CFF /* ofxsOGLFontData.cpp */; };
@@ -736,11 +735,6 @@
 		D730311619518B6B0024BCA4 /* CopyRectangle.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CopyRectangle.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		D730311A19518E7B0024BCA4 /* ofxsRectangleInteract.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsRectangleInteract.cpp; sourceTree = "<group>"; };
 		D730311B19518E7B0024BCA4 /* ofxsRectangleInteract.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsRectangleInteract.h; sourceTree = "<group>"; };
-		D733F6FA1959765100028B57 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D733F6FB1959765100028B57 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		D733F6FC1959765100028B57 /* PluginRegistration.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		D733F6FD1959765100028B57 /* TrackSSD.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TrackSSD.cpp; sourceTree = "<group>"; };
-		D733F6FE1959765100028B57 /* TrackSSD.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TrackSSD.h; sourceTree = "<group>"; };
 		D7349E8918E7766F0097DB1D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D7349E8A18E7766F0097DB1D /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D7349E8B18E7766F0097DB1D /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
@@ -760,6 +754,11 @@
 		D74A80B1194059C0007C3E1C /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D74A80B2194059C0007C3E1C /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		D74A80C4194059CC007C3E1C /* Crop.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Crop.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		D7704C75195B5E4F002E163E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D7704C76195B5E4F002E163E /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		D7704C77195B5E4F002E163E /* PluginRegistration.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		D7704C78195B5E4F002E163E /* TrackES.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TrackES.cpp; sourceTree = "<group>"; };
+		D7704C79195B5E4F002E163E /* TrackES.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TrackES.h; sourceTree = "<group>"; };
 		D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsOGLTextRenderer.cpp; sourceTree = "<group>"; };
 		D792A2E219334C6300547CFF /* ofxsOGLTextRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsOGLTextRenderer.h; sourceTree = "<group>"; };
 		D792A2E919335BE100547CFF /* ofxsOGLFontUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsOGLFontUtils.h; sourceTree = "<group>"; };
@@ -769,7 +768,7 @@
 		D7B4C96018D9DA410004137D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D7B4C96118D9DA410004137D /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D7B4C96218D9DA410004137D /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		D7BB85C91955C00100A86649 /* TrackSSD.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TrackSSD.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		D7BB85C91955C00100A86649 /* TrackES.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TrackES.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		D7BB85CE1955C4AD00A86649 /* ofxsTracking.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsTracking.cpp; sourceTree = "<group>"; };
 		D7BB85CF1955C4AD00A86649 /* ofxsTracking.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsTracking.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -1124,6 +1123,7 @@
 		1E551EB817994D4000A4135C = {
 			isa = PBXGroup;
 			children = (
+				D7704C74195B5E4F002E163E /* TrackES */,
 				1E3E3D30179960F9005F2132 /* Headers */,
 				1E551ED217994DEF00A4135C /* Sources */,
 				1E551EDA17994E8100A4135C /* Frameworks */,
@@ -1158,7 +1158,7 @@
 				1EF46F43194A394E00825BDF /* Shuffle.ofx.bundle */,
 				D730311619518B6B0024BCA4 /* CopyRectangle.ofx.bundle */,
 				1E181AFB19518CCF00FAB9A9 /* Invert.ofx.bundle */,
-				D7BB85C91955C00100A86649 /* TrackSSD.ofx.bundle */,
+				D7BB85C91955C00100A86649 /* TrackES.ofx.bundle */,
 				1E52FFCB1955CE120000FB79 /* Premult.ofx.bundle */,
 			);
 			name = Products;
@@ -1190,7 +1190,6 @@
 				1E235FEC18363CCA0019C45F /* SideBySide */,
 				1E3AC8D818B6211800F228A6 /* Switch */,
 				1E235FF318369E2B0019C45F /* TimeOffset */,
-				D733F6F91959765100028B57 /* TrackSSD */,
 				D7349E8818E7766F0097DB1D /* Transform */,
 				1E8B5D4618B769B400C31FDC /* Misc */,
 				1E3E3CB417995D15005F2132 /* Library */,
@@ -1405,18 +1404,6 @@
 			path = CopyRectangle;
 			sourceTree = "<group>";
 		};
-		D733F6F91959765100028B57 /* TrackSSD */ = {
-			isa = PBXGroup;
-			children = (
-				D733F6FD1959765100028B57 /* TrackSSD.cpp */,
-				D733F6FE1959765100028B57 /* TrackSSD.h */,
-				D733F6FA1959765100028B57 /* Info.plist */,
-				D733F6FB1959765100028B57 /* Makefile */,
-				D733F6FC1959765100028B57 /* PluginRegistration.cpp */,
-			);
-			path = TrackSSD;
-			sourceTree = "<group>";
-		};
 		D7349E8818E7766F0097DB1D /* Transform */ = {
 			isa = PBXGroup;
 			children = (
@@ -1451,6 +1438,18 @@
 				D74A80B2194059C0007C3E1C /* PluginRegistration.cpp */,
 			);
 			path = Crop;
+			sourceTree = "<group>";
+		};
+		D7704C74195B5E4F002E163E /* TrackES */ = {
+			isa = PBXGroup;
+			children = (
+				D7704C75195B5E4F002E163E /* Info.plist */,
+				D7704C76195B5E4F002E163E /* Makefile */,
+				D7704C77195B5E4F002E163E /* PluginRegistration.cpp */,
+				D7704C78195B5E4F002E163E /* TrackES.cpp */,
+				D7704C79195B5E4F002E163E /* TrackES.h */,
+			);
+			path = TrackES;
 			sourceTree = "<group>";
 		};
 		D7B4C95D18D9DA410004137D /* ColorCorrect */ = {
@@ -1868,9 +1867,9 @@
 			productReference = D74A80C4194059CC007C3E1C /* Crop.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
-		D7BB85B81955C00100A86649 /* TrackSSD.ofx */ = {
+		D7BB85B81955C00100A86649 /* TrackES.ofx */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D7BB85C61955C00100A86649 /* Build configuration list for PBXNativeTarget "TrackSSD.ofx" */;
+			buildConfigurationList = D7BB85C61955C00100A86649 /* Build configuration list for PBXNativeTarget "TrackES.ofx" */;
 			buildPhases = (
 				D7BB85B91955C00100A86649 /* Sources */,
 				D7BB85C41955C00100A86649 /* Frameworks */,
@@ -1879,9 +1878,9 @@
 			);
 			dependencies = (
 			);
-			name = TrackSSD.ofx;
+			name = TrackES.ofx;
 			productName = basic.ofx;
-			productReference = D7BB85C91955C00100A86649 /* TrackSSD.ofx.bundle */;
+			productReference = D7BB85C91955C00100A86649 /* TrackES.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
 /* End PBXNativeTarget section */
@@ -1930,7 +1929,7 @@
 				1E235FD918363C850019C45F /* SideBySide.ofx */,
 				1E3AC8C618B6207600F228A6 /* Switch.ofx */,
 				1E235FF418369E4C0019C45F /* TimeOffset.ofx */,
-				D7BB85B81955C00100A86649 /* TrackSSD.ofx */,
+				D7BB85B81955C00100A86649 /* TrackES.ofx */,
 				D7349E8F18E7767D0097DB1D /* Transform.ofx */,
 				1E8B5D4A18B76A7500C31FDC /* Misc.ofx */,
 			);
@@ -2134,7 +2133,6 @@
 				1E8B5D6D18B77F1600C31FDC /* SideBySide.cpp in Sources */,
 				1E8B5D4E18B76A7500C31FDC /* Switch.cpp in Sources */,
 				1E8B5D6718B76F8700C31FDC /* TimeOffset.cpp in Sources */,
-				D733F7001959769F00028B57 /* TrackSSD.cpp in Sources */,
 				D7349E8E18E776780097DB1D /* Transform.cpp in Sources */,
 				1E8B5D5D18B76AB300C31FDC /* PluginRegistrationCombined.cpp in Sources */,
 				D792A2E319334C6300547CFF /* ofxsOGLTextRenderer.cpp in Sources */,
@@ -2393,12 +2391,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D733F6FF1959769800028B57 /* TrackSSD.cpp in Sources */,
-				D733F7011959773E00028B57 /* PluginRegistration.cpp in Sources */,
 				D7BB85D11955C4AD00A86649 /* ofxsTracking.cpp in Sources */,
 				D7BB85D2195638F900A86649 /* ofxsOGLTextRenderer.cpp in Sources */,
 				D7BB85D3195638FB00A86649 /* ofxsOGLFontData.cpp in Sources */,
 				D7BB85BC1955C00100A86649 /* ofxsCore.cpp in Sources */,
+				D7704C7A195B5E78002E163E /* TrackES.cpp in Sources */,
+				D7704C7B195B62C0002E163E /* PluginRegistration.cpp in Sources */,
 				D7BB85BD1955C00100A86649 /* ofxsImageEffect.cpp in Sources */,
 				D7BB85BE1955C00100A86649 /* ofxsInteract.cpp in Sources */,
 				D7BB85BF1955C00100A86649 /* ofxsLog.cpp in Sources */,
@@ -2544,7 +2542,7 @@
 		};
 		D733F7031959803600028B57 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = D7BB85B81955C00100A86649 /* TrackSSD.ofx */;
+			target = D7BB85B81955C00100A86649 /* TrackES.ofx */;
 			targetProxy = D733F7021959803600028B57 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -3214,9 +3212,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = TrackSSD/Info.plist;
+				INFOPLIST_FILE = TrackES/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = TrackSSD.ofx;
+				PRODUCT_NAME = TrackES.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Debug;
@@ -3225,9 +3223,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = TrackSSD/Info.plist;
+				INFOPLIST_FILE = TrackES/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = TrackSSD.ofx;
+				PRODUCT_NAME = TrackES.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
@@ -3487,7 +3485,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D7BB85C61955C00100A86649 /* Build configuration list for PBXNativeTarget "TrackSSD.ofx" */ = {
+		D7BB85C61955C00100A86649 /* Build configuration list for PBXNativeTarget "TrackES.ofx" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D7BB85C71955C00100A86649 /* Debug */,

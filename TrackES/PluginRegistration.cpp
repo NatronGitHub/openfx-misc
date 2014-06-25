@@ -1,4 +1,4 @@
-#include "TrackSSD.h"
+#include "TrackES.h"
 
 namespace OFX
 {
@@ -6,7 +6,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            getTrackSSDPluginID(ids);
+            getTrackESPluginID(ids);
         }
     }
 }
