@@ -92,16 +92,16 @@
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kParamProcessR      "r"
-#define kParamProcessRLabel "R"
+#define kParamProcessRLabel "Invert R"
 #define kParamProcessRHint  "Invert red component"
 #define kParamProcessG      "g"
-#define kParamProcessGLabel "G"
+#define kParamProcessGLabel "Invert G"
 #define kParamProcessGHint  "Invert green component"
 #define kParamProcessB      "b"
-#define kParamProcessBLabel "B"
+#define kParamProcessBLabel "Invert B"
 #define kParamProcessBHint  "Invert blue component"
 #define kParamProcessA      "a"
-#define kParamProcessALabel "A"
+#define kParamProcessALabel "Invert A"
 #define kParamProcessAHint  "Invert alpha component"
 
 using namespace OFX;
@@ -554,7 +554,7 @@ void InvertPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     OFX::BooleanParamDescriptor* processA = desc.defineBooleanParam( kParamProcessA );
     processA->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
     processA->setHint(kParamProcessAHint);
-    processA->setDefault(false);
+    processA->setDefault(true);
     page->addChild(*processA);
 
     ofxsFilterDescribeParamsMaskMix(desc, page);
