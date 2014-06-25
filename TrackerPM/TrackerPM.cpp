@@ -73,7 +73,7 @@
 
 #include <cmath>
 #include <map>
-#include <climits>
+#include <limits>
 
 #include "ofxsProcessing.H"
 #include "ofxsTracking.h"
