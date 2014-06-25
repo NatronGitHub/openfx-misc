@@ -203,7 +203,13 @@ public:
     }
     
 private:
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImage(OfxRectI procWindow)
+    {
+        multiThreadProcessImageMethod<eScoreSSD>(procWindow);
+    }
+
+    template<TrackerScoreEnum scoreType>
+    void multiThreadProcessImageMethod(const OfxRectI &procWindow)
     {
         assert(_refImg && _otherImg);
         double bestScore = std::numeric_limits<double>::infinity();
@@ -224,31 +230,19 @@ private:
                 double score = 0;
                 for (int i = _patternWindow.y1; i < _patternWindow.y2; ++i) {
                     for (int j = _patternWindow.x1; j < _patternWindow.x2; ++j) {
-                        PIX *otherPix = (PIX *) _otherImg->getPixelAddress(x + j, y + i);
                         PIX *refPix = (PIX*) _refImg->getPixelAddress(_center.x + j, _center.y + i);
 
+                        // take nearest pixel in other image (more chance to get a track than with black)
+                        int otherx = x + j;
+                        int othery = y + i;
+                        otherx = std::max(_otherImg->getBounds().x1,std::min(otherx,_otherImg->getBounds().x2-1)); \
+                        othery = std::max(_otherImg->getBounds().y1,std::min(othery,_otherImg->getBounds().y2-1))
+                        PIX *otherPix = (PIX *) _otherImg->getPixelAddress(otherx, othery);
+
                         ///the search window & pattern window have been intersected to the reference image's bounds
-                        assert(refPix);
+                        assert(refPix && otherPix);
 
                         score = aggregate<scoreType>(score, refPix, otherPix);
-                        if (maxComp == 1) {
-                            ///compare raw alpha distance
-                            score += (otherPix ? *otherPix : 0 - *refPix) * (otherPix ? *otherPix : 0 - *refPix);
-                        } else {
-                            assert(maxComp >= 3);
-                            double r,g,b;
-                            if (otherPix) {
-                                r = refPix[0] - otherPix[0];
-                                g = refPix[1] - otherPix[1];
-                                b = refPix[2] - otherPix[2];
-                            } else {
-                                r = (refPix[0] - 0);
-                                g = (refPix[1] - 0);
-                                b = (refPix[2] - 0);
-                            }
-
-                            score += (r*r +  g*g + b*b);
-                        }
                     }
                 }
                 if (score < bestScore) {
@@ -260,6 +254,25 @@ private:
         }
 
         _plugin->updateBestMatch(point, bestScore);
+    }
+
+    template<TrackerScoreEnum scoreType>
+    double aggregate(souble score, PIX* refPix, PIX* otherPix);
+
+    template<>
+    double aggregate<eScoreSSD>(double score, PIX* refPix, PIX* otherPix)
+    {
+        if (nComponents == 1) {
+            ///compare raw alpha distance
+            return score + (*otherPix - *refPix) * (*otherPix - *refPix);
+        } else {
+            assert(nComponents >= 3);
+            double r = refPix[0] - otherPix[0];
+            double g = refPix[1] - otherPix[1];
+            double b = refPix[2] - otherPix[2];
+
+            return score + (r*r +  g*g + b*b);
+        }
     }
 };
 
