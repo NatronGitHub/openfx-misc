@@ -768,7 +768,7 @@
 		D7B4C96018D9DA410004137D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D7B4C96118D9DA410004137D /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D7B4C96218D9DA410004137D /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		D7BB85C91955C00100A86649 /* TrackES.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TrackES.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		D7BB85C91955C00100A86649 /* TrackerPM.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TrackerPM.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		D7BB85CE1955C4AD00A86649 /* ofxsTracking.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsTracking.cpp; sourceTree = "<group>"; };
 		D7BB85CF1955C4AD00A86649 /* ofxsTracking.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsTracking.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -1157,7 +1157,7 @@
 				1EF46F43194A394E00825BDF /* Shuffle.ofx.bundle */,
 				D730311619518B6B0024BCA4 /* CopyRectangle.ofx.bundle */,
 				1E181AFB19518CCF00FAB9A9 /* Invert.ofx.bundle */,
-				D7BB85C91955C00100A86649 /* TrackES.ofx.bundle */,
+				D7BB85C91955C00100A86649 /* TrackerPM.ofx.bundle */,
 				1E52FFCB1955CE120000FB79 /* Premult.ofx.bundle */,
 			);
 			name = Products;
@@ -1867,9 +1867,9 @@
 			productReference = D74A80C4194059CC007C3E1C /* Crop.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
-		D7BB85B81955C00100A86649 /* TrackES.ofx */ = {
+		D7BB85B81955C00100A86649 /* TrackerPM.ofx */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D7BB85C61955C00100A86649 /* Build configuration list for PBXNativeTarget "TrackES.ofx" */;
+			buildConfigurationList = D7BB85C61955C00100A86649 /* Build configuration list for PBXNativeTarget "TrackerPM.ofx" */;
 			buildPhases = (
 				D7BB85B91955C00100A86649 /* Sources */,
 				D7BB85C41955C00100A86649 /* Frameworks */,
@@ -1878,9 +1878,9 @@
 			);
 			dependencies = (
 			);
-			name = TrackES.ofx;
+			name = TrackerPM.ofx;
 			productName = basic.ofx;
-			productReference = D7BB85C91955C00100A86649 /* TrackES.ofx.bundle */;
+			productReference = D7BB85C91955C00100A86649 /* TrackerPM.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
 /* End PBXNativeTarget section */
@@ -1929,7 +1929,7 @@
 				1E235FD918363C850019C45F /* SideBySide.ofx */,
 				1E3AC8C618B6207600F228A6 /* Switch.ofx */,
 				1E235FF418369E4C0019C45F /* TimeOffset.ofx */,
-				D7BB85B81955C00100A86649 /* TrackES.ofx */,
+				D7BB85B81955C00100A86649 /* TrackerPM.ofx */,
 				D7349E8F18E7767D0097DB1D /* Transform.ofx */,
 				1E8B5D4A18B76A7500C31FDC /* Misc.ofx */,
 			);
@@ -2391,12 +2391,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D7704C7A195B5E78002E163E /* TrackerPM.cpp in Sources */,
 				D7BB85D11955C4AD00A86649 /* ofxsTracking.cpp in Sources */,
 				D7BB85D2195638F900A86649 /* ofxsOGLTextRenderer.cpp in Sources */,
 				D7BB85D3195638FB00A86649 /* ofxsOGLFontData.cpp in Sources */,
-				D7BB85BC1955C00100A86649 /* ofxsCore.cpp in Sources */,
-				D7704C7A195B5E78002E163E /* TrackerPM.cpp in Sources */,
 				D7704C7B195B62C0002E163E /* PluginRegistration.cpp in Sources */,
+				D7BB85BC1955C00100A86649 /* ofxsCore.cpp in Sources */,
 				D7BB85BD1955C00100A86649 /* ofxsImageEffect.cpp in Sources */,
 				D7BB85BE1955C00100A86649 /* ofxsInteract.cpp in Sources */,
 				D7BB85BF1955C00100A86649 /* ofxsLog.cpp in Sources */,
@@ -2542,7 +2542,7 @@
 		};
 		D733F7031959803600028B57 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = D7BB85B81955C00100A86649 /* TrackES.ofx */;
+			target = D7BB85B81955C00100A86649 /* TrackerPM.ofx */;
 			targetProxy = D733F7021959803600028B57 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -3212,9 +3212,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = TrackES/Info.plist;
+				INFOPLIST_FILE = TrackerPM/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = TrackES.ofx;
+				PRODUCT_NAME = TrackerPM.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Debug;
@@ -3223,9 +3223,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = TrackES/Info.plist;
+				INFOPLIST_FILE = TrackerPM/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = TrackES.ofx;
+				PRODUCT_NAME = TrackerPM.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
@@ -3485,7 +3485,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		D7BB85C61955C00100A86649 /* Build configuration list for PBXNativeTarget "TrackES.ofx" */ = {
+		D7BB85C61955C00100A86649 /* Build configuration list for PBXNativeTarget "TrackerPM.ofx" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D7BB85C71955C00100A86649 /* Debug */,

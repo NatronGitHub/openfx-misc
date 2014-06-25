@@ -121,7 +121,7 @@ public:
 
     }
     
-    void updateBestMatch(const OfxPointD& point, double score);
+    void updateBestMatch(const OfxPointI& point, double score);
     
 private:
     // override the roi call
@@ -185,11 +185,8 @@ public:
         _patternWindow = pattern;
     }
     
-    void setCenter(const OfxPointD& center) {
-        _center = center;
-        // round center to nearest pixel center
-        _centeri.x = std::floor(center.x + 0.5);
-        _centeri.y = std::floor(center.y + 0.5);
+    void setCenterI(const OfxPointI& centeri) {
+        _centeri = centeri;
     }
     
 };
@@ -197,7 +194,7 @@ public:
 
 // The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
 // by the compiler, using the same generic code for all filters.
-template <class PIX, int nComponents, int maxValue>
+template <class PIX, int nComponents, int maxValue, TrackerScoreEnum scoreType>
 class TrackerPMProcessor : public TrackerPMProcessorBase
 {
 public:
@@ -207,15 +204,10 @@ public:
     }
     
 private:
-    void multiThreadProcessImage(OfxRectI procWindow)
-    {
-        multiThreadProcessImageMethod<eScoreSSD>(procWindow);
-    }
-
-    template<TrackerScoreEnum scoreType>
-    void multiThreadProcessImageMethod(const OfxRectI &procWindow)
+    void multiThreadProcessImages(OfxRectI procWindow)
     {
         assert(_refImg && _otherImg);
+        assert(scoreType == eTrackerSSD);
         double bestScore = std::numeric_limits<double>::infinity();
         OfxPointI point;
         point.x = -1;
@@ -226,7 +218,6 @@ private:
         ///and the pattern in the other image.
         
         ///we're not interested in the alpha channel for RGBA images
-        int maxComp = std::max(nComponents, 3);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if (_effect.abort()) break;
             
@@ -240,14 +231,14 @@ private:
                         // take nearest pixel in other image (more chance to get a track than with black)
                         int otherx = x + j;
                         int othery = y + i;
-                        otherx = std::max(_otherImg->getBounds().x1,std::min(otherx,_otherImg->getBounds().x2-1)); \
-                        othery = std::max(_otherImg->getBounds().y1,std::min(othery,_otherImg->getBounds().y2-1))
+                        otherx = std::max(_otherImg->getBounds().x1,std::min(otherx,_otherImg->getBounds().x2-1));
+                        othery = std::max(_otherImg->getBounds().y1,std::min(othery,_otherImg->getBounds().y2-1));
                         PIX *otherPix = (PIX *) _otherImg->getPixelAddress(otherx, othery);
 
                         ///the search window & pattern window have been intersected to the reference image's bounds
                         assert(refPix && otherPix);
 
-                        score = aggregate<scoreType>(score, refPix, otherPix);
+                        score = aggregateSSD(score, refPix, otherPix);
                     }
                 }
                 if (score < bestScore) {
@@ -258,14 +249,10 @@ private:
             }
         }
 
-        _plugin->updateBestMatch(point, bestScore, dx, dy);
+        _plugin->updateBestMatch(point, bestScore);
     }
 
-    template<TrackerScoreEnum scoreType>
-    double aggregate(souble score, PIX* refPix, PIX* otherPix);
-
-    template<>
-    double aggregate<eScoreSSD>(double score, PIX* refPix, PIX* otherPix)
+    double aggregateSSD(double score, PIX* refPix, PIX* otherPix)
     {
         if (nComponents == 1) {
             ///compare raw alpha distance
@@ -279,8 +266,8 @@ private:
             return score + (r*r +  g*g + b*b);
         }
     }
-};
 
+};
 
 void
 TrackerPMPlugin::updateBestMatch(const OfxPointI& point, double score)
@@ -403,7 +390,11 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,OfxTime refTi
     
     processor.setPatternWindow(patternPixel);
     
-    processor.setCenter(center);
+    // round center to nearest pixel center
+    OfxPointI centeri;
+    centeri.x = std::floor(center.x + 0.5);
+    centeri.y = std::floor(center.y + 0.5);
+    processor.setCenterI(centeri);
     
     _bestMatch.second = std::numeric_limits<double>::infinity();
     
@@ -414,8 +405,8 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,OfxTime refTi
 
     ///ok the score is now computed, update the center
     OfxPointD newCenter;
-    newCenter.x = _center.x + _bestMatch.first.x - _centeri.x;
-    newCenter.y = _center.y + _bestMatch.first.y - _centeri.y;
+    newCenter.x = center.x + _bestMatch.first.x - centeri.x;
+    newCenter.y = center.y + _bestMatch.first.y - centeri.y;
     _center->setValueAtTime(otherTime, newCenter.x, newCenter.y);
 }
 
@@ -486,17 +477,17 @@ TrackerPMPlugin::trackInternal(OfxTime ref,OfxTime other)
     switch (srcBitDepth) {
         case OFX::eBitDepthUByte :
         {
-            TrackerPMProcessor<unsigned char, nComponents, 255> fred(*this);
+            TrackerPMProcessor<unsigned char, nComponents, 255, eTrackerSSD> fred(*this);
             setupAndProcess(fred,ref,other, srcRef.get(),srcOther.get());
         }   break;
         case OFX::eBitDepthUShort :
         {
-            TrackerPMProcessor<unsigned short, nComponents, 65535> fred(*this);
+            TrackerPMProcessor<unsigned short, nComponents, 65535, eTrackerSSD> fred(*this);
             setupAndProcess(fred,ref,other, srcRef.get(),srcOther.get());
         }   break;
         case OFX::eBitDepthFloat :
         {
-            TrackerPMProcessor<float, nComponents, 1> fred(*this);
+            TrackerPMProcessor<float, nComponents, 1, eTrackerSSD> fred(*this);
             setupAndProcess(fred,ref,other,srcRef.get(),srcOther.get());
         }   break;
         default :
