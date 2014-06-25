@@ -20,7 +20,7 @@
 #include "SideBySide.h"
 #include "Switch.h"
 #include "TimeOffset.h"
-#include "TrackES.h"
+#include "TrackerPM.h"
 #include "Transform.h"
 
 namespace OFX
@@ -52,7 +52,7 @@ namespace OFX
             getSwitchPluginID(ids);
             getTimeOffsetPluginID(ids);
             ///Not production ready
-            //getTrackESPluginID(ids);
+            //getTrackerPMPluginID(ids);
             getTransformPluginIDs(ids);
         }
     }

@@ -1,4 +1,4 @@
-#include "TrackES.h"
+#include "TrackerPM.h"
 
 namespace OFX
 {
@@ -6,7 +6,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            getTrackESPluginID(ids);
+            getTrackerPMPluginID(ids);
         }
     }
 }

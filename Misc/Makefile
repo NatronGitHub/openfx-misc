@@ -21,7 +21,7 @@ Shuffle.o \
 SideBySide.o \
 Switch.o \
 TimeOffset.o \
-TrackES.o \
+TrackerPM.o \
 Transform.o \
 ofxsOGLTextRenderer.o \
 ofxsOGLFontData.o  \
@@ -54,7 +54,7 @@ VPATH += \
 ../SideBySide \
 ../Switch \
 ../TimeOffset \
-../TrackES \
+../TrackerPM \
 ../Transform
 
 include ../Makefile.master
@@ -83,5 +83,5 @@ CXXFLAGS += \
 -I../SideBySide \
 -I../Switch \
 -I../TimeOffset \
--I../TrackES \
+-I../TrackerPM \
 -I../Transform

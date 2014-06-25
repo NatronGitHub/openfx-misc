@@ -351,7 +351,7 @@
 		D74A80C5194059E0007C3E1C /* Crop.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D74A80AE194059C0007C3E1C /* Crop.cpp */; };
 		D74A80C6194059E3007C3E1C /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D74A80B2194059C0007C3E1C /* PluginRegistration.cpp */; };
 		D74A80C719405A14007C3E1C /* Crop.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D74A80AE194059C0007C3E1C /* Crop.cpp */; };
-		D7704C7A195B5E78002E163E /* TrackES.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7704C78195B5E4F002E163E /* TrackES.cpp */; };
+		D7704C7A195B5E78002E163E /* TrackerPM.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7704C78195B5E4F002E163E /* TrackerPM.cpp */; };
 		D7704C7B195B62C0002E163E /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7704C77195B5E4F002E163E /* PluginRegistration.cpp */; };
 		D792A2E319334C6300547CFF /* ofxsOGLTextRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */; };
 		D792A2E419334C6300547CFF /* ofxsOGLTextRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */; };
@@ -757,8 +757,8 @@
 		D7704C75195B5E4F002E163E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D7704C76195B5E4F002E163E /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D7704C77195B5E4F002E163E /* PluginRegistration.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		D7704C78195B5E4F002E163E /* TrackES.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TrackES.cpp; sourceTree = "<group>"; };
-		D7704C79195B5E4F002E163E /* TrackES.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TrackES.h; sourceTree = "<group>"; };
+		D7704C78195B5E4F002E163E /* TrackerPM.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TrackerPM.cpp; sourceTree = "<group>"; };
+		D7704C79195B5E4F002E163E /* TrackerPM.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TrackerPM.h; sourceTree = "<group>"; };
 		D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsOGLTextRenderer.cpp; sourceTree = "<group>"; };
 		D792A2E219334C6300547CFF /* ofxsOGLTextRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsOGLTextRenderer.h; sourceTree = "<group>"; };
 		D792A2E919335BE100547CFF /* ofxsOGLFontUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsOGLFontUtils.h; sourceTree = "<group>"; };
@@ -1123,7 +1123,6 @@
 		1E551EB817994D4000A4135C = {
 			isa = PBXGroup;
 			children = (
-				D7704C74195B5E4F002E163E /* TrackES */,
 				1E3E3D30179960F9005F2132 /* Headers */,
 				1E551ED217994DEF00A4135C /* Sources */,
 				1E551EDA17994E8100A4135C /* Frameworks */,
@@ -1190,6 +1189,7 @@
 				1E235FEC18363CCA0019C45F /* SideBySide */,
 				1E3AC8D818B6211800F228A6 /* Switch */,
 				1E235FF318369E2B0019C45F /* TimeOffset */,
+				D7704C74195B5E4F002E163E /* TrackerPM */,
 				D7349E8818E7766F0097DB1D /* Transform */,
 				1E8B5D4618B769B400C31FDC /* Misc */,
 				1E3E3CB417995D15005F2132 /* Library */,
@@ -1440,16 +1440,16 @@
 			path = Crop;
 			sourceTree = "<group>";
 		};
-		D7704C74195B5E4F002E163E /* TrackES */ = {
+		D7704C74195B5E4F002E163E /* TrackerPM */ = {
 			isa = PBXGroup;
 			children = (
 				D7704C75195B5E4F002E163E /* Info.plist */,
 				D7704C76195B5E4F002E163E /* Makefile */,
 				D7704C77195B5E4F002E163E /* PluginRegistration.cpp */,
-				D7704C78195B5E4F002E163E /* TrackES.cpp */,
-				D7704C79195B5E4F002E163E /* TrackES.h */,
+				D7704C78195B5E4F002E163E /* TrackerPM.cpp */,
+				D7704C79195B5E4F002E163E /* TrackerPM.h */,
 			);
-			path = TrackES;
+			path = TrackerPM;
 			sourceTree = "<group>";
 		};
 		D7B4C95D18D9DA410004137D /* ColorCorrect */ = {
@@ -2395,7 +2395,7 @@
 				D7BB85D2195638F900A86649 /* ofxsOGLTextRenderer.cpp in Sources */,
 				D7BB85D3195638FB00A86649 /* ofxsOGLFontData.cpp in Sources */,
 				D7BB85BC1955C00100A86649 /* ofxsCore.cpp in Sources */,
-				D7704C7A195B5E78002E163E /* TrackES.cpp in Sources */,
+				D7704C7A195B5E78002E163E /* TrackerPM.cpp in Sources */,
 				D7704C7B195B62C0002E163E /* PluginRegistration.cpp in Sources */,
 				D7BB85BD1955C00100A86649 /* ofxsImageEffect.cpp in Sources */,
 				D7BB85BE1955C00100A86649 /* ofxsInteract.cpp in Sources */,

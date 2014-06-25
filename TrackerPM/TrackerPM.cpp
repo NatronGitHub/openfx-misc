@@ -69,7 +69,7 @@
  England
  
  */
-#include "TrackES.h"
+#include "TrackerPM.h"
 
 #include <cmath>
 #include <map>
@@ -79,41 +79,49 @@
 #include "ofxsTracking.h"
 #include "ofxsMerging.h"
 
-#define kPluginName "TrackES"
+#define kPluginName "TrackerPM"
 #define kPluginGrouping "Transform"
-#define kPluginDescription "Tracker implemented using exhastive search algorithms."
-#define kPluginIdentifier "net.sf.openfx:TrackESPlugin"
+#define kPluginDescription "Point tracker based on pattern matching using an exhaustive search within an image region"
+#define kPluginIdentifier "net.sf.openfx:TrackerPMPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kAlgorithmParamName "algorithm"
-#define kAlgorithmParamLabel "Algorithm"
+#define kScoreParamName "score"
+#define kScoreParamLabel "Score"
+#define kScoreParamHint "Correlation score computation method"
+#define kScoreParamOptionSSD "SSD"
+#define kScoreParamOptionSSDHint "Sum of Squared Differences"
+#define kScoreParamOptionSAD "SAD"
+#define kScoreParamOptionSADHint "Sum of Absolute Differences, more robust to occlusions"
+#define kScoreParamOptionNCC "NCC"
+#define kScoreParamOptionNCCHint "Normalized Cross-Correlation"
+#define kScoreParamOptionZNCC "ZNCC"
+#define kScoreParamOptionZNCCHint "Zero-mean Normalized Cross-Correlation, less sensitive to illumination changes"
 
 using namespace OFX;
 
-
-enum TrackerType
+enum TrackerScoreEnum
 {
-    TRACKER_SSD = 0,
-    TRACKER_SAD,
-    TRACKER_NCC,
-    TRACKER_ZNCC
+    eTrackerSSD = 0,
+    eTrackerSAD,
+    eTrackerNCC,
+    eTrackerZNCC
 };
 
-class TrackESProcessorBase;
+class TrackerPMProcessorBase;
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class TrackESPlugin : public GenericTrackerPlugin
+class TrackerPMPlugin : public GenericTrackerPlugin
 {
 public:
     /** @brief ctor */
-    TrackESPlugin(OfxImageEffectHandle handle)
+    TrackerPMPlugin(OfxImageEffectHandle handle)
     : GenericTrackerPlugin(handle)
     {
 
     }
     
-    void updateSSD(const OfxPointD& point,double ssd);
+    void updateBestMatch(const OfxPointD& point, double score);
     
 private:
     // override the roi call
@@ -131,36 +139,35 @@ private:
     void trackInternal(OfxTime ref,OfxTime other);
 
     /* set up and run a processor */
-    void setupAndProcess(TrackESProcessorBase &,OfxTime refTime,OfxTime otherTime,OFX::Image* refImg,OFX::Image* otherImg);
+    void setupAndProcess(TrackerPMProcessorBase &,OfxTime refTime,OfxTime otherTime,OFX::Image* refImg,OFX::Image* otherImg);
 
     OfxRectD getTrackSearchWindowCanonical(OfxTime time) const;
 
     ///The pattern is in coordinates relative to the center point
     OfxRectD getPatternCanonical(OfxTime time) const;
     
-    std::pair<OfxPointD,double> _result; //< the results for the current processor
-    OFX::MultiThread::Mutex _lock; //< this is used so we can multi-thread the tracking and protect the shared results
+    std::pair<OfxPointD,double> _bestMatch; //< the results for the current processor
+    OFX::MultiThread::Mutex _bestMatchMutex; //< this is used so we can multi-thread the tracking and protect the shared results
 };
 
 
-class TrackESProcessorBase : public OFX::ImageProcessor
+class TrackerPMProcessorBase : public OFX::ImageProcessor
 {
 protected:
-    
     OFX::Image *_refImg;
     OFX::Image *_otherImg;
     OfxRectI _patternWindow;
     OfxPointD _center;
-    TrackESPlugin* _plugin;
+    TrackerPMPlugin* _plugin;
     
 public:
-    TrackESProcessorBase(OFX::ImageEffect &instance)
+    TrackerPMProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _refImg(0)
     , _otherImg(0)
     , _patternWindow()
     , _center()
-    , _plugin(dynamic_cast<TrackESPlugin*>(&instance))
+    , _plugin(dynamic_cast<TrackerPMPlugin*>(&instance))
     {
         assert(_plugin);
     }
@@ -187,11 +194,11 @@ public:
 // The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
 // by the compiler, using the same generic code for all filters.
 template <class PIX, int nComponents, int maxValue>
-class TrackESProcessor : public TrackESProcessorBase
+class TrackerPMProcessor : public TrackerPMProcessorBase
 {
 public:
-    TrackESProcessor(OFX::ImageEffect &instance)
-    : TrackESProcessorBase(instance)
+    TrackerPMProcessor(OFX::ImageEffect &instance)
+    : TrackerPMProcessorBase(instance)
     {
     }
     
@@ -199,7 +206,7 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         assert(_refImg && _otherImg);
-        double minSSD = INT_MAX;
+        double bestScore = std::numeric_limits<double>::infinity();
         OfxPointD point;
         //assert(filter == _filter);
         
@@ -214,61 +221,62 @@ private:
             
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 
-                double ssd = 0;
+                double score = 0;
                 for (int i = _patternWindow.y1; i < _patternWindow.y2; ++i) {
                     for (int j = _patternWindow.x1; j < _patternWindow.x2; ++j) {
                         PIX *otherPix = (PIX *) _otherImg->getPixelAddress(x + j, y + i);
                         PIX *refPix = (PIX*) _refImg->getPixelAddress(_center.x + j, _center.y + i);
-                        
+
                         ///the search window & pattern window have been intersected to the reference image's bounds
                         assert(refPix);
-                        
-                            if (maxComp == 1) {
-                                ///compare raw alpha distance
-                                ssd += (otherPix ? *otherPix : 0 - *refPix) * (otherPix ? *otherPix : 0 - *refPix);
+
+                        score = aggregate<scoreType>(score, refPix, otherPix);
+                        if (maxComp == 1) {
+                            ///compare raw alpha distance
+                            score += (otherPix ? *otherPix : 0 - *refPix) * (otherPix ? *otherPix : 0 - *refPix);
+                        } else {
+                            assert(maxComp >= 3);
+                            double r,g,b;
+                            if (otherPix) {
+                                r = refPix[0] - otherPix[0];
+                                g = refPix[1] - otherPix[1];
+                                b = refPix[2] - otherPix[2];
                             } else {
-                                assert(maxComp >= 3);
-                                double r,g,b;
-                                if (otherPix) {
-                                    r = refPix[0] - otherPix[0];
-                                    g = refPix[1] - otherPix[1];
-                                    b = refPix[2] - otherPix[2];
-                                } else {
-                                    r = (refPix[0] - 0);
-                                    g = (refPix[1] - 0);
-                                    b = (refPix[2] - 0);
-                                }
-                                
-                                ssd += (r*r +  g*g + b*b);
+                                r = (refPix[0] - 0);
+                                g = (refPix[1] - 0);
+                                b = (refPix[2] - 0);
                             }
+
+                            score += (r*r +  g*g + b*b);
+                        }
                     }
                 }
-                if (ssd < minSSD) {
-                    minSSD = ssd;
+                if (score < bestScore) {
+                    bestScore = score;
                     point.x = x;
                     point.y = y;
                 }
             }
         }
 
-        _plugin->updateSSD(point, minSSD);
+        _plugin->updateBestMatch(point, bestScore);
     }
 };
 
 
 void
-TrackESPlugin::updateSSD(const OfxPointD& point,double ssd)
+TrackerPMPlugin::updateBestMatch(const OfxPointD& point, double score)
 {
-    OFX::MultiThread::AutoMutex lock(_lock);
-    if (_result.second > ssd) {
-        _result.second = ssd;
-        _result.first.x = point.x;
-        _result.first.y = point.y;
+    OFX::MultiThread::AutoMutex lock(_bestMatchMutex);
+    if (_bestMatch.second > score) {
+        _bestMatch.second = score;
+        _bestMatch.first.x = point.x;
+        _bestMatch.first.y = point.y;
     }
 }
 
 void
-TrackESPlugin::trackRange(const OFX::TrackArguments& args)
+TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
 {
     OfxTime t = args.first;
     std::string name;
@@ -316,7 +324,7 @@ TrackESPlugin::trackRange(const OFX::TrackArguments& args)
 
 /* set up and run a processor */
 void
-TrackESPlugin::setupAndProcess(TrackESProcessorBase &processor,OfxTime refTime,OfxTime otherTime,OFX::Image* refImg,OFX::Image* otherImg)
+TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,OfxTime refTime,OfxTime otherTime,OFX::Image* refImg,OFX::Image* otherImg)
 {
     
     // set an uninitialized image for the dst image
@@ -379,17 +387,17 @@ TrackESPlugin::setupAndProcess(TrackESProcessorBase &processor,OfxTime refTime,O
     
     processor.setCenter(center);
     
-    _result.second = INT_MAX;
+    _bestMatch.second = std::numeric_limits<double>::infinity();
     
     // Call the base class process member, this will call the derived templated process code
     processor.process();
     
-    ///ok the ssd is now computed, update the center
-    _center->setValueAtTime(otherTime, _result.first.x, _result.first.y);
+    ///ok the score is now computed, update the center
+    _center->setValueAtTime(otherTime, _bestMatch.first.x, _bestMatch.first.y);
 }
 
 OfxRectD
-TrackESPlugin::getPatternCanonical(OfxTime time) const
+TrackerPMPlugin::getPatternCanonical(OfxTime time) const
 {
     OfxRectD ret;
     OfxPointD innerBtmLeft,innerSize;
@@ -403,7 +411,7 @@ TrackESPlugin::getPatternCanonical(OfxTime time) const
 }
 
 OfxRectD
-TrackESPlugin::getTrackSearchWindowCanonical(OfxTime time) const
+TrackerPMPlugin::getTrackSearchWindowCanonical(OfxTime time) const
 {
     OfxPointD outterBtmLeft,outterSize,center;
     _outterBtmLeft->getValueAtTime(time, outterBtmLeft.x, outterBtmLeft.y);
@@ -424,7 +432,7 @@ TrackESPlugin::getTrackSearchWindowCanonical(OfxTime time) const
 // It may be difficult to implement for complicated transforms:
 // consequently, these transforms cannot support tiles.
 void
-TrackESPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+TrackerPMPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
     
     OfxRectD roi = getTrackSearchWindowCanonical(args.time);
@@ -438,7 +446,7 @@ TrackESPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
 // the internal render function
 template <int nComponents>
 void
-TrackESPlugin::trackInternal(OfxTime ref,OfxTime other)
+TrackerPMPlugin::trackInternal(OfxTime ref,OfxTime other)
 {
     std::auto_ptr<OFX::Image> srcRef(srcClip_->fetchImage(ref));
     std::auto_ptr<OFX::Image> srcOther(srcClip_->fetchImage(other));
@@ -455,17 +463,17 @@ TrackESPlugin::trackInternal(OfxTime ref,OfxTime other)
     switch (srcBitDepth) {
         case OFX::eBitDepthUByte :
         {
-            TrackESProcessor<unsigned char, nComponents, 255> fred(*this);
+            TrackerPMProcessor<unsigned char, nComponents, 255> fred(*this);
             setupAndProcess(fred,ref,other, srcRef.get(),srcOther.get());
         }   break;
         case OFX::eBitDepthUShort :
         {
-            TrackESProcessor<unsigned short, nComponents, 65535> fred(*this);
+            TrackerPMProcessor<unsigned short, nComponents, 65535> fred(*this);
             setupAndProcess(fred,ref,other, srcRef.get(),srcOther.get());
         }   break;
         case OFX::eBitDepthFloat :
         {
-            TrackESProcessor<float, nComponents, 1> fred(*this);
+            TrackerPMProcessor<float, nComponents, 1> fred(*this);
             setupAndProcess(fred,ref,other,srcRef.get(),srcOther.get());
         }   break;
         default :
@@ -476,9 +484,9 @@ TrackESPlugin::trackInternal(OfxTime ref,OfxTime other)
 
 using namespace OFX;
 
-mDeclarePluginFactory(TrackESPluginFactory, {}, {});
+mDeclarePluginFactory(TrackerPMPluginFactory, {}, {});
 
-void TrackESPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void TrackerPMPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabels(kPluginName, kPluginName, kPluginName);
@@ -490,33 +498,37 @@ void TrackESPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 
 
-OFX::ImageEffect* TrackESPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* TrackerPMPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
-    return new TrackESPlugin(handle);
+    return new TrackerPMPlugin(handle);
 }
 
 
 
 
-void TrackESPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     PageParamDescriptor* page = genericTrackerDescribeInContextBegin(desc, context);
     genericTrackerDescribePointParameters(desc, page);
     
-    ChoiceParamDescriptor* type = desc.defineChoiceParam(kAlgorithmParamName);
-    type->setLabels(kAlgorithmParamLabel, kAlgorithmParamLabel, kAlgorithmParamLabel);
-    type->appendOption("SSD","Sum of squared differences");
-    type->appendOption("SAD","Sum of absolute differences");
-    type->appendOption("NCC","Normalized cross-correlation");
-    type->appendOption("ZNCC","Zero mean normalized cross-correlation");
-    type->setDefault((int)TRACKER_ZNCC);
+    ChoiceParamDescriptor* type = desc.defineChoiceParam(kScoreParamName);
+    type->setLabels(kScoreParamLabel, kScoreParamLabel, kScoreParamLabel);
+    assert(type->getNOptions() == eTrackerSSD);
+    type->appendOption(kScoreParamOptionSSD, kScoreParamOptionSSDHint);
+    assert(type->getNOptions() == eTrackerSAD);
+    type->appendOption(kScoreParamOptionSAD, kScoreParamOptionSADHint);
+    assert(type->getNOptions() == eTrackerNCC);
+    type->appendOption(kScoreParamOptionNCC, kScoreParamOptionNCCHint);
+    assert(type->getNOptions() == eTrackerZNCC);
+    type->appendOption(kScoreParamOptionZNCC, kScoreParamOptionZNCCHint);
+    type->setDefault((int)eTrackerZNCC);
     page->addChild(*type);
 
 }
 
-void getTrackESPluginID(OFX::PluginFactoryArray &ids)
+void getTrackerPMPluginID(OFX::PluginFactoryArray &ids)
 {
-    static TrackESPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static TrackerPMPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 

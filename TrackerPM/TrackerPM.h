@@ -40,6 +40,6 @@
 
 #include "ofxsImageEffect.h"
 
-void getTrackESPluginID(OFX::PluginFactoryArray &ids);
+void getTrackerPMPluginID(OFX::PluginFactoryArray &ids);
 
 #endif // MISC_ESA_TRACKER_H
