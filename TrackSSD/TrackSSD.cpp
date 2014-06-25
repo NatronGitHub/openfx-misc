@@ -176,47 +176,6 @@ public:
     
 };
 
-static void rgbToCieXYZ(float r,float g,float b,float *x,float *y,float *z)
-{
-    *x = 0.412453 * r + 0.357580 * g + 0.180423 * b;
-    *y = 0.212671 * r + 0.715160 * g + 0.072169 * b;
-    *z = 0.019334 * r + 0.119193 * g + 0.950227 * b;
-}
-
-static void cieXYZToLab(float x,float y,float z,float* l,float *a, float* b)
-{
-    
-    x /= 95.047;
-    y /= 100.000;
-    z /= 108.883;
-    
-    if ( x > 0.008856 )
-        x = std::pow(x,1.f/3.f);
-    else
-        x=(7.787 * x) + (16.f/116.f);
-    if ( y > 0.008856 )
-        y = std::pow(y,1.f/3.f);
-    else
-        y=(7.787 * y) + (16.f/116.f);
-    if ( z > 0.008856 )
-        z = std::pow(z,1.f/3.f);
-    else
-        z=(7.787 * z) + (16.f/116.f);
-    *l = 116 * y - 16;
-    *a = 500 * (x - y);
-    *b = 200 * (y - z);
-}
-
-template <typename PIX,int maxVal>
-static void rgb_to_lab(PIX r,PIX g,PIX blue,float* l,float* a,float *b)
-{
-    float rf = float(r / (float)maxVal);
-    float gf = float(g / (float)maxVal);
-    float bf = float(blue / (float)maxVal);
-    float x,y,z;
-    rgbToCieXYZ(rf, gf, bf, &x, &y, &z);
-    cieXYZToLab(x, y, z, l, a, b);
-}
 
 // The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
 // by the compiler, using the same generic code for all filters.
@@ -262,12 +221,11 @@ private:
                                 ssd += (otherPix ? *otherPix : 0 - *refPix) * (otherPix ? *otherPix : 0 - *refPix);
                             } else {
                                 assert(maxComp >= 3);
-                                float rl,ra,rb,ol,oa,ob;
-                                rgb_to_lab<PIX, maxValue>(refPix[0], refPix[1], refPix[2], &rl, &ra, &rb);
-                                rgb_to_lab<PIX, maxValue>(otherPix ? otherPix[0] : 0, otherPix ? otherPix[1] : 0, otherPix ? otherPix[2]: 0,
-                                                          &ol, &oa, &ob);
-                                
-                                ssd += ((rl - ol) * (rl - ol) +  (ra - oa) * (ra - oa) + (rb - ob) * (rb - ob));
+                                PIX r,g,b;
+                                r = (refPix[0] - (otherPix ? otherPix[0] : 0));
+                                g = (refPix[1] - (otherPix ? otherPix[1] : 0));
+                                b = (refPix[2] - (otherPix ? otherPix[2] : 0));
+                                ssd += (r*r +  g*g + b*b);
                             }
                     }
                 }
