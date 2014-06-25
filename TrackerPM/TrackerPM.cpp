@@ -157,6 +157,7 @@ protected:
     OFX::Image *_refImg;
     OFX::Image *_otherImg;
     OfxRectI _patternWindow;
+    OfxPointI _centeri;
     OfxPointD _center;
     TrackerPMPlugin* _plugin;
     
@@ -186,6 +187,9 @@ public:
     
     void setCenter(const OfxPointD& center) {
         _center = center;
+        // round center to nearest pixel center
+        _centeri.x = std::floor(center.x + 0.5);
+        _centeri.y = std::floor(center.y + 0.5);
     }
     
 };
@@ -213,9 +217,10 @@ private:
     {
         assert(_refImg && _otherImg);
         double bestScore = std::numeric_limits<double>::infinity();
-        OfxPointD point;
-        //assert(filter == _filter);
-        
+        OfxPointI point;
+        point.x = -1;
+        point.y = -1;
+
         ///For every pixel in the sub window of the search area we find the pixel
         ///that minimize the sum of squared differences between the pattern in the ref image
         ///and the pattern in the other image.
@@ -230,7 +235,7 @@ private:
                 double score = 0;
                 for (int i = _patternWindow.y1; i < _patternWindow.y2; ++i) {
                     for (int j = _patternWindow.x1; j < _patternWindow.x2; ++j) {
-                        PIX *refPix = (PIX*) _refImg->getPixelAddress(_center.x + j, _center.y + i);
+                        PIX *refPix = (PIX*) _refImg->getPixelAddress(_centeri.x + j, _centeri.y + i);
 
                         // take nearest pixel in other image (more chance to get a track than with black)
                         int otherx = x + j;
@@ -253,7 +258,7 @@ private:
             }
         }
 
-        _plugin->updateBestMatch(point, bestScore);
+        _plugin->updateBestMatch(point, bestScore, dx, dy);
     }
 
     template<TrackerScoreEnum scoreType>
@@ -278,7 +283,7 @@ private:
 
 
 void
-TrackerPMPlugin::updateBestMatch(const OfxPointD& point, double score)
+TrackerPMPlugin::updateBestMatch(const OfxPointI& point, double score)
 {
     OFX::MultiThread::AutoMutex lock(_bestMatchMutex);
     if (_bestMatch.second > score) {
@@ -404,9 +409,14 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,OfxTime refTi
     
     // Call the base class process member, this will call the derived templated process code
     processor.process();
-    
+
+    // TODO: subpixel interpolation
+
     ///ok the score is now computed, update the center
-    _center->setValueAtTime(otherTime, _bestMatch.first.x, _bestMatch.first.y);
+    OfxPointD newCenter;
+    newCenter.x = _center.x + _bestMatch.first.x - _centeri.x;
+    newCenter.y = _center.y + _bestMatch.first.y - _centeri.y;
+    _center->setValueAtTime(otherTime, newCenter.x, newCenter.y);
 }
 
 OfxRectD
@@ -534,9 +544,8 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     type->appendOption(kScoreParamOptionNCC, kScoreParamOptionNCCHint);
     assert(type->getNOptions() == eTrackerZNCC);
     type->appendOption(kScoreParamOptionZNCC, kScoreParamOptionZNCCHint);
-    type->setDefault((int)eTrackerZNCC);
+    type->setDefault((int)eTrackerSSD);
     page->addChild(*type);
-
 }
 
 void getTrackerPMPluginID(OFX::PluginFactoryArray &ids)
