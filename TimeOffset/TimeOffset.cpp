@@ -85,6 +85,12 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kTimeOffsetParamName "timeOffset"
+#define kTimeOffsetParamLabel "Time offset (frames)"
+
+#define kReverseInputParamName "reverseInput"
+#define kReverseInputParamLabel "Reverse input"
+
 namespace OFX {
     extern ImageEffectHostDescription gHostDescription;
 }
@@ -129,8 +135,8 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
 {
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
 
-    time_offset_   = fetchIntParam("time_offset");
-    reverse_input_ = fetchBooleanParam("reverse_input");
+    time_offset_   = fetchIntParam(kTimeOffsetParamName);
+    reverse_input_ = fetchBooleanParam(kReverseInputParamName);
 }
 
 
@@ -281,8 +287,8 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    IntParamDescriptor *time_offset = desc.defineIntParam("timeOffset");
-    time_offset->setLabels("time offset (frames)", "time offset (frames)", "time offset (frames)");
+    IntParamDescriptor *time_offset = desc.defineIntParam(kTimeOffsetParamName);
+    time_offset->setLabels(kTimeOffsetParamLabel,kTimeOffsetParamLabel,kTimeOffsetParamLabel);
     time_offset->setScriptName("time_offset");
     time_offset->setHint("Offset in frames (frame f from the input will be at f+offset)");
     time_offset->setDefault(0);
@@ -293,10 +299,10 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 
     page->addChild(*time_offset);
 
-    BooleanParamDescriptor *reverse_input = desc.defineBooleanParam("reverseInput");
+    BooleanParamDescriptor *reverse_input = desc.defineBooleanParam(kReverseInputParamName);
     reverse_input->setDefault(false);
     reverse_input->setHint("Reverse the order of the input frames so that last one is first");
-    reverse_input->setLabels("reverse input", "reverse input", "reverse input");
+    reverse_input->setLabels(kReverseInputParamLabel,kReverseInputParamLabel,kReverseInputParamLabel);
     reverse_input->setAnimates(true);
 
     page->addChild(*reverse_input);
