@@ -216,9 +216,6 @@ public:
     }
     
 private:
-    // override the roi call
-    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois);
-    
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod);
     
     /** @brief get the clip preferences */
@@ -298,20 +295,6 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     processor.process();
 }
 
-
-
-// override the roi call
-// Required if the plugin should support tiles.
-// It may be difficult to implement for complicated transforms:
-// consequently, these transforms cannot support tiles.
-void
-RotoPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
-{
-    // set it on the mask only if we are in an interesting context
-    // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
-    rois.setRegionOfInterest(*maskClip_, args.regionOfInterest);
-    rois.setRegionOfInterest(*srcClip_, args.regionOfInterest);
-}
 
 
 bool
