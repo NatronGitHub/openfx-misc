@@ -399,10 +399,26 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
 void
 CropPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
-
+    bool reformat;
+    _reformat->getValueAtTime(args.time, reformat);
     OfxRectD cropRect;
     getCropRectangle_canonical(args.time, false, true, cropRect);
-    
+    if (reformat) {
+        // translate, because cropRect will be rendered at (0,0) in this case
+        OfxRectD roi = args.regionOfInterest;
+        roi.x1 += cropRect.x1;
+        roi.y1 += cropRect.y1;
+        roi.x2 += cropRect.x2;
+        roi.y2 += cropRect.y2;
+    }
+    // intersect the crop rectangle with args.regionOfInterest
+    cropRect.x1 = std::max(cropRect.x1, args.regionOfInterest.x1);
+    // the region must be *at least* empty, thus the maximin.
+    cropRect.x2 = std::max(cropRect.x1,std::min(cropRect.x2, args.regionOfInterest.x2));
+    cropRect.y1 = std::max(cropRect.y1, args.regionOfInterest.y1);
+    // the region must be *at least* empty, thus the maximin.
+    cropRect.y2 = std::max(cropRect.y1,std::min(cropRect.y2, args.regionOfInterest.y2));
+
     // set it on the mask only if we are in an interesting context
     // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
     rois.setRegionOfInterest(*srcClip_, cropRect);
