@@ -43,21 +43,21 @@
 #define kTrackCenterPointParamLabel "Center"
 #define kTrackCenterPointParamHint "The center point to track"
 
-#define kTrackPatternBoxPositionParamName "patternBoxPosition"
-#define kTrackPatternBoxPositionParamLabel "Pattern box position"
-#define kTrackPatternBoxPositionParamHint "The bottom left corner of the inner pattern box. The coordinates are relative to the center point."
+#define kTrackPatternBoxBottomLeftParamName "patternBoxBottomLeft"
+#define kTrackPatternBoxBottomLeftParamLabel "Pattern bottom left"
+#define kTrackPatternBoxBottomLeftParamHint "The bottom left corner of the inner pattern box. The coordinates are relative to the center point."
 
-#define kTrackPatternBoxSizeParamName "patternBoxSize"
-#define kTrackPatternBoxSizeParamLabel "patternBoxLabel"
-#define kTrackPatternBoxSizeParamHint "Width and height of the pattern box."
+#define kTrackPatternBoxTopRightParamName "patternBoxTopRight"
+#define kTrackPatternBoxTopRightParamLabel "Pattern top right"
+#define kTrackPatternBoxTopRightParamHint "The top right corner of the inner pattern box. The coordinates are relative to the center point."
 
-#define kTrackSearchBoxPositionParamName "searchBoxPosition"
-#define kTrackSearchBoxPositionParamLabel "Search box position"
-#define kTrackSearchBoxPositionParamHint "The bottom left corner of the search area. The coordinates are relative to the center point."
+#define kTrackSearchBoxBottomLeftParamName "searchBoxBottomLeft"
+#define kTrackSearchBoxBottomLeftParamLabel "Search area bottom left"
+#define kTrackSearchBoxBottomLeftParamHint "The bottom left corner of the search area. The coordinates are relative to the center point."
 
-#define kTrackSearchBoxSizeParamName "searchBoxSize"
-#define kTrackSearchBoxSizeParamLabel "Search box size"
-#define kTrackSearchBoxSizeParamHint "Width and height of the search area."
+#define kTrackSearchBoxTopRightParamName "searchBoxTopRight"
+#define kTrackSearchBoxTopRightParamLabel "Search area top right"
+#define kTrackSearchBoxTopRightParamHint "The top right corner of the search area. The coordinates are relative to the center point."
 
 #define kTrackPreviousParamName "trackPrevious"
 #define kTrackPreviousParamLabel "Track previous"
@@ -128,9 +128,9 @@ protected:
     
     OFX::Double2DParam* _center;
     OFX::Double2DParam* _innerBtmLeft;
-    OFX::Double2DParam* _innerSize;
-    OFX::Double2DParam* _outterBtmLeft;
-    OFX::Double2DParam* _outterSize;
+    OFX::Double2DParam* _innerTopRight;
+    OFX::Double2DParam* _outerBtmLeft;
+    OFX::Double2DParam* _outerTopRight;
     
     OFX::PushButtonParam* _backwardButton;
     OFX::PushButtonParam* _prevButton;
@@ -156,9 +156,9 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
  * It is composed of the following elements:
  * - A point which is the center point of the pattern to track
  * - An inner rectangle which defines the bounding box of the pattern to track
- * - An outter rectangle which defines the region where we should look for the pattern in the previous/following frames.
+ * - An outer rectangle which defines the region where we should look for the pattern in the previous/following frames.
  *
- * The inner and outter rectangle are defined respectively by their bottom left corner and their size (width/height).
+ * The inner and outer rectangle are defined respectively by their bottom left corner and their size (width/height).
  * The bottom left corner of these rectangles defines an offset relative to the center point instead of absolute coordinates.
  * It makes it really easier everywhere in the tracker to manipulate coordinates.
  **/
@@ -179,14 +179,14 @@ class TrackerRegionInteract : public OFX::OverlayInteract
         eDraggingInnerMidBtm,
         eDraggingInnerMidLeft,
         
-        eDraggingOutterTopLeft,
-        eDraggingOutterTopRight,
-        eDraggingOutterBottomLeft,
-        eDraggingOutterBottomRight,
-        eDraggingOutterMidTop,
-        eDraggingOutterMidRight,
-        eDraggingOutterMidBtm,
-        eDraggingOutterMidLeft
+        eDraggingOuterTopLeft,
+        eDraggingOuterTopRight,
+        eDraggingOuterBottomLeft,
+        eDraggingOuterBottomRight,
+        eDraggingOuterMidTop,
+        eDraggingOuterMidRight,
+        eDraggingOuterMidBtm,
+        eDraggingOuterMidLeft
     };
     
     enum DrawState
@@ -203,14 +203,14 @@ class TrackerRegionInteract : public OFX::OverlayInteract
         eHoveringInnerMidBtm,
         eHoveringInnerMidLeft,
         
-        eHoveringOutterTopLeft,
-        eHoveringOutterTopRight,
-        eHoveringOutterBottomLeft,
-        eHoveringOutterBottomRight,
-        eHoveringOutterMidTop,
-        eHoveringOutterMidRight,
-        eHoveringOutterMidBtm,
-        eHoveringOutterMidLeft
+        eHoveringOuterTopLeft,
+        eHoveringOuterTopRight,
+        eHoveringOuterBottomLeft,
+        eHoveringOuterBottomRight,
+        eHoveringOuterMidTop,
+        eHoveringOuterMidRight,
+        eHoveringOuterMidBtm,
+        eHoveringOuterMidLeft
     };
     
 public:
@@ -222,28 +222,28 @@ public:
     , _ds(eInactive)
     , _center(0)
     , _innerBtmLeft(0)
-    , _innerSize(0)
-    , _outterBtmLeft(0)
-    , _outterSize(0)
+    , _innerTopRight(0)
+    , _outerBtmLeft(0)
+    , _outerTopRight(0)
     , _name(0)
     , _centerDragPos()
     , _innerBtmLeftDragPos()
-    , _innerSizeDrag()
-    , _outterBtmLeftDragPos()
-    , _outterSizeDrag()
+    , _innerTopRightDragPos()
+    , _outerBtmLeftDragPos()
+    , _outerTopRightDragPos()
     , _controlDown(false)
     {
         _center = effect->fetchDouble2DParam(kTrackCenterPointParamName);
-        _innerBtmLeft = effect->fetchDouble2DParam(kTrackPatternBoxPositionParamName);
-        _innerSize = effect->fetchDouble2DParam(kTrackPatternBoxSizeParamName);
-        _outterBtmLeft = effect->fetchDouble2DParam(kTrackSearchBoxPositionParamName);
-        _outterSize = effect->fetchDouble2DParam(kTrackSearchBoxSizeParamName);
+        _innerBtmLeft = effect->fetchDouble2DParam(kTrackPatternBoxBottomLeftParamName);
+        _innerTopRight = effect->fetchDouble2DParam(kTrackPatternBoxTopRightParamName);
+        _outerBtmLeft = effect->fetchDouble2DParam(kTrackSearchBoxBottomLeftParamName);
+        _outerTopRight = effect->fetchDouble2DParam(kTrackSearchBoxTopRightParamName);
         _name = effect->fetchStringParam(kOfxParamStringSublabelName);
         addParamToSlaveTo(_center);
         addParamToSlaveTo(_innerBtmLeft);
-        addParamToSlaveTo(_innerSize);
-        addParamToSlaveTo(_outterBtmLeft);
-        addParamToSlaveTo(_outterSize);
+        addParamToSlaveTo(_innerTopRight);
+        addParamToSlaveTo(_outerBtmLeft);
+        addParamToSlaveTo(_outerTopRight);
         addParamToSlaveTo(_name);
     }
     
@@ -259,8 +259,8 @@ public:
 private:
     
     
-    ///All the functions below assume that the size parameter is the width/height of either the inner or outter rectangle
-    ///and btmLeft is the absolute coordinates of either the inner or outter rectangle.
+    ///All the functions below assume that the size parameter is the width/height of either the inner or outer rectangle
+    ///and btmLeft is the absolute coordinates of either the inner or outer rectangle.
     bool isNearbyTopLeft(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
     bool isNearbyTopRight(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
     bool isNearbyBtmLeft(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
@@ -274,7 +274,7 @@ private:
     bool isNearbyCenter(const OfxPointD& pos,double tolerance,const OfxPointD& center) const;
     
     bool isDraggingInnerPoint() const;
-    bool isDraggingOutterPoint() const;
+    bool isDraggingOuterPoint() const;
     
     OfxPointD _lastMousePos;
     MouseState _ms;
@@ -283,18 +283,18 @@ private:
     OFX::Double2DParam* _center;
     
     OFX::Double2DParam* _innerBtmLeft;
-    OFX::Double2DParam* _innerSize;
-    OFX::Double2DParam* _outterBtmLeft;
-    OFX::Double2DParam* _outterSize;
+    OFX::Double2DParam* _innerTopRight;
+    OFX::Double2DParam* _outerBtmLeft;
+    OFX::Double2DParam* _outerTopRight;
     OFX::StringParam* _name;
     
     OfxPointD _centerDragPos;
     
     ///Here the btm left points are NOT relative to the center
     OfxPointD _innerBtmLeftDragPos;
-    OfxPointD _innerSizeDrag;
-    OfxPointD _outterBtmLeftDragPos;
-    OfxPointD _outterSizeDrag;
+    OfxPointD _innerTopRightDragPos;
+    OfxPointD _outerBtmLeftDragPos;
+    OfxPointD _outerTopRightDragPos;
     
     bool _controlDown;
     

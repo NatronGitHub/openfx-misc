@@ -52,9 +52,9 @@ GenericTrackerPlugin::GenericTrackerPlugin(OfxImageEffectHandle handle)
 , srcClip_(0)
 , _center(0)
 , _innerBtmLeft(0)
-, _innerSize(0)
-, _outterBtmLeft(0)
-, _outterSize(0)
+, _innerTopRight(0)
+, _outerBtmLeft(0)
+, _outerTopRight(0)
 , _backwardButton(0)
 , _prevButton(0)
 , _nextButton(0)
@@ -68,16 +68,16 @@ GenericTrackerPlugin::GenericTrackerPlugin(OfxImageEffectHandle handle)
 
     
     _center = fetchDouble2DParam(kTrackCenterPointParamName);
-    _innerBtmLeft = fetchDouble2DParam(kTrackPatternBoxPositionParamName);
-    _innerSize = fetchDouble2DParam(kTrackSearchBoxSizeParamName);
-    _outterBtmLeft = fetchDouble2DParam(kTrackSearchBoxPositionParamName);
-    _outterSize = fetchDouble2DParam(kTrackSearchBoxSizeParamName);
+    _innerBtmLeft = fetchDouble2DParam(kTrackPatternBoxBottomLeftParamName);
+    _innerTopRight = fetchDouble2DParam(kTrackPatternBoxTopRightParamName);
+    _outerBtmLeft = fetchDouble2DParam(kTrackSearchBoxBottomLeftParamName);
+    _outerTopRight = fetchDouble2DParam(kTrackSearchBoxTopRightParamName);
     _backwardButton = fetchPushButtonParam(kTrackBackwardParamName);
     _prevButton = fetchPushButtonParam(kTrackPreviousParamName);
     _nextButton = fetchPushButtonParam(kTrackNextParamName);
     _forwardButton = fetchPushButtonParam(kTrackForwardParamName);
     _instanceName = fetchStringParam(kOfxParamStringSublabelName);
-    assert(_center && _innerSize && _innerBtmLeft && _outterSize && _outterBtmLeft && _backwardButton && _prevButton && _nextButton && _forwardButton && _instanceName);
+    assert(_center && _innerTopRight && _innerBtmLeft && _outerTopRight && _outerBtmLeft && _backwardButton && _prevButton && _nextButton && _forwardButton && _instanceName);
 }
 
 bool GenericTrackerPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
@@ -201,43 +201,41 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     page->addChild(*center);
     
     
-    OFX::Double2DParamDescriptor* innerBtmLeft = desc.defineDouble2DParam(kTrackPatternBoxPositionParamName);
-    innerBtmLeft->setLabels(kTrackPatternBoxPositionParamLabel, kTrackPatternBoxPositionParamLabel, kTrackPatternBoxPositionParamLabel);
-    innerBtmLeft->setHint(kTrackPatternBoxPositionParamHint);
-    innerBtmLeft->setDefaultCoordinateSystem(eCoordinatesNormalised);
-    innerBtmLeft->setDoubleType(eDoubleTypeXYAbsolute);
-    innerBtmLeft->setDefault(-0.05,-0.05);
-    innerBtmLeft->setIsSecret(true);
+    OFX::Double2DParamDescriptor* innerBtmLeft = desc.defineDouble2DParam(kTrackPatternBoxBottomLeftParamName);
+    innerBtmLeft->setLabels(kTrackPatternBoxBottomLeftParamLabel, kTrackPatternBoxBottomLeftParamLabel, kTrackPatternBoxBottomLeftParamLabel);
+    innerBtmLeft->setHint(kTrackPatternBoxBottomLeftParamHint);
+    innerBtmLeft->setDoubleType(eDoubleTypeXY);
+    innerBtmLeft->setDefaultCoordinateSystem(eCoordinatesCanonical);
+    innerBtmLeft->setDefault(-15,-15);
+    //innerBtmLeft->setIsSecret(true);
     page->addChild(*innerBtmLeft);
     
-    OFX::Double2DParamDescriptor* innerSize = desc.defineDouble2DParam(kTrackPatternBoxSizeParamName);
-    innerSize->setLabels(kTrackPatternBoxSizeParamLabel, kTrackPatternBoxSizeParamLabel, kTrackPatternBoxSizeParamLabel);
-    innerSize->setHint(kTrackPatternBoxSizeParamHint);
-    innerSize->setDefaultCoordinateSystem(eCoordinatesNormalised);
-    innerSize->setDoubleType(eDoubleTypeXYAbsolute);
-    innerSize->setDefault(0.1, 0.1);
-    innerSize->setIsSecret(true);
-    innerSize->setDimensionLabels("width", "height");
-    page->addChild(*innerSize);
+    OFX::Double2DParamDescriptor* innerTopRight = desc.defineDouble2DParam(kTrackPatternBoxTopRightParamName);
+    innerTopRight->setLabels(kTrackPatternBoxTopRightParamLabel, kTrackPatternBoxTopRightParamLabel, kTrackPatternBoxTopRightParamLabel);
+    innerTopRight->setHint(kTrackPatternBoxTopRightParamHint);
+    innerTopRight->setDoubleType(eDoubleTypeXY);
+    innerTopRight->setDefaultCoordinateSystem(eCoordinatesCanonical);
+    innerTopRight->setDefault(15, 15);
+    //innerTopRight->setIsSecret(true);
+    page->addChild(*innerTopRight);
     
-    OFX::Double2DParamDescriptor* outterBtmLeft = desc.defineDouble2DParam(kTrackSearchBoxPositionParamName);
-    outterBtmLeft->setLabels(kTrackSearchBoxPositionParamLabel, kTrackSearchBoxPositionParamLabel, kTrackSearchBoxPositionParamLabel);
-    outterBtmLeft->setHint(kTrackSearchBoxPositionParamHint);
-    outterBtmLeft->setDefaultCoordinateSystem(eCoordinatesNormalised);
-    outterBtmLeft->setDoubleType(eDoubleTypeXYAbsolute);
-    outterBtmLeft->setDefault(-0.1,-0.1);
-    outterBtmLeft->setIsSecret(true);
-    page->addChild(*outterBtmLeft);
+    OFX::Double2DParamDescriptor* outerBtmLeft = desc.defineDouble2DParam(kTrackSearchBoxBottomLeftParamName);
+    outerBtmLeft->setLabels(kTrackSearchBoxBottomLeftParamLabel, kTrackSearchBoxBottomLeftParamLabel, kTrackSearchBoxBottomLeftParamLabel);
+    outerBtmLeft->setHint(kTrackSearchBoxBottomLeftParamHint);
+    outerBtmLeft->setDoubleType(eDoubleTypeXY);
+    outerBtmLeft->setDefaultCoordinateSystem(eCoordinatesCanonical);
+    outerBtmLeft->setDefault(-25,-25);
+    //outerBtmLeft->setIsSecret(true);
+    page->addChild(*outerBtmLeft);
     
-    OFX::Double2DParamDescriptor* outterSize = desc.defineDouble2DParam(kTrackSearchBoxSizeParamName);
-    outterSize->setLabels(kTrackSearchBoxSizeParamLabel, kTrackSearchBoxSizeParamLabel, kTrackSearchBoxSizeParamLabel);
-    outterSize->setHint(kTrackSearchBoxPositionParamHint);
-    outterSize->setDefaultCoordinateSystem(eCoordinatesNormalised);
-    outterSize->setDoubleType(eDoubleTypeXYAbsolute);
-    outterSize->setDefault(0.2, 0.2);
-    outterSize->setIsSecret(true);
-    outterSize->setDimensionLabels("width", "height");
-    page->addChild(*outterSize);
+    OFX::Double2DParamDescriptor* outerTopRight = desc.defineDouble2DParam(kTrackSearchBoxTopRightParamName);
+    outerTopRight->setLabels(kTrackSearchBoxTopRightParamLabel, kTrackSearchBoxTopRightParamLabel, kTrackSearchBoxTopRightParamLabel);
+    outerTopRight->setHint(kTrackSearchBoxBottomLeftParamHint);
+    outerTopRight->setDoubleType(eDoubleTypeXY);
+    outerTopRight->setDefaultCoordinateSystem(eCoordinatesCanonical);
+    outerTopRight->setDefault(25, 25);
+    //outerTopRight->setIsSecret(true);
+    page->addChild(*outerTopRight);
     
     OFX::PushButtonParamDescriptor* backward = desc.definePushButtonParam(kTrackBackwardParamName);
     backward->setLabels(kTrackBackwardParamLabel, kTrackBackwardParamLabel,kTrackBackwardParamLabel);
@@ -259,7 +257,8 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     page->addChild(*next);
 
     OFX::PushButtonParamDescriptor* forward = desc.definePushButtonParam(kTrackForwardParamName);
-    prev->setLabels(kTrackForwardParamLabel, kTrackForwardParamLabel, kTrackForwardParamLabel);
+    forward->setLabels(kTrackForwardParamLabel, kTrackForwardParamLabel, kTrackForwardParamLabel);
+    forward->setHint(kTrackForwardParamHint);
     page->addChild(*forward);
 
 
@@ -277,11 +276,11 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
 
 //////////////////// INTERACT ////////////////////
 
-bool TrackerRegionInteract::isNearbyTopLeft(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
+bool TrackerRegionInteract::isNearbyTopLeft(const OfxPointD& pos, double tolerance, const OfxPointD& btmLeft, const OfxPointD& topRight) const
 {
     OfxPointD topLeft;
     topLeft.x = btmLeft.x;
-    topLeft.y = btmLeft.y + size.y;
+    topLeft.y = topRight.y;
     if (pos.x >= (topLeft.x - tolerance) && pos.x <= (topLeft.x + tolerance) &&
         pos.y >= (topLeft.y - tolerance) && pos.y <= (topLeft.y + tolerance)) {
         return true;
@@ -290,11 +289,8 @@ bool TrackerRegionInteract::isNearbyTopLeft(const OfxPointD& pos,double toleranc
     }
 }
 
-bool TrackerRegionInteract::isNearbyTopRight(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
+bool TrackerRegionInteract::isNearbyTopRight(const OfxPointD& pos, double tolerance, const OfxPointD& btmLeft, const OfxPointD& topRight) const
 {
-    OfxPointD topRight;
-    topRight.x = btmLeft.x + size.x;
-    topRight.y = btmLeft.y + size.y;
     if (pos.x >= (topRight.x - tolerance) && pos.x <= (topRight.x + tolerance) &&
         pos.y >= (topRight.y - tolerance) && pos.y <= (topRight.y + tolerance)) {
         return true;
@@ -303,7 +299,7 @@ bool TrackerRegionInteract::isNearbyTopRight(const OfxPointD& pos,double toleran
     }
 }
 
-bool TrackerRegionInteract::isNearbyBtmLeft(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
+bool TrackerRegionInteract::isNearbyBtmLeft(const OfxPointD& pos, double tolerance, const OfxPointD& btmLeft, const OfxPointD& topRight) const
 {
     if (pos.x >= (btmLeft.x - tolerance) && pos.x <= (btmLeft.x + tolerance) &&
         pos.y >= (btmLeft.y - tolerance) && pos.y <= (btmLeft.y + tolerance)) {
@@ -313,10 +309,10 @@ bool TrackerRegionInteract::isNearbyBtmLeft(const OfxPointD& pos,double toleranc
     }
 }
 
-bool TrackerRegionInteract::isNearbyBtmRight(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
+bool TrackerRegionInteract::isNearbyBtmRight(const OfxPointD& pos, double tolerance, const OfxPointD& btmLeft, const OfxPointD& topRight) const
 {
     OfxPointD btmRight;
-    btmRight.x = btmLeft.x + size.x;
+    btmRight.x = topRight.x;
     btmRight.y = btmLeft.y ;
     if (pos.x >= (btmRight.x - tolerance) && pos.x <= (btmRight.x + tolerance) &&
         pos.y >= (btmRight.y - tolerance) && pos.y <= (btmRight.y + tolerance)) {
@@ -326,11 +322,11 @@ bool TrackerRegionInteract::isNearbyBtmRight(const OfxPointD& pos,double toleran
     }
 }
 
-bool TrackerRegionInteract::isNearbyMidTop(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
+bool TrackerRegionInteract::isNearbyMidTop(const OfxPointD& pos, double tolerance, const OfxPointD& btmLeft, const OfxPointD& topRight) const
 {
     OfxPointD midTop;
-    midTop.x = btmLeft.x + size.x / 2.;
-    midTop.y = btmLeft.y + size.y;
+    midTop.x = (btmLeft.x + topRight.x) / 2.;
+    midTop.y = topRight.y;
     if (pos.x >= (midTop.x - tolerance) && pos.x <= (midTop.x + tolerance) &&
         pos.y >= (midTop.y - tolerance) && pos.y <= (midTop.y + tolerance)) {
         return true;
@@ -340,11 +336,11 @@ bool TrackerRegionInteract::isNearbyMidTop(const OfxPointD& pos,double tolerance
     
 }
 
-bool TrackerRegionInteract::isNearbyMidRight(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
+bool TrackerRegionInteract::isNearbyMidRight(const OfxPointD& pos, double tolerance, const OfxPointD& btmLeft, const OfxPointD& topRight) const
 {
     OfxPointD midRight;
-    midRight.x = btmLeft.x + size.x;
-    midRight.y = btmLeft.y + size.y / 2.;
+    midRight.x = topRight.x;
+    midRight.y = (btmLeft.y + topRight.y) / 2.;
     if (pos.x >= (midRight.x - tolerance) && pos.x <= (midRight.x + tolerance) &&
         pos.y >= (midRight.y - tolerance) && pos.y <= (midRight.y + tolerance)) {
         return true;
@@ -353,11 +349,11 @@ bool TrackerRegionInteract::isNearbyMidRight(const OfxPointD& pos,double toleran
     }
 }
 
-bool TrackerRegionInteract::isNearbyMidLeft(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
+bool TrackerRegionInteract::isNearbyMidLeft(const OfxPointD& pos,double tolerance, const OfxPointD& btmLeft, const OfxPointD& topRight) const
 {
     OfxPointD midLeft;
     midLeft.x = btmLeft.x;
-    midLeft.y = btmLeft.y + size.y /2.;
+    midLeft.y = (btmLeft.y + topRight.y) /2.;
     if (pos.x >= (midLeft.x - tolerance) && pos.x <= (midLeft.x + tolerance) &&
         pos.y >= (midLeft.y - tolerance) && pos.y <= (midLeft.y + tolerance)) {
         return true;
@@ -367,10 +363,10 @@ bool TrackerRegionInteract::isNearbyMidLeft(const OfxPointD& pos,double toleranc
     
 }
 
-bool TrackerRegionInteract::isNearbyMidBtm(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
+bool TrackerRegionInteract::isNearbyMidBtm(const OfxPointD& pos,double tolerance, const OfxPointD& btmLeft, const OfxPointD& topRight) const
 {
     OfxPointD midBtm;
-    midBtm.x = btmLeft.x + size.x / 2.;
+    midBtm.x = (btmLeft.x + topRight.x) / 2.;
     midBtm.y = btmLeft.y ;
     if (pos.x >= (midBtm.x - tolerance) && pos.x <= (midBtm.x + tolerance) &&
         pos.y >= (midBtm.y - tolerance) && pos.y <= (midBtm.y + tolerance)) {
@@ -391,67 +387,67 @@ bool TrackerRegionInteract::isNearbyCenter(const OfxPointD& pos,double tolerance
 
 bool TrackerRegionInteract::draw(const OFX::DrawArgs &args)
 {
-    OfxPointD innerBtmLeft,innerSize,outterBtmLeft,outterSize,center;
+    OfxPointD innerBtmLeft,innerTopRight,outerBtmLeft,outerTopRight,center;
     
     if (_ms != eIdle) {
         innerBtmLeft = _innerBtmLeftDragPos;
-        innerSize = _innerSizeDrag;
-        outterBtmLeft = _outterBtmLeftDragPos;
-        outterSize = _outterSizeDrag;
+        innerTopRight = _innerTopRightDragPos;
+        outerBtmLeft = _outerBtmLeftDragPos;
+        outerTopRight = _outerTopRightDragPos;
         center = _centerDragPos;
 
     } else {
         _center->getValueAtTime(args.time, center.x, center.y);
 
         _innerBtmLeft->getValueAtTime(args.time, innerBtmLeft.x, innerBtmLeft.y);
-        _innerSize->getValueAtTime(args.time, innerSize.x, innerSize.y);
+        _innerTopRight->getValueAtTime(args.time, innerTopRight.x, innerTopRight.y);
         
         ///innerBtmLeft is relative to the center, make it absolute
         innerBtmLeft.x += center.x;
         innerBtmLeft.y += center.y;
+        innerTopRight.x += center.x;
+        innerTopRight.y += center.y;
 
-        _outterBtmLeft->getValueAtTime(args.time, outterBtmLeft.x, outterBtmLeft.y);
-        _outterSize->getValueAtTime(args.time, outterSize.x, outterSize.y);
+        _outerBtmLeft->getValueAtTime(args.time, outerBtmLeft.x, outerBtmLeft.y);
+        _outerTopRight->getValueAtTime(args.time, outerTopRight.x, outerTopRight.y);
 
         
-        ///outterBtmLeft is relative to the center, make it absolute
-        outterBtmLeft.x += center.x;
-        outterBtmLeft.y += center.y;
+        ///outerBtmLeft is relative to the center, make it absolute
+        outerBtmLeft.x += center.x;
+        outerBtmLeft.y += center.y;
+        outerTopRight.x += center.x;
+        outerTopRight.y += center.y;
     }
     
     
     ///Compute all other points positions given the 5 parameters retrieved above
-    OfxPointD innerTopLeft,innerMidTop,innerTopRight,innerMidRight,innerBtmRight,innerMidBtm,innerMidLeft;
-    OfxPointD outterTopLeft,outterMidTop,outterTopRight,outterMidRight,outterBtmRight,outterMidBtm,outterMidLeft;
+    OfxPointD innerTopLeft, innerMidTop, innerMidRight, innerBtmRight, innerMidBtm, innerMidLeft;
+    OfxPointD outerTopLeft, outerMidTop, outerMidRight, outerBtmRight, outerMidBtm, outerMidLeft;
     innerTopLeft.x = innerBtmLeft.x;
-    innerTopLeft.y = innerBtmLeft.y + innerSize.y;
-    innerMidTop.x = innerBtmLeft.x + innerSize.x / 2.;
+    innerTopLeft.y = innerTopRight.y;
+    innerMidTop.x = (innerBtmLeft.x + innerTopRight.x) / 2.;
     innerMidTop.y = innerTopLeft.y;
-    innerTopRight.x = innerBtmLeft.x + innerSize.x;
-    innerTopRight.y = innerTopLeft.y;
     innerMidRight.x = innerTopRight.x;
-    innerMidRight.y = innerBtmLeft.y + innerSize.y / 2.;
-    innerBtmRight.x = innerMidRight.x;
+    innerMidRight.y = (innerBtmLeft.y + innerTopRight.y) / 2.;
+    innerBtmRight.x = innerTopRight.x;
     innerBtmRight.y = innerBtmLeft.y;
     innerMidBtm.x = innerMidTop.x;
     innerMidBtm.y = innerBtmLeft.y;
     innerMidLeft.x = innerBtmLeft.x;
     innerMidLeft.y = innerMidRight.y;
     
-    outterTopLeft.x = outterBtmLeft.x;
-    outterTopLeft.y = outterBtmLeft.y + outterSize.y;
-    outterMidTop.x = outterBtmLeft.x + outterSize.x / 2.;
-    outterMidTop.y = outterTopLeft.y;
-    outterTopRight.x = outterBtmLeft.x + outterSize.x;
-    outterTopRight.y = outterTopLeft.y;
-    outterMidRight.x = outterTopRight.x;
-    outterMidRight.y = outterBtmLeft.y + outterSize.y / 2.;
-    outterBtmRight.x = outterMidRight.x;
-    outterBtmRight.y = outterBtmLeft.y;
-    outterMidBtm.x = outterMidTop.x;
-    outterMidBtm.y = outterBtmLeft.y;
-    outterMidLeft.x = outterBtmLeft.x;
-    outterMidLeft.y = outterMidRight.y;
+    outerTopLeft.x = outerBtmLeft.x;
+    outerTopLeft.y = outerTopRight.y;
+    outerMidTop.x = (outerBtmLeft.x + outerTopRight.x) / 2.;
+    outerMidTop.y = outerTopLeft.y;
+    outerMidRight.x = outerTopRight.x;
+    outerMidRight.y = (outerBtmLeft.y + outerTopRight.y) / 2.;
+    outerBtmRight.x = outerTopRight.x;
+    outerBtmRight.y = outerBtmLeft.y;
+    outerMidBtm.x = outerMidTop.x;
+    outerMidBtm.y = outerBtmLeft.y;
+    outerMidLeft.x = outerBtmLeft.x;
+    outerMidLeft.y = outerMidRight.y;
 
 
     
@@ -465,11 +461,11 @@ bool TrackerRegionInteract::draw(const OFX::DrawArgs &args)
     glEnd();
     
     glBegin(GL_LINE_STRIP);
-    glVertex2d(outterBtmLeft.x, outterBtmLeft.y);
-    glVertex2d(outterTopLeft.x, outterTopLeft.y);
-    glVertex2d(outterTopRight.x, outterTopRight.y);
-    glVertex2d(outterBtmRight.x, outterBtmRight.y);
-    glVertex2d(outterBtmLeft.x, outterBtmLeft.y);
+    glVertex2d(outerBtmLeft.x, outerBtmLeft.y);
+    glVertex2d(outerTopLeft.x, outerTopLeft.y);
+    glVertex2d(outerTopRight.x, outerTopRight.y);
+    glVertex2d(outerBtmRight.x, outerBtmRight.y);
+    glVertex2d(outerBtmLeft.x, outerBtmLeft.y);
     glEnd();
     
     glPointSize(6);
@@ -516,43 +512,43 @@ bool TrackerRegionInteract::draw(const OFX::DrawArgs &args)
     
     //////DRAWING OUTTER POINTS
     
-    if (_ds == eHoveringOutterBottomLeft || _ms == eDraggingOutterBottomLeft) {
+    if (_ds == eHoveringOuterBottomLeft || _ms == eDraggingOuterBottomLeft) {
         glColor4f(0., 1., 0., 1.);
-        glVertex2d(outterBtmLeft.x, outterBtmLeft.y);
+        glVertex2d(outerBtmLeft.x, outerBtmLeft.y);
     }
     
-    if (_ds == eHoveringOutterMidLeft || _ms == eDraggingOutterMidLeft) {
+    if (_ds == eHoveringOuterMidLeft || _ms == eDraggingOuterMidLeft) {
         glColor4f(0., 1., 0., 1.);
-        glVertex2d(outterMidLeft.x, outterMidLeft.y);
+        glVertex2d(outerMidLeft.x, outerMidLeft.y);
     }
     
-    if (_ds == eHoveringOutterTopLeft || _ms == eDraggingOutterTopLeft) {
+    if (_ds == eHoveringOuterTopLeft || _ms == eDraggingOuterTopLeft) {
         glColor4f(0., 1., 0., 1.);
-        glVertex2d(outterTopLeft.x, outterTopLeft.y);
+        glVertex2d(outerTopLeft.x, outerTopLeft.y);
     }
-    if (_ds == eHoveringOutterMidTop || _ms == eDraggingOutterMidTop) {
+    if (_ds == eHoveringOuterMidTop || _ms == eDraggingOuterMidTop) {
         glColor4f(0., 1., 0., 1.);
-        glVertex2d(outterMidTop.x, outterMidTop.y);
-    }
-    
-    if (_ds == eHoveringOutterTopRight || _ms == eDraggingOutterTopRight) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(outterTopRight.x, outterTopRight.y);
+        glVertex2d(outerMidTop.x, outerMidTop.y);
     }
     
-    if (_ds == eHoveringOutterMidRight || _ms == eDraggingOutterMidRight) {
+    if (_ds == eHoveringOuterTopRight || _ms == eDraggingOuterTopRight) {
         glColor4f(0., 1., 0., 1.);
-        glVertex2d(outterMidRight.x, outterMidRight.y);
+        glVertex2d(outerTopRight.x, outerTopRight.y);
     }
     
-    if (_ds == eHoveringOutterBottomRight || _ms == eDraggingOutterBottomRight) {
+    if (_ds == eHoveringOuterMidRight || _ms == eDraggingOuterMidRight) {
         glColor4f(0., 1., 0., 1.);
-        glVertex2d(outterBtmRight.x, outterBtmRight.y);
+        glVertex2d(outerMidRight.x, outerMidRight.y);
     }
     
-    if (_ds == eHoveringOutterMidBtm || _ms == eDraggingOutterMidBtm) {
+    if (_ds == eHoveringOuterBottomRight || _ms == eDraggingOuterBottomRight) {
         glColor4f(0., 1., 0., 1.);
-        glVertex2d(outterMidBtm.x, outterMidBtm.y);
+        glVertex2d(outerBtmRight.x, outerBtmRight.y);
+    }
+    
+    if (_ds == eHoveringOuterMidBtm || _ms == eDraggingOuterMidBtm) {
+        glColor4f(0., 1., 0., 1.);
+        glVertex2d(outerMidBtm.x, outerMidBtm.y);
     }
     ///draw center
     if (_ds == eHoveringCenter || _ms == eDraggingCenter) {
@@ -605,39 +601,39 @@ bool TrackerRegionInteract::draw(const OFX::DrawArgs &args)
     
     //////DRAWING OUTTER HANDLES
     
-    if (_ds == eHoveringOutterMidLeft || _ms == eDraggingOutterMidLeft) {
+    if (_ds == eHoveringOuterMidLeft || _ms == eDraggingOuterMidLeft) {
         glColor4f(0., 1., 0., 1.);
     } else {
         glColor4f(0.8, 0.8, 0.8, 0.8);
     }
-    glVertex2d(outterMidLeft.x, outterMidLeft.y);
-    glVertex2d(outterMidLeft.x - handleSizeX, outterMidLeft.y);
+    glVertex2d(outerMidLeft.x, outerMidLeft.y);
+    glVertex2d(outerMidLeft.x - handleSizeX, outerMidLeft.y);
 
-    if (_ds == eHoveringOutterMidTop || _ms == eDraggingOutterMidTop) {
+    if (_ds == eHoveringOuterMidTop || _ms == eDraggingOuterMidTop) {
         glColor4f(0., 1., 0., 1.);
     } else {
         glColor4f(0.8, 0.8, 0.8, 0.8);
     }
-    glVertex2d(outterMidTop.x, outterMidTop.y);
-    glVertex2d(outterMidTop.x, outterMidTop.y + handleSizeY);
+    glVertex2d(outerMidTop.x, outerMidTop.y);
+    glVertex2d(outerMidTop.x, outerMidTop.y + handleSizeY);
     
-    if (_ds == eHoveringOutterMidRight || _ms == eDraggingOutterMidRight) {
+    if (_ds == eHoveringOuterMidRight || _ms == eDraggingOuterMidRight) {
         glColor4f(0., 1., 0., 1.);
     } else {
         glColor4f(0.8, 0.8, 0.8, 0.8);
     }
-    glVertex2d(outterMidRight.x + handleSizeX, outterMidRight.y);
-    glVertex2d(outterMidRight.x, outterMidRight.y);
+    glVertex2d(outerMidRight.x + handleSizeX, outerMidRight.y);
+    glVertex2d(outerMidRight.x, outerMidRight.y);
 
 
     
-    if (_ds == eHoveringOutterMidBtm || _ms == eDraggingOutterMidBtm) {
+    if (_ds == eHoveringOuterMidBtm || _ms == eDraggingOuterMidBtm) {
         glColor4f(0., 1., 0., 1.);
     } else {
         glColor4f(0.8, 0.8, 0.8, 0.8);
     }
-    glVertex2d(outterMidBtm.x, outterMidBtm.y);
-    glVertex2d(outterMidBtm.x, outterMidBtm.y - handleSizeY);
+    glVertex2d(outerMidBtm.x, outerMidBtm.y);
+    glVertex2d(outerMidBtm.x, outerMidBtm.y - handleSizeY);
 
 
     glEnd();
@@ -659,254 +655,264 @@ bool TrackerRegionInteract::penMotion(const OFX::PenArgs &args)
     
     double selectionTol = 8. * args.pixelScale.x;
     
-    OfxPointD innerSize,outterSize,innerBtmLeft,outterBtmLeft,center;
-    _innerSize->getValueAtTime(args.time, innerSize.x, innerSize.y);
-    _outterSize->getValueAtTime(args.time, outterSize.x, outterSize.y);
+    OfxPointD innerTopRight,outerTopRight,innerBtmLeft,outerBtmLeft,center;
+    _innerTopRight->getValueAtTime(args.time, innerTopRight.x, innerTopRight.y);
+    _outerTopRight->getValueAtTime(args.time, outerTopRight.x, outerTopRight.y);
     _innerBtmLeft->getValueAtTime(args.time, innerBtmLeft.x, innerBtmLeft.y);
-    _outterBtmLeft->getValueAtTime(args.time, outterBtmLeft.x, outterBtmLeft.y);
+    _outerBtmLeft->getValueAtTime(args.time, outerBtmLeft.x, outerBtmLeft.y);
     _center->getValueAtTime(args.time, center.x, center.y);
-    ///innerBtmLeft and outterBtmLeft are relative to the center, make them absolute
+    ///innerBtmLeft and outerBtmLeft are relative to the center, make them absolute
     innerBtmLeft.x += center.x;
     innerBtmLeft.y += center.y;
-    
-    outterBtmLeft.x += center.x;
-    outterBtmLeft.y += center.y;
-    
+    innerTopRight.x += center.x;
+    innerTopRight.y += center.y;
+
+    outerBtmLeft.x += center.x;
+    outerBtmLeft.y += center.y;
+    outerTopRight.x += center.x;
+    outerTopRight.y += center.y;
+
     bool lastStateWasHovered = _ds != eInactive;
-    
-    if (isNearbyBtmLeft(args.penPosition, selectionTol, innerSize, innerBtmLeft)) {
-        _ds = eHoveringInnerBottomLeft;
-        didSomething = true;
-    } else if (isNearbyBtmRight(args.penPosition, selectionTol, innerSize, innerBtmLeft)) {
-        _ds = eHoveringInnerBottomRight;
-        didSomething = true;
-    } else if (isNearbyTopRight(args.penPosition, selectionTol, innerSize, innerBtmLeft)) {
-        _ds = eHoveringInnerTopRight;
-        didSomething = true;
-    } else if (isNearbyTopLeft(args.penPosition, selectionTol, innerSize, innerBtmLeft)) {
-        _ds = eHoveringInnerTopLeft;
-        didSomething = true;
-    } else if (isNearbyMidTop(args.penPosition, selectionTol, innerSize, innerBtmLeft)) {
-        _ds = eHoveringInnerMidTop;
-        didSomething = true;
-    } else if (isNearbyMidRight(args.penPosition, selectionTol, innerSize, innerBtmLeft)) {
-        _ds = eHoveringInnerMidRight;
-        didSomething = true;
-    } else if (isNearbyMidBtm(args.penPosition, selectionTol, innerSize, innerBtmLeft)) {
-        _ds = eHoveringInnerMidBtm;
-        didSomething = true;
-    } else if (isNearbyMidLeft(args.penPosition, selectionTol, innerSize, innerBtmLeft)) {
-        _ds = eHoveringInnerMidLeft;
-        didSomething = true;
-    } else if (isNearbyCenter(args.penPosition, selectionTol, center)) {
-        _ds = eHoveringCenter;
-        didSomething = true;
-    } else if (isNearbyBtmLeft(args.penPosition, selectionTol, outterSize, outterBtmLeft)) {
-        _ds = eHoveringOutterBottomLeft;
-        didSomething = true;
-    } else if (isNearbyBtmRight(args.penPosition, selectionTol, outterSize, outterBtmLeft)) {
-        _ds = eHoveringOutterBottomRight;
-        didSomething = true;
-    } else if (isNearbyTopRight(args.penPosition, selectionTol, outterSize, outterBtmLeft)) {
-        _ds = eHoveringOutterTopRight;
-        didSomething = true;
-    } else if (isNearbyTopLeft(args.penPosition, selectionTol, outterSize, outterBtmLeft)) {
-        _ds = eHoveringOutterTopLeft;
-        didSomething = true;
-    } else if (isNearbyMidTop(args.penPosition, selectionTol, outterSize, outterBtmLeft)) {
-        _ds = eHoveringOutterMidTop;
-        didSomething = true;
-    } else if (isNearbyMidRight(args.penPosition, selectionTol, outterSize, outterBtmLeft)) {
-        _ds = eHoveringOutterMidRight;
-        didSomething = true;
-    } else if (isNearbyMidBtm(args.penPosition, selectionTol, outterSize, outterBtmLeft)) {
-        _ds = eHoveringOutterMidBtm;
-        didSomething = true;
-    } else if (isNearbyMidLeft(args.penPosition, selectionTol, outterSize, outterBtmLeft)) {
-        _ds = eHoveringOutterMidLeft;
-        didSomething = true;
-    } else {
-        _ds = eInactive;
+
+    if (_ms == eIdle) {
+        if (isNearbyCenter(args.penPosition, selectionTol, center)) {
+            _ds = eHoveringCenter;
+            didSomething = true;
+        } else if (isNearbyBtmLeft(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+            _ds = eHoveringInnerBottomLeft;
+            didSomething = true;
+        } else if (isNearbyBtmRight(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+            _ds = eHoveringInnerBottomRight;
+            didSomething = true;
+        } else if (isNearbyTopRight(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+            _ds = eHoveringInnerTopRight;
+            didSomething = true;
+        } else if (isNearbyTopLeft(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+            _ds = eHoveringInnerTopLeft;
+            didSomething = true;
+        } else if (isNearbyMidTop(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+            _ds = eHoveringInnerMidTop;
+            didSomething = true;
+        } else if (isNearbyMidRight(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+            _ds = eHoveringInnerMidRight;
+            didSomething = true;
+        } else if (isNearbyMidBtm(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+            _ds = eHoveringInnerMidBtm;
+            didSomething = true;
+        } else if (isNearbyMidLeft(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+            _ds = eHoveringInnerMidLeft;
+            didSomething = true;
+        } else if (isNearbyBtmLeft(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+            _ds = eHoveringOuterBottomLeft;
+            didSomething = true;
+        } else if (isNearbyBtmRight(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+            _ds = eHoveringOuterBottomRight;
+            didSomething = true;
+        } else if (isNearbyTopRight(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+            _ds = eHoveringOuterTopRight;
+            didSomething = true;
+        } else if (isNearbyTopLeft(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+            _ds = eHoveringOuterTopLeft;
+            didSomething = true;
+        } else if (isNearbyMidTop(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+            _ds = eHoveringOuterMidTop;
+            didSomething = true;
+        } else if (isNearbyMidRight(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+            _ds = eHoveringOuterMidRight;
+            didSomething = true;
+        } else if (isNearbyMidBtm(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+            _ds = eHoveringOuterMidBtm;
+            didSomething = true;
+        } else if (isNearbyMidLeft(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+            _ds = eHoveringOuterMidLeft;
+            didSomething = true;
+        } else {
+            _ds = eInactive;
+        }
     }
     
-    int multiplier = _controlDown ? 1 : 2;
+    int multiplier = _controlDown ? 0 : 1;
     
     if (_ms == eDraggingInnerBottomLeft) {
         _innerBtmLeftDragPos.x += delta.x;
         _innerBtmLeftDragPos.y += delta.y;
-        _innerSizeDrag.x -= 2 * delta.x;
-        _innerSizeDrag.y -= 2 * delta.y;
-        ///also move the outter rect
-        _outterBtmLeftDragPos.x += delta.x;
-        _outterBtmLeftDragPos.y += delta.y;
-        _outterSizeDrag.x -= 2 * delta.x;
-        _outterSizeDrag.y -= 2 * delta.y;
+        _innerTopRightDragPos.x -= multiplier *delta.x;
+        _innerTopRightDragPos.y -= multiplier *delta.y;
+        ///also move the outer rect
+        _outerBtmLeftDragPos.x += delta.x;
+        _outerBtmLeftDragPos.y += delta.y;
+        _outerTopRightDragPos.x -= multiplier *delta.x;
+        _outerTopRightDragPos.y -= multiplier *delta.y;
         didSomething = true;
     } else if (_ms == eDraggingInnerTopLeft) {
         _innerBtmLeftDragPos.x += delta.x;
-        _innerBtmLeftDragPos.y -= delta.y;
+        _innerBtmLeftDragPos.y -= multiplier *delta.y;
     
-        _innerSizeDrag.y += 2 * delta.y;
-        _innerSizeDrag.x -= 2 * delta.x;
+        _innerTopRightDragPos.y += delta.y;
+        _innerTopRightDragPos.x -= multiplier *delta.x;
         
-        _outterBtmLeftDragPos.x += delta.x;
-        _outterBtmLeftDragPos.y -= delta.y;
+        _outerBtmLeftDragPos.x += delta.x;
+        _outerBtmLeftDragPos.y -= multiplier *delta.y;
         
-        _outterSizeDrag.y += 2 * delta.y;
-        _outterSizeDrag.x -= 2 * delta.x;
+        _outerTopRightDragPos.y += delta.y;
+        _outerTopRightDragPos.x -= multiplier *delta.x;
         didSomething = true;
     } else if (_ms == eDraggingInnerTopRight) {
-        _innerBtmLeftDragPos.x -= delta.x;
-        _innerBtmLeftDragPos.y -= delta.y;
+        _innerBtmLeftDragPos.x -= multiplier *delta.x;
+        _innerBtmLeftDragPos.y -= multiplier *delta.y;
         
-        _innerSizeDrag.y += 2 * delta.y;
-        _innerSizeDrag.x += 2 * delta.x;
+        _innerTopRightDragPos.y += delta.y;
+        _innerTopRightDragPos.x += delta.x;
         
-        _outterBtmLeftDragPos.x -= delta.x;
-        _outterBtmLeftDragPos.y -= delta.y;
+        _outerBtmLeftDragPos.x -= multiplier *delta.x;
+        _outerBtmLeftDragPos.y -= multiplier *delta.y;
         
-        _outterSizeDrag.y += 2 * delta.y;
-        _outterSizeDrag.x += 2 * delta.x;
+        _outerTopRightDragPos.y += delta.y;
+        _outerTopRightDragPos.x += delta.x;
         didSomething = true;
     } else if (_ms == eDraggingInnerBottomRight) {
-        _innerSizeDrag.y -= 2 * delta.y;
-        _innerSizeDrag.x += 2 * delta.x;
+        _innerTopRightDragPos.y -= multiplier *delta.y;
+        _innerTopRightDragPos.x += delta.x;
         _innerBtmLeftDragPos.y += delta.y;
-        _innerBtmLeftDragPos.x -= delta.x;
+        _innerBtmLeftDragPos.x -= multiplier *delta.x;
         
         
-        _outterSizeDrag.y -= 2 * delta.y;
-        _outterSizeDrag.x += 2 * delta.x;
-        _outterBtmLeftDragPos.y += delta.y;
-        _outterBtmLeftDragPos.x -= delta.x;
+        _outerTopRightDragPos.y -= multiplier *delta.y;
+        _outerTopRightDragPos.x += delta.x;
+        _outerBtmLeftDragPos.y += delta.y;
+        _outerBtmLeftDragPos.x -= multiplier *delta.x;
         
 
         didSomething = true;
     } else if (_ms == eDraggingInnerMidTop) {
-        _innerBtmLeftDragPos.y -= delta.y;
-        _outterBtmLeftDragPos.y -= delta.y;
+        _innerBtmLeftDragPos.y -= multiplier *delta.y;
+        _outerBtmLeftDragPos.y -= multiplier *delta.y;
         
-        _innerSizeDrag.y += 2 * delta.y;
-        _outterSizeDrag.y += 2 * delta.y;
+        _innerTopRightDragPos.y += delta.y;
+        _outerTopRightDragPos.y += delta.y;
 
         didSomething = true;
     } else if (_ms == eDraggingInnerMidRight) {
-        _innerSizeDrag.x += 2 * delta.x;
-        _outterSizeDrag.x += 2 * delta.x;
-        _innerBtmLeftDragPos.x -= delta.x;
-        _outterBtmLeftDragPos.x -= delta.x;
+        _innerTopRightDragPos.x += delta.x;
+        _outerTopRightDragPos.x += delta.x;
+        _innerBtmLeftDragPos.x -= multiplier *delta.x;
+        _outerBtmLeftDragPos.x -= multiplier *delta.x;
         
         
         didSomething = true;
     } else if (_ms == eDraggingInnerMidBtm) {
         _innerBtmLeftDragPos.y += delta.y;
-        _innerSizeDrag.y -= 2 * delta.y;
+        _innerTopRightDragPos.y -= multiplier *delta.y;
         
-        _outterBtmLeftDragPos.y += delta.y;
-        _outterSizeDrag.y -= 2 * delta.y;
+        _outerBtmLeftDragPos.y += delta.y;
+        _outerTopRightDragPos.y -= multiplier *delta.y;
 
         didSomething = true;
     } else if (_ms == eDraggingInnerMidLeft) {
         _innerBtmLeftDragPos.x += delta.x;
-        _innerSizeDrag.x -= 2 * delta.x;
+        _innerTopRightDragPos.x -= multiplier *delta.x;
         
-        _outterBtmLeftDragPos.x += delta.x;
-        _outterSizeDrag.x -= multiplier * delta.x;
+        _outerBtmLeftDragPos.x += delta.x;
+        _outerTopRightDragPos.x -= multiplier * delta.x;
         didSomething = true;
-    } else if (_ms == eDraggingOutterBottomLeft) {
-        _outterBtmLeftDragPos.x += delta.x;
-        _outterBtmLeftDragPos.y += delta.y;
-        _outterSizeDrag.x -= multiplier * delta.x;
-        _outterSizeDrag.y -= multiplier * delta.y;
+    } else if (_ms == eDraggingOuterBottomLeft) {
+        _outerBtmLeftDragPos.x += delta.x;
+        _outerBtmLeftDragPos.y += delta.y;
+        _outerTopRightDragPos.x -= multiplier * delta.x;
+        _outerTopRightDragPos.y -= multiplier * delta.y;
         didSomething = true;
-    } else if (_ms == eDraggingOutterTopLeft) {
-        _outterBtmLeftDragPos.x += delta.x;
+    } else if (_ms == eDraggingOuterTopLeft) {
+        _outerBtmLeftDragPos.x += delta.x;
         if (!_controlDown) {
-            _outterBtmLeftDragPos.y -= delta.y;
+            _outerBtmLeftDragPos.y -= delta.y;
         }
-        _outterSizeDrag.y += multiplier * delta.y;
-        _outterSizeDrag.x -= multiplier * delta.x;
+        _outerTopRightDragPos.y += multiplier * delta.y;
+        _outerTopRightDragPos.x -= multiplier * delta.x;
         didSomething = true;
-    } else if (_ms == eDraggingOutterTopRight) {
+    } else if (_ms == eDraggingOuterTopRight) {
         if (!_controlDown) {
-            _outterBtmLeftDragPos.x -= delta.x;
-            _outterBtmLeftDragPos.y -= delta.y;
+            _outerBtmLeftDragPos.x -= delta.x;
+            _outerBtmLeftDragPos.y -= delta.y;
         }
-        _outterSizeDrag.y += multiplier * delta.y;
-        _outterSizeDrag.x += multiplier * delta.x;
+        _outerTopRightDragPos.y += multiplier * delta.y;
+        _outerTopRightDragPos.x += multiplier * delta.x;
         didSomething = true;
-    } else if (_ms == eDraggingOutterBottomRight) {
-        _outterSizeDrag.y -= multiplier * delta.y;
-        _outterSizeDrag.x += multiplier * delta.x;
-        _outterBtmLeftDragPos.y += delta.y;
+    } else if (_ms == eDraggingOuterBottomRight) {
+        _outerTopRightDragPos.y -= multiplier * delta.y;
+        _outerTopRightDragPos.x += multiplier * delta.x;
+        _outerBtmLeftDragPos.y += delta.y;
         if (!_controlDown) {
-            _outterBtmLeftDragPos.x -= delta.x;
-        }
-        didSomething = true;
-    } else if (_ms == eDraggingOutterMidTop) {
-        if (!_controlDown) {
-            _outterBtmLeftDragPos.y -= delta.y;
-        }
-        _outterSizeDrag.y += multiplier * delta.y;
-        didSomething = true;
-    } else if (_ms == eDraggingOutterMidRight) {
-        _outterSizeDrag.x += multiplier * delta.x;
-        if (!_controlDown) {
-            _outterBtmLeftDragPos.x -= delta.x;
+            _outerBtmLeftDragPos.x -= delta.x;
         }
         didSomething = true;
-    } else if (_ms == eDraggingOutterMidBtm) {
-        _outterBtmLeftDragPos.y += delta.y;
-        _outterSizeDrag.y -= multiplier * delta.y;
+    } else if (_ms == eDraggingOuterMidTop) {
+        if (!_controlDown) {
+            _outerBtmLeftDragPos.y -= delta.y;
+        }
+        _outerTopRightDragPos.y += multiplier * delta.y;
         didSomething = true;
-    } else if (_ms == eDraggingOutterMidLeft) {
-        _outterBtmLeftDragPos.x += delta.x;
-        _outterSizeDrag.x -= multiplier * delta.x;
+    } else if (_ms == eDraggingOuterMidRight) {
+        _outerTopRightDragPos.x += multiplier * delta.x;
+        if (!_controlDown) {
+            _outerBtmLeftDragPos.x -= delta.x;
+        }
+        didSomething = true;
+    } else if (_ms == eDraggingOuterMidBtm) {
+        _outerBtmLeftDragPos.y += delta.y;
+        _outerTopRightDragPos.y -= multiplier * delta.y;
+        didSomething = true;
+    } else if (_ms == eDraggingOuterMidLeft) {
+        _outerBtmLeftDragPos.x += delta.x;
+        _outerTopRightDragPos.x -= multiplier * delta.x;
         didSomething = true;
     } else if (_ms == eDraggingCenter) {
         _centerDragPos.x += delta.x;
         _centerDragPos.y += delta.y;
-        _outterBtmLeftDragPos.x += delta.x;
-        _outterBtmLeftDragPos.y += delta.y;
         _innerBtmLeftDragPos.x += delta.x;
         _innerBtmLeftDragPos.y += delta.y;
+        _innerTopRightDragPos.x += delta.x;
+        _innerTopRightDragPos.y += delta.y;
+        _outerBtmLeftDragPos.x += delta.x;
+        _outerBtmLeftDragPos.y += delta.y;
+        _outerTopRightDragPos.x += delta.x;
+        _outerTopRightDragPos.y += delta.y;
         didSomething = true;
     }
     
     
-    if (isDraggingOutterPoint()) {
-        ///clamp the outter rect to the inner rect
-        OfxPointD innerBtmLeft,innerSize;
+    if (isDraggingOuterPoint()) {
+        ///clamp the outer rect to the inner rect
+        OfxPointD innerBtmLeft,innerTopRight;
         _innerBtmLeft->getValue(innerBtmLeft.x, innerBtmLeft.y);
-        _innerSize->getValue(innerSize.x, innerSize.y);
+        _innerTopRight->getValue(innerTopRight.x, innerTopRight.y);
         
         ///convert to absolute coords.
         innerBtmLeft.x += center.x;
         innerBtmLeft.y += center.y;
-        
-        if (_outterBtmLeftDragPos.x > innerBtmLeft.x) {
-            _outterSizeDrag.x += _outterBtmLeftDragPos.x - innerBtmLeft.x;
-            _outterBtmLeftDragPos.x = innerBtmLeft.x;
+        innerTopRight.x += center.x;
+        innerTopRight.y += center.y;
+
+        if (_outerBtmLeftDragPos.x > innerBtmLeft.x) {
+            _outerBtmLeftDragPos.x = innerBtmLeft.x;
         }
 
-        if (_outterBtmLeftDragPos.y > innerBtmLeft.y) {
-            _outterSizeDrag.y += _outterBtmLeftDragPos.y - innerBtmLeft.y;
-            _outterBtmLeftDragPos.y = innerBtmLeft.y;
+        if (_outerBtmLeftDragPos.y > innerBtmLeft.y) {
+            _outerBtmLeftDragPos.y = innerBtmLeft.y;
         }
         
-        if (_outterSizeDrag.x < _innerSizeDrag.x) {
-            _outterSizeDrag.x = _innerSizeDrag.x;
+        if (_outerTopRightDragPos.x < _innerTopRightDragPos.x) {
+            _outerTopRightDragPos.x = _innerTopRightDragPos.x;
         }
-        if (_outterSizeDrag.y < _innerSizeDrag.y) {
-            _outterSizeDrag.y = _innerSizeDrag.y;
+        if (_outerTopRightDragPos.y < _innerTopRightDragPos.y) {
+            _outerTopRightDragPos.y = _innerTopRightDragPos.y;
         }
         
         if (_controlDown) {
-            if ((_outterBtmLeftDragPos.x + _outterSizeDrag.x) < (innerBtmLeft.x + innerSize.x)) {
-                _outterSizeDrag.x = ((innerBtmLeft.x + innerSize.x - _outterBtmLeftDragPos.x));
+            if (_outerTopRightDragPos.x < innerTopRight.x) {
+                _outerTopRightDragPos.x = innerTopRight.x;
             }
-            if ((_outterBtmLeftDragPos.y + _outterSizeDrag.y) < (innerBtmLeft.y + innerSize.y)) {
-                _outterSizeDrag.y = ((innerBtmLeft.y + innerSize.y - _outterBtmLeftDragPos.y));
+            if (_outerTopRightDragPos.y < innerTopRight.y) {
+                _outerTopRightDragPos.y = innerTopRight.y;
             }
         }
     }
@@ -916,48 +922,66 @@ bool TrackerRegionInteract::penMotion(const OFX::PenArgs &args)
         if (_innerBtmLeftDragPos.x > center.x) {
             double diffX = _innerBtmLeftDragPos.x - center.x;
             _innerBtmLeftDragPos.x = center.x;
-            _outterBtmLeftDragPos.x -= diffX;
-            _outterSizeDrag.x += multiplier * diffX;
-            _innerSizeDrag.x += multiplier * diffX;
+            _outerBtmLeftDragPos.x -= diffX;
+            _outerTopRightDragPos.x += multiplier * diffX;
+            _innerTopRightDragPos.x += multiplier * diffX;
         }
         if (_innerBtmLeftDragPos.y > center.y) {
             double diffY = _innerBtmLeftDragPos.y - center.y;
             _innerBtmLeftDragPos.y = center.y;
-            _outterBtmLeftDragPos.y -= diffY;
-            _outterSizeDrag.y += multiplier * diffY;
-            _innerSizeDrag.y += multiplier * diffY;
+            _outerBtmLeftDragPos.y -= diffY;
+            _outerTopRightDragPos.y += multiplier * diffY;
+            _innerTopRightDragPos.y += multiplier * diffY;
         }
-//        
+        if (_innerTopRightDragPos.x < center.x) {
+            double diffX = _innerTopRightDragPos.x - center.x;
+            _innerTopRightDragPos.x = center.x;
+            _outerTopRightDragPos.x += diffX;
+            _outerBtmLeftDragPos.x -= multiplier * diffX;
+            _innerBtmLeftDragPos.x -= multiplier * diffX;
+        }
+        if (_innerTopRightDragPos.y < center.y) {
+            double diffY = _innerTopRightDragPos.y - center.y;
+            _innerTopRightDragPos.y = center.y;
+            _outerTopRightDragPos.y -= diffY;
+            _outerBtmLeftDragPos.y -= multiplier * diffY;
+            _innerBtmLeftDragPos.y -= multiplier * diffY;
+        }
+//
 //        if (_controlDown) {
-//            if ((_innerBtmLeftDragPos.x + _innerSizeDrag.x) < center.x) {
-//                double diffX = center.x - _innerBtmLeftDragPos.x - _innerSizeDrag.x;
-//                _innerSizeDrag.x = center.x - _innerBtmLeftDragPos.x;
-//                _outterSizeDrag.x +=  diffX;
+//            if ((_innerBtmLeftDragPos.x + _innerTopRightDragPos.x) < center.x) {
+//                double diffX = center.x - _innerBtmLeftDragPos.x - _innerTopRightDragPos.x;
+//                _innerTopRightDragPos.x = center.x - _innerBtmLeftDragPos.x;
+//                _outerTopRightDragPos.x +=  diffX;
 //            }
 //            
-//            if ((_innerBtmLeftDragPos.y + _innerSizeDrag.y) < center.y) {
-//                double diffY = center.y - _innerBtmLeftDragPos.y - _innerSizeDrag.y;
-//                _innerSizeDrag.y = center.y - _innerBtmLeftDragPos.y;
-//                _outterSizeDrag.y += diffY;
+//            if ((_innerBtmLeftDragPos.y + _innerTopRightDragPos.y) < center.y) {
+//                double diffY = center.y - _innerBtmLeftDragPos.y - _innerTopRightDragPos.y;
+//                _innerTopRightDragPos.y = center.y - _innerBtmLeftDragPos.y;
+//                _outerTopRightDragPos.y += diffY;
 //            }
 //            
 //        }
     }
     
     ///forbid 0 pixels wide rectangles
-    if (_innerSizeDrag.x < 1) {
-        _innerSizeDrag.x = 1;
+    if (_innerTopRightDragPos.x <= _innerBtmLeftDragPos.x) {
+        _innerBtmLeftDragPos.x = (_innerTopRightDragPos.x + _innerBtmLeftDragPos.x)/2;
+        _innerTopRightDragPos.x = _innerBtmLeftDragPos.x + 1;
     }
-    if (_innerSizeDrag.y < 1) {
-        _innerSizeDrag.y = 1;
+    if (_innerTopRightDragPos.y <= _innerBtmLeftDragPos.y) {
+        _innerBtmLeftDragPos.y = (_innerTopRightDragPos.y + _innerBtmLeftDragPos.y)/2;
+        _innerTopRightDragPos.y = _innerBtmLeftDragPos.y + 1;
     }
-    if (_outterSizeDrag.x < 1) {
-        _outterSizeDrag.x = 1;
+    if (_outerTopRightDragPos.x <= _outerBtmLeftDragPos.x) {
+        _outerBtmLeftDragPos.x = (_outerTopRightDragPos.x + _outerBtmLeftDragPos.x)/2;
+        _outerTopRightDragPos.x = _outerBtmLeftDragPos.x + 1;
     }
-    if (_outterSizeDrag.y < 1) {
-        _outterSizeDrag.y = 1;
+    if (_outerTopRightDragPos.y <= _outerBtmLeftDragPos.y) {
+        _outerBtmLeftDragPos.y = (_outerTopRightDragPos.y + _outerBtmLeftDragPos.y)/2;
+        _outerTopRightDragPos.y = _outerBtmLeftDragPos.y + 1;
     }
-    
+
     
     ///repaint if we toggled off a hovered handle
     if (lastStateWasHovered && !didSomething) {
@@ -974,71 +998,75 @@ bool TrackerRegionInteract::penDown(const OFX::PenArgs &args)
     
     double selectionTol = 8. * args.pixelScale.x;
     
-    OfxPointD innerSize,outterSize,innerBtmLeft,outterBtmLeft,center;
-    _innerSize->getValueAtTime(args.time, innerSize.x, innerSize.y);
+    OfxPointD innerTopRight,outerTopRight,innerBtmLeft,outerBtmLeft,center;
+    _innerTopRight->getValueAtTime(args.time, innerTopRight.x, innerTopRight.y);
     _innerBtmLeft->getValueAtTime(args.time, innerBtmLeft.x, innerBtmLeft.y);
-    _outterSize->getValueAtTime(args.time, outterSize.x, outterSize.y);
-    _outterBtmLeft->getValueAtTime(args.time, outterBtmLeft.x, outterBtmLeft.y);
+    _outerTopRight->getValueAtTime(args.time, outerTopRight.x, outerTopRight.y);
+    _outerBtmLeft->getValueAtTime(args.time, outerBtmLeft.x, outerBtmLeft.y);
     _center->getValueAtTime(args.time, center.x, center.y);
     
     
-    ///innerBtmLeft and outterBtmLeft are relative to the center, make them absolute
+    ///innerBtmLeft and outerBtmLeft are relative to the center, make them absolute
     innerBtmLeft.x += center.x;
     innerBtmLeft.y += center.y;
-    
-    outterBtmLeft.x += center.x;
-    outterBtmLeft.y += center.y;
-    
-    if (isNearbyBtmLeft(args.penPosition, selectionTol, innerSize, innerBtmLeft)) {
+    innerTopRight.x += center.x;
+    innerTopRight.y += center.y;
+
+    outerBtmLeft.x += center.x;
+    outerBtmLeft.y += center.y;
+    outerTopRight.x += center.x;
+    outerTopRight.y += center.y;
+
+    if (isNearbyCenter(args.penPosition, selectionTol, center)) {
+        _ms = eDraggingCenter;
+        didSomething = true;
+    } else if (isNearbyBtmLeft(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
         _ms = eDraggingInnerBottomLeft;
         didSomething = true;
-    } else if (isNearbyBtmRight(args.penPosition, selectionTol, innerSize, innerBtmLeft)) {
+    } else if (isNearbyBtmRight(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
         _ms = eDraggingInnerBottomRight;
         didSomething = true;
-    } else if (isNearbyTopRight(args.penPosition, selectionTol, innerSize, innerBtmLeft)) {
+    } else if (isNearbyTopRight(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
         _ms = eDraggingInnerTopRight;
         didSomething = true;
-    } else if (isNearbyTopLeft(args.penPosition, selectionTol, innerSize, innerBtmLeft)) {
+    } else if (isNearbyTopLeft(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
         _ms = eDraggingInnerTopLeft;
         didSomething = true;
-    } else if (isNearbyMidTop(args.penPosition, selectionTol, innerSize, innerBtmLeft)) {
+    } else if (isNearbyMidTop(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
         _ms = eDraggingInnerMidTop;
         didSomething = true;
-    } else if (isNearbyMidRight(args.penPosition, selectionTol, innerSize, innerBtmLeft)) {
+    } else if (isNearbyMidRight(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
         _ms = eDraggingInnerMidRight;
         didSomething = true;
-    } else if (isNearbyMidBtm(args.penPosition, selectionTol, innerSize, innerBtmLeft)) {
+    } else if (isNearbyMidBtm(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
         _ms = eDraggingInnerMidBtm;
         didSomething = true;
-    } else if (isNearbyMidLeft(args.penPosition, selectionTol, innerSize, innerBtmLeft)) {
+    } else if (isNearbyMidLeft(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
         _ms = eDraggingInnerMidLeft;
         didSomething = true;
-    } else if (isNearbyBtmLeft(args.penPosition, selectionTol, outterSize, outterBtmLeft)) {
-        _ms = eDraggingOutterBottomLeft;
+    } else if (isNearbyBtmLeft(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+        _ms = eDraggingOuterBottomLeft;
         didSomething = true;
-    } else if (isNearbyBtmRight(args.penPosition, selectionTol, outterSize, outterBtmLeft)) {
-        _ms = eDraggingOutterBottomRight;
+    } else if (isNearbyBtmRight(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+        _ms = eDraggingOuterBottomRight;
         didSomething = true;
-    } else if (isNearbyTopRight(args.penPosition, selectionTol, outterSize, outterBtmLeft)) {
-        _ms = eDraggingOutterTopRight;
+    } else if (isNearbyTopRight(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+        _ms = eDraggingOuterTopRight;
         didSomething = true;
-    } else if (isNearbyTopLeft(args.penPosition, selectionTol, outterSize, outterBtmLeft)) {
-        _ms = eDraggingOutterTopLeft;
+    } else if (isNearbyTopLeft(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+        _ms = eDraggingOuterTopLeft;
         didSomething = true;
-    } else if (isNearbyMidTop(args.penPosition, selectionTol, outterSize, outterBtmLeft)) {
-        _ms = eDraggingOutterMidTop;
+    } else if (isNearbyMidTop(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+        _ms = eDraggingOuterMidTop;
         didSomething = true;
-    } else if (isNearbyMidRight(args.penPosition, selectionTol, outterSize, outterBtmLeft)) {
-        _ms = eDraggingOutterMidRight;
+    } else if (isNearbyMidRight(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+        _ms = eDraggingOuterMidRight;
         didSomething = true;
-    } else if (isNearbyMidBtm(args.penPosition, selectionTol, outterSize, outterBtmLeft)) {
-        _ms = eDraggingOutterMidBtm;
+    } else if (isNearbyMidBtm(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+        _ms = eDraggingOuterMidBtm;
         didSomething = true;
-    } else if (isNearbyMidLeft(args.penPosition, selectionTol, outterSize, outterBtmLeft)) {
-        _ms = eDraggingOutterMidLeft;
-        didSomething = true;
-    } else if (isNearbyCenter(args.penPosition, selectionTol, center)) {
-        _ms = eDraggingCenter;
+    } else if (isNearbyMidLeft(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+        _ms = eDraggingOuterMidLeft;
         didSomething = true;
     } else {
         _ms = eIdle;
@@ -1047,9 +1075,9 @@ bool TrackerRegionInteract::penDown(const OFX::PenArgs &args)
     
     ///Keep the points in absolute coordinates
     _innerBtmLeftDragPos = innerBtmLeft;
-    _innerSizeDrag = innerSize;
-    _outterBtmLeftDragPos = outterBtmLeft;
-    _outterSizeDrag = outterSize;
+    _innerTopRightDragPos = innerTopRight;
+    _outerBtmLeftDragPos = outerBtmLeft;
+    _outerTopRightDragPos = outerTopRight;
     _centerDragPos = center;
     
     _lastMousePos = args.penPosition;
@@ -1068,23 +1096,24 @@ bool TrackerRegionInteract::isDraggingInnerPoint() const
             _ms == eDraggingInnerMidLeft;
 }
 
-bool TrackerRegionInteract::isDraggingOutterPoint() const
+bool TrackerRegionInteract::isDraggingOuterPoint() const
 {
-    return _ms == eDraggingOutterTopLeft ||
-    _ms == eDraggingOutterTopRight ||
-    _ms == eDraggingOutterBottomLeft ||
-    _ms == eDraggingOutterBottomRight ||
-    _ms == eDraggingOutterMidTop ||
-    _ms == eDraggingOutterMidRight ||
-    _ms == eDraggingOutterMidBtm ||
-    _ms == eDraggingOutterMidLeft;
+    return _ms == eDraggingOuterTopLeft ||
+    _ms == eDraggingOuterTopRight ||
+    _ms == eDraggingOuterBottomLeft ||
+    _ms == eDraggingOuterBottomRight ||
+    _ms == eDraggingOuterMidTop ||
+    _ms == eDraggingOuterMidRight ||
+    _ms == eDraggingOuterMidBtm ||
+    _ms == eDraggingOuterMidLeft;
 }
 
 bool TrackerRegionInteract::penUp(const OFX::PenArgs &args)
 {
+    if (_ms == eIdle) {
+        return false;
+    }
     
-    
-    bool didSmthing = false;
     OfxPointD center;
     if (_ms != eDraggingCenter) {
         _center->getValue(center.x, center.y);
@@ -1096,25 +1125,32 @@ bool TrackerRegionInteract::penUp(const OFX::PenArgs &args)
         btmLeft.x = _innerBtmLeftDragPos.x - center.x;
         btmLeft.y = _innerBtmLeftDragPos.y - center.y;
         
-        _innerBtmLeft->setValueAtTime(args.time,btmLeft.x, btmLeft.y);
-        _innerSize->setValueAtTime(args.time,_innerSizeDrag.x, _innerSizeDrag.y);
+        _innerBtmLeft->setValueAtTime(args.time, btmLeft.x, btmLeft.y);
+
+        OfxPointD topRight;
+        topRight.x = _innerTopRightDragPos.x - center.x;
+        topRight.y = _innerTopRightDragPos.y - center.y;
+
+        _innerTopRight->setValueAtTime(args.time, topRight.x, topRight.y);
     }
     {
         OfxPointD btmLeft;
-        btmLeft.x = _outterBtmLeftDragPos.x - center.x;
-        btmLeft.y = _outterBtmLeftDragPos.y - center.y;
-        _outterBtmLeft->setValueAtTime(args.time,btmLeft.x, btmLeft.y);
-        _outterSize->setValueAtTime(args.time,_outterSizeDrag.x, _outterSizeDrag.y);
-        didSmthing = true;
+        btmLeft.x = _outerBtmLeftDragPos.x - center.x;
+        btmLeft.y = _outerBtmLeftDragPos.y - center.y;
+        _outerBtmLeft->setValueAtTime(args.time, btmLeft.x, btmLeft.y);
 
+        OfxPointD topRight;
+        topRight.x = _outerTopRightDragPos.x - center.x;
+        topRight.y = _outerTopRightDragPos.y - center.y;
+        _outerTopRight->setValueAtTime(args.time, topRight.x, topRight.y);
     }
     
     if (_ms == eDraggingCenter) {
         _center->setValueAtTime(args.time,_centerDragPos.x, _centerDragPos.y);
     }
-    
+
     _ms = eIdle;
-    return didSmthing;
+    return true;
 }
 
 bool TrackerRegionInteract::keyDown(const OFX::KeyArgs &args)

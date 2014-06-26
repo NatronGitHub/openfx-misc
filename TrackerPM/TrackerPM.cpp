@@ -121,6 +121,7 @@ public:
 
     }
     
+    // FIXME: move _bestMatch to TrackerPMProcessorBase, where it belongs
     void updateBestMatch(const OfxPointI& point, double score);
     
 private:
@@ -145,7 +146,8 @@ private:
 
     ///The pattern is in coordinates relative to the center point
     OfxRectD getPatternCanonical(OfxTime time) const;
-    
+
+    // FIXME: move _bestMatch to TrackerPMProcessorBase, where it belongs
     std::pair<OfxPointD,double> _bestMatch; //< the results for the current processor
     OFX::MultiThread::Mutex _bestMatchMutex; //< this is used so we can multi-thread the tracking and protect the shared results
 };
@@ -272,6 +274,7 @@ private:
 void
 TrackerPMPlugin::updateBestMatch(const OfxPointI& point, double score)
 {
+    // FIXME: move _bestMatch to TrackerPMProcessorBase, where it belongs
     OFX::MultiThread::AutoMutex lock(_bestMatchMutex);
     if (_bestMatch.second > score) {
         _bestMatch.second = score;
@@ -283,6 +286,7 @@ TrackerPMPlugin::updateBestMatch(const OfxPointI& point, double score)
 void
 TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
 {
+    // TODO: set kOfxImageEffectPropInAnalysis on the plugin instance
     OfxTime t = args.first;
     std::string name;
     _instanceName->getValue(name);
@@ -396,6 +400,7 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,OfxTime refTi
     centeri.y = std::floor(center.y + 0.5);
     processor.setCenterI(centeri);
     
+    // FIXME: move _bestMatch to TrackerPMProcessorBase, where it belongs
     _bestMatch.second = std::numeric_limits<double>::infinity();
     
     // Call the base class process member, this will call the derived templated process code
@@ -405,6 +410,7 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,OfxTime refTi
 
     ///ok the score is now computed, update the center
     OfxPointD newCenter;
+    // FIXME: move _bestMatch to TrackerPMProcessorBase, where it belongs
     newCenter.x = center.x + _bestMatch.first.x - centeri.x;
     newCenter.y = center.y + _bestMatch.first.y - centeri.y;
     _center->setValueAtTime(otherTime, newCenter.x, newCenter.y);
@@ -414,29 +420,33 @@ OfxRectD
 TrackerPMPlugin::getPatternCanonical(OfxTime time) const
 {
     OfxRectD ret;
-    OfxPointD innerBtmLeft,innerSize;
+    OfxPointD innerBtmLeft,innerTopRight;
     _innerBtmLeft->getValueAtTime(time, innerBtmLeft.x, innerBtmLeft.y);
-    _innerSize->getValueAtTime(time, innerSize.x, innerSize.y);
+    _innerTopRight->getValueAtTime(time, innerTopRight.x, innerTopRight.y);
     ret.x1 = innerBtmLeft.x;
-    ret.x2 = innerBtmLeft.x + innerSize.x;
+    ret.x2 = innerTopRight.x;
     ret.y1 = innerBtmLeft.y;
-    ret.y2 = innerBtmLeft.y + innerSize.y;
+    ret.y2 = innerTopRight.y;
     return ret;
 }
 
 OfxRectD
 TrackerPMPlugin::getTrackSearchWindowCanonical(OfxTime time) const
 {
-    OfxPointD outterBtmLeft,outterSize,center;
-    _outterBtmLeft->getValueAtTime(time, outterBtmLeft.x, outterBtmLeft.y);
-    _outterSize->getValueAtTime(time, outterSize.x, outterSize.y);
+    OfxPointD innerBtmLeft,innerTopRight;
+    _innerBtmLeft->getValueAtTime(time, innerBtmLeft.x, innerBtmLeft.y);
+    _innerTopRight->getValueAtTime(time, innerTopRight.x, innerTopRight.y);
+    OfxPointD outerBtmLeft, outerTopRight, center;
+    _outerBtmLeft->getValueAtTime(time, outerBtmLeft.x, outerBtmLeft.y);
+    _outerTopRight->getValueAtTime(time, outerTopRight.x, outerTopRight.y);
     _center->getValueAtTime(time, center.x, center.y);
     
     OfxRectD roi;
-    roi.x1 = center.x + outterBtmLeft.x;
-    roi.y1 = center.y + outterBtmLeft.y;
-    roi.x2 = roi.x1 + outterSize.x;
-    roi.y2 = roi.y1 + outterSize.y;
+    // subtract the pattern window so that we don't check for pixels out of the search window
+    roi.x1 = center.x + outerBtmLeft.x - innerBtmLeft.x;
+    roi.y1 = center.y + outerBtmLeft.y - innerBtmLeft.y;
+    roi.x2 = center.x + outerTopRight.x - innerTopRight.x;
+    roi.y2 = center.x + outerTopRight.y - innerTopRight.y;
     return roi;
 }
 
