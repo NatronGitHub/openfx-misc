@@ -128,7 +128,7 @@ typedef OfxStatus (*OfxImageEffectSuiteV1getParamSet)(OfxImageEffectHandle image
 typedef OfxStatus (*OfxImageEffectSuiteV1clipDefine)(OfxImageEffectHandle imageEffect, const char *name, OfxPropertySetHandle *propertySet);
 typedef OfxStatus (*OfxImageEffectSuiteV1clipGetHandle)(OfxImageEffectHandle imageEffect, const char *name, OfxImageClipHandle *clip, OfxPropertySetHandle *propertySet);
 typedef OfxStatus (*OfxImageEffectSuiteV1clipGetPropertySet)(OfxImageClipHandle clip, OfxPropertySetHandle *propHandle);
-typedef OfxStatus (*OfxImageEffectSuiteV1clipGetImage)(OfxImageClipHandle clip, OfxTime time, OfxRectD *region, OfxPropertySetHandle *imageHandle);
+typedef OfxStatus (*OfxImageEffectSuiteV1clipGetImage)(OfxImageClipHandle clip, OfxTime time, const OfxRectD *region, OfxPropertySetHandle *imageHandle);
 typedef OfxStatus (*OfxImageEffectSuiteV1clipReleaseImage)(OfxPropertySetHandle imageHandle);
 typedef OfxStatus (*OfxImageEffectSuiteV1clipGetRegionOfDefinition)(OfxImageClipHandle clip, OfxTime time, OfxRectD *bounds);
 typedef int (*OfxImageEffectSuiteV1abort)(OfxImageEffectHandle imageEffect);
@@ -1677,7 +1677,7 @@ template<int nth>
 static OfxStatus
 clipGetImageNth(OfxImageClipHandle clip,
 			    OfxTime       time,
-			    OfxRectD     *region,
+			    const OfxRectD     *region,
 			    OfxPropertySetHandle   *imageHandle)
 {
     OfxStatus st;
