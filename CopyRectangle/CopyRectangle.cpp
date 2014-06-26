@@ -432,12 +432,19 @@ CopyRectanglePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments 
 
     OfxRectD rectangle;
     getRectanglecanonical(args.time, rectangle);
-    OfxRectD srcB_rod = srcClipB_->getRegionOfDefinition(args.time);
-    
+
+    // intersect the crop rectangle with args.regionOfInterest
+    rectangle.x1 = std::max(rectangle.x1, args.regionOfInterest.x1);
+    // the region must be *at least* empty, thus the maximin.
+    rectangle.x2 = std::max(rectangle.x1,std::min(rectangle.x2, args.regionOfInterest.x2));
+    rectangle.y1 = std::max(rectangle.y1, args.regionOfInterest.y1);
+    // the region must be *at least* empty, thus the maximin.
+    rectangle.y2 = std::max(rectangle.y1,std::min(rectangle.y2, args.regionOfInterest.y2));
+
     // set it on the mask only if we are in an interesting context
     // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
-    rois.setRegionOfInterest(*srcClipB_, srcB_rod);
     rois.setRegionOfInterest(*srcClipA_, rectangle);
+    // no need to set the RoI on srcClipB_, since it's the same as the output RoI
 }
 
 
@@ -526,8 +533,6 @@ void CopyRectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(false);
     desc.setRenderThreadSafety(eRenderFullySafe);
     
-
-    // in order to support tiles, the plugin must implement the getRegionOfInterest function
     desc.setSupportsTiles(true);
     
     // in order to support multiresolution, render() must take into account the pixelaspectratio and the renderscale
