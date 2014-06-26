@@ -369,7 +369,7 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,OfxTime refTi
     patternPixel.x1 = std::floor(patternCanonical.x1);
     patternPixel.y1 = std::floor(patternCanonical.y1);
     patternPixel.x2 = std::ceil(patternCanonical.x2);
-    patternPixel.y2 = std::ceil(patternPixel.y2);
+    patternPixel.y2 = std::ceil(patternCanonical.y2);
     if (mipMapLevel != 0) {
         patternPixel = MergeImages2D::downscalePowerOfTwoSmallestEnclosing(patternPixel, mipMapLevel);
     }
@@ -448,7 +448,7 @@ TrackerPMPlugin::getTrackSearchWindowCanonical(OfxTime other, OfxRectD *bounds) 
     bounds->x1 = center.x + outerBtmLeft.x - innerBtmLeft.x;
     bounds->y1 = center.y + outerBtmLeft.y - innerBtmLeft.y;
     bounds->x2 = center.x + outerTopRight.x - innerTopRight.x;
-    bounds->y2 = center.x + outerTopRight.y - innerTopRight.y;
+    bounds->y2 = center.y + outerTopRight.y - innerTopRight.y;
 }
 
 
