@@ -321,26 +321,17 @@ void
 SideBySidePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
     bool vertical = vertical_->getValueAtTime(args.time);
-    OfxPointD offset = getProjectOffset();
-    OfxPointD size = getProjectSize();
 
     // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask
-    OfxRectD rod = srcClip_->getRegionOfDefinition(args.time);
+    OfxRectD roi = srcClip_->getRegionOfDefinition(args.time);
 
-    // clip to the project rect
-    rod.x1 = std::max(rod.x1,offset.x);
-    rod.x2 = std::min(rod.x2,offset.x+size.x);
-    rod.y1 = std::max(rod.y1,offset.y);
-    rod.y2 = std::min(rod.y2,offset.y+size.y);
-
-    // ask for either a horizontal or a vertical stripe, to avoid the numerous comparisons
-    OfxRectD roi = args.regionOfInterest;
+    // since getRegionsOfInterest is not view-specific, return a full horizontal or vertical band
     if (vertical) {
-        roi.y1 = rod.y1;
-        roi.y2 = rod.y2;
+        roi.x1 = args.regionOfInterest.x1;
+        roi.x2 = args.regionOfInterest.x2;
     } else {
-        roi.x1 = rod.x1;
-        roi.x2 = rod.x2;
+        roi.y1 = args.regionOfInterest.y1;
+        roi.y2 = args.regionOfInterest.y2;
     }
     rois.setRegionOfInterest(*srcClip_, roi);
 
