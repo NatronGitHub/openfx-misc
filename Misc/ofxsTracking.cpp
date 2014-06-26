@@ -736,62 +736,61 @@ bool TrackerRegionInteract::penMotion(const OFX::PenArgs &args)
         }
     }
     
-    int multiplier = _controlDown ? 0 : 1;
-    
+    double multiplier = _controlDown ? 0 : 1;
     if (_ms == eDraggingInnerBottomLeft) {
         _innerBtmLeftDragPos.x += delta.x;
         _innerBtmLeftDragPos.y += delta.y;
-        _innerTopRightDragPos.x -= multiplier *delta.x;
-        _innerTopRightDragPos.y -= multiplier *delta.y;
+        _innerTopRightDragPos.x -= 2 *delta.x;
+        _innerTopRightDragPos.y -= 2 *delta.y;
         ///also move the outer rect
         _outerBtmLeftDragPos.x += delta.x;
         _outerBtmLeftDragPos.y += delta.y;
-        _outerTopRightDragPos.x -= multiplier *delta.x;
-        _outerTopRightDragPos.y -= multiplier *delta.y;
+        _outerTopRightDragPos.x -= 2 *delta.x;
+        _outerTopRightDragPos.y -= 2 *delta.y;
         didSomething = true;
     } else if (_ms == eDraggingInnerTopLeft) {
         _innerBtmLeftDragPos.x += delta.x;
-        _innerBtmLeftDragPos.y -= multiplier *delta.y;
+        _innerBtmLeftDragPos.y -= 2 *delta.y;
     
         _innerTopRightDragPos.y += delta.y;
-        _innerTopRightDragPos.x -= multiplier *delta.x;
+        _innerTopRightDragPos.x -= 2 *delta.x;
         
         _outerBtmLeftDragPos.x += delta.x;
-        _outerBtmLeftDragPos.y -= multiplier *delta.y;
+        _outerBtmLeftDragPos.y -= 2 *delta.y;
         
         _outerTopRightDragPos.y += delta.y;
-        _outerTopRightDragPos.x -= multiplier *delta.x;
+        _outerTopRightDragPos.x -= 2 *delta.x;
         didSomething = true;
     } else if (_ms == eDraggingInnerTopRight) {
-        _innerBtmLeftDragPos.x -= multiplier *delta.x;
-        _innerBtmLeftDragPos.y -= multiplier *delta.y;
+        _innerBtmLeftDragPos.x -= 2 *delta.x;
+        _innerBtmLeftDragPos.y -= 2 *delta.y;
         
         _innerTopRightDragPos.y += delta.y;
         _innerTopRightDragPos.x += delta.x;
         
-        _outerBtmLeftDragPos.x -= multiplier *delta.x;
-        _outerBtmLeftDragPos.y -= multiplier *delta.y;
+        _outerBtmLeftDragPos.x -= 2 *delta.x;
+        _outerBtmLeftDragPos.y -= 2 *delta.y;
         
         _outerTopRightDragPos.y += delta.y;
         _outerTopRightDragPos.x += delta.x;
         didSomething = true;
     } else if (_ms == eDraggingInnerBottomRight) {
-        _innerTopRightDragPos.y -= multiplier *delta.y;
+        _innerTopRightDragPos.y -= 2 *delta.y;
         _innerTopRightDragPos.x += delta.x;
         _innerBtmLeftDragPos.y += delta.y;
-        _innerBtmLeftDragPos.x -= multiplier *delta.x;
+        _innerBtmLeftDragPos.x -= 2 *delta.x;
         
         
-        _outerTopRightDragPos.y -= multiplier *delta.y;
+        _outerTopRightDragPos.y -= 2 *delta.y;
         _outerTopRightDragPos.x += delta.x;
         _outerBtmLeftDragPos.y += delta.y;
-        _outerBtmLeftDragPos.x -= multiplier *delta.x;
+        _outerBtmLeftDragPos.x -= 2 *delta.x;
         
 
         didSomething = true;
     } else if (_ms == eDraggingInnerMidTop) {
-        _innerBtmLeftDragPos.y -= multiplier *delta.y;
-        _outerBtmLeftDragPos.y -= multiplier *delta.y;
+        _innerBtmLeftDragPos.y -= 2 *delta.y;
+        _outerBtmLeftDragPos.y -= 2 *delta.y;
         
         _innerTopRightDragPos.y += delta.y;
         _outerTopRightDragPos.y += delta.y;
@@ -800,25 +799,25 @@ bool TrackerRegionInteract::penMotion(const OFX::PenArgs &args)
     } else if (_ms == eDraggingInnerMidRight) {
         _innerTopRightDragPos.x += delta.x;
         _outerTopRightDragPos.x += delta.x;
-        _innerBtmLeftDragPos.x -= multiplier *delta.x;
-        _outerBtmLeftDragPos.x -= multiplier *delta.x;
+        _innerBtmLeftDragPos.x -= 2 *delta.x;
+        _outerBtmLeftDragPos.x -= 2 *delta.x;
         
         
         didSomething = true;
     } else if (_ms == eDraggingInnerMidBtm) {
         _innerBtmLeftDragPos.y += delta.y;
-        _innerTopRightDragPos.y -= multiplier *delta.y;
+        _innerTopRightDragPos.y -= 2 *delta.y;
         
         _outerBtmLeftDragPos.y += delta.y;
-        _outerTopRightDragPos.y -= multiplier *delta.y;
+        _outerTopRightDragPos.y -= 2 *delta.y;
 
         didSomething = true;
     } else if (_ms == eDraggingInnerMidLeft) {
         _innerBtmLeftDragPos.x += delta.x;
-        _innerTopRightDragPos.x -= multiplier *delta.x;
+        _innerTopRightDragPos.x -= 2 *delta.x;
         
         _outerBtmLeftDragPos.x += delta.x;
-        _outerTopRightDragPos.x -= multiplier * delta.x;
+        _outerTopRightDragPos.x -= 2 * delta.x;
         didSomething = true;
     } else if (_ms == eDraggingOuterBottomLeft) {
         _outerBtmLeftDragPos.x += delta.x;
@@ -831,7 +830,7 @@ bool TrackerRegionInteract::penMotion(const OFX::PenArgs &args)
         if (!_controlDown) {
             _outerBtmLeftDragPos.y -= delta.y;
         }
-        _outerTopRightDragPos.y += multiplier * delta.y;
+        _outerTopRightDragPos.y += delta.y;
         _outerTopRightDragPos.x -= multiplier * delta.x;
         didSomething = true;
     } else if (_ms == eDraggingOuterTopRight) {
@@ -839,12 +838,12 @@ bool TrackerRegionInteract::penMotion(const OFX::PenArgs &args)
             _outerBtmLeftDragPos.x -= delta.x;
             _outerBtmLeftDragPos.y -= delta.y;
         }
-        _outerTopRightDragPos.y += multiplier * delta.y;
-        _outerTopRightDragPos.x += multiplier * delta.x;
+        _outerTopRightDragPos.y +=  delta.y;
+        _outerTopRightDragPos.x +=  delta.x;
         didSomething = true;
     } else if (_ms == eDraggingOuterBottomRight) {
         _outerTopRightDragPos.y -= multiplier * delta.y;
-        _outerTopRightDragPos.x += multiplier * delta.x;
+        _outerTopRightDragPos.x +=  delta.x;
         _outerBtmLeftDragPos.y += delta.y;
         if (!_controlDown) {
             _outerBtmLeftDragPos.x -= delta.x;
@@ -854,10 +853,10 @@ bool TrackerRegionInteract::penMotion(const OFX::PenArgs &args)
         if (!_controlDown) {
             _outerBtmLeftDragPos.y -= delta.y;
         }
-        _outerTopRightDragPos.y += multiplier * delta.y;
+        _outerTopRightDragPos.y += delta.y;
         didSomething = true;
     } else if (_ms == eDraggingOuterMidRight) {
-        _outerTopRightDragPos.x += multiplier * delta.x;
+        _outerTopRightDragPos.x +=  delta.x;
         if (!_controlDown) {
             _outerBtmLeftDragPos.x -= delta.x;
         }
