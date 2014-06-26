@@ -143,10 +143,10 @@ void genericTrackerDescribe(OFX::ImageEffectDescriptor &desc)
     
     desc.setSupportsMultipleClipPARs(false);
     
+    // support multithread (anyway, the tracker always returns identity)
     desc.setRenderThreadSafety(eRenderFullySafe);
     
-    
-    // in order to support tiles, the plugin must implement the getRegionOfInterest function
+    // support tiles (anyway, the tracker always returns identity)
     desc.setSupportsTiles(true);
     
     // in order to support multiresolution, render() must take into account the pixelaspectratio and the renderscale

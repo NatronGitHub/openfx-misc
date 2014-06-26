@@ -577,7 +577,8 @@ Transform3x3Plugin::getRegionOfDefinition(const RegionOfDefinitionArguments &arg
 
 // override the roi call
 // Transform3x3-GENERIC
-// Required if the plugin should support tiles.
+// Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
+// (this is the case for transforms)
 // It may be difficult to implement for complicated transforms:
 // consequently, these transforms cannot support tiles.
 void
@@ -1007,7 +1008,7 @@ void OFX::Transform3x3Describe(OFX::ImageEffectDescriptor &desc, bool masked)
 
     // Transform3x3-GENERIC
 
-    // in order to support tiles, the plugin must implement the getRegionOfInterest function
+    // in order to support tiles, the transform plugin must implement the getRegionOfInterest function
     desc.setSupportsTiles(true);
 
     // in order to support multiresolution, render() must take into account the pixelaspectratio and the renderscale

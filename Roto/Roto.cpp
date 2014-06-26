@@ -399,8 +399,6 @@ void RotoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(false);
     desc.setRenderThreadSafety(eRenderFullySafe);
     
-
-    // in order to support tiles, the plugin must implement the getRegionOfInterest function
     desc.setSupportsTiles(true);
     
     // in order to support multiresolution, render() must take into account the pixelaspectratio and the renderscale

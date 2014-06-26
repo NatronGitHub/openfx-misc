@@ -423,9 +423,8 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
 
 
 // override the roi call
-// Required if the plugin should support tiles.
-// It may be difficult to implement for complicated transforms:
-// consequently, these transforms cannot support tiles.
+// Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
+// (this is the case here)
 void
 CopyRectanglePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
