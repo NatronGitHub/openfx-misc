@@ -128,18 +128,22 @@ void genericTrackerDescribe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedContext(eContextFilter);
     
-    desc.addSupportedBitDepth(eBitDepthUByte);
-    desc.addSupportedBitDepth(eBitDepthUShort);
-    desc.addSupportedBitDepth(eBitDepthFloat);
+    // supported bit depths depend on the tracking algorithm.
+    //desc.addSupportedBitDepth(eBitDepthUByte);
+    //desc.addSupportedBitDepth(eBitDepthUShort);
+    //desc.addSupportedBitDepth(eBitDepthFloat);
     
-    
-    desc.setSingleInstance(false);
+    // single instance depends on the algorithm
+    //desc.setSingleInstance(false);
+
+    // no host frame threading (anyway, the tracker always returns identity)
     desc.setHostFrameThreading(false);
     
     ///We do temporal clip access
     desc.setTemporalClipAccess(true);
-    
-    desc.setRenderTwiceAlways(false);
+
+    // rendertwicealways must be set to true if the tracker cannot handle interlaced content (most don't)
+    //desc.setRenderTwiceAlways(true);
     
     desc.setSupportsMultipleClipPARs(false);
     

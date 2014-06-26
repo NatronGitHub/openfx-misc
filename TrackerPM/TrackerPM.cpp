@@ -500,6 +500,14 @@ void TrackerPMPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
     genericTrackerDescribe(desc);
+    // supported bit depths depend on the tracking algorithm.
+    desc.addSupportedBitDepth(eBitDepthUByte);
+    desc.addSupportedBitDepth(eBitDepthUShort);
+    desc.addSupportedBitDepth(eBitDepthFloat);
+    // single instance depends on the algorithm
+    desc.setSingleInstance(false);
+    // rendertwicealways must be set to true if the tracker cannot handle interlaced content (most don't)
+    desc.setRenderTwiceAlways(true);
     desc.setOverlayInteractDescriptor(new TrackerRegionOverlayDescriptor);
 }
 
