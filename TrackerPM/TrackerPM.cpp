@@ -123,9 +123,6 @@ public:
     
     
 private:
-    // override the roi call
-    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois);
-    
     /**
      * @brief Override to track the entire range between [first,last].
      * @param forward If true then it should track from first to last, otherwise it should track
@@ -445,23 +442,6 @@ TrackerPMPlugin::getTrackSearchWindowCanonical(OfxTime other, OfxRectD *bounds) 
     bounds->x2 = center.x + outerTopRight.x - innerTopRight.x;
     bounds->y2 = center.y + outerTopRight.y - innerTopRight.y;
 }
-
-
-// override the roi call
-// Required if the plugin should support tiles.
-// It may be difficult to implement for complicated transforms:
-// consequently, these transforms cannot support tiles.
-void
-TrackerPMPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
-{
-    
-    OfxRectD roi;
-    getTrackSearchWindowCanonical(args.time, &roi);
-    // set it on the mask only if we are in an interesting context
-    // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
-    rois.setRegionOfInterest(*srcClip_, roi);
-}
-
 
 
 // the internal render function
