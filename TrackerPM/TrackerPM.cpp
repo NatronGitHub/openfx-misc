@@ -121,8 +121,6 @@ public:
 
     }
     
-    // FIXME: move _bestMatch to TrackerPMProcessorBase, where it belongs
-    void updateBestMatch(const OfxPointI& point, double score);
     
 private:
     // override the roi call
@@ -146,10 +144,7 @@ private:
 
     ///The pattern is in coordinates relative to the center point
     void getPatternCanonical(OfxTime time, OfxRectD *bounds) const;
-
-    // FIXME: move _bestMatch to TrackerPMProcessorBase, where it belongs
-    std::pair<OfxPointD,double> _bestMatch; //< the results for the current processor
-    OFX::MultiThread::Mutex _bestMatchMutex; //< this is used so we can multi-thread the tracking and protect the shared results
+   
 };
 
 
@@ -162,6 +157,8 @@ protected:
     OfxPointI _centeri;
     OfxPointD _center;
     TrackerPMPlugin* _plugin;
+    std::pair<OfxPointD,double> _bestMatch; //< the results for the current processor
+    OFX::MultiThread::Mutex _bestMatchMutex; //< this is used so we can multi-thread the tracking and protect the shared results
     
 public:
     TrackerPMProcessorBase(OFX::ImageEffect &instance)
@@ -173,6 +170,8 @@ public:
     , _plugin(dynamic_cast<TrackerPMPlugin*>(&instance))
     {
         assert(_plugin);
+        _bestMatch.second = std::numeric_limits<double>::infinity();
+
     }
     
     /** @brief set the src image */
@@ -190,6 +189,11 @@ public:
     void setCenterI(const OfxPointI& centeri) {
         _centeri = centeri;
     }
+    
+    /**
+     * @brief Retrieves the results of the track. Must be called once process() returns so it is thread safe.
+     **/
+    const OfxPointD& getBestMatch() const { return _bestMatch.first; }
     
 };
 
@@ -250,8 +254,15 @@ private:
                 }
             }
         }
-
-        _plugin->updateBestMatch(point, bestScore);
+        
+        {
+            OFX::MultiThread::AutoMutex lock(_bestMatchMutex);
+            if (_bestMatch.second > bestScore) {
+                _bestMatch.second = bestScore;
+                _bestMatch.first.x = point.x;
+                _bestMatch.first.y = point.y;
+            }
+        }
     }
 
     double aggregateSSD(double score, PIX* refPix, PIX* otherPix)
@@ -271,17 +282,6 @@ private:
 
 };
 
-void
-TrackerPMPlugin::updateBestMatch(const OfxPointI& point, double score)
-{
-    // FIXME: move _bestMatch to TrackerPMProcessorBase, where it belongs
-    OFX::MultiThread::AutoMutex lock(_bestMatchMutex);
-    if (_bestMatch.second > score) {
-        _bestMatch.second = score;
-        _bestMatch.first.x = point.x;
-        _bestMatch.first.y = point.y;
-    }
-}
 
 void
 TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
@@ -400,8 +400,6 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,OfxTime refTi
     centeri.y = std::floor(center.y + 0.5);
     processor.setCenterI(centeri);
     
-    // FIXME: move _bestMatch to TrackerPMProcessorBase, where it belongs
-    _bestMatch.second = std::numeric_limits<double>::infinity();
     
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -410,9 +408,10 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,OfxTime refTi
 
     ///ok the score is now computed, update the center
     OfxPointD newCenter;
-    // FIXME: move _bestMatch to TrackerPMProcessorBase, where it belongs
-    newCenter.x = center.x + _bestMatch.first.x - centeri.x;
-    newCenter.y = center.y + _bestMatch.first.y - centeri.y;
+    const OfxPointD& bestMatch = processor.getBestMatch();
+    
+    newCenter.x = center.x + bestMatch.x - centeri.x;
+    newCenter.y = center.y + bestMatch.y - centeri.y;
     _center->setValueAtTime(otherTime, newCenter.x, newCenter.y);
 }
 
