@@ -198,6 +198,7 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     center->setDoubleType(eDoubleTypeXYAbsolute);
     center->setDefaultCoordinateSystem(eCoordinatesNormalised);
     center->setDefault(0.5, 0.5);
+    center->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
     page->addChild(*center);
     
     
@@ -208,6 +209,7 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     innerBtmLeft->setDefaultCoordinateSystem(eCoordinatesCanonical);
     innerBtmLeft->setDefault(-15,-15);
     //innerBtmLeft->setIsSecret(true);
+    innerBtmLeft->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
     page->addChild(*innerBtmLeft);
     
     OFX::Double2DParamDescriptor* innerTopRight = desc.defineDouble2DParam(kTrackPatternBoxTopRightParamName);
@@ -217,6 +219,7 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     innerTopRight->setDefaultCoordinateSystem(eCoordinatesCanonical);
     innerTopRight->setDefault(15, 15);
     //innerTopRight->setIsSecret(true);
+    innerTopRight->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
     page->addChild(*innerTopRight);
     
     OFX::Double2DParamDescriptor* outerBtmLeft = desc.defineDouble2DParam(kTrackSearchBoxBottomLeftParamName);
@@ -226,6 +229,7 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     outerBtmLeft->setDefaultCoordinateSystem(eCoordinatesCanonical);
     outerBtmLeft->setDefault(-25,-25);
     //outerBtmLeft->setIsSecret(true);
+    outerBtmLeft->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
     page->addChild(*outerBtmLeft);
     
     OFX::Double2DParamDescriptor* outerTopRight = desc.defineDouble2DParam(kTrackSearchBoxTopRightParamName);
@@ -235,6 +239,7 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     outerTopRight->setDefaultCoordinateSystem(eCoordinatesCanonical);
     outerTopRight->setDefault(25, 25);
     //outerTopRight->setIsSecret(true);
+    outerTopRight->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
     page->addChild(*outerTopRight);
     
     OFX::PushButtonParamDescriptor* backward = desc.definePushButtonParam(kTrackBackwardParamName);

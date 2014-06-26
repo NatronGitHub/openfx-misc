@@ -286,7 +286,7 @@ TrackerPMPlugin::updateBestMatch(const OfxPointI& point, double score)
 void
 TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
 {
-    // TODO: set kOfxImageEffectPropInAnalysis on the plugin instance
+    getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1);
     OfxTime t = args.first;
     std::string name;
     _instanceName->getValue(name);
@@ -322,7 +322,7 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
     if (showProgress) {
         progressEnd();
     }
-
+    getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
