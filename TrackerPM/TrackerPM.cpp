@@ -377,11 +377,7 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,OfxTime refTi
     OfxPointD center;
     _center->getValueAtTime(refTime, center.x, center.y);
     ///before intersection to the image bounds, convert to absolute coordinates the pattern window
-    patternPixel.x1 += center.x;
-    patternPixel.x2 += center.x;
-    patternPixel.y1 += center.y;
-    patternPixel.y2 += center.y;
-    
+
     if (!MergeImages2D::rectangleIntersect(imageBounds, patternPixel, &patternPixel)) {
         return;
     }
