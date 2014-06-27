@@ -1133,24 +1133,24 @@ bool TrackerRegionInteract::penUp(const OFX::PenArgs &args)
         btmLeft.x = _innerBtmLeftDragPos.x - center.x;
         btmLeft.y = _innerBtmLeftDragPos.y - center.y;
         
-        _innerBtmLeft->setValueAtTime(args.time, btmLeft.x, btmLeft.y);
+        _innerBtmLeft->setValue(btmLeft.x, btmLeft.y);
 
         OfxPointD topRight;
         topRight.x = _innerTopRightDragPos.x - center.x;
         topRight.y = _innerTopRightDragPos.y - center.y;
 
-        _innerTopRight->setValueAtTime(args.time, topRight.x, topRight.y);
+        _innerTopRight->setValue(topRight.x, topRight.y);
     }
     {
         OfxPointD btmLeft;
         btmLeft.x = _outerBtmLeftDragPos.x - center.x;
         btmLeft.y = _outerBtmLeftDragPos.y - center.y;
-        _outerBtmLeft->setValueAtTime(args.time, btmLeft.x, btmLeft.y);
+        _outerBtmLeft->setValue(btmLeft.x, btmLeft.y);
 
         OfxPointD topRight;
         topRight.x = _outerTopRightDragPos.x - center.x;
         topRight.y = _outerTopRightDragPos.y - center.y;
-        _outerTopRight->setValueAtTime(args.time, topRight.x, topRight.y);
+        _outerTopRight->setValue(topRight.x, topRight.y);
     }
     
     if (_ms == eDraggingCenter) {
