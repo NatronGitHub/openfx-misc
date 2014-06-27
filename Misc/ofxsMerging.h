@@ -630,9 +630,11 @@ namespace MergeImages2D {
             return false;
 
         intersection->x1 = std::max(r1.x1,r2.x1);
-        intersection->x2 = std::min(r1.x2,r2.x2);
+        // the region must be *at least* empty, thus the maximin.
+        intersection->x2 = std::max(intersection->x1,std::min(r1.x2,r2.x2));
         intersection->y1 = std::max(r1.y1,r2.y1);
-        intersection->y2 = std::min(r1.y2,r2.y2);
+        // the region must be *at least* empty, thus the maximin.
+        intersection->y2 = std::max(intersection->y1,std::min(r1.y2,r2.y2));
         return true;
     }
 

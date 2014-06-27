@@ -398,12 +398,26 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
 void
 CropPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
+    bool reformat;
+    _reformat->getValueAtTime(args.time, reformat);
 
     OfxRectD cropRect;
     getCropRectangle_canonical(args.time, false, true, cropRect);
 
+    OfxRectD roi = args.regionOfInterest;
+
+    if (reformat) {
+        // translate, because cropRect will be rendered at (0,0) in this case
+        // Remember: this is the region of INTEREST: the region from the input
+        // used to render the region args.regionOfInterest
+        roi.x1 += cropRect.x1;
+        roi.y1 += cropRect.y1;
+        roi.x2 += cropRect.x2;
+        roi.y2 += cropRect.y2;
+    }
+
     // intersect the crop rectangle with args.regionOfInterest
-    MergeImages2D::rectangleIntersect(cropRect, args.regionOfInterest, &cropRect);
+    MergeImages2D::rectangleIntersect(cropRect, roi, &cropRect);
     rois.setRegionOfInterest(*srcClip_, cropRect);
 }
 
