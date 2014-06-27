@@ -286,7 +286,13 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
     // Although the following property has been there since OFX 1.0,
     // it's not in the HostSupport library.
     getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
+
+    double t1, t2;
+    // get the first and last times available on the effect's timeline
+    timeLineGetBounds(t1, t2);
+
     OfxTime t = args.first;
+    bool changeTime = (args.reason == eChangeUserEdit && t == timeLineGetTime());
     std::string name;
     _instanceName->getValue(name);
     bool showProgress = std::abs(args.last - args.first) > 1;
@@ -314,7 +320,11 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
         } else {
             --t;
         }
-        if (showProgress && !progressUpdate(std::abs(t - args.first) / std::abs(args.last - args.first))) {
+        if (changeTime ) {
+            // set the timeline to a specific time
+            timeLineGotoTime(t);
+        }
+        if (showProgress && !progressUpdate((t - args.first) / (args.last - args.first))) {
             return;
         }
     }
