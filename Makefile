@@ -21,13 +21,14 @@ Shuffle \
 SideBySide \
 Switch \
 TimeOffset \
+TrackerPM \
 Transform
 
 ifneq ($(DEBUGFLAG),-O3)
   # DebugProxy is only useful to debug the communication between a host and a plugin
   SUBDIRS += DebugProxy
-  # ReConverge is not tested yet
-  SUBDIRS += ReConverge
+  # TrackerPM is not well tested yet
+  SUBDIRS += TrackerPM
 endif
 
 HAVE_CIMG ?= 0
