@@ -423,6 +423,17 @@ TrackerPMPlugin::getPatternCanonical(OfxTime ref, OfxRectD *bounds) const
     bounds->x2 = center.x + innerTopRight.x;
     bounds->y1 = center.y + innerBtmLeft.y;
     bounds->y2 = center.y + innerTopRight.y;
+
+    // make the window at least 2 pixels high/wide
+    // (this should never happen, of course)
+    if (bounds->x2 < bounds->x1 + 2) {
+        bounds->x1 = (bounds->x1 + bounds->x2) / 2 - 1;
+        bounds->x2 = bounds->x1 + 2;
+    }
+    if (bounds->y2 < bounds->y1 + 2) {
+        bounds->y1 = (bounds->y1 + bounds->y2) / 2 - 1;
+        bounds->y2 = bounds->y1 + 2;
+    }
 }
 
 void
@@ -441,6 +452,16 @@ TrackerPMPlugin::getTrackSearchWindowCanonical(OfxTime other, OfxRectD *bounds) 
     bounds->y1 = center.y + outerBtmLeft.y - innerBtmLeft.y;
     bounds->x2 = center.x + outerTopRight.x - innerTopRight.x;
     bounds->y2 = center.y + outerTopRight.y - innerTopRight.y;
+
+    // if the window is empty, make it at least 1 pixel high/wide
+    if (bounds->x2 <= bounds->x1) {
+        bounds->x1 = (bounds->x1 + bounds->x2) / 2;
+        bounds->x2 = bounds->x1 + 1;
+    }
+    if (bounds->y2 <= bounds->y1) {
+        bounds->y1 = (bounds->y1 + bounds->y2) / 2;
+        bounds->y2 = bounds->y1 + 1;
+    }
 }
 
 
