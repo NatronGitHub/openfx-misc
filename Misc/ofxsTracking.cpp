@@ -98,18 +98,21 @@ void GenericTrackerPlugin::changedParam(const OFX::InstanceChangedArgs &args, co
         timeLineGetBounds(first, last);
         trackArgs.last = first;
         trackArgs.forward = false;
+        trackArgs.reason = args.reason;
         trackRange(trackArgs);
     } else if (paramName == kTrackPreviousParamName) {
         OFX::TrackArguments trackArgs;
         trackArgs.first = args.time;
         trackArgs.last = trackArgs.first - 1;
         trackArgs.forward = false;
+        trackArgs.reason = args.reason;
         trackRange(trackArgs);
     } else if (paramName == kTrackNextParamName) {
         OFX::TrackArguments trackArgs;
         trackArgs.first = args.time;
         trackArgs.last = trackArgs.first + 1;
         trackArgs.forward = true;
+        trackArgs.reason = args.reason;
         trackRange(trackArgs);
     } else if (paramName == kTrackForwardParamName) {
         OFX::TrackArguments trackArgs;
@@ -118,6 +121,7 @@ void GenericTrackerPlugin::changedParam(const OFX::InstanceChangedArgs &args, co
         timeLineGetBounds(first, last);
         trackArgs.last = last;
         trackArgs.forward = true;
+        trackArgs.reason = args.reason;
         trackRange(trackArgs);
     }
     

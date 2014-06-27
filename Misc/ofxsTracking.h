@@ -87,6 +87,7 @@ namespace OFX
         OfxTime first;
         OfxTime last;
         bool forward;
+        InstanceChangeReason reason;
     };
 }
 
