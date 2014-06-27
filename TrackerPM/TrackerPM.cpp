@@ -423,12 +423,12 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,OfxTime refTi
 }
 
 void
-TrackerPMPlugin::getPatternCanonical(OfxTime ref, OfxRectD *bounds) const
+TrackerPMPlugin::getPatternCanonical(OfxTime time, OfxRectD *bounds) const
 {
     OfxPointD innerBtmLeft, innerTopRight, center;
-    _innerBtmLeft->getValueAtTime(ref, innerBtmLeft.x, innerBtmLeft.y);
-    _innerTopRight->getValueAtTime(ref, innerTopRight.x, innerTopRight.y);
-    _center->getValueAtTime(ref, center.x, center.y);
+    _innerBtmLeft->getValueAtTime(time, innerBtmLeft.x, innerBtmLeft.y);
+    _innerTopRight->getValueAtTime(time, innerTopRight.x, innerTopRight.y);
+    _center->getValueAtTime(time, center.x, center.y);
     bounds->x1 = center.x + innerBtmLeft.x;
     bounds->x2 = center.x + innerTopRight.x;
     bounds->y1 = center.y + innerBtmLeft.y;
@@ -447,15 +447,15 @@ TrackerPMPlugin::getPatternCanonical(OfxTime ref, OfxRectD *bounds) const
 }
 
 void
-TrackerPMPlugin::getTrackSearchWindowCanonical(OfxTime other, OfxRectD *bounds) const
+TrackerPMPlugin::getTrackSearchWindowCanonical(OfxTime time, OfxRectD *bounds) const
 {
     OfxPointD innerBtmLeft,innerTopRight;
-    _innerBtmLeft->getValueAtTime(other, innerBtmLeft.x, innerBtmLeft.y);
-    _innerTopRight->getValueAtTime(other, innerTopRight.x, innerTopRight.y);
+    _innerBtmLeft->getValueAtTime(time, innerBtmLeft.x, innerBtmLeft.y);
+    _innerTopRight->getValueAtTime(time, innerTopRight.x, innerTopRight.y);
     OfxPointD outerBtmLeft, outerTopRight, center;
-    _outerBtmLeft->getValueAtTime(other, outerBtmLeft.x, outerBtmLeft.y);
-    _outerTopRight->getValueAtTime(other, outerTopRight.x, outerTopRight.y);
-    _center->getValueAtTime(other, center.x, center.y);
+    _outerBtmLeft->getValueAtTime(time, outerBtmLeft.x, outerBtmLeft.y);
+    _outerTopRight->getValueAtTime(time, outerTopRight.x, outerTopRight.y);
+    _center->getValueAtTime(time, center.x, center.y);
     
     // subtract the pattern window so that we don't check for pixels out of the search window
     bounds->x1 = center.x + outerBtmLeft.x - innerBtmLeft.x;
@@ -484,7 +484,7 @@ TrackerPMPlugin::trackInternal(OfxTime ref, OfxTime other)
     getPatternCanonical(ref, &refBounds);
 
     OfxRectD otherBounds;
-    getTrackSearchWindowCanonical(other, &otherBounds);
+    getTrackSearchWindowCanonical(ref, &otherBounds);
 
     std::auto_ptr<OFX::Image> srcRef(srcClip_->fetchImage(ref, refBounds));
     std::auto_ptr<OFX::Image> srcOther(srcClip_->fetchImage(other, otherBounds));
