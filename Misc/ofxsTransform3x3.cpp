@@ -37,6 +37,7 @@
 
 #include "ofxsTransform3x3.h"
 #include "ofxsTransform3x3Processor.h"
+#include "ofxsMerging.h"
 
 using namespace OFX;
 
@@ -669,6 +670,11 @@ Transform3x3Plugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
 
     ofxsFilterExpandRoI(roi, srcClip_->getPixelAspectRatio(), args.renderScale, (FilterEnum)filter, doMasking, mix, &srcRoI);
 
+
+    if (_masked && mix != 1.) {
+        // compute the bounding box with the default ROI
+        MergeImages2D::rectanglesBoundingBox(srcRoI, args.regionOfInterest, &srcRoI);
+    }
 
     // no need to set it on mask (the default ROI is OK)
     rois.setRegionOfInterest(*srcClip_, srcRoI);

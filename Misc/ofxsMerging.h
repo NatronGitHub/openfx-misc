@@ -607,14 +607,12 @@ namespace MergeImages2D {
     }
 
     ///Union of rectangles
-    inline OfxRectD rectanglesBoundingBox(const OfxRectD& a, const OfxRectD& b)
+    inline void rectanglesBoundingBox(const OfxRectD& a, const OfxRectD& b, OfxRectD* bbox)
     {
-        OfxRectD res;
-        res.x1 = std::min(a.x1, b.x1);
-        res.x2 = std::max(res.x1, std::max(a.x2, b.x2));
-        res.y1 = std::min(a.y1, b.y1);
-        res.y2 = std::max(res.y1, std::max(a.y2, b.y2));
-        return res;
+        bbox->x1 = std::min(a.x1, b.x1);
+        bbox->x2 = std::max(bbox->x1, std::max(a.x2, b.x2));
+        bbox->y1 = std::min(a.y1, b.y1);
+        bbox->y2 = std::max(bbox->x1, std::max(a.y2, b.y2));
     }
 
 

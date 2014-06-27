@@ -433,13 +433,14 @@ CopyRectanglePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments 
     getRectanglecanonical(args.time, rectangle);
 
     // intersect the crop rectangle with args.regionOfInterest
-    rectangle.x1 = std::max(rectangle.x1, args.regionOfInterest.x1);
-    // the region must be *at least* empty, thus the maximin.
-    rectangle.x2 = std::max(rectangle.x1,std::min(rectangle.x2, args.regionOfInterest.x2));
-    rectangle.y1 = std::max(rectangle.y1, args.regionOfInterest.y1);
-    // the region must be *at least* empty, thus the maximin.
-    rectangle.y2 = std::max(rectangle.y1,std::min(rectangle.y2, args.regionOfInterest.y2));
+    MergeImages2D::rectangleIntersect(rectangle, args.regionOfInterest, &rectangle);
 
+    double mix;
+    _mix->getValueAtTime(args.time, mix);
+    if (mix != 1.) {
+        // compute the bounding box with the default ROI
+        MergeImages2D::rectanglesBoundingBox(rectangle, args.regionOfInterest, &rectangle);
+    }
     // set it on the mask only if we are in an interesting context
     // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
     rois.setRegionOfInterest(*srcClipA_, rectangle);
@@ -453,7 +454,7 @@ CopyRectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgument
     OfxRectD rect;
     getRectanglecanonical(args.time, rect);
     OfxRectD srcB_rod = srcClipB_->getRegionOfDefinition(args.time);
-    rod = MergeImages2D::rectanglesBoundingBox(rect, srcB_rod);
+    MergeImages2D::rectanglesBoundingBox(rect, srcB_rod, &rod);
     return true;
 }
 

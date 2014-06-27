@@ -288,7 +288,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
 	{
 		case 0: //union
 		{
-            rod = rectanglesBoundingBox(rodA,rodB);
+            rectanglesBoundingBox(rodA, rodB, &rod);
 			return true;
 		}
 		case 1: //intersection
