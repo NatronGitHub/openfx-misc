@@ -135,25 +135,24 @@ private:
     void trackInternal(OfxTime ref,OfxTime other);
 
     /* set up and run a processor */
-    void setupAndProcess(TrackerPMProcessorBase &,OfxTime refTime,OfxTime otherTime,OFX::Image* refImg,OFX::Image* otherImg);
-
-    void getTrackSearchWindowCanonical(OfxTime time, OfxRectD *bounds) const;
-
-    ///The pattern is in coordinates relative to the center point
-    void getPatternCanonical(OfxTime time, OfxRectD *bounds) const;
-   
+    void setupAndProcess(TrackerPMProcessorBase &processor,
+                         OfxTime refTime,
+                         const OfxRectD& refBounds,
+                         const OfxPointD& refCenter,
+                         const OFX::Image* refImg,
+                         OfxTime otherTime,
+                         const OfxRectD& trackSearchBounds,
+                         const OFX::Image* otherImg);
 };
 
 
 class TrackerPMProcessorBase : public OFX::ImageProcessor
 {
 protected:
-    OFX::Image *_refImg;
-    OFX::Image *_otherImg;
-    OfxRectI _patternWindow;
-    OfxPointI _centeri;
-    OfxPointD _center;
-    TrackerPMPlugin* _plugin;
+    const OFX::Image *_refImg;
+    const OFX::Image *_otherImg;
+    OfxRectI _refRectPixel;
+    OfxPointI _refCenterI;
     std::pair<OfxPointD,double> _bestMatch; //< the results for the current processor
     OFX::MultiThread::Mutex _bestMatchMutex; //< this is used so we can multi-thread the tracking and protect the shared results
     
@@ -162,29 +161,26 @@ public:
     : OFX::ImageProcessor(instance)
     , _refImg(0)
     , _otherImg(0)
-    , _patternWindow()
-    , _center()
-    , _plugin(dynamic_cast<TrackerPMPlugin*>(&instance))
+    , _refRectPixel()
     {
-        assert(_plugin);
         _bestMatch.second = std::numeric_limits<double>::infinity();
 
     }
     
     /** @brief set the src image */
-    void setImages(OFX::Image *ref,OFX::Image *other)
+    void setImages(const OFX::Image *ref, const OFX::Image *other)
     {
         _refImg = ref;
         _otherImg = other;
     }
     
-    void setPatternWindow(const OfxRectI& pattern)
+    void setRefRectPixel(const OfxRectI& pattern)
     {
-        _patternWindow = pattern;
+        _refRectPixel = pattern;
     }
     
-    void setCenterI(const OfxPointI& centeri) {
-        _centeri = centeri;
+    void setRefCenterI(const OfxPointI& centeri) {
+        _refCenterI = centeri;
     }
     
     /**
@@ -227,9 +223,9 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 
                 double score = 0;
-                for (int i = _patternWindow.y1; i < _patternWindow.y2; ++i) {
-                    for (int j = _patternWindow.x1; j < _patternWindow.x2; ++j) {
-                        PIX *refPix = (PIX*) _refImg->getPixelAddress(_centeri.x + j, _centeri.y + i);
+                for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
+                    for (int j = _refRectPixel.x1; j < _refRectPixel.x2; ++j) {
+                        PIX *refPix = (PIX*) _refImg->getPixelAddress(_refCenterI.x + j, _refCenterI.y + i);
 
                         // take nearest pixel in other image (more chance to get a track than with black)
                         int otherx = x + j;
@@ -287,21 +283,22 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
     // it's not in the HostSupport library.
     getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
 
-    double t1, t2;
+    //double t1, t2;
     // get the first and last times available on the effect's timeline
-    timeLineGetBounds(t1, t2);
+    //timeLineGetBounds(t1, t2);
 
     OfxTime t = args.first;
     bool changeTime = (args.reason == eChangeUserEdit && t == timeLineGetTime());
     std::string name;
     _instanceName->getValue(name);
+    assert((args.forward && args.last >= args.first) || (!args.forward && args.last <= args.first));
     bool showProgress = std::abs(args.last - args.first) > 1;
     if (showProgress) {
         progressStart(name);
     }
-    while (t != args.last) {
-        
-        OfxTime other = args.forward ? t + 1 : t - 1;
+
+    while (args.forward ? (t <= args.last) : (t >= args.last)) {
+        OfxTime other = args.forward ? (t + 1) : (t - 1);
         
         OFX::PixelComponentEnum srcComponents  = srcClip_->getPixelComponents();
         assert(srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA ||
@@ -325,6 +322,7 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
             timeLineGotoTime(t);
         }
         if (showProgress && !progressUpdate((t - args.first) / (args.last - args.first))) {
+            progressEnd();
             return;
         }
     }
@@ -340,99 +338,14 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
 
-/* set up and run a processor */
-void
-TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,OfxTime refTime,OfxTime otherTime,OFX::Image* refImg,OFX::Image* otherImg)
+
+static void
+getRefBounds(const OfxRectD& refRect, const OfxPointD &refCenter, OfxRectD *bounds)
 {
-    
-    // set an uninitialized image for the dst image
-    OFX::Image* dstImg = refImg;
-    processor.setDstImg(dstImg);
-    processor.setImages(refImg, otherImg);
-    
-    OfxRectD searchWindowCanonical;
-    getTrackSearchWindowCanonical(refTime, &searchWindowCanonical);
-    OfxRectI searchWindowPixel;
-    searchWindowPixel.x1 = std::floor(searchWindowCanonical.x1);
-    searchWindowPixel.y1 = std::floor(searchWindowCanonical.y1);
-    searchWindowPixel.x2 = std::ceil(searchWindowCanonical.x2);
-    searchWindowPixel.y2 = std::ceil(searchWindowCanonical.y2);
-    
-    unsigned int mipMapLevel = MergeImages2D::getLevelFromScale(refImg->getRenderScale().x);
-    if (mipMapLevel != 0) {
-        searchWindowPixel = MergeImages2D::downscalePowerOfTwoSmallestEnclosing(searchWindowPixel, mipMapLevel);
-    }
-    
-    OfxRectI imageBounds = refImg->getBounds();
-    if (!MergeImages2D::rectangleIntersect(imageBounds, searchWindowPixel, &searchWindowPixel)) {
-        ///if the search window doesn't intersect the ref image bounds just return there's nothing to do
-        return;
-    }
-    
-    
-    OfxRectD patternCanonical;
-    getPatternCanonical(refTime, &patternCanonical);
-    OfxRectI patternPixel;
-    patternPixel.x1 = std::floor(patternCanonical.x1);
-    patternPixel.y1 = std::floor(patternCanonical.y1);
-    patternPixel.x2 = std::ceil(patternCanonical.x2);
-    patternPixel.y2 = std::ceil(patternCanonical.y2);
-    if (mipMapLevel != 0) {
-        patternPixel = MergeImages2D::downscalePowerOfTwoSmallestEnclosing(patternPixel, mipMapLevel);
-    }
-    
-    OfxPointD center;
-    _center->getValueAtTime(refTime, center.x, center.y);
-    ///before intersection to the image bounds, convert to absolute coordinates the pattern window
-
-    if (!MergeImages2D::rectangleIntersect(imageBounds, patternPixel, &patternPixel)) {
-        return;
-    }
-    
-    ///now convert back to coords relative to the center for the processing
-    patternPixel.x1 -= center.x;
-    patternPixel.x2 -= center.x;
-    patternPixel.y1 -= center.y;
-    patternPixel.y2 -= center.y;
-
-    
-    // set the render window
-    processor.setRenderWindow(searchWindowPixel);
-    
-    processor.setPatternWindow(patternPixel);
-    
-    // round center to nearest pixel center
-    OfxPointI centeri;
-    centeri.x = std::floor(center.x + 0.5);
-    centeri.y = std::floor(center.y + 0.5);
-    processor.setCenterI(centeri);
-    
-    
-    // Call the base class process member, this will call the derived templated process code
-    processor.process();
-
-    // TODO: subpixel interpolation
-
-    ///ok the score is now computed, update the center
-    OfxPointD newCenter;
-    const OfxPointD& bestMatch = processor.getBestMatch();
-    
-    newCenter.x = center.x + bestMatch.x - centeri.x;
-    newCenter.y = center.y + bestMatch.y - centeri.y;
-    _center->setValueAtTime(otherTime, newCenter.x, newCenter.y);
-}
-
-void
-TrackerPMPlugin::getPatternCanonical(OfxTime time, OfxRectD *bounds) const
-{
-    OfxPointD innerBtmLeft, innerTopRight, center;
-    _innerBtmLeft->getValueAtTime(time, innerBtmLeft.x, innerBtmLeft.y);
-    _innerTopRight->getValueAtTime(time, innerTopRight.x, innerTopRight.y);
-    _center->getValueAtTime(time, center.x, center.y);
-    bounds->x1 = center.x + innerBtmLeft.x;
-    bounds->x2 = center.x + innerTopRight.x;
-    bounds->y1 = center.y + innerBtmLeft.y;
-    bounds->y2 = center.y + innerTopRight.y;
+    bounds->x1 = refCenter.x + refRect.x1;
+    bounds->x2 = refCenter.x + refRect.x2;
+    bounds->y1 = refCenter.y + refRect.y1;
+    bounds->y2 = refCenter.y + refRect.y2;
 
     // make the window at least 2 pixels high/wide
     // (this should never happen, of course)
@@ -447,21 +360,13 @@ TrackerPMPlugin::getPatternCanonical(OfxTime time, OfxRectD *bounds) const
 }
 
 void
-TrackerPMPlugin::getTrackSearchWindowCanonical(OfxTime time, OfxRectD *bounds) const
+getTrackSearchBounds(const OfxRectD& refRect, const OfxPointD &refCenter, const OfxRectD& searchRect, OfxRectD *bounds)
 {
-    OfxPointD innerBtmLeft,innerTopRight;
-    _innerBtmLeft->getValueAtTime(time, innerBtmLeft.x, innerBtmLeft.y);
-    _innerTopRight->getValueAtTime(time, innerTopRight.x, innerTopRight.y);
-    OfxPointD outerBtmLeft, outerTopRight, center;
-    _outerBtmLeft->getValueAtTime(time, outerBtmLeft.x, outerBtmLeft.y);
-    _outerTopRight->getValueAtTime(time, outerTopRight.x, outerTopRight.y);
-    _center->getValueAtTime(time, center.x, center.y);
-    
     // subtract the pattern window so that we don't check for pixels out of the search window
-    bounds->x1 = center.x + outerBtmLeft.x - innerBtmLeft.x;
-    bounds->y1 = center.y + outerBtmLeft.y - innerBtmLeft.y;
-    bounds->x2 = center.x + outerTopRight.x - innerTopRight.x;
-    bounds->y2 = center.y + outerTopRight.y - innerTopRight.y;
+    bounds->x1 = refCenter.x + searchRect.x1 - refRect.x1;
+    bounds->y1 = refCenter.y + searchRect.y1 - refRect.y1;
+    bounds->x2 = refCenter.x + searchRect.x2 - refRect.x2;
+    bounds->y2 = refCenter.y + searchRect.y2 - refRect.y2;
 
     // if the window is empty, make it at least 1 pixel high/wide
     if (bounds->x2 <= bounds->x1) {
@@ -474,45 +379,143 @@ TrackerPMPlugin::getTrackSearchWindowCanonical(OfxTime time, OfxRectD *bounds) c
     }
 }
 
+void
+getOtherBounds(const OfxPointD &refCenter, const OfxRectD& searchRect, OfxRectD *bounds)
+{
+    // subtract the pattern window so that we don't check for pixels out of the search window
+    bounds->x1 = refCenter.x + searchRect.x1;
+    bounds->y1 = refCenter.y + searchRect.y1;
+    bounds->x2 = refCenter.x + searchRect.x2;
+    bounds->y2 = refCenter.y + searchRect.y2;
+
+    // if the window is empty, make it at least 1 pixel high/wide
+    if (bounds->x2 <= bounds->x1) {
+        bounds->x1 = (bounds->x1 + bounds->x2) / 2;
+        bounds->x2 = bounds->x1 + 1;
+    }
+    if (bounds->y2 <= bounds->y1) {
+        bounds->y1 = (bounds->y1 + bounds->y2) / 2;
+        bounds->y2 = bounds->y1 + 1;
+    }
+}
+
+/* set up and run a processor */
+void
+TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
+                                 OfxTime refTime,
+                                 const OfxRectD& refBounds,
+                                 const OfxPointD& refCenter,
+                                 const OFX::Image* refImg,
+                                 OfxTime otherTime,
+                                 const OfxRectD& trackSearchBounds,
+                                 const OFX::Image* otherImg)
+{
+    // set a dummy dstImg so that the processor does the job
+    // (we don't use it anyway)
+    processor.setDstImg((OFX::Image *)1);
+    processor.setImages(refImg, otherImg);
+    
+    OfxRectI trackSearchBoundsPixel;
+    trackSearchBoundsPixel.x1 = std::floor(trackSearchBounds.x1);
+    trackSearchBoundsPixel.y1 = std::floor(trackSearchBounds.y1);
+    trackSearchBoundsPixel.x2 = std::ceil(trackSearchBounds.x2);
+    trackSearchBoundsPixel.y2 = std::ceil(trackSearchBounds.y2);
+
+    // compute the pattern window in pixel coords
+    OfxRectI refRectPixel;
+    refRectPixel.x1 = std::floor(refBounds.x1);
+    refRectPixel.y1 = std::floor(refBounds.y1);
+    refRectPixel.x2 = std::ceil(refBounds.x2);
+    refRectPixel.y2 = std::ceil(refBounds.y2);
+    OfxPointI refCenterI;
+    refCenterI.x = std::floor(refCenter.x + 0.5);
+    refCenterI.y = std::floor(refCenter.y + 0.5);
+
+    refRectPixel.x1 -= refCenterI.x;
+    refRectPixel.x2 -= refCenterI.x;
+    refRectPixel.y1 -= refCenterI.y;
+    refRectPixel.y2 -= refCenterI.y;
+
+    // set the render window
+    processor.setRenderWindow(trackSearchBoundsPixel);
+    
+    processor.setRefRectPixel(refRectPixel);
+    
+    // round center to nearest pixel center
+    processor.setRefCenterI(refCenterI);
+    
+    
+    // Call the base class process member, this will call the derived templated process code
+    processor.process();
+
+    //////////////////////////////////
+    // TODO: subpixel interpolation //
+    //////////////////////////////////
+
+    ///ok the score is now computed, update the center
+    OfxPointD newCenter;
+    const OfxPointD& bestMatch = processor.getBestMatch();
+    
+    newCenter.x = refCenter.x + bestMatch.x - refCenterI.x;
+    newCenter.y = refCenter.y + bestMatch.y - refCenterI.y;
+    _center->setValueAtTime(otherTime, newCenter.x, newCenter.y);
+}
+
+
 
 // the internal render function
 template <int nComponents>
 void
 TrackerPMPlugin::trackInternal(OfxTime ref, OfxTime other)
 {
+    OfxRectD refRect;
+    _innerBtmLeft->getValueAtTime(ref, refRect.x1, refRect.y1);
+    _innerTopRight->getValueAtTime(ref, refRect.x2, refRect.y2);
+    OfxPointD refCenter;
+    _center->getValueAtTime(ref, refCenter.x, refCenter.y);
+    OfxRectD searchRect;
+    _outerBtmLeft->getValueAtTime(ref, searchRect.x1, searchRect.y1);
+    _outerTopRight->getValueAtTime(ref, searchRect.x2, searchRect.y2);
+
     OfxRectD refBounds;
-    getPatternCanonical(ref, &refBounds);
+    getRefBounds(refRect, refCenter, &refBounds);
 
     OfxRectD otherBounds;
-    getTrackSearchWindowCanonical(ref, &otherBounds);
+    getOtherBounds(refCenter, searchRect, &otherBounds);
 
-    std::auto_ptr<OFX::Image> srcRef(srcClip_->fetchImage(ref, refBounds));
-    std::auto_ptr<OFX::Image> srcOther(srcClip_->fetchImage(other, otherBounds));
+    std::auto_ptr<const OFX::Image> srcRef(srcClip_->fetchImage(ref, refBounds));
+    std::auto_ptr<const OFX::Image> srcOther(srcClip_->fetchImage(other, otherBounds));
     if (!srcRef.get() || !srcOther.get()) {
         return;
     }
+    // renderScale should never be something else than 1 when called from ActionInstanceChanged
     if ((srcRef->getPixelDepth() != srcOther->getPixelDepth()) ||
-        (srcRef->getPixelComponents() != srcOther->getPixelComponents())) {
-        return;
+        (srcRef->getPixelComponents() != srcOther->getPixelComponents()) ||
+        srcRef->getRenderScale().x != 1. || srcRef->getRenderScale().y != 1 ||
+        srcOther->getRenderScale().x != 1. || srcOther->getRenderScale().y != 1) {
+        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
     }
 
     OFX::BitDepthEnum srcBitDepth = srcRef->getPixelDepth();
     
+    OfxRectD trackSearchBounds;
+    getTrackSearchBounds(refRect, refCenter, searchRect, &trackSearchBounds);
+
     switch (srcBitDepth) {
         case OFX::eBitDepthUByte :
         {
             TrackerPMProcessor<unsigned char, nComponents, 255, eTrackerSSD> fred(*this);
-            setupAndProcess(fred,ref,other, srcRef.get(),srcOther.get());
+            setupAndProcess(fred, ref, refBounds, refCenter, srcRef.get(), other, trackSearchBounds, srcOther.get());
         }   break;
         case OFX::eBitDepthUShort :
         {
             TrackerPMProcessor<unsigned short, nComponents, 65535, eTrackerSSD> fred(*this);
-            setupAndProcess(fred,ref,other, srcRef.get(),srcOther.get());
+            setupAndProcess(fred, ref, refBounds, refCenter, srcRef.get(), other, trackSearchBounds, srcOther.get());
         }   break;
         case OFX::eBitDepthFloat :
         {
             TrackerPMProcessor<float, nComponents, 1, eTrackerSSD> fred(*this);
-            setupAndProcess(fred,ref,other,srcRef.get(),srcOther.get());
+            setupAndProcess(fred, ref, refBounds, refCenter, srcRef.get(), other, trackSearchBounds, srcOther.get());
         }   break;
         default :
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
