@@ -670,11 +670,7 @@ Transform3x3Plugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &
     ofxsFilterExpandRoI(roi, srcClip_->getPixelAspectRatio(), args.renderScale, (FilterEnum)filter, doMasking, mix, &srcRoI);
 
 
-    // set it on the mask only if we are in an interesting context
-    // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
-    if (doMasking) {
-        rois.setRegionOfInterest(*maskClip_, roi);
-    }
+    // no need to set it on mask (the default ROI is OK)
     rois.setRegionOfInterest(*srcClip_, srcRoI);
 }
 
