@@ -87,10 +87,17 @@
 
 #define kPluginName "RGBLutOFX"
 #define kPluginGrouping "Color"
-#define kPluginDescription "Apply a parametric lookup curve to each channel separately."
+#define kPluginDescription "Apply a parametric lookup curve to each channel separately. The master curve is combined with the red, green and blue curves, but not with the alpha curve."
 #define kPluginIdentifier "net.sf.openfx:RGBLutPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
+#define kCurveMaster 0
+#define kCurveRed 1
+#define kCurveGreen 2
+#define kCurveBlue 3
+#define kCurveAlpha 4
+#define kCurveNb 5
 
 class RGBLutBase : public OFX::ImageProcessor {
 protected:
@@ -102,6 +109,23 @@ public:
     }
     void setSrcImg(OFX::Image *v) {_srcImg = v;}
 };
+
+static inline int
+componentToCurve(int comp)
+{
+    switch (comp) {
+        case 0:
+            return kCurveRed;
+        case 1:
+            return kCurveGreen;
+        case 2:
+            return kCurveBlue;
+        case 3:
+            return kCurveAlpha;
+        default:
+            return 0;
+    }
+}
 
 // template to do the RGBA processing for discrete types
 template <class PIX, int nComponents, int maxValue>
@@ -115,14 +139,18 @@ public:
         // build the LUT
         OFX::ParametricParam  *lookupTable = instance.fetchParametricParam("lookupTable");
         assert(lookupTable);
-        for (int component = 0; component < 3; ++component) {
+        for (int component = 0; component < nComponents; ++component) {
+            int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
+            bool applyMaster = lutIndex != kCurveAlpha;
             for (PIX position = 0; position <= maxValue; ++position) {
                 // position to evaluate the param at
                 float parametricPos = float(position)/maxValue;
 
                 // evaluate the parametric param
-                double value = lookupTable->getValue(component, args.time, parametricPos);
-
+                double value = lookupTable->getValue(lutIndex, args.time, parametricPos);
+                if (applyMaster) {
+                    value += lookupTable->getValue(kCurveMaster, args.time, parametricPos) - parametricPos;
+                }
                 // set that in the lut
                 _lookupTable[component][position] = std::max(PIX(0),std::min(PIX(value*maxValue+0.5), PIX(maxValue)));
             }
@@ -143,7 +171,7 @@ private:
                 PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 if (srcPix) {
                     for (int c = 0; c < nComponents; c++) {
-                        assert(0 <= srcPix[c] && srcPix[c] <= maxValue);
+                        //assert(0 <= srcPix[c] && srcPix[c] <= maxValue);
                         dstPix[c] = _lookupTable[c][srcPix[c]];
                     }
                 } else  {
@@ -159,30 +187,32 @@ private:
     }
 
 private:
-    PIX _lookupTable[3][maxValue+1];
+    PIX _lookupTable[nComponents][maxValue+1];
 };
 
 // template to do the RGBA processing for floating-point types
 template <int nComponents, int maxValue>
 class ImageRGBLutProcessorFloat : public RGBLutBase
 {
-protected:
-    typedef float PIX;
-    PIX _lookupTable[3][maxValue+1];
-    public:
+public:
     // ctor
     ImageRGBLutProcessorFloat(OFX::ImageEffect &instance, const OFX::RenderArguments &args)
     : RGBLutBase(instance)
     {
         // build the LUT
         OFX::ParametricParam  *lookupTable = instance.fetchParametricParam("lookupTable");
-        for (int component = 0; component < 3; ++component) {
+        for (int component = 0; component < nComponents; ++component) {
+            int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
+            bool applyMaster = lutIndex != kCurveAlpha;
             for (int position = 0; position <= maxValue; ++position) {
                 // position to evaluate the param at
                 double parametricPos = float(position)/maxValue;
 
                 // evaluate the parametric param
-                double value = lookupTable->getValue(component, args.time, parametricPos);
+                double value = lookupTable->getValue(lutIndex, args.time, parametricPos);
+                if (applyMaster) {
+                    value += lookupTable->getValue(kCurveMaster, args.time, parametricPos) - parametricPos;
+                }
                 //value = value * maxValue;
                 //value = clamp(value, 0, maxValue);
 
@@ -219,11 +249,8 @@ private:
             }
         }
     }
-private:
+
     float interpolate(int component, float value) {
-        if (component == 3) { // alpha
-            return value;
-        }
         if (value < 0.) {
             return _lookupTable[component][0];
         } else if (value >= 1.) {
@@ -232,9 +259,13 @@ private:
             int i = (int)(value * maxValue);
             assert(i < maxValue);
             float alpha = value - (float)i / maxValue;
-            return _lookupTable[component][i] * (1.-alpha) + _lookupTable[component][i] * alpha;
+            return _lookupTable[component][i] * (1.-alpha) + _lookupTable[component][i+1] * alpha;
         }
     }
+
+private:
+    typedef float PIX;
+    PIX _lookupTable[nComponents][maxValue+1];
 };
 
 using namespace OFX;
@@ -262,7 +293,7 @@ private:
     {
         if (paramName=="addCtrlPts") {
             OFX::ParametricParam  *lookupTable = fetchParametricParam("lookupTable");
-            for (int component = 0; component < 3; ++component) {
+            for (int component = 0; component < kCurveNb; ++component) {
                 int n = lookupTable->getNControlPoints(component, args.time);
                 if (n <= 1) {
                     // clear all control points
@@ -314,7 +345,7 @@ private:
             }
             if (reply == OFX::Message::eMessageReplyYes) {
                 OFX::ParametricParam  *lookupTable = fetchParametricParam("lookupTable");
-                for (int component = 0; component < 3; ++component) {
+                for (int component = 0; component < kCurveNb; ++component) {
                     lookupTable->deleteControlPoint(component);
                     // add a control point at 0, value is 0
                     lookupTable->addControlPoint(component, // curve to set
@@ -397,7 +428,7 @@ void RGBLutPlugin::render(const OFX::RenderArguments &args)
 
             case OFX::eBitDepthFloat :
             {
-                ImageRGBLutProcessorFloat<4,999> fred(*this, args);
+                ImageRGBLutProcessorFloat<4,1023> fred(*this, args);
                 setupAndProcess(fred, args);
             }
                 break;
@@ -526,21 +557,27 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     lookupTable->setScriptName("lookupTable");
     
     // define it as three dimensional
-    lookupTable->setDimension(3);
+    lookupTable->setDimension(kCurveNb);
     
     // label our dimensions are r/g/b
-    lookupTable->setDimensionLabel("red", 0);
-    lookupTable->setDimensionLabel("green", 1);
-    lookupTable->setDimensionLabel("blue", 2);
-    
+    lookupTable->setDimensionLabel("master", kCurveMaster);
+    lookupTable->setDimensionLabel("red", kCurveRed);
+    lookupTable->setDimensionLabel("green", kCurveGreen);
+    lookupTable->setDimensionLabel("blue", kCurveBlue);
+    lookupTable->setDimensionLabel("alpha", kCurveAlpha);
+
     // set the UI colour for each dimension
+    const OfxRGBColourD master  = {0.9,0.9,0.9};
     const OfxRGBColourD red   = {1,0,0};		//set red color to red curve
     const OfxRGBColourD green = {0,1,0};		//set green color to green curve
     const OfxRGBColourD blue  = {0,0,1};		//set blue color to blue curve
-    lookupTable->setUIColour( 0, red );
-    lookupTable->setUIColour( 1, green );
-    lookupTable->setUIColour( 2, blue );
-    
+    const OfxRGBColourD alpha  = {0.5,0.5,0.5};
+    lookupTable->setUIColour( kCurveRed, red );
+    lookupTable->setUIColour( kCurveGreen, green );
+    lookupTable->setUIColour( kCurveBlue, blue );
+    lookupTable->setUIColour( kCurveAlpha, alpha );
+    lookupTable->setUIColour( kCurveMaster, master );
+
     // set the min/max parametric range to 0..1
     lookupTable->setRange(0.0, 1.0);
     
