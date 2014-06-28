@@ -534,7 +534,7 @@ template<bool isPremult>
 void
 PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (srcClip_) {
+    if (srcClip_ && args.reason == OFX::eChangeUserEdit) {
         switch (srcClip_->getPreMultiplication()) {
             case eImageOpaque:
                 break;
