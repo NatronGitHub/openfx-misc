@@ -92,6 +92,10 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kLookupTableParamName "lookupTable"
+#define kLookupTableParamLabel "Lookup Table"
+#define kLookupTableParamHint "Colour lookup table. The master curve is combined with the red, green and blue curves, but not with the alpha curve."
+
 #define kCurveMaster 0
 #define kCurveRed 1
 #define kCurveGreen 2
@@ -550,12 +554,11 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     // define it
-    OFX::ParametricParamDescriptor* lookupTable = desc.defineParametricParam("lookupTable");
+    OFX::ParametricParamDescriptor* lookupTable = desc.defineParametricParam(kLookupTableParamName);
     assert(lookupTable);
-    lookupTable->setLabels("Lookup Table", "Lookup Table", "Lookup Table");
-    lookupTable->setHint("Colour lookup table");
-    lookupTable->setScriptName("lookupTable");
-    
+    lookupTable->setLabels(kLookupTableParamLabel, kLookupTableParamLabel, kLookupTableParamLabel);
+    lookupTable->setHint(kLookupTableParamHint);
+
     // define it as three dimensional
     lookupTable->setDimension(kCurveNb);
     
@@ -568,10 +571,11 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 
     // set the UI colour for each dimension
     const OfxRGBColourD master  = {0.9,0.9,0.9};
-    const OfxRGBColourD red   = {1,0,0};		//set red color to red curve
-    const OfxRGBColourD green = {0,1,0};		//set green color to green curve
-    const OfxRGBColourD blue  = {0,0,1};		//set blue color to blue curve
-    const OfxRGBColourD alpha  = {0.5,0.5,0.5};
+    // the following are magic colors, they all have the same luminance
+    const OfxRGBColourD red   = {0.711519527404004, 0.164533420851110, 0.164533420851110};		//set red color to red curve
+    const OfxRGBColourD green = {0., 0.546986106552894, 0.};		//set green color to green curve
+    const OfxRGBColourD blue  = {0.288480472595996, 0.288480472595996, 0.835466579148890};		//set blue color to blue curve
+    const OfxRGBColourD alpha  = {0.398979,0.398979,0.398979};
     lookupTable->setUIColour( kCurveRed, red );
     lookupTable->setUIColour( kCurveGreen, green );
     lookupTable->setUIColour( kCurveBlue, blue );
