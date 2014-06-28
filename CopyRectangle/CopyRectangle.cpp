@@ -110,18 +110,23 @@ class CopyRectangleProcessorBase : public OFX::ImageProcessor
 protected:
     OFX::Image *_srcImgA;
     OFX::Image *_srcImgB;
+    OFX::Image *_maskImg;
     double _softness;
-    double _mix;
     bool _enabled[4];
-    OFX::PixelComponentEnum _srcAComponents;
     OfxRectI _rectangle;
-    
-    
+    bool   _doMasking;
+    double _mix;
+    bool _maskInvert;
+
 public:
     CopyRectangleProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _srcImgA(0)
     , _srcImgB(0)
+    , _maskImg(0)
+    , _doMasking(false)
+    , _mix(1.)
+    , _maskInvert(false)
     {
     }
 
@@ -131,18 +136,28 @@ public:
         _srcImgA = A;
         _srcImgB = B;
     }
-    
-    void setValues(const OfxRectI& rectangle,double softness,double mix,OFX::PixelComponentEnum srcAComponents,
-                   bool red,bool green,bool blue,bool alpha)
+
+    void setMaskImg(OFX::Image *v) {_maskImg = v;}
+
+    void doMasking(bool v) {_doMasking = v;}
+
+    void setValues(const OfxRectI& rectangle,
+                   double softness,
+                   bool red,
+                   bool green,
+                   bool blue,
+                   bool alpha,
+                   double mix,
+                   bool maskInvert)
     {
         _rectangle = rectangle;
         _softness = softness;
-        _mix = mix;
-        _srcAComponents = srcAComponents;
         _enabled[0] = red;
         _enabled[1] = green;
         _enabled[2] = blue;
         _enabled[3] = alpha;
+        _mix = mix;
+        _maskInvert = maskInvert;
     }
 
 };
@@ -162,7 +177,9 @@ public:
 private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
+        assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         double yMultiplier,xMultiplier;
+        float tmpPix[nComponents];
 
         //assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
@@ -202,36 +219,18 @@ private:
                 if (xInRectangle && yInRectangle) {
                     PIX *srcPixA = _srcImgA ? (PIX*)_srcImgA->getPixelAddress(x, y) : NULL;
 
-                    double multiplier = xMultiplier * yMultiplier * _mix;
-                    
-                    switch (_srcAComponents) {
-                        case OFX::ePixelComponentAlpha: {
-                            if (!_enabled[3]) {
-                                ///copy B
-                                dstPix[0] = srcPixB ? *srcPixB : 0.;
-                            } else {
-                                PIX A = srcPixA ? *srcPixA : 0.;
-                                PIX B = srcPixB ? *srcPixB : 0.;
-                                *dstPix = A *  multiplier + B * (1. - multiplier) ;
-                            }
-                        }   break;
-                        case OFX::ePixelComponentRGB:
-                        case OFX::ePixelComponentRGBA: {
-                            for (int k = 0; k < nComponents; ++k) {
-                                if (!_enabled[k]) {
-                                    dstPix[k] = srcPixB ? srcPixB[k] : 0.;
-                                } else {
-                                    PIX A = srcPixA ? srcPixA[k] : 0.;
-                                    PIX B = srcPixB ? srcPixB[k] : 0.;
-                                    dstPix[k] = A *  multiplier + B * (1. - multiplier) ;
-                                }
-                            }
-                        }   break;
-                        default:
-                            break;
+                    double multiplier = xMultiplier * yMultiplier;
+
+                    for (int k = 0; k < nComponents; ++k) {
+                        if (!_enabled[(nComponents) == 1 ? 3 : k]) {
+                            tmpPix[k] = srcPixB ? srcPixB[k] : 0.;
+                        } else {
+                            PIX A = srcPixA ? srcPixA[k] : 0.;
+                            PIX B = srcPixB ? srcPixB[k] : 0.;
+                            tmpPix[k] = A *  multiplier + B * (1. - multiplier) ;
+                        }
                     }
-                  
-                    
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPixB, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 } else {
                     for (int k = 0; k < nComponents; ++k) {
                         dstPix[k] = srcPixB ? srcPixB[k] : 0.;
@@ -253,7 +252,7 @@ class CopyRectanglePlugin : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
-    CopyRectanglePlugin(OfxImageEffectHandle handle, bool masked)
+    CopyRectanglePlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClipA_(0)
@@ -265,7 +264,6 @@ public:
     , _green(0)
     , _blue(0)
     , _alpha(0)
-    , _mix(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
@@ -273,7 +271,9 @@ public:
         assert(srcClipA_->getPixelComponents() == ePixelComponentAlpha || srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA);
         srcClipB_ = fetchClip(kSrcClipBName);
         assert(srcClipB_->getPixelComponents() == ePixelComponentAlpha || srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA);
-        
+        maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
+
         _btmLeft = fetchDouble2DParam(kRectInteractBtmLeftParamName);
         _size = fetchDouble2DParam(kRectInteractSizeParamName);
         _softness = fetchDoubleParam(kSoftnessParamName);
@@ -282,8 +282,9 @@ public:
         _blue = fetchBooleanParam(kBlueParamName);
         _alpha = fetchBooleanParam(kAlphaParamName);
         _mix = fetchDoubleParam(kFilterMixParamName);
-        
-        assert(_btmLeft && _size && _softness && _red && _green && _blue && _alpha && _mix);
+        _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
+
+        assert(_btmLeft && _size && _softness && _red && _green && _blue && _alpha && _mix && _maskInvert);
     }
     
 private:
@@ -294,7 +295,9 @@ private:
     
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
-    
+
+    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) /*OVERRIDE FINAL*/;
+
     template <int nComponents>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
@@ -308,6 +311,7 @@ private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClipA_;
     OFX::Clip *srcClipB_;
+    OFX::Clip *maskClip_;
 
     OFX::Double2DParam* _btmLeft;
     OFX::Double2DParam* _size;
@@ -317,6 +321,7 @@ private:
     OFX::BooleanParam* _blue;
     OFX::BooleanParam* _alpha;
     OFX::DoubleParam* _mix;
+    OFX::BooleanParam* _maskInvert;
 };
 
 void
@@ -351,30 +356,49 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     std::auto_ptr<OFX::Image> srcA(srcClipA_->fetchImage(args.time));
+    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if (srcA.get()) {
+        OFX::BitDepthEnum    srcBitDepth      = srcA->getPixelDepth();
+        OFX::PixelComponentEnum srcComponents = srcA->getPixelComponents();
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+        if (srcA->getRenderScale().x != args.renderScale.x ||
+            srcA->getRenderScale().y != args.renderScale.y ||
+            srcA->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+    }
     std::auto_ptr<OFX::Image> srcB(srcClipB_->fetchImage(args.time));
-    
-    OFX::PixelComponentEnum srcAComponents;
-    if (srcA.get() && dst.get()) {
-        OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-        OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-        OFX::BitDepthEnum    srcABitDepth      = srcA->getPixelDepth();
-        srcAComponents = srcA->getPixelComponents();
-        if (srcABitDepth != dstBitDepth || srcAComponents != dstComponents)
+    if (srcB.get()) {
+        OFX::BitDepthEnum    srcBitDepth      = srcB->getPixelDepth();
+        OFX::PixelComponentEnum srcComponents = srcB->getPixelComponents();
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
             OFX::throwSuiteStatusException(kOfxStatFailed);
-    } else {
-        srcAComponents = OFX::ePixelComponentNone;
-    }
-    
-    
-    if (srcB.get() && dst.get()) {
-        OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-        OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-        OFX::BitDepthEnum    srcBBitDepth      = srcB->getPixelDepth();
-        OFX::PixelComponentEnum srcBComponents = srcB->getPixelComponents();
-        if (srcBBitDepth != dstBitDepth || srcBComponents != dstComponents)
+        }
+        if (srcB->getRenderScale().x != args.renderScale.x ||
+            srcB->getRenderScale().y != args.renderScale.y ||
+            srcB->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
     }
-    
+    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
+    if (mask.get()) {
+        if (mask->getRenderScale().x != args.renderScale.x ||
+            mask->getRenderScale().y != args.renderScale.y ||
+            mask->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+    }
+    if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+        processor.doMasking(true);
+        processor.setMaskImg(mask.get());
+    }
+
     // set the images
     processor.setDstImg(dst.get());
     processor.setSrcImgs(srcA.get(),srcB.get());
@@ -413,8 +437,9 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    
-    processor.setValues(rectanglePixel, softness, mix,srcAComponents,red,green,blue,alpha);
+    bool maskInvert;
+    _maskInvert->getValueAtTime(args.time, maskInvert);
+    processor.setValues(rectanglePixel, softness, red, green, blue, alpha, mix, maskInvert);
     
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -441,8 +466,6 @@ CopyRectanglePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments 
         // compute the bounding box with the default ROI
         MergeImages2D::rectanglesBoundingBox(rectangle, args.regionOfInterest, &rectangle);
     }
-    // set it on the mask only if we are in an interesting context
-    // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
     rois.setRegionOfInterest(*srcClipA_, rectangle);
     // no need to set the RoI on srcClipB_, since it's the same as the output RoI
 }
@@ -481,6 +504,20 @@ CopyRectanglePlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDe
         }   break;
         default :
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
+bool
+CopyRectanglePlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+{
+    double mix;
+    _mix->getValueAtTime(args.time, mix);
+
+    if (mix == 0.) {
+        identityClip = srcClipB_;
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -547,7 +584,7 @@ void CopyRectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 OFX::ImageEffect* CopyRectanglePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
-    return new CopyRectanglePlugin(handle, false);
+    return new CopyRectanglePlugin(handle);
 }
 
 
@@ -587,6 +624,16 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(true);
 
+    if (context == eContextGeneral || context == eContextPaint) {
+        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
+        maskClip->addSupportedComponent(ePixelComponentAlpha);
+        maskClip->setTemporalClipAccess(false);
+        if (context == eContextGeneral) {
+            maskClip->setOptional(true);
+        }
+        maskClip->setSupportsTiles(true);
+        maskClip->setIsMask(true);
+    }
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
@@ -625,15 +672,8 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     softness->setRange(0., 100.);
     softness->setHint(kSoftnessParamHint);
     page->addChild(*softness);
-    
-    OFX::DoubleParamDescriptor* mix = desc.defineDoubleParam(kFilterMixParamName);
-    mix->setLabels(kFilterMixParamLabel, kFilterMixParamLabel, kFilterMixParamLabel);
-    mix->setHint(kFilterMixParamHint);
-    mix->setDefault(1.);
-    mix->setRange(0.,1.);
-    mix->setDisplayRange(0.,1.);
-    page->addChild(*mix);
 
+    ofxsFilterDescribeParamsMaskMix(desc, page);
 }
 
 void getCopyRectanglePluginID(OFX::PluginFactoryArray &ids)
