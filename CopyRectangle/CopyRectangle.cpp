@@ -626,7 +626,14 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     softness->setHint(kSoftnessParamHint);
     page->addChild(*softness);
     
-    ofxsFilterDescribeParamsMaskMix(desc,page);
+    OFX::DoubleParamDescriptor* mix = desc.defineDoubleParam(kFilterMixParamName);
+    mix->setLabels(kFilterMixParamLabel, kFilterMixParamLabel, kFilterMixParamLabel);
+    mix->setHint(kFilterMixParamHint);
+    mix->setDefault(1.);
+    mix->setRange(0.,1.);
+    mix->setDisplayRange(0.,1.);
+    page->addChild(*mix);
+
 }
 
 void getCopyRectanglePluginID(OFX::PluginFactoryArray &ids)
