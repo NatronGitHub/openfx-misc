@@ -241,7 +241,7 @@ public:
     , _srcImg(0)
     , _maskImg(0)
     , _doMasking(false)
-    , _mix(0)
+    , _mix(1.)
     , _maskInvert(false)
     {
         // build the LUT
@@ -501,8 +501,9 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
     if (src.get()) {
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
-            throw int(1);
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
             src->getField() != args.fieldToRender) {

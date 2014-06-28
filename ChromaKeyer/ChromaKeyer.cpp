@@ -685,8 +685,9 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
     if (src.get()) {
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
-            throw int(1);
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
             src->getField() != args.fieldToRender) {
@@ -698,8 +699,9 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
     if (bg.get()) {
         OFX::BitDepthEnum    srcBitDepth      = bg->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = bg->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
-            throw int(1);
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
         if (bg->getRenderScale().x != args.renderScale.x ||
             bg->getRenderScale().y != args.renderScale.y ||
             bg->getField() != args.fieldToRender) {

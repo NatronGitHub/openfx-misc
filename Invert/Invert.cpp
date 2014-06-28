@@ -131,7 +131,7 @@ public:
     , _green(true)
     , _blue(true)
     , _alpha(false)
-    , _mix(0)
+    , _mix(1.)
     , _maskInvert(false)
     {
     }

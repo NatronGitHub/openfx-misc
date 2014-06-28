@@ -140,7 +140,7 @@ public:
     , _srcImg(0)
     , _maskImg(0)
     , _doMasking(false)
-    , _mix(0)
+    , _mix(1.)
     , _maskInvert(false)
     {
     }
@@ -342,8 +342,9 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     if (src.get()) {
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
-            throw int(1);
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
     }
     std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
     if (getContext() != OFX::eContextFilter) {

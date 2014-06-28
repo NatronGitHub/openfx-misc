@@ -131,7 +131,7 @@ public:
     , _operation(eMergePlus)
     , _bbox(0)
     , _alphaMasking(false)
-    , _mix(0)
+    , _mix(1.)
     , _maskInvert(false)
     {
         
@@ -342,15 +342,17 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     if (srcA.get()) {
         OFX::BitDepthEnum    srcBitDepth      = srcA->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcA->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
-            throw int(1);
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
     }
     
     if (srcB.get()) {
         OFX::BitDepthEnum    srcBitDepth      = srcB->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcB->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
-            throw int(1);
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
     }
     
     // auto ptr for the mask.
