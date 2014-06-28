@@ -117,8 +117,10 @@ public:
     /** @brief ctor */
     TrackerPMPlugin(OfxImageEffectHandle handle)
     : GenericTrackerPlugin(handle)
+    , _score(0)
     {
-
+        _score = fetchChoiceParam(kScoreParamName);
+        assert(_score);
     }
     
     
@@ -132,7 +134,16 @@ private:
     virtual void trackRange(const OFX::TrackArguments& args);
     
     template <int nComponents>
-    void trackInternal(OfxTime ref,OfxTime other);
+    void trackInternal(OfxTime refTime, OfxTime otherTime);
+
+    template <class PIX, int nComponents, int maxValue>
+    void trackInternalForDepth(OfxTime refTime,
+                               const OfxRectD& refBounds,
+                               const OfxPointD& refCenter,
+                               const OFX::Image* refImg,
+                               OfxTime otherTime,
+                               const OfxRectD& trackSearchBounds,
+                               const OFX::Image* otherImg);
 
     /* set up and run a processor */
     void setupAndProcess(TrackerPMProcessorBase &processor,
@@ -143,6 +154,8 @@ private:
                          OfxTime otherTime,
                          const OfxRectD& trackSearchBounds,
                          const OFX::Image* otherImg);
+
+    ChoiceParam* _score;
 };
 
 
@@ -182,12 +195,11 @@ public:
     void setRefCenterI(const OfxPointI& centeri) {
         _refCenterI = centeri;
     }
-    
+
     /**
      * @brief Retrieves the results of the track. Must be called once process() returns so it is thread safe.
      **/
     const OfxPointD& getBestMatch() const { return _bestMatch.first; }
-    
 };
 
 
@@ -277,7 +289,11 @@ private:
             }
         }
         if (scoreTypeE == eTrackerNCC || scoreTypeE == eTrackerZNCC) {
-            score /= std::sqrt(otherSsq);
+            if (otherSsq != 0.) {
+                score /= std::sqrt(otherSsq);
+            } else {
+                score = std::numeric_limits<double>::infinity();
+            }
         }
         return score;
     }
@@ -585,21 +601,54 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
     _center->setValueAtTime(otherTime, newCenter.x, newCenter.y);
 }
 
+template <class PIX, int nComponents, int maxValue>
+void
+TrackerPMPlugin::trackInternalForDepth(OfxTime refTime,
+                                       const OfxRectD& refBounds,
+                                       const OfxPointD& refCenter,
+                                       const OFX::Image* refImg,
+                                       OfxTime otherTime,
+                                       const OfxRectD& trackSearchBounds,
+                                       const OFX::Image* otherImg)
+{
+    int scoreI;
+    _score->getValueAtTime(refTime, scoreI);
+    TrackerScoreEnum typeE = (TrackerScoreEnum)scoreI;
+
+    switch (typeE) {
+        case eTrackerSSD: {
+            TrackerPMProcessor<PIX, nComponents, maxValue, eTrackerSSD> fred(*this);
+            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, otherTime, trackSearchBounds, otherImg);
+        }   break;
+        case eTrackerSAD: {
+            TrackerPMProcessor<PIX, nComponents, maxValue, eTrackerSAD> fred(*this);
+            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, otherTime, trackSearchBounds, otherImg);
+        }   break;
+        case eTrackerNCC: {
+            TrackerPMProcessor<PIX, nComponents, maxValue, eTrackerNCC> fred(*this);
+            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, otherTime, trackSearchBounds, otherImg);
+        }   break;
+        case eTrackerZNCC: {
+            TrackerPMProcessor<PIX, nComponents, maxValue, eTrackerZNCC> fred(*this);
+            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, otherTime, trackSearchBounds, otherImg);
+        }   break;
+    }
+}
 
 
 // the internal render function
 template <int nComponents>
 void
-TrackerPMPlugin::trackInternal(OfxTime ref, OfxTime other)
+TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime)
 {
     OfxRectD refRect;
-    _innerBtmLeft->getValueAtTime(ref, refRect.x1, refRect.y1);
-    _innerTopRight->getValueAtTime(ref, refRect.x2, refRect.y2);
+    _innerBtmLeft->getValueAtTime(refTime, refRect.x1, refRect.y1);
+    _innerTopRight->getValueAtTime(refTime, refRect.x2, refRect.y2);
     OfxPointD refCenter;
-    _center->getValueAtTime(ref, refCenter.x, refCenter.y);
+    _center->getValueAtTime(refTime, refCenter.x, refCenter.y);
     OfxRectD searchRect;
-    _outerBtmLeft->getValueAtTime(ref, searchRect.x1, searchRect.y1);
-    _outerTopRight->getValueAtTime(ref, searchRect.x2, searchRect.y2);
+    _outerBtmLeft->getValueAtTime(refTime, searchRect.x1, searchRect.y1);
+    _outerTopRight->getValueAtTime(refTime, searchRect.x2, searchRect.y2);
 
     OfxRectD refBounds;
     getRefBounds(refRect, refCenter, &refBounds);
@@ -607,8 +656,8 @@ TrackerPMPlugin::trackInternal(OfxTime ref, OfxTime other)
     OfxRectD otherBounds;
     getOtherBounds(refCenter, searchRect, &otherBounds);
 
-    std::auto_ptr<const OFX::Image> srcRef(srcClip_->fetchImage(ref, refBounds));
-    std::auto_ptr<const OFX::Image> srcOther(srcClip_->fetchImage(other, otherBounds));
+    std::auto_ptr<const OFX::Image> srcRef(srcClip_->fetchImage(refTime, refBounds));
+    std::auto_ptr<const OFX::Image> srcOther(srcClip_->fetchImage(otherTime, otherBounds));
     if (!srcRef.get() || !srcOther.get()) {
         return;
     }
@@ -628,18 +677,15 @@ TrackerPMPlugin::trackInternal(OfxTime ref, OfxTime other)
     switch (srcBitDepth) {
         case OFX::eBitDepthUByte :
         {
-            TrackerPMProcessor<unsigned char, nComponents, 255, eTrackerSSD> fred(*this);
-            setupAndProcess(fred, ref, refBounds, refCenter, srcRef.get(), other, trackSearchBounds, srcOther.get());
+            trackInternalForDepth<unsigned char, nComponents, 255>(refTime, refBounds, refCenter, srcRef.get(), otherTime, trackSearchBounds, srcOther.get());
         }   break;
         case OFX::eBitDepthUShort :
         {
-            TrackerPMProcessor<unsigned short, nComponents, 65535, eTrackerSSD> fred(*this);
-            setupAndProcess(fred, ref, refBounds, refCenter, srcRef.get(), other, trackSearchBounds, srcOther.get());
+            trackInternalForDepth<unsigned short, nComponents, 65535>(refTime, refBounds, refCenter, srcRef.get(), otherTime, trackSearchBounds, srcOther.get());
         }   break;
         case OFX::eBitDepthFloat :
         {
-            TrackerPMProcessor<float, nComponents, 1, eTrackerSSD> fred(*this);
-            setupAndProcess(fred, ref, refBounds, refCenter, srcRef.get(), other, trackSearchBounds, srcOther.get());
+            trackInternalForDepth<float, nComponents, 1>(refTime, refBounds, refCenter, srcRef.get(), otherTime, trackSearchBounds, srcOther.get());
         }   break;
         default :
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
@@ -684,18 +730,18 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor* page = genericTrackerDescribeInContextBegin(desc, context);
     genericTrackerDescribePointParameters(desc, page);
     
-    ChoiceParamDescriptor* type = desc.defineChoiceParam(kScoreParamName);
-    type->setLabels(kScoreParamLabel, kScoreParamLabel, kScoreParamLabel);
-    assert(type->getNOptions() == eTrackerSSD);
-    type->appendOption(kScoreParamOptionSSD, kScoreParamOptionSSDHint);
-    assert(type->getNOptions() == eTrackerSAD);
-    type->appendOption(kScoreParamOptionSAD, kScoreParamOptionSADHint);
-    assert(type->getNOptions() == eTrackerNCC);
-    type->appendOption(kScoreParamOptionNCC, kScoreParamOptionNCCHint);
-    assert(type->getNOptions() == eTrackerZNCC);
-    type->appendOption(kScoreParamOptionZNCC, kScoreParamOptionZNCCHint);
-    type->setDefault((int)eTrackerSSD);
-    page->addChild(*type);
+    ChoiceParamDescriptor* score = desc.defineChoiceParam(kScoreParamName);
+    score->setLabels(kScoreParamLabel, kScoreParamLabel, kScoreParamLabel);
+    assert(score->getNOptions() == eTrackerSSD);
+    score->appendOption(kScoreParamOptionSSD, kScoreParamOptionSSDHint);
+    assert(score->getNOptions() == eTrackerSAD);
+    score->appendOption(kScoreParamOptionSAD, kScoreParamOptionSADHint);
+    assert(score->getNOptions() == eTrackerNCC);
+    score->appendOption(kScoreParamOptionNCC, kScoreParamOptionNCCHint);
+    assert(score->getNOptions() == eTrackerZNCC);
+    score->appendOption(kScoreParamOptionZNCC, kScoreParamOptionZNCCHint);
+    score->setDefault((int)eTrackerSSD);
+    page->addChild(*score);
 }
 
 void getTrackerPMPluginID(OFX::PluginFactoryArray &ids)
