@@ -203,10 +203,24 @@ public:
     }
     
 private:
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(OfxRectI procWindow) {
+        switch (scoreType) {
+            case eTrackerSSD:
+                return multiThreadProcessImagesForScore<eTrackerSSD>(procWindow);
+            case eTrackerSAD:
+                return multiThreadProcessImagesForScore<eTrackerSAD>(procWindow);
+            case eTrackerNCC:
+                return multiThreadProcessImagesForScore<eTrackerNCC>(procWindow);
+            case eTrackerZNCC:
+                return multiThreadProcessImagesForScore<eTrackerZNCC>(procWindow);
+        }
+    }
+
+    template<enum TrackerScoreEnum scoreTypeE>
+    void multiThreadProcessImagesForScore(const OfxRectI& procWindow)
     {
         assert(_refImg && _otherImg);
-        assert(scoreType == eTrackerSSD);
+        assert(scoreType == scoreTypeE);
         double bestScore = std::numeric_limits<double>::infinity();
         OfxPointI point;
         point.x = -1;
@@ -215,7 +229,28 @@ private:
         ///For every pixel in the sub window of the search area we find the pixel
         ///that minimize the sum of squared differences between the pattern in the ref image
         ///and the pattern in the other image.
-        
+
+        const int scoreComps = std::min(nComponents,3);
+        double refMean[3];
+        if (scoreTypeE == eTrackerZNCC) {
+            for (int c = 0; c < scoreComps; ++c) {
+                refMean[c] = 0;
+            }
+        }
+        if (scoreTypeE == eTrackerZNCC) {
+            for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
+                for (int j = _refRectPixel.x1; j < _refRectPixel.x2; ++j) {
+                    PIX *refPix = (PIX*) _refImg->getPixelAddress(_refCenterI.x + j, _refCenterI.y + i);
+                    for (int c = 0; c < scoreComps; ++c) {
+                        refMean[c] += refPix[c];
+                    }
+                }
+            }
+            for (int c = 0; c < scoreComps; ++c) {
+                refMean[c] /= (_refRectPixel.x2-_refRectPixel.x1) * (_refRectPixel.y2-_refRectPixel.y1);
+            }
+        }
+
         ///we're not interested in the alpha channel for RGBA images
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if (_effect.abort()) break;
@@ -223,6 +258,29 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 
                 double score = 0;
+                double otherSsq = 0.;
+                double otherMean[3];
+                if (scoreTypeE == eTrackerZNCC) {
+                    for (int c = 0; c < scoreComps; ++c) {
+                        otherMean[c] = 0;
+                    }
+                    for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
+                        for (int j = _refRectPixel.x1; j < _refRectPixel.x2; ++j) {
+                            // take nearest pixel in other image (more chance to get a track than with black)
+                            int otherx = x + j;
+                            int othery = y + i;
+                            otherx = std::max(_otherImg->getBounds().x1,std::min(otherx,_otherImg->getBounds().x2-1));
+                            othery = std::max(_otherImg->getBounds().y1,std::min(othery,_otherImg->getBounds().y2-1));
+                            PIX *otherPix = (PIX *) _otherImg->getPixelAddress(otherx, othery);
+                            for (int c = 0; c < scoreComps; ++c) {
+                                otherMean[c] += otherPix[c];
+                            }
+                        }
+                    }
+                   for (int c = 0; c < scoreComps; ++c) {
+                       otherMean[c] /= (_refRectPixel.x2-_refRectPixel.x1) * (_refRectPixel.y2-_refRectPixel.y1);
+                   }
+                }
                 for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
                     for (int j = _refRectPixel.x1; j < _refRectPixel.x2; ++j) {
                         PIX *refPix = (PIX*) _refImg->getPixelAddress(_refCenterI.x + j, _refCenterI.y + i);
@@ -236,9 +294,28 @@ private:
 
                         ///the search window & pattern window have been intersected to the reference image's bounds
                         assert(refPix && otherPix);
-
-                        score = aggregateSSD(score, refPix, otherPix);
+                        for (int c = 0; c < scoreComps; ++c) {
+                            switch (scoreTypeE) {
+                                case eTrackerSSD:
+                                    score += aggregateSD(refPix[c], otherPix[c]);
+                                    break;
+                                case eTrackerSAD:
+                                    score += aggregateAD(refPix[c], otherPix[c]);
+                                    break;
+                                case eTrackerNCC:
+                                    score += aggregateCC(refPix[c], otherPix[c]);
+                                    otherSsq += aggregateCC(otherPix[c], otherPix[c]);
+                                    break;
+                                case eTrackerZNCC:
+                                    score += aggregateNCC(refPix[c], refMean[c], otherPix[c], otherMean[c]);
+                                    otherSsq += aggregateNCC(otherPix[c], otherMean[c], otherPix[c], otherMean[c]);
+                                    break;
+                            }
+                        }
                     }
+                }
+                if (scoreTypeE == eTrackerNCC || scoreTypeE == eTrackerZNCC) {
+                    score /= std::sqrt(otherSsq);
                 }
                 if (score < bestScore) {
                     bestScore = score;
@@ -258,21 +335,26 @@ private:
         }
     }
 
-    double aggregateSSD(double score, PIX* refPix, PIX* otherPix)
+    double aggregateSD(PIX refPix, PIX otherPix)
     {
-        if (nComponents == 1) {
-            ///compare raw alpha distance
-            return score + (*otherPix - *refPix) * (*otherPix - *refPix);
-        } else {
-            assert(nComponents >= 3);
-            double r = refPix[0] - otherPix[0];
-            double g = refPix[1] - otherPix[1];
-            double b = refPix[2] - otherPix[2];
-
-            return score + (r*r +  g*g + b*b);
-        }
+        double d = (double)refPix - otherPix;
+        return d * d;
     }
 
+    double aggregateAD(PIX refPix, PIX otherPix)
+    {
+        return std::abs((double)refPix - otherPix);
+    }
+
+    double aggregateCC(PIX refPix, PIX otherPix)
+    {
+        return - (double)refPix * otherPix;
+    }
+
+    double aggregateNCC(PIX refPix, double refMean, PIX otherPix, double otherMean)
+    {
+        return - (refPix - refMean) * (otherPix - otherMean);
+    }
 };
 
 

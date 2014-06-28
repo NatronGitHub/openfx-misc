@@ -1451,11 +1451,11 @@
 		D7704C74195B5E4F002E163E /* TrackerPM */ = {
 			isa = PBXGroup;
 			children = (
+				D7704C78195B5E4F002E163E /* TrackerPM.cpp */,
+				D7704C79195B5E4F002E163E /* TrackerPM.h */,
 				D7704C75195B5E4F002E163E /* Info.plist */,
 				D7704C76195B5E4F002E163E /* Makefile */,
 				D7704C77195B5E4F002E163E /* PluginRegistration.cpp */,
-				D7704C78195B5E4F002E163E /* TrackerPM.cpp */,
-				D7704C79195B5E4F002E163E /* TrackerPM.h */,
 			);
 			path = TrackerPM;
 			sourceTree = "<group>";
