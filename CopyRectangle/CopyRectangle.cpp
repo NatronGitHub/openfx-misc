@@ -115,7 +115,7 @@ protected:
     bool _enabled[4];
     OFX::PixelComponentEnum _srcAComponents;
     OfxRectI _rectangle;
-    
+    bool _invert;
     
 public:
     CopyRectangleProcessorBase(OFX::ImageEffect &instance)
@@ -133,7 +133,7 @@ public:
     }
     
     void setValues(const OfxRectI& rectangle,double softness,double mix,OFX::PixelComponentEnum srcAComponents,
-                   bool red,bool green,bool blue,bool alpha)
+                   bool red,bool green,bool blue,bool alpha,bool invert)
     {
         _rectangle = rectangle;
         _softness = softness;
@@ -143,6 +143,7 @@ public:
         _enabled[1] = green;
         _enabled[2] = blue;
         _enabled[3] = alpha;
+        _invert = invert;
     }
 
 };
@@ -199,10 +200,16 @@ private:
                 
                 PIX *srcPixB = _srcImgB ?(PIX*)_srcImgB->getPixelAddress(x, y) : NULL;
 
-                if (xInRectangle && yInRectangle) {
+                if ((xInRectangle && yInRectangle) || (_invert && (!xInRectangle || !yInRectangle))) {
                     PIX *srcPixA = _srcImgA ? (PIX*)_srcImgA->getPixelAddress(x, y) : NULL;
-
-                    double multiplier = xMultiplier * yMultiplier * _mix;
+                    double multiplier;
+                    if (!xInRectangle || !yInRectangle) {
+                        multiplier = _mix;
+                    } else if (xInRectangle && yInRectangle) {
+                        multiplier = _invert ? 1 - xMultiplier * yMultiplier * _mix :  xMultiplier * yMultiplier * _mix;
+                    } else {
+                        multiplier =  xMultiplier * yMultiplier * _mix;
+                    }
                     
                     switch (_srcAComponents) {
                         case OFX::ePixelComponentAlpha: {
@@ -282,8 +289,8 @@ public:
         _blue = fetchBooleanParam(kBlueParamName);
         _alpha = fetchBooleanParam(kAlphaParamName);
         _mix = fetchDoubleParam(kFilterMixParamName);
-        
-        assert(_btmLeft && _size && _softness && _red && _green && _blue && _alpha && _mix);
+        _invertMask = fetchBooleanParam(kFilterMaskInvertParamName);
+        assert(_btmLeft && _size && _softness && _red && _green && _blue && _alpha && _mix && _invertMask);
     }
     
 private:
@@ -317,6 +324,7 @@ private:
     OFX::BooleanParam* _blue;
     OFX::BooleanParam* _alpha;
     OFX::DoubleParam* _mix;
+    OFX::BooleanParam* _invertMask;
 };
 
 void
@@ -414,7 +422,10 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     double mix;
     _mix->getValueAtTime(args.time, mix);
     
-    processor.setValues(rectanglePixel, softness, mix,srcAComponents,red,green,blue,alpha);
+    bool invert;
+    _invertMask->getValueAtTime(args.time,invert);
+    
+    processor.setValues(rectanglePixel, softness, mix,srcAComponents,red,green,blue,alpha,invert);
     
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -428,6 +439,8 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
 void
 CopyRectanglePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
+    bool invert;
+    _invertMask->getValueAtTime(args.time, invert);
 
     OfxRectD rectangle;
     getRectanglecanonical(args.time, rectangle);
@@ -441,10 +454,17 @@ CopyRectanglePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments 
         // compute the bounding box with the default ROI
         MergeImages2D::rectanglesBoundingBox(rectangle, args.regionOfInterest, &rectangle);
     }
-    // set it on the mask only if we are in an interesting context
-    // (i.e. eContextGeneral or eContextPaint, see Support/Plugins/Basic)
-    rois.setRegionOfInterest(*srcClipA_, rectangle);
+    
     // no need to set the RoI on srcClipB_, since it's the same as the output RoI
+    // except when inverted
+    
+    if (!invert) {
+        rois.setRegionOfInterest(*srcClipA_, rectangle);
+    } else {
+        rois.setRegionOfInterest(*srcClipB_, rectangle);
+    }
+    
+    
 }
 
 
