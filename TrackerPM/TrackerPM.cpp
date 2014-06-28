@@ -379,6 +379,11 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
         progressStart(name);
     }
 
+    // create a keyframe at starting point
+    OfxPointD refCenter;
+    _center->getValueAtTime(t, refCenter.x, refCenter.y);
+    _center->setValueAtTime(t, refCenter.x, refCenter.y);
+
     while (args.forward ? (t <= args.last) : (t >= args.last)) {
         OfxTime other = args.forward ? (t + 1) : (t - 1);
         
