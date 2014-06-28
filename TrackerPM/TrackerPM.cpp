@@ -217,6 +217,72 @@ private:
     }
 
     template<enum TrackerScoreEnum scoreTypeE>
+    double computeScore(int scoreComps, int x, int y, const double refMean[3])
+    {
+        double score = 0;
+        double otherSsq = 0.;
+        double otherMean[3];
+        if (scoreTypeE == eTrackerZNCC) {
+            for (int c = 0; c < scoreComps; ++c) {
+                otherMean[c] = 0;
+            }
+            for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
+                for (int j = _refRectPixel.x1; j < _refRectPixel.x2; ++j) {
+                    // take nearest pixel in other image (more chance to get a track than with black)
+                    int otherx = x + j;
+                    int othery = y + i;
+                    otherx = std::max(_otherImg->getBounds().x1,std::min(otherx,_otherImg->getBounds().x2-1));
+                    othery = std::max(_otherImg->getBounds().y1,std::min(othery,_otherImg->getBounds().y2-1));
+                    PIX *otherPix = (PIX *) _otherImg->getPixelAddress(otherx, othery);
+                    for (int c = 0; c < scoreComps; ++c) {
+                        otherMean[c] += otherPix[c];
+                    }
+                }
+            }
+            for (int c = 0; c < scoreComps; ++c) {
+                otherMean[c] /= (_refRectPixel.x2-_refRectPixel.x1) * (_refRectPixel.y2-_refRectPixel.y1);
+            }
+        }
+        for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
+            for (int j = _refRectPixel.x1; j < _refRectPixel.x2; ++j) {
+                PIX *refPix = (PIX*) _refImg->getPixelAddress(_refCenterI.x + j, _refCenterI.y + i);
+
+                // take nearest pixel in other image (more chance to get a track than with black)
+                int otherx = x + j;
+                int othery = y + i;
+                otherx = std::max(_otherImg->getBounds().x1,std::min(otherx,_otherImg->getBounds().x2-1));
+                othery = std::max(_otherImg->getBounds().y1,std::min(othery,_otherImg->getBounds().y2-1));
+                PIX *otherPix = (PIX *) _otherImg->getPixelAddress(otherx, othery);
+
+                ///the search window & pattern window have been intersected to the reference image's bounds
+                assert(refPix && otherPix);
+                for (int c = 0; c < scoreComps; ++c) {
+                    switch (scoreTypeE) {
+                        case eTrackerSSD:
+                            score += aggregateSD(refPix[c], otherPix[c]);
+                            break;
+                        case eTrackerSAD:
+                            score += aggregateAD(refPix[c], otherPix[c]);
+                            break;
+                        case eTrackerNCC:
+                            score += aggregateCC(refPix[c], otherPix[c]);
+                            otherSsq += aggregateCC(otherPix[c], otherPix[c]);
+                            break;
+                        case eTrackerZNCC:
+                            score += aggregateNCC(refPix[c], refMean[c], otherPix[c], otherMean[c]);
+                            otherSsq += aggregateNCC(otherPix[c], otherMean[c], otherPix[c], otherMean[c]);
+                            break;
+                    }
+                }
+            }
+        }
+        if (scoreTypeE == eTrackerNCC || scoreTypeE == eTrackerZNCC) {
+            score /= std::sqrt(otherSsq);
+        }
+        return score;
+    }
+
+    template<enum TrackerScoreEnum scoreTypeE>
     void multiThreadProcessImagesForScore(const OfxRectI& procWindow)
     {
         assert(_refImg && _otherImg);
@@ -253,70 +319,11 @@ private:
 
         ///we're not interested in the alpha channel for RGBA images
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if (_effect.abort()) break;
-            
+            if (_effect.abort()) {
+                break;
+            }
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                
-                double score = 0;
-                double otherSsq = 0.;
-                double otherMean[3];
-                if (scoreTypeE == eTrackerZNCC) {
-                    for (int c = 0; c < scoreComps; ++c) {
-                        otherMean[c] = 0;
-                    }
-                    for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
-                        for (int j = _refRectPixel.x1; j < _refRectPixel.x2; ++j) {
-                            // take nearest pixel in other image (more chance to get a track than with black)
-                            int otherx = x + j;
-                            int othery = y + i;
-                            otherx = std::max(_otherImg->getBounds().x1,std::min(otherx,_otherImg->getBounds().x2-1));
-                            othery = std::max(_otherImg->getBounds().y1,std::min(othery,_otherImg->getBounds().y2-1));
-                            PIX *otherPix = (PIX *) _otherImg->getPixelAddress(otherx, othery);
-                            for (int c = 0; c < scoreComps; ++c) {
-                                otherMean[c] += otherPix[c];
-                            }
-                        }
-                    }
-                   for (int c = 0; c < scoreComps; ++c) {
-                       otherMean[c] /= (_refRectPixel.x2-_refRectPixel.x1) * (_refRectPixel.y2-_refRectPixel.y1);
-                   }
-                }
-                for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
-                    for (int j = _refRectPixel.x1; j < _refRectPixel.x2; ++j) {
-                        PIX *refPix = (PIX*) _refImg->getPixelAddress(_refCenterI.x + j, _refCenterI.y + i);
-
-                        // take nearest pixel in other image (more chance to get a track than with black)
-                        int otherx = x + j;
-                        int othery = y + i;
-                        otherx = std::max(_otherImg->getBounds().x1,std::min(otherx,_otherImg->getBounds().x2-1));
-                        othery = std::max(_otherImg->getBounds().y1,std::min(othery,_otherImg->getBounds().y2-1));
-                        PIX *otherPix = (PIX *) _otherImg->getPixelAddress(otherx, othery);
-
-                        ///the search window & pattern window have been intersected to the reference image's bounds
-                        assert(refPix && otherPix);
-                        for (int c = 0; c < scoreComps; ++c) {
-                            switch (scoreTypeE) {
-                                case eTrackerSSD:
-                                    score += aggregateSD(refPix[c], otherPix[c]);
-                                    break;
-                                case eTrackerSAD:
-                                    score += aggregateAD(refPix[c], otherPix[c]);
-                                    break;
-                                case eTrackerNCC:
-                                    score += aggregateCC(refPix[c], otherPix[c]);
-                                    otherSsq += aggregateCC(otherPix[c], otherPix[c]);
-                                    break;
-                                case eTrackerZNCC:
-                                    score += aggregateNCC(refPix[c], refMean[c], otherPix[c], otherMean[c]);
-                                    otherSsq += aggregateNCC(otherPix[c], otherMean[c], otherPix[c], otherMean[c]);
-                                    break;
-                            }
-                        }
-                    }
-                }
-                if (scoreTypeE == eTrackerNCC || scoreTypeE == eTrackerZNCC) {
-                    score /= std::sqrt(otherSsq);
-                }
+                double score = computeScore<scoreTypeE>(scoreComps, x, y, refMean);
                 if (score < bestScore) {
                     bestScore = score;
                     point.x = x;
@@ -325,12 +332,42 @@ private:
             }
         }
         
+        // do the subpixel refinement, only if the score is a possible winner
+        double dx = 0.;
+        double dy = 0.;
+        {
+            _bestMatchMutex.lock();
+            if (_bestMatch.second < bestScore) {
+                _bestMatchMutex.unlock();
+            } else {
+                // don't block other threads
+                _bestMatchMutex.unlock();
+                // compute subpixel position.
+                double scorepc = computeScore<scoreTypeE>(scoreComps, point.x - 1, point.y, refMean);
+                double scorenc = computeScore<scoreTypeE>(scoreComps, point.x + 1, point.y, refMean);
+                if (bestScore < scorepc && bestScore <= scorenc) {
+                    // don't simplify the denominator in the following expression,
+                    // 2*bestScore - scorenc - scorepc may cause an underflow.
+                    dx = 0.5 * (scorenc - scorepc) /((bestScore - scorenc) + (bestScore - scorepc));
+                    assert(-0.5 < dx && dx <= 0.5);
+                }
+                double scorecp = computeScore<scoreTypeE>(scoreComps, point.x, point.y - 1, refMean);
+                double scorecn = computeScore<scoreTypeE>(scoreComps, point.x, point.y + 1, refMean);
+                if (bestScore < scorecp && bestScore <= scorecn) {
+                    // don't simplify the denominator in the following expression,
+                    // 2*bestScore - scorenc - scorepc may cause an underflow.
+                    dy = 0.5 * (scorecn - scorecp) /((bestScore - scorecn) + (bestScore - scorecp));
+                    assert(-0.5 < dy && dy <= 0.5);
+                }
+            }
+        }
+        // check again...
         {
             OFX::MultiThread::AutoMutex lock(_bestMatchMutex);
             if (_bestMatch.second > bestScore) {
                 _bestMatch.second = bestScore;
-                _bestMatch.first.x = point.x;
-                _bestMatch.first.y = point.y;
+                _bestMatch.first.x = point.x + dx;
+                _bestMatch.first.y = point.y + dy;
             }
         }
     }
