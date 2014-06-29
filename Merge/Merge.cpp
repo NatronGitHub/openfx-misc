@@ -189,8 +189,9 @@ private:
                     ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImgB, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 } else if (srcPixA && !srcPixB) {
                     for (int c = 0; c < nComponents; ++c) {
-                        dstPix[c] = srcPixA[c];
+                        tmpPix[c] = srcPixA[c];
                     }
+                    ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImgB, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 } else if (srcPixB && !srcPixA) {
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = srcPixB[c];

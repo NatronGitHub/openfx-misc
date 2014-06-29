@@ -519,21 +519,23 @@ ofxsMaskMix(const float *tmpPix, //!< interpolated pixel
     PIX *srcPix = NULL;
     float maskScale = 1.;
 
-    // are we doing masking
-    if (masked && srcImg) {
-        if (domask && maskImg) {
-            // we do, get the pixel from the mask
-            maskPix = (PIX *)maskImg->getPixelAddress(x, y);
-            // figure the scale factor from that pixel
-            if (maskPix == 0) {
-                maskScale = 0.;
-            } else {
-                maskScale = *maskPix/float(maxValue);
-                if (maskInvert) {
-                    maskScale = 1. - maskScale;
-                }
+    // Always retrieve the mask if we're masking and there's a mask image
+    if (masked && domask && maskImg) {
+        // we do, get the pixel from the mask
+        maskPix = (PIX *)maskImg->getPixelAddress(x, y);
+        // figure the scale factor from that pixel
+        if (maskPix == 0) {
+            maskScale = 0.;
+        } else {
+            maskScale = *maskPix/float(maxValue);
+            if (maskInvert) {
+                maskScale = 1. - maskScale;
             }
         }
+    }
+    
+    // are we doing masking
+    if (masked && srcImg) {
         if ((domask && maskImg) || mix != 1.) {
             srcPix = (PIX *)srcImg->getPixelAddress(x, y);
         }
@@ -549,6 +551,18 @@ ofxsMaskMix(const float *tmpPix, //!< interpolated pixel
                 dstPix[c] = PIX(Clamp(v, 0, maxValue));
             }
         }
+    } else if (masked && domask && !srcPix) { //< apply the mask even if there's no srcPix
+        float alpha = maskScale * mix;
+        for (int c = 0; c < nComponents; ++c) {
+            float v = tmpPix[c] * alpha;
+            if (maxValue == 1) { // implies floating point and so no clamping
+                dstPix[c] = PIX(v);
+            } else { // integer based and we need to clamp
+                     // (e.g. bicubic filter may overflow)
+                dstPix[c] = PIX(Clamp(v, 0, maxValue));
+            }
+        }
+
     } else {
         // no mask, no mix
         for (int c = 0; c < nComponents; ++c) {
