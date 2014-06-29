@@ -179,24 +179,19 @@ private:
                 
                 PIX *srcPixA = (PIX *)  (_srcImgA ? _srcImgA->getPixelAddress(x, y) : 0);
                 PIX *srcPixB = (PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
-                
-                if (srcPixA && srcPixB) {
+
+                if (srcPixA || srcPixB) {
+
                     for (int c = 0; c < nComponents; ++c) {
-                        tmpA[c] = (float)srcPixA[c] / (float)maxValue;
-                        tmpB[c] = (float)srcPixB[c] / (float)maxValue;
+                        // all images are supposed to be black and transparent outside o
+                        tmpA[c] = srcPixA ? ((float)srcPixA[c] / (float)maxValue) : 0.;
+                        tmpB[c] = srcPixB ? ((float)srcPixB[c] / (float)maxValue) : 0.;
                     }
+
                     mergePixel<float, nComponents, maxValue>(_operation,_alphaMasking, tmpA, tmpB, tmpPix);
-                    ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImgB, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
-                } else if (srcPixA && !srcPixB) {
-                    for (int c = 0; c < nComponents; ++c) {
-                        tmpPix[c] = srcPixA[c];
-                    }
-                    ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImgB, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
-                } else if (srcPixB && !srcPixA) {
-                    for (int c = 0; c < nComponents; ++c) {
-                        dstPix[c] = srcPixB[c];
-                    }
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPixB, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 } else {
+                    // everything is black and transparent
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = 0;
                     }
