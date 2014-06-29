@@ -92,16 +92,16 @@
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kParamProcessR      "r"
-#define kParamProcessRLabel "Invert R"
+#define kParamProcessRLabel "R"
 #define kParamProcessRHint  "Invert red component"
 #define kParamProcessG      "g"
-#define kParamProcessGLabel "Invert G"
+#define kParamProcessGLabel "G"
 #define kParamProcessGHint  "Invert green component"
 #define kParamProcessB      "b"
-#define kParamProcessBLabel "Invert B"
+#define kParamProcessBLabel "B"
 #define kParamProcessBHint  "Invert blue component"
 #define kParamProcessA      "a"
-#define kParamProcessALabel "Invert A"
+#define kParamProcessALabel "A"
 #define kParamProcessAHint  "Invert alpha component"
 
 using namespace OFX;
@@ -537,18 +537,21 @@ void InvertPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     processR->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
     processR->setHint(kParamProcessRHint);
     processR->setDefault(true);
+    processR->setLayoutHint(eLayoutHintNoNewLine);
     page->addChild(*processR);
 
     OFX::BooleanParamDescriptor* processG = desc.defineBooleanParam(kParamProcessG);
     processG->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
     processG->setHint(kParamProcessGHint);
     processG->setDefault(true);
+    processG->setLayoutHint(eLayoutHintNoNewLine);
     page->addChild(*processG);
 
     OFX::BooleanParamDescriptor* processB = desc.defineBooleanParam( kParamProcessB );
     processB->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
     processB->setHint(kParamProcessBHint);
     processB->setDefault(true);
+    processB->setLayoutHint(eLayoutHintNoNewLine);
     page->addChild(*processB);
 
     OFX::BooleanParamDescriptor* processA = desc.defineBooleanParam( kParamProcessA );
