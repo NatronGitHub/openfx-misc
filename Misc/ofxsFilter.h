@@ -514,90 +514,18 @@ ofxsFilterInterpolate2D(double fx, double fy, //!< coordinates of the pixel to b
 #undef OFXS_GETI
 #undef OFXS_I44
 
-template <class PIX, int nComponents, int maxValue, bool masked>
-void
-ofxsMaskMix(const float *tmpPix, //!< interpolated pixel
-            int x, //!< coordinates for the pixel to be computed (PIXEL coordinates)
-            int y,
-            const OFX::Image *srcImg, //!< the background image (the output is srcImg where maskImg=0, else it is tmpPix)
-            bool domask, //!< apply the mask?
-            const OFX::Image *maskImg, //!< the mask image (ignored if masked=false or domask=false)
-            float mix, //!< mix factor between the output and bkImg
-            bool maskInvert, //<! invert mask behavior
-            PIX *dstPix) //!< destination pixel
-{
-    PIX *maskPix = NULL;
-    PIX *srcPix = NULL;
-    float maskScale = 1.;
-
-    // Always retrieve the mask if we're masking and there's a mask image
-    if (masked && domask && maskImg) {
-        // we do, get the pixel from the mask
-        maskPix = (PIX *)maskImg->getPixelAddress(x, y);
-        // figure the scale factor from that pixel
-        if (maskPix == 0) {
-            maskScale = 0.;
-        } else {
-            maskScale = *maskPix/float(maxValue);
-            if (maskInvert) {
-                maskScale = 1. - maskScale;
-            }
-        }
-    }
-    
-    // are we doing masking
-    if (masked && srcImg) {
-        if ((domask && maskImg) || mix != 1.) {
-            srcPix = (PIX *)srcImg->getPixelAddress(x, y);
-        }
-    }
-    if (masked && srcPix) {
-        float alpha = maskScale * mix;
-        for (int c = 0; c < nComponents; ++c) {
-            float v = tmpPix[c] * alpha + (1. - alpha) * srcPix[c];
-            if (maxValue == 1) { // implies floating point and so no clamping
-                dstPix[c] = PIX(v);
-            } else { // integer based and we need to clamp
-                // (e.g. bicubic filter may overflow)
-                dstPix[c] = PIX(Clamp(v, 0, maxValue));
-            }
-        }
-    } else if (masked && domask && !srcPix) { //< apply the mask even if there's no srcPix
-        float alpha = maskScale * mix;
-        for (int c = 0; c < nComponents; ++c) {
-            float v = tmpPix[c] * alpha;
-            if (maxValue == 1) { // implies floating point and so no clamping
-                dstPix[c] = PIX(v);
-            } else { // integer based and we need to clamp
-                     // (e.g. bicubic filter may overflow)
-                dstPix[c] = PIX(Clamp(v, 0, maxValue));
-            }
-        }
-
-    } else {
-        // no mask, no mix
-        for (int c = 0; c < nComponents; ++c) {
-            if (maxValue == 1) { // implies floating point and so no clamping
-                dstPix[c] = tmpPix[c];
-            } else { // integer based and we need to clamp
-                // (e.g. bicubic filter may overflow)
-                dstPix[c] = PIX(Clamp(tmpPix[c], 0, maxValue));
-            }
-        }
-    }
-}
 
 template <class PIX, int nComponents, int maxValue, bool masked>
 void
 ofxsMaskMixPix(const float *tmpPix, //!< interpolated pixel
-            int x, //!< coordinates for the pixel to be computed (PIXEL coordinates)
-            int y,
-            PIX *srcPix, //!< the background image (the output is srcImg where maskImg=0, else it is tmpPix)
-            bool domask, //!< apply the mask?
-            const OFX::Image *maskImg, //!< the mask image (ignored if masked=false or domask=false)
-            float mix, //!< mix factor between the output and bkImg
-            bool maskInvert, //<! invert mask behavior
-            PIX *dstPix) //!< destination pixel
+               int x, //!< coordinates for the pixel to be computed (PIXEL coordinates)
+               int y,
+               PIX *srcPix, //!< the background image (the output is srcImg where maskImg=0, else it is tmpPix)
+               bool domask, //!< apply the mask?
+               const OFX::Image *maskImg, //!< the mask image (ignored if masked=false or domask=false)
+               float mix, //!< mix factor between the output and bkImg
+               bool maskInvert, //<! invert mask behavior
+               PIX *dstPix) //!< destination pixel
 {
     PIX *maskPix = NULL;
     float maskScale = 1.;
@@ -635,6 +563,30 @@ ofxsMaskMixPix(const float *tmpPix, //!< interpolated pixel
             }
         }
     }
+}
+
+template <class PIX, int nComponents, int maxValue, bool masked>
+void
+ofxsMaskMix(const float *tmpPix, //!< interpolated pixel
+            int x, //!< coordinates for the pixel to be computed (PIXEL coordinates)
+            int y,
+            const OFX::Image *srcImg, //!< the background image (the output is srcImg where maskImg=0, else it is tmpPix)
+            bool domask, //!< apply the mask?
+            const OFX::Image *maskImg, //!< the mask image (ignored if masked=false or domask=false)
+            float mix, //!< mix factor between the output and bkImg
+            bool maskInvert, //<! invert mask behavior
+            PIX *dstPix) //!< destination pixel
+{
+    PIX *srcPix = NULL;
+
+    // are we doing masking/mixing? in this case, retrieve srcPix
+    if (masked && srcImg) {
+        if ((domask && maskImg) || mix != 1.) {
+            srcPix = (PIX *)srcImg->getPixelAddress(x, y);
+        }
+    }
+
+    return ofxsMaskMixPix<PIX,nComponents,maxValue,masked>(tmpPix, x, y, srcPix, domask, maskImg, mix, maskInvert, dstPix);
 }
 
 inline void
