@@ -1101,7 +1101,7 @@ void OFX::Transform3x3DescribeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX
     DoubleParamDescriptor* shutter = desc.defineDoubleParam(kTransform3x3ShutterParamName);
     shutter->setLabels(kTransform3x3ShutterParamLabel, kTransform3x3ShutterParamLabel, kTransform3x3ShutterParamLabel);
     shutter->setHint(kTransform3x3ShutterParamHint);
-    shutter->setDefault(0.);
+    shutter->setDefault(0.5);
     shutter->setRange(0., 2.);
     shutter->setDisplayRange(0., 2.);
     page->addChild(*shutter);
@@ -1118,6 +1118,7 @@ void OFX::Transform3x3DescribeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX
     assert(shutteroffset->getNOptions() == kTransform3x3ShutterOffsetCustom);
     shutteroffset->appendOption(kTransform3x3ShutterOffsetCustomLabel, kTransform3x3ShutterOffsetCustomHint);
     shutteroffset->setAnimates(true);
+    shutteroffset->setDefault(kTransform3x3ShutterOffsetStart);
     page->addChild(*shutteroffset);
 
     DoubleParamDescriptor* shuttercustomoffset = desc.defineDoubleParam(kTransform3x3ShutterCustomOffsetParamName);
