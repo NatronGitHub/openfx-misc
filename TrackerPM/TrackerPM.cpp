@@ -200,6 +200,7 @@ public:
      * @brief Retrieves the results of the track. Must be called once process() returns so it is thread safe.
      **/
     const OfxPointD& getBestMatch() const { return _bestMatch.first; }
+    double getBestScore() const { return _bestMatch.second; }
 };
 
 
@@ -278,11 +279,11 @@ private:
                             break;
                         case eTrackerNCC:
                             score += aggregateCC(refPix[c], otherPix[c]);
-                            otherSsq += aggregateCC(otherPix[c], otherPix[c]);
+                            otherSsq -= aggregateCC(otherPix[c], otherPix[c]);
                             break;
                         case eTrackerZNCC:
                             score += aggregateNCC(refPix[c], refMean[c], otherPix[c], otherMean[c]);
-                            otherSsq += aggregateNCC(otherPix[c], otherMean[c], otherPix[c], otherMean[c]);
+                            otherSsq -= aggregateNCC(otherPix[c], otherMean[c], otherPix[c], otherMean[c]);
                             break;
                     }
                 }
@@ -351,40 +352,40 @@ private:
         // do the subpixel refinement, only if the score is a possible winner
         double dx = 0.;
         double dy = 0.;
-        {
-            _bestMatchMutex.lock();
-            if (_bestMatch.second < bestScore) {
-                _bestMatchMutex.unlock();
-            } else {
-                // don't block other threads
-                _bestMatchMutex.unlock();
-                // compute subpixel position.
-                double scorepc = computeScore<scoreTypeE>(scoreComps, point.x - 1, point.y, refMean);
-                double scorenc = computeScore<scoreTypeE>(scoreComps, point.x + 1, point.y, refMean);
-                if (bestScore < scorepc && bestScore <= scorenc) {
-                    // don't simplify the denominator in the following expression,
-                    // 2*bestScore - scorenc - scorepc may cause an underflow.
-                    dx = 0.5 * (scorenc - scorepc) /((bestScore - scorenc) + (bestScore - scorepc));
-                    assert(-0.5 < dx && dx <= 0.5);
-                }
-                double scorecp = computeScore<scoreTypeE>(scoreComps, point.x, point.y - 1, refMean);
-                double scorecn = computeScore<scoreTypeE>(scoreComps, point.x, point.y + 1, refMean);
-                if (bestScore < scorecp && bestScore <= scorecn) {
-                    // don't simplify the denominator in the following expression,
-                    // 2*bestScore - scorenc - scorepc may cause an underflow.
-                    dy = 0.5 * (scorecn - scorecp) /((bestScore - scorecn) + (bestScore - scorecp));
-                    assert(-0.5 < dy && dy <= 0.5);
+
+        _bestMatchMutex.lock();
+        if (_bestMatch.second < bestScore) {
+            _bestMatchMutex.unlock();
+        } else {
+            // don't block other threads
+            _bestMatchMutex.unlock();
+            // compute subpixel position.
+            double scorepc = computeScore<scoreTypeE>(scoreComps, point.x - 1, point.y, refMean);
+            double scorenc = computeScore<scoreTypeE>(scoreComps, point.x + 1, point.y, refMean);
+            if (bestScore < scorepc && bestScore <= scorenc) {
+                // don't simplify the denominator in the following expression,
+                // 2*bestScore - scorenc - scorepc may cause an underflow.
+                dx = 0.5 * (scorenc - scorepc) /((bestScore - scorenc) + (bestScore - scorepc));
+                assert(-0.5 < dx && dx <= 0.5);
+            }
+            double scorecp = computeScore<scoreTypeE>(scoreComps, point.x, point.y - 1, refMean);
+            double scorecn = computeScore<scoreTypeE>(scoreComps, point.x, point.y + 1, refMean);
+            if (bestScore < scorecp && bestScore <= scorecn) {
+                // don't simplify the denominator in the following expression,
+                // 2*bestScore - scorenc - scorepc may cause an underflow.
+                dy = 0.5 * (scorecn - scorecp) /((bestScore - scorecn) + (bestScore - scorecp));
+                assert(-0.5 < dy && dy <= 0.5);
+            }
+            // check again...
+            {
+                OFX::MultiThread::AutoMutex lock(_bestMatchMutex);
+                if (_bestMatch.second > bestScore) {
+                    _bestMatch.second = bestScore;
+                    _bestMatch.first.x = point.x + dx;
+                    _bestMatch.first.y = point.y + dy;
                 }
             }
-        }
-        // check again...
-        {
-            OFX::MultiThread::AutoMutex lock(_bestMatchMutex);
-            if (_bestMatch.second > bestScore) {
-                _bestMatch.second = bestScore;
-                _bestMatch.first.x = point.x + dx;
-                _bestMatch.first.y = point.y + dy;
-            }
+
         }
     }
 
@@ -594,11 +595,13 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
 
     ///ok the score is now computed, update the center
     OfxPointD newCenter;
-    const OfxPointD& bestMatch = processor.getBestMatch();
-    
-    newCenter.x = refCenter.x + bestMatch.x - refCenterI.x;
-    newCenter.y = refCenter.y + bestMatch.y - refCenterI.y;
-    _center->setValueAtTime(otherTime, newCenter.x, newCenter.y);
+    if (processor.getBestScore() != std::numeric_limits<double>::infinity()) {
+        const OfxPointD& bestMatch = processor.getBestMatch();
+
+        newCenter.x = refCenter.x + bestMatch.x - refCenterI.x;
+        newCenter.y = refCenter.y + bestMatch.y - refCenterI.y;
+        _center->setValueAtTime(otherTime, newCenter.x, newCenter.y);
+    }
 }
 
 template <class PIX, int nComponents, int maxValue>
