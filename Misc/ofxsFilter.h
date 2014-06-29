@@ -321,12 +321,23 @@ OFXS_CUBIC2D(ofxsFilterNotch);
 #undef OFXS_CUBIC2D
 #undef OFXS_APPLY4
 
-template <class T> inline T
-Clamp(T v, int min, int max)
+template <class T>
+inline
+T ofxsClamp(T v, int min, int max)
 {
     if(v < T(min)) return T(min);
     if(v > T(max)) return T(max);
     return v;
+}
+
+template <int maxValue>
+inline
+float ofxsClampIfInt(float v, int min, int max)
+{
+    if (maxValue == 1) {
+        return v;
+    }
+    return ofxsClamp(v, min, max);
 }
 
 template <class PIX>
@@ -592,7 +603,12 @@ ofxsMaskMixPix(const float *tmpPix, //!< interpolated pixel
     float maskScale = 1.;
 
     // are we doing masking
-    if (masked && srcPix) {
+    if (!masked) {
+        // no mask, no mix
+        for (int c = 0; c < nComponents; ++c) {
+            dstPix[c] = PIX(ofxsClampIfInt<maxValue>(tmpPix[c], 0, maxValue));
+        }
+    } else {
         if (domask && maskImg) {
             // we do, get the pixel from the mask
             maskPix = (PIX *)maskImg->getPixelAddress(x, y);
@@ -607,23 +623,15 @@ ofxsMaskMixPix(const float *tmpPix, //!< interpolated pixel
             }
         }
         float alpha = maskScale * mix;
-        for (int c = 0; c < nComponents; ++c) {
-            float v = tmpPix[c] * alpha + (1. - alpha) * srcPix[c];
-            if (maxValue == 1) { // implies floating point and so no clamping
-                dstPix[c] = PIX(v);
-            } else { // integer based and we need to clamp
-                // (e.g. bicubic filter may overflow)
-                dstPix[c] = PIX(Clamp(v, 0, maxValue));
+        if (srcPix) {
+            for (int c = 0; c < nComponents; ++c) {
+                float v = tmpPix[c] * alpha + (1. - alpha) * srcPix[c];
+                dstPix[c] = PIX(ofxsClampIfInt<maxValue>(v, 0, maxValue));
             }
-        }
-    } else {
-        // no mask, no mix
-        for (int c = 0; c < nComponents; ++c) {
-            if (maxValue == 1) { // implies floating point and so no clamping
-                dstPix[c] = tmpPix[c];
-            } else { // integer based and we need to clamp
-                // (e.g. bicubic filter may overflow)
-                dstPix[c] = PIX(Clamp(tmpPix[c], 0, maxValue));
+        } else {
+            for (int c = 0; c < nComponents; ++c) {
+                float v = tmpPix[c] * alpha;
+                dstPix[c] = PIX(ofxsClampIfInt<maxValue>(v, 0, maxValue));
             }
         }
     }
