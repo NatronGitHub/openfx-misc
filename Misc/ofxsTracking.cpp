@@ -283,10 +283,10 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     name->setLabels(kTrackLabelParamLabel, kTrackLabelParamLabel, kTrackLabelParamLabel);
     name->setHint(kTrackLabelParamHint);
     name->setDefault(kTrackLabelParamDefault);
-    name->setIsSecret(false); // it has to be user-editable
-    name->setEnabled(true); // it has to be user-editable
-    name->setIsPersistant(true); // it has to be saved with the instance parameters
-    name->setEvaluateOnChange(false);
+    ////name->setIsSecret(false); // it has to be user-editable
+    ////name->setEnabled(true); // it has to be user-editable
+    ////name->setIsPersistant(true); // it has to be saved with the instance parameters
+    name->setEvaluateOnChange(false); // it is meaningless
     page->addChild(*name);
     
 }
