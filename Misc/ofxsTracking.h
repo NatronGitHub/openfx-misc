@@ -43,17 +43,17 @@
 #define kTrackCenterPointParamLabel "Center"
 #define kTrackCenterPointParamHint "The center point to track"
 
-#define kTrackPatternBoxBottomLeftParamName "patternBoxBottomLeft"
-#define kTrackPatternBoxBottomLeftParamLabel "Pattern bottom left"
-#define kTrackPatternBoxBottomLeftParamHint "The bottom left corner of the inner pattern box. The coordinates are relative to the center point."
+#define kTrackPatternBoxBtmLeftParamName "patternBoxBtmLeft"
+#define kTrackPatternBoxBtmLeftParamLabel "Pattern bottom left"
+#define kTrackPatternBoxBtmLeftParamHint "The bottom left corner of the inner pattern box. The coordinates are relative to the center point."
 
 #define kTrackPatternBoxTopRightParamName "patternBoxTopRight"
 #define kTrackPatternBoxTopRightParamLabel "Pattern top right"
 #define kTrackPatternBoxTopRightParamHint "The top right corner of the inner pattern box. The coordinates are relative to the center point."
 
-#define kTrackSearchBoxBottomLeftParamName "searchBoxBottomLeft"
-#define kTrackSearchBoxBottomLeftParamLabel "Search area bottom left"
-#define kTrackSearchBoxBottomLeftParamHint "The bottom left corner of the search area. The coordinates are relative to the center point."
+#define kTrackSearchBoxBtmLeftParamName "searchBoxBtmLeft"
+#define kTrackSearchBoxBtmLeftParamLabel "Search area bottom left"
+#define kTrackSearchBoxBtmLeftParamHint "The bottom left corner of the search area. The coordinates are relative to the center point."
 
 #define kTrackSearchBoxTopRightParamName "searchBoxTopRight"
 #define kTrackSearchBoxTopRightParamLabel "Search area top right"
@@ -173,20 +173,20 @@ class TrackerRegionInteract : public OFX::OverlayInteract
 
         eDraggingInnerTopLeft,
         eDraggingInnerTopRight,
-        eDraggingInnerBottomLeft,
-        eDraggingInnerBottomRight,
-        eDraggingInnerMidTop,
+        eDraggingInnerBtmLeft,
+        eDraggingInnerBtmRight,
+        eDraggingInnerTopMid,
         eDraggingInnerMidRight,
-        eDraggingInnerMidBtm,
+        eDraggingInnerBtmMid,
         eDraggingInnerMidLeft,
         
         eDraggingOuterTopLeft,
         eDraggingOuterTopRight,
-        eDraggingOuterBottomLeft,
-        eDraggingOuterBottomRight,
-        eDraggingOuterMidTop,
+        eDraggingOuterBtmLeft,
+        eDraggingOuterBtmRight,
+        eDraggingOuterTopMid,
         eDraggingOuterMidRight,
-        eDraggingOuterMidBtm,
+        eDraggingOuterBtmMid,
         eDraggingOuterMidLeft
     };
     
@@ -197,20 +197,20 @@ class TrackerRegionInteract : public OFX::OverlayInteract
 
         eHoveringInnerTopLeft,
         eHoveringInnerTopRight,
-        eHoveringInnerBottomLeft,
-        eHoveringInnerBottomRight,
-        eHoveringInnerMidTop,
+        eHoveringInnerBtmLeft,
+        eHoveringInnerBtmRight,
+        eHoveringInnerTopMid,
         eHoveringInnerMidRight,
-        eHoveringInnerMidBtm,
+        eHoveringInnerBtmMid,
         eHoveringInnerMidLeft,
         
         eHoveringOuterTopLeft,
         eHoveringOuterTopRight,
-        eHoveringOuterBottomLeft,
-        eHoveringOuterBottomRight,
-        eHoveringOuterMidTop,
+        eHoveringOuterBtmLeft,
+        eHoveringOuterBtmRight,
+        eHoveringOuterTopMid,
         eHoveringOuterMidRight,
-        eHoveringOuterMidBtm,
+        eHoveringOuterBtmMid,
         eHoveringOuterMidLeft
     };
     
@@ -235,9 +235,9 @@ public:
     , _controlDown(false)
     {
         _center = effect->fetchDouble2DParam(kTrackCenterPointParamName);
-        _innerBtmLeft = effect->fetchDouble2DParam(kTrackPatternBoxBottomLeftParamName);
+        _innerBtmLeft = effect->fetchDouble2DParam(kTrackPatternBoxBtmLeftParamName);
         _innerTopRight = effect->fetchDouble2DParam(kTrackPatternBoxTopRightParamName);
-        _outerBtmLeft = effect->fetchDouble2DParam(kTrackSearchBoxBottomLeftParamName);
+        _outerBtmLeft = effect->fetchDouble2DParam(kTrackSearchBoxBtmLeftParamName);
         _outerTopRight = effect->fetchDouble2DParam(kTrackSearchBoxTopRightParamName);
         _name = effect->fetchStringParam(kOfxParamStringSublabelName);
         addParamToSlaveTo(_center);
@@ -266,10 +266,10 @@ private:
     bool isNearbyTopRight(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
     bool isNearbyBtmLeft(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
     bool isNearbyBtmRight(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyMidTop(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
+    bool isNearbyTopMid(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
     bool isNearbyMidRight(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
     bool isNearbyMidLeft(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyMidBtm(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
+    bool isNearbyBtmMid(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
 
     
     bool isNearbyCenter(const OfxPointD& pos,double tolerance,const OfxPointD& center) const;
