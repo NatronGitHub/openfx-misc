@@ -800,13 +800,15 @@ static bool isOnRotationBar(const  OFX::Point3D& pos,double radiusX,const OfxPoi
     return false;
 }
 
-static OfxRectD rectFromCenterPoint(const OfxPointD& center)
+static OfxRectD rectFromCenterPoint(const OfxPointD& center, const OfxPointD& pixelScale)
 {
+    // we are not axis-aligned
+    double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
     OfxRectD ret;
-    ret.x1 = center.x - POINT_SIZE / 2.;
-    ret.x2 = center.x + POINT_SIZE / 2.;
-    ret.y1 = center.y - POINT_SIZE / 2.;
-    ret.y2 = center.y + POINT_SIZE / 2.;
+    ret.x1 = center.x - (POINT_SIZE / 2.) * meanPixelScale;
+    ret.x2 = center.x + (POINT_SIZE / 2.) * meanPixelScale;
+    ret.y1 = center.y - (POINT_SIZE / 2.) * meanPixelScale;
+    ret.y2 = center.y + (POINT_SIZE / 2.) * meanPixelScale;
     return ret;
 }
 
@@ -821,11 +823,11 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     pscale.y = args.pixelScale.y / args.renderScale.y;
     getPoints(args.time, pscale, &center, &left, &bottom, &top, &right);
 
-    OfxRectD centerPoint = rectFromCenterPoint(center);
-    OfxRectD leftPoint = rectFromCenterPoint(left);
-    OfxRectD rightPoint = rectFromCenterPoint(right);
-    OfxRectD topPoint = rectFromCenterPoint(top);
-    OfxRectD bottomPoint = rectFromCenterPoint(bottom);
+    OfxRectD centerPoint = rectFromCenterPoint(center, pscale);
+    OfxRectD leftPoint = rectFromCenterPoint(left, pscale);
+    OfxRectD rightPoint = rectFromCenterPoint(right, pscale);
+    OfxRectD topPoint = rectFromCenterPoint(top, pscale);
+    OfxRectD bottomPoint = rectFromCenterPoint(bottom, pscale);
     
     OfxPointD ellipseRadius;
     getCircleRadius(args.time, pscale, &ellipseRadius);
@@ -1065,11 +1067,11 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     pscale.x = args.pixelScale.x / args.renderScale.x;
     pscale.y = args.pixelScale.y / args.renderScale.y;
     getPoints(args.time, pscale, &center, &left, &bottom, &top, &right);
-    OfxRectD centerPoint = rectFromCenterPoint(center);
-    OfxRectD leftPoint = rectFromCenterPoint(left);
-    OfxRectD rightPoint = rectFromCenterPoint(right);
-    OfxRectD topPoint = rectFromCenterPoint(top);
-    OfxRectD bottomPoint = rectFromCenterPoint(bottom);
+    OfxRectD centerPoint = rectFromCenterPoint(center, pscale);
+    OfxRectD leftPoint = rectFromCenterPoint(left, pscale);
+    OfxRectD rightPoint = rectFromCenterPoint(right, pscale);
+    OfxRectD topPoint = rectFromCenterPoint(top, pscale);
+    OfxRectD bottomPoint = rectFromCenterPoint(bottom, pscale);
     
     OfxPointD ellipseRadius;
     getCircleRadius(args.time, pscale, &ellipseRadius);
