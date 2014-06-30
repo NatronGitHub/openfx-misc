@@ -906,13 +906,13 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         double hoverTolerance = (POINT_SIZE / 2.) * meanPixelScale;
         if (squareContains(transformedPos, centerPoint)) {
             _drawState = eCenterPointHovered;
-        } else if (squareContains(transformedPos, leftPoint,hoverToleranceX,hoverToleranceY)) {
+        } else if (squareContains(transformedPos, leftPoint)) {
             _drawState = eLeftPointHovered;
-        } else if (squareContains(transformedPos, rightPoint,hoverToleranceX,hoverToleranceY)) {
+        } else if (squareContains(transformedPos, rightPoint)) {
             _drawState = eRightPointHovered;
-        } else if (squareContains(transformedPos, topPoint,hoverToleranceX,hoverToleranceY)) {
+        } else if (squareContains(transformedPos, topPoint)) {
             _drawState = eTopPointHovered;
-        } else if (squareContains(transformedPos, bottomPoint,hoverToleranceX,hoverToleranceY)) {
+        } else if (squareContains(transformedPos, bottomPoint)) {
             _drawState = eBottomPointHovered;
         } else if (isOnEllipseBorder(transformedPos, ellipseRadius, center)) {
             _drawState = eCircleHovered;
