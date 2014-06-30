@@ -644,7 +644,7 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
         glVertex2d(p[i].x, p[i].y);
     }
     glEnd();
-
+    glColor4f(1., 1., 1., 1.);
     for (int i = 0; i < 4; ++i) {
         TextRenderer::bitmapString(p[i].x, p[i].y, useFrom ? kFromParamName[i] : kToParamName[i]);
     }
