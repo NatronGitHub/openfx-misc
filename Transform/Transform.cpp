@@ -899,9 +899,10 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     
     bool ret = true;
     if (_mouseState == eReleased) {
-        double hoverToleranceX = 5 * pscale.x;
-        double hoverToleranceY = 5 * pscale.y;
-        if (squareContains(transformedPos, centerPoint,hoverToleranceX,hoverToleranceY)) {
+        // we are not axis-aligned
+        double meanPixelScale = (pscale.x + pscale.y) / 2.;
+        double hoverTolerance = (POINT_SIZE / 2.) * meanPixelScale;
+        if (squareContains(transformedPos, centerPoint)) {
             _drawState = eCenterPointHovered;
         } else if (squareContains(transformedPos, leftPoint,hoverToleranceX,hoverToleranceY)) {
             _drawState = eLeftPointHovered;
@@ -913,11 +914,11 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
             _drawState = eBottomPointHovered;
         } else if (isOnEllipseBorder(transformedPos, ellipseRadius, center)) {
             _drawState = eCircleHovered;
-        } else if (isOnRotationBar(rotationPos, ellipseRadius.x, center, pscale, hoverToleranceX)) {
+        } else if (isOnRotationBar(rotationPos, ellipseRadius.x, center, pscale, hoverTolerance)) {
             _drawState = eRotationBarHovered;
-        } else if (isOnSkewXBar(transformedPos,ellipseRadius.y,center,pscale,hoverToleranceY)) {
+        } else if (isOnSkewXBar(transformedPos,ellipseRadius.y,center,pscale,hoverTolerance)) {
             _drawState = eSkewXBarHoverered;
-        } else if (isOnSkewYBar(transformedPos,ellipseRadius.x,center,pscale,hoverToleranceX)) {
+        } else if (isOnSkewYBar(transformedPos,ellipseRadius.x,center,pscale,hoverTolerance)) {
             _drawState = eSkewYBarHoverered;
         } else {
             _drawState = eInActive;
