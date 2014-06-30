@@ -63,12 +63,12 @@ class RectangleInteract : public OFX::OverlayInteract
         eIdle = 0,
         eDraggingTopLeft,
         eDraggingTopRight,
-        eDraggingBottomLeft,
-        eDraggingBottomRight,
+        eDraggingBtmLeft,
+        eDraggingBtmRight,
         eDraggingCenter,
-        eDraggingMidTop,
+        eDraggingTopMid,
         eDraggingMidRight,
-        eDraggingMidBtm,
+        eDraggingBtmMid,
         eDraggingMidLeft
     };
     
@@ -77,12 +77,12 @@ class RectangleInteract : public OFX::OverlayInteract
         eInactive = 0,
         eHoveringTopLeft,
         eHoveringTopRight,
-        eHoveringBottomLeft,
-        eHoveringBottomRight,
+        eHoveringBtmLeft,
+        eHoveringBtmRight,
         eHoveringCenter,
-        eHoveringMidTop,
+        eHoveringTopMid,
         eHoveringMidRight,
-        eHoveringMidBtm,
+        eHoveringBtmMid,
         eHoveringMidLeft
     };
     
@@ -119,7 +119,7 @@ protected:
      * of the _btmLeft parameter at the given time.
      * One could override this function to  do more complex stuff based on other parameters state like the Crop plug-in does.
      **/
-    virtual OfxPointD getBottomLeft(OfxTime time) const;
+    virtual OfxPointD getBtmLeft(OfxTime time) const;
     
     /**
      * @brief This is called right before any call to allowXXX is made.
@@ -133,27 +133,15 @@ protected:
      **/
     virtual bool allowTopLeftInteraction() const { return true; }
     virtual bool allowTopRightInteraction() const { return true; }
-    virtual bool allowBottomRightInteraction() const { return true; }
-    virtual bool allowBottomLeftInteraction() const { return true; }
-    virtual bool allowMidTopInteraction() const { return true; }
+    virtual bool allowBtmRightInteraction() const { return true; }
+    virtual bool allowBtmLeftInteraction() const { return true; }
+    virtual bool allowTopMidInteraction() const { return true; }
     virtual bool allowMidRightInteraction() const { return true; }
     virtual bool allowMidBottomInteraction() const { return true; }
     virtual bool allowMidLeftInteraction() const { return true; }
     virtual bool allowCenterInteraction() const { return true; }
 
 private:
-    
-    
-    
-    bool isNearbyTopLeft(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyTopRight(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyBtmLeft(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyBtmRight(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyMidTop(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyMidRight(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyMidLeft(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyMidBtm(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyCenter(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
     
     OfxPointD _lastMousePos;
     MouseState _ms;

@@ -507,12 +507,12 @@ public:
     
 private:
     
-    virtual OfxPointD getBottomLeft(OfxTime time) const /*OVERRIDE FINAL*/ {
+    virtual OfxPointD getBtmLeft(OfxTime time) const /*OVERRIDE FINAL*/ {
         OfxPointD btmLeft;
         bool reformat;
         _reformat->getValueAtTime(time, reformat);
         if (!reformat) {
-            btmLeft = RectangleInteract::getBottomLeft(time);
+            btmLeft = RectangleInteract::getBtmLeft(time);
         } else {
             btmLeft.x = btmLeft.y = 0.;
         }
@@ -524,8 +524,8 @@ private:
     }
     
     virtual bool allowTopLeftInteraction() const { return !_isReformated; }
-    virtual bool allowBottomRightInteraction() const { return !_isReformated; }
-    virtual bool allowBottomLeftInteraction() const { return !_isReformated; }
+    virtual bool allowBtmRightInteraction() const { return !_isReformated; }
+    virtual bool allowBtmLeftInteraction() const { return !_isReformated; }
     virtual bool allowMidBottomInteraction() const { return !_isReformated; }
     virtual bool allowMidLeftInteraction() const { return !_isReformated; }
     virtual bool allowCenterInteraction() const { return !_isReformated; }

@@ -36,6 +36,7 @@
  */
 
 #include "ofxsRectangleInteract.h"
+#include <cmath>
 
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
@@ -43,126 +44,75 @@
 #include <GL/gl.h>
 #endif
 
-bool RectangleInteract::isNearbyTopLeft(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
+#define POINT_SIZE 5
+#define POINT_TOLERANCE 6
+
+
+
+
+static bool isNearby(const OfxPointD& p1, const OfxPointD& p2, double tolerance, const OfxPointD& pscale)
 {
-    OfxPointD topLeft;
-    topLeft.x = btmLeft.x;
-    topLeft.y = btmLeft.y + size.y;
-    if (pos.x >= (topLeft.x - tolerance) && pos.x <= (topLeft.x + tolerance) &&
-        pos.y >= (topLeft.y - tolerance) && pos.y <= (topLeft.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-    
+    return std::fabs(p1.x-p2.x) <= tolerance*pscale.x &&  std::fabs(p1.y-p2.y) <= tolerance*pscale.y;
 }
 
-bool RectangleInteract::isNearbyTopRight(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
-{
-    OfxPointD topRight;
-    topRight.x = btmLeft.x + size.x;
-    topRight.y = btmLeft.y + size.y;
-    if (pos.x >= (topRight.x - tolerance) && pos.x <= (topRight.x + tolerance) &&
-        pos.y >= (topRight.y - tolerance) && pos.y <= (topRight.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-    
+static OfxPointD ptopLeft(const OfxPointD& btmLeft, const OfxPointD& size) {
+    OfxPointD p;
+    p.x = btmLeft.x;
+    p.y = btmLeft.y + size.y;
+    return p;
 }
 
-bool RectangleInteract::isNearbyBtmLeft(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
-{
-    if (pos.x >= (btmLeft.x - tolerance) && pos.x <= (btmLeft.x + tolerance) &&
-        pos.y >= (btmLeft.y - tolerance) && pos.y <= (btmLeft.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-    
+static OfxPointD ptopRight(const OfxPointD& btmLeft, const OfxPointD& size) {
+    OfxPointD p;
+    p.x = btmLeft.x + size.x;
+    p.y = btmLeft.y + size.y;
+    return p;
 }
 
-bool RectangleInteract::isNearbyBtmRight(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
-{
-    OfxPointD btmRight;
-    btmRight.x = btmLeft.x + size.x;
-    btmRight.y = btmLeft.y ;
-    if (pos.x >= (btmRight.x - tolerance) && pos.x <= (btmRight.x + tolerance) &&
-        pos.y >= (btmRight.y - tolerance) && pos.y <= (btmRight.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-    
+static OfxPointD pbtmLeft(const OfxPointD& btmLeft, const OfxPointD& size) {
+    return btmLeft;
 }
 
-bool RectangleInteract::isNearbyMidTop(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
-{
-    OfxPointD midTop;
-    midTop.x = btmLeft.x + size.x / 2.;
-    midTop.y = btmLeft.y + size.y;
-    if (pos.x >= (midTop.x - tolerance) && pos.x <= (midTop.x + tolerance) &&
-        pos.y >= (midTop.y - tolerance) && pos.y <= (midTop.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-    
+static OfxPointD pbtmRight(const OfxPointD& btmLeft, const OfxPointD& size) {
+    OfxPointD p;
+    p.x = btmLeft.x + size.x;
+    p.y = btmLeft.y;
+    return p;
 }
 
-bool RectangleInteract::isNearbyMidRight(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
-{
-    OfxPointD midRight;
-    midRight.x = btmLeft.x + size.x;
-    midRight.y = btmLeft.y + size.y / 2.;
-    if (pos.x >= (midRight.x - tolerance) && pos.x <= (midRight.x + tolerance) &&
-        pos.y >= (midRight.y - tolerance) && pos.y <= (midRight.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-    
+static OfxPointD ptopMid(const OfxPointD& btmLeft, const OfxPointD& size) {
+    OfxPointD p;
+    p.x = btmLeft.x + size.x/2;
+    p.y = btmLeft.y + size.y;
+    return p;
 }
 
-bool RectangleInteract::isNearbyMidLeft(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
-{
-    OfxPointD midLeft;
-    midLeft.x = btmLeft.x;
-    midLeft.y = btmLeft.y + size.y /2.;
-    if (pos.x >= (midLeft.x - tolerance) && pos.x <= (midLeft.x + tolerance) &&
-        pos.y >= (midLeft.y - tolerance) && pos.y <= (midLeft.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-    
+static OfxPointD pbtmMid(const OfxPointD& btmLeft, const OfxPointD& size) {
+    OfxPointD p;
+    p.x = btmLeft.x + size.x/2;
+    p.y = btmLeft.y;
+    return p;
 }
 
-bool RectangleInteract::isNearbyMidBtm(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
-{
-    OfxPointD midBtm;
-    midBtm.x = btmLeft.x + size.x / 2.;
-    midBtm.y = btmLeft.y ;
-    if (pos.x >= (midBtm.x - tolerance) && pos.x <= (midBtm.x + tolerance) &&
-        pos.y >= (midBtm.y - tolerance) && pos.y <= (midBtm.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-    
+static OfxPointD pmidRight(const OfxPointD& btmLeft, const OfxPointD& size) {
+    OfxPointD p;
+    p.x = btmLeft.x + size.x;
+    p.y = btmLeft.y + size.y/2;
+    return p;
 }
-bool RectangleInteract::isNearbyCenter(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const
-{
-    OfxPointD center;
-    center.x = btmLeft.x + size.x / 2.;
-    center.y = btmLeft.y + size.y / 2.;
-    if (pos.x >= (center.x - tolerance) && pos.x <= (center.x + tolerance) &&
-        pos.y >= (center.y - tolerance) && pos.y <= (center.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-    
+
+static OfxPointD pmidLeft(const OfxPointD& btmLeft, const OfxPointD& size) {
+    OfxPointD p;
+    p.x = btmLeft.x;
+    p.y = btmLeft.y + size.y/2;
+    return p;
+}
+
+static OfxPointD pmidMid(const OfxPointD& btmLeft, const OfxPointD& size) {
+    OfxPointD p;
+    p.x = btmLeft.x + size.x/2;
+    p.y = btmLeft.y + size.y/2;
+    return p;
 }
 
 
@@ -173,45 +123,36 @@ bool RectangleInteract::draw(const OFX::DrawArgs &args)
         btmLeft = _btmLeftDragPos;
         size = _sizeDrag;
     } else {
-        btmLeft = getBottomLeft(args.time);
+        btmLeft = getBtmLeft(args.time);
         _size->getValueAtTime(args.time, size.x, size.y);
     }
     
-    OfxPointD topLeft,midTop,topRight,midRight,btmRight,midBtm,midLeft,center;
-    topLeft.x = btmLeft.x;
-    topLeft.y = btmLeft.y + size.y;
-    midTop.x = btmLeft.x + size.x / 2.;
-    midTop.y = topLeft.y;
-    topRight.x = btmLeft.x + size.x;
-    topRight.y = topLeft.y;
-    midRight.x = topRight.x;
-    midRight.y = btmLeft.y + size.y / 2.;
-    btmRight.x = midRight.x;
-    btmRight.y = btmLeft.y;
-    midBtm.x = midTop.x;
-    midBtm.y = btmLeft.y;
-    midLeft.x = btmLeft.x;
-    midLeft.y = midRight.y;
-    center.x = midTop.x;
-    center.y = midRight.y;
-    
+    OfxPointD topLeft  = ptopLeft(btmLeft, size);
+    OfxPointD topMid   = ptopMid(btmLeft, size);
+    OfxPointD topRight = ptopRight(btmLeft, size);
+    OfxPointD midRight = pmidRight(btmLeft, size);
+    OfxPointD btmRight = pbtmRight(btmLeft, size);
+    OfxPointD btmMid   = pbtmMid(btmLeft, size);
+    OfxPointD midLeft  = pmidLeft(btmLeft, size);
+    OfxPointD center   = pmidMid(btmLeft, size);
+
     glColor4f(0.9, 0.9, 0.9, 1.);
     glBegin(GL_LINE_STRIP);
-    glVertex2d(btmLeft.x, btmLeft.y);
-    glVertex2d(topLeft.x, topLeft.y);
+    glVertex2d(btmLeft.x,  btmLeft.y);
+    glVertex2d(topLeft.x,  topLeft.y);
     glVertex2d(topRight.x, topRight.y);
     glVertex2d(btmRight.x, btmRight.y);
-    glVertex2d(btmLeft.x, btmLeft.y);
+    glVertex2d(btmLeft.x,  btmLeft.y);
     glEnd();
     
-    glPointSize(6);
+    glPointSize(POINT_SIZE);
     glBegin(GL_POINTS);
-    if (_ds == eHoveringBottomLeft) {
+    if (_ds == eHoveringBtmLeft) {
         glColor4f(0., 1., 0., 1.);
     } else {
         glColor4f(1, 1, 1, 1);
     }
-    if (allowBottomLeftInteraction()) {
+    if (allowBtmLeftInteraction()) {
         glVertex2d(btmLeft.x, btmLeft.y);
     }
     if (_ds == eHoveringMidLeft) {
@@ -230,13 +171,13 @@ bool RectangleInteract::draw(const OFX::DrawArgs &args)
     if (allowTopLeftInteraction()) {
         glVertex2d(topLeft.x, topLeft.y);
     }
-    if (_ds == eHoveringMidTop) {
+    if (_ds == eHoveringTopMid) {
         glColor4f(0., 1., 0., 1.);
     } else {
         glColor4f(1, 1, 1, 1);
     }
-    if (allowMidTopInteraction()) {
-        glVertex2d(midTop.x, midTop.y);
+    if (allowTopMidInteraction()) {
+        glVertex2d(topMid.x, topMid.y);
     }
     if (_ds == eHoveringTopRight) {
         glColor4f(0., 1., 0., 1.);
@@ -254,21 +195,21 @@ bool RectangleInteract::draw(const OFX::DrawArgs &args)
     if (allowMidRightInteraction()) {
         glVertex2d(midRight.x, midRight.y);
     }
-    if (_ds == eHoveringBottomRight) {
+    if (_ds == eHoveringBtmRight) {
         glColor4f(0., 1., 0., 1.);
     } else {
         glColor4f(1, 1, 1, 1);
     }
-    if (allowBottomRightInteraction()) {
+    if (allowBtmRightInteraction()) {
         glVertex2d(btmRight.x, btmRight.y);
     }
-    if (_ds == eHoveringMidBtm) {
+    if (_ds == eHoveringBtmMid) {
         glColor4f(0., 1., 0., 1.);
     } else {
         glColor4f(1, 1, 1, 1);
     }
     if (allowMidBottomInteraction()) {
-        glVertex2d(midBtm.x, midBtm.y);
+        glVertex2d(btmMid.x, btmMid.y);
     }
     glEnd();
     glPointSize(1);
@@ -297,52 +238,55 @@ bool RectangleInteract::draw(const OFX::DrawArgs &args)
 bool RectangleInteract::penMotion(const OFX::PenArgs &args)
 {
     bool didSomething = false;
+    OfxPointD pscale;
+
+    pscale.x = args.pixelScale.x / args.renderScale.x;
+    pscale.y = args.pixelScale.y / args.renderScale.y;
+
     OfxPointD delta;
     delta.x = args.penPosition.x - _lastMousePos.x;
     delta.y = args.penPosition.y - _lastMousePos.y;
-    
-    double selectionTol = 15. * args.pixelScale.x;
-    
+
     OfxPointD size;
     _size->getValueAtTime(args.time, size.x, size.y);
     
-    OfxPointD btmLeft = getBottomLeft(args.time);
+    OfxPointD btmLeft = getBtmLeft(args.time);
     bool lastStateWasHovered = _ds != eInactive;
     
     
     aboutToCheckInteractivity(args.time);
-    if (isNearbyBtmLeft(args.penPosition, selectionTol, size, btmLeft) && allowBottomLeftInteraction()) {
-        _ds = eHoveringBottomLeft;
+    if (isNearby(args.penPosition, ptopLeft(btmLeft,size), POINT_TOLERANCE, pscale) && allowBtmLeftInteraction()) {
+        _ds = eHoveringBtmLeft;
         didSomething = true;
-    } else if (isNearbyBtmRight(args.penPosition, selectionTol, size, btmLeft)  && allowBottomRightInteraction()) {
-        _ds = eHoveringBottomRight;
+    } else if (isNearby(args.penPosition, pbtmRight(btmLeft,size), POINT_TOLERANCE, pscale) && allowBtmRightInteraction()) {
+        _ds = eHoveringBtmRight;
         didSomething = true;
-    } else if (isNearbyTopRight(args.penPosition, selectionTol, size, btmLeft) && allowTopRightInteraction()) {
+    } else if (isNearby(args.penPosition, ptopRight(btmLeft,size), POINT_TOLERANCE, pscale) && allowTopRightInteraction()) {
         _ds = eHoveringTopRight;
         didSomething = true;
-    } else if (isNearbyTopLeft(args.penPosition, selectionTol, size, btmLeft)  && allowTopLeftInteraction()) {
+    } else if (isNearby(args.penPosition, ptopLeft(btmLeft,size), POINT_TOLERANCE, pscale)  && allowTopLeftInteraction()) {
         _ds = eHoveringTopLeft;
         didSomething = true;
-    } else if (isNearbyMidTop(args.penPosition, selectionTol, size, btmLeft) && allowMidTopInteraction()) {
-        _ds = eHoveringMidTop;
+    } else if (isNearby(args.penPosition, ptopMid(btmLeft,size), POINT_TOLERANCE, pscale) && allowTopMidInteraction()) {
+        _ds = eHoveringTopMid;
         didSomething = true;
-    } else if (isNearbyMidRight(args.penPosition, selectionTol, size, btmLeft) && allowMidRightInteraction()) {
+    } else if (isNearby(args.penPosition, pmidRight(btmLeft,size), POINT_TOLERANCE, pscale) && allowMidRightInteraction()) {
         _ds = eHoveringMidRight;
         didSomething = true;
-    } else if (isNearbyMidBtm(args.penPosition, selectionTol, size, btmLeft)  && allowMidBottomInteraction()) {
-        _ds = eHoveringMidBtm;
+    } else if (isNearby(args.penPosition, pbtmMid(btmLeft,size), POINT_TOLERANCE, pscale)  && allowMidBottomInteraction()) {
+        _ds = eHoveringBtmMid;
         didSomething = true;
-    } else if (isNearbyMidLeft(args.penPosition, selectionTol, size, btmLeft)  && allowMidLeftInteraction()) {
+    } else if (isNearby(args.penPosition, pmidLeft(btmLeft,size), POINT_TOLERANCE, pscale)  && allowMidLeftInteraction()) {
         _ds = eHoveringMidLeft;
         didSomething = true;
-    } else if (isNearbyCenter(args.penPosition, selectionTol, size, btmLeft)  && allowCenterInteraction()) {
+    } else if (isNearby(args.penPosition, pmidMid(btmLeft,size), POINT_TOLERANCE, pscale)  && allowCenterInteraction()) {
         _ds = eHoveringCenter;
         didSomething = true;
     } else {
         _ds = eInactive;
     }
     
-    if (_ms == eDraggingBottomLeft) {
+    if (_ms == eDraggingBtmLeft) {
         OfxPointD topRight;
         topRight.x = _btmLeftDragPos.x + _sizeDrag.x;
         topRight.y = _btmLeftDragPos.y + _sizeDrag.y;
@@ -363,7 +307,7 @@ bool RectangleInteract::penMotion(const OFX::PenArgs &args)
         _sizeDrag.x += delta.x;
         _sizeDrag.y += delta.y;
         didSomething = true;
-    } else if (_ms == eDraggingBottomRight) {
+    } else if (_ms == eDraggingBtmRight) {
         OfxPointD topLeft;
         topLeft.x = _btmLeftDragPos.x;
         topLeft.y = _btmLeftDragPos.y + _sizeDrag.y;
@@ -371,13 +315,13 @@ bool RectangleInteract::penMotion(const OFX::PenArgs &args)
         _btmLeftDragPos.y += delta.y;
         _sizeDrag.y = topLeft.y - _btmLeftDragPos.y;
         didSomething = true;
-    } else if (_ms == eDraggingMidTop) {
+    } else if (_ms == eDraggingTopMid) {
         _sizeDrag.y += delta.y;
         didSomething = true;
     } else if (_ms == eDraggingMidRight) {
         _sizeDrag.x += delta.x;
         didSomething = true;
-    } else if (_ms == eDraggingMidBtm) {
+    } else if (_ms == eDraggingBtmMid) {
         double top = _btmLeftDragPos.y + _sizeDrag.y;
         _btmLeftDragPos.y += delta.y;
         _sizeDrag.y = top - _btmLeftDragPos.y;
@@ -396,14 +340,14 @@ bool RectangleInteract::penMotion(const OFX::PenArgs &args)
     
     //if size is negative shift bottom left
     if (_sizeDrag.x < 0) {
-        if (_ms == eDraggingBottomLeft) {
-            _ms = eDraggingBottomRight;
+        if (_ms == eDraggingBtmLeft) {
+            _ms = eDraggingBtmRight;
         } else if (_ms == eDraggingMidLeft) {
             _ms = eDraggingMidRight;
         } else if (_ms == eDraggingTopLeft) {
             _ms = eDraggingTopRight;
-        } else if (_ms == eDraggingBottomRight) {
-            _ms = eDraggingBottomLeft;
+        } else if (_ms == eDraggingBtmRight) {
+            _ms = eDraggingBtmLeft;
         } else if (_ms == eDraggingMidRight) {
             _ms = eDraggingMidLeft;
         } else if (_ms == eDraggingTopRight) {
@@ -415,16 +359,16 @@ bool RectangleInteract::penMotion(const OFX::PenArgs &args)
     }
     if (_sizeDrag.y < 0) {
         if (_ms == eDraggingTopLeft) {
-            _ms = eDraggingBottomLeft;
-        } else if (_ms == eDraggingMidTop) {
-            _ms = eDraggingMidBtm;
+            _ms = eDraggingBtmLeft;
+        } else if (_ms == eDraggingTopMid) {
+            _ms = eDraggingBtmMid;
         } else if (_ms == eDraggingTopRight) {
-            _ms = eDraggingBottomRight;
-        } else if (_ms == eDraggingBottomLeft) {
+            _ms = eDraggingBtmRight;
+        } else if (_ms == eDraggingBtmLeft) {
             _ms = eDraggingTopLeft;
-        } else if (_ms == eDraggingMidBtm) {
-            _ms = eDraggingMidTop;
-        } else if (_ms == eDraggingBottomRight) {
+        } else if (_ms == eDraggingBtmMid) {
+            _ms = eDraggingTopMid;
+        } else if (_ms == eDraggingBtmRight) {
             _ms = eDraggingTopRight;
         }
         
@@ -452,42 +396,44 @@ bool RectangleInteract::penMotion(const OFX::PenArgs &args)
 bool RectangleInteract::penDown(const OFX::PenArgs &args)
 {
     bool didSomething = false;
-    
-    double selectionTol = 15. * args.pixelScale.x;
-    
+    OfxPointD pscale;
+
+    pscale.x = args.pixelScale.x / args.renderScale.x;
+    pscale.y = args.pixelScale.y / args.renderScale.y;
+
     OfxPointD size;
     _size->getValueAtTime(args.time, size.x, size.y);
     
     
-    OfxPointD btmLeft = getBottomLeft(args.time);
+    OfxPointD btmLeft = getBtmLeft(args.time);
     
     aboutToCheckInteractivity(args.time);
     
-    if (isNearbyBtmLeft(args.penPosition, selectionTol, size, btmLeft)  && allowBottomLeftInteraction()) {
-        _ms = eDraggingBottomLeft;
+    if (isNearby(args.penPosition, pbtmLeft(btmLeft,size), POINT_TOLERANCE, pscale) && allowBtmLeftInteraction()) {
+        _ms = eDraggingBtmLeft;
         didSomething = true;
-    } else if (isNearbyBtmRight(args.penPosition, selectionTol, size, btmLeft) && allowBottomRightInteraction()) {
-        _ms = eDraggingBottomRight;
+    } else if (isNearby(args.penPosition, pbtmRight(btmLeft,size), POINT_TOLERANCE, pscale) && allowBtmRightInteraction()) {
+        _ms = eDraggingBtmRight;
         didSomething = true;
-    } else if (isNearbyTopRight(args.penPosition, selectionTol, size, btmLeft) && allowTopRightInteraction()) {
+    } else if (isNearby(args.penPosition, ptopRight(btmLeft,size), POINT_TOLERANCE, pscale) && allowTopRightInteraction()) {
         _ms = eDraggingTopRight;
         didSomething = true;
-    } else if (isNearbyTopLeft(args.penPosition, selectionTol, size, btmLeft)  && allowTopLeftInteraction()) {
+    } else if (isNearby(args.penPosition, ptopLeft(btmLeft,size), POINT_TOLERANCE, pscale) && allowTopLeftInteraction()) {
         _ms = eDraggingTopLeft;
         didSomething = true;
-    } else if (isNearbyMidTop(args.penPosition, selectionTol, size, btmLeft) && allowMidTopInteraction()) {
-        _ms = eDraggingMidTop;
+    } else if (isNearby(args.penPosition, ptopMid(btmLeft,size), POINT_TOLERANCE, pscale) && allowTopMidInteraction()) {
+        _ms = eDraggingTopMid;
         didSomething = true;
-    } else if (isNearbyMidRight(args.penPosition, selectionTol, size, btmLeft) && allowMidRightInteraction()) {
+    } else if (isNearby(args.penPosition, pmidRight(btmLeft,size), POINT_TOLERANCE, pscale) && allowMidRightInteraction()) {
         _ms = eDraggingMidRight;
         didSomething = true;
-    } else if (isNearbyMidBtm(args.penPosition, selectionTol, size, btmLeft)  && allowMidBottomInteraction()) {
-        _ms = eDraggingMidBtm;
+    } else if (isNearby(args.penPosition, pbtmMid(btmLeft,size), POINT_TOLERANCE, pscale) && allowMidBottomInteraction()) {
+        _ms = eDraggingBtmMid;
         didSomething = true;
-    } else if (isNearbyMidLeft(args.penPosition, selectionTol, size, btmLeft)  && allowMidLeftInteraction()) {
+    } else if (isNearby(args.penPosition, pmidLeft(btmLeft,size), POINT_TOLERANCE, pscale) && allowMidLeftInteraction()) {
         _ms = eDraggingMidLeft;
         didSomething = true;
-    } else if (isNearbyCenter(args.penPosition, selectionTol, size, btmLeft)  && allowCenterInteraction()) {
+    } else if (isNearby(args.penPosition, pmidMid(btmLeft,size), POINT_TOLERANCE, pscale) && allowCenterInteraction()) {
         _ms = eDraggingCenter;
         didSomething = true;
     } else {
@@ -512,7 +458,7 @@ bool RectangleInteract::penUp(const OFX::PenArgs &args)
     return didSmthing;
 }
 
-OfxPointD RectangleInteract::getBottomLeft(OfxTime time) const
+OfxPointD RectangleInteract::getBtmLeft(OfxTime time) const
 {
     OfxPointD ret;
     _btmLeft->getValueAtTime(time, ret.x, ret.y);
