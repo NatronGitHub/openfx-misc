@@ -255,7 +255,7 @@ bool RectangleInteract::penMotion(const OFX::PenArgs &args)
     
     
     aboutToCheckInteractivity(args.time);
-    if (isNearby(args.penPosition, ptopLeft(btmLeft,size), POINT_TOLERANCE, pscale) && allowBtmLeftInteraction()) {
+    if (isNearby(args.penPosition, pbtmLeft(btmLeft,size), POINT_TOLERANCE, pscale) && allowBtmLeftInteraction()) {
         _ds = eHoveringBtmLeft;
         didSomething = true;
     } else if (isNearby(args.penPosition, pbtmRight(btmLeft,size), POINT_TOLERANCE, pscale) && allowBtmRightInteraction()) {
