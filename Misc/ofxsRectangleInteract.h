@@ -57,7 +57,7 @@
  **/
 class RectangleInteract : public OFX::OverlayInteract
 {
-    
+public:
     enum MouseState
     {
         eIdle = 0,
@@ -137,7 +137,7 @@ protected:
     virtual bool allowBtmLeftInteraction() const { return true; }
     virtual bool allowTopMidInteraction() const { return true; }
     virtual bool allowMidRightInteraction() const { return true; }
-    virtual bool allowMidBottomInteraction() const { return true; }
+    virtual bool allowBtmMidInteraction() const { return true; }
     virtual bool allowMidLeftInteraction() const { return true; }
     virtual bool allowCenterInteraction() const { return true; }
 

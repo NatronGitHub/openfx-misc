@@ -258,22 +258,6 @@ public:
     
     
 private:
-    
-    
-    ///All the functions below assume that the size parameter is the width/height of either the inner or outer rectangle
-    ///and btmLeft is the absolute coordinates of either the inner or outer rectangle.
-    bool isNearbyTopLeft(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyTopRight(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyBtmLeft(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyBtmRight(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyTopMid(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyMidRight(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyMidLeft(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-    bool isNearbyBtmMid(const OfxPointD& pos,double tolerance,const OfxPointD& size,const OfxPointD& btmLeft) const;
-
-    
-    bool isNearbyCenter(const OfxPointD& pos,double tolerance,const OfxPointD& center) const;
-    
     bool isDraggingInnerPoint() const;
     bool isDraggingOuterPoint() const;
     

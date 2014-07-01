@@ -113,6 +113,8 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define POINT_SIZE 5
+#define POINT_TOLERANCE 6
 
 #ifndef ENABLE_HOST_TRANSFORM
 #undef OFX_EXTENSIONS_NUKE // host transform is the only nuke extension used
@@ -593,8 +595,6 @@ private:
         _overlayChoice->getValueAtTime(time, v);
         return v == 1;
     }
-    
-    bool isNearbyTo(double time, int i, const OfxPointD& pos,bool useFromPoints,double tolerance) const;
 
     OFX::Double2DParam* _to[4];
     OFX::Double2DParam* _from[4];
@@ -612,15 +612,17 @@ private:
 
 
 
-bool CornerPinTransformInteract::isNearbyTo(double time, int i, const OfxPointD& pos,bool useFromPoints,double tolerance) const
+static bool isNearby(const OfxPointD& p, double x, double y, double tolerance, const OfxPointD& pscale)
 {
-    OfxPointD p;
-    useFromPoints ? _from[i]->getValueAtTime(time, p.x, p.y) :_to[i]->getValueAtTime(time, p.x, p.y);
-    return std::fabs(pos.x-p.x) < tolerance && std::fabs(pos.y-p.y) < tolerance;
+    return std::fabs(p.x-x) <= tolerance*pscale.x &&  std::fabs(p.y-y) <= tolerance*pscale.y;
 }
 
 bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
 {
+    OfxPointD pscale;
+    pscale.x = args.pixelScale.x / args.renderScale.x;
+    pscale.y = args.pixelScale.y / args.renderScale.y;
+
     bool useFrom = isFromPoints(args.time);
 
     OfxPointD p[4];
@@ -632,21 +634,56 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
         }
     }
     
-    glPushAttrib(GL_POINT_BIT);
-    glPointSize(5);
-    glBegin(GL_POINTS);
-    for (int i = 0; i < 4; ++i) {
-        if (_hovering == i || _dragging == i) {
-            glColor4f(0., 1., 0., 1.);
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+    
+    //glDisable(GL_LINE_STIPPLE);
+    //glEnable(GL_LINE_SMOOTH);
+    //glEnable(GL_POINT_SMOOTH);
+    glEnable(GL_BLEND);
+    glHint(GL_LINE_SMOOTH_HINT,GL_DONT_CARE);
+    glLineWidth(1.5);
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+
+    glPointSize(POINT_SIZE);
+    // Draw everything twice
+    // l = 0: shadow
+    // l = 1: drawing
+    for (int l = 0; l < 2; ++l) {
+        if (l == 0) {
+            // translate (1,-1) pixels
+            glTranslated(pscale.x, -pscale.y, 0);
+            glColor3f(0., 0., 0.);
         } else {
-            glColor4f(1., 1., 1., 1.);
+            glColor3f(0.8, 0.8, 0.8);
         }
-        glVertex2d(p[i].x, p[i].y);
-    }
-    glEnd();
-    glColor4f(1., 1., 1., 1.);
-    for (int i = 0; i < 4; ++i) {
-        TextRenderer::bitmapString(p[i].x, p[i].y, useFrom ? kFromParamName[i] : kToParamName[i]);
+        glBegin(GL_LINE_STRIP);
+        for (int i = 0; i < 4; ++i) {
+            glVertex2d(p[i].x, p[i].y);
+        }
+        glVertex2d(p[0].x, p[0].y);
+        glEnd();
+        glBegin(GL_POINTS);
+        for (int i = 0; i < 4; ++i) {
+            if (l == 1) {
+                if (_hovering == i || _dragging == i) {
+                    glColor3f(0., 1., 0.);
+                } else {
+                    glColor3f(0.8, 0.8, 0.8);
+                }
+            }
+            glVertex2d(p[i].x, p[i].y);
+        }
+        glEnd();
+        if (l == 1) {
+            glColor3f(0.8, 0.8, 0.8);
+        }
+        for (int i = 0; i < 4; ++i) {
+            TextRenderer::bitmapString(p[i].x, p[i].y, useFrom ? kFromParamName[i] : kToParamName[i]);
+        }
+        if (l == 0) {
+            // translate (-1,1) pixels
+            glTranslated(-pscale.x, pscale.y, 0);
+        }
     }
 
     glPopAttrib();
@@ -656,15 +693,26 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
 
 bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
 {
+    bool useFrom = isFromPoints(args.time);
+
+    OfxPointD p[4];
+    for (int i = 0; i < 4; ++i) {
+        if (_dragging == i) {
+            p[i] = _draggedPos[i];
+        } else {
+            useFrom ? _from[i]->getValueAtTime(args.time, p[i].x, p[i].y) :_to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+        }
+    }
+
+    OfxPointD pscale;
+    pscale.x = args.pixelScale.x / args.renderScale.x;
+    pscale.y = args.pixelScale.y / args.renderScale.y;
 
     bool didSomething = false;
     OfxPointD delta;
     delta.x = args.penPosition.x - _lastMousePos.x;
     delta.y = args.penPosition.y - _lastMousePos.y;
-    
-    bool useFrom = isFromPoints(args.time);
-    
-    double selectionTol = 15. * args.pixelScale.x;
+
     _hovering = -1;
     didSomething = false;
 
@@ -673,7 +721,7 @@ bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
             _draggedPos[i].x += delta.x;
             _draggedPos[i].y += delta.y;
             didSomething = true;
-        } else if (isNearbyTo(args.time, i, args.penPosition, useFrom, selectionTol)) {
+        } else if (isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale)) {
             _hovering = i;
             didSomething = true;
         }
@@ -685,13 +733,25 @@ bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
 
 bool CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
 {
-    bool didSomething = false;
-    
-    double selectionTol = 15. * args.pixelScale.x;
     bool useFrom = isFromPoints(args.time);
 
+    OfxPointD p[4];
     for (int i = 0; i < 4; ++i) {
-        if (isNearbyTo(args.time, i, args.penPosition, useFrom, selectionTol)) {
+        if (_dragging == i) {
+            p[i] = _draggedPos[i];
+        } else {
+            useFrom ? _from[i]->getValueAtTime(args.time, p[i].x, p[i].y) :_to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+        }
+    }
+
+    OfxPointD pscale;
+    pscale.x = args.pixelScale.x / args.renderScale.x;
+    pscale.y = args.pixelScale.y / args.renderScale.y;
+
+    bool didSomething = false;
+
+    for (int i = 0; i < 4; ++i) {
+        if (isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale)) {
             _dragging = i;
             _draggedPos[i] = args.penPosition;
             didSomething = true;

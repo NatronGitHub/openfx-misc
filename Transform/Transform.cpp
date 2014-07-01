@@ -435,18 +435,21 @@ static void
 drawSquare(const OfxPointD& center,
            const OfxPointD& pixelScale,
            bool hovered,
-           bool althovered = false)
+           bool althovered,
+           int l)
 {
     // we are not axis-aligned
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
-    if (hovered) {
-        if (althovered) {
-            glColor4f(0.0, 1.0, 0.0, 1.0);
+    if (l == 1) {
+        if (hovered) {
+            if (althovered) {
+                glColor3f(0., 1., 0.);
+            } else {
+                glColor3f(1., 0., 0.);
+            }
         } else {
-            glColor4f(1.0, 0.0, 0.0, 1.0);
+            glColor3f(0.8, 0.8, 0.8);
         }
-    } else {
-        glColor4f(1.0, 1.0, 1.0, 1.0);
     }
     double halfWidth = (POINT_SIZE / 2.) * meanPixelScale;
     double halfHeight = (POINT_SIZE / 2.) * meanPixelScale;
@@ -464,14 +467,17 @@ drawSquare(const OfxPointD& center,
 
 static void
 drawEllipse(const OfxPointD& center,
-                               const OfxPointD& radius,
-                               const OfxPointD& pixelScale,
-                               bool hovered)
+            const OfxPointD& radius,
+            const OfxPointD& pixelScale,
+            bool hovered,
+            int l)
 {
-    if (hovered) {
-        glColor4f(1.0, 0.0, 0.0, 1.0);
-    } else {
-        glColor4f(1.0, 1.0, 1.0, 1.0);
+    if (l == 1) {
+        if (hovered) {
+            glColor3f(1., 0., 0.);
+        } else {
+            glColor3f(0.8, 0.8, 0.8);
+        }
     }
     
     glPushMatrix ();
@@ -492,17 +498,19 @@ drawEllipse(const OfxPointD& center,
 
 static void
 drawSkewBar(const OfxPointD &center,
-                               const OfxPointD& pixelScale,
-                               double radiusY,
-                               bool hovered,
-                               double angle)
+            const OfxPointD& pixelScale,
+            double radiusY,
+            bool hovered,
+            double angle,
+            int l)
 {
-    if (hovered) {
-        glColor4f(1.0, 0.0, 0.0, 1.0);
-    } else {
-        glColor4f(1.0, 1.0, 1.0, 1.0);
+    if (l == 1) {
+        if (hovered) {
+            glColor3f(1., 0., 0.);
+        } else {
+            glColor3f(0.8, 0.8, 0.8);
+        }
     }
-    
     // we are not axis-aligned: use the mean pixel scale
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
     double barHalfSize = radiusY + 20. * meanPixelScale;
@@ -548,14 +556,17 @@ static void
 drawRotationBar(const OfxPointD& pixelScale,
                 double radiusX,
                 bool hovered,
-                bool inverted)
+                bool inverted,
+                int l)
 {
     // we are not axis-aligned
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
-    if (hovered) {
-        glColor4f(1.0, 0.0, 0.0, 1.0);
-    } else {
-        glColor4f(1.0, 1.0, 1.0, 1.0);
+    if (l == 1) {
+        if (hovered) {
+            glColor3f(1., 0., 0.);
+        } else {
+            glColor3f(0.8, 0.8, 0.8);
+        }
     }
     
     double barExtra = 30. * meanPixelScale;
@@ -663,11 +674,11 @@ bool
 TransformInteract::draw(const OFX::DrawArgs &args)
 {
     //std::cout << "pixelScale= "<<args.pixelScale.x << "," << args.pixelScale.y << " renderscale=" << args.renderScale.x << "," << args.renderScale.y << std::endl;
-    OfxPointD center, left, right, bottom, top;
     OfxPointD pscale;
-
     pscale.x = args.pixelScale.x / args.renderScale.x;
     pscale.y = args.pixelScale.y / args.renderScale.y;
+
+    OfxPointD center, left, right, bottom, top;
     getPoints(args.time, pscale, &center, &left, &bottom, &top, &right);
 
     double angle;
@@ -685,62 +696,90 @@ TransformInteract::draw(const OFX::DrawArgs &args)
     OfxPointD radius;
     getCircleRadius(args.time, pscale, &radius);
 
-    glPushMatrix();
-    glTranslated(center.x, center.y, 0.);
-
     GLdouble skewMatrix[16];
     skewMatrix[0] = (skewOrderYX ? 1. : (1.+skewX*skewY)); skewMatrix[1] = skewY; skewMatrix[2] = 0.; skewMatrix[3] = 0;
     skewMatrix[4] = skewX; skewMatrix[5] = (skewOrderYX ? (1.+skewX*skewY) : 1.); skewMatrix[6] = 0.; skewMatrix[7] = 0;
     skewMatrix[8] = 0.; skewMatrix[9] = 0.; skewMatrix[10] = 1.; skewMatrix[11] = 0;
     skewMatrix[12] = 0.; skewMatrix[13] = 0.; skewMatrix[14] = 0.; skewMatrix[15] = 1.;
 
-    glRotated(angle, 0, 0., 1.);
-    drawRotationBar(pscale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered, inverted);
-    glMultMatrixd(skewMatrix);
-    glTranslated(-center.x, -center.y, 0.);
-    
-    drawEllipse(center, radius, pscale, _mouseState == eDraggingCircle || _drawState == eCircleHovered);
-    
-    // add 180 to the angle to draw the arrows on the other side. unfortunately, this requires knowing
-    // the mouse position in the ellipse frame
-    double flip = 0.;
-    if (_drawState == eSkewXBarHoverered || _drawState == eSkewYBarHoverered) {
-        OfxPointD scale;
-        _scale->getValueAtTime(args.time, scale.x, scale.y);
-        bool scaleUniform;
-        _scaleUniform->getValueAtTime(args.time, scaleUniform);
-        if (scaleUniform) {
-            scale.y = scale.x;
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+
+    //glDisable(GL_LINE_STIPPLE);
+    glEnable(GL_LINE_SMOOTH);
+    //glEnable(GL_POINT_SMOOTH);
+    glEnable(GL_BLEND);
+    glHint(GL_LINE_SMOOTH_HINT,GL_DONT_CARE);
+    glLineWidth(1.5);
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+
+    // Draw everything twice
+    // l = 0: shadow
+    // l = 1: drawing
+    for (int l = 0; l < 2; ++l) {
+        if (l == 0) {
+            // Draw a shadow for the cross hair
+            // shift by (1,1) pixel
+            glTranslated(pscale.x, -pscale.y, 0);
+            glColor3f(0., 0., 0.);
+        } else {
+            glColor3f(0.8, 0.8, 0.8);
         }
-        double rot = OFX::ofxsToRadians(angle);
-        OFX::Matrix3x3 transformscale;
-        transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-        
-        OFX::Point3D previousPos;
-        previousPos.x = _lastMousePos.x;
-        previousPos.y = _lastMousePos.y;
-        previousPos.z = 1.;
-        previousPos = transformscale * previousPos;
-        if (previousPos.z != 0) {
-            previousPos.x /= previousPos.z;
-            previousPos.y /= previousPos.z;
+
+        glPushMatrix();
+        glTranslated(center.x, center.y, 0.);
+
+        glRotated(angle, 0, 0., 1.);
+        drawRotationBar(pscale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered, inverted, l);
+        glMultMatrixd(skewMatrix);
+        glTranslated(-center.x, -center.y, 0.);
+
+        drawEllipse(center, radius, pscale, _mouseState == eDraggingCircle || _drawState == eCircleHovered, l);
+
+        // add 180 to the angle to draw the arrows on the other side. unfortunately, this requires knowing
+        // the mouse position in the ellipse frame
+        double flip = 0.;
+        if (_drawState == eSkewXBarHoverered || _drawState == eSkewYBarHoverered) {
+            OfxPointD scale;
+            _scale->getValueAtTime(args.time, scale.x, scale.y);
+            bool scaleUniform;
+            _scaleUniform->getValueAtTime(args.time, scaleUniform);
+            if (scaleUniform) {
+                scale.y = scale.x;
+            }
+            double rot = OFX::ofxsToRadians(angle);
+            OFX::Matrix3x3 transformscale;
+            transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+
+            OFX::Point3D previousPos;
+            previousPos.x = _lastMousePos.x;
+            previousPos.y = _lastMousePos.y;
+            previousPos.z = 1.;
+            previousPos = transformscale * previousPos;
+            if (previousPos.z != 0) {
+                previousPos.x /= previousPos.z;
+                previousPos.y /= previousPos.z;
+            }
+            if ((_drawState == eSkewXBarHoverered && previousPos.y > center.y) ||
+                (_drawState == eSkewYBarHoverered && previousPos.x > center.x)) {
+                flip = 180.;
+            }
         }
-        if ((_drawState == eSkewXBarHoverered && previousPos.y > center.y) ||
-            (_drawState == eSkewYBarHoverered && previousPos.x > center.x)) {
-            flip = 180.;
+        drawSkewBar(center, pscale, radius.y, _mouseState == eDraggingSkewXBar || _drawState == eSkewXBarHoverered, flip, l);
+        drawSkewBar(center, pscale, radius.x, _mouseState == eDraggingSkewYBar || _drawState == eSkewYBarHoverered, flip - 90., l);
+
+
+        drawSquare(center, pscale, _mouseState == eDraggingTranslation || _mouseState == eDraggingCenter || _drawState == eCenterPointHovered, _modifierStateCtrl, l);
+        drawSquare(left, pscale, _mouseState == eDraggingLeftPoint || _drawState == eLeftPointHovered, false, l);
+        drawSquare(right, pscale, _mouseState == eDraggingRightPoint || _drawState == eRightPointHovered, false, l);
+        drawSquare(top, pscale, _mouseState == eDraggingTopPoint || _drawState == eTopPointHovered, false, l);
+        drawSquare(bottom, pscale, _mouseState == eDraggingBottomPoint || _drawState == eBottomPointHovered, false, l);
+
+        glPopMatrix();
+        if (l == 0) {
+            glTranslated(-pscale.x, pscale.y, 0);
         }
     }
-    drawSkewBar(center, pscale, radius.y, _mouseState == eDraggingSkewXBar || _drawState == eSkewXBarHoverered, flip);
-    drawSkewBar(center, pscale, radius.x, _mouseState == eDraggingSkewYBar || _drawState == eSkewYBarHoverered, flip - 90.);
     
-    
-    drawSquare(center, pscale, _mouseState == eDraggingTranslation || _mouseState == eDraggingCenter || _drawState == eCenterPointHovered, _modifierStateCtrl);
-    drawSquare(left, pscale, _mouseState == eDraggingLeftPoint || _drawState == eLeftPointHovered);
-    drawSquare(right, pscale, _mouseState == eDraggingRightPoint || _drawState == eRightPointHovered);
-    drawSquare(top, pscale, _mouseState == eDraggingTopPoint || _drawState == eTopPointHovered);
-    drawSquare(bottom, pscale, _mouseState == eDraggingBottomPoint || _drawState == eBottomPointHovered);
-    
-    glPopMatrix();
     return true;
 }
 
@@ -816,11 +855,11 @@ static OfxRectD rectFromCenterPoint(const OfxPointD& center, const OfxPointD& pi
 // overridden functions from OFX::Interact to do things
 bool TransformInteract::penMotion(const OFX::PenArgs &args)
 {
-    OfxPointD center, left, right, top, bottom;
     OfxPointD pscale;
-
     pscale.x = args.pixelScale.x / args.renderScale.x;
     pscale.y = args.pixelScale.y / args.renderScale.y;
+
+    OfxPointD center, left, right, top, bottom;
     getPoints(args.time, pscale, &center, &left, &bottom, &top, &right);
 
     OfxRectD centerPoint = rectFromCenterPoint(center, pscale);
@@ -1060,12 +1099,12 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
 bool TransformInteract::penDown(const OFX::PenArgs &args)
 {
     using OFX::Matrix3x3;
-    
-    OfxPointD center,left,right,top,bottom;
-    OfxPointD pscale;
 
+    OfxPointD pscale;
     pscale.x = args.pixelScale.x / args.renderScale.x;
     pscale.y = args.pixelScale.y / args.renderScale.y;
+
+    OfxPointD center,left,right,top,bottom;
     getPoints(args.time, pscale, &center, &left, &bottom, &top, &right);
     OfxRectD centerPoint = rectFromCenterPoint(center, pscale);
     OfxRectD leftPoint = rectFromCenterPoint(left, pscale);
