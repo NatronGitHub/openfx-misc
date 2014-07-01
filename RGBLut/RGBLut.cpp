@@ -412,87 +412,65 @@ void RGBLutPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
 
-    if (dstComponents == OFX::ePixelComponentRGBA)
-    {
-        switch (dstBitDepth)
-        {
-            case OFX::eBitDepthUByte :
-            {
+    if (dstComponents == OFX::ePixelComponentRGBA) {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
                 ImageRGBLutProcessor<unsigned char, 4, 255> fred(*this, args);
                 setupAndProcess(fred, args);
             }
                 break;
-
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 ImageRGBLutProcessor<unsigned short, 4, 65535> fred(*this, args);
                 setupAndProcess(fred, args);
             }
                 break;
-
-            case OFX::eBitDepthFloat :
-            {
+            case OFX::eBitDepthFloat: {
                 ImageRGBLutProcessorFloat<4,1023> fred(*this, args);
                 setupAndProcess(fred, args);
             }
                 break;
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
-    }
-    else if (dstComponents == OFX::ePixelComponentRGB)
-    {
-        switch (dstBitDepth)
-        {
-            case OFX::eBitDepthUByte :
-            {
+    } else if (dstComponents == OFX::ePixelComponentRGB) {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
                 ImageRGBLutProcessor<unsigned char, 3, 255> fred(*this, args);
                 setupAndProcess(fred, args);
             }
                 break;
-
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 ImageRGBLutProcessor<unsigned short, 3, 65535> fred(*this, args);
                 setupAndProcess(fred, args);
             }
                 break;
-
-            case OFX::eBitDepthFloat :
-            {
-                ImageRGBLutProcessorFloat<3,999> fred(*this, args);
+            case OFX::eBitDepthFloat: {
+                ImageRGBLutProcessorFloat<3,1023> fred(*this, args);
                 setupAndProcess(fred, args);
             }
                 break;
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
-    }
-    else {
+    } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        switch (dstBitDepth)
-        {
-            case OFX::eBitDepthUByte :
-            {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
                 ImageRGBLutProcessor<unsigned char, 1, 255> fred(*this, args);
                 setupAndProcess(fred, args);
             }
                 break;
-
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 ImageRGBLutProcessor<unsigned short, 1, 65535> fred(*this, args);
                 setupAndProcess(fred, args);
             }
                 break;
-
-            case OFX::eBitDepthFloat :
-            {
-                ImageRGBLutProcessorFloat<1,999> fred(*this, args);
+            case OFX::eBitDepthFloat: {
+                ImageRGBLutProcessorFloat<1,1023> fred(*this, args);
                 setupAndProcess(fred, args);
             }
                 break;
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
