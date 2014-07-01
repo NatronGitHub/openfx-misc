@@ -35,6 +35,7 @@
  */
 
 #include "ofxsTracking.h"
+#include <cmath>
 
 #include "ofxsOGLTextRenderer.h"
 
@@ -43,6 +44,10 @@
 #else
 #include <GL/gl.h>
 #endif
+
+#define POINT_SIZE 5
+#define POINT_TOLERANCE 6
+#define HANDLE_SIZE 6
 
 using namespace OFX;
 
@@ -293,455 +298,397 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
 
 //////////////////// INTERACT ////////////////////
 
-bool TrackerRegionInteract::isNearbyTopLeft(const OfxPointD& pos, double tolerance, const OfxPointD& btmLeft, const OfxPointD& topRight) const
+static bool isNearby(const OfxPointD& p, double x, double y, double tolerance, const OfxPointD& pscale)
 {
-    OfxPointD topLeft;
-    topLeft.x = btmLeft.x;
-    topLeft.y = topRight.y;
-    if (pos.x >= (topLeft.x - tolerance) && pos.x <= (topLeft.x + tolerance) &&
-        pos.y >= (topLeft.y - tolerance) && pos.y <= (topLeft.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool TrackerRegionInteract::isNearbyTopRight(const OfxPointD& pos, double tolerance, const OfxPointD& btmLeft, const OfxPointD& topRight) const
-{
-    if (pos.x >= (topRight.x - tolerance) && pos.x <= (topRight.x + tolerance) &&
-        pos.y >= (topRight.y - tolerance) && pos.y <= (topRight.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool TrackerRegionInteract::isNearbyBtmLeft(const OfxPointD& pos, double tolerance, const OfxPointD& btmLeft, const OfxPointD& topRight) const
-{
-    if (pos.x >= (btmLeft.x - tolerance) && pos.x <= (btmLeft.x + tolerance) &&
-        pos.y >= (btmLeft.y - tolerance) && pos.y <= (btmLeft.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool TrackerRegionInteract::isNearbyBtmRight(const OfxPointD& pos, double tolerance, const OfxPointD& btmLeft, const OfxPointD& topRight) const
-{
-    OfxPointD btmRight;
-    btmRight.x = topRight.x;
-    btmRight.y = btmLeft.y ;
-    if (pos.x >= (btmRight.x - tolerance) && pos.x <= (btmRight.x + tolerance) &&
-        pos.y >= (btmRight.y - tolerance) && pos.y <= (btmRight.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool TrackerRegionInteract::isNearbyTopMid(const OfxPointD& pos, double tolerance, const OfxPointD& btmLeft, const OfxPointD& topRight) const
-{
-    OfxPointD topMid;
-    topMid.x = (btmLeft.x + topRight.x) / 2.;
-    topMid.y = topRight.y;
-    if (pos.x >= (topMid.x - tolerance) && pos.x <= (topMid.x + tolerance) &&
-        pos.y >= (topMid.y - tolerance) && pos.y <= (topMid.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-    
-}
-
-bool TrackerRegionInteract::isNearbyMidRight(const OfxPointD& pos, double tolerance, const OfxPointD& btmLeft, const OfxPointD& topRight) const
-{
-    OfxPointD midRight;
-    midRight.x = topRight.x;
-    midRight.y = (btmLeft.y + topRight.y) / 2.;
-    if (pos.x >= (midRight.x - tolerance) && pos.x <= (midRight.x + tolerance) &&
-        pos.y >= (midRight.y - tolerance) && pos.y <= (midRight.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool TrackerRegionInteract::isNearbyMidLeft(const OfxPointD& pos,double tolerance, const OfxPointD& btmLeft, const OfxPointD& topRight) const
-{
-    OfxPointD midLeft;
-    midLeft.x = btmLeft.x;
-    midLeft.y = (btmLeft.y + topRight.y) /2.;
-    if (pos.x >= (midLeft.x - tolerance) && pos.x <= (midLeft.x + tolerance) &&
-        pos.y >= (midLeft.y - tolerance) && pos.y <= (midLeft.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-    
-}
-
-bool TrackerRegionInteract::isNearbyBtmMid(const OfxPointD& pos,double tolerance, const OfxPointD& btmLeft, const OfxPointD& topRight) const
-{
-    OfxPointD btmMid;
-    btmMid.x = (btmLeft.x + topRight.x) / 2.;
-    btmMid.y = btmLeft.y ;
-    if (pos.x >= (btmMid.x - tolerance) && pos.x <= (btmMid.x + tolerance) &&
-        pos.y >= (btmMid.y - tolerance) && pos.y <= (btmMid.y + tolerance)) {
-        return true;
-    } else {
-        return false;
-    }
-    
-}
-
-bool TrackerRegionInteract::isNearbyCenter(const OfxPointD& pos,double tolerance,const OfxPointD& center) const
-{
-    return (pos.x >= (center.x - tolerance) && pos.x <= (center.x + tolerance) &&
-            pos.y >= (center.y - tolerance) && pos.y <= (center.y + tolerance));
+    return std::fabs(p.x-x) <= tolerance*pscale.x &&  std::fabs(p.y-y) <= tolerance*pscale.y;
 }
 
 
 
 bool TrackerRegionInteract::draw(const OFX::DrawArgs &args)
 {
-    OfxPointD innerBtmLeft,innerTopRight,outerBtmLeft,outerTopRight,center;
-    
+    OfxPointD pscale;
+    pscale.x = args.pixelScale.x / args.renderScale.x;
+    pscale.y = args.pixelScale.y / args.renderScale.y;
+
+    double xi1, xi2, yi1, yi2, xo1, xo2, yo1, yo2, xc, yc;
+
     if (_ms != eIdle) {
-        innerBtmLeft = _innerBtmLeftDragPos;
-        innerTopRight = _innerTopRightDragPos;
-        outerBtmLeft = _outerBtmLeftDragPos;
-        outerTopRight = _outerTopRightDragPos;
-        center = _centerDragPos;
-
+        xi1 = _innerBtmLeftDragPos.x;
+        yi1 = _innerBtmLeftDragPos.y;
+        xi2 = _innerTopRightDragPos.x;
+        yi2 = _innerTopRightDragPos.y;
+        xo1 = _outerBtmLeftDragPos.x;
+        yo1 = _outerBtmLeftDragPos.y;
+        xo2 = _outerTopRightDragPos.x;
+        yo2 = _outerTopRightDragPos.y;
+        xc = _centerDragPos.x;
+        yc = _centerDragPos.y;
     } else {
-        _center->getValueAtTime(args.time, center.x, center.y);
+        _innerBtmLeft->getValueAtTime( args.time, xi1, yi1);
+        _innerTopRight->getValueAtTime(args.time, xi2, yi2);
+        _outerBtmLeft->getValueAtTime( args.time, xo1, yo1);
+        _outerTopRight->getValueAtTime(args.time, xo2, yo2);
+        _center->getValueAtTime(args.time, xc, yc);
+        ///innerBtmLeft and outerBtmLeft are relative to the center, make them absolute
+        xi1 += xc;
+        yi1 += yc;
+        xi2 += xc;
+        yi2 += yc;
+        xo1 += xc;
+        yo1 += yc;
+        xo2 += xc;
+        yo2 += yc;
+    }
+    
+    
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
 
-        _innerBtmLeft->getValueAtTime(args.time, innerBtmLeft.x, innerBtmLeft.y);
-        _innerTopRight->getValueAtTime(args.time, innerTopRight.x, innerTopRight.y);
+    //glDisable(GL_LINE_STIPPLE);
+    glEnable(GL_LINE_SMOOTH);
+    //glEnable(GL_POINT_SMOOTH);
+    glEnable(GL_BLEND);
+    glHint(GL_LINE_SMOOTH_HINT,GL_DONT_CARE);
+    glLineWidth(1.5);
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+
+    // Draw everything twice
+    // l = 0: shadow
+    // l = 1: drawing
+    for (int l = 0; l < 2; ++l) {
+        if (l == 0) {
+            // translate (1,-1) pixels
+            glTranslated(pscale.x, -pscale.y, 0);
+            glColor3f(0., 0., 0.);
+        } else {
+            glColor3f(0.8, 0.8, 0.8);
+        }
+        glBegin(GL_LINE_STRIP);
+        glVertex2d(xi1, yi1);
+        glVertex2d(xi1, yi2);
+        glVertex2d(xi2, yi2);
+        glVertex2d(xi2, yi1);
+        glVertex2d(xi1, yi1);
+        glEnd();
+
+        glBegin(GL_LINE_STRIP);
+        glVertex2d(xo1, yo1);
+        glVertex2d(xo1, yo2);
+        glVertex2d(xo2, yo2);
+        glVertex2d(xo2, yo1);
+        glVertex2d(xo1, yo1);
+        glEnd();
+
+        glPointSize(POINT_SIZE);
+        glBegin(GL_POINTS);
+
+        ///draw center
+        if (l == 1) {
+            if (_ds == eHoveringCenter || _ms == eDraggingCenter) {
+                glColor3f(0., 1., 0.);
+            } else {
+                glColor3f(0.8, 0.8, 0.8);
+            }
+        }
+        glVertex2d(xc, yc);
+        //////DRAWING INNER POINTS
+        if (_ds == eHoveringInnerBtmLeft || _ms == eDraggingInnerBtmLeft) {
+            if (l == 1) {
+                glColor3f(0., 1., 0.);
+            }
+            glVertex2d(xi1, yi1);
+        }
+        if (_ds == eHoveringInnerBtmMid || _ms == eDraggingInnerBtmMid) {
+            if (l == 1) {
+                glColor3f(0., 1., 0.);
+            }
+            glVertex2d(xc, yi1);
+        }
+        if (_ds == eHoveringInnerBtmRight || _ms == eDraggingInnerBtmRight) {
+            if (l == 1) {
+                glColor3f(0., 1., 0.);
+            }
+            glVertex2d(xi2, yi1);
+        }
+        if (_ds == eHoveringInnerMidLeft || _ms == eDraggingInnerMidLeft) {
+            if (l == 1) {
+                glColor3f(0., 1., 0.);
+            }
+            glVertex2d(xi1, yc);
+        }
+        if (_ds == eHoveringInnerMidRight || _ms == eDraggingInnerMidRight) {
+            if (l == 1) {
+                glColor3f(0., 1., 0.);
+            }
+            glVertex2d(xi2, yc);
+        }
+        if (_ds == eHoveringInnerTopLeft || _ms == eDraggingInnerTopLeft) {
+            if (l == 1) {
+                glColor3f(0., 1., 0.);
+            }
+            glVertex2d(xi1, yi2);
+        }
+
+        if (_ds == eHoveringInnerTopMid || _ms == eDraggingInnerTopMid) {
+            if (l == 1) {
+                glColor3f(0., 1., 0.);
+            }
+            glVertex2d(xc, yi2);
+        }
+
+        if (_ds == eHoveringInnerTopRight || _ms == eDraggingInnerTopRight) {
+            if (l == 1) {
+                glColor3f(0., 1., 0.);
+            }
+            glVertex2d(xi2, yi2);
+        }
+
+
+
+
+        //////DRAWING OUTTER POINTS
+
+        if (_ds == eHoveringOuterBtmLeft || _ms == eDraggingOuterBtmLeft) {
+            if (l == 1) {
+                glColor3f(0., 1., 0.);
+            }
+            glVertex2d(xo1, yo1);
+        }
+        if (_ds == eHoveringOuterBtmMid || _ms == eDraggingOuterBtmMid) {
+            if (l == 1) {
+                glColor3f(0., 1., 0.);
+            }
+            glVertex2d(xc, yo1);
+        }
+        if (_ds == eHoveringOuterBtmRight || _ms == eDraggingOuterBtmRight) {
+            if (l == 1) {
+                glColor3f(0., 1., 0.);
+            }
+            glVertex2d(xo2, yo1);
+        }
+        if (_ds == eHoveringOuterMidLeft || _ms == eDraggingOuterMidLeft) {
+            if (l == 1) {
+                glColor3f(0., 1., 0.);
+            }
+            glVertex2d(xo1, yc);
+        }
+        if (_ds == eHoveringOuterMidRight || _ms == eDraggingOuterMidRight) {
+            if (l == 1) {
+                glColor3f(0., 1., 0.);
+            }
+            glVertex2d(xo2, yc);
+        }
+
+        if (_ds == eHoveringOuterTopLeft || _ms == eDraggingOuterTopLeft) {
+            if (l == 1) {
+                glColor3f(0., 1., 0.);
+            }
+            glVertex2d(xo1, yo2);
+        }
+        if (_ds == eHoveringOuterTopMid || _ms == eDraggingOuterTopMid) {
+            if (l == 1) {
+                glColor3f(0., 1., 0.);
+            }
+            glVertex2d(xc, yo2);
+        }
+        if (_ds == eHoveringOuterTopRight || _ms == eDraggingOuterTopRight) {
+            if (l == 1) {
+                glColor3f(0., 1., 0.);
+            }
+            glVertex2d(xo2, yo2);
+        }
+
+        glEnd();
+
+        double handleSizeX = HANDLE_SIZE * pscale.x;
+        double handleSizeY = HANDLE_SIZE * pscale.y;
+
+        ///now show small lines at handle positions
+        glBegin(GL_LINES);
+
+        if (l == 1) {
+            if (_ds == eHoveringInnerMidLeft || _ms == eDraggingInnerMidLeft) {
+                glColor3f(0., 1., 0.);
+            } else {
+                glColor3f(0.8, 0.8, 0.8);
+            }
+        }
+        glVertex2d(xi1, yc);
+        glVertex2d(xi1 - handleSizeX, yc);
+
+        if (l == 1) {
+            if (_ds == eHoveringInnerTopMid || _ms == eDraggingInnerTopMid) {
+                glColor3f(0., 1., 0.);
+            } else {
+                glColor3f(0.8, 0.8, 0.8);
+            }
+        }
+        glVertex2d(xc, yi2);
+        glVertex2d(xc, yi2 + handleSizeY);
+
+        if (l == 1) {
+            if (_ds == eHoveringInnerMidRight || _ms == eDraggingInnerMidRight) {
+                glColor3f(0., 1., 0.);
+            } else {
+                glColor3f(0.8, 0.8, 0.8);
+            }
+        }
+        glVertex2d(xi2, yc);
+        glVertex2d(xi2 + handleSizeX, yc);
+
+        if (l == 1) {
+            if (_ds == eHoveringInnerBtmMid || _ms == eDraggingInnerBtmMid) {
+                glColor3f(0., 1., 0.);
+            } else {
+                glColor3f(0.8, 0.8, 0.8);
+            }
+        }
+        glVertex2d(xc, yi1);
+        glVertex2d(xc, yi1 - handleSizeY);
+
+        //////DRAWING OUTTER HANDLES
+
+        if (l == 1) {
+            if (_ds == eHoveringOuterMidLeft || _ms == eDraggingOuterMidLeft) {
+                glColor3f(0., 1., 0.);
+            } else {
+                glColor3f(0.8, 0.8, 0.8);
+            }
+        }
+        glVertex2d(xo1, yc);
+        glVertex2d(xo1 - handleSizeX, yc);
+
+        if (l == 1) {
+            if (_ds == eHoveringOuterTopMid || _ms == eDraggingOuterTopMid) {
+                glColor3f(0., 1., 0.);
+            } else {
+                glColor3f(0.8, 0.8, 0.8);
+            }
+        }
+        glVertex2d(xc, yo2);
+        glVertex2d(xc, yo2 + handleSizeY);
+
+        if (l == 1) {
+            if (_ds == eHoveringOuterMidRight || _ms == eDraggingOuterMidRight) {
+                glColor3f(0., 1., 0.);
+            } else {
+                glColor3f(0.8, 0.8, 0.8);
+            }
+        }
+        glVertex2d(xo2 + handleSizeX, yc);
+        glVertex2d(xo2, yc);
+
+        if (l == 1) {
+            if (_ds == eHoveringOuterBtmMid || _ms == eDraggingOuterBtmMid) {
+                glColor3f(0., 1., 0.);
+            } else {
+                glColor3f(0.8, 0.8, 0.8);
+            }
+        }
+        glVertex2d(xc, yo1);
+        glVertex2d(xc, yo1 - handleSizeY);
+        glEnd();
         
-        ///innerBtmLeft is relative to the center, make it absolute
-        innerBtmLeft.x += center.x;
-        innerBtmLeft.y += center.y;
-        innerTopRight.x += center.x;
-        innerTopRight.y += center.y;
-
-        _outerBtmLeft->getValueAtTime(args.time, outerBtmLeft.x, outerBtmLeft.y);
-        _outerTopRight->getValueAtTime(args.time, outerTopRight.x, outerTopRight.y);
-
         
-        ///outerBtmLeft is relative to the center, make it absolute
-        outerBtmLeft.x += center.x;
-        outerBtmLeft.y += center.y;
-        outerTopRight.x += center.x;
-        outerTopRight.y += center.y;
+        if (l == 1) {
+            glColor3f(0.8, 0.8, 0.8);
+        }
+        std::string name;
+        _name->getValue(name);
+        TextRenderer::bitmapString(xc, yc, name.c_str());
+        
+        if (l == 0) {
+            // translate (-1,1) pixels
+            glTranslated(-pscale.x, pscale.y, 0);
+        }
     }
-    
-    
-    ///Compute all other points positions given the 5 parameters retrieved above
-    OfxPointD innerTopLeft, innerTopMid, innerMidRight, innerBtmRight, innerBtmMid, innerMidLeft;
-    OfxPointD outerTopLeft, outerTopMid, outerMidRight, outerBtmRight, outerBtmMid, outerMidLeft;
-    innerTopLeft.x = innerBtmLeft.x;
-    innerTopLeft.y = innerTopRight.y;
-    innerTopMid.x = (innerBtmLeft.x + innerTopRight.x) / 2.;
-    innerTopMid.y = innerTopLeft.y;
-    innerMidRight.x = innerTopRight.x;
-    innerMidRight.y = (innerBtmLeft.y + innerTopRight.y) / 2.;
-    innerBtmRight.x = innerTopRight.x;
-    innerBtmRight.y = innerBtmLeft.y;
-    innerBtmMid.x = innerTopMid.x;
-    innerBtmMid.y = innerBtmLeft.y;
-    innerMidLeft.x = innerBtmLeft.x;
-    innerMidLeft.y = innerMidRight.y;
-    
-    outerTopLeft.x = outerBtmLeft.x;
-    outerTopLeft.y = outerTopRight.y;
-    outerTopMid.x = (outerBtmLeft.x + outerTopRight.x) / 2.;
-    outerTopMid.y = outerTopLeft.y;
-    outerMidRight.x = outerTopRight.x;
-    outerMidRight.y = (outerBtmLeft.y + outerTopRight.y) / 2.;
-    outerBtmRight.x = outerTopRight.x;
-    outerBtmRight.y = outerBtmLeft.y;
-    outerBtmMid.x = outerTopMid.x;
-    outerBtmMid.y = outerBtmLeft.y;
-    outerMidLeft.x = outerBtmLeft.x;
-    outerMidLeft.y = outerMidRight.y;
 
-
-    
-    glColor4f(0.9, 0.9, 0.9, 1.);
-    glBegin(GL_LINE_STRIP);
-    glVertex2d(innerBtmLeft.x, innerBtmLeft.y);
-    glVertex2d(innerTopLeft.x, innerTopLeft.y);
-    glVertex2d(innerTopRight.x, innerTopRight.y);
-    glVertex2d(innerBtmRight.x, innerBtmRight.y);
-    glVertex2d(innerBtmLeft.x, innerBtmLeft.y);
-    glEnd();
-    
-    glBegin(GL_LINE_STRIP);
-    glVertex2d(outerBtmLeft.x, outerBtmLeft.y);
-    glVertex2d(outerTopLeft.x, outerTopLeft.y);
-    glVertex2d(outerTopRight.x, outerTopRight.y);
-    glVertex2d(outerBtmRight.x, outerBtmRight.y);
-    glVertex2d(outerBtmLeft.x, outerBtmLeft.y);
-    glEnd();
-    
-    glPointSize(6);
-    glBegin(GL_POINTS);
-    
-    //////DRAWING INNER POINTS
-    if (_ds == eHoveringInnerBtmLeft || _ms == eDraggingInnerBtmLeft) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(innerBtmLeft.x, innerBtmLeft.y);
-    }
-    if (_ds == eHoveringInnerMidLeft || _ms == eDraggingInnerMidLeft) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(innerMidLeft.x, innerMidLeft.y);
-    }
-    if (_ds == eHoveringInnerTopLeft || _ms == eDraggingInnerTopLeft) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(innerTopLeft.x, innerTopLeft.y);
-    }
-    
-    if (_ds == eHoveringInnerTopMid || _ms == eDraggingInnerTopMid) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(innerTopMid.x, innerTopMid.y);
-    }
-    
-    if (_ds == eHoveringInnerTopRight || _ms == eDraggingInnerTopRight) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(innerTopRight.x, innerTopRight.y);
-    }
-    
-    if (_ds == eHoveringInnerMidRight || _ms == eDraggingInnerMidRight) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(innerMidRight.x, innerMidRight.y);
-    }
-    
-    if (_ds == eHoveringInnerBtmRight || _ms == eDraggingInnerBtmRight) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(innerBtmRight.x, innerBtmRight.y);
-    }
-    
-    if (_ds == eHoveringInnerBtmMid || _ms == eDraggingInnerBtmMid) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(innerBtmMid.x, innerBtmMid.y);
-    }
-    
-    //////DRAWING OUTTER POINTS
-    
-    if (_ds == eHoveringOuterBtmLeft || _ms == eDraggingOuterBtmLeft) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(outerBtmLeft.x, outerBtmLeft.y);
-    }
-    
-    if (_ds == eHoveringOuterMidLeft || _ms == eDraggingOuterMidLeft) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(outerMidLeft.x, outerMidLeft.y);
-    }
-    
-    if (_ds == eHoveringOuterTopLeft || _ms == eDraggingOuterTopLeft) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(outerTopLeft.x, outerTopLeft.y);
-    }
-    if (_ds == eHoveringOuterTopMid || _ms == eDraggingOuterTopMid) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(outerTopMid.x, outerTopMid.y);
-    }
-    
-    if (_ds == eHoveringOuterTopRight || _ms == eDraggingOuterTopRight) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(outerTopRight.x, outerTopRight.y);
-    }
-    
-    if (_ds == eHoveringOuterMidRight || _ms == eDraggingOuterMidRight) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(outerMidRight.x, outerMidRight.y);
-    }
-    
-    if (_ds == eHoveringOuterBtmRight || _ms == eDraggingOuterBtmRight) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(outerBtmRight.x, outerBtmRight.y);
-    }
-    
-    if (_ds == eHoveringOuterBtmMid || _ms == eDraggingOuterBtmMid) {
-        glColor4f(0., 1., 0., 1.);
-        glVertex2d(outerBtmMid.x, outerBtmMid.y);
-    }
-    ///draw center
-    if (_ds == eHoveringCenter || _ms == eDraggingCenter) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(1, 1, 1, 1);
-    }
-    glVertex2d(center.x,center.y);
-    glEnd();
-    glPointSize(1);
-
-    double handleSizeX = 10. * args.pixelScale.x;
-    double handleSizeY = 10. * args.pixelScale.y;
-    
-    ///now show small lines at handle positions
-    glBegin(GL_LINES);
-
-    if (_ds == eHoveringInnerMidLeft || _ms == eDraggingInnerMidLeft) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(0.8, 0.8, 0.8, 0.8);
-    }
-    glVertex2d(innerMidLeft.x, innerMidLeft.y);
-    glVertex2d(innerMidLeft.x - handleSizeX, innerMidLeft.y);
-    
-    if (_ds == eHoveringInnerTopMid || _ms == eDraggingInnerTopMid) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(0.8, 0.8, 0.8, 0.8);
-    }
-    glVertex2d(innerTopMid.x, innerTopMid.y);
-    glVertex2d(innerTopMid.x, innerTopMid.y + handleSizeY);
-    
-
-    if (_ds == eHoveringInnerMidRight || _ms == eDraggingInnerMidRight) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(0.8, 0.8, 0.8, 0.8);
-    }
-    glVertex2d(innerMidRight.x, innerMidRight.y);
-    glVertex2d(innerMidRight.x + handleSizeX, innerMidRight.y);
-
-    if (_ds == eHoveringInnerBtmMid || _ms == eDraggingInnerBtmMid) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(0.8, 0.8, 0.8, 0.8);
-    }
-    glVertex2d(innerBtmMid.x, innerBtmMid.y);
-    glVertex2d(innerBtmMid.x, innerBtmMid.y - handleSizeY);
-    
-    //////DRAWING OUTTER HANDLES
-    
-    if (_ds == eHoveringOuterMidLeft || _ms == eDraggingOuterMidLeft) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(0.8, 0.8, 0.8, 0.8);
-    }
-    glVertex2d(outerMidLeft.x, outerMidLeft.y);
-    glVertex2d(outerMidLeft.x - handleSizeX, outerMidLeft.y);
-
-    if (_ds == eHoveringOuterTopMid || _ms == eDraggingOuterTopMid) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(0.8, 0.8, 0.8, 0.8);
-    }
-    glVertex2d(outerTopMid.x, outerTopMid.y);
-    glVertex2d(outerTopMid.x, outerTopMid.y + handleSizeY);
-    
-    if (_ds == eHoveringOuterMidRight || _ms == eDraggingOuterMidRight) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(0.8, 0.8, 0.8, 0.8);
-    }
-    glVertex2d(outerMidRight.x + handleSizeX, outerMidRight.y);
-    glVertex2d(outerMidRight.x, outerMidRight.y);
-
-
-    
-    if (_ds == eHoveringOuterBtmMid || _ms == eDraggingOuterBtmMid) {
-        glColor4f(0., 1., 0., 1.);
-    } else {
-        glColor4f(0.8, 0.8, 0.8, 0.8);
-    }
-    glVertex2d(outerBtmMid.x, outerBtmMid.y);
-    glVertex2d(outerBtmMid.x, outerBtmMid.y - handleSizeY);
-
-
-    glEnd();
-    
-    
-    std::string name;
-    _name->getValue(name);
-    TextRenderer::bitmapString(center.x,center.y + 10,name.c_str());
+    glPopAttrib();
     
     return true;
 }
 
 bool TrackerRegionInteract::penMotion(const OFX::PenArgs &args)
 {
+    OfxPointD pscale;
+    pscale.x = args.pixelScale.x / args.renderScale.x;
+    pscale.y = args.pixelScale.y / args.renderScale.y;
+
     bool didSomething = false;
     OfxPointD delta;
     delta.x = args.penPosition.x - _lastMousePos.x;
     delta.y = args.penPosition.y - _lastMousePos.y;
-    
-    double selectionTol = 8. * args.pixelScale.x;
-    
-    OfxPointD innerTopRight,outerTopRight,innerBtmLeft,outerBtmLeft,center;
-    _innerTopRight->getValueAtTime(args.time, innerTopRight.x, innerTopRight.y);
-    _outerTopRight->getValueAtTime(args.time, outerTopRight.x, outerTopRight.y);
-    _innerBtmLeft->getValueAtTime(args.time, innerBtmLeft.x, innerBtmLeft.y);
-    _outerBtmLeft->getValueAtTime(args.time, outerBtmLeft.x, outerBtmLeft.y);
-    _center->getValueAtTime(args.time, center.x, center.y);
-    ///innerBtmLeft and outerBtmLeft are relative to the center, make them absolute
-    innerBtmLeft.x += center.x;
-    innerBtmLeft.y += center.y;
-    innerTopRight.x += center.x;
-    innerTopRight.y += center.y;
 
-    outerBtmLeft.x += center.x;
-    outerBtmLeft.y += center.y;
-    outerTopRight.x += center.x;
-    outerTopRight.y += center.y;
+    double xi1, xi2, yi1, yi2, xo1, xo2, yo1, yo2, xc, yc;
+    _innerBtmLeft->getValueAtTime( args.time, xi1, yi1);
+    _innerTopRight->getValueAtTime(args.time, xi2, yi2);
+    _outerBtmLeft->getValueAtTime( args.time, xo1, yo1);
+    _outerTopRight->getValueAtTime(args.time, xo2, yo2);
+    _center->getValueAtTime(args.time, xc, yc);
+    ///innerBtmLeft and outerBtmLeft are relative to the center, make them absolute
+    xi1 += xc;
+    yi1 += yc;
+    xi2 += xc;
+    yi2 += yc;
+    xo1 += xc;
+    yo1 += yc;
+    xo2 += xc;
+    yo2 += yc;
 
     bool lastStateWasHovered = _ds != eInactive;
 
     if (_ms == eIdle) {
-        if (isNearbyCenter(args.penPosition, selectionTol, center)) {
+        // test center first
+        if (       isNearby(args.penPosition, xc,  yc,  POINT_TOLERANCE, pscale)) {
             _ds = eHoveringCenter;
             didSomething = true;
-        } else if (isNearbyBtmLeft(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+        } else if (isNearby(args.penPosition, xi1, yi1, POINT_TOLERANCE, pscale)) {
             _ds = eHoveringInnerBtmLeft;
             didSomething = true;
-        } else if (isNearbyBtmRight(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+        } else if (isNearby(args.penPosition, xi2, yi1, POINT_TOLERANCE, pscale)) {
             _ds = eHoveringInnerBtmRight;
             didSomething = true;
-        } else if (isNearbyTopRight(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
-            _ds = eHoveringInnerTopRight;
-            didSomething = true;
-        } else if (isNearbyTopLeft(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+        } else if (isNearby(args.penPosition, xi1, yi2, POINT_TOLERANCE, pscale)) {
             _ds = eHoveringInnerTopLeft;
             didSomething = true;
-        } else if (isNearbyTopMid(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
-            _ds = eHoveringInnerTopMid;
+        } else if (isNearby(args.penPosition, xi2, yi2, POINT_TOLERANCE, pscale)) {
+            _ds = eHoveringInnerTopRight;
             didSomething = true;
-        } else if (isNearbyMidRight(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
-            _ds = eHoveringInnerMidRight;
-            didSomething = true;
-        } else if (isNearbyBtmMid(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+        } else if (isNearby(args.penPosition, xc,  yi1, POINT_TOLERANCE, pscale)) {
             _ds = eHoveringInnerBtmMid;
             didSomething = true;
-        } else if (isNearbyMidLeft(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+        } else if (isNearby(args.penPosition, xi1, yc,  POINT_TOLERANCE, pscale)) {
             _ds = eHoveringInnerMidLeft;
             didSomething = true;
-        } else if (isNearbyBtmLeft(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+        } else if (isNearby(args.penPosition, xc,  yi2, POINT_TOLERANCE, pscale)) {
+            _ds = eHoveringInnerTopMid;
+            didSomething = true;
+        } else if (isNearby(args.penPosition, xi2, yc,  POINT_TOLERANCE, pscale)) {
+            _ds = eHoveringInnerMidRight;
+            didSomething = true;
+        } else if (isNearby(args.penPosition, xo1, yo1, POINT_TOLERANCE, pscale)) {
             _ds = eHoveringOuterBtmLeft;
             didSomething = true;
-        } else if (isNearbyBtmRight(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+        } else if (isNearby(args.penPosition, xo2, yo1, POINT_TOLERANCE, pscale)) {
             _ds = eHoveringOuterBtmRight;
             didSomething = true;
-        } else if (isNearbyTopRight(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
-            _ds = eHoveringOuterTopRight;
-            didSomething = true;
-        } else if (isNearbyTopLeft(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+        } else if (isNearby(args.penPosition, xo1, yo2, POINT_TOLERANCE, pscale)) {
             _ds = eHoveringOuterTopLeft;
             didSomething = true;
-        } else if (isNearbyTopMid(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
-            _ds = eHoveringOuterTopMid;
+        } else if (isNearby(args.penPosition, xo2, yo2, POINT_TOLERANCE, pscale)) {
+            _ds = eHoveringOuterTopRight;
             didSomething = true;
-        } else if (isNearbyMidRight(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
-            _ds = eHoveringOuterMidRight;
-            didSomething = true;
-        } else if (isNearbyBtmMid(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+        } else if (isNearby(args.penPosition, xc,  yo1, POINT_TOLERANCE, pscale)) {
             _ds = eHoveringOuterBtmMid;
             didSomething = true;
-        } else if (isNearbyMidLeft(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+        } else if (isNearby(args.penPosition, xo1, yc,  POINT_TOLERANCE, pscale)) {
             _ds = eHoveringOuterMidLeft;
+            didSomething = true;
+        } else if (isNearby(args.penPosition, xc,  yo2, POINT_TOLERANCE, pscale)) {
+            _ds = eHoveringOuterTopMid;
+            didSomething = true;
+        } else if (isNearby(args.penPosition, xo2, yc,  POINT_TOLERANCE, pscale)) {
+            _ds = eHoveringOuterMidRight;
             didSomething = true;
         } else {
             _ds = eInactive;
@@ -897,87 +844,54 @@ bool TrackerRegionInteract::penMotion(const OFX::PenArgs &args)
     
     
     if (isDraggingOuterPoint()) {
-        ///clamp the outer rect to the inner rect
-        OfxPointD innerBtmLeft,innerTopRight;
-        _innerBtmLeft->getValue(innerBtmLeft.x, innerBtmLeft.y);
-        _innerTopRight->getValue(innerTopRight.x, innerTopRight.y);
-        
-        ///convert to absolute coords.
-        innerBtmLeft.x += center.x;
-        innerBtmLeft.y += center.y;
-        innerTopRight.x += center.x;
-        innerTopRight.y += center.y;
+        /// outer rect must at least contain the inner rect
 
-        if (_outerBtmLeftDragPos.x > innerBtmLeft.x) {
-            _outerBtmLeftDragPos.x = innerBtmLeft.x;
+        if (_outerBtmLeftDragPos.x > xi1) {
+            _outerBtmLeftDragPos.x = xi1;
         }
 
-        if (_outerBtmLeftDragPos.y > innerBtmLeft.y) {
-            _outerBtmLeftDragPos.y = innerBtmLeft.y;
+        if (_outerBtmLeftDragPos.y > yi1) {
+            _outerBtmLeftDragPos.y = yi1;
         }
         
-        if (_outerTopRightDragPos.x < _innerTopRightDragPos.x) {
-            _outerTopRightDragPos.x = _innerTopRightDragPos.x;
+        if (_outerTopRightDragPos.x < xi2) {
+            _outerTopRightDragPos.x = xi2;
         }
-        if (_outerTopRightDragPos.y < _innerTopRightDragPos.y) {
-            _outerTopRightDragPos.y = _innerTopRightDragPos.y;
-        }
-        
-        if (_controlDown) {
-            if (_outerTopRightDragPos.x < innerTopRight.x) {
-                _outerTopRightDragPos.x = innerTopRight.x;
-            }
-            if (_outerTopRightDragPos.y < innerTopRight.y) {
-                _outerTopRightDragPos.y = innerTopRight.y;
-            }
+        if (_outerTopRightDragPos.y < yi2) {
+            _outerTopRightDragPos.y = yi2;
         }
     }
     
     if (isDraggingInnerPoint()) {
-        ///clamp to the center point
-        if (_innerBtmLeftDragPos.x > center.x) {
-            double diffX = _innerBtmLeftDragPos.x - center.x;
-            _innerBtmLeftDragPos.x = center.x;
+        /// inner rect must contain center point
+        if (_innerBtmLeftDragPos.x > xc) {
+            double diffX = _innerBtmLeftDragPos.x - xc;
+            _innerBtmLeftDragPos.x = xc;
             _outerBtmLeftDragPos.x -= diffX;
             _outerTopRightDragPos.x += multiplier * diffX;
             _innerTopRightDragPos.x += multiplier * diffX;
         }
-        if (_innerBtmLeftDragPos.y > center.y) {
-            double diffY = _innerBtmLeftDragPos.y - center.y;
-            _innerBtmLeftDragPos.y = center.y;
+        if (_innerBtmLeftDragPos.y > yc) {
+            double diffY = _innerBtmLeftDragPos.y - yc;
+            _innerBtmLeftDragPos.y = yc;
             _outerBtmLeftDragPos.y -= diffY;
             _outerTopRightDragPos.y += multiplier * diffY;
             _innerTopRightDragPos.y += multiplier * diffY;
         }
-        if (_innerTopRightDragPos.x < center.x) {
-            double diffX = _innerTopRightDragPos.x - center.x;
-            _innerTopRightDragPos.x = center.x;
+        if (_innerTopRightDragPos.x <= xc) {
+            double diffX = _innerTopRightDragPos.x - xc;
+            _innerTopRightDragPos.x = xc;
             _outerTopRightDragPos.x += diffX;
             _outerBtmLeftDragPos.x -= multiplier * diffX;
             _innerBtmLeftDragPos.x -= multiplier * diffX;
         }
-        if (_innerTopRightDragPos.y < center.y) {
-            double diffY = _innerTopRightDragPos.y - center.y;
-            _innerTopRightDragPos.y = center.y;
+        if (_innerTopRightDragPos.y <= yc) {
+            double diffY = _innerTopRightDragPos.y - yc;
+            _innerTopRightDragPos.y = yc;
             _outerTopRightDragPos.y -= diffY;
             _outerBtmLeftDragPos.y -= multiplier * diffY;
             _innerBtmLeftDragPos.y -= multiplier * diffY;
         }
-//
-//        if (_controlDown) {
-//            if ((_innerBtmLeftDragPos.x + _innerTopRightDragPos.x) < center.x) {
-//                double diffX = center.x - _innerBtmLeftDragPos.x - _innerTopRightDragPos.x;
-//                _innerTopRightDragPos.x = center.x - _innerBtmLeftDragPos.x;
-//                _outerTopRightDragPos.x +=  diffX;
-//            }
-//            
-//            if ((_innerBtmLeftDragPos.y + _innerTopRightDragPos.y) < center.y) {
-//                double diffY = center.y - _innerBtmLeftDragPos.y - _innerTopRightDragPos.y;
-//                _innerTopRightDragPos.y = center.y - _innerBtmLeftDragPos.y;
-//                _outerTopRightDragPos.y += diffY;
-//            }
-//            
-//        }
     }
     
     ///forbid 0 pixels wide rectangles
@@ -1010,79 +924,82 @@ bool TrackerRegionInteract::penMotion(const OFX::PenArgs &args)
 
 bool TrackerRegionInteract::penDown(const OFX::PenArgs &args)
 {
+    OfxPointD pscale;
+    pscale.x = args.pixelScale.x / args.renderScale.x;
+    pscale.y = args.pixelScale.y / args.renderScale.y;
+
     bool didSomething = false;
-    
-    double selectionTol = 8. * args.pixelScale.x;
-    
-    OfxPointD innerTopRight,outerTopRight,innerBtmLeft,outerBtmLeft,center;
-    _innerTopRight->getValueAtTime(args.time, innerTopRight.x, innerTopRight.y);
-    _innerBtmLeft->getValueAtTime(args.time, innerBtmLeft.x, innerBtmLeft.y);
-    _outerTopRight->getValueAtTime(args.time, outerTopRight.x, outerTopRight.y);
-    _outerBtmLeft->getValueAtTime(args.time, outerBtmLeft.x, outerBtmLeft.y);
-    _center->getValueAtTime(args.time, center.x, center.y);
-    
-    
+    OfxPointD delta;
+    delta.x = args.penPosition.x - _lastMousePos.x;
+    delta.y = args.penPosition.y - _lastMousePos.y;
+
+    double xi1, xi2, yi1, yi2, xo1, xo2, yo1, yo2, xc, yc;
+    _innerBtmLeft->getValueAtTime( args.time, xi1, yi1);
+    _innerTopRight->getValueAtTime(args.time, xi2, yi2);
+    _outerBtmLeft->getValueAtTime( args.time, xo1, yo1);
+    _outerTopRight->getValueAtTime(args.time, xo2, yo2);
+    _center->getValueAtTime(args.time, xc, yc);
     ///innerBtmLeft and outerBtmLeft are relative to the center, make them absolute
-    innerBtmLeft.x += center.x;
-    innerBtmLeft.y += center.y;
-    innerTopRight.x += center.x;
-    innerTopRight.y += center.y;
+    xi1 += xc;
+    yi1 += yc;
+    xi2 += xc;
+    yi2 += yc;
+    xo1 += xc;
+    yo1 += yc;
+    xo2 += xc;
+    yo2 += yc;
 
-    outerBtmLeft.x += center.x;
-    outerBtmLeft.y += center.y;
-    outerTopRight.x += center.x;
-    outerTopRight.y += center.y;
-
-    if (isNearbyCenter(args.penPosition, selectionTol, center)) {
+    // test center first
+    if (       isNearby(args.penPosition, xc,  yc,  POINT_TOLERANCE, pscale)) {
         _ms = eDraggingCenter;
         didSomething = true;
-    } else if (isNearbyBtmLeft(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+    } else if (isNearby(args.penPosition, xi1, yi1, POINT_TOLERANCE, pscale)) {
         _ms = eDraggingInnerBtmLeft;
         didSomething = true;
-    } else if (isNearbyBtmRight(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+    } else if (isNearby(args.penPosition, xi2, yi1, POINT_TOLERANCE, pscale)) {
         _ms = eDraggingInnerBtmRight;
         didSomething = true;
-    } else if (isNearbyTopRight(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
-        _ms = eDraggingInnerTopRight;
-        didSomething = true;
-    } else if (isNearbyTopLeft(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+    } else if (isNearby(args.penPosition, xi1, yi2, POINT_TOLERANCE, pscale)) {
         _ms = eDraggingInnerTopLeft;
         didSomething = true;
-    } else if (isNearbyTopMid(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
-        _ms = eDraggingInnerTopMid;
+    } else if (isNearby(args.penPosition, xi2, yi2, POINT_TOLERANCE, pscale)) {
+        _ms = eDraggingInnerTopRight;
         didSomething = true;
-    } else if (isNearbyMidRight(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
-        _ms = eDraggingInnerMidRight;
-        didSomething = true;
-    } else if (isNearbyBtmMid(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+    } else if (isNearby(args.penPosition, xc,  yi1, POINT_TOLERANCE, pscale)) {
         _ms = eDraggingInnerBtmMid;
         didSomething = true;
-    } else if (isNearbyMidLeft(args.penPosition, selectionTol, innerBtmLeft, innerTopRight)) {
+    } else if (isNearby(args.penPosition, xi1, yc,  POINT_TOLERANCE, pscale)) {
         _ms = eDraggingInnerMidLeft;
         didSomething = true;
-    } else if (isNearbyBtmLeft(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+    } else if (isNearby(args.penPosition, xc,  yi2, POINT_TOLERANCE, pscale)) {
+        _ms = eDraggingInnerTopMid;
+        didSomething = true;
+    } else if (isNearby(args.penPosition, xi2, yc,  POINT_TOLERANCE, pscale)) {
+        _ms = eDraggingInnerMidRight;
+        didSomething = true;
+    } else if (isNearby(args.penPosition, xo1, yo1, POINT_TOLERANCE, pscale)) {
         _ms = eDraggingOuterBtmLeft;
         didSomething = true;
-    } else if (isNearbyBtmRight(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+    } else if (isNearby(args.penPosition, xo2, yo1, POINT_TOLERANCE, pscale)) {
         _ms = eDraggingOuterBtmRight;
         didSomething = true;
-    } else if (isNearbyTopRight(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
-        _ms = eDraggingOuterTopRight;
-        didSomething = true;
-    } else if (isNearbyTopLeft(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+    } else if (isNearby(args.penPosition, xo1, yo2, POINT_TOLERANCE, pscale)) {
         _ms = eDraggingOuterTopLeft;
         didSomething = true;
-    } else if (isNearbyTopMid(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
-        _ms = eDraggingOuterTopMid;
+    } else if (isNearby(args.penPosition, xo2, yo2, POINT_TOLERANCE, pscale)) {
+        _ms = eDraggingOuterTopRight;
         didSomething = true;
-    } else if (isNearbyMidRight(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
-        _ms = eDraggingOuterMidRight;
-        didSomething = true;
-    } else if (isNearbyBtmMid(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+    } else if (isNearby(args.penPosition, xc,  yo1, POINT_TOLERANCE, pscale)) {
         _ms = eDraggingOuterBtmMid;
         didSomething = true;
-    } else if (isNearbyMidLeft(args.penPosition, selectionTol, outerBtmLeft, outerTopRight)) {
+    } else if (isNearby(args.penPosition, xo1, yc,  POINT_TOLERANCE, pscale)) {
         _ms = eDraggingOuterMidLeft;
+        didSomething = true;
+    } else if (isNearby(args.penPosition, xc,  yo2, POINT_TOLERANCE, pscale)) {
+        _ms = eDraggingOuterTopMid;
+        didSomething = true;
+    } else if (isNearby(args.penPosition, xo2, yc,  POINT_TOLERANCE, pscale)) {
+        _ms = eDraggingOuterMidRight;
         didSomething = true;
     } else {
         _ms = eIdle;
@@ -1090,12 +1007,17 @@ bool TrackerRegionInteract::penDown(const OFX::PenArgs &args)
  
     
     ///Keep the points in absolute coordinates
-    _innerBtmLeftDragPos = innerBtmLeft;
-    _innerTopRightDragPos = innerTopRight;
-    _outerBtmLeftDragPos = outerBtmLeft;
-    _outerTopRightDragPos = outerTopRight;
-    _centerDragPos = center;
-    
+    _innerBtmLeftDragPos.x  = xi1;
+    _innerBtmLeftDragPos.y  = yi1;
+    _innerTopRightDragPos.x = xi2;
+    _innerTopRightDragPos.y = yi2;
+    _outerBtmLeftDragPos.x  = xo1;
+    _outerBtmLeftDragPos.y  = yo1;
+    _outerTopRightDragPos.x = xo2;
+    _outerTopRightDragPos.y = yo2;
+    _centerDragPos.x        = xc;
+    _centerDragPos.y        = yc;
+
     _lastMousePos = args.penPosition;
     return didSomething;
 }

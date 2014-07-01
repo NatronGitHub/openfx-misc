@@ -170,11 +170,16 @@ bool PositionInteract::draw(const OFX::DrawArgs &args)
     if (!_position) {
         return false; // nothing to draw
     }
+
+    OfxPointD pscale;
+    pscale.x = args.pixelScale.x / args.renderScale.x;
+    pscale.y = args.pixelScale.y / args.renderScale.y;
+
     OfxRGBColourF col;
     switch (_state) {
         case eInActive : col.r = col.g = col.b = 0.0f; break;
         case ePoised   : col.r = col.g = col.b = 0.5f; break;
-        case ePicked   : col.r = col.g = col.b = 1.0f; break;
+        case ePicked   : col.r = col.g = col.b = 0.8f; break;
     }
 
     // make the box a constant size on screen by scaling by the pixel scale
@@ -182,39 +187,44 @@ bool PositionInteract::draw(const OFX::DrawArgs &args)
     float dy = (float)(kXHairSize.y / args.pixelScale.y);
 
     OfxPointD pos = getCanonicalPosition(args.time);
-    {
-        // Draw a shadow for the cross hair
-        glPushMatrix();
-        // shift by (1,1) pixel
-        OfxPointD pos2 = pos;
-        pos2.x += 1. / args.pixelScale.x;
-        pos2.y += 1. / args.pixelScale.y;
-        glColor3f(col.r, col.g, col.b);
-        glTranslated(pos2.x, pos2.y, 0);
-        glBegin(GL_LINES);
-        glVertex2f(-dx, 0);
-        glVertex2f(dx, 0);
-        glVertex2f(0, -dy);
-        glVertex2f(0, dy);
-        glEnd();
-        glPopMatrix();
-    }
 
-    {
-        // Draw a cross hair, the current coordinate system aligns with the image plane.
-        glPushMatrix();
-        // draw the bo
-        OfxPointD pos = getCanonicalPosition(args.time);
-        glColor3f(col.r, col.g, col.b);
-        glTranslated(pos.x, pos.y, 0);
+    
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+    //glDisable(GL_LINE_STIPPLE);
+    glEnable(GL_LINE_SMOOTH);
+    //glEnable(GL_POINT_SMOOTH);
+    glEnable(GL_BLEND);
+    glHint(GL_LINE_SMOOTH_HINT,GL_DONT_CARE);
+    glLineWidth(1.5);
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+
+    glPushMatrix();
+    glTranslated(pos.x, pos.y, 0);
+    // Draw everything twice
+    // l = 0: shadow
+    // l = 1: drawing
+    for (int l = 0; l < 2; ++l) {
+        if (l == 0) {
+            // Draw a shadow for the cross hair
+            // shift by (1,1) pixel
+            glTranslated(pscale.x, -pscale.y, 0);
+            glColor3f(0., 0., 0.);
+        } else {
+            glColor3f(col.r, col.g, col.b);
+        }
         glBegin(GL_LINES);
         glVertex2f(-dx, 0);
         glVertex2f(dx, 0);
         glVertex2f(0, -dy);
         glVertex2f(0, dy);
         glEnd();
-        glPopMatrix();
+        if (l == 0) {
+            glTranslated(-pscale.x, pscale.y, 0);
+        }
     }
+    glPopMatrix();
+
+    glPopAttrib();
 
     return true;
 }

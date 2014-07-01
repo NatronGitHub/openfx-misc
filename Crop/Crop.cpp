@@ -526,7 +526,7 @@ private:
     virtual bool allowTopLeftInteraction() const { return !_isReformated; }
     virtual bool allowBtmRightInteraction() const { return !_isReformated; }
     virtual bool allowBtmLeftInteraction() const { return !_isReformated; }
-    virtual bool allowMidBottomInteraction() const { return !_isReformated; }
+    virtual bool allowBtmMidInteraction() const { return !_isReformated; }
     virtual bool allowMidLeftInteraction() const { return !_isReformated; }
     virtual bool allowCenterInteraction() const { return !_isReformated; }
 
