@@ -300,7 +300,7 @@ private:
     void setupAndProcess(RGBLutBase &, const OFX::RenderArguments &args);
     void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
     {
-        if (paramName == kAddCtrlPtsParamLabel) {
+        if (paramName == kAddCtrlPtsParamName) {
             for (int component = 0; component < kCurveNb; ++component) {
                 int n = lookupTable_->getNControlPoints(component, args.time);
                 if (n <= 1) {
