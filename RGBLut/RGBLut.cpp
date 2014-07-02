@@ -95,6 +95,10 @@
 #define kLookupTableParamName "lookupTable"
 #define kLookupTableParamLabel "Lookup Table"
 #define kLookupTableParamHint "Colour lookup table. The master curve is combined with the red, green and blue curves, but not with the alpha curve."
+#define kAddCtrlPtsParamName "addCtrlPts"
+#define kAddCtrlPtsParamLabel "Add Control Points"
+#define kResetCtrlPtsParamName "resetCtrlPts"
+#define kResetCtrlPtsParamLabel "Reset"
 
 #define kCurveMaster 0
 #define kCurveRed 1
@@ -137,11 +141,10 @@ class ImageRGBLutProcessor : public RGBLutBase
 {
 public:
     // ctor
-    ImageRGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args)
+    ImageRGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTable)
     : RGBLutBase(instance)
     {
         // build the LUT
-        OFX::ParametricParam  *lookupTable = instance.fetchParametricParam("lookupTable");
         assert(lookupTable);
         for (int component = 0; component < nComponents; ++component) {
             int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
@@ -200,11 +203,10 @@ class ImageRGBLutProcessorFloat : public RGBLutBase
 {
 public:
     // ctor
-    ImageRGBLutProcessorFloat(OFX::ImageEffect &instance, const OFX::RenderArguments &args)
+    ImageRGBLutProcessorFloat(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTable)
     : RGBLutBase(instance)
     {
         // build the LUT
-        OFX::ParametricParam  *lookupTable = instance.fetchParametricParam("lookupTable");
         for (int component = 0; component < nComponents; ++component) {
             int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
             bool applyMaster = lutIndex != kCurveAlpha;
@@ -285,9 +287,12 @@ public:
     , srcClip_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
+        assert(dstClip_ && dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
+        assert(srcClip_ && srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
+
+        lookupTable_ = fetchParametricParam(kLookupTableParamName);
+        assert(lookupTable_);
     }
 
 private:
@@ -295,31 +300,30 @@ private:
     void setupAndProcess(RGBLutBase &, const OFX::RenderArguments &args);
     void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
     {
-        if (paramName=="addCtrlPts") {
-            OFX::ParametricParam  *lookupTable = fetchParametricParam("lookupTable");
+        if (paramName == kAddCtrlPtsParamLabel) {
             for (int component = 0; component < kCurveNb; ++component) {
-                int n = lookupTable->getNControlPoints(component, args.time);
+                int n = lookupTable_->getNControlPoints(component, args.time);
                 if (n <= 1) {
                     // clear all control points
-                    lookupTable->deleteControlPoint(component);
+                    lookupTable_->deleteControlPoint(component);
                     // add a control point at 0, value is 0
-                    lookupTable->addControlPoint(component, // curve to set
+                    lookupTable_->addControlPoint(component, // curve to set
                                                  args.time,   // time, ignored in this case, as we are not adding a key
                                                  0.0,   // parametric position, zero
                                                  0.0,   // value to be, 0
                                                  false);   // don't add a key
                     // add a control point at 1, value is 1
-                    lookupTable->addControlPoint(component, args.time, 1.0, 1.0, false);
+                    lookupTable_->addControlPoint(component, args.time, 1.0, 1.0, false);
                 } else {
-                    std::pair<double, double> prev = lookupTable->getNthControlPoint(component, args.time, 0);
+                    std::pair<double, double> prev = lookupTable_->getNthControlPoint(component, args.time, 0);
                     for (int i = 1; i < n; ++i) {
                         // note that getNthControlPoint is buggy in Nuke 6, and always returns point 1 for nthCtl > 0
-                        std::pair<double, double> next = lookupTable->getNthControlPoint(component, args.time, i);
+                        std::pair<double, double> next = lookupTable_->getNthControlPoint(component, args.time, i);
                         if (prev != next) { // don't create additional points if we encounter the Nuke bug
                             // create a new control point between two existing control points
                             double parametricPos = (prev.first + next.first)/2.;
-                            double parametricVal = lookupTable->getValue(component, args.time, parametricPos);
-                            lookupTable->addControlPoint(component, // curve to set
+                            double parametricVal = lookupTable_->getValue(component, args.time, parametricPos);
+                            lookupTable_->addControlPoint(component, // curve to set
                                                          args.time,   // time, ignored in this case, as we are not adding a key
                                                          parametricPos,   // parametric position
                                                          parametricVal,   // value to be, 0
@@ -330,7 +334,7 @@ private:
                 }
             }
 #if 0
-        } else if (paramName=="resetCtrlPts") {
+        } else if (paramName == kResetCtrlPtsParamName) {
             OFX::Message::MessageReplyEnum reply = sendMessage(OFX::Message::eMessageQuestion, "", "Delete all control points for all components?");
             // Nuke seems to always reply eMessageReplyOK, whatever the real answer was
             switch (reply) {
@@ -348,11 +352,10 @@ private:
                     break;
             }
             if (reply == OFX::Message::eMessageReplyYes) {
-                OFX::ParametricParam  *lookupTable = fetchParametricParam("lookupTable");
                 for (int component = 0; component < kCurveNb; ++component) {
-                    lookupTable->deleteControlPoint(component);
+                    lookupTable_->deleteControlPoint(component);
                     // add a control point at 0, value is 0
-                    lookupTable->addControlPoint(component, // curve to set
+                    lookupTable_->addControlPoint(component, // curve to set
                                                  args.time,   // time, ignored in this case, as we are not adding a key
                                                  0.0,   // parametric position, zero
                                                  0.0,   // value to be, 0
@@ -368,6 +371,8 @@ private:
 private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
+    OFX::ParametricParam  *lookupTable_;
+
 };
 
 
@@ -408,24 +413,23 @@ void RGBLutPlugin::setupAndProcess(RGBLutBase &processor, const OFX::RenderArgum
 
 void RGBLutPlugin::render(const OFX::RenderArguments &args)
 {
-    assert(dstClip_);
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
 
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
             case OFX::eBitDepthUByte: {
-                ImageRGBLutProcessor<unsigned char, 4, 255> fred(*this, args);
+                ImageRGBLutProcessor<unsigned char, 4, 255> fred(*this, args, lookupTable_);
                 setupAndProcess(fred, args);
             }
                 break;
             case OFX::eBitDepthUShort: {
-                ImageRGBLutProcessor<unsigned short, 4, 65535> fred(*this, args);
+                ImageRGBLutProcessor<unsigned short, 4, 65535> fred(*this, args, lookupTable_);
                 setupAndProcess(fred, args);
             }
                 break;
             case OFX::eBitDepthFloat: {
-                ImageRGBLutProcessorFloat<4,1023> fred(*this, args);
+                ImageRGBLutProcessorFloat<4,1023> fred(*this, args, lookupTable_);
                 setupAndProcess(fred, args);
             }
                 break;
@@ -435,17 +439,17 @@ void RGBLutPlugin::render(const OFX::RenderArguments &args)
     } else if (dstComponents == OFX::ePixelComponentRGB) {
         switch (dstBitDepth) {
             case OFX::eBitDepthUByte: {
-                ImageRGBLutProcessor<unsigned char, 3, 255> fred(*this, args);
+                ImageRGBLutProcessor<unsigned char, 3, 255> fred(*this, args, lookupTable_);
                 setupAndProcess(fred, args);
             }
                 break;
             case OFX::eBitDepthUShort: {
-                ImageRGBLutProcessor<unsigned short, 3, 65535> fred(*this, args);
+                ImageRGBLutProcessor<unsigned short, 3, 65535> fred(*this, args, lookupTable_);
                 setupAndProcess(fred, args);
             }
                 break;
             case OFX::eBitDepthFloat: {
-                ImageRGBLutProcessorFloat<3,1023> fred(*this, args);
+                ImageRGBLutProcessorFloat<3,1023> fred(*this, args, lookupTable_);
                 setupAndProcess(fred, args);
             }
                 break;
@@ -456,17 +460,17 @@ void RGBLutPlugin::render(const OFX::RenderArguments &args)
         assert(dstComponents == OFX::ePixelComponentAlpha);
         switch (dstBitDepth) {
             case OFX::eBitDepthUByte: {
-                ImageRGBLutProcessor<unsigned char, 1, 255> fred(*this, args);
+                ImageRGBLutProcessor<unsigned char, 1, 255> fred(*this, args, lookupTable_);
                 setupAndProcess(fred, args);
             }
                 break;
             case OFX::eBitDepthUShort: {
-                ImageRGBLutProcessor<unsigned short, 1, 65535> fred(*this, args);
+                ImageRGBLutProcessor<unsigned short, 1, 65535> fred(*this, args, lookupTable_);
                 setupAndProcess(fred, args);
             }
                 break;
             case OFX::eBitDepthFloat: {
-                ImageRGBLutProcessorFloat<1,1023> fred(*this, args);
+                ImageRGBLutProcessorFloat<1,1023> fred(*this, args, lookupTable_);
                 setupAndProcess(fred, args);
             }
                 break;
@@ -580,14 +584,14 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     
     page->addChild(*lookupTable);
     
-    OFX::PushButtonParamDescriptor* addCtrlPts = desc.definePushButtonParam("addCtrlPts");
-    addCtrlPts->setLabels("Add Control Points", "Add Control Points", "Add Control Points");
+    OFX::PushButtonParamDescriptor* addCtrlPts = desc.definePushButtonParam(kAddCtrlPtsParamName);
+    addCtrlPts->setLabels(kAddCtrlPtsParamLabel, kAddCtrlPtsParamLabel, kAddCtrlPtsParamLabel);
     
     page->addChild(*addCtrlPts);
     
 #if 0
-    OFX::PushButtonParamDescriptor* resetCtrlPts = desc.definePushButtonParam("resetCtrlPts");
-    resetCtrlPts->setLabels("Reset", "Reset", "Reset");
+    OFX::PushButtonParamDescriptor* resetCtrlPts = desc.definePushButtonParam(kResetCtrlPtsParamName);
+    resetCtrlPts->setLabels(kResetCtrlPtsParamLabel, kResetCtrlPtsParamLabel, kResetCtrlPtsParamLabel);
     
     page->addChild(*resetCtrlPts);
 #endif
