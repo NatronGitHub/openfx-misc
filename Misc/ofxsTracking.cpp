@@ -209,6 +209,18 @@ OFX::PageParamDescriptor* genericTrackerDescribeInContextBegin(OFX::ImageEffectD
 
 void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX::PageParamDescriptor* page)
 {
+    ///Declare the name first so that in Natron it appears as the first column in the multi instance
+    OFX::StringParamDescriptor* name = desc.defineStringParam(kTrackLabelParamName);
+    name->setLabels(kTrackLabelParamLabel, kTrackLabelParamLabel, kTrackLabelParamLabel);
+    name->setHint(kTrackLabelParamHint);
+    name->setDefault(kTrackLabelParamDefault);
+    ////name->setIsSecret(false); // it has to be user-editable
+    ////name->setEnabled(true); // it has to be user-editable
+    ////name->setIsPersistant(true); // it has to be saved with the instance parameters
+    name->setEvaluateOnChange(false); // it is meaningless
+    page->addChild(*name);
+
+    
     OFX::Double2DParamDescriptor* center = desc.defineDouble2DParam(kTrackCenterPointParamName);
     center->setLabels(kTrackCenterPointParamLabel, kTrackCenterPointParamLabel, kTrackCenterPointParamLabel);
     center->setHint(kTrackCenterPointParamHint);
@@ -284,15 +296,6 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     page->addChild(*forward);
 
 
-    OFX::StringParamDescriptor* name = desc.defineStringParam(kTrackLabelParamName);
-    name->setLabels(kTrackLabelParamLabel, kTrackLabelParamLabel, kTrackLabelParamLabel);
-    name->setHint(kTrackLabelParamHint);
-    name->setDefault(kTrackLabelParamDefault);
-    ////name->setIsSecret(false); // it has to be user-editable
-    ////name->setEnabled(true); // it has to be user-editable
-    ////name->setIsPersistant(true); // it has to be saved with the instance parameters
-    name->setEvaluateOnChange(false); // it is meaningless
-    page->addChild(*name);
     
 }
 
