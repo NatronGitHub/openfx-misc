@@ -146,10 +146,11 @@ public:
     {
         // build the LUT
         assert(lookupTable);
+        assert((PIX)maxValue == maxValue);
         for (int component = 0; component < nComponents; ++component) {
             int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
             bool applyMaster = lutIndex != kCurveAlpha;
-            for (PIX position = 0; position <= maxValue; ++position) {
+            for (int position = 0; position <= maxValue; ++position) {
                 // position to evaluate the param at
                 float parametricPos = float(position)/maxValue;
 
@@ -316,6 +317,9 @@ private:
                     lookupTable_->addControlPoint(component, args.time, 1.0, 1.0, false);
                 } else {
                     std::pair<double, double> prev = lookupTable_->getNthControlPoint(component, args.time, 0);
+                    std::list<std::pair<double, double> > newCtrlPts;
+
+                    // compute new points, put them in a list
                     for (int i = 1; i < n; ++i) {
                         // note that getNthControlPoint is buggy in Nuke 6, and always returns point 1 for nthCtl > 0
                         std::pair<double, double> next = lookupTable_->getNthControlPoint(component, args.time, i);
@@ -323,13 +327,19 @@ private:
                             // create a new control point between two existing control points
                             double parametricPos = (prev.first + next.first)/2.;
                             double parametricVal = lookupTable_->getValue(component, args.time, parametricPos);
-                            lookupTable_->addControlPoint(component, // curve to set
-                                                         args.time,   // time, ignored in this case, as we are not adding a key
-                                                         parametricPos,   // parametric position
-                                                         parametricVal,   // value to be, 0
-                                                         false);
+                            newCtrlPts.push_back(std::make_pair(parametricPos, parametricVal));
                         }
                         prev = next;
+                    }
+                    // now add the new points
+                    for (std::list<std::pair<double, double> >::const_iterator it = newCtrlPts.begin();
+                         it != newCtrlPts.end();
+                         ++it) {
+                        lookupTable_->addControlPoint(component, // curve to set
+                                                      args.time,   // time, ignored in this case, as we are not adding a key
+                                                      it->first,   // parametric position
+                                                      it->second,   // value to be, 0
+                                                      false);
                     }
                 }
             }
