@@ -302,8 +302,9 @@ private:
             }
         }
         if (scoreTypeE == eTrackerNCC || scoreTypeE == eTrackerZNCC) {
-            if (otherSsq != 0.) {
-                score /= std::sqrt(otherSsq);
+            double sdev = std::sqrt(otherSsq);
+            if (sdev != 0.) {
+                score /= sdev;
             } else {
                 score = std::numeric_limits<double>::infinity();
             }
