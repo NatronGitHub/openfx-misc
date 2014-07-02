@@ -305,8 +305,7 @@ private:
             for (int component = 0; component < kCurveNb; ++component) {
                 int n = lookupTable_->getNControlPoints(component, args.time);
                 if (n <= 1) {
-                    // clear all control points
-                    lookupTable_->deleteControlPoint(component);
+                    // less than two points: add the two default control points
                     // add a control point at 0, value is 0
                     lookupTable_->addControlPoint(component, // curve to set
                                                  args.time,   // time, ignored in this case, as we are not adding a key
@@ -321,9 +320,8 @@ private:
 
                     // compute new points, put them in a list
                     for (int i = 1; i < n; ++i) {
-                        // note that getNthControlPoint is buggy in Nuke 6, and always returns point 1 for nthCtl > 0
                         std::pair<double, double> next = lookupTable_->getNthControlPoint(component, args.time, i);
-                        if (prev != next) { // don't create additional points if we encounter the Nuke bug
+                        if (prev.first != next.first) { // don't create additional points if there is no space for one
                             // create a new control point between two existing control points
                             double parametricPos = (prev.first + next.first)/2.;
                             double parametricVal = lookupTable_->getValue(component, args.time, parametricPos);
