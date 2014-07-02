@@ -93,7 +93,8 @@
 
 #define kSwitchPluginSourceClipCount 10
 #define kSwitchPluginParamWhich "which"
-
+#define kSwitchPluginParamWhichLabel "Which"
+#define kSwitchPluginParamWhichHint "The input to display. Each input is displayed at the value corresponding to the number of the input. For example, setting which to 4 displays the image from input 4."
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class SwitchPlugin : public OFX::ImageEffect
@@ -132,8 +133,10 @@ SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle)
         std::stringstream s;
         s << i;
         srcClip_[i] = fetchClip(s.str());
+        assert(srcClip_[i]);
     }
     which_  = fetchIntParam(kSwitchPluginParamWhich);
+    assert(which_);
 }
 
 void
@@ -251,9 +254,8 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     IntParamDescriptor *which = desc.defineIntParam(kSwitchPluginParamWhich);
-    which->setLabels("which", "which", "which");
-    which->setScriptName("which");
-    which->setHint("The input to display. Each input is displayed at the value corresponding to the number of the input. For example, setting which to 4 displays the image from input 4.");
+    which->setLabels(kSwitchPluginParamWhichLabel, kSwitchPluginParamWhichLabel, kSwitchPluginParamWhichLabel);
+    which->setHint(kSwitchPluginParamWhichHint);
     which->setDefault(0);
     which->setRange(0, kSwitchPluginSourceClipCount);
     which->setDisplayRange(0, 1);

@@ -226,12 +226,13 @@ public:
     , offset_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_->getPixelComponents() == ePixelComponentRGBA);
+        assert(dstClip_ && dstClip_->getPixelComponents() == ePixelComponentRGBA);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_->getPixelComponents() == ePixelComponentRGBA);
+        assert(srcClip_ && srcClip_->getPixelComponents() == ePixelComponentRGBA);
         amtcolour_  = fetchDoubleParam(kAmtColourParamName);
         swap_ = fetchBooleanParam(kSwapParamName);
         offset_ = fetchIntParam(kOffsetParamName);
+        assert(amtcolour_ && swap_ && offset_);
     }
 
 private:

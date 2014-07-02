@@ -400,9 +400,9 @@ public:
     , maskClip_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
+        assert(dstClip_ && dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
+        assert(srcClip_ && srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
         fetchColorControlGroup(kColorCorrectMasterGroupName, &_masterParamsGroup);
@@ -412,6 +412,7 @@ public:
         _rangesParam = fetchParametricParam(kColorCorrectToneRangesParamName);
         _mix = fetchDoubleParam(kFilterMixParamName);
         _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
+        assert(_rangesParam && _mix && _maskInvert);
     }
 
 private:
@@ -424,11 +425,13 @@ private:
     virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) /*OVERRIDE FINAL*/;
 
     void fetchColorControlGroup(const std::string& groupName, ColorControlParamGroup* group) {
+        assert(group);
         group->saturation = fetchRGBAParam(groupName + '.' + kColorCorrectSaturationName);
         group->contrast = fetchRGBAParam(groupName + '.' + kColorCorrectContrastName);
         group->gamma = fetchRGBAParam(groupName + '.' + kColorCorrectGammaName);
         group->gain = fetchRGBAParam(groupName + '.' + kColorCorrectGainName);
         group->offset = fetchRGBAParam(groupName + '.' + kColorCorrectOffsetName);
+        assert(group->saturation && group->contrast && group->gamma && group->gain && group->offset);
     }
     
     void getColorCorrectGroupValues(double time, ColorControlGroup* groupValues, ColorCorrectGroupType type);

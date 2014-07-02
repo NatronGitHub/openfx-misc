@@ -87,6 +87,19 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kVerticalParamName "vertical"
+#define kVerticalParamLabel "Vertical"
+#define kVerticalParamHint "Stack views vertically instead of horizontally"
+
+#define kView1ParamName "view1"
+#define kView1ParamLabel "View 1"
+#define kView1ParamHint "First view"
+#define kView2ParamName "view2"
+#define kView2ParamLabel "View 2"
+#define kView2ParamHint "Second view"
+#define kViewOptionLeft "Left"
+#define kViewOptionRight "Right"
+
 // Base class for the RGBA and the Alpha processor
 class SideBySideBase : public OFX::ImageProcessor {
 protected:
@@ -178,12 +191,12 @@ public:
     , view2_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
+        assert(dstClip_ && dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
-        vertical_ = fetchBooleanParam("vertical");
-        view1_ = fetchChoiceParam("view1");
-        view2_ = fetchChoiceParam("view2");
+        assert(srcClip_ && srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
+        vertical_ = fetchBooleanParam(kVerticalParamName);
+        view1_ = fetchChoiceParam(kView1ParamName);
+        view2_ = fetchChoiceParam(kView2ParamName);
     }
 
 private:
@@ -493,29 +506,29 @@ void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // make some pages and to things in 
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    BooleanParamDescriptor *vertical = desc.defineBooleanParam("vertical");
+    BooleanParamDescriptor *vertical = desc.defineBooleanParam(kVerticalParamName);
     vertical->setDefault(false);
-    vertical->setHint("Stack views vertically instead of horizontally");
-    vertical->setLabels("vertical", "vertical", "vertical");
+    vertical->setHint(kVerticalParamHint);
+    vertical->setLabels(kVerticalParamLabel, kVerticalParamLabel, kVerticalParamLabel);
     vertical->setAnimates(true);
     
     page->addChild(*vertical);
     
-    ChoiceParamDescriptor *view1 = desc.defineChoiceParam("view1");
-    view1->setHint("First view");
-    view1->setLabels("view1", "view1", "view1");
-    view1->appendOption("Left", "Left");
-    view1->appendOption("Right", "Right");
+    ChoiceParamDescriptor *view1 = desc.defineChoiceParam(kView1ParamName);
+    view1->setHint(kView1ParamHint);
+    view1->setLabels(kView1ParamLabel, kView1ParamLabel, kView1ParamLabel);
+    view1->appendOption(kViewOptionLeft);
+    view1->appendOption(kViewOptionRight);
     view1->setDefault(0);
     view1->setAnimates(true);
     
     page->addChild(*view1);
     
-    ChoiceParamDescriptor *view2 = desc.defineChoiceParam("view2");
-    view2->setHint("Second view");
-    view2->setLabels("view2", "view2", "view2");
-    view2->appendOption("Left", "Left");
-    view2->appendOption("Right", "Right");
+    ChoiceParamDescriptor *view2 = desc.defineChoiceParam(kView2ParamName);
+    view2->setHint(kView2ParamHint);
+    view2->setLabels(kView2ParamLabel, kView2ParamLabel, kView2ParamLabel);
+    view2->appendOption(kViewOptionLeft);
+    view2->appendOption(kViewOptionRight);
     view2->setDefault(1);
     view2->setAnimates(true);
     

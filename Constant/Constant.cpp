@@ -220,8 +220,10 @@ public:
     , range_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
+        assert(dstClip_ && dstClip_->getPixelComponents() == OFX::ePixelComponentRGB || dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentAlpha);
         color_   = fetchRGBAParam(kColorParamName);
         range_   = fetchInt2DParam(kRangeParamName);
+        assert(color_ && range_);
     }
 
 private:

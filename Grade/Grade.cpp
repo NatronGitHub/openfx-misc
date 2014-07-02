@@ -270,9 +270,9 @@ public:
     
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
+        assert(dstClip_ && dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
+        assert(srcClip_ && srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
         _blackPoint = fetchRGBAParam(kBlackPointParamName);
@@ -286,6 +286,7 @@ public:
         _clampWhite = fetchBooleanParam(kClampWhiteParamName);
         _mix = fetchDoubleParam(kFilterMixParamName);
         _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
+        assert(_blackPoint && _whitePoint && _black && _white && _multiply && _offset && _gamma && _clampBlack && _clampWhite && _mix && _maskInvert);
     }
     
 private:

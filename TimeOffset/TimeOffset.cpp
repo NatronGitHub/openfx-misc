@@ -87,9 +87,10 @@
 
 #define kTimeOffsetParamName "timeOffset"
 #define kTimeOffsetParamLabel "Time offset (frames)"
-
+#define kTimeOffsetParamHint "Offset in frames (frame f from the input will be at f+offset)"
 #define kReverseInputParamName "reverseInput"
 #define kReverseInputParamLabel "Reverse input"
+#define kReverseInputParamHint "Reverse the order of the input frames so that last one is first"
 
 namespace OFX {
     extern ImageEffectHostDescription gHostDescription;
@@ -134,9 +135,11 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
 , reverse_input_(0)
 {
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentAlpha || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB || srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
 
     time_offset_   = fetchIntParam(kTimeOffsetParamName);
     reverse_input_ = fetchBooleanParam(kReverseInputParamName);
+    assert(time_offset_ && reverse_input_);
 }
 
 
@@ -274,6 +277,7 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // we are a transition, so define the sourceTo input clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(true); // say we will be doing random time access on this clip
     srcClip->setSupportsTiles(true);
@@ -281,6 +285,7 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(true);
 
@@ -289,8 +294,7 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 
     IntParamDescriptor *time_offset = desc.defineIntParam(kTimeOffsetParamName);
     time_offset->setLabels(kTimeOffsetParamLabel,kTimeOffsetParamLabel,kTimeOffsetParamLabel);
-    time_offset->setScriptName("time_offset");
-    time_offset->setHint("Offset in frames (frame f from the input will be at f+offset)");
+    time_offset->setHint(kTimeOffsetParamHint);
     time_offset->setDefault(0);
     // keep default range (INT_MIN..INT_MAX)
     // no display range
@@ -301,7 +305,7 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 
     BooleanParamDescriptor *reverse_input = desc.defineBooleanParam(kReverseInputParamName);
     reverse_input->setDefault(false);
-    reverse_input->setHint("Reverse the order of the input frames so that last one is first");
+    reverse_input->setHint(kReverseInputParamHint);
     reverse_input->setLabels(kReverseInputParamLabel,kReverseInputParamLabel,kReverseInputParamLabel);
     reverse_input->setAnimates(true);
 

@@ -219,11 +219,11 @@ public:
     
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha);
+        assert(dstClip_ && dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha);
         srcClipA_ = fetchClip(kSourceClipAName);
-        assert(srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA || srcClipA_->getPixelComponents() == ePixelComponentAlpha);
+        assert(srcClipA_ && srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA || srcClipA_->getPixelComponents() == ePixelComponentAlpha);
         srcClipB_ = fetchClip(kSourceClipBName);
-        assert(srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA || srcClipB_->getPixelComponents() == ePixelComponentAlpha);
+        assert(srcClipB_ && srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA || srcClipB_->getPixelComponents() == ePixelComponentAlpha);
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
         _operation = fetchChoiceParam(kOperationParamName);
@@ -232,6 +232,7 @@ public:
         _alphaMasking = fetchBooleanParam(kAlphaMaskingParamName);
         _mix = fetchDoubleParam(kFilterMixParamName);
         _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
+        assert(_operation && _operationString && _bbox && _alphaMasking && _mix && _maskInvert);
     }
     
 private:
