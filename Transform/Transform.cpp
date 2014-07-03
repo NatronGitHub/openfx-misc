@@ -125,7 +125,7 @@
 #define kScaleParamLabel "Scale"
 #define kScaleUniformParamName "uniform"
 #define kScaleUniformParamLabel "Uniform"
-#define kScaleUniformParamHint "Use same scale for both directions"
+#define kScaleUniformParamHint "Use the X scale for both directions"
 #define kSkewXParamName "skewX"
 #define kSkewXParamLabel "Skew X"
 #define kSkewYParamName "skewY"
@@ -136,9 +136,12 @@
 #define kCenterParamLabel "Center"
 
 
-#define CIRCLE_RADIUS_BASE 30.0
-#define POINT_SIZE 7.0
-#define ELLIPSE_N_POINTS 50.0
+#define CIRCLE_RADIUS_BASE 30.
+#define CIRCLE_RADIUS_MIN 15.
+#define CIRCLE_RADIUS_MAX 300.
+#define POINT_SIZE 7.
+#define ELLIPSE_N_POINTS 50.
+#define SCALE_MIN 1e-8
 
 using namespace OFX;
 
@@ -233,6 +236,12 @@ bool TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX
     _scaleUniform->getValueAtTime(time, scaleUniform);
     if (scaleUniform) {
         scaleY = scaleX;
+    }
+    if (std::fabs(scaleX) < SCALE_MIN) {
+        scaleX = scaleX >= 0 ? SCALE_MIN : -SCALE_MIN;
+    }
+    if (std::fabs(scaleY) < SCALE_MIN) {
+        scaleY = scaleY >= 0 ? SCALE_MIN : -SCALE_MIN;
     }
     _translate->getValueAtTime(time, translateX, translateY);
     _rotate->getValueAtTime(time, rotate);
@@ -365,6 +374,12 @@ private:
         if (scaleUniform) {
             scale->y = scale->x;
         }
+        if (std::fabs(scale->x) < SCALE_MIN) {
+            scale->x = scale->x >= 0 ? SCALE_MIN : -SCALE_MIN;
+        }
+        if (std::fabs(scale->y) < SCALE_MIN) {
+            scale->y = scale->y >= 0 ? SCALE_MIN : -SCALE_MIN;
+        }
     }
     
     void getCircleRadius(double time, const OfxPointD& pixelScale, OfxPointD* radius)
@@ -374,13 +389,37 @@ private:
         radius->x = scale.x * CIRCLE_RADIUS_BASE;
         radius->y = scale.y * CIRCLE_RADIUS_BASE;
         // don't draw too small. 15 pixels is the limit
-        if (std::fabs(radius->x) < 15) {
-            radius->y *= std::fabs(15./radius->x);
-            radius->x = radius->x > 0 ? 15. : -15.;
-        }
-        if (std::fabs(radius->y) < 15) {
-            radius->x *= std::fabs(15./radius->y);
-            radius->y = radius->y > 0 ? 15. : -15.;
+        if (std::fabs(radius->x) < CIRCLE_RADIUS_MIN && std::fabs(radius->y) < CIRCLE_RADIUS_MIN) {
+            radius->x = radius->x >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
+            radius->y = radius->y >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
+        } else if (std::fabs(radius->x) > CIRCLE_RADIUS_MAX && std::fabs(radius->y) > CIRCLE_RADIUS_MAX) {
+            radius->x = radius->x >= 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
+            radius->y = radius->y >= 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
+        } else {
+            if (std::fabs(radius->x) < CIRCLE_RADIUS_MIN) {
+                if (radius->x == 0. && radius->y != 0.) {
+                    radius->y = radius->y > 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
+                } else {
+                    radius->y *= std::fabs(CIRCLE_RADIUS_MIN/radius->x);
+                }
+                radius->x = radius->x >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
+            }
+            if (std::fabs(radius->x) > CIRCLE_RADIUS_MAX) {
+                radius->y *= std::fabs(CIRCLE_RADIUS_MAX/radius->x);
+                radius->x = radius->x > 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
+            }
+            if (std::fabs(radius->y) < CIRCLE_RADIUS_MIN) {
+                if (radius->y == 0. && radius->x != 0.) {
+                    radius->x = radius->x > 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
+                } else {
+                    radius->x *= std::fabs(CIRCLE_RADIUS_MIN/radius->y);
+                }
+                radius->y = radius->y >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
+            }
+            if (std::fabs(radius->y) > CIRCLE_RADIUS_MAX) {
+                radius->x *= std::fabs(CIRCLE_RADIUS_MAX/radius->x);
+                radius->y = radius->y > 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
+            }
         }
         // the circle axes are not aligned with the images axes, so we cannot use the x and y scales separately
         double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
@@ -480,20 +519,20 @@ drawEllipse(const OfxPointD& center,
         }
     }
     
-    glPushMatrix ();
+    glPushMatrix();
     //  center the oval at x_center, y_center
-    glTranslatef (center.x, center.y, 0);
+    glTranslatef(center.x, center.y, 0);
     //  draw the oval using line segments
-    glBegin (GL_LINE_LOOP);
+    glBegin(GL_LINE_LOOP);
     // we don't need to be pixel-perfect here, it's just an interact!
     // 40 segments is enough.
     for (int i = 0; i < 40; ++i) {
         double theta = i * 2 * OFX::ofxsPi() / 40.;
-        glVertex2f (radius.x * std::cos(theta), radius.y * std::sin(theta));
+        glVertex2f(radius.x * std::cos(theta), radius.y * std::sin(theta));
     }
-    glEnd ();
+    glEnd();
     
-    glPopMatrix ();
+    glPopMatrix();
 }
 
 static void
@@ -515,8 +554,8 @@ drawSkewBar(const OfxPointD &center,
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
     double barHalfSize = radiusY + 20. * meanPixelScale;
 
-    glPushMatrix ();
-    glTranslatef (center.x, center.y, 0);
+    glPushMatrix();
+    glTranslatef(center.x, center.y, 0);
     glRotated(angle, 0, 0, 1);
     
     glBegin(GL_LINES);
@@ -583,15 +622,15 @@ drawRotationBar(const OfxPointD& pixelScale,
         arrowRadius.x = 5. * meanPixelScale;
         arrowRadius.y = 10. * meanPixelScale;
         
-        glPushMatrix ();
+        glPushMatrix();
         //  center the oval at x_center, y_center
-        glTranslatef (arrowCenterX, 0., 0);
+        glTranslatef(arrowCenterX, 0., 0);
         //  draw the oval using line segments
-        glBegin (GL_LINE_STRIP);
-        glVertex2f (0, arrowRadius.y);
-        glVertex2f (arrowRadius.x, 0.);
-        glVertex2f (0, -arrowRadius.y);
-        glEnd ();
+        glBegin(GL_LINE_STRIP);
+        glVertex2f(0, arrowRadius.y);
+        glVertex2f(arrowRadius.x, 0.);
+        glVertex2f(0, -arrowRadius.y);
+        glEnd();
         
 
         glBegin(GL_LINES);
@@ -611,7 +650,7 @@ drawRotationBar(const OfxPointD& pixelScale,
         
         glEnd();
 
-        glPopMatrix ();
+        glPopMatrix();
     }
     if (inverted) {
         double arrowXPosition = radiusX + barExtra * 1.5;
@@ -619,8 +658,8 @@ drawRotationBar(const OfxPointD& pixelScale,
         double arrowHeadOffsetX = 3 * meanPixelScale;
         double arrowHeadOffsetY = 3 * meanPixelScale;
 
-        glPushMatrix ();
-        glTranslatef (arrowXPosition, 0., 0);
+        glPushMatrix();
+        glTranslatef(arrowXPosition, 0., 0);
 
         glBegin(GL_LINES);
         ///draw the central bar
@@ -664,7 +703,7 @@ drawRotationBar(const OfxPointD& pixelScale,
         glVertex2d(+ arrowXHalfSize - arrowHeadOffsetX, -arrowHeadOffsetY);
         glEnd();
         
-        glPopMatrix ();
+        glPopMatrix();
     }
 
 }
@@ -740,12 +779,7 @@ TransformInteract::draw(const OFX::DrawArgs &args)
         double flip = 0.;
         if (_drawState == eSkewXBarHoverered || _drawState == eSkewYBarHoverered) {
             OfxPointD scale;
-            _scale->getValueAtTime(args.time, scale.x, scale.y);
-            bool scaleUniform;
-            _scaleUniform->getValueAtTime(args.time, scaleUniform);
-            if (scaleUniform) {
-                scale.y = scale.x;
-            }
+            getScale(args.time, &scale);
             double rot = OFX::ofxsToRadians(angle);
             OFX::Matrix3x3 transformscale;
             transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
@@ -779,7 +813,8 @@ TransformInteract::draw(const OFX::DrawArgs &args)
             glTranslated(-pscale.x, pscale.y, 0);
         }
     }
-    
+    glPopAttrib();
+
     return true;
 }
 
@@ -792,8 +827,8 @@ static bool squareContains(const OFX::Point3D& pos,const OfxRectD& rect,double t
 static bool isOnEllipseBorder(const OFX::Point3D& pos,const OfxPointD& radius,const OfxPointD& center,double epsilon = 0.1)
 {
 
-    double v = (((pos.x - center.x) * (pos.x - center.x)) / (radius.x * radius.x)) +
-    (((pos.y - center.y) * (pos.y - center.y)) / (radius.y * radius.y));
+    double v = ((pos.x - center.x) * (pos.x - center.x) / (radius.x * radius.x) +
+                (pos.y - center.y) * (pos.y - center.y) / (radius.y * radius.y));
     if (v <= (1. + epsilon) && v >= (1. - epsilon)) {
         return true;
     }
@@ -890,6 +925,12 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     _scaleUniform->getValueAtTime(args.time, scaleUniform);
     if (scaleUniform) {
         scale.y = scale.x;
+    }
+    if (std::fabs(scale.x) < SCALE_MIN) {
+        scale.x = scale.x >= 0 ? SCALE_MIN : -SCALE_MIN;
+    }
+    if (std::fabs(scale.y) < SCALE_MIN) {
+        scale.y = scale.y >= 0 ? SCALE_MIN : -SCALE_MIN;
     }
 
     OFX::Point3D penPos, prevPenPos, rotationPos, transformedPos, previousPos, currentPos;
@@ -1231,7 +1272,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     translate->setLabels(kTranslateParamLabel, kTranslateParamLabel, kTranslateParamLabel);
     //translate->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
     translate->setDoubleType(eDoubleTypeXYAbsolute);
-    translate->setDimensionLabels("x","y");
+    //translate->setDimensionLabels("x","y");
     translate->setDefault(0, 0);
     page->addChild(*translate);
 
@@ -1246,7 +1287,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     Double2DParamDescriptor* scale = desc.defineDouble2DParam(kScaleParamName);
     scale->setLabels(kScaleParamLabel, kScaleParamLabel, kScaleParamLabel);
     scale->setDoubleType(eDoubleTypeScale);
-    scale->setDimensionLabels("w","h");
+    //scale->setDimensionLabels("w","h");
     scale->setDefault(1,1);
     //scale->setRange(0.1,0.1,10,10);
     scale->setDisplayRange(0.1, 0.1, 10, 10);
@@ -1284,7 +1325,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     center->setLabels(kCenterParamLabel, kCenterParamLabel, kCenterParamLabel);
     //center->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
     center->setDoubleType(eDoubleTypeXYAbsolute);
-    center->setDimensionLabels("x","y");
+    //center->setDimensionLabels("x","y");
     center->setDefaultCoordinateSystem(eCoordinatesNormalised);
     center->setDefault(0.5, 0.5);
     page->addChild(*center);

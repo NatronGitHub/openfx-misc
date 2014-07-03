@@ -612,7 +612,7 @@ ofxsFilterExpandRoD(OFX::ImageEffect* effect, double pixelAspectRatio, const Ofx
         rod->y1 = rod->y1 - pixelSizeY;
         rod->y2 = rod->y2 + pixelSizeY;
     }
-    assert(rod->x1 < rod->x2 && rod->y1 < rod->y2);
+    assert(rod->x1 <= rod->x2 && rod->y1 <= rod->y2);
 }
 
 inline void

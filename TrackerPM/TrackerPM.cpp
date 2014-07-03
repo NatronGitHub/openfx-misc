@@ -119,6 +119,8 @@ public:
     : GenericTrackerPlugin(handle)
     , _score(0)
     {
+        maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
         _score = fetchChoiceParam(kScoreParamName);
         assert(_score);
     }
@@ -141,6 +143,7 @@ private:
                                const OfxRectD& refBounds,
                                const OfxPointD& refCenter,
                                const OFX::Image* refImg,
+                               const OFX::Image* maskImg,
                                OfxTime otherTime,
                                const OfxRectD& trackSearchBounds,
                                const OFX::Image* otherImg);
@@ -151,10 +154,12 @@ private:
                          const OfxRectD& refBounds,
                          const OfxPointD& refCenter,
                          const OFX::Image* refImg,
+                         const OFX::Image* maskImg,
                          OfxTime otherTime,
                          const OfxRectD& trackSearchBounds,
                          const OFX::Image* otherImg);
 
+    OFX::Clip *maskClip_;
     ChoiceParam* _score;
 };
 
@@ -164,6 +169,7 @@ class TrackerPMProcessorBase : public OFX::ImageProcessor
 protected:
     const OFX::Image *_refImg;
     const OFX::Image *_otherImg;
+    const OFX::Image *_maskImg;
     OfxRectI _refRectPixel;
     OfxPointI _refCenterI;
     std::pair<OfxPointD,double> _bestMatch; //< the results for the current processor
@@ -181,10 +187,11 @@ public:
     }
     
     /** @brief set the src image */
-    void setImages(const OFX::Image *ref, const OFX::Image *other)
+    void setImages(const OFX::Image *ref, const OFX::Image *other, const OFX::Image *mask)
     {
         _refImg = ref;
         _otherImg = other;
+        _maskImg = mask;
     }
     
     void setRefRectPixel(const OfxRectI& pattern)
@@ -259,6 +266,10 @@ private:
         for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
             for (int j = _refRectPixel.x1; j < _refRectPixel.x2; ++j) {
                 PIX *refPix = (PIX*) _refImg->getPixelAddress(_refCenterI.x + j, _refCenterI.y + i);
+                PIX *maskPix = _maskImg ? (PIX*) _maskImg->getPixelAddress(_refCenterI.x + j, _refCenterI.y + i) : 0;
+
+                // weight is zero if there's a mask but we're outside of it
+                double weight = maskPix ? (*maskPix/(double)maxValue) : (_maskImg ? 1. : 0.);
 
                 // take nearest pixel in other image (more chance to get a track than with black)
                 int otherx = x + j;
@@ -272,26 +283,28 @@ private:
                 for (int c = 0; c < scoreComps; ++c) {
                     switch (scoreTypeE) {
                         case eTrackerSSD:
-                            score += aggregateSD(refPix[c], otherPix[c]);
+                            // reference is squared in SSD, so is the weight
+                            score += weight * weight * aggregateSD(refPix[c], otherPix[c]);
                             break;
                         case eTrackerSAD:
-                            score += aggregateAD(refPix[c], otherPix[c]);
+                            score += weight * aggregateAD(refPix[c], otherPix[c]);
                             break;
                         case eTrackerNCC:
-                            score += aggregateCC(refPix[c], otherPix[c]);
-                            otherSsq -= aggregateCC(otherPix[c], otherPix[c]);
+                            score += weight * aggregateCC(refPix[c], otherPix[c]);
+                            otherSsq -= weight * aggregateCC(otherPix[c], otherPix[c]);
                             break;
                         case eTrackerZNCC:
-                            score += aggregateNCC(refPix[c], refMean[c], otherPix[c], otherMean[c]);
-                            otherSsq -= aggregateNCC(otherPix[c], otherMean[c], otherPix[c], otherMean[c]);
+                            score += weight * aggregateNCC(refPix[c], refMean[c], otherPix[c], otherMean[c]);
+                            otherSsq -= weight * aggregateNCC(otherPix[c], otherMean[c], otherPix[c], otherMean[c]);
                             break;
                     }
                 }
             }
         }
         if (scoreTypeE == eTrackerNCC || scoreTypeE == eTrackerZNCC) {
-            if (otherSsq != 0.) {
-                score /= std::sqrt(otherSsq);
+            double sdev = std::sqrt(otherSsq);
+            if (sdev != 0.) {
+                score /= sdev;
             } else {
                 score = std::numeric_limits<double>::infinity();
             }
@@ -547,6 +560,7 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
                                  const OfxRectD& refBounds,
                                  const OfxPointD& refCenter,
                                  const OFX::Image* refImg,
+                                 const OFX::Image* maskImg,
                                  OfxTime otherTime,
                                  const OfxRectD& trackSearchBounds,
                                  const OFX::Image* otherImg)
@@ -554,7 +568,7 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
     // set a dummy dstImg so that the processor does the job
     // (we don't use it anyway)
     processor.setDstImg((OFX::Image *)1);
-    processor.setImages(refImg, otherImg);
+    processor.setImages(refImg, otherImg, maskImg);
     
     OfxRectI trackSearchBoundsPixel;
     trackSearchBoundsPixel.x1 = std::floor(trackSearchBounds.x1);
@@ -613,6 +627,7 @@ TrackerPMPlugin::trackInternalForDepth(OfxTime refTime,
                                        const OfxRectD& refBounds,
                                        const OfxPointD& refCenter,
                                        const OFX::Image* refImg,
+                                       const OFX::Image* maskImg,
                                        OfxTime otherTime,
                                        const OfxRectD& trackSearchBounds,
                                        const OFX::Image* otherImg)
@@ -624,19 +639,19 @@ TrackerPMPlugin::trackInternalForDepth(OfxTime refTime,
     switch (typeE) {
         case eTrackerSSD: {
             TrackerPMProcessor<PIX, nComponents, maxValue, eTrackerSSD> fred(*this);
-            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, otherTime, trackSearchBounds, otherImg);
+            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, maskImg, otherTime, trackSearchBounds, otherImg);
         }   break;
         case eTrackerSAD: {
             TrackerPMProcessor<PIX, nComponents, maxValue, eTrackerSAD> fred(*this);
-            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, otherTime, trackSearchBounds, otherImg);
+            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, maskImg, otherTime, trackSearchBounds, otherImg);
         }   break;
         case eTrackerNCC: {
             TrackerPMProcessor<PIX, nComponents, maxValue, eTrackerNCC> fred(*this);
-            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, otherTime, trackSearchBounds, otherImg);
+            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, maskImg, otherTime, trackSearchBounds, otherImg);
         }   break;
         case eTrackerZNCC: {
             TrackerPMProcessor<PIX, nComponents, maxValue, eTrackerZNCC> fred(*this);
-            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, otherTime, trackSearchBounds, otherImg);
+            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, maskImg, otherTime, trackSearchBounds, otherImg);
         }   break;
     }
 }
@@ -677,21 +692,24 @@ TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime)
 
     OFX::BitDepthEnum srcBitDepth = srcRef->getPixelDepth();
     
+    // auto ptr for the mask.
+    std::auto_ptr<OFX::Image> mask((getContext() != OFX::eContextFilter) ? maskClip_->fetchImage(refTime) : 0);
+
     OfxRectD trackSearchBounds;
     getTrackSearchBounds(refRect, refCenter, searchRect, &trackSearchBounds);
 
     switch (srcBitDepth) {
         case OFX::eBitDepthUByte :
         {
-            trackInternalForDepth<unsigned char, nComponents, 255>(refTime, refBounds, refCenter, srcRef.get(), otherTime, trackSearchBounds, srcOther.get());
+            trackInternalForDepth<unsigned char, nComponents, 255>(refTime, refBounds, refCenter, srcRef.get(), mask.get(), otherTime, trackSearchBounds, srcOther.get());
         }   break;
         case OFX::eBitDepthUShort :
         {
-            trackInternalForDepth<unsigned short, nComponents, 65535>(refTime, refBounds, refCenter, srcRef.get(), otherTime, trackSearchBounds, srcOther.get());
+            trackInternalForDepth<unsigned short, nComponents, 65535>(refTime, refBounds, refCenter, srcRef.get(), mask.get(), otherTime, trackSearchBounds, srcOther.get());
         }   break;
         case OFX::eBitDepthFloat :
         {
-            trackInternalForDepth<float, nComponents, 1>(refTime, refBounds, refCenter, srcRef.get(), otherTime, trackSearchBounds, srcOther.get());
+            trackInternalForDepth<float, nComponents, 1>(refTime, refBounds, refCenter, srcRef.get(), mask.get(), otherTime, trackSearchBounds, srcOther.get());
         }   break;
         default :
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
@@ -709,33 +727,45 @@ void TrackerPMPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setLabels(kPluginName, kPluginName, kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+
+    // description common to all trackers
     genericTrackerDescribe(desc);
+
+    // add the additional supported contexts
+    desc.addSupportedContext(eContextPaint); // this tracker can be masked
+
     // supported bit depths depend on the tracking algorithm.
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
+
     // single instance depends on the algorithm
     desc.setSingleInstance(false);
+
     // rendertwicealways must be set to true if the tracker cannot handle interlaced content (most don't)
     desc.setRenderTwiceAlways(true);
     desc.setOverlayInteractDescriptor(new TrackerRegionOverlayDescriptor);
 }
 
-
-
-OFX::ImageEffect* TrackerPMPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
-{
-    return new TrackerPMPlugin(handle);
-}
-
-
-
-
 void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     PageParamDescriptor* page = genericTrackerDescribeInContextBegin(desc, context);
+
+    // description common to all trackers
     genericTrackerDescribePointParameters(desc, page);
-    
+
+    // this tracker can be masked
+    if (context == eContextGeneral || context == eContextPaint) {
+        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
+        maskClip->addSupportedComponent(ePixelComponentAlpha);
+        maskClip->setTemporalClipAccess(false);
+        if (context == eContextGeneral) {
+            maskClip->setOptional(true);
+        }
+        maskClip->setSupportsTiles(true);
+        maskClip->setIsMask(true);
+    }
+
     ChoiceParamDescriptor* score = desc.defineChoiceParam(kScoreParamName);
     score->setLabels(kScoreParamLabel, kScoreParamLabel, kScoreParamLabel);
     assert(score->getNOptions() == eTrackerSSD);
@@ -749,6 +779,17 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     score->setDefault((int)eTrackerSSD);
     page->addChild(*score);
 }
+
+
+
+OFX::ImageEffect* TrackerPMPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+{
+    return new TrackerPMPlugin(handle);
+}
+
+
+
+
 
 void getTrackerPMPluginID(OFX::PluginFactoryArray &ids)
 {
