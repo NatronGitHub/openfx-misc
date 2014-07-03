@@ -564,7 +564,7 @@ Transform3x3Plugin::getRegionOfDefinition(const RegionOfDefinitionArguments &arg
     rod.x2 = x2;
     rod.y1 = y1;
     rod.y2 = y2;
-    assert(rod.x1 < rod.x2 && rod.y1 < rod.y2);
+    assert(rod.x1 <= rod.x2 && rod.y1 <= rod.y2);
 
     bool blackOutside;
     _blackOutside->getValueAtTime(args.time, blackOutside);
