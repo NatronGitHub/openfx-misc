@@ -227,6 +227,7 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         assert(nComponents == 3 || nComponents == 4);
+        assert(_dstImg);
         float tmpPix[nComponents];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
@@ -243,12 +244,21 @@ private:
                     if (nComponents == 4) {
                         tmpPix[nComponents-1] = srcPix[nComponents-1];
                     }
-                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 } else {
-                    for (int c = 0; c < nComponents; c++) {
-                        dstPix[c] = 0;
+                    // no src pixel here, be black and transparent
+                    double t_r = 0.;
+                    double t_g = 0.;
+                    double t_b = 0.;
+                    grade(&t_r, &t_g, &t_b);
+                    tmpPix[0] = t_r * maxValue;
+                    tmpPix[1] = t_g * maxValue;
+                    tmpPix[2] = t_b * maxValue;
+                    if (nComponents == 4) {
+                        tmpPix[nComponents-1] = srcPix[nComponents-1];
                     }
                 }
+                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                // increment the dst pixel
                 dstPix += nComponents;
             }
         }
@@ -348,7 +358,7 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
         }
     }
     std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
-    if (getContext() != OFX::eContextFilter) {
+    if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
         processor.doMasking(true);
         processor.setMaskImg(mask.get());
     }
