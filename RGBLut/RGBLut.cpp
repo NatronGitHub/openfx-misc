@@ -84,6 +84,7 @@
 #endif
 
 #include "ofxsProcessing.H"
+#include "ofxsFilter.h"
 
 #define kPluginName "RGBLutOFX"
 #define kPluginGrouping "Color"
@@ -110,12 +111,34 @@
 class RGBLutBase : public OFX::ImageProcessor {
 protected:
     OFX::Image *_srcImg;
+    OFX::Image *_maskImg;
+    bool   _doMasking;
+    double _mix;
+    bool _maskInvert;
 
 public:
-    RGBLutBase(OFX::ImageEffect &instance): OFX::ImageProcessor(instance), _srcImg(0)
+    RGBLutBase(OFX::ImageEffect &instance)
+    : OFX::ImageProcessor(instance)
+    , _srcImg(0)
+    , _maskImg(0)
+    , _doMasking(false)
+    , _mix(1.)
+    , _maskInvert(false)
     {
     }
     void setSrcImg(OFX::Image *v) {_srcImg = v;}
+
+    void setMaskImg(OFX::Image *v) {_maskImg = v;}
+
+    void doMasking(bool v) {_doMasking = v;}
+
+    void setValues(double mix,
+                   bool maskInvert)
+    {
+        _mix = mix;
+        _maskInvert = maskInvert;
+    }
+
 };
 
 static inline int
@@ -135,13 +158,13 @@ componentToCurve(int comp)
     }
 }
 
-// template to do the RGBA processing for discrete types
+// template to do the RGBA processing for discrete types (non-masked)
 template <class PIX, int nComponents, int maxValue>
 class ImageRGBLutProcessor : public RGBLutBase
 {
 public:
     // ctor
-    ImageRGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTable)
+    ImageRGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam *lookupTable)
     : RGBLutBase(instance)
     {
         // build the LUT
@@ -169,23 +192,25 @@ private:
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
+        assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         assert(_dstImg);
+        assert(!_doMasking);
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
             }
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            for (int x = procWindow.x1; x < procWindow.x2; x++)  {
-                PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+            for (int x = procWindow.x1; x < procWindow.x2; x++) {
+                PIX *srcPix = (PIX *) (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 if (srcPix) {
                     for (int c = 0; c < nComponents; c++) {
                         //assert(0 <= srcPix[c] && srcPix[c] <= maxValue);
                         dstPix[c] = _lookupTable[c][srcPix[c]];
                     }
-                } else  {
+                } else {
                     // no src pixel here, be black and transparent
                     for (int c = 0; c < nComponents; c++) {
-                        dstPix[c] = 0;
+                        dstPix[c] = _lookupTable[c][0];
                     }
                 }
                 // increment the dst pixel
@@ -198,13 +223,13 @@ private:
     PIX _lookupTable[nComponents][maxValue+1];
 };
 
-// template to do the RGBA processing for floating-point types
+// template to do the RGBA processing for floating-point types (non-masked)
 template <int nComponents, int maxValue>
 class ImageRGBLutProcessorFloat : public RGBLutBase
 {
 public:
     // ctor
-    ImageRGBLutProcessorFloat(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTable)
+    ImageRGBLutProcessorFloat(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam *lookupTable)
     : RGBLutBase(instance)
     {
         // build the LUT
@@ -233,14 +258,16 @@ private:
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
+        assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         assert(_dstImg);
+        assert(!_doMasking);
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
             }
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
-                PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                PIX *srcPix = (PIX *) (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 if (srcPix) {
                     for (int c = 0; c < nComponents; c++) {
                         dstPix[c] = interpolate(c, srcPix[c]);
@@ -248,7 +275,7 @@ private:
                 } else {
                     // no src pixel here, be black and transparent
                     for (int c = 0; c < nComponents; c++) {
-                        dstPix[c] = 0;
+                        dstPix[c] = interpolate(c, 0);
                     }
                 }
                 // increment the dst pixel
@@ -275,6 +302,153 @@ private:
     PIX _lookupTable[nComponents][maxValue+1];
 };
 
+
+// template to do the RGBA processing for discrete types (masked version)
+template <class PIX, int nComponents, int maxValue>
+class ImageRGBLutProcessorMasked : public RGBLutBase
+{
+public:
+    // ctor
+    ImageRGBLutProcessorMasked(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTable)
+    : RGBLutBase(instance)
+    {
+        // build the LUT
+        assert(lookupTable);
+        assert((PIX)maxValue == maxValue);
+        for (int component = 0; component < nComponents; ++component) {
+            int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
+            bool applyMaster = lutIndex != kCurveAlpha;
+            for (int position = 0; position <= maxValue; ++position) {
+                // position to evaluate the param at
+                float parametricPos = float(position)/maxValue;
+
+                // evaluate the parametric param
+                double value = lookupTable->getValue(lutIndex, args.time, parametricPos);
+                if (applyMaster) {
+                    value += lookupTable->getValue(kCurveMaster, args.time, parametricPos) - parametricPos;
+                }
+                // set that in the lut
+                _lookupTable[component][position] = std::max(0.,std::min(value, double(maxValue)));
+            }
+        }
+    }
+
+private:
+    // and do some processing
+    void multiThreadProcessImages(OfxRectI procWindow)
+    {
+        assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
+        assert(_dstImg);
+        assert(_doMasking);
+        float tmpPix[nComponents];
+        for (int y = procWindow.y1; y < procWindow.y2; y++) {
+            if (_effect.abort()) {
+                break;
+            }
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            for (int x = procWindow.x1; x < procWindow.x2; x++)  {
+                PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                if (srcPix) {
+                    for (int c = 0; c < nComponents; c++) {
+                        //assert(0 <= srcPix[c] && srcPix[c] <= maxValue);
+                        tmpPix[c] = _lookupTable[c][srcPix[c]];
+                    }
+                } else  {
+                    // no src pixel here, be black and transparent
+                    for (int c = 0; c < nComponents; c++) {
+                        tmpPix[c] = _lookupTable[c][0];
+                    }
+                }
+                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                // increment the dst pixel
+                dstPix += nComponents;
+            }
+        }
+    }
+
+private:
+    float _lookupTable[nComponents][maxValue+1];
+};
+
+// template to do the RGBA processing for floating-point types (masked version)
+template <int nComponents, int nbValues>
+class ImageRGBLutProcessorFloatMasked : public RGBLutBase
+{
+public:
+    // ctor
+    ImageRGBLutProcessorFloatMasked(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTable)
+    : RGBLutBase(instance)
+    {
+        // build the LUT
+        for (int component = 0; component < nComponents; ++component) {
+            int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
+            bool applyMaster = lutIndex != kCurveAlpha;
+            for (int position = 0; position <= nbValues; ++position) {
+                // position to evaluate the param at
+                double parametricPos = float(position)/nbValues;
+
+                // evaluate the parametric param
+                double value = lookupTable->getValue(lutIndex, args.time, parametricPos);
+                if (applyMaster) {
+                    value += lookupTable->getValue(kCurveMaster, args.time, parametricPos) - parametricPos;
+                }
+
+                // set that in the lut
+                _lookupTable[component][position] = std::max(PIX(0),std::min(PIX(value),PIX(nbValues)));
+            }
+        }
+    }
+
+private:
+    // and do some processing
+    void multiThreadProcessImages(OfxRectI procWindow)
+    {
+        assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
+        assert(_dstImg);
+        assert(_doMasking);
+        float tmpPix[nComponents];
+        for (int y = procWindow.y1; y < procWindow.y2; y++) {
+            if (_effect.abort()) {
+                break;
+            }
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            for (int x = procWindow.x1; x < procWindow.x2; x++) {
+                PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                if (srcPix) {
+                    for (int c = 0; c < nComponents; c++) {
+                        tmpPix[c] = interpolate(c, srcPix[c]);
+                    }
+                } else {
+                    // no src pixel here, be black and transparent
+                    for (int c = 0; c < nComponents; c++) {
+                        tmpPix[c] = interpolate(c, 0.);;
+                    }
+                }
+                ofxsMaskMixPix<PIX, nComponents, 1, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                // increment the dst pixel
+                dstPix += nComponents;
+            }
+        }
+    }
+
+    float interpolate(int component, float value) {
+        if (value < 0.) {
+            return _lookupTable[component][0];
+        } else if (value >= 1.) {
+            return _lookupTable[component][nbValues];
+        } else {
+            int i = (int)(value * nbValues);
+            assert(i < nbValues);
+            float alpha = value - (float)i / nbValues;
+            return _lookupTable[component][i] * (1.-alpha) + _lookupTable[component][i+1] * alpha;
+        }
+    }
+
+private:
+    typedef float PIX;
+    float _lookupTable[nComponents][nbValues+1];
+};
+
 using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -286,18 +460,28 @@ public:
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClip_(0)
+    , maskClip_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_ && dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(srcClip_ && srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
 
+        maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
         lookupTable_ = fetchParametricParam(kLookupTableParamName);
         assert(lookupTable_);
-    }
+        _mix = fetchDoubleParam(kFilterMixParamName);
+        _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
+        assert(lookupTable_ && _mix && _maskInvert);
+     }
 
 private:
     virtual void render(const OFX::RenderArguments &args);
+
+    template <int nComponents, bool masked>
+    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+
     void setupAndProcess(RGBLutBase &, const OFX::RenderArguments &args);
     void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
     {
@@ -379,8 +563,10 @@ private:
 private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
+    OFX::Clip *maskClip_;
     OFX::ParametricParam  *lookupTable_;
-
+    OFX::DoubleParam* _mix;
+    OFX::BooleanParam* _maskInvert;
 };
 
 
@@ -397,8 +583,22 @@ void RGBLutPlugin::setupAndProcess(RGBLutBase &processor, const OFX::RenderArgum
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     assert(srcClip_);
     std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
+    if (src.get()) {
+        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
+    }
+    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
+    if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+        processor.doMasking(true);
+        processor.setMaskImg(mask.get());
+    }
 
     if (src.get() && dst.get())
     {
@@ -415,75 +615,80 @@ void RGBLutPlugin::setupAndProcess(RGBLutBase &processor, const OFX::RenderArgum
     processor.setDstImg(dst.get());
     processor.setSrcImg(src.get());
     processor.setRenderWindow(args.renderWindow);
+    double mix;
+    _mix->getValueAtTime(args.time, mix);
+    bool maskInvert;
+    _maskInvert->getValueAtTime(args.time, maskInvert);
+    processor.setValues(mix, maskInvert);
     processor.process();
 }
 
+// the internal render function
+template <int nComponents, bool masked>
+void
+RGBLutPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+{
+    if (masked) {
+        switch(dstBitDepth) {
+            case OFX::eBitDepthUByte: {
+                ImageRGBLutProcessorMasked<unsigned char, nComponents, 255> fred(*this, args, lookupTable_);
+                setupAndProcess(fred, args);
+            }   break;
+            case OFX::eBitDepthUShort: {
+                ImageRGBLutProcessorMasked<unsigned short, nComponents, 65535> fred(*this, args, lookupTable_);
+                setupAndProcess(fred, args);
+            }   break;
+            case OFX::eBitDepthFloat: {
+                ImageRGBLutProcessorFloatMasked<nComponents,1023> fred(*this, args, lookupTable_);
+                setupAndProcess(fred, args);
+            }   break;
+            default :
+                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
+    } else {
+        switch(dstBitDepth) {
+            case OFX::eBitDepthUByte: {
+                ImageRGBLutProcessor<unsigned char, nComponents, 255> fred(*this, args, lookupTable_);
+                setupAndProcess(fred, args);
+            }   break;
+            case OFX::eBitDepthUShort: {
+                ImageRGBLutProcessor<unsigned short, nComponents, 65535> fred(*this, args, lookupTable_);
+                setupAndProcess(fred, args);
+            }   break;
+            case OFX::eBitDepthFloat: {
+                ImageRGBLutProcessorFloat<nComponents,1023> fred(*this, args, lookupTable_);
+                setupAndProcess(fred, args);
+            }   break;
+            default :
+                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
+    }
+}
 
 void RGBLutPlugin::render(const OFX::RenderArguments &args)
 {
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    bool masked = getContext() != OFX::eContextFilter && maskClip_->isConnected();
 
     if (dstComponents == OFX::ePixelComponentRGBA) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                ImageRGBLutProcessor<unsigned char, 4, 255> fred(*this, args, lookupTable_);
-                setupAndProcess(fred, args);
-            }
-                break;
-            case OFX::eBitDepthUShort: {
-                ImageRGBLutProcessor<unsigned short, 4, 65535> fred(*this, args, lookupTable_);
-                setupAndProcess(fred, args);
-            }
-                break;
-            case OFX::eBitDepthFloat: {
-                ImageRGBLutProcessorFloat<4,1023> fred(*this, args, lookupTable_);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        if (masked) {
+            renderInternal<4,true>(args, dstBitDepth);
+        } else {
+            renderInternal<4,false>(args, dstBitDepth);
         }
     } else if (dstComponents == OFX::ePixelComponentRGB) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                ImageRGBLutProcessor<unsigned char, 3, 255> fred(*this, args, lookupTable_);
-                setupAndProcess(fred, args);
-            }
-                break;
-            case OFX::eBitDepthUShort: {
-                ImageRGBLutProcessor<unsigned short, 3, 65535> fred(*this, args, lookupTable_);
-                setupAndProcess(fred, args);
-            }
-                break;
-            case OFX::eBitDepthFloat: {
-                ImageRGBLutProcessorFloat<3,1023> fred(*this, args, lookupTable_);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        if (masked) {
+            renderInternal<3,true>(args, dstBitDepth);
+        } else {
+            renderInternal<3,false>(args, dstBitDepth);
         }
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                ImageRGBLutProcessor<unsigned char, 1, 255> fred(*this, args, lookupTable_);
-                setupAndProcess(fred, args);
-            }
-                break;
-            case OFX::eBitDepthUShort: {
-                ImageRGBLutProcessor<unsigned short, 1, 65535> fred(*this, args, lookupTable_);
-                setupAndProcess(fred, args);
-            }
-                break;
-            case OFX::eBitDepthFloat: {
-                ImageRGBLutProcessorFloat<1,1023> fred(*this, args, lookupTable_);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        if (masked) {
+            renderInternal<1,true>(args, dstBitDepth);
+        } else {
+            renderInternal<1,false>(args, dstBitDepth);
         }
     }
 }
@@ -500,6 +705,8 @@ void RGBLutPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
 
     desc.addSupportedContext(eContextFilter);
+    desc.addSupportedContext(eContextPaint);
+    desc.addSupportedContext(eContextGeneral);
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
@@ -539,6 +746,16 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(true);
+
+    if (context == eContextGeneral || context == eContextPaint) {
+        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
+        maskClip->addSupportedComponent(ePixelComponentAlpha);
+        maskClip->setTemporalClipAccess(false);
+        if (context == eContextGeneral)
+            maskClip->setOptional(true);
+        maskClip->setSupportsTiles(true);
+        maskClip->setIsMask(true);
+    }
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
@@ -603,6 +820,8 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     
     page->addChild(*resetCtrlPts);
 #endif
+
+    ofxsFilterDescribeParamsMaskMix(desc, page);
 }
 
 OFX::ImageEffect* RGBLutPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
