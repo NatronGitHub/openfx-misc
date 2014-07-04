@@ -240,13 +240,26 @@ class ImageInverter : public InvertBase
                             tmpPix[3] = doalpha ? (maxValue - srcPix[3]) : srcPix[3];
                             break;
                     }
-                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 } else {
                     // no src pixel here, be black and transparent
-                    for (int c = 0; c < nComponents; c++) {
-                        dstPix[c] = 0;
+                    switch (nComponents) {
+                        case 1: // Alpha
+                            tmpPix[0] = doalpha ? maxValue : 0;
+                            break;
+                        case 3: // RGB
+                            tmpPix[0] = dored   ? maxValue : 0;
+                            tmpPix[1] = dogreen ? maxValue : 0;
+                            tmpPix[2] = doblue  ? maxValue : 0;
+                            break;
+                        case 4: // RGBA
+                            tmpPix[0] = dored   ? maxValue : 0;
+                            tmpPix[1] = dogreen ? maxValue : 0;
+                            tmpPix[2] = doblue  ? maxValue : 0;
+                            tmpPix[3] = doalpha ? maxValue : 0;
+                            break;
                     }
                 }
+                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
 
                 // increment the dst pixel
                 dstPix += nComponents;
