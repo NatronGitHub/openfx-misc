@@ -237,7 +237,7 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     innerBtmLeft->setDoubleType(eDoubleTypeXY);
     innerBtmLeft->setDefaultCoordinateSystem(eCoordinatesCanonical);
     innerBtmLeft->setDefault(-15,-15);
-    innerBtmLeft->setIsSecret(true);
+    //innerBtmLeft->setIsSecret(true);
     innerBtmLeft->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
     page->addChild(*innerBtmLeft);
     
@@ -247,7 +247,7 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     innerTopRight->setDoubleType(eDoubleTypeXY);
     innerTopRight->setDefaultCoordinateSystem(eCoordinatesCanonical);
     innerTopRight->setDefault(15, 15);
-    innerTopRight->setIsSecret(true);
+    //innerTopRight->setIsSecret(true);
     innerTopRight->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
     page->addChild(*innerTopRight);
     
@@ -257,7 +257,7 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     outerBtmLeft->setDoubleType(eDoubleTypeXY);
     outerBtmLeft->setDefaultCoordinateSystem(eCoordinatesCanonical);
     outerBtmLeft->setDefault(-25,-25);
-    outerBtmLeft->setIsSecret(true);
+    //outerBtmLeft->setIsSecret(true);
     outerBtmLeft->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
     page->addChild(*outerBtmLeft);
     
@@ -267,7 +267,7 @@ void genericTrackerDescribePointParameters(OFX::ImageEffectDescriptor &desc,OFX:
     outerTopRight->setDoubleType(eDoubleTypeXY);
     outerTopRight->setDefaultCoordinateSystem(eCoordinatesCanonical);
     outerTopRight->setDefault(25, 25);
-    outerTopRight->setIsSecret(true);
+    //outerTopRight->setIsSecret(true);
     outerTopRight->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
     page->addChild(*outerTopRight);
     
