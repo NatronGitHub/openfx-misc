@@ -512,20 +512,26 @@ void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const s
 {
     if (paramName == kCopyInputRoDParamName) {
         const OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
+        beginEditBlock(kCopyInputRoDParamName);
         _from[0]->setValue(srcRoD.x1, srcRoD.y1);
         _from[1]->setValue(srcRoD.x2, srcRoD.y1);
         _from[2]->setValue(srcRoD.x2, srcRoD.y2);
         _from[3]->setValue(srcRoD.x1, srcRoD.y2);
+        endEditBlock();
         changedTransform(args);
     } else if (paramName == kCopyFromParamName) {
+        beginEditBlock(kCopyFromParamName);
         for (int i=0; i<4; ++i) {
             copyPoint(_from[i],_to[i]);
         }
+        endEditBlock();
         changedTransform(args);
     } else if (paramName == kCopyToParamName) {
+        beginEditBlock(kCopyToParamName);
         for (int i=0; i<4; ++i) {
             copyPoint(_to[i],_from[i]);
         }
+        endEditBlock();
         changedTransform(args);
     } else if (paramName == kToParamName[0] ||
                paramName == kToParamName[1] ||
