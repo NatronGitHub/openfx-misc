@@ -630,7 +630,11 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
         if (_dragging == i) {
             p[i] = _draggedPos[i];
         } else {
-            useFrom ? _from[i]->getValueAtTime(args.time, p[i].x, p[i].y) :_to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+            if (useFrom) {
+                _from[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+            } else {
+                _to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+            }
         }
     }
     
@@ -700,7 +704,11 @@ bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
         if (_dragging == i) {
             p[i] = _draggedPos[i];
         } else {
-            useFrom ? _from[i]->getValueAtTime(args.time, p[i].x, p[i].y) :_to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+            if (useFrom) {
+                _from[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+            } else {
+                _to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+            }
         }
     }
 
@@ -740,7 +748,11 @@ bool CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
         if (_dragging == i) {
             p[i] = _draggedPos[i];
         } else {
-            useFrom ? _from[i]->getValueAtTime(args.time, p[i].x, p[i].y) :_to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+            if (useFrom) {
+                _from[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+            } else {
+                _to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+            }
         }
     }
 
@@ -768,14 +780,16 @@ bool CornerPinTransformInteract::penUp(const OFX::PenArgs &args)
 
     bool useFrom = isFromPoints(args.time);
 
-    for (int i = 0; i < 4; ++i) {
-        if (_dragging == i) {
-            useFrom ? _from[i]->setValue(_draggedPos[i].x, _draggedPos[i].y)
-            : _to[i]->setValue(_draggedPos[i].x,_draggedPos[i].y);
-            didSomething = true;
+    if (0 <= _dragging && _dragging < 4) {
+        int i = _dragging;
+        if (useFrom) {
+            _from[i]->setValue(_draggedPos[i].x, _draggedPos[i].y);
+        } else {
+            _to[i]->setValue(_draggedPos[i].x,_draggedPos[i].y);
         }
+        didSomething = true;
     }
-    
+
     _dragging = -1;
     return didSomething;
 }
