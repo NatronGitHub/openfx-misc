@@ -269,7 +269,7 @@ private:
                 PIX *maskPix = _maskImg ? (PIX*) _maskImg->getPixelAddress(_refCenterI.x + j, _refCenterI.y + i) : 0;
 
                 // weight is zero if there's a mask but we're outside of it
-                double weight = maskPix ? (*maskPix/(double)maxValue) : (_maskImg ? 1. : 0.);
+                double weight = maskPix ? (*maskPix/(double)maxValue) : (_maskImg ? 0. : 1.);
 
                 // take nearest pixel in other image (more chance to get a track than with black)
                 int otherx = x + j;
