@@ -113,8 +113,6 @@ protected:
     OFX::Image *_srcImg;
     OFX::Image *_maskImg;
 
-    bool _premult;
-
 public:
     RotoProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
@@ -132,10 +130,6 @@ public:
     /** @brief set the optional mask image */
     void setMaskImg(OFX::Image *v) {_maskImg = v;}
 
-    void setValues(bool premult)
-    {
-        _premult = premult;
-    }
 };
 
 
@@ -163,22 +157,20 @@ private:
                 PIX *srcPix = (PIX*)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 PIX *maskPix = (PIX*) (_maskImg ? _maskImg->getPixelAddress(x, y) : 0);
                 
-                if (nComponents == 1) {
-                    *dstPix = maskPix ? *maskPix : 0.;
-                } else {
-                    for (int k = 0; k < std::min(nComponents,3); ++k) {
-                        if (_premult) {
-                            dstPix[k] = (srcPix && maskPix) ? (srcPix[k] * *maskPix) / maxValue : 0.;
-                        } else {
-                            dstPix[k] = srcPix ? srcPix[k] : 0.;
-                        }
-                        
-                    }
-                    if (nComponents > 3) {
-                        dstPix[3] = maskPix ? *maskPix : 0.;
+                
+                for (int k = 0; k < nComponents - 1; ++k) {
+                    ///this is only executed for  RGBA
+                    if (!maskPix) {
+                        ///src image outside of the mask
+                        dstPix[k] = srcPix ? srcPix[k] : 0.;
+                    } else {
+                        ///we're inside the mask, paint the mask
+                        dstPix[k] = maskPix[k];
                     }
                 }
                 
+                ///Just copy the alpha of the roto brush
+                dstPix[nComponents - 1] = maskPix ? maskPix[nComponents -1] : 0.;
             }
         }
     }
@@ -206,11 +198,7 @@ public:
         assert(srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
         // name of mask clip depends on the context
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-        assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
-        
-        _premult = fetchBooleanParam(kPremultParamName);
-        assert(_premult);
-        
+
         _outputComps = fetchChoiceParam(kOutputCompsParamName);
         assert(_outputComps);
     }
@@ -235,7 +223,6 @@ private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::Clip *maskClip_;
-    BooleanParam* _premult;
     ChoiceParam* _outputComps;
 };
 
@@ -274,6 +261,10 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     // auto ptr for the mask.
     std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
     
+    if (mask->getPixelComponents() != dst->getPixelComponents()) {
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
+    }
+    
     // do we do masking
     if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
         // Set it in the processor
@@ -286,10 +277,6 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     
     // set the render window
     processor.setRenderWindow(args.renderWindow);
-    
-    bool premult;
-    _premult->getValueAtTime(args.time, premult);
-    processor.setValues(premult);
     
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -438,6 +425,8 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         // if paint context, it is a mandated input called 'brush'
         ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
         maskClip->addSupportedComponent(ePixelComponentAlpha);
+        maskClip->addSupportedComponent(ePixelComponentRGBA); //< our brush can output RGBA
+         maskClip->addSupportedComponent(ePixelComponentRGB); //< our brush can output RGB
         maskClip->setTemporalClipAccess(false);
         if (context == eContextGeneral) {
             maskClip->setOptional(false);
@@ -455,13 +444,6 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    
-    BooleanParamDescriptor* premult = desc.defineBooleanParam(kPremultParamName);
-    premult->setLabels(kPremultParamLabel, kPremultParamLabel, kPremultParamLabel);
-    premult->setDefault(false);
-    premult->setAnimates(true);
-    premult->setHint(kPremultParamHint);
-    page->addChild(*premult);
 
     ChoiceParamDescriptor* outputComps = desc.defineChoiceParam(kOutputCompsParamName);
     outputComps->setLabels(kOutputCompsParamLabel, kOutputCompsParamLabel, kOutputCompsParamLabel);
