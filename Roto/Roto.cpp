@@ -157,10 +157,10 @@ private:
                 PIX *srcPix = (PIX*)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 PIX *maskPix = (PIX*) (_maskImg ? _maskImg->getPixelAddress(x, y) : 0);
                 
-                
+                PIX maskScale = maskPix ? maskPix[nComponents - 1] : 0.;
                 for (int k = 0; k < nComponents - 1; ++k) {
                     ///this is only executed for  RGBA
-                    if (!maskPix) {
+                    if (maskScale == 0) {
                         ///src image outside of the mask
                         dstPix[k] = srcPix ? srcPix[k] : 0.;
                     } else {
@@ -170,7 +170,7 @@ private:
                 }
                 
                 ///Just copy the alpha of the roto brush
-                dstPix[nComponents - 1] = maskPix ? maskPix[nComponents -1] : 0.;
+                dstPix[nComponents - 1] = maskScale;
             }
         }
     }
