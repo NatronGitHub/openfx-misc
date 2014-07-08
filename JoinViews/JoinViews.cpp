@@ -165,11 +165,11 @@ public:
     , srcRightClip_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
+        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
         srcLeftClip_ = fetchClip("Left");
-        assert(srcLeftClip_ && srcLeftClip_->getPixelComponents() == ePixelComponentAlpha || srcLeftClip_->getPixelComponents() == ePixelComponentRGB || srcLeftClip_->getPixelComponents() == ePixelComponentRGBA);
+        assert(srcLeftClip_ && (srcLeftClip_->getPixelComponents() == ePixelComponentAlpha || srcLeftClip_->getPixelComponents() == ePixelComponentRGB || srcLeftClip_->getPixelComponents() == ePixelComponentRGBA));
         srcRightClip_ = fetchClip("Right");
-        assert(srcRightClip_ && srcRightClip_->getPixelComponents() == ePixelComponentAlpha || srcRightClip_->getPixelComponents() == ePixelComponentRGB || srcRightClip_->getPixelComponents() == ePixelComponentRGBA);
+        assert(srcRightClip_ && (srcRightClip_->getPixelComponents() == ePixelComponentAlpha || srcRightClip_->getPixelComponents() == ePixelComponentRGB || srcRightClip_->getPixelComponents() == ePixelComponentRGBA));
     }
 
 private:

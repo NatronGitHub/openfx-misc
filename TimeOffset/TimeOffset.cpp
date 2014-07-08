@@ -135,7 +135,7 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
 , reverse_input_(0)
 {
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(srcClip_ && srcClip_->getPixelComponents() == OFX::ePixelComponentAlpha || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB || srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA);
+    assert(srcClip_ && (srcClip_->getPixelComponents() == OFX::ePixelComponentAlpha || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB || srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA));
 
     time_offset_   = fetchIntParam(kTimeOffsetParamName);
     reverse_input_ = fetchBooleanParam(kReverseInputParamName);
