@@ -157,15 +157,17 @@ private:
                 PIX *srcPix = (PIX*)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 PIX *maskPix = (PIX*) (_maskImg ? _maskImg->getPixelAddress(x, y) : 0);
                 
+#pragma message ("Mask only has ONE component. This looks like an obvious bug, or that input shouldn't be called a Mask. Call it something else (Roto maybe)")
                 PIX maskScale = maskPix ? maskPix[nComponents - 1] : 0.;
                 for (int k = 0; k < nComponents - 1; ++k) {
                     ///this is only executed for  RGBA
                     if (maskScale == 0) {
                         ///src image outside of the mask
+#pragma message ("WHY? outside ANY image, the image is supposed to be black and transparent, even if it's a Mask")
                         dstPix[k] = srcPix ? srcPix[k] : 0.;
                     } else {
                         ///we're inside the mask, paint the mask
-                        dstPix[k] = maskPix[k];
+                        dstPix[k] = maskPix ? maskPix[k] : 0.;
                     }
                 }
                 
@@ -425,6 +427,7 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         // if paint context, it is a mandated input called 'brush'
         ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
         maskClip->addSupportedComponent(ePixelComponentAlpha);
+#pragma message ("NO! Mask (or Brush) shouldn't be anything else than Alpha. Obviously this is not a mask. Don't call it Mask or Brush, then! If it's called Roto, then only the General context is supported.")
         maskClip->addSupportedComponent(ePixelComponentRGBA); //< our brush can output RGBA
          maskClip->addSupportedComponent(ePixelComponentRGB); //< our brush can output RGB
         maskClip->setTemporalClipAccess(false);
@@ -452,7 +455,7 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     outputComps->appendOption(kOutputCompsParamOptionRGBA);
     outputComps->setDefault(0);
     desc.addClipPreferencesSlaveParam(*outputComps);
-
+    page->addChild(*outputComps);
 }
 
 void getRotoPluginID(OFX::PluginFactoryArray &ids)
