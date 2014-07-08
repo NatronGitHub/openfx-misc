@@ -231,6 +231,8 @@ public:
     // ctor
     ImageRGBLutProcessorFloat(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam *lookupTable)
     : RGBLutBase(instance)
+    , _lookupTableParam(lookupTable)
+    , _time(args.time)
     {
         // build the LUT
         for (int component = 0; component < nComponents; ++component) {
@@ -285,8 +287,10 @@ private:
     }
 
     float interpolate(int component, float value) {
-        if (value < 0.) {
-            return _lookupTable[component][0];
+        if (value < 0. || 1. < value) {
+            // extrapolation is not possible! compute the exact value (extra-slow)
+            int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
+            return _lookupTableParam->getValue(lutIndex, _time, value);
         } else if (value >= 1.) {
             return _lookupTable[component][maxValue];
         } else {
@@ -300,6 +304,8 @@ private:
 private:
     typedef float PIX;
     PIX _lookupTable[nComponents][maxValue+1];
+    OFX::ParametricParam *_lookupTableParam;
+    double _time;
 };
 
 

@@ -271,6 +271,11 @@ void TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args, const s
         paramName == kSkewYParamName ||
         paramName == kSkewOrderParamName ||
         paramName == kCenterParamName) {
+        printf("%p: param=%s, reeason=%d\n", this, paramName.c_str(), (int)args.reason);
+        double translateX, translateY;
+        _translate->getValueAtTime(args.time, translateX, translateY);
+        printf("%p: translate=%g,%g\n", this, translateX, translateY);
+
         changedTransform(args);
     } else {
         Transform3x3Plugin::changedParam(args, paramName);
@@ -1063,7 +1068,12 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         pscale10.y = std::pow(10.,std::floor(std::log10(pscale.y)));
         newx = pscale10.x * std::floor(newx/pscale10.x + 0.5);
         newy = pscale10.y * std::floor(newy/pscale10.y + 0.5);
+        printf("%p: translation:%g,%g->%g,%g\n", this, currentTranslation.x, currentTranslation.y, newx, newy);
         _translate->setValue(newx,newy);
+        double translateX,translateY;
+        _translate->getValueAtTime(args.time, translateX, translateY);
+        printf("%p: now translate=%g,%g\n", this, translateX, translateY);
+
     } else if (_mouseState == eDraggingCenter) {
         OfxPointD currentTranslation;
         _translate->getValueAtTime(args.time, currentTranslation.x, currentTranslation.y);
@@ -1144,6 +1154,7 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     OfxPointD pscale;
     pscale.x = args.pixelScale.x / args.renderScale.x;
     pscale.y = args.pixelScale.y / args.renderScale.y;
+    printf("%p: pixelScale=%g,renderScale=%g\n", this, args.pixelScale.x, args.renderScale.x);
 
     OfxPointD center,left,right,top,bottom;
     getPoints(args.time, pscale, &center, &left, &bottom, &top, &right);
