@@ -13,6 +13,7 @@ Invert \
 JoinViews \
 Merge \
 MixViews \
+NoOp \
 OneView \
 Premult \
 RGBLut \

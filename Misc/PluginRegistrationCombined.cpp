@@ -11,6 +11,7 @@
 #include "JoinViews.h"
 #include "Merge.h"
 #include "MixViews.h"
+#include "NoOp.h"
 #include "OneView.h"
 #include "Premult.h"
 #include "ReConverge.h"
@@ -42,6 +43,7 @@ namespace OFX
             getJoinViewsPluginID(ids);
             getMergePluginID(ids);
             getMixViewsPluginID(ids);
+            getNoOpPluginID(ids);
             getOneViewPluginID(ids);
             getPremultPluginIDs(ids);
             getReConvergePluginID(ids);
