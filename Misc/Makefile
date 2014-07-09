@@ -12,6 +12,7 @@ Invert.o \
 JoinViews.o \
 Merge.o \
 MixViews.o \
+NoOp.o \
 OneView.o \
 Premult.o \
 ReConverge.o \
@@ -45,6 +46,7 @@ VPATH += \
 ../JoinViews \
 ../Merge \
 ../MixViews \
+../NoOp \
 ../OneView \
 ../Premult \
 ../ReConverge \
@@ -74,6 +76,7 @@ CXXFLAGS += \
 -I../JoinViews \
 -I../Merge \
 -I../MixViews \
+-I../NoOp \
 -I../OneView \
 -I../Premult \
 -I../ReConverge \
