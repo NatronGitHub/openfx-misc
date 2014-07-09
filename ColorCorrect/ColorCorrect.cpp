@@ -610,12 +610,35 @@ ColorCorrectPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+static bool
+groupIsIdentity(const ColorControlGroup& group)
+{
+    return (group.saturation.r == 1. &&
+            group.saturation.g == 1. &&
+            group.saturation.b == 1. &&
+            group.saturation.a == 1. &&
+            group.contrast.r == 1. &&
+            group.contrast.g == 1. &&
+            group.contrast.b == 1. &&
+            group.contrast.a == 1. &&
+            group.gamma.r == 1. &&
+            group.gamma.g == 1. &&
+            group.gamma.b == 1. &&
+            group.gamma.a == 1. &&
+            group.gain.r == 1. &&
+            group.gain.g == 1. &&
+            group.gain.b == 1. &&
+            group.gain.a == 1. &&
+            group.offset.r == 0. &&
+            group.offset.g == 0. &&
+            group.offset.b == 0. &&
+            group.offset.a == 0.);
+
+}
 
 bool
 ColorCorrectPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
 {
-    // TODO: handle all parameters correctly, not only mix
-
     //bool red, green, blue, alpha;
     double mix;
     //_paramProcessR->getValueAtTime(args.time, red);
@@ -627,9 +650,20 @@ ColorCorrectPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip
     if (mix == 0. /*|| (!red && !green && !blue && !alpha)*/) {
         identityClip = srcClip_;
         return true;
-    } else {
-        return false;
     }
+    ColorControlGroup masterValues,shadowValues,midtoneValues,highlightValues;
+    getColorCorrectGroupValues(args.time, &masterValues,    eGroupMaster);
+    getColorCorrectGroupValues(args.time, &shadowValues,    eGroupShadow);
+    getColorCorrectGroupValues(args.time, &midtoneValues,   eGroupMidtone);
+    getColorCorrectGroupValues(args.time, &highlightValues, eGroupHighlight);
+    if (groupIsIdentity(masterValues) &&
+        groupIsIdentity(shadowValues) &&
+        groupIsIdentity(midtoneValues) &&
+        groupIsIdentity(highlightValues)) {
+        identityClip = srcClip_;
+        return true;
+    }
+    return false;
 }
 
 mDeclarePluginFactory(ColorCorrectPluginFactory, {}, {});

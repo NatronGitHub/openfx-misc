@@ -463,9 +463,32 @@ GradePlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, doubl
     if (mix == 0. /*|| (!red && !green && !blue && !alpha)*/) {
         identityClip = srcClip_;
         return true;
-    } else {
+    }
+
+    bool clampBlack,clampWhite;
+    _clampBlack->getValueAtTime(args.time, clampBlack);
+    _clampWhite->getValueAtTime(args.time, clampWhite);
+    if (clampBlack || clampWhite) {
         return false;
     }
+    RGBAValues blackPoint,whitePoint,black,white,multiply,offset,gamma;
+    _blackPoint->getValueAtTime(args.time, blackPoint.r, blackPoint.g, blackPoint.b, blackPoint.a);
+    _whitePoint->getValueAtTime(args.time, whitePoint.r, whitePoint.g, whitePoint.b, whitePoint.a);
+    _black->getValueAtTime(args.time, black.r, black.g, black.b, black.a);
+    _white->getValueAtTime(args.time, white.r, white.g, white.b, white.a);
+    _multiply->getValueAtTime(args.time, multiply.r, multiply.g, multiply.b, multiply.a);
+    _offset->getValueAtTime(args.time, offset.r, offset.g, offset.b, offset.a);
+    _gamma->getValueAtTime(args.time, gamma.r, gamma.g, gamma.b, gamma.a);
+    if (blackPoint.r == 0. && blackPoint.g == 0. && blackPoint.b == 0. && blackPoint.a == 0. &&
+        whitePoint.r == 1. && whitePoint.g == 1. && whitePoint.b == 1. && whitePoint.a == 1. &&
+        black.r == 0. && black.g == 0. && black.b == 0. && black.a == 0. &&
+        white.r == 1. && white.g == 1. && white.b == 1. && white.a == 1. &&
+        multiply.r == 1. && multiply.g == 1. && multiply.b == 1. && multiply.a == 1. &&
+        offset.r == 0. && offset.g == 0. && offset.b == 0. && offset.a == 0. &&
+        gamma.r == 1. && gamma.g == 1. && gamma.b == 1. && gamma.a == 1) {
+        return true;
+    }
+    return false;
 }
 
 mDeclarePluginFactory(GradePluginFactory, {}, {});
