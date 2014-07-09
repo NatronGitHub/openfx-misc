@@ -482,9 +482,13 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
 bool
 Transform3x3Plugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
-    // if there is motion blur, we use default values
+    // if there is motion blur, we cannot determine precisely the RoD. Let's say it's infinite
     if (hasMotionBlur(args.time)) {
-        return false;
+        rod.x1 = kOfxFlagInfiniteMin;
+        rod.x2 = kOfxFlagInfiniteMax;
+        rod.y1 = kOfxFlagInfiniteMin;
+        rod.y2 = kOfxFlagInfiniteMax;
+        return true;
     }
     
     OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
@@ -829,8 +833,10 @@ bool Transform3x3Plugin::isIdentity(const RenderArguments &args, OFX::Clip * &id
     double shuttercustomoffset;
     _shuttercustomoffset->getValueAtTime(args.time, shuttercustomoffset);
     if (shutter != 0. && motionblur != 0.) {
+        assert(hasMotionBlur(args.time));
         return false;
     }
+    assert(!hasMotionBlur(args.time));
 
     double transform_time = args.time;
     if (shutteroffset_i == kTransform3x3ShutterOffsetCustom) {
