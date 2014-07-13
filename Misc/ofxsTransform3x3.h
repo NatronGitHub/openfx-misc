@@ -54,7 +54,7 @@
 
 #define kTransform3x3ShutterOffsetParamName "shutterOffset"
 #define kTransform3x3ShutterOffsetParamLabel "Shutter Offset"
-#define kTransform3x3ShutterOffsetParamHint "Controls when the shutter should be open/closed."
+#define kTransform3x3ShutterOffsetParamHint "Controls when the shutter should be open/closed. Ignored if there is no motion blur (i.e. shutter=0 or motionBlur=0)."
 #define kTransform3x3ShutterOffsetCentered 0
 #define kTransform3x3ShutterOffsetCenteredLabel "centred"
 #define kTransform3x3ShutterOffsetCenteredHint "centers the shutter around the frame (from t-shutter/2 to t+shutter/2)"
@@ -70,7 +70,7 @@
 
 #define kTransform3x3ShutterCustomOffsetParamName "shutterCustomOffset"
 #define kTransform3x3ShutterCustomOffsetParamLabel "Custom Offset"
-#define kTransform3x3ShutterCustomOffsetParamHint "When custom is selected, the shutter is open at current time plus this offset (in frames)."
+#define kTransform3x3ShutterCustomOffsetParamHint "When custom is selected, the shutter is open at current time plus this offset (in frames). Ignored if there is no motion blur (i.e. shutter=0 or motionBlur=0)."
 
 namespace OFX {
 
@@ -151,6 +151,8 @@ private:
                                 OFX::Matrix3x3* invtransform,
                                 size_t invtransformsizealloc) const;
 
+    void transformRegion(const OfxRectD &rectFrom, double time, bool invert, double motionblur, double shutter, int shutteroffset_i, double shuttercustomoffset, OfxRectD *rectTo);
+    
 private:
     class CacheID;
 
