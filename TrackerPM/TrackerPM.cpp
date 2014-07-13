@@ -587,7 +587,7 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
     refCenterI.y = std::floor(refCenter.y + 0.5);
 
     //Clip the refRectPixel to the bounds of the ref image
-    MergeImages2D::rectangleIntersect(refRectPixel, refImg->getBounds(), &refRectPixel);
+    MergeImages2D::rectIntersection(refRectPixel, refImg->getBounds(), &refRectPixel);
     
     refRectPixel.x1 -= refCenterI.x;
     refRectPixel.x2 -= refCenterI.x;

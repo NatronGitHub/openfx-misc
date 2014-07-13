@@ -607,10 +607,18 @@ ofxsFilterExpandRoD(OFX::ImageEffect* effect, double pixelAspectRatio, const Ofx
         // expand the RoD to get at least one black pixel
         double pixelSizeX = pixelAspectRatio / renderScale.x;
         double pixelSizeY = 1. / renderScale.x;
-        rod->x1 = rod->x1 - pixelSizeX;
-        rod->x2 = rod->x2 + pixelSizeX;
-        rod->y1 = rod->y1 - pixelSizeY;
-        rod->y2 = rod->y2 + pixelSizeY;
+        if (rod->x1 > kOfxFlagInfiniteMin) {
+            rod->x1 = rod->x1 - pixelSizeX;
+        }
+        if (rod->x2 < kOfxFlagInfiniteMax) {
+            rod->x2 = rod->x2 + pixelSizeX;
+        }
+        if (rod->y1 > kOfxFlagInfiniteMin) {
+            rod->y1 = rod->y1 - pixelSizeY;
+        }
+        if (rod->y2 < kOfxFlagInfiniteMax) {
+            rod->y2 = rod->y2 + pixelSizeY;
+        }
     }
     assert(rod->x1 <= rod->x2 && rod->y1 <= rod->y2);
 }
@@ -630,10 +638,18 @@ ofxsFilterExpandRoI(const OfxRectD &roi, double pixelAspectRatio, const OfxPoint
         case eFilterBilinear:
         case eFilterCubic:
             // bilinear or cubic, expand by 0.5 pixels
-            srcRoI->x1 -= 0.5*pixelSizeX;
-            srcRoI->x2 += 0.5*pixelSizeX;
-            srcRoI->y1 -= 0.5*pixelSizeY;
-            srcRoI->y2 += 0.5*pixelSizeY;
+            if (srcRoI->x1 > kOfxFlagInfiniteMin) {
+                srcRoI->x1 -= 0.5*pixelSizeX;
+            }
+            if (srcRoI->x2 < kOfxFlagInfiniteMax) {
+                srcRoI->x2 += 0.5*pixelSizeX;
+            }
+            if (srcRoI->y1 > kOfxFlagInfiniteMin) {
+                srcRoI->y1 -= 0.5*pixelSizeY;
+            }
+            if (srcRoI->y2 < kOfxFlagInfiniteMax) {
+                srcRoI->y2 += 0.5*pixelSizeY;
+            }
             break;
         case eFilterKeys:
         case eFilterSimon:
@@ -642,10 +658,18 @@ ofxsFilterExpandRoI(const OfxRectD &roi, double pixelAspectRatio, const OfxPoint
         case eFilterParzen:
         case eFilterNotch:
             // bicubic, expand by 1.5 pixels
-            srcRoI->x1 -= 1.5*pixelSizeX;
-            srcRoI->x2 += 1.5*pixelSizeX;
-            srcRoI->y1 -= 1.5*pixelSizeY;
-            srcRoI->y2 += 1.5*pixelSizeY;
+            if (srcRoI->x1 > kOfxFlagInfiniteMin) {
+                srcRoI->x1 -= 1.5*pixelSizeX;
+            }
+            if (srcRoI->x2 < kOfxFlagInfiniteMax) {
+                srcRoI->x2 += 1.5*pixelSizeX;
+            }
+            if (srcRoI->y1 > kOfxFlagInfiniteMin) {
+                srcRoI->y1 -= 1.5*pixelSizeY;
+            }
+            if (srcRoI->y2 < kOfxFlagInfiniteMax) {
+                srcRoI->y2 += 1.5*pixelSizeY;
+            }
             break;
     }
     if (doMasking || mix != 1.) {

@@ -606,8 +606,8 @@ namespace MergeImages2D {
         }
     }
 
-    ///Union of rectangles
-    inline void rectanglesBoundingBox(const OfxRectD& a, const OfxRectD& b, OfxRectD* bbox)
+    ///Bounding box of two rectangles
+    inline void rectBoundingBox(const OfxRectD& a, const OfxRectD& b, OfxRectD* bbox)
     {
         bbox->x1 = std::min(a.x1, b.x1);
         bbox->x2 = std::max(bbox->x1, std::max(a.x2, b.x2));
@@ -617,15 +617,37 @@ namespace MergeImages2D {
 
 
     template <typename Rect>
-    bool isRectNull(const Rect& r) { return (r.x2 <= r.x1) || (r.y2 <= r.y1); }
+    bool rectIsEmpty(const Rect& r)
+    {
+        return (r.x2 <= r.x1) || (r.y2 <= r.y1);
+    }
 
     template <typename Rect>
-    bool rectangleIntersect(const Rect& r1,const Rect& r2,Rect* intersection) {
-        if (isRectNull(r1) || isRectNull(r2))
-            return false;
+    bool rectIsInfinite(const Rect& r)
+    {
+        return ((r.x1 <= kOfxFlagInfiniteMin) || (r.x2 >= kOfxFlagInfiniteMax) ||
+                (r.y1 <= kOfxFlagInfiniteMin) || (r.y2 >= kOfxFlagInfiniteMax));
+    }
 
-        if (r1.x1 > r2.x2 || r2.x1 > r1.x2 || r1.y1 > r2.y2 || r2.y1 > r1.y2)
+    /// compute the intersection of two rectangles, and return true if they intersect
+    template <typename Rect>
+    bool rectIntersection(const Rect& r1, const Rect& r2, Rect* intersection)
+    {
+        if (rectIsEmpty(r1) || rectIsEmpty(r2)) {
+            intersection->x1 = 0;
+            intersection->x2 = 0;
+            intersection->y1 = 0;
+            intersection->y2 = 0;
             return false;
+        }
+
+        if (r1.x1 > r2.x2 || r2.x1 > r1.x2 || r1.y1 > r2.y2 || r2.y1 > r1.y2) {
+            intersection->x1 = 0;
+            intersection->x2 = 0;
+            intersection->y1 = 0;
+            intersection->y2 = 0;
+            return false;
+        }
 
         intersection->x1 = std::max(r1.x1,r2.x1);
         // the region must be *at least* empty, thus the maximin.
@@ -639,7 +661,8 @@ namespace MergeImages2D {
     /**
      * @brief Scales down the rectangle by the given power of 2, and return the smallest *enclosing* rectangle
      **/
-    inline OfxRectI downscalePowerOfTwoSmallestEnclosing(const OfxRectI& r,unsigned int thisLevel)
+    inline
+    OfxRectI downscalePowerOfTwoSmallestEnclosing(const OfxRectI& r,unsigned int thisLevel)
     {
         if (thisLevel == 0) {
             return r;
@@ -647,17 +670,36 @@ namespace MergeImages2D {
         OfxRectI ret;
         int pot = (1<<thisLevel);
         int pot_minus1 = pot - 1;
-        ret.x1 = r.x1 >> thisLevel;
-        ret.x2 = (r.x2 + pot_minus1) >> thisLevel;
-        ret.y1 = r.y1 >> thisLevel;
-        ret.y2 = (r.y2 + pot_minus1) >> thisLevel;
-        // check that it's enclosing
-        assert(ret.x1*pot <= r.x1 && ret.x2*pot >= r.x2 && ret.y1*pot <= r.y1 && ret.y2*pot >= r.y2);
+        if (r.x1 <= kOfxFlagInfiniteMin) {
+            ret.x1 = kOfxFlagInfiniteMin;
+        } else {
+            ret.x1 = r.x1 >> thisLevel;
+            assert(ret.x1*pot <= r.x1);
+        }
+        if (r.x2 >= kOfxFlagInfiniteMax) {
+            ret.x2 = kOfxFlagInfiniteMax;
+        } else {
+            ret.x2 = (r.x2 + pot_minus1) >> thisLevel;
+            assert(ret.x2*pot >= r.x2);
+        }
+        if (r.y1 <= kOfxFlagInfiniteMin) {
+            ret.y1 = kOfxFlagInfiniteMin;
+        } else {
+            ret.y1 = r.y1 >> thisLevel;
+            assert(ret.y1*pot <= r.y1);
+        }
+        if (r.y2 >= kOfxFlagInfiniteMax) {
+            ret.y2 = kOfxFlagInfiniteMax;
+        } else {
+            ret.y2 = (r.y2 + pot_minus1) >> thisLevel;
+            assert(ret.y2*pot >= r.y2);
+        }
         return ret;
     }
 
 
-    inline double getScaleFromMipMapLevel(unsigned int level)
+    inline
+    double scaleFromMipmapLevel(unsigned int level)
     {
         return 1./(1<<level);
     }
@@ -665,7 +707,8 @@ namespace MergeImages2D {
 #ifndef M_LN2
 #define M_LN2       0.693147180559945309417232121458176568  /* loge(2)        */
 #endif
-    inline unsigned int getLevelFromScale(double s)
+    inline
+    unsigned int mipmapLevelFromScale(double s)
     {
         assert(0. < s && s <= 1.);
         int retval = -std::floor(std::log(s)/M_LN2 + 0.5);

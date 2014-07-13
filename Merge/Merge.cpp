@@ -285,12 +285,12 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
 	{
 		case 0: //union
 		{
-            rectanglesBoundingBox(rodA, rodB, &rod);
+            rectBoundingBox(rodA, rodB, &rod);
 			return true;
 		}
 		case 1: //intersection
 		{
-            bool interesect = rectangleIntersect(rodA, rodB, &rod);
+            bool interesect = rectIntersection(rodA, rodB, &rod);
             if (!interesect) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "The bounding boxes of the 2 images don't intersect.");
                 return false;

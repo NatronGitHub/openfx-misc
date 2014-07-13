@@ -310,7 +310,7 @@ CropPlugin::getCropRectangle_canonical(OfxTime time,bool useReformat,bool forceI
     
     if (intersect) {
         OfxRectD srcRoD = srcClip_->getRegionOfDefinition(time);
-        MergeImages2D::rectangleIntersect(cropRect, srcRoD, &cropRect);
+        MergeImages2D::rectIntersection(cropRect, srcRoD, &cropRect);
     }
     
 
@@ -369,7 +369,7 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
     cropRectPixel.x2 = cropRectCanonical.x2;
     cropRectPixel.y2 = cropRectCanonical.y2;
     
-    unsigned int mipMapLevel = MergeImages2D::getLevelFromScale(args.renderScale.x);
+    unsigned int mipMapLevel = MergeImages2D::mipmapLevelFromScale(args.renderScale.x);
     cropRectPixel = MergeImages2D::downscalePowerOfTwoSmallestEnclosing(cropRectPixel, mipMapLevel);
     
     double softness;
@@ -417,7 +417,7 @@ CropPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OF
     }
 
     // intersect the crop rectangle with args.regionOfInterest
-    MergeImages2D::rectangleIntersect(cropRect, roi, &cropRect);
+    MergeImages2D::rectIntersection(cropRect, roi, &cropRect);
     rois.setRegionOfInterest(*srcClip_, cropRect);
 }
 

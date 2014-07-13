@@ -414,7 +414,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     rectanglePixel.x2 = rectangle.x2;
     rectanglePixel.y2 = rectangle.y2;
     
-    unsigned int mipMapLevel = MergeImages2D::getLevelFromScale(args.renderScale.x);
+    unsigned int mipMapLevel = MergeImages2D::mipmapLevelFromScale(args.renderScale.x);
     rectanglePixel = MergeImages2D::downscalePowerOfTwoSmallestEnclosing(rectanglePixel, mipMapLevel);
     
     double softness;
@@ -458,13 +458,13 @@ CopyRectanglePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments 
     getRectanglecanonical(args.time, rectangle);
 
     // intersect the crop rectangle with args.regionOfInterest
-    MergeImages2D::rectangleIntersect(rectangle, args.regionOfInterest, &rectangle);
+    MergeImages2D::rectIntersection(rectangle, args.regionOfInterest, &rectangle);
 
     double mix;
     _mix->getValueAtTime(args.time, mix);
     if (mix != 1.) {
         // compute the bounding box with the default ROI
-        MergeImages2D::rectanglesBoundingBox(rectangle, args.regionOfInterest, &rectangle);
+        MergeImages2D::rectBoundingBox(rectangle, args.regionOfInterest, &rectangle);
     }
     rois.setRegionOfInterest(*srcClipA_, rectangle);
     // no need to set the RoI on srcClipB_, since it's the same as the output RoI
@@ -477,7 +477,7 @@ CopyRectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgument
     OfxRectD rect;
     getRectanglecanonical(args.time, rect);
     OfxRectD srcB_rod = srcClipB_->getRegionOfDefinition(args.time);
-    MergeImages2D::rectanglesBoundingBox(rect, srcB_rod, &rod);
+    MergeImages2D::rectBoundingBox(rect, srcB_rod, &rod);
     return true;
 }
 
