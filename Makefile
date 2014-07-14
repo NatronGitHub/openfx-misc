@@ -13,6 +13,7 @@ Invert \
 JoinViews \
 Merge \
 MixViews \
+Noise \
 NoOp \
 OneView \
 Premult \

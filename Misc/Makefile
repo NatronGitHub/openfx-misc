@@ -12,6 +12,7 @@ Invert.o \
 JoinViews.o \
 Merge.o \
 MixViews.o \
+Noise.o \
 NoOp.o \
 OneView.o \
 Premult.o \
@@ -46,6 +47,7 @@ VPATH += \
 ../JoinViews \
 ../Merge \
 ../MixViews \
+../Noise \
 ../NoOp \
 ../OneView \
 ../Premult \
@@ -76,6 +78,7 @@ CXXFLAGS += \
 -I../JoinViews \
 -I../Merge \
 -I../MixViews \
+-I../Noise \
 -I../NoOp \
 -I../OneView \
 -I../Premult \
