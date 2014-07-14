@@ -306,7 +306,12 @@ NoOpPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double
     bool forceCopy;
     forceCopy_->getValue(forceCopy);
 
-    return !forceCopy;
+    if (!forceCopy) {
+        identityClip = srcClip_;
+        return true;
+    } else {
+        return false;
+    }
 }
 
 
