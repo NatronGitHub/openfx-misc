@@ -416,7 +416,7 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string
             OFX::Clip &c = *srcClip_;
             oss << pixelComponentString(c.getPixelComponentsProperty());
             oss << bitDepthString(c.getPixelDepth());
-            oss << "(unmapped: ";
+            oss << " (unmapped: ";
             oss << pixelComponentString(c.getUnmappedPixelComponentsProperty());
             oss << bitDepthString(c.getUnmappedPixelDepth());
             oss << ")\npremultiplication: ";
@@ -457,7 +457,7 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string
             OFX::Clip &c = *dstClip_;
             oss << pixelComponentString(c.getPixelComponentsProperty());
             oss << bitDepthString(c.getPixelDepth());
-            oss << "(unmapped: ";
+            oss << " (unmapped: ";
             oss << pixelComponentString(c.getUnmappedPixelComponentsProperty());
             oss << bitDepthString(c.getUnmappedPixelDepth());
             oss << ")\npremultiplication: ";
