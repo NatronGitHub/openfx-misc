@@ -52,6 +52,10 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kClipInfoParamName "clipInfo"
+#define kClipInfoParamLabel "Clip Info..."
+#define kClipInfoParamHint "Display information about the inputs"
+
 #define kForceCopyParamName "forceCopy"
 #define kForceCopyParamLabel "Force Copy"
 #define kForceCopyParamHint "Force copy from input to output"
@@ -147,6 +151,8 @@ private:
     void setupAndProcess(CopierBase &, const OFX::RenderArguments &args);
 
     virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) /*OVERRIDE FINAL*/;
+
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -267,8 +273,7 @@ NoOpPlugin::render(const OFX::RenderArguments &args)
             default :
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
-    } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+    } else if (dstComponents == OFX::ePixelComponentAlpha) {
         switch(dstBitDepth) {
             case OFX::eBitDepthUByte : {
                 ImageCopier<unsigned char, 1> fred(*this);
@@ -290,6 +295,8 @@ NoOpPlugin::render(const OFX::RenderArguments &args)
             default :
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
+    } else {
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
@@ -300,6 +307,162 @@ NoOpPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double
     forceCopy_->getValue(forceCopy);
 
     return !forceCopy;
+}
+
+
+static const char*
+bitDepthString(BitDepthEnum bitDepth)
+{
+    switch (bitDepth) {
+        case OFX::eBitDepthUByte:
+            return "8u";
+        case OFX::eBitDepthUShort:
+            return "16u";
+        case OFX::eBitDepthHalf:
+            return "16f";
+        case OFX::eBitDepthFloat:
+            return "32f";
+        case OFX::eBitDepthCustom:
+            return "x";
+        case OFX::eBitDepthNone:
+            return "0";
+#ifdef OFX_EXTENSIONS_VEGAS
+        case eBitDepthUByteBGRA:
+            return "8uBGRA";
+        case eBitDepthUShortBGRA:
+            return "16uBGRA";
+        case eBitDepthFloatBGRA:
+            return "32fBGRA";
+#endif
+        default:
+            return "[unknown bit depth]";
+    }
+}
+
+static std::string
+pixelComponentString(const std::string& p)
+{
+    const std::string prefix = "OfxImageComponent";
+    std::string s = p;
+    return s.replace(s.find(prefix),prefix.length(),"");
+}
+
+static const char* premultString(PreMultiplicationEnum e)
+{
+    switch (e) {
+        case eImageOpaque:
+            return "Opaque";
+        case eImagePreMultiplied:
+            return "PreMultiplied";
+        case eImageUnPreMultiplied:
+            return "UnPreMultiplied";
+        default:
+            return "[unknown premult]";
+    }
+}
+
+static const char* fieldOrderString(FieldEnum e)
+{
+    switch (e) {
+        case eFieldBoth:
+            return "Both";
+        case eFieldLower:
+            return "Lower";
+        case eFieldUpper:
+            return "Upper";
+        case eFieldSingle:
+            return "Single";
+        case eFieldDoubled:
+            return "Doubled";
+        default:
+            return "[unknown field order]";
+    }
+}
+
+void
+NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kClipInfoParamName) {
+        std::ostringstream oss;
+        oss << "Clip Info:\n\n";
+        oss << "Input: ";
+        if (!srcClip_) {
+            oss << "N/A";
+        } else {
+            OFX::Clip &c = *srcClip_;
+            oss << pixelComponentString(c.getPixelComponentsProperty());
+            oss << bitDepthString(c.getPixelDepth());
+            oss << "(unmapped: ";
+            oss << pixelComponentString(c.getUnmappedPixelComponentsProperty());
+            oss << bitDepthString(c.getUnmappedPixelDepth());
+            oss << ")\npremultiplication: ";
+            oss << premultString(c.getPreMultiplication());
+            oss << "\nfield order: ";
+            oss << fieldOrderString(c.getFieldOrder());
+            oss << "\n";
+            oss << (c.isConnected() ? "connected" : "not connected");
+            oss << "\n";
+            oss << (c.hasContinuousSamples() ? "continuous samples" : "discontinuous samples");
+            oss << "\npixel aspect ratio: ";
+            oss << c.getPixelAspectRatio();
+            oss << "\nframe rate: ";
+            oss << c.getFrameRate();
+            oss << " (unmapped: ";
+            oss << c.getUnmappedFrameRate();
+            oss << ")";
+            OfxRangeD range = c.getFrameRange();
+            oss << "\nframe range: ";
+            oss << range.min << "..." << range.max;
+            oss << " (unmapped: ";
+            range = c.getUnmappedFrameRange();
+            oss << range.min << "..." << range.max;
+            oss << ")";
+            oss << "\nregion of definition: ";
+            OfxRectD rod = c.getRegionOfDefinition(args.time);
+            oss << rod.x1 << ' ' << rod.y1 << ' ' << rod.x2 << ' ' << rod.y2;
+        }
+        oss << "\n\n";
+        oss << "Output: ";
+        if (!dstClip_) {
+            oss << "N/A";
+        } else {
+            OFX::Clip &c = *dstClip_;
+            oss << pixelComponentString(c.getPixelComponentsProperty());
+            oss << bitDepthString(c.getPixelDepth());
+            oss << "(unmapped: ";
+            oss << pixelComponentString(c.getUnmappedPixelComponentsProperty());
+            oss << bitDepthString(c.getUnmappedPixelDepth());
+            oss << ")\npremultiplication: ";
+            oss << premultString(c.getPreMultiplication());
+            oss << "\nfield order: ";
+            oss << fieldOrderString(c.getFieldOrder());
+            oss << "\n";
+            oss << (c.isConnected() ? "connected" : "not connected");
+            oss << "\n";
+            oss << (c.hasContinuousSamples() ? "continuous samples" : "discontinuous samples");
+            oss << "\npixel aspect ratio: ";
+            oss << c.getPixelAspectRatio();
+            oss << "\nframe rate: ";
+            oss << c.getFrameRate();
+            oss << " (unmapped: ";
+            oss << c.getUnmappedFrameRate();
+            oss << ")";
+            OfxRangeD range = c.getFrameRange();
+            oss << "\nframe range: ";
+            oss << range.min << "..." << range.max;
+            oss << " (unmapped: ";
+            range = c.getUnmappedFrameRange();
+            oss << range.min << "..." << range.max;
+            oss << ")";
+            oss << "\nregion of definition: ";
+            OfxRectD rod = c.getRegionOfDefinition(args.time);
+            oss << rod.x1 << ' ' << rod.y1 << ' ' << rod.x2 << ' ' << rod.y2;
+        }
+        oss << "\n\n";
+        oss << "time: " << args.time << ", renderscale: " << args.renderScale.x << 'x' << args.renderScale.y << '\n';
+        
+        sendMessage(OFX::Message::eMessageMessage, "", oss.str());
+    }
 }
 
 using namespace OFX;
@@ -317,9 +480,17 @@ void NoOpPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedContext(eContextFilter);
 
     // add supported pixel depths
+    desc.addSupportedBitDepth(eBitDepthNone);
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
+    desc.addSupportedBitDepth(eBitDepthHalf);
     desc.addSupportedBitDepth(eBitDepthFloat);
+    desc.addSupportedBitDepth(eBitDepthCustom);
+#ifdef OFX_EXTENSIONS_VEGAS
+    desc.addSupportedBitDepth(eBitDepthUByteBGRA);
+    desc.addSupportedBitDepth(eBitDepthUShortBGRA);
+    desc.addSupportedBitDepth(eBitDepthFloatBGRA);
+#endif
 
     // set a few flags
     desc.setSingleInstance(false);
@@ -333,25 +504,33 @@ void NoOpPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
-    if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
-        throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
-    }
-
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentNone);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
+#ifdef OFX_EXTENSIONS_NUKE
+    srcClip->addSupportedComponent(ePixelComponentMotionVectors);
+    srcClip->addSupportedComponent(ePixelComponentStereoDisparity);
+#endif
+    srcClip->addSupportedComponent(ePixelComponentCustom);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(true);
     srcClip->setIsMask(false);
     
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentNone);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
+#ifdef OFX_EXTENSIONS_NUKE
+    dstClip->addSupportedComponent(ePixelComponentMotionVectors);
+    dstClip->addSupportedComponent(ePixelComponentStereoDisparity);
+#endif
+    dstClip->addSupportedComponent(ePixelComponentCustom);
     dstClip->setSupportsTiles(true);
     
     // make some pages and to things in 
@@ -362,8 +541,12 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     forceCopy->setHint(kForceCopyParamHint);
     forceCopy->setDefault(false);
     forceCopy->setAnimates(false);
-    
     page->addChild(*forceCopy);
+
+    PushButtonParamDescriptor *clipInfo = desc.definePushButtonParam(kClipInfoParamName);
+    clipInfo->setLabels(kClipInfoParamLabel, kClipInfoParamLabel, kClipInfoParamLabel);
+    clipInfo->setHint(kClipInfoParamHint);
+    page->addChild(*clipInfo);
 }
 
 OFX::ImageEffect* NoOpPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
