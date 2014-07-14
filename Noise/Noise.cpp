@@ -71,7 +71,7 @@
  */
 
 #include <limits>
-#include <stdio.h>
+#include <cmath>
 #include "ofxsImageEffect.h"
 #include "ofxsMultiThread.h"
 
@@ -90,6 +90,12 @@
 #define kNoiseParamLabel "Noise"
 #define kNoiseParamHint "How much noise to make."
 
+#define kSeedParamName "seed"
+#define kSeedParamLabel "Seed"
+#define kSeedParamHint "Random seed: change this if you want different instances to have different noise."
+
+using namespace OFX;
+
 ////////////////////////////////////////////////////////////////////////////////
 // base class for the noise
 
@@ -97,7 +103,8 @@
 class NoiseGeneratorBase : public OFX::ImageProcessor
 {
 protected:
-    float       _noiseLevel;   // how much to blend
+    float       _noiseLevel;   // noise amplitude
+    float       _mean;   // mean value
     uint32_t    _seed;    // base seed
 public:
     /** @brief no arg ctor */
@@ -111,9 +118,22 @@ public:
     /** @brief set the scale */
     void setNoiseLevel(float v) {_noiseLevel = v;}
 
+    /** @brief set the offset */
+    void setNoiseMean(float v) {_mean = v;}
+
     /** @brief the seed to use */
     void setSeed(uint32_t v) {_seed = v;}
 };
+
+static unsigned int hash(unsigned int a)
+{
+    a = (a ^ 61) ^ (a >> 16);
+    a = a + (a << 3);
+    a = a ^ (a >> 4);
+    a = a * 0x27d4eb2d;
+    a = a ^ (a >> 15);
+    return a;
+}
 
 /** @brief templated class to blend between two images */
 template <class PIX, int nComponents, int max>
@@ -131,18 +151,21 @@ public:
         float noiseLevel = _noiseLevel;
 
         // set up a random number generator and set the seed
-        RandomGenerator randy(_seed + procWindow.y1);
+        RandomGenerator randy;;
 
         // push pixels
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) break;
-
+            if (_effect.abort()) {
+                break;
+            }
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
+                // for a given x,y position, the output should always be the same.
+                randy.reseed(hash(x + 0x10000*_seed) + y);
                 for (int c = 0; c < nComponents; c++) {
                     // get the random value out of it, scale up by the pixel max level and the noise level
-                    double randValue = max * noiseLevel * randy.random();
+                    double randValue = _mean + max * noiseLevel * (randy.random()-0.5);
 
                     if (max == 1) // implies floating point, so don't clamp
                         dstPix[c] = PIX(randValue);
@@ -163,9 +186,11 @@ class NoisePlugin : public OFX::ImageEffect
 {
 protected:
     // do not need to delete these, the ImageEffect is managing them for us
+    OFX::Clip *srcClip_;
     OFX::Clip *dstClip_;
 
     OFX::DoubleParam  *noise_;
+    OFX::IntParam  *seed_;
 
 public:
     /** @brief ctor */
@@ -173,9 +198,15 @@ public:
     : ImageEffect(handle)
     , dstClip_(0)
     , noise_(0)
+    , seed_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
+        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha));
+        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA || srcClip_->getPixelComponents() == ePixelComponentAlpha));
         noise_   = fetchDoubleParam(kNoiseParamName);
+        seed_   = fetchIntParam(kSeedParamName);
+        assert(noise_ && seed_);
     }
 
     /* Override the render */
@@ -215,10 +246,14 @@ NoisePlugin::setupAndProcess(NoiseGeneratorBase &processor, const OFX::RenderArg
     processor.setRenderWindow(args.renderWindow);
 
     // set the scales
-    processor.setNoiseLevel((float)noise_->getValueAtTime(args.time));
+    // noise level depends on the render scale
+    // (the following formula is for Gaussian noise only, but we use it as an approximation)
+    double noise = noise_->getValueAtTime(args.time);
+    processor.setNoiseLevel((float)(noise * std::sqrt(args.renderScale.x * args.renderScale.y)));
+    processor.setNoiseMean((float)(noise / 2.));
 
     // set the seed based on the current time, and double it we get difference seeds on different fields
-    processor.setSeed(uint32_t(args.time * 2.0f + 2000.0f));
+    processor.setSeed(uint32_t(args.time * 2.0f + seed_->getValueAtTime(args.time)));
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -327,29 +362,38 @@ void NoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
 {
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip( kOfxImageEffectSimpleSourceClipName );
-    srcClip->addSupportedComponent( OFX::ePixelComponentRGBA );
-    srcClip->addSupportedComponent( OFX::ePixelComponentAlpha );
+    srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setSupportsTiles(true);
     srcClip->setOptional(true);
 
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(true);
     dstClip->setFieldExtraction(eFieldExtractSingle);
 
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    DoubleParamDescriptor *param = desc.defineDoubleParam(kNoiseParamName);
-    param->setLabels(kNoiseParamLabel,kNoiseParamLabel,kNoiseParamLabel);
-    param->setHint(kNoiseParamHint);
-    param->setDefault(0.2);
-    param->setRange(0, 10);
-    param->setIncrement(0.1);
-    param->setDisplayRange(0, 1);
-    param->setAnimates(true); // can animate
-    param->setDoubleType(eDoubleTypeScale);
-    page->addChild(*param);
+    DoubleParamDescriptor *noise = desc.defineDoubleParam(kNoiseParamName);
+    noise->setLabels(kNoiseParamLabel, kNoiseParamLabel, kNoiseParamLabel);
+    noise->setHint(kNoiseParamHint);
+    noise->setDefault(0.2);
+    noise->setRange(0, 10);
+    noise->setIncrement(0.1);
+    noise->setDisplayRange(0, 1);
+    noise->setAnimates(true); // can animate
+    noise->setDoubleType(eDoubleTypeScale);
+    page->addChild(*noise);
+
+    IntParamDescriptor *seed = desc.defineIntParam(kSeedParamName);
+    seed->setLabels(kSeedParamName, kSeedParamName, kSeedParamLabel);
+    seed->setHint(kSeedParamHint);
+    seed->setDefault(2000);
+    seed->setAnimates(true); // can animate
+    page->addChild(*seed);
 }
 
 ImageEffect* NoisePluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
