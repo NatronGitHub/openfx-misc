@@ -347,7 +347,8 @@ pixelComponentString(const std::string& p)
     return s.replace(s.find(prefix),prefix.length(),"");
 }
 
-static const char* premultString(PreMultiplicationEnum e)
+static const char*
+premultString(PreMultiplicationEnum e)
 {
     switch (e) {
         case eImageOpaque:
@@ -361,9 +362,27 @@ static const char* premultString(PreMultiplicationEnum e)
     }
 }
 
-static const char* fieldOrderString(FieldEnum e)
+#ifdef OFX_EXTENSIONS_VEGAS
+static const char*
+pixelOrderString(PixelOrderEnum e)
 {
     switch (e) {
+        case ePixelOrderRGBA:
+            return "RGBA";
+        case ePixelOrderBGRA:
+            return "BGRA";
+        default:
+            return "[unknown pixel order]";
+    }
+}
+#endif
+
+static const char*
+fieldOrderString(FieldEnum e)
+{
+    switch (e) {
+        case eFieldNone:
+            return "None";
         case eFieldBoth:
             return "Both";
         case eFieldLower:
@@ -397,6 +416,10 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string
             oss << bitDepthString(c.getUnmappedPixelDepth());
             oss << ")\npremultiplication: ";
             oss << premultString(c.getPreMultiplication());
+#ifdef OFX_EXTENSIONS_VEGAS
+            oss << "\npixel order: ";
+            oss << pixelOrderString(c.getPixelOrder());
+#endif
             oss << "\nfield order: ";
             oss << fieldOrderString(c.getFieldOrder());
             oss << "\n";
@@ -434,6 +457,10 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string
             oss << bitDepthString(c.getUnmappedPixelDepth());
             oss << ")\npremultiplication: ";
             oss << premultString(c.getPreMultiplication());
+#ifdef OFX_EXTENSIONS_VEGAS
+            oss << "\npixel order: ";
+            oss << pixelOrderString(c.getPixelOrder());
+#endif
             oss << "\nfield order: ";
             oss << fieldOrderString(c.getFieldOrder());
             oss << "\n";
@@ -499,7 +526,8 @@ void NoOpPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(true);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
-    desc.setSupportsMultipleClipPARs(false);
+    desc.setSupportsMultipleClipDepths(true);
+    desc.setSupportsMultipleClipPARs(true);
 }
 
 void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
@@ -512,8 +540,8 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
 #ifdef OFX_EXTENSIONS_NUKE
-    srcClip->addSupportedComponent(ePixelComponentMotionVectors);
-    srcClip->addSupportedComponent(ePixelComponentStereoDisparity);
+    //srcClip->addSupportedComponent(ePixelComponentMotionVectors);
+    //srcClip->addSupportedComponent(ePixelComponentStereoDisparity);
 #endif
     srcClip->addSupportedComponent(ePixelComponentCustom);
     srcClip->setTemporalClipAccess(false);
@@ -527,8 +555,8 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
 #ifdef OFX_EXTENSIONS_NUKE
-    dstClip->addSupportedComponent(ePixelComponentMotionVectors);
-    dstClip->addSupportedComponent(ePixelComponentStereoDisparity);
+    //dstClip->addSupportedComponent(ePixelComponentMotionVectors); // crashes Nuke
+    //dstClip->addSupportedComponent(ePixelComponentStereoDisparity);
 #endif
     dstClip->addSupportedComponent(ePixelComponentCustom);
     dstClip->setSupportsTiles(true);
