@@ -313,22 +313,6 @@ Transform3x3Plugin::~Transform3x3Plugin()
 #endif
 }
 
-bool
-Transform3x3Plugin::hasMotionBlur(double time)
-{
-    double motionblur;
-    _motionblur->getValueAtTime(time, motionblur);
-    double shutter;
-    _shutter->getValueAtTime(time, shutter);
-    int shutteroffset_i;
-    _shutteroffset->getValueAtTime(time, shutteroffset_i);
-    double shuttercustomoffset;
-    _shuttercustomoffset->getValueAtTime(time, shuttercustomoffset);
-    // even without motion blur, a custom shutter offset may be set
-    return ((shutter != 0. && motionblur != 0.) ||
-            (shutteroffset_i == kTransform3x3ShutterOffsetCustom && shuttercustomoffset != 0.));
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */
 
@@ -339,7 +323,8 @@ Transform3x3Plugin::hasMotionBlur(double time)
 void
 Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    const double time = args.time;
+    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -349,7 +334,7 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(time));
     size_t invtransformsizealloc = 0;
     size_t invtransformsize = 0;
     OFX::Matrix3x3* invtransform = NULL;
@@ -381,46 +366,41 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
         if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
             OFX::throwSuiteStatusException(kOfxStatFailed);
 
-        // Transform3x3-GENERIC
         bool invert;
-        // GENERIC
+        _invert->getValueAtTime(time, invert);
 
-        // Transform3x3-GENERIC
-        _invert->getValueAtTime(args.time, invert);
-
-        // GENERIC
-        _blackOutside->getValueAtTime(args.time, blackOutside);
+        _blackOutside->getValueAtTime(time, blackOutside);
         if (_masked) {
-            _mix->getValueAtTime(args.time, mix);
-            _maskInvert->getValueAtTime(args.time, maskInvert);
+            _mix->getValueAtTime(time, mix);
+            _maskInvert->getValueAtTime(time, maskInvert);
         }
+        _motionblur->getValueAtTime(time, motionblur);
+        double shutter;
+        _shutter->getValueAtTime(time, shutter);
 
         const bool fielded = args.fieldToRender == OFX::eFieldLower || args.fieldToRender == OFX::eFieldUpper;
         const double pixelAspectRatio = src->getPixelAspectRatio();
 
-        if (hasMotionBlur(args.time)) {
+        if (shutter != 0. && motionblur != 0.) {
             invtransformsizealloc = kTransform3x3MotionBlurCount;
             invtransform = new OFX::Matrix3x3[invtransformsizealloc];
-            _motionblur->getValueAtTime(args.time, motionblur);
-            double shutter;
-            _shutter->getValueAtTime(args.time, shutter);
             int shutteroffset_i;
-            _shutteroffset->getValueAtTime(args.time, shutteroffset_i);
+            _shutteroffset->getValueAtTime(time, shutteroffset_i);
             double shuttercustomoffset;
-            _shuttercustomoffset->getValueAtTime(args.time, shuttercustomoffset);
+            _shuttercustomoffset->getValueAtTime(time, shuttercustomoffset);
 
 #ifdef USE_CACHE
-            _cache->get(CacheID(args.time, args.renderScale, fielded, pixelAspectRatio, invert, shutter, shutteroffset_i, shuttercustomoffset, dst->getUniqueIdentifier()),
+            _cache->get(CacheID(time, args.renderScale, fielded, pixelAspectRatio, invert, shutter, shutteroffset_i, shuttercustomoffset, dst->getUniqueIdentifier()),
                         invtransform, &invtransformsize);
 #else
-            invtransformsize = getInverseTransforms(args.time, args.renderScale, fielded, pixelAspectRatio, invert, shutter, shutteroffset_i, shuttercustomoffset, invtransform, invtransformsizealloc);
+            invtransformsize = getInverseTransforms(time, args.renderScale, fielded, pixelAspectRatio, invert, shutter, shutteroffset_i, shuttercustomoffset, invtransform, invtransformsizealloc);
 #endif
 
         } else {
             invtransformsizealloc = 1;
             invtransform = new OFX::Matrix3x3[invtransformsizealloc];
             invtransformsize = 1;
-            bool success = getInverseTransformCanonical(args.time, invert, &invtransform[0]); // virtual function
+            bool success = getInverseTransformCanonical(time, invert, &invtransform[0]); // virtual function
             if (!success) {
                 invtransform[0].a = 0.;
                 invtransform[0].b = 0.;
@@ -445,7 +425,7 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
     }
 
     // auto ptr for the mask.
-    std::auto_ptr<OFX::Image> mask((_masked && (getContext() != OFX::eContextFilter)) ? maskClip_->fetchImage(args.time) : 0);
+    std::auto_ptr<OFX::Image> mask((_masked && (getContext() != OFX::eContextFilter)) ? maskClip_->fetchImage(time) : 0);
 
     // do we do masking
     if (_masked && getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
@@ -475,59 +455,10 @@ Transform3x3Plugin::setupAndProcess(Transform3x3ProcessorBase &processor, const 
     delete [] invtransform;
 }
 
-// override the rod call
-// Transform3x3-GENERIC
-// the RoD should at least contain the region of definition of the source clip,
-// which will be filled with black or by continuity.
-bool
-Transform3x3Plugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
+// compute the bounding box of the transform of four points
+static void
+ofxsTransformRegionFromPoints(const OFX::Point3D p[4], OfxRectD &rod)
 {
-    // if there is motion blur, we cannot determine precisely the RoD. Let's say it's infinite
-    if (hasMotionBlur(args.time)) {
-        rod.x1 = kOfxFlagInfiniteMin;
-        rod.x2 = kOfxFlagInfiniteMax;
-        rod.y1 = kOfxFlagInfiniteMin;
-        rod.y2 = kOfxFlagInfiniteMax;
-        return true;
-    }
-    
-    OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
-
-    ///if is identity return the input rod instead of transforming
-    // Transform3x3-GENERIC
-    if (isIdentity(args.time)) {
-        rod = srcRoD;
-        return true;
-    }
-
-    // GENERIC
-    if (_masked) {
-        double mix;
-        _mix->getValueAtTime(args.time, mix);
-        if (mix == 0.) {
-            rod = srcRoD;
-            return true;
-        }
-    }
-
-    bool invert;
-
-    // Transform3x3-GENERIC
-    _invert->getValueAtTime(args.time, invert);
-    
-    OFX::Matrix3x3 transform;
-    bool success = getInverseTransformCanonical(args.time, !invert, &transform); // RoD is computed using the *DIRECT* transform, which is why we use !invert
-    if (!success) {
-        return false; // can't compute - use default values
-    }
-
-    /// now transform the 4 corners of the source clip to the output image
-    OFX::Point3D p[4];
-    p[0] = transform * OFX::Point3D(srcRoD.x1,srcRoD.y1,1);
-    p[1] = transform * OFX::Point3D(srcRoD.x1,srcRoD.y2,1);
-    p[2] = transform * OFX::Point3D(srcRoD.x2,srcRoD.y2,1);
-    p[3] = transform * OFX::Point3D(srcRoD.x2,srcRoD.y1,1);
-
     // extract the x/y bounds
     double x1, y1, x2, y2;
 
@@ -540,25 +471,30 @@ Transform3x3Plugin::getRegionOfDefinition(const RegionOfDefinitionArguments &arg
     }
 
     if (!allpositive && !allnegative) {
-        return false;
+        // the line at infinity crosses the source RoD
+        x1 = kOfxFlagInfiniteMin;
+        x2 = kOfxFlagInfiniteMax;
+        y1 = kOfxFlagInfiniteMin;
+        y2 = kOfxFlagInfiniteMax;
     } else {
+        OfxPointD q[4];
         for (int i = 0; i < 4; ++i) {
-            p[i].x /= p[i].z;
-            p[i].y /= p[i].z;
+            q[i].x = p[i].x / p[i].z;
+            q[i].y = p[i].y / p[i].z;
         }
 
-        x1 = x2 = p[0].x;
-        y1 = y2 = p[0].y;
+        x1 = x2 = q[0].x;
+        y1 = y2 = q[0].y;
         for (int i = 1; i < 4; ++i) {
-            if (p[i].x < x1) {
-                x1 = p[i].x;
-            } else if (p[i].x > x2) {
-                x2 = p[i].x;
+            if (q[i].x < x1) {
+                x1 = q[i].x;
+            } else if (q[i].x > x2) {
+                x2 = q[i].x;
             }
-            if (p[i].y < y1) {
-                y1 = p[i].y;
-            } else if (p[i].y > y2) {
-                y2 = p[i].y;
+            if (q[i].y < y1) {
+                y1 = q[i].y;
+            } else if (q[i].y > y2) {
+                y2 = q[i].y;
             }
         }
     }
@@ -569,12 +505,172 @@ Transform3x3Plugin::getRegionOfDefinition(const RegionOfDefinitionArguments &arg
     rod.y1 = y1;
     rod.y2 = y2;
     assert(rod.x1 <= rod.x2 && rod.y1 <= rod.y2);
+}
+
+// compute the bounding box of the transform of a rectangle
+static void
+ofxsTransformRegionFromRoD(const OfxRectD &srcRoD, const OFX::Matrix3x3 &transform, OFX::Point3D p[4], OfxRectD &rod)
+{
+    /// now transform the 4 corners of the source clip to the output image
+    p[0] = transform * OFX::Point3D(srcRoD.x1,srcRoD.y1,1);
+    p[1] = transform * OFX::Point3D(srcRoD.x1,srcRoD.y2,1);
+    p[2] = transform * OFX::Point3D(srcRoD.x2,srcRoD.y2,1);
+    p[3] = transform * OFX::Point3D(srcRoD.x2,srcRoD.y1,1);
+
+    ofxsTransformRegionFromPoints(p, rod);
+}
+
+void
+Transform3x3Plugin::transformRegion(const OfxRectD &rectFrom, double time, bool invert, double motionblur, double shutter, int shutteroffset_i, double shuttercustomoffset, OfxRectD *rectTo)
+{
+    // Algorithm:
+    // - Compute positions of the four corners at start and end of shutter, and every multiple of 0.25 within this range.
+    // - Update the bounding box from these positions.
+    // - At the end, expand the bounding box by the maximum L-infinity distance between consecutive positions of each corner.
+
+    OfxRangeD range;
+    bool hasmotionblur = (shutter != 0. && motionblur != 0.);
+    if (hasmotionblur) {
+        shutterRange(time, shutter, shutteroffset_i, shuttercustomoffset, &range);
+    } else {
+        ///if is identity return the input rod instead of transforming
+        if (isIdentity(time)) {
+            *rectTo = rectFrom;
+            return;
+        }
+        range.min = range.max = time;
+    }
+
+    // initialize with a super-empty RoD (note that max and min are reversed)
+    rectTo->x1 = kOfxFlagInfiniteMax;
+    rectTo->x2 = kOfxFlagInfiniteMin;
+    rectTo->y1 = kOfxFlagInfiniteMax;
+    rectTo->y2 = kOfxFlagInfiniteMin;
+    double t = range.min;
+    bool first = true;
+    bool last = !hasmotionblur; // ony one iteration if there is no motion blur
+    bool finished = false;
+    double expand = 0.;
+    OFX::Point3D p_prev[4];
+    while (!finished) {
+        // compute transformed positions
+        OfxRectD thisRoD;
+        OFX::Matrix3x3 transform;
+        bool success = getInverseTransformCanonical(time, invert, &transform); // RoD is computed using the *DIRECT* transform, which is why we use !invert
+        if (!success) {
+            // return infinite region
+            rectTo->x1 = kOfxFlagInfiniteMin;
+            rectTo->x2 = kOfxFlagInfiniteMax;
+            rectTo->y1 = kOfxFlagInfiniteMin;
+            rectTo->y2 = kOfxFlagInfiniteMax;
+            return;
+        }
+        OFX::Point3D p[4];
+        ofxsTransformRegionFromRoD(rectFrom, transform, p, thisRoD);
+
+        // update min/max
+        MergeImages2D::rectBoundingBox(*rectTo, thisRoD, rectTo);
+
+        // if first iteration, continue
+        if (first) {
+            first = false;
+        } else {
+            // compute the L-infinity distance between consecutive tested points
+            expand = std::max(expand, std::fabs(p_prev[0].x-p[0].x));
+            expand = std::max(expand, std::fabs(p_prev[0].y-p[0].y));
+            expand = std::max(expand, std::fabs(p_prev[1].x-p[1].x));
+            expand = std::max(expand, std::fabs(p_prev[1].y-p[1].y));
+            expand = std::max(expand, std::fabs(p_prev[2].x-p[2].x));
+            expand = std::max(expand, std::fabs(p_prev[2].y-p[2].y));
+            expand = std::max(expand, std::fabs(p_prev[3].x-p[3].x));
+            expand = std::max(expand, std::fabs(p_prev[3].y-p[3].y));
+        }
+
+        if (last) {
+            finished = true;
+        } else {
+            // prepare for next iteration
+            p_prev[0] = p[0];
+            p_prev[1] = p[1];
+            p_prev[2] = p[2];
+            p_prev[3] = p[3];
+            t = std::floor(t*4+1)/4; // next quarter-frame
+            if (t >= range.max) {
+                // last iteration should be done with range.max
+                t = range.max;
+                last = true;
+            }
+        }
+    }
+    // expand to take into account errors due to motion blur
+    if (rectTo->x1 > kOfxFlagInfiniteMin) {
+        rectTo->x1 -= expand;
+    }
+    if (rectTo->x2 < kOfxFlagInfiniteMax) {
+        rectTo->x2 += expand;
+    }
+    if (rectTo->y1 > kOfxFlagInfiniteMin) {
+        rectTo->y1 -= expand;
+    }
+    if (rectTo->y2 < kOfxFlagInfiniteMax) {
+        rectTo->y2 += expand;
+    }
+}
+
+// override the rod call
+// Transform3x3-GENERIC
+// the RoD should at least contain the region of definition of the source clip,
+// which will be filled with black or by continuity.
+bool
+Transform3x3Plugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    const double time = args.time;
+    const OfxRectD srcRoD = srcClip_->getRegionOfDefinition(time);
+    if (MergeImages2D::rectIsInfinite(srcRoD)) {
+        // return an infinite RoD
+        rod.x1 = kOfxFlagInfiniteMin;
+        rod.x2 = kOfxFlagInfiniteMax;
+        rod.y1 = kOfxFlagInfiniteMin;
+        rod.y2 = kOfxFlagInfiniteMax;
+        return true;
+    }
+
+    double mix = 1.;
+    const bool doMasking = _masked && getContext() != OFX::eContextFilter && maskClip_->isConnected();
+    if (doMasking) {
+        _mix->getValueAtTime(time, mix);
+        if (mix == 0.) {
+            // identity transform
+            rod = srcRoD;
+            return true;
+        }
+    }
+
+    bool invert;
+    _invert->getValueAtTime(time, invert);
+    invert = !invert; // only for getRoD
+    double motionblur;
+    _motionblur->getValueAtTime(time, motionblur);
+    double shutter;
+    _shutter->getValueAtTime(time, shutter);
+    int shutteroffset_i;
+    _shutteroffset->getValueAtTime(time, shutteroffset_i);
+    double shuttercustomoffset;
+    _shuttercustomoffset->getValueAtTime(time, shuttercustomoffset);
+
+    // set rod from srcRoD
+    transformRegion(srcRoD, time, invert, motionblur, shutter, shutteroffset_i, shuttercustomoffset, &rod);
 
     bool blackOutside;
-    _blackOutside->getValueAtTime(args.time, blackOutside);
+    _blackOutside->getValueAtTime(time, blackOutside);
 
     ofxsFilterExpandRoD(this, dstClip_->getPixelAspectRatio(), args.renderScale, blackOutside, &rod);
 
+    if (doMasking && mix != 1.) {
+        // for masking or mixing, we also need the source image.
+        // compute the union of both RODs
+        MergeImages2D::rectBoundingBox(rod, srcRoD, &rod);
+    }
     // say we set it
     return true;
 }
@@ -589,95 +685,69 @@ Transform3x3Plugin::getRegionOfDefinition(const RegionOfDefinitionArguments &arg
 void
 Transform3x3Plugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
+    const double time = args.time;
     const OfxRectD roi = args.regionOfInterest;
-    bool invert;
+    OfxRectD srcRoI;
 
-    // if there is motion blur, we return the whole RoD
-    bool hasmotionblur = hasMotionBlur(args.time);
-
-    // extract the x/y bounds
-    double x1, y1, x2, y2;
-    OFX::Point3D p[4];
-    bool allpositive = true;
-    bool allnegative = true;
-
-    if (!hasmotionblur) {
-        // Transform3x3-GENERIC
-        _invert->getValueAtTime(args.time, invert);
-
-        OFX::Matrix3x3 invtransform;
-        bool success = getInverseTransformCanonical(args.time, invert, &invtransform);
-        if (!success) {
-            // can't compute inverse transform, use default value (render will probably fail anyway)
+    double mix = 1.;
+    const bool doMasking = _masked && getContext() != OFX::eContextFilter && maskClip_->isConnected();
+    if (doMasking) {
+        _mix->getValueAtTime(time, mix);
+        if (mix == 0.) {
+            // identity transform
+            srcRoI = roi;
+            rois.setRegionOfInterest(*srcClip_, srcRoI);
             return;
         }
-
-        /// now find the positions in the src clip of the 4 corners of the roi
-        p[0] = invtransform * OFX::Point3D(roi.x1,roi.y1,1);
-        p[1] = invtransform * OFX::Point3D(roi.x2,roi.y1,1);
-        p[2] = invtransform * OFX::Point3D(roi.x2,roi.y2,1);
-        p[3] = invtransform * OFX::Point3D(roi.x1,roi.y2,1);
-
-
-        // if all z's have the same sign, we can compute a reasonable ROI, else we give the whole image (the line at infinity crosses the rectangle)
-        for (int i = 0; i < 4; ++i) {
-            allnegative = allnegative && (p[i].z < 0.);
-            allpositive = allpositive && (p[i].z > 0.);
-        }
-    }
-    if (hasmotionblur || (!allpositive && !allnegative)) {
-        OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
-        x1 = srcRoD.x1;
-        x2 = srcRoD.x2;
-        y1 = srcRoD.y1;
-        y2 = srcRoD.y2;
-    } else {
-        for (int i = 0; i < 4; ++i) {
-            p[i].x /= p[i].z;
-            p[i].y /= p[i].z;
-        }
-
-        x1 = x2 = p[0].x;
-        y1 = y2 = p[0].y;
-        for (int i = 1; i < 4; ++i) {
-            if (p[i].x < x1) {
-                x1 = p[i].x;
-            } else if (p[i].x > x2) {
-                x2 = p[i].x;
-            }
-            if (p[i].y < y1) {
-                y1 = p[i].y;
-            } else if (p[i].y > y2) {
-                y2 = p[i].y;
-            }
-        }
     }
 
-    // GENERIC
+    bool invert;
+    _invert->getValueAtTime(time, invert);
+    //invert = !invert; // only for getRoD
+    double motionblur;
+    _motionblur->getValueAtTime(time, motionblur);
+    double shutter;
+    _shutter->getValueAtTime(time, shutter);
+    int shutteroffset_i;
+    _shutteroffset->getValueAtTime(time, shutteroffset_i);
+    double shuttercustomoffset;
+    _shuttercustomoffset->getValueAtTime(time, shuttercustomoffset);
+
+    // set srcRoI from roi
+    transformRegion(roi, time, invert, motionblur, shutter, shutteroffset_i, shuttercustomoffset, &srcRoI);
+
     int filter;
-    _filter->getValueAtTime(args.time, filter);
+    _filter->getValueAtTime(time, filter);
     bool blackOutside;
-    _blackOutside->getValueAtTime(args.time, blackOutside);
-    const bool doMasking = _masked && getContext() != OFX::eContextFilter && maskClip_->isConnected();
-    double mix = 1.;
-    if (_masked) {
-        _mix->getValueAtTime(args.time, mix);
-    }
+    _blackOutside->getValueAtTime(time, blackOutside);
 
-
-    OfxRectD srcRoI;
-    srcRoI.x1 = x1;
-    srcRoI.x2 = x2;
-    srcRoI.y1 = y1;
-    srcRoI.y2 = y2;
     assert(srcRoI.x1 <= srcRoI.x2 && srcRoI.y1 <= srcRoI.y2);
 
     ofxsFilterExpandRoI(roi, srcClip_->getPixelAspectRatio(), args.renderScale, (FilterEnum)filter, doMasking, mix, &srcRoI);
 
+    if (MergeImages2D::rectIsInfinite(srcRoI)) {
+        // RoI cannot be infinite.
+        // This is not a mathematically correct solution, but better than nothing: set to the project size
+        OfxPointD size = getProjectSize();
+        OfxPointD offset = getProjectOffset();
+
+        if (srcRoI.x1 <= kOfxFlagInfiniteMin) {
+            srcRoI.x1 = offset.x;
+        }
+        if (srcRoI.x2 >= kOfxFlagInfiniteMax) {
+            srcRoI.x2 = offset.x + size.x;
+        }
+        if (srcRoI.y1 <= kOfxFlagInfiniteMin) {
+            srcRoI.y1 = offset.y;
+        }
+        if (srcRoI.y2 >= kOfxFlagInfiniteMax) {
+            srcRoI.y2 = offset.y + size.y;
+        }
+    }
 
     if (_masked && mix != 1.) {
         // compute the bounding box with the default ROI
-        MergeImages2D::rectanglesBoundingBox(srcRoI, args.regionOfInterest, &srcRoI);
+        MergeImages2D::rectBoundingBox(srcRoI, args.regionOfInterest, &srcRoI);
     }
 
     // no need to set it on mask (the default ROI is OK)
@@ -689,10 +759,11 @@ template <class PIX, int nComponents, int maxValue, bool masked>
 void
 Transform3x3Plugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
 {
+    const double time = args.time;
     int filter;
-    _filter->getValueAtTime(args.time, filter);
+    _filter->getValueAtTime(time, filter);
     bool clamp;
-    _clamp->getValueAtTime(args.time, clamp);
+    _clamp->getValueAtTime(time, clamp);
 
     // as you may see below, some filters don't need explicit clamping, since they are
     // "clamped" by construction.
@@ -821,41 +892,31 @@ Transform3x3Plugin::render(const OFX::RenderArguments &args)
 
 bool Transform3x3Plugin::isIdentity(const RenderArguments &args, OFX::Clip * &identityClip, double &identityTime)
 {
-    // Transform3x3-GENERIC
+    const double time = args.time;
 
     // if there is motion blur, we suppose the transform is not identity
     double motionblur;
-    _motionblur->getValueAtTime(args.time, motionblur);
+    _motionblur->getValueAtTime(time, motionblur);
     double shutter;
-    _shutter->getValueAtTime(args.time, shutter);
-    int shutteroffset_i;
-    _shutteroffset->getValueAtTime(args.time, shutteroffset_i);
-    double shuttercustomoffset;
-    _shuttercustomoffset->getValueAtTime(args.time, shuttercustomoffset);
-    if (shutter != 0. && motionblur != 0.) {
-        assert(hasMotionBlur(args.time));
+    _shutter->getValueAtTime(time, shutter);
+    bool hasmotionblur = (shutter != 0. && motionblur != 0.);
+    if (hasmotionblur) {
         return false;
     }
-    assert(!hasMotionBlur(args.time));
 
-    double transform_time = args.time;
-    if (shutteroffset_i == kTransform3x3ShutterOffsetCustom) {
-        transform_time += shuttercustomoffset;
-    }
-
-    if (isIdentity(transform_time)) { // let's call the Transform-specific one first
+    if (isIdentity(time)) { // let's call the Transform-specific one first
         identityClip = srcClip_;
-        identityTime = args.time;
+        identityTime = time;
         return true;
     }
 
     // GENERIC
     if (_masked) {
         double mix;
-        _mix->getValueAtTime(args.time, mix);
+        _mix->getValueAtTime(time, mix);
         if (mix == 0.) {
             identityClip = srcClip_;
-            identityTime = args.time;
+            identityTime = time;
             return true;
         }
     }
@@ -867,14 +928,15 @@ bool Transform3x3Plugin::isIdentity(const RenderArguments &args, OFX::Clip * &id
 // overridden getTransform
 bool Transform3x3Plugin::getTransform(const TransformArguments &args, Clip * &transformClip, double transformMatrix[9])
 {
+    const double time = args.time;
     bool invert;
 
     //std::cout << "getTransform called!" << std::endl;
     // Transform3x3-GENERIC
-    _invert->getValueAtTime(args.time, invert);
+    _invert->getValueAtTime(time, invert);
 
     OFX::Matrix3x3 invtransform;
-    bool success = getInverseTransformCanonical(args.time, invert, &invtransform);
+    bool success = getInverseTransformCanonical(time, invert, &invtransform);
     if (!success) {
         return false;
     }

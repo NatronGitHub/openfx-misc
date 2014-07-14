@@ -138,8 +138,6 @@ private:
 
     bool isIdentity(double time, OFX::Clip * &identityClip, double &identityTime);
 
-    bool hasMotionBlur(double time);
-
     size_t getInverseTransforms(double time,
                                 OfxPointD renderscale,
                                 bool fielded,
