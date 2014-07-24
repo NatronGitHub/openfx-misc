@@ -167,9 +167,7 @@ private:
 class TrackerPMProcessorBase : public OFX::ImageProcessor
 {
 protected:
-    const OFX::Image *_refImg;
     const OFX::Image *_otherImg;
-    const OFX::Image *_maskImg;
     OfxRectI _refRectPixel;
     OfxPointI _refCenterI;
     std::pair<OfxPointD,double> _bestMatch; //< the results for the current processor
@@ -178,30 +176,21 @@ protected:
 public:
     TrackerPMProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
-    , _refImg(0)
     , _otherImg(0)
     , _refRectPixel()
+    , _refCenterI()
     {
         _bestMatch.second = std::numeric_limits<double>::infinity();
 
     }
-    
-    /** @brief set the src image */
-    void setImages(const OFX::Image *ref, const OFX::Image *other, const OFX::Image *mask)
+
+    virtual ~TrackerPMProcessorBase()
     {
-        _refImg = ref;
-        _otherImg = other;
-        _maskImg = mask;
     }
-    
-    void setRefRectPixel(const OfxRectI& pattern)
-    {
-        _refRectPixel = pattern;
-    }
-    
-    void setRefCenterI(const OfxPointI& centeri) {
-        _refCenterI = centeri;
-    }
+
+    /** @brief set the processing parameters. return false if processing cannot be done. */
+    virtual bool setValues(const OFX::Image *ref, const OFX::Image *other, const OFX::Image *mask,
+                           const OfxRectI& pattern, const OfxPointI& centeri) = 0;
 
     /**
      * @brief Retrieves the results of the track. Must be called once process() returns so it is thread safe.
@@ -216,13 +205,83 @@ public:
 template <class PIX, int nComponents, int maxValue, TrackerScoreEnum scoreType>
 class TrackerPMProcessor : public TrackerPMProcessorBase
 {
+protected:
+    ImageMemory *_patternImg;
+    PIX *_patternData;
+    ImageMemory *_weightImg;
+    float *_weightData;
+    double _weightTotal;
 public:
     TrackerPMProcessor(OFX::ImageEffect &instance)
     : TrackerPMProcessorBase(instance)
+    , _patternImg(0)
+    , _patternData(0)
+    , _weightImg(0)
+    , _weightData(0)
+    , _weightTotal(0.)
     {
     }
-    
+
+    ~TrackerPMProcessor()
+    {
+        _patternImg->unlock();
+        delete _patternImg;
+        _weightImg->unlock();
+        delete _weightImg;
+    }
 private:
+    /** @brief set the processing parameters. return false if processing cannot be done. */
+    virtual bool setValues(const OFX::Image *ref, const OFX::Image *other, const OFX::Image *mask,
+                           const OfxRectI& pattern, const OfxPointI& centeri)
+    {
+        size_t rowsize = pattern.x2 - pattern.x1;
+        size_t nPix = rowsize * (pattern.y2 - pattern.y1);
+        _patternImg = new ImageMemory(sizeof(PIX) * nComponents * nPix, &_effect);
+        _weightImg = new ImageMemory(sizeof(float) * nPix, &_effect);
+        _otherImg = other;
+        _refRectPixel = pattern;
+        _refCenterI = centeri;
+
+        _patternData = (PIX*)_patternImg->lock();
+        _weightData = (float*)_weightImg->lock();
+
+        // sliding pointers
+        size_t patternIdx = 0; // sliding index
+        PIX *patternPtr = _patternData;
+        float *weightPtr = _weightData;
+        _weightTotal = 0.;
+
+        // extract ref and mask
+        for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
+            for (int j = _refRectPixel.x1; j < _refRectPixel.x2; ++j, ++weightPtr, patternPtr += nComponents, ++patternIdx) {
+                assert(patternIdx == ((i - _refRectPixel.y1) * (_refRectPixel.x2 - _refRectPixel.x1) + (j - _refRectPixel.x1)));
+                PIX *refPix = (PIX*) ref->getPixelAddress(_refCenterI.x + j, _refCenterI.y + i);
+
+                if (!refPix) {
+                    // no reference pixel, set weight to 0
+                    *weightPtr = 0.;
+                    for (int c = 0; c < nComponents; ++c) {
+                        patternPtr[c] = PIX();
+                    }
+                } else {
+                    if (!mask) {
+                        // no mask, weight is uniform
+                        *weightPtr = 1.;
+                    } else {
+                        PIX *maskPix = (PIX*) mask->getPixelAddress(_refCenterI.x + j, _refCenterI.y + i);
+                        // weight is zero if there's a mask but we're outside of it
+                        *weightPtr = maskPix ? (*maskPix/(double)maxValue) : 0.;
+                    }
+                    for (int c = 0; c < nComponents; ++c) {
+                        patternPtr[c] = refPix[c];
+                    }
+                }
+                _weightTotal += *weightPtr;
+            }
+        }
+        return (_weightTotal > 0);
+    }
+
     void multiThreadProcessImages(OfxRectI procWindow) {
         switch (scoreType) {
             case eTrackerSSD:
@@ -246,30 +305,40 @@ private:
             for (int c = 0; c < scoreComps; ++c) {
                 otherMean[c] = 0;
             }
+            // sliding pointers
+            size_t patternIdx = 0; // sliding index
+            const PIX *patternPtr = _patternData;
+            float *weightPtr = _weightData;
             for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
-                for (int j = _refRectPixel.x1; j < _refRectPixel.x2; ++j) {
-                    // take nearest pixel in other image (more chance to get a track than with black)
+                for (int j = _refRectPixel.x1; j < _refRectPixel.x2; ++j, ++weightPtr, patternPtr += nComponents, ++patternIdx) {
+                    assert(patternIdx == ((i - _refRectPixel.y1) * (_refRectPixel.x2 - _refRectPixel.x1) + (j - _refRectPixel.x1)));
+                   // take nearest pixel in other image (more chance to get a track than with black)
                     int otherx = x + j;
                     int othery = y + i;
                     otherx = std::max(_otherImg->getBounds().x1,std::min(otherx,_otherImg->getBounds().x2-1));
                     othery = std::max(_otherImg->getBounds().y1,std::min(othery,_otherImg->getBounds().y2-1));
                     PIX *otherPix = (PIX *) _otherImg->getPixelAddress(otherx, othery);
                     for (int c = 0; c < scoreComps; ++c) {
-                        otherMean[c] += otherPix[c];
+                        otherMean[c] += *weightPtr * otherPix[c];
                     }
                 }
             }
             for (int c = 0; c < scoreComps; ++c) {
-                otherMean[c] /= (_refRectPixel.x2-_refRectPixel.x1) * (_refRectPixel.y2-_refRectPixel.y1);
+                otherMean[c] /= _weightTotal;
             }
         }
-        for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
-            for (int j = _refRectPixel.x1; j < _refRectPixel.x2; ++j) {
-                PIX *refPix = (PIX*) _refImg->getPixelAddress(_refCenterI.x + j, _refCenterI.y + i);
-                PIX *maskPix = _maskImg ? (PIX*) _maskImg->getPixelAddress(_refCenterI.x + j, _refCenterI.y + i) : 0;
 
-                // weight is zero if there's a mask but we're outside of it
-                double weight = maskPix ? (*maskPix/(double)maxValue) : (_maskImg ? 0. : 1.);
+        // sliding pointers
+        size_t patternIdx = 0; // sliding index
+        const PIX *patternPtr = _patternData;
+        float *weightPtr = _weightData;
+
+        for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
+            for (int j = _refRectPixel.x1; j < _refRectPixel.x2; ++j, ++weightPtr, patternPtr += nComponents, ++patternIdx) {
+                assert(patternIdx == ((i - _refRectPixel.y1) * (_refRectPixel.x2 - _refRectPixel.x1) + (j - _refRectPixel.x1)));
+                const PIX * const refPix = patternPtr;
+
+                const float weight = *weightPtr;
 
                 // take nearest pixel in other image (more chance to get a track than with black)
                 int otherx = x + j;
@@ -315,7 +384,7 @@ private:
     template<enum TrackerScoreEnum scoreTypeE>
     void multiThreadProcessImagesForScore(const OfxRectI& procWindow)
     {
-        assert(_refImg && _otherImg);
+        assert(_patternImg && _patternData && _weightImg && _weightData && _otherImg);
         assert(scoreType == scoreTypeE);
         double bestScore = std::numeric_limits<double>::infinity();
         OfxPointI point;
@@ -334,16 +403,21 @@ private:
             }
         }
         if (scoreTypeE == eTrackerZNCC) {
+            // sliding pointers
+            size_t patternIdx = 0; // sliding index
+            const PIX *patternPtr = _patternData;
+            float *weightPtr = _weightData;
             for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
-                for (int j = _refRectPixel.x1; j < _refRectPixel.x2; ++j) {
-                    PIX *refPix = (PIX*) _refImg->getPixelAddress(_refCenterI.x + j, _refCenterI.y + i);
+                for (int j = _refRectPixel.x1; j < _refRectPixel.x2; ++j, ++weightPtr, patternPtr += nComponents, ++patternIdx) {
+                    assert(patternIdx == ((i - _refRectPixel.y1) * (_refRectPixel.x2 - _refRectPixel.x1) + (j - _refRectPixel.x1)));
+                    const PIX *refPix = patternPtr;
                     for (int c = 0; c < scoreComps; ++c) {
-                        refMean[c] += refPix[c];
+                        refMean[c] += *weightPtr * refPix[c];
                     }
                 }
             }
             for (int c = 0; c < scoreComps; ++c) {
-                refMean[c] /= (_refRectPixel.x2-_refRectPixel.x1) * (_refRectPixel.y2-_refRectPixel.y1);
+                refMean[c] /= _weightTotal;
             }
         }
 
@@ -363,6 +437,7 @@ private:
         }
         
         // do the subpixel refinement, only if the score is a possible winner
+        // TODO: only do this for the best match
         double dx = 0.;
         double dy = 0.;
 
@@ -446,10 +521,8 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
         progressStart(name);
     }
 
-    // create a keyframe at starting point
     OfxPointD refCenter;
     _center->getValueAtTime(t, refCenter.x, refCenter.y);
-    _center->setValueAtTime(t, refCenter.x, refCenter.y);
 
     while (args.forward ? (t <= args.last) : (t >= args.last)) {
         OfxTime other = args.forward ? (t + 1) : (t - 1);
@@ -568,8 +641,7 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
     // set a dummy dstImg so that the processor does the job
     // (we don't use it anyway)
     processor.setDstImg((OFX::Image *)1);
-    processor.setImages(refImg, otherImg, maskImg);
-    
+
     OfxRectI trackSearchBoundsPixel;
     trackSearchBoundsPixel.x1 = std::floor(trackSearchBounds.x1);
     trackSearchBoundsPixel.y1 = std::floor(trackSearchBounds.y1);
@@ -582,6 +654,7 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
     refRectPixel.y1 = std::floor(refBounds.y1);
     refRectPixel.x2 = std::ceil(refBounds.x2);
     refRectPixel.y2 = std::ceil(refBounds.y2);
+    // round center to nearest pixel center
     OfxPointI refCenterI;
     refCenterI.x = std::floor(refCenter.x + 0.5);
     refCenterI.y = std::floor(refCenter.y + 0.5);
@@ -597,27 +670,34 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
     // set the render window
     processor.setRenderWindow(trackSearchBoundsPixel);
     
-    processor.setRefRectPixel(refRectPixel);
+    bool canProcess = processor.setValues(refImg, otherImg, maskImg, refRectPixel, refCenterI);
     
-    // round center to nearest pixel center
-    processor.setRefCenterI(refCenterI);
-    
-    
-    // Call the base class process member, this will call the derived templated process code
-    processor.process();
+    if (!canProcess) {
+        // can't track: erase any existing track
+        _center->deleteKeyAtTime(otherTime);
+    } else {
+        // Call the base class process member, this will call the derived templated process code
+        processor.process();
 
-    //////////////////////////////////
-    // TODO: subpixel interpolation //
-    //////////////////////////////////
+        //////////////////////////////////
+        // TODO: subpixel interpolation //
+        //////////////////////////////////
 
-    ///ok the score is now computed, update the center
-    OfxPointD newCenter;
-    if (processor.getBestScore() != std::numeric_limits<double>::infinity()) {
-        const OfxPointD& bestMatch = processor.getBestMatch();
+        ///ok the score is now computed, update the center
+        OfxPointD newCenter;
+        if (processor.getBestScore() == std::numeric_limits<double>::infinity()) {
+            // can't track: erase any existing track
+            _center->deleteKeyAtTime(otherTime);
+        } else {
+            const OfxPointD& bestMatch = processor.getBestMatch();
 
-        newCenter.x = refCenter.x + bestMatch.x - refCenterI.x;
-        newCenter.y = refCenter.y + bestMatch.y - refCenterI.y;
-        _center->setValueAtTime(otherTime, newCenter.x, newCenter.y);
+            newCenter.x = refCenter.x + bestMatch.x - refCenterI.x;
+            newCenter.y = refCenter.y + bestMatch.y - refCenterI.y;
+            // create a keyframe at starting point
+            _center->setValueAtTime(refTime, refCenter.x, refCenter.y);
+            // create a keyframe at end point
+            _center->setValueAtTime(otherTime, newCenter.x, newCenter.y);
+        }
     }
 }
 
@@ -768,6 +848,7 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     ChoiceParamDescriptor* score = desc.defineChoiceParam(kScoreParamName);
     score->setLabels(kScoreParamLabel, kScoreParamLabel, kScoreParamLabel);
+    score->setHint(kScoreParamHint);
     assert(score->getNOptions() == eTrackerSSD);
     score->appendOption(kScoreParamOptionSSD, kScoreParamOptionSSDHint);
     assert(score->getNOptions() == eTrackerSAD);
