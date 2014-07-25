@@ -78,7 +78,7 @@
 #endif
 
 #include "ofxsProcessing.H"
-#include "ofxsFilter.h"
+#include "ofxsMaskMix.h"
 
 #define kPluginName "GradeOFX"
 #define kPluginGrouping "Color"
@@ -294,8 +294,8 @@ public:
         _gamma = fetchRGBAParam(kGammaParamName);
         _clampBlack = fetchBooleanParam(kClampBlackParamName);
         _clampWhite = fetchBooleanParam(kClampWhiteParamName);
-        _mix = fetchDoubleParam(kFilterMixParamName);
-        _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
+        _mix = fetchDoubleParam(kMixParamName);
+        _maskInvert = fetchBooleanParam(kMaskInvertParamName);
         assert(_blackPoint && _whitePoint && _black && _white && _multiply && _offset && _gamma && _clampBlack && _clampWhite && _mix && _maskInvert);
     }
     
@@ -586,7 +586,7 @@ void GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     clampWhiteParam->setAnimates(true);
     page->addChild(*clampWhiteParam);
 
-    ofxsFilterDescribeParamsMaskMix(desc, page);
+    ofxsMaskMixDescribeParams(desc, page);
 }
 
 OFX::ImageEffect* GradePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)

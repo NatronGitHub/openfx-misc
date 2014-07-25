@@ -81,7 +81,7 @@
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
-#include "ofxsFilter.h"
+#include "ofxsMaskMix.h"
 
 
 #define kPluginName "InvertOFX"
@@ -289,8 +289,8 @@ class InvertPlugin : public OFX::ImageEffect
         _paramProcessG = fetchBooleanParam(kParamProcessG);
         _paramProcessB = fetchBooleanParam(kParamProcessB);
         _paramProcessA = fetchBooleanParam(kParamProcessA);
-        _mix = fetchDoubleParam(kFilterMixParamName);
-        _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
+        _mix = fetchDoubleParam(kMixParamName);
+        _maskInvert = fetchBooleanParam(kMaskInvertParamName);
     }
 
   private:
@@ -573,7 +573,7 @@ void InvertPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     processA->setDefault(true);
     page->addChild(*processA);
 
-    ofxsFilterDescribeParamsMaskMix(desc, page);
+    ofxsMaskMixDescribeParams(desc, page);
 }
 
 OFX::ImageEffect* InvertPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

@@ -42,6 +42,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMatrix2D.h"
 #include "ofxsFilter.h"
+#include "ofxsMaskMix.h"
 
 // constants for the motion blur algorithm (may depend on _motionblur)
 #define kTransform3x3ProcessorMotionBlurMaxError (_motionblur*maxValue/1000.)

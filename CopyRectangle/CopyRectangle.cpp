@@ -77,7 +77,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMerging.h"
 #include "ofxsRectangleInteract.h"
-#include "ofxsFilter.h"
+#include "ofxsMaskMix.h"
 
 #define kPluginName "CopyRectangleOFX"
 #define kPluginGrouping "Merge"
@@ -281,8 +281,8 @@ public:
         _green = fetchBooleanParam(kGreenParamName);
         _blue = fetchBooleanParam(kBlueParamName);
         _alpha = fetchBooleanParam(kAlphaParamName);
-        _mix = fetchDoubleParam(kFilterMixParamName);
-        _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
+        _mix = fetchDoubleParam(kMixParamName);
+        _maskInvert = fetchBooleanParam(kMaskInvertParamName);
 
         assert(_btmLeft && _size && _softness && _red && _green && _blue && _alpha && _mix && _maskInvert);
     }
@@ -673,7 +673,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     softness->setHint(kSoftnessParamHint);
     page->addChild(*softness);
 
-    ofxsFilterDescribeParamsMaskMix(desc, page);
+    ofxsMaskMixDescribeParams(desc, page);
 }
 
 void getCopyRectanglePluginID(OFX::PluginFactoryArray &ids)

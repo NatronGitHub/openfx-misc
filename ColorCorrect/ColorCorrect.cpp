@@ -77,7 +77,7 @@
 #include <windows.h>
 #endif
 #include "ofxsProcessing.H"
-#include "ofxsFilter.h"
+#include "ofxsMaskMix.h"
 
 #define kPluginName "ColorCorrectOFX"
 #define kPluginGrouping "Color"
@@ -410,8 +410,8 @@ public:
         fetchColorControlGroup(kColorCorrectMidtonesGroupName, &_midtonesParamsGroup);
         fetchColorControlGroup(kColorCorrectHighlightsGroupName, &_highlightsParamsGroup);
         _rangesParam = fetchParametricParam(kColorCorrectToneRangesParamName);
-        _mix = fetchDoubleParam(kFilterMixParamName);
-        _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
+        _mix = fetchDoubleParam(kMixParamName);
+        _maskInvert = fetchBooleanParam(kMaskInvertParamName);
         assert(_rangesParam && _mix && _maskInvert);
     }
 
@@ -806,7 +806,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     
     ranges->addChild(*lookupTable);
 
-    ofxsFilterDescribeParamsMaskMix(desc, page);
+    ofxsMaskMixDescribeParams(desc, page);
 }
 
 OFX::ImageEffect* ColorCorrectPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)

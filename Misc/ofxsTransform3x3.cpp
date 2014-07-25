@@ -301,8 +301,8 @@ Transform3x3Plugin::Transform3x3Plugin(OfxImageEffectHandle handle, bool masked)
     _shutteroffset = fetchChoiceParam(kTransform3x3ShutterOffsetParamName);
     _shuttercustomoffset = fetchDoubleParam(kTransform3x3ShutterCustomOffsetParamName);
     if (masked) {
-        _mix = fetchDoubleParam(kFilterMixParamName);
-        _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
+        _mix = fetchDoubleParam(kMixParamName);
+        _maskInvert = fetchBooleanParam(kMaskInvertParamName);
     }
 }
 
@@ -1200,7 +1200,7 @@ void OFX::Transform3x3DescribeInContextEnd(OFX::ImageEffectDescriptor &desc, OFX
     if (masked) {
         // GENERIC (MASKED)
         //
-        ofxsFilterDescribeParamsMaskMix(desc, page);
+        ofxsMaskMixDescribeParams(desc, page);
 #ifdef OFX_EXTENSIONS_NUKE
     } else if (getImageEffectHostDescription()->canTransform) {
         // Transform3x3-GENERIC (NON-MASKED)

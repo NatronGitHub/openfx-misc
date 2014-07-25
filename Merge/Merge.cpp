@@ -79,7 +79,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMerging.h"
-#include "ofxsFilter.h"
+#include "ofxsMaskMix.h"
 
 #include "ofxNatron.h"
 
@@ -230,8 +230,8 @@ public:
         _operationString = fetchStringParam(kOfxParamStringSublabelName);
         _bbox = fetchChoiceParam(kBboxParamName);
         _alphaMasking = fetchBooleanParam(kAlphaMaskingParamName);
-        _mix = fetchDoubleParam(kFilterMixParamName);
-        _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
+        _mix = fetchDoubleParam(kMixParamName);
+        _maskInvert = fetchBooleanParam(kMaskInvertParamName);
         assert(_operation && _operationString && _bbox && _alphaMasking && _mix && _maskInvert);
     }
     
@@ -671,7 +671,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     alphaMasking->setHint(kAlphaMaskingParamHint);
     page->addChild(*alphaMasking);
     
-    ofxsFilterDescribeParamsMaskMix(desc, page);
+    ofxsMaskMixDescribeParams(desc, page);
  
 }
 

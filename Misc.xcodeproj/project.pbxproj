@@ -697,6 +697,7 @@
 		1E8B5D7D18B7820900C31FDC /* Anaglyph.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Anaglyph.h; sourceTree = "<group>"; };
 		1E8B5D8118B782F000C31FDC /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1E8B5D8318B7830000C31FDC /* ReConverge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ReConverge.h; sourceTree = "<group>"; };
+		1E90F3E919823D3F00BB8B6D /* ofxsMaskMix.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsMaskMix.h; sourceTree = "<group>"; };
 		1E9C215F192FA596002EEFE1 /* ofxsTransform3x3Processor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsTransform3x3Processor.h; sourceTree = "<group>"; };
 		1E9FC1CE180BF74400EFE0F9 /* camera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = camera.h; sourceTree = "<group>"; };
 		1E9FC1CF180BF74400EFE0F9 /* fnPublicOfxExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fnPublicOfxExtensions.h; sourceTree = "<group>"; };
@@ -1291,25 +1292,26 @@
 		1E8B5D4618B769B400C31FDC /* Misc */ = {
 			isa = PBXGroup;
 			children = (
-				1ED4AEB51973DE1100EE64C8 /* randomGenerator.cpp */,
-				1ED4AEB61973DE1200EE64C8 /* randomGenerator.H */,
-				1E9C215F192FA596002EEFE1 /* ofxsTransform3x3Processor.h */,
-				1E71D9CB1935E61B00C98388 /* ofxsTransform3x3.cpp */,
-				1E71D9CC1935E61B00C98388 /* ofxsTransform3x3.h */,
 				1EF33E0F18F556CB003E62EF /* ofxsFilter.h */,
+				1E90F3E919823D3F00BB8B6D /* ofxsMaskMix.h */,
 				1EF33E1018F556CB003E62EF /* ofxsMatrix2D.h */,
 				D74121D318F9CE3D00A81F8B /* ofxsMerging.h */,
 				D792A2EF1933691800547CFF /* ofxsOGLFontData.cpp */,
 				D792A2E919335BE100547CFF /* ofxsOGLFontUtils.h */,
 				D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */,
 				D792A2E219334C6300547CFF /* ofxsOGLTextRenderer.h */,
-				1E8B5D4918B769CA00C31FDC /* PluginRegistrationCombined.cpp */,
-				1E8B5D4718B769CA00C31FDC /* Info.plist */,
-				1E8B5D4818B769CA00C31FDC /* Makefile */,
 				D730311A19518E7B0024BCA4 /* ofxsRectangleInteract.cpp */,
 				D730311B19518E7B0024BCA4 /* ofxsRectangleInteract.h */,
 				D7BB85CE1955C4AD00A86649 /* ofxsTracking.cpp */,
 				D7BB85CF1955C4AD00A86649 /* ofxsTracking.h */,
+				1E9C215F192FA596002EEFE1 /* ofxsTransform3x3Processor.h */,
+				1E71D9CB1935E61B00C98388 /* ofxsTransform3x3.cpp */,
+				1E71D9CC1935E61B00C98388 /* ofxsTransform3x3.h */,
+				1ED4AEB51973DE1100EE64C8 /* randomGenerator.cpp */,
+				1ED4AEB61973DE1200EE64C8 /* randomGenerator.H */,
+				1E8B5D4918B769CA00C31FDC /* PluginRegistrationCombined.cpp */,
+				1E8B5D4718B769CA00C31FDC /* Info.plist */,
+				1E8B5D4818B769CA00C31FDC /* Makefile */,
 			);
 			path = Misc;
 			sourceTree = "<group>";

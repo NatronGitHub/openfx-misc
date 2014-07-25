@@ -84,7 +84,7 @@
 #endif
 
 #include "ofxsProcessing.H"
-#include "ofxsFilter.h"
+#include "ofxsMaskMix.h"
 
 #define kPluginName "RGBLutOFX"
 #define kPluginGrouping "Color"
@@ -477,8 +477,8 @@ public:
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
         lookupTable_ = fetchParametricParam(kLookupTableParamName);
         assert(lookupTable_);
-        _mix = fetchDoubleParam(kFilterMixParamName);
-        _maskInvert = fetchBooleanParam(kFilterMaskInvertParamName);
+        _mix = fetchDoubleParam(kMixParamName);
+        _maskInvert = fetchBooleanParam(kMaskInvertParamName);
         assert(lookupTable_ && _mix && _maskInvert);
      }
 
@@ -827,7 +827,7 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     page->addChild(*resetCtrlPts);
 #endif
 
-    ofxsFilterDescribeParamsMaskMix(desc, page);
+    ofxsMaskMixDescribeParams(desc, page);
 }
 
 OFX::ImageEffect* RGBLutPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
