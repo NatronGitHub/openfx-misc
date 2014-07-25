@@ -163,10 +163,10 @@ using namespace OFX;
 class ChromaKeyerProcessorBase : public OFX::ImageProcessor
 {
 protected:
-    OFX::Image *_srcImg;
-    OFX::Image *_bgImg;
-    OFX::Image *_inMaskImg;
-    OFX::Image *_outMaskImg;
+    const OFX::Image *_srcImg;
+    const OFX::Image *_bgImg;
+    const OFX::Image *_inMaskImg;
+    const OFX::Image *_outMaskImg;
     OfxRGBColourD _keyColor;
     double _acceptanceAngle;
     double _tan_acceptanceAngle_2;
@@ -202,7 +202,7 @@ public:
         
     }
     
-    void setSrcImgs(OFX::Image *srcImg, OFX::Image *bgImg, OFX::Image *inMaskImg, OFX::Image *outMaskImg)
+    void setSrcImgs(const OFX::Image *srcImg, const OFX::Image *bgImg, const OFX::Image *inMaskImg, const OFX::Image *outMaskImg)
     {
         _srcImg = srcImg;
         _bgImg = bgImg;
@@ -318,10 +318,10 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
                 
-                PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                PIX *bgPix = (PIX *)  (_bgImg ? _bgImg->getPixelAddress(x, y) : 0);
-                PIX *inMaskPix = (PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
-                PIX *outMaskPix = (PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
+                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                const PIX *bgPix = (const PIX *)  (_bgImg ? _bgImg->getPixelAddress(x, y) : 0);
+                const PIX *inMaskPix = (const PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
+                const PIX *outMaskPix = (const PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
 
                 float inMask = inMaskPix ? *inMaskPix : 0.;
                 if (_sourceAlpha == eSourceAlphaAddToInsideMask && nComponents == 4 && srcPix) {

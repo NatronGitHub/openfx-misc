@@ -140,7 +140,7 @@ using namespace OFX;
 class PremultBase : public OFX::ImageProcessor
 {
   protected:
-    OFX::Image *_srcImg;
+    const OFX::Image *_srcImg;
     bool _red;
     bool _green;
     bool _blue;
@@ -160,7 +160,7 @@ class PremultBase : public OFX::ImageProcessor
     }
 
     /** @brief set the src image */
-    void setSrcImg(OFX::Image *v) {_srcImg = v;}
+    void setSrcImg(const OFX::Image *v) {_srcImg = v;}
 
     void setValues(bool red, bool green, bool blue, bool alpha, InputChannelEnum premultChannel)
     {
@@ -270,7 +270,7 @@ class ImagePremulter : public PremultBase
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
 
-                PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
 
                 // do we have a source image to scale up
                 if (srcPix) {

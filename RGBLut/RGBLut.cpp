@@ -110,8 +110,8 @@
 
 class RGBLutBase : public OFX::ImageProcessor {
 protected:
-    OFX::Image *_srcImg;
-    OFX::Image *_maskImg;
+    const OFX::Image *_srcImg;
+    const OFX::Image *_maskImg;
     bool   _doMasking;
     double _mix;
     bool _maskInvert;
@@ -126,9 +126,9 @@ public:
     , _maskInvert(false)
     {
     }
-    void setSrcImg(OFX::Image *v) {_srcImg = v;}
+    void setSrcImg(const OFX::Image *v) {_srcImg = v;}
 
-    void setMaskImg(OFX::Image *v) {_maskImg = v;}
+    void setMaskImg(const OFX::Image *v) {_maskImg = v;}
 
     void doMasking(bool v) {_doMasking = v;}
 
@@ -203,7 +203,7 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
-                PIX *srcPix = (PIX *) (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                const PIX *srcPix = (const PIX *) (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 if (srcPix) {
                     for (int c = 0; c < nComponents; c++) {
                         //assert(0 <= srcPix[c] && srcPix[c] <= maxValue);
@@ -273,7 +273,7 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
-                PIX *srcPix = (PIX *) (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                const PIX *srcPix = (const PIX *) (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 if (srcPix) {
                     for (int c = 0; c < nComponents; c++) {
                         dstPix[c] = interpolate(c, srcPix[c]);
@@ -359,7 +359,7 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; x++)  {
-                PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 if (srcPix) {
                     for (int c = 0; c < nComponents; c++) {
                         //assert(0 <= srcPix[c] && srcPix[c] <= maxValue);
@@ -427,7 +427,7 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
-                PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 if (srcPix) {
                     for (int c = 0; c < nComponents; c++) {
                         tmpPix[c] = interpolate(c, srcPix[c]);

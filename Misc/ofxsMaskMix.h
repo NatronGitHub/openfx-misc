@@ -94,14 +94,14 @@ void
 ofxsMaskMixPix(const float *tmpPix, //!< interpolated pixel
                int x, //!< coordinates for the pixel to be computed (PIXEL coordinates)
                int y,
-               PIX *srcPix, //!< the background image (the output is srcImg where maskImg=0, else it is tmpPix)
+               const PIX *srcPix, //!< the background image (the output is srcImg where maskImg=0, else it is tmpPix)
                bool domask, //!< apply the mask?
                const OFX::Image *maskImg, //!< the mask image (ignored if masked=false or domask=false)
                float mix, //!< mix factor between the output and bkImg
                bool maskInvert, //<! invert mask behavior
                PIX *dstPix) //!< destination pixel
 {
-    PIX *maskPix = NULL;
+    const PIX *maskPix = NULL;
     float maskScale = 1.;
 
     // are we doing masking
@@ -113,7 +113,7 @@ ofxsMaskMixPix(const float *tmpPix, //!< interpolated pixel
     } else {
         if (domask && maskImg) {
             // we do, get the pixel from the mask
-            maskPix = (PIX *)maskImg->getPixelAddress(x, y);
+            maskPix = (const PIX *)maskImg->getPixelAddress(x, y);
             // figure the scale factor from that pixel
             if (maskPix == 0) {
                 maskScale = 0.;
@@ -151,12 +151,12 @@ ofxsMaskMix(const float *tmpPix, //!< interpolated pixel
             bool maskInvert, //<! invert mask behavior
             PIX *dstPix) //!< destination pixel
 {
-    PIX *srcPix = NULL;
+    const PIX *srcPix = NULL;
 
     // are we doing masking/mixing? in this case, retrieve srcPix
     if (masked && srcImg) {
         if ((domask && maskImg) || mix != 1.) {
-            srcPix = (PIX *)srcImg->getPixelAddress(x, y);
+            srcPix = (const PIX *)srcImg->getPixelAddress(x, y);
         }
     }
 

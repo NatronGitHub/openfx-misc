@@ -97,7 +97,7 @@
 class CopierBase : public OFX::ImageProcessor
 {
 protected:
-    OFX::Image *_srcImg;
+    const OFX::Image *_srcImg;
 
 public:
     /** @brief no arg ctor */
@@ -108,7 +108,7 @@ public:
     }
 
     /** @brief set the src image */
-    void setSrcImg(OFX::Image *v) {_srcImg = v;}
+    void setSrcImg(const OFX::Image *v) {_srcImg = v;}
 };
 
 // template to do the RGBA processing
@@ -134,7 +134,7 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
 
-                PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
 
                 // do we have a source image to scale up
                 if (srcPix) {

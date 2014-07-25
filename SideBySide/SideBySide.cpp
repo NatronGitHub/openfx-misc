@@ -103,8 +103,8 @@
 // Base class for the RGBA and the Alpha processor
 class SideBySideBase : public OFX::ImageProcessor {
 protected:
-    OFX::Image *_srcImg1;
-    OFX::Image *_srcImg2;
+    const OFX::Image *_srcImg1;
+    const OFX::Image *_srcImg2;
     bool _vertical;
     int _offset;
 public:
@@ -119,10 +119,10 @@ public:
     }
 
     /** @brief set the left src image */
-    void setSrcImg1(OFX::Image *v) {_srcImg1 = v;}
+    void setSrcImg1(const OFX::Image *v) {_srcImg1 = v;}
 
     /** @brief set the right src image */
-    void setSrcImg2(OFX::Image *v) {_srcImg2 = v;}
+    void setSrcImg2(const OFX::Image *v) {_srcImg2 = v;}
 
     /** @brief set vertical stacking and offset oin the vertical or horizontal direction */
     void setVerticalAndOffset(bool v, int offset) {_vertical = v; _offset = offset;}
@@ -151,11 +151,11 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for(int x = procWindow.x1; x < procWindow.x2; x++) {
-                PIX *srcPix;
+                const PIX *srcPix;
                 if ((_vertical && y >= _offset) || (!_vertical && x < _offset)) {
-                    srcPix = (PIX *)(_srcImg1 ? _srcImg1->getPixelAddress(x, _vertical ? y - _offset : y) : 0);
+                    srcPix = (const PIX *)(_srcImg1 ? _srcImg1->getPixelAddress(x, _vertical ? y - _offset : y) : 0);
                 } else {
-                    srcPix = (PIX *)(_srcImg2 ? _srcImg2->getPixelAddress(_vertical ? x : x - _offset, y ) : 0);
+                    srcPix = (const PIX *)(_srcImg2 ? _srcImg2->getPixelAddress(_vertical ? x : x - _offset, y ) : 0);
                 }
 
                 if (srcPix) {

@@ -110,9 +110,9 @@ using namespace MergeImages2D;
 class MergeProcessorBase : public OFX::ImageProcessor
 {
 protected:
-    OFX::Image *_srcImgA;
-    OFX::Image *_srcImgB;
-    OFX::Image *_maskImg;
+    const OFX::Image *_srcImgA;
+    const OFX::Image *_srcImgB;
+    const OFX::Image *_maskImg;
     bool   _doMasking;
     MergingFunctionEnum _operation;
     int _bbox;
@@ -137,9 +137,9 @@ public:
         
     }
     
-    void setSrcImg(OFX::Image *A, OFX::Image *B) {_srcImgA = A; _srcImgB = B;}
+    void setSrcImg(const OFX::Image *A, const OFX::Image *B) {_srcImgA = A; _srcImgB = B;}
     
-    void setMaskImg(OFX::Image *v) {_maskImg = v;}
+    void setMaskImg(const OFX::Image *v) {_maskImg = v;}
     
     void doMasking(bool v) {_doMasking = v;}
 
@@ -180,8 +180,8 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 
-                PIX *srcPixA = (PIX *)  (_srcImgA ? _srcImgA->getPixelAddress(x, y) : 0);
-                PIX *srcPixB = (PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
+                const PIX *srcPixA = (const PIX *)  (_srcImgA ? _srcImgA->getPixelAddress(x, y) : 0);
+                const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
 
                 if (srcPixA || srcPixB) {
 

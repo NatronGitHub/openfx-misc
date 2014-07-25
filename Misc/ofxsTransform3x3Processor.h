@@ -54,8 +54,8 @@ namespace OFX {
 class Transform3x3ProcessorBase : public OFX::ImageProcessor
 {
 protected:
-    OFX::Image *_srcImg;
-    OFX::Image *_maskImg;
+    const OFX::Image *_srcImg;
+    const OFX::Image *_maskImg;
     // NON-GENERIC PARAMETERS:
     const OFX::Matrix3x3* _invtransform; // the set of transforms to sample from (in PIXEL coords)
     size_t _invtransformsize;
@@ -86,14 +86,14 @@ public:
     virtual bool getClamp() const = 0;
 
     /** @brief set the src image */
-    void setSrcImg(OFX::Image *v)
+    void setSrcImg(const OFX::Image *v)
     {
         _srcImg = v;
     }
 
 
     /** @brief set the optional mask image */
-    void setMaskImg(OFX::Image *v) {_maskImg = v;}
+    void setMaskImg(const OFX::Image *v) {_maskImg = v;}
 
     // Are we masking. We can't derive this from the mask image being set as NULL is a valid value for an input image
     void doMasking(bool v) {_domask = v;}

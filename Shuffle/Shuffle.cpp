@@ -183,8 +183,8 @@ static int nComps(PixelComponentEnum e)
 class ShufflerBase : public OFX::ImageProcessor
 {
 protected:
-    OFX::Image *_srcImgA;
-    OFX::Image *_srcImgB;
+    const OFX::Image *_srcImgA;
+    const OFX::Image *_srcImgB;
     PixelComponentEnum _outputComponents;
     BitDepthEnum _outputBitDepth;
     int _nComponentsDst;
@@ -201,7 +201,7 @@ protected:
     {
     }
 
-    void setSrcImg(OFX::Image *A, OFX::Image *B) {_srcImgA = A; _srcImgB = B;}
+    void setSrcImg(const OFX::Image *A, const OFX::Image *B) {_srcImgA = A; _srcImgB = B;}
 
     void setValues(PixelComponentEnum outputComponents,
                    BitDepthEnum outputBitDepth,
@@ -303,7 +303,7 @@ public:
 private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        OFX::Image* channelMapImg[nComponentsDst];
+        const OFX::Image* channelMapImg[nComponentsDst];
         int channelMapComp[nComponentsDst]; // channel component, or value if no image
         int srcMapComp[4]; // R,G,B,A components for src
         PixelComponentEnum srcComponents = ePixelComponentNone;
@@ -400,7 +400,7 @@ private:
         }
         // now compute the transformed image, component by component
         for (int c = 0; c < nComponentsDst; ++c) {
-            OFX::Image* srcImg = channelMapImg[c];
+            const OFX::Image* srcImg = channelMapImg[c];
             int srcComp = channelMapComp[c];
 
             for (int y = procWindow.y1; y < procWindow.y2; y++) {
