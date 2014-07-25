@@ -144,8 +144,10 @@ private:
     {
         assert(_offset != 0);
         for(int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) break;
-
+            if (_effect.abort()) {
+                break;
+            }
+            
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for(int x = procWindow.x1; x < procWindow.x2; x++) {

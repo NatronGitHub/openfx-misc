@@ -141,7 +141,9 @@ private:
         if (_motionblur == 0.) { // no motion blur
             const OFX::Matrix3x3& H = _invtransform[0];
             for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-                if(_effect.abort()) break;
+                if(_effect.abort()) {
+                    break;
+                }
 
                 PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
@@ -179,8 +181,10 @@ private:
             // Monte Carlo intergation, starting with at least 13 regularly spaced samples, and then low discrepancy
             // samples from the van der Corput sequence.
             for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-                if(_effect.abort()) break;
-
+                if(_effect.abort()) {
+                    break;
+                }
+                
                 PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
                 // the coordinates of the center of the pixel in canonical coordinates

@@ -341,11 +341,13 @@ private:
     {
         assert(nComponents == 3 || nComponents == 4);
         float tmpPix[nComponents];
-        for (int y = procWindow.y1; y < procWindow.y2; y++)
-        {
+        for (int y = procWindow.y1; y < procWindow.y2; y++) {
+            if (_effect.abort()) {
+                break;
+            }
+
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            for (int x = procWindow.x1; x < procWindow.x2; x++)
-            {
+            for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 if (srcPix) {
                     double t_r = srcPix[0] / double(maxValue);

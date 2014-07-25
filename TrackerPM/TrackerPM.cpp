@@ -426,6 +426,7 @@ private:
             if (_effect.abort()) {
                 break;
             }
+            
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 double score = computeScore<scoreTypeE>(scoreComps, x, y, refMean);
                 if (score < bestScore) {

@@ -158,6 +158,7 @@ public:
             if (_effect.abort()) {
                 break;
             }
+            
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {

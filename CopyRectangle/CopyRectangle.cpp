@@ -183,10 +183,11 @@ private:
 
         //assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if (_effect.abort()) break;
+            if (_effect.abort()) {
+                break;
+            }
             
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            
 
             // distance to the nearest rectangle area horizontal edge
             int yDistance =  std::min(y - _rectangle.y1, _rectangle.y2 - 1 - y);

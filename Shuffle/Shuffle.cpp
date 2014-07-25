@@ -404,7 +404,12 @@ private:
             int srcComp = channelMapComp[c];
 
             for (int y = procWindow.y1; y < procWindow.y2; y++) {
+                if (_effect.abort()) {
+                    break;
+                }
+
                 PIXDST *dstPix = (PIXDST *) _dstImg->getPixelAddress(procWindow.x1, y);
+
                 for (int x = procWindow.x1; x < procWindow.x2; x++) {
                     PIXSRC *srcPix = (PIXSRC *)  (srcImg ? srcImg->getPixelAddress(x, y) : 0);
 

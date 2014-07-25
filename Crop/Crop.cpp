@@ -155,9 +155,10 @@ private:
     {
         
         //assert(filter == _filter);
-        for (int y = procWindow.y1; y < procWindow.y2; ++y)
-        {
-            if (_effect.abort()) break;
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if (_effect.abort()) {
+                break;
+            }
             
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             
