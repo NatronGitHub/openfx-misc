@@ -111,13 +111,13 @@ class RotoProcessorBase : public OFX::ImageProcessor
 {
 protected:
     OFX::Image *_srcImg;
-    OFX::Image *_maskImg;
+    OFX::Image *_roto;
 
 public:
     RotoProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
-    , _maskImg(0)
+    , _roto(0)
     {
     }
 
@@ -128,7 +128,7 @@ public:
     }
 
     /** @brief set the optional mask image */
-    void setMaskImg(OFX::Image *v) {_maskImg = v;}
+    void setRotoImg(OFX::Image *v) {_roto = v;}
 
 };
 
@@ -147,6 +147,7 @@ public:
 private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
+        bool useRotoAsMask = _roto->getPixelComponents() == ePixelComponentAlpha;
         //assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if (_effect.abort()) break;
@@ -155,20 +156,29 @@ private:
       
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
                 PIX *srcPix = (PIX*)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                PIX *maskPix = (PIX*) (_maskImg ? _maskImg->getPixelAddress(x, y) : 0);
+                PIX *maskPix = (PIX*) (_roto ? _roto->getPixelAddress(x, y) : 0);
                 
-#pragma message ("Mask only has ONE component. This looks like an obvious bug, or that input shouldn't be called a Mask. Call it something else (Roto maybe)")
-                PIX maskScale = maskPix ? maskPix[nComponents - 1] : 0.;
+                PIX maskScale = 1.;
+                if (useRotoAsMask) {
+                    maskScale = maskPix ? *maskPix : 0.;
+                }
                 for (int k = 0; k < nComponents - 1; ++k) {
                     ///this is only executed for  RGBA
-                    if (maskScale == 0) {
-                        ///src image outside of the mask
-#pragma message ("WHY? outside ANY image, the image is supposed to be black and transparent, even if it's a Mask")
-                        dstPix[k] = srcPix ? srcPix[k] : 0.;
+                    
+                    if (!useRotoAsMask) {
+                        maskScale = maskPix ? maskPix[nComponents - 1] : 0.;
+                        if (maskScale == 0) {
+                            ///src image outside of the roto shape
+                            dstPix[k] = srcPix ? srcPix[k] : 0.;
+                        } else {
+                            ///we're inside the mask, paint the mask
+                            dstPix[k] = maskPix ? maskScale : 0.;
+                        }
                     } else {
-                        ///we're inside the mask, paint the mask
-                        dstPix[k] = maskPix ? maskPix[k] : 0.;
+                        dstPix[k] = maskPix ? maskScale : 0.;
                     }
+                    
+                    
                 }
                 
                 ///Just copy the alpha of the roto brush
@@ -192,15 +202,15 @@ public:
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClip_(0)
-    , maskClip_(0)
+    , rotoClip_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
         // name of mask clip depends on the context
-        maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-
+        rotoClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Roto");
+        assert(rotoClip_);
         _outputComps = fetchChoiceParam(kOutputCompsParamName);
         assert(_outputComps);
     }
@@ -224,7 +234,7 @@ private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
-    OFX::Clip *maskClip_;
+    OFX::Clip *rotoClip_;
     ChoiceParam* _outputComps;
 };
 
@@ -261,16 +271,16 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     }
     
     // auto ptr for the mask.
-    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
+    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? rotoClip_->fetchImage(args.time) : 0);
     
     if (mask->getPixelComponents() != dst->getPixelComponents()) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
     
     // do we do masking
-    if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+    if (getContext() != OFX::eContextFilter && rotoClip_->isConnected()) {
         // Set it in the processor
-        processor.setMaskImg(mask.get());
+        processor.setRotoImg(mask.get());
     }
     
     // set the images
@@ -425,17 +435,15 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // if general or paint context, define the mask clip
     if (context == eContextGeneral || context == eContextPaint) {
         // if paint context, it is a mandated input called 'brush'
-        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
-        maskClip->addSupportedComponent(ePixelComponentAlpha);
-#pragma message ("NO! Mask (or Brush) shouldn't be anything else than Alpha. Obviously this is not a mask. Don't call it Mask or Brush, then! If it's called Roto, then only the General context is supported.")
-        maskClip->addSupportedComponent(ePixelComponentRGBA); //< our brush can output RGBA
-         maskClip->addSupportedComponent(ePixelComponentRGB); //< our brush can output RGB
+        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Roto") : desc.defineClip("Brush");
         maskClip->setTemporalClipAccess(false);
+        maskClip->addSupportedComponent(ePixelComponentAlpha);
         if (context == eContextGeneral) {
+            maskClip->addSupportedComponent(ePixelComponentRGBA); //< our brush can output RGBA
             maskClip->setOptional(false);
         }
         maskClip->setSupportsTiles(true);
-        maskClip->setIsMask(true); // we are a mask input
+        maskClip->setIsMask(context == eContextPaint); // we are a mask input
     }
 
     // create the mandated output clip
