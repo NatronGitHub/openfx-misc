@@ -317,7 +317,7 @@ private:
                     int othery = y + i;
                     otherx = std::max(_otherImg->getBounds().x1,std::min(otherx,_otherImg->getBounds().x2-1));
                     othery = std::max(_otherImg->getBounds().y1,std::min(othery,_otherImg->getBounds().y2-1));
-                    PIX *otherPix = (PIX *) _otherImg->getPixelAddress(otherx, othery);
+                    const PIX *otherPix = (const PIX *) _otherImg->getPixelAddress(otherx, othery);
                     for (int c = 0; c < scoreComps; ++c) {
                         otherMean[c] += *weightPtr * otherPix[c];
                     }
@@ -345,7 +345,7 @@ private:
                 int othery = y + i;
                 otherx = std::max(_otherImg->getBounds().x1,std::min(otherx,_otherImg->getBounds().x2-1));
                 othery = std::max(_otherImg->getBounds().y1,std::min(othery,_otherImg->getBounds().y2-1));
-                PIX *otherPix = (PIX *) _otherImg->getPixelAddress(otherx, othery);
+                const PIX *otherPix = (const PIX *) _otherImg->getPixelAddress(otherx, othery);
 
                 ///the search window & pattern window have been intersected to the reference image's bounds
                 assert(refPix && otherPix);
@@ -426,6 +426,7 @@ private:
             if (_effect.abort()) {
                 break;
             }
+            
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 double score = computeScore<scoreTypeE>(scoreComps, x, y, refMean);
                 if (score < bestScore) {

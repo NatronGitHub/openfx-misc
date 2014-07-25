@@ -112,8 +112,8 @@ Clamp(T v, int min, int max)
 class DifferencerBase : public OFX::ImageProcessor
 {
 protected:
-    OFX::Image *_srcImgA;
-    OFX::Image *_srcImgB;
+    const OFX::Image *_srcImgA;
+    const OFX::Image *_srcImgB;
     double _offset;
     double _gain;
 
@@ -127,7 +127,7 @@ public:
     {
     }
 
-    void setSrcImg(OFX::Image *A, OFX::Image *B) {_srcImgA = A; _srcImgB = B;}
+    void setSrcImg(const OFX::Image *A, const OFX::Image *B) {_srcImgA = A; _srcImgB = B;}
 
     void setValues(double offset,
                    double gain)
@@ -153,10 +153,15 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
+            if (_effect.abort()) {
+                break;
+            }
+
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
-                PIX *srcPixA = (PIX *)  (_srcImgA ? _srcImgA->getPixelAddress(x, y) : 0);
-                PIX *srcPixB = (PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
+                const PIX *srcPixA = (const PIX *)  (_srcImgA ? _srcImgA->getPixelAddress(x, y) : 0);
+                const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
 
                 if (srcPixA && srcPixB) {
                     double diff = 0.;

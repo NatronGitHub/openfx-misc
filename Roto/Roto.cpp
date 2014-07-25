@@ -110,8 +110,9 @@ using namespace OFX;
 class RotoProcessorBase : public OFX::ImageProcessor
 {
 protected:
-    OFX::Image *_srcImg;
-    OFX::Image *_roto;
+    const OFX::Image *_srcImg;
+    const OFX::Image *_roto;
+
 
 public:
     RotoProcessorBase(OFX::ImageEffect &instance)
@@ -122,13 +123,13 @@ public:
     }
 
     /** @brief set the src image */
-    void setSrcImg(OFX::Image *v)
+    void setSrcImg(const OFX::Image *v)
     {
         _srcImg = v;
     }
 
     /** @brief set the optional mask image */
-    void setRotoImg(OFX::Image *v) {_roto = v;}
+    void setRotoImg(const OFX::Image *v) {_roto = v;}
 
 };
 
@@ -150,13 +151,16 @@ private:
         bool useRotoAsMask = _roto->getPixelComponents() == ePixelComponentAlpha;
         //assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if (_effect.abort()) break;
+            if (_effect.abort()) {
+                break;
+            }
             
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
       
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
-                PIX *srcPix = (PIX*)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                PIX *maskPix = (PIX*) (_roto ? _roto->getPixelAddress(x, y) : 0);
+
+                const PIX *srcPix = (const PIX*)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                const PIX *maskPix = (const PIX*) (_roto ? _roto->getPixelAddress(x, y) : 0);
                 
                 PIX maskScale = 1.;
                 if (useRotoAsMask) {

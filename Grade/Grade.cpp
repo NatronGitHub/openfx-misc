@@ -127,8 +127,8 @@ namespace {
 class GradeProcessorBase : public OFX::ImageProcessor
 {
 protected:
-    OFX::Image *_srcImg;
-    OFX::Image *_maskImg;
+    const OFX::Image *_srcImg;
+    const OFX::Image *_maskImg;
     bool   _doMasking;
     double _mix;
     bool _maskInvert;
@@ -145,9 +145,9 @@ public:
     {
     }
     
-    void setSrcImg(OFX::Image *v) {_srcImg = v;}
+    void setSrcImg(const OFX::Image *v) {_srcImg = v;}
     
-    void setMaskImg(OFX::Image *v) {_maskImg = v;}
+    void setMaskImg(const OFX::Image *v) {_maskImg = v;}
     
     void doMasking(bool v) {_doMasking = v;}
     
@@ -230,9 +230,14 @@ private:
         assert(_dstImg);
         float tmpPix[nComponents];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
+            if (_effect.abort()) {
+                break;
+            }
+
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
-                PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 if (srcPix) {
                     double t_r = srcPix[0] / double(maxValue);
                     double t_g = srcPix[1] / double(maxValue);

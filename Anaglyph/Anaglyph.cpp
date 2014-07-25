@@ -172,8 +172,8 @@ private:
                 int xRed = std::min(std::max(srcRedBounds.x1,x+(_offset+1)/2),srcRedBounds.x2-1);
                 int xCyan = std::min(std::max(srcCyanBounds.x1,x-_offset/2),srcCyanBounds.x2-1);
 
-                PIX *srcRedPix = (PIX *)(srcRedImg ? srcRedImg->getPixelAddress(xRed, y) : 0);
-                PIX *srcCyanPix = (PIX *)(srcCyanImg ? srcCyanImg->getPixelAddress(xCyan, y) : 0);
+                const PIX *srcRedPix = (const PIX *)(srcRedImg ? srcRedImg->getPixelAddress(xRed, y) : 0);
+                const PIX *srcCyanPix = (const PIX *)(srcCyanImg ? srcCyanImg->getPixelAddress(xCyan, y) : 0);
 
                 dstPix[3] = 0; // start with transparent
                 if (srcRedPix) {

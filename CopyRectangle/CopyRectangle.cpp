@@ -108,9 +108,9 @@ class CopyRectangleProcessorBase : public OFX::ImageProcessor
    
     
 protected:
-    OFX::Image *_srcImgA;
-    OFX::Image *_srcImgB;
-    OFX::Image *_maskImg;
+    const OFX::Image *_srcImgA;
+    const OFX::Image *_srcImgB;
+    const OFX::Image *_maskImg;
     double _softness;
     bool _enabled[4];
     OfxRectI _rectangle;
@@ -131,13 +131,13 @@ public:
     }
 
     /** @brief set the src image */
-    void setSrcImgs(OFX::Image *A,OFX::Image* B)
+    void setSrcImgs(const OFX::Image *A, const OFX::Image* B)
     {
         _srcImgA = A;
         _srcImgB = B;
     }
 
-    void setMaskImg(OFX::Image *v) {_maskImg = v;}
+    void setMaskImg(const OFX::Image *v) {_maskImg = v;}
 
     void doMasking(bool v) {_doMasking = v;}
 
@@ -183,10 +183,11 @@ private:
 
         //assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if (_effect.abort()) break;
+            if (_effect.abort()) {
+                break;
+            }
             
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            
 
             // distance to the nearest rectangle area horizontal edge
             int yDistance =  std::min(y - _rectangle.y1, _rectangle.y2 - 1 - y);
@@ -214,10 +215,10 @@ private:
                     xMultiplier = 1.;
                 }
                 
-                PIX *srcPixB = _srcImgB ?(PIX*)_srcImgB->getPixelAddress(x, y) : NULL;
+                const PIX *srcPixB = _srcImgB ?(const PIX*)_srcImgB->getPixelAddress(x, y) : NULL;
 
                 if (xInRectangle && yInRectangle) {
-                    PIX *srcPixA = _srcImgA ? (PIX*)_srcImgA->getPixelAddress(x, y) : NULL;
+                    const PIX *srcPixA = _srcImgA ? (const PIX*)_srcImgA->getPixelAddress(x, y) : NULL;
 
                     double multiplier = xMultiplier * yMultiplier;
 

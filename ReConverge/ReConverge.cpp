@@ -316,7 +316,7 @@ bool PositionInteract::penUp(const OFX::PenArgs &args)
 class TranslateBase : public OFX::ImageProcessor
 {
 protected:
-    OFX::Image *_srcImg;
+    const OFX::Image *_srcImg;
     int _translateX;
     int _translateY;
     
@@ -331,7 +331,7 @@ public:
     }
 
     /** @brief set the src image */
-    void setSrcImg(OFX::Image *v) {_srcImg = v;}
+    void setSrcImg(const OFX::Image *v) {_srcImg = v;}
 
     /** @brief set the translation vector */
     void setTranslate(int x, int y) {_translateX = x; _translateY = y;}
@@ -352,13 +352,15 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) break;
-
+            if (_effect.abort()) {
+                break;
+            }
+            
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
 
-                PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
 
                 // do we have a source image to scale up
                 if (srcPix) {

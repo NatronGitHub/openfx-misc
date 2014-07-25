@@ -101,7 +101,7 @@ class CropProcessorBase : public OFX::ImageProcessor
    
     
 protected:
-    OFX::Image *_srcImg;
+    const OFX::Image *_srcImg;
     
     double _softness;
     bool _blackOutside;
@@ -116,7 +116,7 @@ public:
     }
 
     /** @brief set the src image */
-    void setSrcImg(OFX::Image *v)
+    void setSrcImg(const OFX::Image *v)
     {
         _srcImg = v;
     }
@@ -155,9 +155,10 @@ private:
     {
         
         //assert(filter == _filter);
-        for (int y = procWindow.y1; y < procWindow.y2; ++y)
-        {
-            if (_effect.abort()) break;
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if (_effect.abort()) {
+                break;
+            }
             
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             
@@ -181,7 +182,7 @@ private:
                     // handle softness
                     double xMultiplier = xDistance < _softness ? (double)xDistance / _softness : 1.;
 
-                    PIX *srcPix = (PIX*)_srcImg->getPixelAddress(x + _translation.x, y + _translation.y);
+                    const PIX *srcPix = (const PIX*)_srcImg->getPixelAddress(x + _translation.x, y + _translation.y);
                     if (!srcPix) {
                         for (int k = 0; k < nComponents; ++k) {
                             dstPix[k] =  0.;

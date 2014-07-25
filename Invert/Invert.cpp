@@ -110,8 +110,8 @@ using namespace OFX;
 class InvertBase : public OFX::ImageProcessor
 {
 protected:
-    OFX::Image *_srcImg;
-    OFX::Image *_maskImg;
+    const OFX::Image *_srcImg;
+    const OFX::Image *_maskImg;
     bool   _doMasking;
     bool _red;
     bool _green;
@@ -137,9 +137,9 @@ public:
     }
 
     /** @brief set the src image */
-    void setSrcImg(OFX::Image *v) {_srcImg = v;}
+    void setSrcImg(const OFX::Image *v) {_srcImg = v;}
 
-    void setMaskImg(OFX::Image *v) {_maskImg = v;}
+    void setMaskImg(const OFX::Image *v) {_maskImg = v;}
 
     void doMasking(bool v) {_doMasking = v;}
 
@@ -220,7 +220,7 @@ class ImageInverter : public InvertBase
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
 
-                PIX *srcPix = (PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
 
                 // do we have a source image to scale up
                 if (srcPix) {

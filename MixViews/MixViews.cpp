@@ -134,13 +134,15 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) break;
-
+            if (_effect.abort()) {
+                break;
+            }
+            
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
-                PIX *srcLeftPix = (PIX *)(_srcLeftImg ? _srcLeftImg->getPixelAddress(x, y) : 0);
-                PIX *srcRightPix = (PIX *)(_srcRightImg ? _srcRightImg->getPixelAddress(x, y) : 0);
+                const PIX *srcLeftPix = (const PIX *)(_srcLeftImg ? _srcLeftImg->getPixelAddress(x, y) : 0);
+                const PIX *srcRightPix = (const PIX *)(_srcRightImg ? _srcRightImg->getPixelAddress(x, y) : 0);
 
                 for (int c = 0; c < nComponents; c++) {
                     dstPix[c] = (srcLeftPix ? srcLeftPix[c] : 0)*(1-_mix) + (srcRightPix ? srcRightPix[c] : 0)*_mix;
