@@ -265,12 +265,15 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     // auto ptr for the mask.
     std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
     
-    if (mask->getPixelComponents() != dst->getPixelComponents()) {
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
-    
     // do we do masking
     if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+        if (!mask.get()) {
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+        if (mask->getPixelComponents() != dst->getPixelComponents()) {
+            OFX::throwSuiteStatusException(kOfxStatErrFormat);
+        }
+        
         // Set it in the processor
         processor.setMaskImg(mask.get());
     }
