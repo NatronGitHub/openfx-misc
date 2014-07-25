@@ -164,19 +164,20 @@ private:
                 
                 PIX maskScale = 1.;
                 if (useRotoAsMask) {
-                    maskScale = maskPix ? *maskPix : 0.;
+                    maskScale = maskPix ? *maskPix : 1.;
+                } else {
+                    maskScale = maskPix ? maskPix[nComponents - 1] : 1;
                 }
                 for (int k = 0; k < nComponents - 1; ++k) {
                     ///this is only executed for  RGBA
-                    
+
                     if (!useRotoAsMask) {
-                        maskScale = maskPix ? maskPix[nComponents - 1] : 0.;
                         if (maskScale == 0) {
                             ///src image outside of the roto shape
                             dstPix[k] = srcPix ? srcPix[k] : 0.;
                         } else {
                             ///we're inside the mask, paint the mask
-                            dstPix[k] = maskPix ? maskScale : 0.;
+                            dstPix[k] = maskPix ? maskPix[k] : 0.;
                         }
                     } else {
                         dstPix[k] = maskPix ? maskScale : 0.;
