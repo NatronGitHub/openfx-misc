@@ -629,7 +629,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     assert(operation->getNOptions() == eMergeOver);
     operation->appendOption( "over", "A+B(1-a)" );
     assert(operation->getNOptions() == eMergeOverlay);
-    operation->appendOption( "overlay", ": multiply if B<0.5, screen if B>0.5" );
+    operation->appendOption( "overlay", "multiply if B<0.5, screen if B>0.5" );
     assert(operation->getNOptions() == eMergePinLight);
     operation->appendOption( "pinlight", "if B >= 0.5 then max(A, 2*B - 1), min(A, B * 2.0 ) else" );
     assert(operation->getNOptions() == eMergePlus);
@@ -645,7 +645,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     assert(operation->getNOptions() == eMergeUnder);
     operation->appendOption( "under", "A(1-b)+B" );
     assert(operation->getNOptions() == eMergeXOR);
-    operation->appendOption( "xor", ": A(1-b)+B(1-a)" );
+    operation->appendOption( "xor", "A(1-b)+B(1-a)" );
     operation->setDefault(eMergeOver);
     operation->setAnimates(true);
     operation->setLayoutHint(OFX::eLayoutHintNoNewLine);
