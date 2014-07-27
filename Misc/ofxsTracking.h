@@ -233,6 +233,7 @@ public:
     , _outerBtmLeftDragPos()
     , _outerTopRightDragPos()
     , _controlDown(false)
+    , _altDown(false)
     {
         _center = effect->fetchDouble2DParam(kTrackCenterPointParamName);
         _innerBtmLeft = effect->fetchDouble2DParam(kTrackPatternBoxBtmLeftParamName);
@@ -282,6 +283,7 @@ private:
     OfxPointD _outerTopRightDragPos;
     
     bool _controlDown;
+    bool _altDown;
     
 };
 

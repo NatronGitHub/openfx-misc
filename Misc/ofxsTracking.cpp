@@ -1098,7 +1098,10 @@ bool TrackerRegionInteract::keyDown(const OFX::KeyArgs &args)
 {
     if (args.keySymbol == kOfxKey_Control_L || args.keySymbol == kOfxKey_Control_R) {
         _controlDown = true;
-        return true;
+        return !_altDown;
+    } else if (args.keySymbol == kOfxKey_Alt_L || args.keySymbol == kOfxKey_Alt_R) {
+        _altDown = true;
+        return false;
     }
     return false;
 }
@@ -1107,7 +1110,10 @@ bool TrackerRegionInteract::keyUp(const OFX::KeyArgs &args)
 {
     if (args.keySymbol == kOfxKey_Control_L || args.keySymbol == kOfxKey_Control_R) {
         _controlDown = false;
-        return true;
+        return !_altDown;
+    } else if (args.keySymbol == kOfxKey_Alt_L || args.keySymbol == kOfxKey_Alt_R) {
+        _altDown = false;
+        return false;
     }
     return false;
 }
