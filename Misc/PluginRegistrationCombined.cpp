@@ -55,8 +55,7 @@ namespace OFX
             getSideBySidePluginID(ids);
             getSwitchPluginID(ids);
             getTimeOffsetPluginID(ids);
-            ///Not production ready
-            //getTrackerPMPluginID(ids);
+            getTrackerPMPluginID(ids);
             getTransformPluginIDs(ids);
         }
     }
