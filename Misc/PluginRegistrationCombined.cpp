@@ -15,7 +15,9 @@
 #include "NoOp.h"
 #include "OneView.h"
 #include "Premult.h"
+#ifdef DEBUG
 #include "ReConverge.h"
+#endif
 #include "RGBLut.h"
 #include "Roto.h"
 #include "Shuffle.h"
@@ -48,7 +50,9 @@ namespace OFX
             getNoOpPluginID(ids);
             getOneViewPluginID(ids);
             getPremultPluginIDs(ids);
+#ifdef DEBUG
             getReConvergePluginID(ids);
+#endif
             getRGBLutPluginID(ids);
             getRotoPluginID(ids);
             getShufflePluginID(ids);

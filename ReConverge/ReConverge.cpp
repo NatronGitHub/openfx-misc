@@ -73,6 +73,8 @@
 
  */
 
+#ifdef DEBUG
+
 #include "ReConverge.h"
 
 #include <cstdio>
@@ -178,6 +180,7 @@ private:
                 // do we have a source image to scale up
                 if (srcPix) {
                     for (int c = 0; c < nComponents; c++) {
+#pragma message ("TODO")
                         dstPix[c] = max - srcPix[c];
                     }
                 }
@@ -521,3 +524,4 @@ void getReConvergePluginID(OFX::PluginFactoryArray &ids)
     ids.push_back(&p);
 }
 
+#endif
