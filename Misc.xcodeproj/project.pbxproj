@@ -210,6 +210,8 @@
 		1E9B5F67198A52460095C8AA /* ofxsTracking.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F55198A51840095C8AA /* ofxsTracking.cpp */; };
 		1E9B5F68198A52550095C8AA /* ofxsOGLFontData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F4D198A51840095C8AA /* ofxsOGLFontData.cpp */; };
 		1E9B5F69198A52590095C8AA /* ofxsOGLTextRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F4F198A51840095C8AA /* ofxsOGLTextRenderer.cpp */; };
+		1E9B5F74198A5BF60095C8AA /* ofxsOGLTextRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F4F198A51840095C8AA /* ofxsOGLTextRenderer.cpp */; };
+		1E9B5F75198A5BFB0095C8AA /* ofxsOGLFontData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F4D198A51840095C8AA /* ofxsOGLFontData.cpp */; };
 		1EB9C071196DD64E003C1849 /* OneView.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDE1BC9182D3F90002392CB /* OneView.cpp */; };
 		1EB9C072196DD64E003C1849 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E8B5D7418B7805D00C31FDC /* PluginRegistration.cpp */; };
 		1EB9C073196DD64E003C1849 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
@@ -2335,8 +2337,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E9B5F74198A5BF60095C8AA /* ofxsOGLTextRenderer.cpp in Sources */,
 				1ECE5450185F23E3001ED442 /* ReConverge.cpp in Sources */,
 				1E8B5D8218B782F000C31FDC /* PluginRegistration.cpp in Sources */,
+				1E9B5F75198A5BFB0095C8AA /* ofxsOGLFontData.cpp in Sources */,
 				1ECE543E185F2374001ED442 /* ofxsCore.cpp in Sources */,
 				1ECE543F185F2374001ED442 /* ofxsImageEffect.cpp in Sources */,
 				1ECE5440185F2374001ED442 /* ofxsInteract.cpp in Sources */,

@@ -371,7 +371,7 @@ private:
                         tmpPix[c] = _lookupTable[c][0];
                     }
                 }
-                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                OFX::ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
             }
@@ -438,7 +438,7 @@ private:
                         tmpPix[c] = interpolate(c, 0.);;
                     }
                 }
-                ofxsMaskMixPix<PIX, nComponents, 1, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                OFX::ofxsMaskMixPix<PIX, nComponents, 1, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
             }
