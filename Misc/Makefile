@@ -30,6 +30,7 @@ ofxsOGLFontData.o  \
 ofxsTracking.o \
 ofxsTransform3x3.o \
 ofxsRectangleInteract.o \
+randomGenerator.o \
 PluginRegistrationCombined.o
 
 PLUGINNAME = Misc

@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Difference.o PluginRegistration.o
-PLUGINNAME = Difference
+PLUGINOBJECTS = Shuffle.o PluginRegistration.o
+PLUGINNAME = Shuffle
 
 include ../Makefile.master

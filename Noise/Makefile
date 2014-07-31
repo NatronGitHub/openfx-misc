@@ -1,7 +1,4 @@
-PLUGINOBJECTS = Noise.o randomGenerator.o
+PLUGINOBJECTS = Noise.o randomGenerator.o PluginRegistration.o
 PLUGINNAME = Noise
 
 include ../Makefile.master
-
-CXXFLAGS += -I../Misc
-VPATH += ../Misc

@@ -2,6 +2,3 @@ PLUGINOBJECTS = CornerPin.o PluginRegistration.o ofxsTransform3x3.o ofxsOGLTextR
 PLUGINNAME = CornerPin
 
 include ../Makefile.master
-
-CXXFLAGS += -I../Misc
-VPATH += ../Misc
