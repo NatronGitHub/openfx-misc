@@ -103,26 +103,33 @@
 
 #define kKeyColorParamName "keyColor"
 #define kKeyColorParamLabel "Key Color"
-#define kKeyColorParamHint "Foreground key color; foreground areas containing the key color are replaced with the background image."
+#define kKeyColorParamHint \
+"Foreground key color; foreground areas containing the key color are replaced with the background image."
 
 #define kAcceptanceAngleParamName "acceptanceAngle"
 #define kAcceptanceAngleParamLabel "Acceptance Angle"
-#define kAcceptanceAngleParamHint "Foreground colors are only suppressed inside the acceptance angle (alpha)."
+#define kAcceptanceAngleParamHint \
+"Foreground colors are only suppressed inside the acceptance angle (alpha)."
 
 #define kSuppressionAngleParamName "suppressionAngle"
 #define kSuppressionAngleParamLabel "Suppression Angle"
-#define kSuppressionAngleParamHint "The chrominance of foreground colors inside the suppression angle (beta) is set to zero on output, to deal with noise. Use no more than one third of acceptance angle."
+#define kSuppressionAngleParamHint \
+"The chrominance of foreground colors inside the suppression angle (beta) is set to zero on output, to deal with noise. Use no more than one third of acceptance angle."
 
 #define kKeyLiftParamName "keyLift"
 #define kKeyLiftParamLabel "Key Lift"
-#define kKeyLiftParamHint "Raise it so that less pixels are classified as background. Makes a sharper transition between foreground and background. Defaults to 0."
+#define kKeyLiftParamHint \
+"Raise it so that less pixels are classified as background. Makes a sharper transition between foreground and background. Defaults to 0."
 
 #define kKeyGainParamName "keyGain"
 #define kKeyGainParamLabel "Key Gain"
-#define kKeyGainParamHint "Lower it to classify more colors as background. Defaults to 1."
+#define kKeyGainParamHint \
+"Lower it to classify more colors as background. Defaults to 1."
 
 #define kOutputModeParamName "show"
 #define kOutputModeParamLabel "Output Mode"
+#define kOutputModeParamHint \
+"What image to output."
 #define kOutputModeIntermediateOption "Intermediate"
 #define kOutputModeIntermediateHint "Color is the source color. Alpha is the foreground key. Use for multi-pass keying."
 #define kOutputModePremultipliedOption "Premultiplied"
@@ -134,6 +141,8 @@
 
 #define kSourceAlphaParamName "sourceAlphaHandling"
 #define kSourceAlphaParamLabel "Source Alpha"
+#define kSourceAlphaParamHint \
+"How the alpha embedded in the Source input should be used"
 #define kSourceAlphaIgnoreOption "Ignore"
 #define kSourceAlphaIgnoreHint "Ignore the source alpha."
 #define kSourceAlphaAddToInsideMaskOption "Add to Inside Mask"
@@ -970,6 +979,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
 
     ChoiceParamDescriptor* outputMode = desc.defineChoiceParam(kOutputModeParamName);
     outputMode->setLabels(kOutputModeParamLabel, kOutputModeParamLabel, kOutputModeParamLabel);
+    outputMode->setHint(kOutputModeParamHint);
     assert(outputMode->getNOptions() == (int)eOutputModeIntermediate);
     outputMode->appendOption(kOutputModeIntermediateOption, kOutputModeIntermediateHint);
     assert(outputMode->getNOptions() == (int)eOutputModePremultiplied);
@@ -985,6 +995,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
 
     ChoiceParamDescriptor* sourceAlpha = desc.defineChoiceParam(kSourceAlphaParamName);
     sourceAlpha->setLabels(kSourceAlphaParamLabel, kSourceAlphaParamLabel, kSourceAlphaParamLabel);
+    sourceAlpha->setHint(kSourceAlphaParamHint);
     assert(sourceAlpha->getNOptions() == (int)eSourceAlphaIgnore);
     sourceAlpha->appendOption(kSourceAlphaIgnoreOption, kSourceAlphaIgnoreHint);
     assert(sourceAlpha->getNOptions() == (int)eSourceAlphaAddToInsideMask);
