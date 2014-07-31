@@ -107,7 +107,11 @@
 #define kPluginName "CornerPinOFX"
 #define kPluginMaskedName "CornerPinMaskedOFX"
 #define kPluginGrouping "Transform"
-#define kPluginDescription "Allows an image to fit another in translation, rotation and scale."
+#define kPluginDescription \
+"Allows an image to fit another in translation, rotation and scale.\n" \
+"The resulting transform is a translation if 1 point is enabled, a " \
+"similarity if 2 are enabled, an affine transform if 3 are enabled, " \
+"and a homography if they are all enabled."
 #define kPluginIdentifier "net.sf.openfx:CornerPinPlugin"
 #define kPluginMaskedIdentifier "net.sf.openfx:CornerPinMaskedPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -647,7 +651,7 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
     glPushAttrib(GL_ALL_ATTRIB_BITS);
     
     //glDisable(GL_LINE_STIPPLE);
-    //glEnable(GL_LINE_SMOOTH);
+    glEnable(GL_LINE_SMOOTH);
     //glEnable(GL_POINT_SMOOTH);
     glEnable(GL_BLEND);
     glHint(GL_LINE_SMOOTH_HINT,GL_DONT_CARE);
@@ -939,7 +943,7 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     overlayChoice->appendOption("To");
     overlayChoice->appendOption("From");
     overlayChoice->setDefault(0);
-    overlayChoice->setAnimates(true);
+    overlayChoice->setEvaluateOnChange(false);
     page->addChild(*overlayChoice);
 }
 
