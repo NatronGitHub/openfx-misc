@@ -36,6 +36,14 @@
 #ifndef __Misc__ofxsPositionInteract__
 #define __Misc__ofxsPositionInteract__
 
+#include <cmath>
+
+#ifdef __APPLE__
+#include <OpenGL/gl.h>
+#else
+#include <GL/gl.h>
+#endif
+
 #include <ofxsInteract.h>
 #include <ofxsImageEffect.h>
 
@@ -45,12 +53,16 @@ namespace OFX {
 /*
  The PositionInteractParam class must define a static name() function, returning the OFX parameter name.
  (using const char* directly as template parameter is not reliable) :
- 
+ namespace {
  struct MyPositionInteractParam {
      static const char *name() { return kMyName; }
  };
+ }
 
-// The position param should be defined as follows:
+ // the describe() function should include the declaration of the interact:
+ desc.setOverlayInteractDescriptor(new PositionOverlayDescriptor<MyPositionInteractParam>);
+
+// The position param should be defined is describeInContext() as follows:
 Double2DParamDescriptor* position = desc.defineDouble2DParam(kMyName);
 position->setLabels(kMyLabel, kMyLabel, kMyLabel);
 position->setHint(kMyHint);
@@ -77,23 +89,6 @@ private:
     virtual bool penMotion(const OFX::PenArgs &args);
     virtual bool penDown(const OFX::PenArgs &args);
     virtual bool penUp(const OFX::PenArgs &args);
-    OfxPointD getCanonicalPosition(double time) const
-    {
-        OfxPointD offset = _effect->getProjectOffset();
-        OfxPointD size = _effect->getProjectSize();
-        double x,y;
-        _position->getValueAtTime(time, x, y);
-        OfxPointD retVal;
-        retVal.x = x * size.x + offset.x;
-        retVal.y = y * size.y + offset.y;
-        return retVal;
-    }
-    void setCanonicalPosition(double x, double y)
-    {
-        OfxPointD offset = _effect->getProjectOffset();
-        OfxPointD size = _effect->getProjectSize();
-        _position->setValue((x - offset.x) / size.x, (y - offset.y) / size.y);
-    }
 
 private:
     enum StateEnum {
@@ -105,45 +100,31 @@ private:
     StateEnum _state;
     OFX::Double2DParam* _position;
 
-    double xHairSize() const { return 5; }
+    double pointSize() const { return 5; }
+    double pointTolerance() const { return 6; }
 };
 
 template <typename ParamName>
 bool PositionInteract<ParamName>::draw(const OFX::DrawArgs &args)
 {
-    if (!_position) {
-        return false; // nothing to draw
-    }
-
     OfxPointD pscale;
     pscale.x = args.pixelScale.x / args.renderScale.x;
     pscale.y = args.pixelScale.y / args.renderScale.y;
 
     OfxRGBColourF col;
     switch (_state) {
-        case eInActive : col.r = col.g = col.b = 0.0f; break;
-        case ePoised   : col.r = col.g = col.b = 0.5f; break;
-        case ePicked   : col.r = col.g = col.b = 0.8f; break;
+        case eInActive : col.r = col.g = col.b = 0.8f; break;
+        case ePoised   : col.r = 0.; col.g = 1.0; col.b = 0.0f; break;
+        case ePicked   : col.r = 0.; col.g = 1.0; col.b = 0.0f; break;
     }
 
-    // make the box a constant size on screen by scaling by the pixel scale
-    float dx = (float)(xHairSize() / args.pixelScale.x);
-    float dy = (float)(xHairSize() / args.pixelScale.y);
-
-    OfxPointD pos = getCanonicalPosition(args.time);
-
+    OfxPointD pos;
+    _position->getValueAtTime(args.time, pos.x, pos.y);
 
     glPushAttrib(GL_ALL_ATTRIB_BITS);
-    //glDisable(GL_LINE_STIPPLE);
-    glEnable(GL_LINE_SMOOTH);
-    //glEnable(GL_POINT_SMOOTH);
-    glEnable(GL_BLEND);
-    glHint(GL_LINE_SMOOTH_HINT,GL_DONT_CARE);
-    glLineWidth(1.5);
-    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    glPointSize(pointSize());
 
     glPushMatrix();
-    glTranslated(pos.x, pos.y, 0);
     // Draw everything twice
     // l = 0: shadow
     // l = 1: drawing
@@ -156,11 +137,8 @@ bool PositionInteract<ParamName>::draw(const OFX::DrawArgs &args)
         } else {
             glColor3f(col.r, col.g, col.b);
         }
-        glBegin(GL_LINES);
-        glVertex2f(-dx, 0);
-        glVertex2f(dx, 0);
-        glVertex2f(0, -dy);
-        glVertex2f(0, dy);
+        glBegin(GL_POINTS);
+        glVertex2d(pos.x, pos.y);
         glEnd();
         if (l == 0) {
             glTranslated(-pscale.x, pscale.y, 0);
@@ -177,29 +155,22 @@ bool PositionInteract<ParamName>::draw(const OFX::DrawArgs &args)
 template <typename ParamName>
 bool PositionInteract<ParamName>::penMotion(const OFX::PenArgs &args)
 {
-    if (!_position) {
-        return false;
-    }
-    // figure the size of the box in cannonical coords
-    float dx = (float)(xHairSize() / args.pixelScale.x);
-    float dy = (float)(xHairSize() / args.pixelScale.y);
-
-    OfxPointD pos = getCanonicalPosition(args.time);
+    OfxPointD pscale;
+    pscale.x = args.pixelScale.x / args.renderScale.x;
+    pscale.y = args.pixelScale.y / args.renderScale.y;
+    OfxPointD pos;
+    _position->getValueAtTime(args.time, pos.x, pos.y);
 
     // pen position is in cannonical coords
     OfxPointD penPos = args.penPosition;
 
-    switch (_state)
-    {
-        case eInActive :
-        case ePoised   :
-        {
+    switch (_state) {
+        case eInActive:
+        case ePoised: {
             // are we in the box, become 'poised'
             StateEnum newState;
-            penPos.x -= pos.x;
-            penPos.y -= pos.y;
-            if (std::labs(penPos.x) < dx &&
-                std::labs(penPos.y) < dy) {
+            if (std::fabs(penPos.x-pos.x) <= pointTolerance()*pscale.x &&
+                std::fabs(penPos.y-pos.y) <= pointTolerance()*pscale.y) {
                 newState = ePoised;
             }
             else {
@@ -210,15 +181,12 @@ bool PositionInteract<ParamName>::penMotion(const OFX::PenArgs &args)
                 _state = newState;
                 _effect->redrawOverlays();
             }
-        }
-            break;
+        }   break;
 
-        case ePicked   :
-        {
-            setCanonicalPosition(penPos.x, penPos.y);
+        case ePicked: {
+            _position->setValue(penPos.x, penPos.y);
             _effect->redrawOverlays();
-        }
-            break;
+        }   break;
     }
     return _state != eInActive;
 }
@@ -232,7 +200,7 @@ bool PositionInteract<ParamName>::penDown(const OFX::PenArgs &args)
     penMotion(args);
     if (_state == ePoised) {
         _state = ePicked;
-        setCanonicalPosition(args.penPosition.x, args.penPosition.y);
+        _position->setValue(args.penPosition.x, args.penPosition.y);
         _effect->redrawOverlays();
     }
 
@@ -245,8 +213,7 @@ bool PositionInteract<ParamName>::penUp(const OFX::PenArgs &args)
     if (!_position) {
         return false;
     }
-    if (_state == ePicked)
-    {
+    if (_state == ePicked) {
         _state = ePoised;
         penMotion(args);
         _effect->redrawOverlays();
