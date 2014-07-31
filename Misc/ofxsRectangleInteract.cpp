@@ -49,6 +49,8 @@
 #define CROSS_SIZE 7
 #define HANDLE_SIZE 6
 
+using OFX::RectangleInteract;
+
 static bool isNearby(const OfxPointD& p, double x, double y, double tolerance, const OfxPointD& pscale)
 {
     return std::fabs(p.x-x) <= tolerance*pscale.x &&  std::fabs(p.y-y) <= tolerance*pscale.y;

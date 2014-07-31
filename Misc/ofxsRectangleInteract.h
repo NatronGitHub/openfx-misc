@@ -50,6 +50,8 @@
 #define kRectInteractSizeParamDim1 "width"
 #define kRectInteractSizeParamDim2 "height"
 
+namespace OFX {
+
 /**
  * @brief In order to work the plug-in using this interact must have 2 parameters named after
  * the defines above.
@@ -155,5 +157,6 @@ private:
 
 class RectangleOverlayDescriptor : public OFX::DefaultEffectOverlayDescriptor<RectangleOverlayDescriptor, RectangleInteract> {};
 
+} // namespace OFX
 
 #endif /* defined(__Misc__ofxsRectangleInteract__) */

@@ -699,6 +699,7 @@
 		1E8B5D8118B782F000C31FDC /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1E8B5D8318B7830000C31FDC /* ReConverge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ReConverge.h; sourceTree = "<group>"; };
 		1E90F3E919823D3F00BB8B6D /* ofxsMaskMix.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsMaskMix.h; sourceTree = "<group>"; };
+		1E9B5EF8198A343E0095C8AA /* ofxsPositionInteract.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsPositionInteract.h; sourceTree = "<group>"; };
 		1E9C215F192FA596002EEFE1 /* ofxsTransform3x3Processor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsTransform3x3Processor.h; sourceTree = "<group>"; };
 		1E9FC1CE180BF74400EFE0F9 /* camera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = camera.h; sourceTree = "<group>"; };
 		1E9FC1CF180BF74400EFE0F9 /* fnPublicOfxExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fnPublicOfxExtensions.h; sourceTree = "<group>"; };
@@ -1301,6 +1302,7 @@
 				D792A2E919335BE100547CFF /* ofxsOGLFontUtils.h */,
 				D792A2E119334C6300547CFF /* ofxsOGLTextRenderer.cpp */,
 				D792A2E219334C6300547CFF /* ofxsOGLTextRenderer.h */,
+				1E9B5EF8198A343E0095C8AA /* ofxsPositionInteract.h */,
 				D730311A19518E7B0024BCA4 /* ofxsRectangleInteract.cpp */,
 				D730311B19518E7B0024BCA4 /* ofxsRectangleInteract.h */,
 				D7BB85CE1955C4AD00A86649 /* ofxsTracking.cpp */,
