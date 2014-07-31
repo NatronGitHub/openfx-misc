@@ -81,8 +81,10 @@
 
 #define kPluginName "TrackerPM"
 #define kPluginGrouping "Transform"
-#define kPluginDescription "Point tracker based on pattern matching using an exhaustive search within an image region"
-#define kPluginIdentifier "net.sf.openfx:TrackerPMPlugin"
+#define kPluginDescription \
+"Point tracker based on pattern matching using an exhaustive search within an image region.\n" \
+"The Mask input is used to weight the pattern, so that only pixels from the Mask will be tracked."
+#define kPluginIdentifier "net.sf.openfx:TrackerPM"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -858,7 +860,7 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     score->appendOption(kScoreParamOptionNCC, kScoreParamOptionNCCHint);
     assert(score->getNOptions() == eTrackerZNCC);
     score->appendOption(kScoreParamOptionZNCC, kScoreParamOptionZNCCHint);
-    score->setDefault((int)eTrackerSSD);
+    score->setDefault((int)eTrackerSAD);
     page->addChild(*score);
 }
 
