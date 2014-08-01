@@ -126,9 +126,10 @@ These plugins are distributed precompiled with each version of
 If you want to compile the plugins from source, you may either use the
 provided Unix Makefile, the Xcode project, or the Visual Studio project.
 
-### Getting sources from github
+### Getting the sources from github
 
 To fetch the latest sources from github, execute the following commands:
+
 	git clone https://github.com/devernay/openfx-misc.git
 	cd openfx-misc
 	git submodule update -i -r
