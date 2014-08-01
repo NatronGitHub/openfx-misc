@@ -27,6 +27,8 @@ grouping).
 * RotoOFX: Create masks and shapes. Requires a host with mask editing
   capabilities (such as Natron).
 
+* NoiseOFX: Generate noise
+
 ### Time
 
 * TimeOffsetOFX: Move the input clip forward or backward in time.  
@@ -42,6 +44,8 @@ grouping).
 
 * GradeOFX: Modify the tonal spread of an image from the white and black points.  
 
+* InvertOFX: Inverse the selected channels
+
 * RGBLutOFX: Apply a parametric lookup curve to each channel  
   separately.  
    
@@ -56,6 +60,8 @@ grouping).
 
 * MergeOFX: Pixel-by-pixel merge operation between the two inputs.
 
+* PreMultOFX/UnpremultOFX: Multiply/divide the selected channels by alpha (or another channel)
+
 * SwitchOFX: Lets you switch between any number of inputs.
 
 ### Transform
@@ -67,6 +73,8 @@ grouping).
   translation, rotation, scale, and shear
 
 * CropOFX: Remove everything outside from the image of a rectangle.
+
+* TrackerPM: Point tracker based on pattern matching using an exhaustive search within an image region.
 
 ### Views
 
@@ -86,6 +94,10 @@ with Nuke).
 
 * Stereo/SideBySideOFX: Put the left and right view of the input next
   to each other.
+
+### Other
+
+* NoOpOFX: Copies the input to the ouput. Useful for inspecting the properties of input and output clips.
 
 Notes & Caveats
 ---------------
@@ -113,6 +125,17 @@ These plugins are distributed precompiled with each version of
 
 If you want to compile the plugins from source, you may either use the
 provided Unix Makefile, the Xcode project, or the Visual Studio project.
+
+### Getting sources from github
+
+To fetch the latest sources from github, execute the following commands:
+	git clone https://github.com/devernay/openfx-misc.git
+	cd openfx-misc
+	git submodule update -i -r
+
+In order to get a specific tag, corresponding to a source release, do `git tag -l`
+to get the list of tags, and then `git checkout tags/<tag_name>`
+to checkout a given tag.
 
 ### Unix/Linux/OS X, using Makefiles
 
