@@ -642,21 +642,29 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
     bool useFrom = isFromPoints(args.time);
 
     OfxPointD p[4];
+    OfxPointD q[4];
     bool enable[4];
     int enableBegin = 4;
     int enableEnd = 0;
     for (int i = 0; i < 4; ++i) {
-        if (_dragging == i) {
-            p[i] = _draggedPos[i];
-        } else {
-            if (useFrom) {
-                _from[i]->getValueAtTime(args.time, p[i].x, p[i].y);
-            } else {
-                _to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
-            }
-        }
         _enable[i]->getValueAtTime(args.time, enable[i]);
         if (enable[i]) {
+            if (_dragging == i) {
+                p[i] = _draggedPos[i];
+                if (useFrom) {
+                    _to[i]->getValueAtTime(args.time, q[i].x, q[i].y);
+                } else {
+                    _from[i]->getValueAtTime(args.time, q[i].x, q[i].y);
+                }
+            } else {
+                if (useFrom) {
+                    _from[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+                    _to[i]->getValueAtTime(args.time, q[i].x, q[i].y);
+                } else {
+                    _to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+                    _from[i]->getValueAtTime(args.time, q[i].x, q[i].y);
+                }
+            }
             if (i < enableBegin) {
                 enableBegin = i;
             }
@@ -684,37 +692,37 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
         if (l == 0) {
             // translate (1,-1) pixels
             glTranslated(pscale.x, -pscale.y, 0);
-            glColor3f(0., 0., 0.);
-        } else {
-            glColor3f(0.8, 0.8, 0.8);
         }
-        glBegin(GL_LINE_STRIP);
+        glColor3f(0.4*l, 0.4*l, 0.4*l);
+        glBegin(GL_LINES);
+        for (int i = enableBegin; i < enableEnd; ++i) {
+            if (enable[i]) {
+                glVertex2d(p[i].x, p[i].y);
+                glVertex2d(q[i].x, q[i].y);
+            }
+        }
+        glEnd();
+        glColor3f(0.8*l, 0.8*l, 0.8*l);
+        glBegin(GL_LINE_LOOP);
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
                 glVertex2d(p[i].x, p[i].y);
             }
-        }
-        if (enableBegin < enableEnd) {
-            glVertex2d(p[enableBegin].x, p[enableBegin].y);
         }
         glEnd();
         glBegin(GL_POINTS);
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
-                if (l == 1) {
-                    if (_hovering == i || _dragging == i) {
-                        glColor3f(0., 1., 0.);
-                    } else {
-                        glColor3f(0.8, 0.8, 0.8);
-                    }
+                if (_hovering == i || _dragging == i) {
+                    glColor3f(0.*l, 1.*l, 0.*l);
+                } else {
+                    glColor3f(0.8*l, 0.8*l, 0.8*l);
                 }
                 glVertex2d(p[i].x, p[i].y);
             }
         }
         glEnd();
-        if (l == 1) {
-            glColor3f(0.8, 0.8, 0.8);
-        }
+        glColor3f(0.8*l, 0.8*l, 0.8*l);
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
                 TextRenderer::bitmapString(p[i].x, p[i].y, useFrom ? kFromParamName[i] : kToParamName[i]);
