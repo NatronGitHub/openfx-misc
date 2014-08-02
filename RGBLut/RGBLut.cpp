@@ -487,7 +487,7 @@ public:
         assert(lookupTable_);
         _mix = fetchDoubleParam(kMixParamName);
         _maskInvert = fetchBooleanParam(kMaskInvertParamName);
-        assert(lookupTable_ && _mix && _maskInvert);
+        assert(_mix && _maskInvert);
      }
 
 private:
@@ -614,8 +614,7 @@ void RGBLutPlugin::setupAndProcess(RGBLutBase &processor, const OFX::RenderArgum
         processor.setMaskImg(mask.get());
     }
 
-    if (src.get() && dst.get())
-    {
+    if (src.get() && dst.get()) {
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
         OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();

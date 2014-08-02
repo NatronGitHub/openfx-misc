@@ -282,10 +282,10 @@ public:
         _green = fetchBooleanParam(kGreenParamName);
         _blue = fetchBooleanParam(kBlueParamName);
         _alpha = fetchBooleanParam(kAlphaParamName);
+        assert(_btmLeft && _size && _softness && _red && _green && _blue && _alpha);
         _mix = fetchDoubleParam(kMixParamName);
         _maskInvert = fetchBooleanParam(kMaskInvertParamName);
-
-        assert(_btmLeft && _size && _softness && _red && _green && _blue && _alpha && _mix && _maskInvert);
+        assert(_mix && _maskInvert);
     }
     
 private:

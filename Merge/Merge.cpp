@@ -233,9 +233,10 @@ public:
         _operationString = fetchStringParam(kOfxParamStringSublabelName);
         _bbox = fetchChoiceParam(kBboxParamName);
         _alphaMasking = fetchBooleanParam(kAlphaMaskingParamName);
+        assert(_operation && _operationString && _bbox && _alphaMasking);
         _mix = fetchDoubleParam(kMixParamName);
         _maskInvert = fetchBooleanParam(kMaskInvertParamName);
-        assert(_operation && _operationString && _bbox && _alphaMasking && _mix && _maskInvert);
+        assert(_mix && _maskInvert);
     }
     
 private:

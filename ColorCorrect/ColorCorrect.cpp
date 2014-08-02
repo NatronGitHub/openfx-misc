@@ -412,9 +412,10 @@ public:
         fetchColorControlGroup(kColorCorrectMidtonesGroupName, &_midtonesParamsGroup);
         fetchColorControlGroup(kColorCorrectHighlightsGroupName, &_highlightsParamsGroup);
         _rangesParam = fetchParametricParam(kColorCorrectToneRangesParamName);
+        assert(_rangesParam);
         _mix = fetchDoubleParam(kMixParamName);
         _maskInvert = fetchBooleanParam(kMaskInvertParamName);
-        assert(_rangesParam && _mix && _maskInvert);
+        assert(_mix && _maskInvert);
     }
 
 private:

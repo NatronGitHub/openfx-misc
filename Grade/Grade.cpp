@@ -299,9 +299,10 @@ public:
         _gamma = fetchRGBAParam(kGammaParamName);
         _clampBlack = fetchBooleanParam(kClampBlackParamName);
         _clampWhite = fetchBooleanParam(kClampWhiteParamName);
+        assert(_blackPoint && _whitePoint && _black && _white && _multiply && _offset && _gamma && _clampBlack && _clampWhite);
         _mix = fetchDoubleParam(kMixParamName);
         _maskInvert = fetchBooleanParam(kMaskInvertParamName);
-        assert(_blackPoint && _whitePoint && _black && _white && _multiply && _offset && _gamma && _clampBlack && _clampWhite && _mix && _maskInvert);
+        assert(_mix && _maskInvert);
     }
     
 private:
