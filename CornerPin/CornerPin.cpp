@@ -595,8 +595,8 @@ public:
     virtual bool penMotion(const OFX::PenArgs &args);
     virtual bool penDown(const OFX::PenArgs &args);
     virtual bool penUp(const OFX::PenArgs &args);
-    virtual bool keyDown(const OFX::KeyArgs &args);
-    virtual bool keyUp(const OFX::KeyArgs &args);
+    //virtual bool keyDown(const OFX::KeyArgs &args);
+    //virtual bool keyUp(const OFX::KeyArgs &args);
 
 private:
     
@@ -736,14 +736,26 @@ bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
     bool useFrom = isFromPoints(args.time);
 
     OfxPointD p[4];
+    bool enable[4];
+    int enableBegin = 4;
+    int enableEnd = 0;
     for (int i = 0; i < 4; ++i) {
-        if (_dragging == i) {
-            p[i] = _draggedPos[i];
-        } else {
-            if (useFrom) {
-                _from[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+        _enable[i]->getValueAtTime(args.time, enable[i]);
+        if (enable[i]) {
+            if (i < enableBegin) {
+                enableBegin = i;
+            }
+            if (i + 1 > enableEnd) {
+                enableEnd = i + 1;
+            }
+            if (_dragging == i) {
+                p[i] = _draggedPos[i];
             } else {
-                _to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+                if (useFrom) {
+                    _from[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+                } else {
+                    _to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+                }
             }
         }
     }
@@ -760,14 +772,16 @@ bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
     _hovering = -1;
     didSomething = false;
 
-    for (int i = 0; i < 4; ++i) {
-        if (_dragging == i) {
-            _draggedPos[i].x += delta.x;
-            _draggedPos[i].y += delta.y;
-            didSomething = true;
-        } else if (isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale)) {
-            _hovering = i;
-            didSomething = true;
+    for (int i = enableBegin; i < enableEnd; ++i) {
+        if (enable[i]) {
+            if (_dragging == i) {
+                _draggedPos[i].x += delta.x;
+                _draggedPos[i].y += delta.y;
+                didSomething = true;
+            } else if (isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale)) {
+                _hovering = i;
+                didSomething = true;
+            }
         }
     }
 
@@ -780,14 +794,26 @@ bool CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
     bool useFrom = isFromPoints(args.time);
 
     OfxPointD p[4];
+    bool enable[4];
+    int enableBegin = 4;
+    int enableEnd = 0;
     for (int i = 0; i < 4; ++i) {
-        if (_dragging == i) {
-            p[i] = _draggedPos[i];
-        } else {
-            if (useFrom) {
-                _from[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+        _enable[i]->getValueAtTime(args.time, enable[i]);
+        if (enable[i]) {
+            if (i < enableBegin) {
+                enableBegin = i;
+            }
+            if (i + 1 > enableEnd) {
+                enableEnd = i + 1;
+            }
+            if (_dragging == i) {
+                p[i] = _draggedPos[i];
             } else {
-                _to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+                if (useFrom) {
+                    _from[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+                } else {
+                    _to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+                }
             }
         }
     }
@@ -798,11 +824,13 @@ bool CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
 
     bool didSomething = false;
 
-    for (int i = 0; i < 4; ++i) {
-        if (isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale)) {
-            _dragging = i;
-            _draggedPos[i] = args.penPosition;
-            didSomething = true;
+    for (int i = enableBegin; i < enableEnd; ++i) {
+        if (enable[i]) {
+            if (isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale)) {
+                _dragging = i;
+                _draggedPos[i] = args.penPosition;
+                didSomething = true;
+            }
         }
     }
 
@@ -818,31 +846,21 @@ bool CornerPinTransformInteract::penUp(const OFX::PenArgs &args)
 
     if (0 <= _dragging && _dragging < 4) {
         int i = _dragging;
-        if (useFrom) {
-            _from[i]->setValue(_draggedPos[i].x, _draggedPos[i].y);
-        } else {
-            _to[i]->setValue(_draggedPos[i].x,_draggedPos[i].y);
+        bool enable;
+        _enable[i]->getValueAtTime(args.time, enable);
+        if (enable) {
+            if (useFrom) {
+                _from[i]->setValue(_draggedPos[i].x, _draggedPos[i].y);
+            } else {
+                _to[i]->setValue(_draggedPos[i].x,_draggedPos[i].y);
+            }
+            didSomething = true;
         }
-        didSomething = true;
     }
 
     _dragging = -1;
     return didSomething;
 }
-
-bool CornerPinTransformInteract::keyDown(const OFX::KeyArgs &args)
-{
-    bool didSomething = false;
-    return didSomething;
-}
-
-bool CornerPinTransformInteract::keyUp(const OFX::KeyArgs &args)
-{
-    bool didSomething = false;
-    return didSomething;
-}
-
-
 
 using namespace OFX;
 
