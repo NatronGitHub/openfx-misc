@@ -89,6 +89,7 @@
 #include <cmath>
 
 #include "ofxsProcessing.H"
+#include "ofxsMerging.h"
 
 #define kPluginName "RotoOFX"
 #define kPluginGrouping "Draw"
@@ -112,7 +113,7 @@ class RotoProcessorBase : public OFX::ImageProcessor
 protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_roto;
-
+    PixelComponentEnum _srcComponents;
 
 public:
     RotoProcessorBase(OFX::ImageEffect &instance)
@@ -126,17 +127,17 @@ public:
     void setSrcImg(const OFX::Image *v)
     {
         _srcImg = v;
+        _srcComponents = v ? _srcImg->getPixelComponents() : ePixelComponentNone;
     }
 
     /** @brief set the optional mask image */
     void setRotoImg(const OFX::Image *v) {_roto = v;}
-
 };
 
 
 // The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
 // by the compiler, using the same generic code for all filters.
-template <class PIX, int nComponents, int maxValue>
+template <class PIX, int dstNComponents, int maxValue>
 class RotoProcessor : public RotoProcessorBase
 {
 public:
@@ -148,7 +149,8 @@ public:
 private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        bool useRotoAsMask = _roto->getPixelComponents() == ePixelComponentAlpha;
+        assert((_roto->getPixelComponents() == ePixelComponentAlpha && dstNComponents == 1) ||
+               (_roto->getPixelComponents() == ePixelComponentRGBA && dstNComponents == 4));
         //assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if (_effect.abort()) {
@@ -157,37 +159,82 @@ private:
             
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
       
-            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
+            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += dstNComponents) {
 
                 const PIX *srcPix = (const PIX*)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 const PIX *maskPix = (const PIX*) (_roto ? _roto->getPixelAddress(x, y) : 0);
-                
-                PIX maskScale = 1.;
-                if (useRotoAsMask) {
-                    maskScale = maskPix ? *maskPix : 1.;
-                } else {
-                    maskScale = maskPix ? maskPix[nComponents - 1] : 1;
-                }
-                for (int k = 0; k < nComponents - 1; ++k) {
-                    ///this is only executed for  RGBA
 
-                    if (!useRotoAsMask) {
-                        if (maskScale == 0) {
-                            ///src image outside of the roto shape
-                            dstPix[k] = srcPix ? srcPix[k] : 0.;
-                        } else {
-                            ///we're inside the mask, paint the mask
-                            dstPix[k] = maskPix ? maskPix[k] : 0.;
-                        }
-                    } else {
-                        dstPix[k] = maskPix ? maskScale : 0.;
+                PIX srcAlpha;
+                if (!srcPix) {
+                    srcAlpha = 0.;
+                } else {
+                    switch (_srcComponents) {
+                        case ePixelComponentAlpha:
+                            srcAlpha = srcPix[0];
+                            break;
+                        case ePixelComponentRGB:
+                            srcAlpha = 0.;
+                            break;
+                        case ePixelComponentRGBA:
+                            srcAlpha = srcPix[3];
+                            break;
+                        default:
+                            srcAlpha = 0.;
+                            break;
                     }
-                    
-                    
+                }
+                PIX maskAlpha;
+                if (!maskPix) {
+                    maskAlpha = 0.;
+                } else {
+                    maskAlpha = maskPix[dstNComponents-1];
                 }
                 
-                ///Just copy the alpha of the roto brush
-                dstPix[nComponents - 1] = maskScale;
+                PIX srcVal[dstNComponents];
+                // fill srcVal (hopefully the compiler will optimize this)
+                if (!srcPix) {
+                    for (int c = 0; c < dstNComponents; ++c) {
+                        srcVal[c] = 0;
+                    }
+                } else if (dstNComponents == 1) {
+                    srcVal[0] = srcAlpha;
+                } else if (dstNComponents == 3) {
+                    if (_srcComponents == ePixelComponentAlpha) {
+                        for (int c = 0; c < dstNComponents; ++c) {
+                            srcVal[c] = 0;
+                        }
+                    } else { // src is RGBA or RGB
+                        for (int c = 0; c < dstNComponents; ++c) {
+                            srcVal[c] = srcPix[c];
+                        }
+                    }
+                } else if (dstNComponents == 4) {
+                    switch (_srcComponents) {
+                        case ePixelComponentRGB:
+                            for (int c = 0; c < dstNComponents-1; ++c) {
+                                srcVal[c] = srcPix[c];
+                            }
+                            srcVal[dstNComponents-1] = 0.;
+                            break;
+                        case ePixelComponentRGBA:
+                            for (int c = 0; c < dstNComponents; ++c) {
+                                srcVal[c] = srcPix[c];
+                            }
+                            break;
+                        case ePixelComponentAlpha:
+                        default:
+                            for (int c = 0; c < dstNComponents-1; ++c) {
+                                srcVal[c] = 0;
+                            }
+                            srcVal[dstNComponents-1] = srcAlpha;
+                            break;
+                    }
+                }
+
+                // merge/over
+                for (int c = 0; c < dstNComponents; ++c) {
+                    dstPix[c] = OFX::MergeImages2D::overFunctor<PIX,maxValue>(maskPix[c], srcVal[c], maskAlpha, srcAlpha);
+                }
             }
         }
     }
@@ -210,12 +257,12 @@ public:
     , rotoClip_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA);
+        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA);
+        assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
         // name of mask clip depends on the context
         rotoClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Roto");
-        assert(rotoClip_);
+        assert(rotoClip_ && (rotoClip_->getPixelComponents() == ePixelComponentAlpha || rotoClip_->getPixelComponents() == ePixelComponentRGBA));
         _outputComps = fetchChoiceParam(kOutputCompsParamName);
         assert(_outputComps);
     }
@@ -267,8 +314,8 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     }
     std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
     if (src.get() && dst.get()) {
-        OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::BitDepthEnum dstBitDepth = dst->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth = src->getPixelDepth();
         if (srcBitDepth != dstBitDepth)
             OFX::throwSuiteStatusException(kOfxStatFailed);
         
@@ -283,6 +330,7 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
         if (!mask.get()) {
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
+        assert(mask->getPixelComponents() == OFX::ePixelComponentRGBA || mask->getPixelComponents() == OFX::ePixelComponentAlpha);
         if (mask->getPixelComponents() != dst->getPixelComponents()) {
             OFX::throwSuiteStatusException(kOfxStatErrFormat);
         }
