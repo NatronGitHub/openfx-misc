@@ -479,16 +479,14 @@ drawSquare(const OfxPointD& center,
 {
     // we are not axis-aligned
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
-    if (l == 1) {
-        if (hovered) {
-            if (althovered) {
-                glColor3f(0., 1., 0.);
-            } else {
-                glColor3f(1., 0., 0.);
-            }
+    if (hovered) {
+        if (althovered) {
+            glColor3f(0.*l, 1.*l, 0.*l);
         } else {
-            glColor3f(0.8, 0.8, 0.8);
+            glColor3f(1.*l, 0.*l, 0.*l);
         }
+    } else {
+        glColor3f(0.8*l, 0.8*l, 0.8*l);
     }
     double halfWidth = (POINT_SIZE / 2.) * meanPixelScale;
     double halfHeight = (POINT_SIZE / 2.) * meanPixelScale;
@@ -511,14 +509,12 @@ drawEllipse(const OfxPointD& center,
             bool hovered,
             int l)
 {
-    if (l == 1) {
-        if (hovered) {
-            glColor3f(1., 0., 0.);
-        } else {
-            glColor3f(0.8, 0.8, 0.8);
-        }
+    if (hovered) {
+        glColor3f(1.*l, 0.*l, 0.*l);
+    } else {
+        glColor3f(0.8*l, 0.8*l, 0.8*l);
     }
-    
+
     glPushMatrix();
     //  center the oval at x_center, y_center
     glTranslatef(center.x, center.y, 0);
@@ -543,13 +539,12 @@ drawSkewBar(const OfxPointD &center,
             double angle,
             int l)
 {
-    if (l == 1) {
-        if (hovered) {
-            glColor3f(1., 0., 0.);
-        } else {
-            glColor3f(0.8, 0.8, 0.8);
-        }
+    if (hovered) {
+        glColor3f(1.*l, 0.*l, 0.*l);
+    } else {
+        glColor3f(0.8*l, 0.8*l, 0.8*l);
     }
+
     // we are not axis-aligned: use the mean pixel scale
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
     double barHalfSize = radiusY + 20. * meanPixelScale;
@@ -600,20 +595,18 @@ drawRotationBar(const OfxPointD& pixelScale,
 {
     // we are not axis-aligned
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
-    if (l == 1) {
-        if (hovered) {
-            glColor3f(1., 0., 0.);
-        } else {
-            glColor3f(0.8, 0.8, 0.8);
-        }
+    if (hovered) {
+        glColor3f(1.*l, 0.*l, 0.*l);
+    } else {
+        glColor3f(0.8*l, 0.8*l, 0.8*l);
     }
-    
+
     double barExtra = 30. * meanPixelScale;
     glBegin(GL_LINES);
     glVertex2d(0., 0.);
     glVertex2d(0. + radiusX + barExtra, 0.);
     glEnd();
-    
+
     if (hovered) {
         double arrowCenterX = radiusX + barExtra / 2.;
         
@@ -759,10 +752,8 @@ TransformInteract::draw(const OFX::DrawArgs &args)
             // Draw a shadow for the cross hair
             // shift by (1,1) pixel
             glTranslated(pscale.x, -pscale.y, 0);
-            glColor3f(0., 0., 0.);
-        } else {
-            glColor3f(0.8, 0.8, 0.8);
         }
+        glColor3f(0.8*l, 0.8*l, 0.8*l);
 
         glPushMatrix();
         glTranslated(center.x, center.y, 0.);
