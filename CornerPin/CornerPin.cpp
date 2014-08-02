@@ -478,7 +478,10 @@ bool CornerPinPlugin::isIdentity(double time)
         return false;
     }
 
-    // all enabled points must be equal
+    // extraMat is identity.
+    
+    // The transform is identity either if no point is enabled, or if
+    // all enabled from's are equal to their counterpart to
     for (int i = 0; i < 4; ++i) {
         bool enable;
         _enable[i]->getValueAtTime(time, enable);
@@ -575,9 +578,11 @@ public:
         for (int i = 0; i < 4; ++i) {
             _to[i] = effect->fetchDouble2DParam(kToParamName[i]);
             _from[i] = effect->fetchDouble2DParam(kFromParamName[i]);
-            assert(_to[i] && _from[i]);
+            _enable[i] = effect->fetchBooleanParam(kEnableParamName[i]);
+            assert(_to[i] && _from[i] && _enable[i]);
             addParamToSlaveTo(_to[i]);
             addParamToSlaveTo(_from[i]);
+            addParamToSlaveTo(_enable[i]);
         }
         _invert = effect->fetchBooleanParam(kTransform3x3InvertParamName);
         addParamToSlaveTo(_invert);
@@ -608,6 +613,7 @@ private:
 
     OFX::Double2DParam* _to[4];
     OFX::Double2DParam* _from[4];
+    OFX::BooleanParam* _enable[4];
     OFX::BooleanParam* _invert;
     OFX::ChoiceParam* _overlayChoice;
     
@@ -636,6 +642,9 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
     bool useFrom = isFromPoints(args.time);
 
     OfxPointD p[4];
+    bool enable[4];
+    int enableBegin = 4;
+    int enableEnd = 0;
     for (int i = 0; i < 4; ++i) {
         if (_dragging == i) {
             p[i] = _draggedPos[i];
@@ -644,6 +653,15 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
                 _from[i]->getValueAtTime(args.time, p[i].x, p[i].y);
             } else {
                 _to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
+            }
+        }
+        _enable[i]->getValueAtTime(args.time, enable[i]);
+        if (enable[i]) {
+            if (i < enableBegin) {
+                enableBegin = i;
+            }
+            if (i + 1 > enableEnd) {
+                enableEnd = i + 1;
             }
         }
     }
@@ -671,28 +689,36 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
             glColor3f(0.8, 0.8, 0.8);
         }
         glBegin(GL_LINE_STRIP);
-        for (int i = 0; i < 4; ++i) {
-            glVertex2d(p[i].x, p[i].y);
+        for (int i = enableBegin; i < enableEnd; ++i) {
+            if (enable[i]) {
+                glVertex2d(p[i].x, p[i].y);
+            }
         }
-        glVertex2d(p[0].x, p[0].y);
+        if (enableBegin < enableEnd) {
+            glVertex2d(p[enableBegin].x, p[enableBegin].y);
+        }
         glEnd();
         glBegin(GL_POINTS);
-        for (int i = 0; i < 4; ++i) {
-            if (l == 1) {
-                if (_hovering == i || _dragging == i) {
-                    glColor3f(0., 1., 0.);
-                } else {
-                    glColor3f(0.8, 0.8, 0.8);
+        for (int i = enableBegin; i < enableEnd; ++i) {
+            if (enable[i]) {
+                if (l == 1) {
+                    if (_hovering == i || _dragging == i) {
+                        glColor3f(0., 1., 0.);
+                    } else {
+                        glColor3f(0.8, 0.8, 0.8);
+                    }
                 }
+                glVertex2d(p[i].x, p[i].y);
             }
-            glVertex2d(p[i].x, p[i].y);
         }
         glEnd();
         if (l == 1) {
             glColor3f(0.8, 0.8, 0.8);
         }
-        for (int i = 0; i < 4; ++i) {
-            TextRenderer::bitmapString(p[i].x, p[i].y, useFrom ? kFromParamName[i] : kToParamName[i]);
+        for (int i = enableBegin; i < enableEnd; ++i) {
+            if (enable[i]) {
+                TextRenderer::bitmapString(p[i].x, p[i].y, useFrom ? kFromParamName[i] : kToParamName[i]);
+            }
         }
         if (l == 0) {
             // translate (-1,1) pixels
