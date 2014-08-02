@@ -92,7 +92,10 @@
 
 #define kOperationParamName "operation"
 #define kOperationParamLabel "Operation"
-#define kOperationParamHint "The operation used to merge the input A and B images."
+#define kOperationParamHint \
+"The operation used to merge the input A and B images.\n" \
+"The operator formula is applied to each component: A and B represent the input component (Red, Green, Blue, or Alpha) of each input, and a and b represent the Alpha component of each input.\n" \
+"If Alpha masking is checked, the output alpha is computed using a different formula (a+b - a*b)"
 #define kAlphaMaskingParamName "screenAlpha"
 #define kAlphaMaskingParamLabel "Alpha masking"
 #define kAlphaMaskingParamHint "When enabled, the input images are unchanged where the other image has 0 alpha, and" \
