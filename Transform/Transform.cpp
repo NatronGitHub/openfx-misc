@@ -1230,6 +1230,7 @@ bool TransformInteract::penUp(const OFX::PenArgs &args)
     return ret;
 }
 
+// keyDown just updates the modifier state
 bool TransformInteract::keyDown(const OFX::KeyArgs &args)
 {
     // Note that on the Mac:
@@ -1244,6 +1245,7 @@ bool TransformInteract::keyDown(const OFX::KeyArgs &args)
     return false;
 }
 
+// keyUp just updates the modifier state
 bool TransformInteract::keyUp(const OFX::KeyArgs &args)
 {
     _modifierStateCtrl -= args.keySymbol == kOfxKey_Control_L || args.keySymbol == kOfxKey_Control_R;
