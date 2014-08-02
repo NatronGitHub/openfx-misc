@@ -221,10 +221,8 @@ public:
     }
     
 private:
-#ifdef NATRON_ROTO_INVERTIBLE
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod);
-#endif
-    
+
     /** @brief get the clip preferences */
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences);
     
@@ -305,19 +303,33 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
 
 
 
-#ifdef NATRON_ROTO_INVERTIBLE
 // (see comments in Natron code about this feature being buggy)
 bool
 RotoPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
+#ifdef NATRON_ROTO_INVERTIBLE
     // if NATRON_ROTO_INVERTIBLE is defined (but this is buggy anyway),
     // RoD should be union(defaultRoD,inputsRoD)
     // Natron does this if the RoD is infinite
     rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
     rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
     return true;
-}
+#else
+    // if source is not connected, use the Mask RoD (i.e. the default RoD)
+    // else use the union of Source and Mask RoD (Source is optional)
+    if (!srcClip_->isConnected()) {
+        return false;
+    } else {
+        rod = srcClip_->getRegionOfDefinition(args.time);
+        OfxRectD rotoRod = rotoClip_->getRegionOfDefinition(args.time);
+        rod.x1 = std::min(rod.x1, rotoRod.x1);
+        rod.x2 = std::max(rod.x2, rotoRod.x2);
+        rod.y1 = std::min(rod.y1, rotoRod.y1);
+        rod.y2 = std::max(rod.y2, rotoRod.y2);
+        return true;
+    }
 #endif
+}
 
 // the internal render function
 template <int nComponents>
