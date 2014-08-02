@@ -221,7 +221,9 @@ public:
     }
     
 private:
+#ifdef NATRON_ROTO_INVERTIBLE
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod);
+#endif
     
     /** @brief get the clip preferences */
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences);
@@ -303,14 +305,19 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
 
 
 
+#ifdef NATRON_ROTO_INVERTIBLE
+// (see comments in Natron code about this feature being buggy)
 bool
 RotoPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
-
+    // if NATRON_ROTO_INVERTIBLE is defined (but this is buggy anyway),
+    // RoD should be union(defaultRoD,inputsRoD)
+    // Natron does this if the RoD is infinite
     rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
     rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
     return true;
 }
+#endif
 
 // the internal render function
 template <int nComponents>
