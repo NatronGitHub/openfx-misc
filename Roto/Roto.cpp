@@ -101,6 +101,7 @@
 #define kPremultParamName "premultiply"
 #define kPremultParamLabel "Premultiply"
 #define kPremultParamHint "Premultiply the red,green and blue channels with the alpha channel produced by the mask."
+
 #define kOutputCompsParamName "outputComponents"
 #define kOutputCompsParamLabel "Output components"
 #define kOutputCompsParamOptionAlpha "Alpha"
@@ -137,7 +138,7 @@ public:
 
 // The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
 // by the compiler, using the same generic code for all filters.
-template <class PIX, int dstNComponents, int maxValue>
+template <class PIX, int srcNComponents, int dstNComponents, int maxValue>
 class RotoProcessor : public RotoProcessorBase
 {
 public:
@@ -149,6 +150,7 @@ public:
 private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
+        // roto and dst should have the same number of components
         assert((_roto->getPixelComponents() == ePixelComponentAlpha && dstNComponents == 1) ||
                (_roto->getPixelComponents() == ePixelComponentRGBA && dstNComponents == 4));
         //assert(filter == _filter);
@@ -164,32 +166,18 @@ private:
                 const PIX *srcPix = (const PIX*)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 const PIX *maskPix = (const PIX*) (_roto ? _roto->getPixelAddress(x, y) : 0);
 
-                PIX srcAlpha;
-                if (!srcPix) {
-                    srcAlpha = 0.;
-                } else {
-                    switch (_srcComponents) {
-                        case ePixelComponentAlpha:
+                PIX srcAlpha = 0.;
+                if (srcPix) {
+                    if (srcNComponents == 1) {
                             srcAlpha = srcPix[0];
-                            break;
-                        case ePixelComponentRGB:
+                    } else if (srcNComponents == 3) {
                             srcAlpha = 0.;
-                            break;
-                        case ePixelComponentRGBA:
+                    } else if (srcNComponents == 4) {
                             srcAlpha = srcPix[3];
-                            break;
-                        default:
-                            srcAlpha = 0.;
-                            break;
                     }
                 }
-                PIX maskAlpha;
-                if (!maskPix) {
-                    maskAlpha = 0.;
-                } else {
-                    maskAlpha = maskPix[dstNComponents-1];
-                }
-                
+                PIX maskAlpha = maskPix ? maskPix[dstNComponents-1] : 0.;
+
                 PIX srcVal[dstNComponents];
                 // fill srcVal (hopefully the compiler will optimize this)
                 if (!srcPix) {
@@ -198,36 +186,21 @@ private:
                     }
                 } else if (dstNComponents == 1) {
                     srcVal[0] = srcAlpha;
-                } else if (dstNComponents == 3) {
-                    if (_srcComponents == ePixelComponentAlpha) {
-                        for (int c = 0; c < dstNComponents; ++c) {
-                            srcVal[c] = 0;
-                        }
-                    } else { // src is RGBA or RGB
-                        for (int c = 0; c < dstNComponents; ++c) {
+                } else if (dstNComponents == 4) {
+                    if (srcNComponents == 3) {
+                        for (int c = 0; c < srcNComponents; ++c) {
                             srcVal[c] = srcPix[c];
                         }
-                    }
-                } else if (dstNComponents == 4) {
-                    switch (_srcComponents) {
-                        case ePixelComponentRGB:
-                            for (int c = 0; c < dstNComponents-1; ++c) {
-                                srcVal[c] = srcPix[c];
-                            }
-                            srcVal[dstNComponents-1] = 0.;
-                            break;
-                        case ePixelComponentRGBA:
-                            for (int c = 0; c < dstNComponents; ++c) {
-                                srcVal[c] = srcPix[c];
-                            }
-                            break;
-                        case ePixelComponentAlpha:
-                        default:
-                            for (int c = 0; c < dstNComponents-1; ++c) {
-                                srcVal[c] = 0;
-                            }
-                            srcVal[dstNComponents-1] = srcAlpha;
-                            break;
+                        srcVal[dstNComponents-1] = 0.;
+                    } else if (srcNComponents == 4) {
+                        for (int c = 0; c < srcNComponents; ++c) {
+                            srcVal[c] = srcPix[c];
+                        }
+                    } else {
+                        for (int c = 0; c < dstNComponents-1; ++c) {
+                            srcVal[c] = 0;
+                        }
+                        srcVal[dstNComponents-1] = srcAlpha;
                     }
                 }
 
@@ -276,8 +249,11 @@ private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args);
     
-    template <int nComponents>
+    template <int srcNComponents, int dstNComponents>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+
+    template <int dstNComponents>
+    void renderInternalNComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
     void setupAndProcess(RotoProcessorBase &, const OFX::RenderArguments &args);
@@ -380,28 +356,51 @@ RotoPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, 
 }
 
 // the internal render function
-template <int nComponents>
+template <int srcNComponents, int dstNComponents>
 void
 RotoPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
         case OFX::eBitDepthUByte :
         {
-            RotoProcessor<unsigned char, nComponents, 255> fred(*this);
+            RotoProcessor<unsigned char, srcNComponents, dstNComponents, 255> fred(*this);
             setupAndProcess(fred, args);
         }   break;
         case OFX::eBitDepthUShort :
         {
-            RotoProcessor<unsigned short, nComponents, 65535> fred(*this);
+            RotoProcessor<unsigned short, srcNComponents, dstNComponents, 65535> fred(*this);
             setupAndProcess(fred, args);
         }   break;
         case OFX::eBitDepthFloat :
         {
-            RotoProcessor<float, nComponents, 1> fred(*this);
+            RotoProcessor<float, srcNComponents, dstNComponents, 1> fred(*this);
             setupAndProcess(fred, args);
         }   break;
         default :
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
+// the overridden render function
+template <int dstNComponents>
+void
+RotoPlugin::renderInternalNComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+{
+
+    // instantiate the render code based on the pixel depth of the dst clip
+    OFX::BitDepthEnum       srcBitDepth    = srcClip_->getPixelDepth();
+    OFX::PixelComponentEnum srcComponents  = srcClip_->getPixelComponents();
+
+    assert(srcComponents == OFX::ePixelComponentRGBA || srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentAlpha);
+    assert(srcBitDepth == dstBitDepth);
+
+    if (srcComponents == OFX::ePixelComponentRGBA) {
+        renderInternal<4,dstNComponents>(args, dstBitDepth);
+    } else if (srcComponents == OFX::ePixelComponentRGB) {
+        renderInternal<3,dstNComponents>(args, dstBitDepth);
+    } else {
+        assert(srcComponents == OFX::ePixelComponentAlpha);
+        renderInternal<1,dstNComponents>(args, dstBitDepth);
     }
 }
 
@@ -414,14 +413,12 @@ RotoPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
 
-    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentAlpha);
     if (dstComponents == OFX::ePixelComponentRGBA) {
-        renderInternal<4>(args, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
-        renderInternal<3>(args, dstBitDepth);
+        renderInternalNComponents<4>(args, dstBitDepth);
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        renderInternal<1>(args, dstBitDepth);
+        renderInternalNComponents<1>(args, dstBitDepth);
     }
 }
 
@@ -442,6 +439,7 @@ void RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
             assert(false);
             break;
     }
+    clipPreferences.setClipComponents(*rotoClip_, outputComponents);
     clipPreferences.setClipComponents(*dstClip_, outputComponents);
 }
 
