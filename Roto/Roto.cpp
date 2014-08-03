@@ -107,6 +107,19 @@
 #define kOutputCompsParamOptionAlpha "Alpha"
 #define kOutputCompsParamOptionRGBA "RGBA"
 
+#define kParamProcessR      "r"
+#define kParamProcessRLabel "R"
+#define kParamProcessRHint  "Process red component"
+#define kParamProcessG      "g"
+#define kParamProcessGLabel "G"
+#define kParamProcessGHint  "Process green component"
+#define kParamProcessB      "b"
+#define kParamProcessBLabel "B"
+#define kParamProcessBHint  "Process blue component"
+#define kParamProcessA      "a"
+#define kParamProcessALabel "A"
+#define kParamProcessAHint  "Process alpha component"
+
 using namespace OFX;
 
 class RotoProcessorBase : public OFX::ImageProcessor
@@ -115,6 +128,10 @@ protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_roto;
     PixelComponentEnum _srcComponents;
+    bool _red;
+    bool _green;
+    bool _blue;
+    bool _alpha;
 
 public:
     RotoProcessorBase(OFX::ImageEffect &instance)
@@ -133,6 +150,14 @@ public:
 
     /** @brief set the optional mask image */
     void setRotoImg(const OFX::Image *v) {_roto = v;}
+
+    void setValues(bool red, bool green, bool blue, bool alpha)
+    {
+        _red = red;
+        _green = green;
+        _blue = blue;
+        _alpha = alpha;
+    }
 };
 
 
@@ -150,6 +175,16 @@ public:
 private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
+        bool proc[dstNComponents];
+        if (dstNComponents == 1) {
+            proc[0] = _alpha;
+        } else if (dstNComponents == 4) {
+            proc[0] = _red;
+            proc[1] = _green;
+            proc[2] = _blue;
+            proc[3] = _alpha;
+        }
+
         // roto and dst should have the same number of components
         assert((_roto->getPixelComponents() == ePixelComponentAlpha && dstNComponents == 1) ||
                (_roto->getPixelComponents() == ePixelComponentRGBA && dstNComponents == 4));
@@ -206,7 +241,7 @@ private:
 
                 // merge/over
                 for (int c = 0; c < dstNComponents; ++c) {
-                    dstPix[c] = OFX::MergeImages2D::overFunctor<PIX,maxValue>(maskPix[c], srcVal[c], maskAlpha, srcAlpha);
+                    dstPix[c] = proc[c] ? OFX::MergeImages2D::overFunctor<PIX,maxValue>(maskPix[c], srcVal[c], maskAlpha, srcAlpha) : srcVal[c];
                 }
             }
         }
@@ -238,6 +273,11 @@ public:
         assert(rotoClip_ && (rotoClip_->getPixelComponents() == ePixelComponentAlpha || rotoClip_->getPixelComponents() == ePixelComponentRGBA));
         _outputComps = fetchChoiceParam(kOutputCompsParamName);
         assert(_outputComps);
+        _paramProcessR = fetchBooleanParam(kParamProcessR);
+        _paramProcessG = fetchBooleanParam(kParamProcessG);
+        _paramProcessB = fetchBooleanParam(kParamProcessB);
+        _paramProcessA = fetchBooleanParam(kParamProcessA);
+        assert(_paramProcessR && _paramProcessG && _paramProcessB && _paramProcessA);
     }
     
 private:
@@ -258,11 +298,17 @@ private:
     /* set up and run a processor */
     void setupAndProcess(RotoProcessorBase &, const OFX::RenderArguments &args);
 
+    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) /*OVERRIDE FINAL*/;
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::Clip *rotoClip_;
+    OFX::BooleanParam* _paramProcessR;
+    OFX::BooleanParam* _paramProcessG;
+    OFX::BooleanParam* _paramProcessB;
+    OFX::BooleanParam* _paramProcessA;
     ChoiceParam* _outputComps;
 };
 
@@ -313,7 +359,14 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
         // Set it in the processor
         processor.setRotoImg(mask.get());
     }
-    
+
+    bool red, green, blue, alpha;
+    _paramProcessR->getValueAtTime(args.time, red);
+    _paramProcessG->getValueAtTime(args.time, green);
+    _paramProcessB->getValueAtTime(args.time, blue);
+    _paramProcessA->getValueAtTime(args.time, alpha);
+    processor.setValues(red, green, blue, alpha);
+
     // set the images
     processor.setDstImg(dst.get());
     processor.setSrcImg(src.get());
@@ -422,7 +475,8 @@ RotoPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
-void RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
+void
+RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     int index;
     _outputComps->getValue(index);
@@ -443,13 +497,39 @@ void RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     clipPreferences.setClipComponents(*dstClip_, outputComponents);
 }
 
+bool
+RotoPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+{
+    OFX::PixelComponentEnum srcComponents  = srcClip_->getPixelComponents();
+    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    if (srcComponents != dstComponents) {
+        return false;
+    }
 
+    bool alpha;
+    _paramProcessA->getValueAtTime(args.time, alpha);
+
+    if (srcComponents == ePixelComponentAlpha && !alpha) {
+        identityClip = srcClip_;
+        return true;
+    }
+    bool red, green, blue;
+    _paramProcessR->getValueAtTime(args.time, red);
+    _paramProcessG->getValueAtTime(args.time, green);
+    _paramProcessB->getValueAtTime(args.time, blue);
+    if (srcComponents == ePixelComponentRGBA && !red && !green && !blue && !alpha) {
+        identityClip = srcClip_;
+        return true;
+    }
+    return false;
+}
 
 using namespace OFX;
 
 mDeclarePluginFactory(RotoPluginFactory, {}, {});
 
-void RotoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+RotoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabels(kPluginName, kPluginName, kPluginName);
@@ -481,7 +561,8 @@ void RotoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 
 
-OFX::ImageEffect* RotoPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect*
+RotoPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
     return new RotoPlugin(handle, false);
 }
@@ -489,7 +570,8 @@ OFX::ImageEffect* RotoPluginFactory::createInstance(OfxImageEffectHandle handle,
 
 
 
-void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void
+RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -536,6 +618,33 @@ void RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     outputComps->setDefault(0);
     desc.addClipPreferencesSlaveParam(*outputComps);
     page->addChild(*outputComps);
+
+    OFX::BooleanParamDescriptor* processR = desc.defineBooleanParam(kParamProcessR);
+    processR->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+    processR->setHint(kParamProcessRHint);
+    processR->setDefault(true);
+    processR->setLayoutHint(eLayoutHintNoNewLine);
+    page->addChild(*processR);
+
+    OFX::BooleanParamDescriptor* processG = desc.defineBooleanParam(kParamProcessG);
+    processG->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+    processG->setHint(kParamProcessGHint);
+    processG->setDefault(true);
+    processG->setLayoutHint(eLayoutHintNoNewLine);
+    page->addChild(*processG);
+
+    OFX::BooleanParamDescriptor* processB = desc.defineBooleanParam( kParamProcessB );
+    processB->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+    processB->setHint(kParamProcessBHint);
+    processB->setDefault(true);
+    processB->setLayoutHint(eLayoutHintNoNewLine);
+    page->addChild(*processB);
+
+    OFX::BooleanParamDescriptor* processA = desc.defineBooleanParam( kParamProcessA );
+    processA->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+    processA->setHint(kParamProcessAHint);
+    processA->setDefault(true);
+    page->addChild(*processA);
 }
 
 void getRotoPluginID(OFX::PluginFactoryArray &ids)
