@@ -428,6 +428,7 @@ void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     offset->setLabels(kOffsetParamLabel, kOffsetParamLabel, kOffsetParamLabel);
     offset->setHint(kOffsetParamHint);
     offset->setDefault(0.);
+    offset->setIncrement(0.005);
     offset->setDisplayRange(0., 1.);
     page->addChild(*offset);
 
@@ -435,6 +436,7 @@ void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     gain->setLabels(kGainParamLabel, kGainParamLabel, kGainParamLabel);
     gain->setHint(kGainParamHint);
     gain->setDefault(1.);
+    gain->setIncrement(0.005);
     gain->setDisplayRange(0., 1.);
     gain->setDoubleType(eDoubleTypeScale);
     page->addChild(*gain);

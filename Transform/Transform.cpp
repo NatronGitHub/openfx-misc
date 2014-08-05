@@ -1267,6 +1267,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     translate->setDoubleType(eDoubleTypeXYAbsolute);
     //translate->setDimensionLabels("x","y");
     translate->setDefault(0, 0);
+    translate->setIncrement(1.);
     page->addChild(*translate);
 
     DoubleParamDescriptor* rotate = desc.defineDoubleParam(kRotateParamName);
@@ -1275,6 +1276,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     rotate->setDefault(0);
     //rotate->setRange(-180, 180); // the angle may be -infinity..+infinity
     rotate->setDisplayRange(-180, 180);
+    rotate->setIncrement(0.5);
     page->addChild(*rotate);
 
     Double2DParamDescriptor* scale = desc.defineDouble2DParam(kScaleParamName);
@@ -1284,6 +1286,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     scale->setDefault(1,1);
     //scale->setRange(0.1,0.1,10,10);
     scale->setDisplayRange(0.1, 0.1, 10, 10);
+    scale->setIncrement(0.01);
     scale->setLayoutHint(OFX::eLayoutHintNoNewLine);
     page->addChild(*scale);
 
@@ -1298,12 +1301,14 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     skewX->setLabels(kSkewXParamName, kSkewXParamName, kSkewXParamName);
     skewX->setDefault(0);
     skewX->setDisplayRange(-1,1);
+    skewX->setIncrement(0.01);
     page->addChild(*skewX);
 
     DoubleParamDescriptor* skewY = desc.defineDoubleParam(kSkewYParamName);
     skewY->setLabels(kSkewYParamLabel, kSkewYParamLabel, kSkewYParamLabel);
     skewY->setDefault(0);
     skewY->setDisplayRange(-1,1);
+    skewY->setIncrement(0.01);
     page->addChild(*skewY);
 
     ChoiceParamDescriptor* skewOrder = desc.defineChoiceParam(kSkewOrderParamName);
@@ -1321,6 +1326,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     //center->setDimensionLabels("x","y");
     center->setDefaultCoordinateSystem(eCoordinatesNormalised);
     center->setDefault(0.5, 0.5);
+    center->setIncrement(1.);
     page->addChild(*center);
 }
 

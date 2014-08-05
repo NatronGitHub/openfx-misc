@@ -482,6 +482,7 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         convergepoint->setDoubleType(eDoubleTypeXYAbsolute);
         convergepoint->setDefaultCoordinateSystem(eCoordinatesNormalised);
         convergepoint->setDefault(0.5, 0.5);
+        convergepoint->setIncrement(1.);
         convergepoint->setAnimates(true);
         page->addChild(*convergepoint);
     }

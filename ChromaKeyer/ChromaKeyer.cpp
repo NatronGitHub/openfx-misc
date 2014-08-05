@@ -962,6 +962,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     keyLift->setHint(kKeyLiftParamHint);
     keyLift->setRange(0., 1.);
     keyLift->setDisplayRange(0., 1.);
+    keyLift->setIncrement(0.01);
     keyLift->setDefault(0.);
     keyLift->setDigits(4);
     keyLift->setAnimates(true);
@@ -972,6 +973,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     keyGain->setHint(kKeyGainParamHint);
     keyGain->setRange(0., std::numeric_limits<double>::max());
     keyGain->setDisplayRange(0., 2.);
+    keyGain->setIncrement(0.01);
     keyGain->setDefault(1.);
     keyGain->setDigits(4);
     keyGain->setAnimates(true);

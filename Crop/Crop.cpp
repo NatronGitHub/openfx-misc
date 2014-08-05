@@ -626,6 +626,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     size->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     size->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     size->setDefault(1., 1.);
+    size->setIncrement(1.);
     size->setDimensionLabels("width", "height");
     size->setHint("Width and height of the crop rectangle");
     size->setIncrement(1.);
@@ -636,6 +637,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     softness->setLabels(kSoftnessParamLabel, kSoftnessParamLabel, kSoftnessParamLabel);
     softness->setDefault(0);
     softness->setRange(0., 100.);
+    softness->setIncrement(1.);
     softness->setHint("Size of the fade to black around edges to apply");
     page->addChild(*softness);
     

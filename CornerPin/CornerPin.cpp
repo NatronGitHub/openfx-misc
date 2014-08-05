@@ -887,6 +887,7 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
     size->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     size->setAnimates(true);
     size->setDefault(x, y);
+    size->setIncrement(1.);
     size->setDimensionLabels("x", "y");
     size->setLayoutHint(OFX::eLayoutHintNoNewLine);
     size->setParent(*group);
@@ -914,6 +915,7 @@ static void defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
     size->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     size->setAnimates(true);
     size->setDefault(x, y);
+    size->setIncrement(1.);
     size->setDimensionLabels("x", "y");
     size->setParent(*group);
     page->addChild(*size);
@@ -931,6 +933,7 @@ static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
     row->setLabels("", "", "");
     row->setAnimates(true);
     row->setDefault(x,y,z);
+    row->setIncrement(0.01);
     row->setParent(*group);
     page->addChild(*row);
 }
