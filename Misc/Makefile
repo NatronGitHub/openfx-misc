@@ -17,6 +17,7 @@ NoOp.o \
 OneView.o \
 Premult.o \
 ReConverge.o \
+Retime.o \
 RGBLut.o \
 Roto.o \
 Shuffle.o \
@@ -53,6 +54,7 @@ VPATH += \
 ../OneView \
 ../Premult \
 ../ReConverge \
+../Retime \
 ../RGBLut \
 ../Roto \
 ../Shuffle \
@@ -84,6 +86,7 @@ CXXFLAGS += \
 -I../OneView \
 -I../Premult \
 -I../ReConverge \
+-I../Retime \
 -I../RGBLut \
 -I../Roto \
 -I../Shuffle \

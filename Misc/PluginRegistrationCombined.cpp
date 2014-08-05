@@ -18,6 +18,7 @@
 #ifdef DEBUG
 #include "ReConverge.h"
 #endif
+#include "Retime.h"
 #include "RGBLut.h"
 #include "Roto.h"
 #include "Shuffle.h"
@@ -53,6 +54,7 @@ namespace OFX
 #ifdef DEBUG
             getReConvergePluginID(ids);
 #endif
+            getRetimePluginID(ids);
             getRGBLutPluginID(ids);
             getRotoPluginID(ids);
             getShufflePluginID(ids);
