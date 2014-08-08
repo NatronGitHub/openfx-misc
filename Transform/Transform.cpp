@@ -1267,7 +1267,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     translate->setDoubleType(eDoubleTypeXYAbsolute);
     //translate->setDimensionLabels("x","y");
     translate->setDefault(0, 0);
-    translate->setIncrement(1.);
+    translate->setIncrement(10.);
     page->addChild(*translate);
 
     DoubleParamDescriptor* rotate = desc.defineDoubleParam(kRotateParamName);
@@ -1276,7 +1276,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     rotate->setDefault(0);
     //rotate->setRange(-180, 180); // the angle may be -infinity..+infinity
     rotate->setDisplayRange(-180, 180);
-    rotate->setIncrement(0.5);
+    rotate->setIncrement(0.1);
     page->addChild(*rotate);
 
     Double2DParamDescriptor* scale = desc.defineDouble2DParam(kScaleParamName);
