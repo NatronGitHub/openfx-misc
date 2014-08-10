@@ -193,7 +193,7 @@ public:
             *g = std::max(0.,*g);
             *b = std::max(0.,*b);
         }
-        if (_clampBlack) {
+        if (_clampWhite) {
             *r = std::min(1.,*r);
             *g = std::min(1.,*g);
             *b = std::min(1.,*b);
@@ -282,7 +282,6 @@ public:
     , dstClip_(0)
     , srcClip_(0)
     , maskClip_(0)
-    
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
@@ -373,7 +372,7 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     processor.setSrcImg(src.get());
     processor.setRenderWindow(args.renderWindow);
     
-    RGBAValues blackPoint,whitePoint,black,white,multiply,offset,gamma;
+    RGBAValues blackPoint, whitePoint, black, white, multiply, offset, gamma;
     _blackPoint->getValueAtTime(args.time, blackPoint.r, blackPoint.g, blackPoint.b, blackPoint.a);
     _whitePoint->getValueAtTime(args.time, whitePoint.r, whitePoint.g, whitePoint.b, whitePoint.a);
     _black->getValueAtTime(args.time, black.r, black.g, black.b, black.a);
@@ -396,7 +395,6 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
 void
 GradePlugin::render(const OFX::RenderArguments &args)
 {
-    
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
@@ -456,17 +454,10 @@ GradePlugin::render(const OFX::RenderArguments &args)
 bool
 GradePlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
 {
-    // TODO: handle all parameters correctly, not only mix
-
-    //bool red, green, blue, alpha;
     double mix;
-    //_paramProcessR->getValueAtTime(args.time, red);
-    //_paramProcessG->getValueAtTime(args.time, green);
-    //_paramProcessB->getValueAtTime(args.time, blue);
-    //_paramProcessA->getValueAtTime(args.time, alpha);
     _mix->getValueAtTime(args.time, mix);
 
-    if (mix == 0. /*|| (!red && !green && !blue && !alpha)*/) {
+    if (mix == 0.) {
         identityClip = srcClip_;
         return true;
     }
