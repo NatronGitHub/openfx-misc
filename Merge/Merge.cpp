@@ -193,8 +193,12 @@ private:
                         tmpA[c] = srcPixA ? ((float)srcPixA[c] / (float)maxValue) : 0.;
                         tmpB[c] = srcPixB ? ((float)srcPixB[c] / (float)maxValue) : 0.;
                     }
-
-                    mergePixel<float, nComponents, maxValue>(_operation,_alphaMasking, tmpA, tmpB, tmpPix);
+                    // work in float: clamping is done when mixing
+                    mergePixel<float, nComponents, 1>(_operation, _alphaMasking, tmpA, tmpB, tmpPix);
+                    // denormalize
+                    for (int c = 0; c < nComponents; ++c) {
+                        tmpPix[c] *= maxValue;
+                    }
                     ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPixB, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 } else {
                     // everything is black and transparent
