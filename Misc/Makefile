@@ -73,6 +73,7 @@ CXXFLAGS += \
 -I../Anaglyph \
 -I../ChromaKeyer \
 -I../ColorCorrect \
+-I../ColorMatrix \
 -I../Constant \
 -I../CopyRectangle \
 -I../CornerPin \
