@@ -1,6 +1,7 @@
 #include "Anaglyph.h"
 #include "ChromaKeyer.h"
 #include "ColorCorrect.h"
+#include "ColorMatrix.h"
 #include "Constant.h"
 #include "CopyRectangle.h"
 #include "CornerPin.h"
@@ -37,6 +38,7 @@ namespace OFX
             getAnaglyphPluginID(ids);
             getChromaKeyerPluginID(ids);
             getColorCorrectPluginID(ids);
+            getColorMatrixPluginID(ids);
             getConstantPluginID(ids);
             getCopyRectanglePluginID(ids);
             getCornerPinPluginIDs(ids);

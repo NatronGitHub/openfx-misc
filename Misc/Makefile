@@ -2,6 +2,7 @@ PLUGINOBJECTS = \
 Anaglyph.o \
 ChromaKeyer.o \
 ColorCorrect.o \
+ColorMatrix.o \
 Constant.o \
 CopyRectangle.o \
 CornerPin.o \
@@ -39,6 +40,7 @@ VPATH += \
 ../Anaglyph \
 ../ChromaKeyer \
 ../ColorCorrect \
+../ColorMatrix \
 ../Constant \
 ../CopyRectangle \
 ../CornerPin \

@@ -4,6 +4,7 @@ SUBDIRS_NOMULTI = \
 Anaglyph \
 ChromaKeyer \
 ColorCorrect \
+ColorMatrix \
 Constant \
 CornerPin \
 Crop \

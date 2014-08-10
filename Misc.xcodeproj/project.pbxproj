@@ -58,6 +58,18 @@
 
 /* Begin PBXBuildFile section */
 		1E0E4EA2194CAF9E0072248F /* ReConverge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ECE544F185F23E3001ED442 /* ReConverge.cpp */; };
+		1E10A6FA1997BFE400EE87A1 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1E10A6FB1997BFE400EE87A1 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1E10A6FC1997BFE400EE87A1 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1E10A6FD1997BFE400EE87A1 /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1E10A6FE1997BFE400EE87A1 /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1E10A6FF1997BFE400EE87A1 /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1E10A7001997BFE400EE87A1 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1E10A7011997BFE400EE87A1 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1E10A7031997BFE400EE87A1 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1E10A70A1997C03100EE87A1 /* ColorMatrix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E10A7091997C03100EE87A1 /* ColorMatrix.cpp */; };
+		1E10A70B1997C03100EE87A1 /* ColorMatrix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E10A7091997C03100EE87A1 /* ColorMatrix.cpp */; };
+		1E10A70D1997C04500EE87A1 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E10A70C1997C04500EE87A1 /* PluginRegistration.cpp */; };
 		1E181AEE19518CCF00FAB9A9 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E181AEF19518CCF00FAB9A9 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E181AF019518CCF00FAB9A9 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -624,6 +636,12 @@
 		1E009D6A17F44D70003071CC /* ofxProgress.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ofxProgress.h; path = ../../include/ofxProgress.h; sourceTree = "<group>"; };
 		1E009D6B17F44D70003071CC /* ofxProperty.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ofxProperty.h; path = ../../include/ofxProperty.h; sourceTree = "<group>"; };
 		1E009D6C17F44D70003071CC /* ofxTimeLine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ofxTimeLine.h; path = ../../include/ofxTimeLine.h; sourceTree = "<group>"; };
+		1E10A7071997BFE400EE87A1 /* ColorMatrix.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorMatrix.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E10A7091997C03100EE87A1 /* ColorMatrix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ColorMatrix.cpp; path = ColorMatrix/ColorMatrix.cpp; sourceTree = "<group>"; };
+		1E10A70C1997C04500EE87A1 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PluginRegistration.cpp; path = ColorMatrix/PluginRegistration.cpp; sourceTree = "<group>"; };
+		1E10A70E1997C05200EE87A1 /* ColorMatrix.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ColorMatrix.h; path = ColorMatrix/ColorMatrix.h; sourceTree = "<group>"; };
+		1E10A70F1997C05200EE87A1 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = ColorMatrix/Info.plist; sourceTree = "<group>"; };
+		1E10A7101997C05200EE87A1 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; name = Makefile; path = ColorMatrix/Makefile; sourceTree = "<group>"; };
 		1E181AFB19518CCF00FAB9A9 /* Invert.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Invert.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E181AFD19518DF500FAB9A9 /* Invert.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Invert.cpp; sourceTree = "<group>"; };
 		1E181AFE19518DF500FAB9A9 /* Invert.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Invert.h; sourceTree = "<group>"; };
@@ -846,6 +864,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		1E10A7021997BFE400EE87A1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E10A7031997BFE400EE87A1 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E181AF619518CCF00FAB9A9 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -1081,6 +1107,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1E10A6F51997BFD000EE87A1 /* ColorMatrix */ = {
+			isa = PBXGroup;
+			children = (
+				1E10A7091997C03100EE87A1 /* ColorMatrix.cpp */,
+				1E10A70E1997C05200EE87A1 /* ColorMatrix.h */,
+				1E10A70F1997C05200EE87A1 /* Info.plist */,
+				1E10A7101997C05200EE87A1 /* Makefile */,
+				1E10A70C1997C04500EE87A1 /* PluginRegistration.cpp */,
+			);
+			name = ColorMatrix;
+			sourceTree = "<group>";
+		};
 		1E181AE919518BF900FAB9A9 /* Invert */ = {
 			isa = PBXGroup;
 			children = (
@@ -1270,6 +1308,7 @@
 				1EB9C080196DD64E003C1849 /* NoOp.ofx.bundle */,
 				1ED4AEA61973DCAD00EE64C8 /* Noise.ofx.bundle */,
 				1E2A93581990EE690061B1F1 /* Retime.ofx.bundle */,
+				1E10A7071997BFE400EE87A1 /* ColorMatrix.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -1284,6 +1323,7 @@
 				1EDE1B8E182D0511002392CB /* Anaglyph */,
 				1E3451E0190695070080D699 /* ChromaKeyer */,
 				D7B4C95D18D9DA410004137D /* ColorCorrect */,
+				1E10A6F51997BFD000EE87A1 /* ColorMatrix */,
 				1E59336B194A0C3F00804448 /* Constant */,
 				D73030FE19518ACE0024BCA4 /* CopyRectangle */,
 				D7257D45192E910C0040CD9C /* CornerPin */,
@@ -1624,6 +1664,22 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		1E10A6F61997BFE400EE87A1 /* ColorMatrix.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1E10A7041997BFE400EE87A1 /* Build configuration list for PBXNativeTarget "ColorMatrix.ofx" */;
+			buildPhases = (
+				1E10A6F71997BFE400EE87A1 /* Sources */,
+				1E10A7021997BFE400EE87A1 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ColorMatrix.ofx;
+			productName = basic.ofx;
+			productReference = 1E10A7071997BFE400EE87A1 /* ColorMatrix.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 		1E181AEA19518CCF00FAB9A9 /* Invert.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1E181AF819518CCF00FAB9A9 /* Build configuration list for PBXNativeTarget "Invert.ofx" */;
@@ -2114,6 +2170,7 @@
 				1EDE1B7B182D04D9002392CB /* Anaglyph.ofx */,
 				1E3451E11906952D0080D699 /* ChromaKeyer.ofx */,
 				1E3451FD190695DC0080D699 /* ColorCorrect.ofx */,
+				1E10A6F61997BFE400EE87A1 /* ColorMatrix.ofx */,
 				1E59336C194A0C6300804448 /* Constant.ofx */,
 				D730310519518B6B0024BCA4 /* CopyRectangle.ofx */,
 				D7257D4B192E91120040CD9C /* CornerPin.ofx */,
@@ -2145,6 +2202,23 @@
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		1E10A6F71997BFE400EE87A1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E10A6FA1997BFE400EE87A1 /* ofxsCore.cpp in Sources */,
+				1E10A6FB1997BFE400EE87A1 /* ofxsImageEffect.cpp in Sources */,
+				1E10A70A1997C03100EE87A1 /* ColorMatrix.cpp in Sources */,
+				1E10A6FC1997BFE400EE87A1 /* ofxsInteract.cpp in Sources */,
+				1E10A6FD1997BFE400EE87A1 /* ofxsLog.cpp in Sources */,
+				1E10A6FE1997BFE400EE87A1 /* ofxsMultiThread.cpp in Sources */,
+				1E10A6FF1997BFE400EE87A1 /* ofxsParams.cpp in Sources */,
+				1E10A70D1997C04500EE87A1 /* PluginRegistration.cpp in Sources */,
+				1E10A7001997BFE400EE87A1 /* ofxsProperty.cpp in Sources */,
+				1E10A7011997BFE400EE87A1 /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E181AEB19518CCF00FAB9A9 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -2346,6 +2420,7 @@
 				1E9B5F5C198A51D40095C8AA /* ofxsRectangleInteract.cpp in Sources */,
 				1E9B5F5F198A51F40095C8AA /* ofxsOGLTextRenderer.cpp in Sources */,
 				1EFB4E2019461B76005932AF /* Difference.cpp in Sources */,
+				1E10A70B1997C03100EE87A1 /* ColorMatrix.cpp in Sources */,
 				D725A2E318E0D54E001A1E3E /* Grade.cpp in Sources */,
 				1E52FFD01955CE720000FB79 /* Premult.cpp in Sources */,
 				1E181B0219518E0000FAB9A9 /* Invert.cpp in Sources */,
@@ -2828,6 +2903,28 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				PRODUCT_NAME = "all copy";
+			};
+			name = Release;
+		};
+		1E10A7051997BFE400EE87A1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = ColorMatrix/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = ColorMatrix.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1E10A7061997BFE400EE87A1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = ColorMatrix/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = ColorMatrix.ofx;
+				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
 		};
@@ -3573,6 +3670,15 @@
 			buildConfigurations = (
 				1E0E4EA9194CB2970072248F /* Debug */,
 				1E0E4EAA194CB2970072248F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1E10A7041997BFE400EE87A1 /* Build configuration list for PBXNativeTarget "ColorMatrix.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E10A7051997BFE400EE87A1 /* Debug */,
+				1E10A7061997BFE400EE87A1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
