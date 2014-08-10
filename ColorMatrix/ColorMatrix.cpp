@@ -73,6 +73,7 @@
 #include "ColorMatrix.h"
 
 #include <cmath>
+#include <cstring>
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -232,7 +233,7 @@ private:
                    }
                 } else {
                     // no src pixel here, be black and transparent
-                    memset(dstPix ,0, nComponents * sizeof(PIX));
+                    std::memset(dstPix ,0, nComponents * sizeof(PIX));
                 }
                 ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 // increment the dst pixel
