@@ -138,7 +138,7 @@ In order to get a specific tag, corresponding to a source release, do `git tag -
 to get the list of tags, and then `git checkout tags/<tag_name>`
 to checkout a given tag.
 
-### Unix/Linux/OS X, using Makefiles
+### Unix/Linux/FreeBSD/OS X, using Makefiles
 
 To compile an optimized version for a 64-bits machine: open a shell in
 the toplevel directory, and type

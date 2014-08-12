@@ -115,6 +115,10 @@
 #define OFX_PATH "/usr/OFX/Plugins/"
 #define BINARY_PATH "/usr/OFX/Plugins.disabled/Sapphire.ofx.bundle/Contents/Linux-x86-64/Sapphire.ofx"
 #endif
+#if defined(__FreeBSD__)
+#define OFX_PATH "/usr/OFX/Plugins/"
+#define BINARY_PATH "/usr/OFX/Plugins.disabled/Sapphire.ofx.bundle/Contents/FreeBSD-x86-64/Sapphire.ofx"
+#endif
 #if defined(__APPLE__)
 #define OFX_PATH "/Library/OFX/Plugins/"
 #define BINARY_PATH "/Library/OFX/Plugins.disabled/Sapphire.ofx.bundle/Contents/MacOS/Sapphire.ofx"
@@ -242,7 +246,7 @@ static const char* help_string =
 "OFX DebugProxy Help:\n"
 "- Specify the PATH to the plugin to be debugged using the environment variable\n"
 "  OFX_DEBUGPROXY_PATH.\n"
-"  this can be done on Unix/Linux/OSX using something like:\n"
+"  this can be done on Unix/Linux/FreeBSD/OSX using something like:\n"
 "  env OFX_DEBUGPROXY_BINARY=/path/to/plugindir/plugin.ofx /path/to/ofx/host/bin/host\n"
 "  the first path points to the plugin binary (ending in \".ofx\"), and the second\n"
 "  path is the host executable.\n"
@@ -263,6 +267,10 @@ static const char* help_string =
 "  the environment variable LD_LIBRARY_PATH\n"
 "  (add \"LD_LIBRARY_PATH=/path/to/plugindir\" after the \"env\" in the line above).\n"
 #endif
+#if defined(__FreeBSD__)
+"  the environment variable LD_LIBRARY_PATH\n"
+"  (add \"LD_LIBRARY_PATH=/path/to/plugindir\" after the \"env\" in the line above).\n"
+#endif
 #if defined(__APPLE__)
 "  the environment variable DYLD_LIBRARY_PATH\n"
 "  (add \"DYLD_LIBRARY_PATH=/path/to/plugindir after the \"env\" in the line above).\n"
@@ -274,6 +282,10 @@ static const char* help_string =
 #if defined(__linux__)
 "  On Linux, this can be done using the following command:\n"
 "  touch "OFX_PATH"DebugProxy.ofx.bundle/Contents/Linux-x86*/DebugProxy.ofx\n"
+#endif
+#if defined(__FreeBSD__)
+"  On FreeBSD, this can be done using the following command:\n"
+"  touch "OFX_PATH"DebugProxy.ofx.bundle/Contents/FreeBSD-x86*/DebugProxy.ofx\n"
 #endif
 #if defined(__APPLE__)
 "  On OS X, this can be done using the following command:\n"
