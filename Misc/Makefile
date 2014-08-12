@@ -62,6 +62,7 @@ VPATH += \
 ../Shuffle \
 ../SideBySide \
 ../Switch \
+../TestRender \
 ../TimeOffset \
 ../TrackerPM \
 ../Transform
@@ -95,6 +96,7 @@ CXXFLAGS += \
 -I../Shuffle \
 -I../SideBySide \
 -I../Switch \
+-I../TestRender \
 -I../TimeOffset \
 -I../TrackerPM \
 -I../Transform

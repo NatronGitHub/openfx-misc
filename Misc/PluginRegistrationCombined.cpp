@@ -25,6 +25,7 @@
 #include "Shuffle.h"
 #include "SideBySide.h"
 #include "Switch.h"
+#include "TestRender.h"
 #include "TimeOffset.h"
 #include "TrackerPM.h"
 #include "Transform.h"
@@ -62,6 +63,7 @@ namespace OFX
             getShufflePluginID(ids);
             getSideBySidePluginID(ids);
             getSwitchPluginID(ids);
+            getTestRenderPluginID(ids);
             getTimeOffsetPluginID(ids);
             getTrackerPMPluginID(ids);
             getTransformPluginIDs(ids);
