@@ -46,6 +46,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
+#include "ofxsMerging.h"
 
 
 #define kPluginName "TestRenderOFX"
@@ -155,6 +156,8 @@ private:
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
+        bool toto = true;
+        // TODO: write the render function
         float tmpPix[nComponents];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
@@ -438,7 +441,13 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isI
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-   double mix;
+    bool forceCopy;
+    _forceCopy->getValueAtTime(args.time, forceCopy);
+    if (forceCopy) {
+        return false;
+    }
+
+    double mix;
     _mix->getValueAtTime(args.time, mix);
 
     if (mix == 0.) {
@@ -447,6 +456,21 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isI
     } else {
         return false;
     }
+
+    bool identityEven, identityOdd;
+    _identityEven->getValueAtTime(args.time, identityEven);
+    _identityOdd->getValueAtTime(args.time, identityOdd);
+    unsigned int mipMapLevel = MergeImages2D::mipmapLevelFromScale(args.renderScale.x);
+    bool isOdd = bool(mipMapLevel & 1);
+    if ((identityEven && !isOdd) || (identityOdd && isOdd)) {
+        identityClip = srcClip_;
+        return true;
+    }
+
+    const OfxRectI& roi = args.renderWindow;
+    // TODO: if renderWindow is fully in the lower left or upper right corner, return true
+
+    return false;
 }
 
 
