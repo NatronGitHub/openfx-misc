@@ -24,6 +24,7 @@ Roto.o \
 Shuffle.o \
 SideBySide.o \
 Switch.o \
+TestRender.o \
 TimeOffset.o \
 TrackerPM.o \
 Transform.o \
@@ -62,7 +63,7 @@ VPATH += \
 ../Shuffle \
 ../SideBySide \
 ../Switch \
-../TestRender \
+../Test \
 ../TimeOffset \
 ../TrackerPM \
 ../Transform
@@ -96,7 +97,7 @@ CXXFLAGS += \
 -I../Shuffle \
 -I../SideBySide \
 -I../Switch \
--I../TestRender \
+-I../Test \
 -I../TimeOffset \
 -I../TrackerPM \
 -I../Transform

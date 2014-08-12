@@ -23,7 +23,7 @@ Roto \
 Shuffle \
 SideBySide \
 Switch \
-TestRender \
+Test \
 TimeOffset \
 TrackerPM \
 Transform
