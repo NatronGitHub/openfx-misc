@@ -82,6 +82,7 @@
 #include "ofxsMaskMix.h"
 
 #include "ofxNatron.h"
+#include "ofxsMacros.h"
 
 #define kPluginName "MergeOFX"
 #define kPluginGrouping "Merge"
@@ -248,17 +249,17 @@ public:
     
 private:
     // override the rod call
-    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod);
+    virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(MergeProcessorBase &, const OFX::RenderArguments &args);
 
-    bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime);
+    bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
     
 private:
     // do not need to delete these, the ImageEffect is managing them for us

@@ -96,6 +96,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsImageBlender.H"
+#include "ofxsMacros.h"
 
 #define kPluginName "RetimeOFX"
 #define kPluginGrouping "Time"
@@ -159,13 +160,13 @@ public:
     }
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     /** Override the get frames needed action */
-    virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames);
+    virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
 
     /* override the time domain action, only for the general context */
-    virtual bool getTimeDomain(OfxRangeD &range);
+    virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(OFX::ImageBlenderBase &, const OFX::RenderArguments &args);

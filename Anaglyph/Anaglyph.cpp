@@ -79,6 +79,7 @@
 #endif
 
 #include "ofxsProcessing.H"
+#include "ofxsMacros.h"
 
 #define kPluginName "AnaglyphOFX"
 #define kPluginGrouping "Views/Stereo"
@@ -237,10 +238,10 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(AnaglyphBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(AnaglyphBase &, const OFX::RenderArguments &args) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us

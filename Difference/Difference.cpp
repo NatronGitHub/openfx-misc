@@ -78,6 +78,7 @@
 #endif
 
 #include "ofxsProcessing.H"
+#include "ofxsMacros.h"
 
 #define kPluginLabel "DifferenceOFX"
 #define kPluginGrouping "Keyer"
@@ -214,7 +215,7 @@ public:
     
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     
     /* set up and run a processor */
     void setupAndProcess(DifferencerBase &, const OFX::RenderArguments &args);

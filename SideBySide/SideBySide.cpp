@@ -79,6 +79,7 @@
 #endif
 
 #include "ofxsProcessing.H"
+#include "ofxsMacros.h"
 
 #define kPluginName "SideBySideOFX"
 #define kPluginGrouping "Views/Stereo"
@@ -203,13 +204,13 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     // override the rod call
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod);
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     // override the roi call
-    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois);
+    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(SideBySideBase &, const OFX::RenderArguments &args);

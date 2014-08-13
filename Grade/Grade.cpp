@@ -79,6 +79,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
+#include "ofxsMacros.h"
 
 #define kPluginName "GradeOFX"
 #define kPluginGrouping "Color"
@@ -306,12 +307,12 @@ public:
     
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     
     /* set up and run a processor */
     void setupAndProcess(GradeProcessorBase &, const OFX::RenderArguments &args);
 
-    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) /*OVERRIDE FINAL*/;
+    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us

@@ -78,6 +78,7 @@
 #endif
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
+#include "ofxsMacros.h"
 
 #define kPluginName "ColorCorrectOFX"
 #define kPluginGrouping "Color"
@@ -420,12 +421,12 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     
     /* set up and run a processor */
     void setupAndProcess(ColorCorrecterBase &, const OFX::RenderArguments &args);
 
-    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) /*OVERRIDE FINAL*/;
+    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     void fetchColorControlGroup(const std::string& groupName, ColorControlParamGroup* group) {
         assert(group);

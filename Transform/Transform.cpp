@@ -178,11 +178,11 @@ public:
     }
 
 private:
-    virtual bool isIdentity(double time) /*OVERRIDE FINAL*/;
+    virtual bool isIdentity(double time) OVERRIDE FINAL;
 
-    virtual bool getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) const /*OVERRIDE FINAL*/;
+    virtual bool getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
 
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) /*OVERRIDE FINAL*/;
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     // NON-GENERIC
     OFX::Double2DParam* _translate;

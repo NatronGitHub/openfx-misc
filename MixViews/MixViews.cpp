@@ -79,6 +79,7 @@
 #endif
 
 #include "ofxsProcessing.H"
+#include "ofxsMacros.h"
 
 #define kPluginName "MixViewsOFX"
 #define kPluginGrouping "Views/Stereo"
@@ -179,7 +180,7 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(MixViewsBase &, const OFX::RenderArguments &args);

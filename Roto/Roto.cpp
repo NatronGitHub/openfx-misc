@@ -90,6 +90,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMerging.h"
+#include "ofxsMacros.h"
 
 #define kPluginName "RotoOFX"
 #define kPluginGrouping "Draw"
@@ -281,13 +282,13 @@ public:
     }
     
 private:
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod);
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
-    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences);
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
     
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     
     template <int srcNComponents, int dstNComponents>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
@@ -298,7 +299,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(RotoProcessorBase &, const OFX::RenderArguments &args);
 
-    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) /*OVERRIDE FINAL*/;
+    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us

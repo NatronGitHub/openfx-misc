@@ -78,6 +78,7 @@
 #endif
 
 #include "ofxsProcessing.H"
+#include "ofxsMacros.h"
 
 #define kPluginName "ConstantOFX"
 #define kPluginGrouping "Image"
@@ -230,16 +231,16 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     /* override the time domain action, only for the general context */
-    virtual bool getTimeDomain(OfxRangeD &range);
+    virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(ConstantGeneratorBase &, const OFX::RenderArguments &args);
 
     /** @brief The get RoD action.  We flag an infinite rod */
-    bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod);
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 };
 
 

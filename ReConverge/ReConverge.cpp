@@ -86,6 +86,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsPositionInteract.h"
+#include "ofxsMacros.h"
 
 #define kPluginName "ReConvergeOFX"
 #define kPluginGrouping "Views/Stereo"
@@ -220,10 +221,10 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     // override the roi call
-    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois);
+    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(TranslateBase &, const OFX::RenderArguments &args);

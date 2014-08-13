@@ -76,6 +76,7 @@
 #include "TimeOffset.h"
 
 #include "ofxsProcessing.H"
+#include "ofxsMacros.h"
 
 #define kPluginName "TimeOffsetOFX"
 #define kPluginGrouping "Time"
@@ -106,16 +107,16 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     /** Override the get frames needed action */
-    virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames);
+    virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
 
     /* override the time domain action, only for the general context */
-    virtual bool getTimeDomain(OfxRangeD &range);
+    virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
 
     /* override is identity */
-    virtual bool isIdentity(const OFX::RenderArguments &args, OFX::Clip * &identityClip, double &identityTime);
+    virtual bool isIdentity(const OFX::RenderArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     double getSourceTime(double time) const;
 

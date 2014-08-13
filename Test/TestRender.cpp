@@ -47,6 +47,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
 #include "ofxsMerging.h"
+#include "ofxsMacros.h"
 
 
 #define kPluginName "TestRenderOFX"
@@ -229,17 +230,17 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) /*OVERRIDE FINAL*/;
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(TestRenderBase &, const OFX::RenderArguments &args);
 
-    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) /*OVERRIDE FINAL*/;
+    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName);
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     // override the rod call
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod);
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us

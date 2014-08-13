@@ -79,6 +79,7 @@
 #endif
 
 #include "ofxsProcessing.H"
+#include "ofxsMacros.h"
 
 #define kPluginName "ChromaKeyerOFX"
 #define kPluginGrouping "Keyer"
@@ -645,10 +646,10 @@ public:
  
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
-    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) /* OVERRIDE FINAL */;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(ChromaKeyerProcessorBase &, const OFX::RenderArguments &args);

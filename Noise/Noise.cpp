@@ -75,7 +75,8 @@
 #include "ofxsImageEffect.h"
 #include "ofxsMultiThread.h"
 
-#include "../include/ofxsProcessing.H"
+#include "ofxsProcessing.H"
+#include "ofxsMacros.h"
 
 #include "randomGenerator.H"
 
@@ -211,16 +212,16 @@ public:
     }
 
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     /* Override the clip preferences, we need to say we are setting the frame varying flag */
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences);
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(NoiseGeneratorBase &, const OFX::RenderArguments &args);
 
     /** @brief The get RoD action.  We flag an infinite rod */
-    bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod);
+    bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 };
 
 

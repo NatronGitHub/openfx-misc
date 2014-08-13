@@ -776,6 +776,7 @@
 		1EBAEFCE199A81AA0037B3E6 /* TestRender.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestRender.cpp; sourceTree = "<group>"; };
 		1EBAEFCF199A81AA0037B3E6 /* TestRender.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestRender.h; sourceTree = "<group>"; };
 		1EBAEFE1199A81DB0037B3E6 /* TestRender.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TestRender.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EBAF03E199B74370037B3E6 /* ofxsMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsMacros.h; sourceTree = "<group>"; };
 		1EC7C7F818BF4F4C002A246F /* ofxReadWrite.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxReadWrite.h; sourceTree = "<group>"; };
 		1EC7C7F918BF4F85002A246F /* ofxDialog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxDialog.h; path = openfx/include/ofxDialog.h; sourceTree = SOURCE_ROOT; };
 		1EC7C7FA18BF4F85002A246F /* ofxSonyVegas.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxSonyVegas.h; path = openfx/include/ofxSonyVegas.h; sourceTree = SOURCE_ROOT; };
@@ -1422,6 +1423,7 @@
 				1E9B5F47198A51840095C8AA /* ofxsCopier.h */,
 				1E9B5F48198A51840095C8AA /* ofxsFilter.h */,
 				1E9B5F49198A51840095C8AA /* ofxsFormatResolution.h */,
+				1EBAF03E199B74370037B3E6 /* ofxsMacros.h */,
 				1E9B5F4A198A51840095C8AA /* ofxsMaskMix.h */,
 				1E9B5F4B198A51840095C8AA /* ofxsMatrix2D.h */,
 				1E9B5F4C198A51840095C8AA /* ofxsMerging.h */,

@@ -81,6 +81,7 @@
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
+#include "ofxsMacros.h"
 
 
 #define kPluginPremultName "PremultOFX"
@@ -335,20 +336,20 @@ class PremultPlugin : public OFX::ImageEffect
 
   private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) /*OVERRIDE FINAL*/;
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(PremultBase &, const OFX::RenderArguments &args);
 
-    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) /*OVERRIDE FINAL*/;
+    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences);
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /* override changedParam */
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) /* OVERRIDE FINAL */;
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
-    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) /* OVERRIDE FINAL */;
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
   private:
     // do not need to delete these, the ImageEffect is managing them for us

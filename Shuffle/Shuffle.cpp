@@ -78,6 +78,7 @@
 #endif
 
 #include "ofxsProcessing.H"
+#include "ofxsMacros.h"
 
 #define kPluginLabel "ShuffleOFX"
 #define kPluginGrouping "Channel"
@@ -460,16 +461,16 @@ public:
 
 private:
     /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) /* OVERRIDE FINAL */;
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
-    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) /* OVERRIDE FINAL */;
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /* override changedParam */
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) /* OVERRIDE FINAL */;
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
-    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) /* OVERRIDE FINAL */;
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
 private:
     void enableComponents(void);
