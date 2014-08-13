@@ -669,13 +669,8 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::get
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    if (srcClip_ && srcClip_->isConnected()) {
-        rod = srcClip_->getRegionOfDefinition(args.time);
-    } else {
-        rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
-        rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
-    }
-    return true;
+    // use the default RoD
+    return false;
 }
 
 //mDeclarePluginFactory(TestRenderPluginFactory, {}, {});
