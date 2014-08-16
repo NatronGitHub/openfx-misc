@@ -349,12 +349,15 @@ public:
     }
     
     // overridden functions from OFX::Interact to do things
-    virtual bool draw(const OFX::DrawArgs &args);
-    virtual bool penMotion(const OFX::PenArgs &args);
-    virtual bool penDown(const OFX::PenArgs &args);
-    virtual bool penUp(const OFX::PenArgs &args);
-    virtual bool keyDown(const OFX::KeyArgs &args);
-    virtual bool keyUp(const OFX::KeyArgs &args);
+    virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL;
+    virtual bool penMotion(const OFX::PenArgs &args) OVERRIDE FINAL;
+    virtual bool penDown(const OFX::PenArgs &args) OVERRIDE FINAL;
+    virtual bool penUp(const OFX::PenArgs &args) OVERRIDE FINAL;
+    virtual bool keyDown(const OFX::KeyArgs &args) OVERRIDE FINAL;
+    virtual bool keyUp(const OFX::KeyArgs &args) OVERRIDE FINAL;
+
+    /** @brief Called when the interact is loses input focus */
+    virtual void loseFocus(const FocusArgs &/*args*/) OVERRIDE FINAL;
 
 private:
     void getCenter(double time, OfxPointD *center)
@@ -1230,7 +1233,10 @@ bool TransformInteract::keyDown(const OFX::KeyArgs &args)
     // alt/option is kOfxKey_Alt_L
 
     // the two control keys may be pressed consecutively, be aware about this
-    _modifierStateCtrl += args.keySymbol == kOfxKey_Control_L || args.keySymbol == kOfxKey_Control_R;
+    if (args.keySymbol == kOfxKey_Control_L || args.keySymbol == kOfxKey_Control_R) {
+        ++_modifierStateCtrl;
+        _effect->redrawOverlays();
+    }
     //std::cout << std::hex << args.keySymbol << std::endl;
     // modifiers are not "caught"
     return false;
@@ -1239,14 +1245,25 @@ bool TransformInteract::keyDown(const OFX::KeyArgs &args)
 // keyUp just updates the modifier state
 bool TransformInteract::keyUp(const OFX::KeyArgs &args)
 {
-    _modifierStateCtrl -= args.keySymbol == kOfxKey_Control_L || args.keySymbol == kOfxKey_Control_R;
-    if (_modifierStateCtrl < 0) {
+    if (args.keySymbol == kOfxKey_Control_L || args.keySymbol == kOfxKey_Control_R) {
         // we may have missed a keypress
-        _modifierStateCtrl = 0;
+        if (_modifierStateCtrl > 0) {
+            --_modifierStateCtrl;
+        }
+        if (_modifierStateCtrl == 0) {
+            _effect->redrawOverlays();
+       }
     }
 
     // modifiers are not "caught"
     return false;
+}
+
+/** @brief Called when the interact is loses input focus */
+void TransformInteract::loseFocus(const FocusArgs &/*args*/)
+{
+    // reset the modifiers state
+    _modifierStateCtrl = 0;
 }
 
 
