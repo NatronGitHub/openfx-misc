@@ -26,54 +26,47 @@ grouping).
 
 * RotoOFX: Create masks and shapes. Requires a host with mask editing
   capabilities (such as Natron).
-
-* NoiseOFX: Generate noise
+* NoiseOFX: Generate noise.
 
 ### Time
 
-* TimeOffsetOFX: Move the input clip forward or backward in time.  
+* Deinterlace: Deinterlace input stream.
+* RetimeOFX: Change the timing of the input clip.
+* TimeOffsetOFX: Move the input clip forward or backward in time.
 
 ### Channel
 
 * ShuffleOFX: Rearrange channels from one or two inputs, and convert
-  to a different bit depth (on hosts that support it)
+  to a different bit depth (on hosts that support it).
 
 ### Color
 
-* ColorCorrectOFX: Adjusts the saturation, constrast, gamma, gain and offset of an image.  
-
-* GradeOFX: Modify the tonal spread of an image from the white and black points.  
-
-* InvertOFX: Inverse the selected channels
-
+* ColorCorrectOFX: Adjusts the saturation, constrast, gamma, gain and offset of an image.
+* GradeOFX: Modify the tonal spread of an image from the white and black points.
+* InvertOFX: Inverse the selected channels.
 * RGBLutOFX: Apply a parametric lookup curve to each channel  
-  separately.  
+  separately.
+* ColorMatrixOFX: Multiply the RGBA channels by an arbitrary 4x4 matrix.
    
 ### Keyer
 
 * ChromaKeyerOFX: Apply chroma keying, as described in "Video Demystified" by Keith Jack.  
-
 * DifferenceOFX: Produce a rough matte from the difference of two
   images.
   
 ### Merge
 
 * MergeOFX: Pixel-by-pixel merge operation between the two inputs.
-
-* PreMultOFX/UnpremultOFX: Multiply/divide the selected channels by alpha (or another channel)
-
+* PreMultOFX/UnpremultOFX: Multiply/divide the selected channels by alpha (or another channel).
 * SwitchOFX: Lets you switch between any number of inputs.
 
 ### Transform
 
 * TransformOFX and TransformMaskedOFX: Translate / Rotate / Scale a 2D
   image.
-
 * CornerPinOFX and CornerPinMaskedOFX: Fit an image to another in
   translation, rotation, scale, and shear
-
 * CropOFX: Remove everything outside from the image of a rectangle.
-
 * TrackerPM: Point tracker based on pattern matching using an exhaustive search within an image region.
 
 ### Views
@@ -82,22 +75,18 @@ These plugin use the Sony Vegas multiview extension (they don't work
 with Nuke).
 
 * JoinViewsOFX: JoinView inputs to make a stereo output.
-
 * OneViewOFX: Takes one view from the input.
-
 * Stereo/AnaglyphOFX: Make an anaglyph image out of the two views of the input.
-
 * Stereo/MixViewsOFX: Mix two views together. 
-
 * Stereo/ReConvergeOFX: Shift convergence so that a tracked point
   appears at screen-depth.
-
 * Stereo/SideBySideOFX: Put the left and right view of the input next
   to each other.
 
 ### Other
 
 * NoOpOFX: Copies the input to the ouput. Useful for inspecting the properties of input and output clips.
+* TestRenderOFX: Test some rendering features of the OFX host.
 
 Notes & Caveats
 ---------------
@@ -189,3 +178,5 @@ Merge, ColorCorrect, Grade, Roto, Crop, CopyRectangle  are by
 Alexandre Gauthier.
 
 Transform and CornerPin are by Frederic Devernay and Alexandre Gauthier.
+
+Deinterlace/yadif was first ported to OFX by [George Yohng](http://yohng.com) and rewritten when yadif was relicensed to LGPL.
