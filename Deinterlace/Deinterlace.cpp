@@ -77,7 +77,7 @@
 #include "ofxsMultiThread.h"
 #include "ofxsProcessing.H"
 
-#define kPluginName          "Deinterlace"
+#define kPluginName          "DeinterlaceOFX"
 #define kPluginGrouping      "Time"
 #define kPluginDescription \
 "Deinterlace input stream.\n" \
