@@ -76,6 +76,7 @@
 #include "ofxsImageEffect.h"
 #include "ofxsMultiThread.h"
 #include "ofxsProcessing.H"
+#include "ofxsMacros.h"
 
 #define kPluginName          "DeinterlaceOFX"
 #define kPluginGrouping      "Time"
@@ -93,6 +94,11 @@
 #define kPluginIdentifier    "net.sf.openfx:Deinterlace"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
+#define kSupportsTiles 0
+#define kSupportsMultiResolution 0
+#define kSupportsRenderScale 1 // are images still fielded at any renderscale?
+#define kRenderThreadSafety eRenderFullySafe
 
 #define kParamMode "mode"
 #define kParamModeLabel "Deinterlacing Mode"
@@ -180,8 +186,13 @@ private:
     virtual void render(const OFX::RenderArguments &args);
 
     /** @brief get the clip preferences */
-    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) /* OVERRIDE FINAL */;
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
+    // override the rod call
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+
+    /* override is identity */
+    virtual bool isIdentity(const OFX::RenderArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE;
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
@@ -414,6 +425,10 @@ static void filter_plane_ofx(int mode,
 
 void DeinterlacePlugin::render(const OFX::RenderArguments &args)
 {
+    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
 
@@ -544,6 +559,29 @@ DeinterlacePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreference
     clipPreferences.setOutputFielding(OFX::eFieldNone);
 }
 
+bool
+DeinterlacePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                         OfxRectD &rod)
+{
+    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+
+    return false;
+}
+
+bool
+DeinterlacePlugin::isIdentity(const OFX::RenderArguments &args,
+                              OFX::Clip * &identityClip,
+                              double &identityTime)
+{
+    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+
+    return false;
+}
+
 mDeclarePluginFactory(DeinterlacePluginFactory, {}, {});
 
 using namespace OFX;
@@ -567,8 +605,8 @@ void DeinterlacePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // set a few flags
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
-    desc.setSupportsMultiResolution(false);
-    desc.setSupportsTiles(false);
+    desc.setSupportsMultiResolution(kSupportsMultiResolution);
+    desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(true);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
