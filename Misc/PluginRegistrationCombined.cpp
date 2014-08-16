@@ -6,6 +6,7 @@
 #include "CopyRectangle.h"
 #include "CornerPin.h"
 #include "Crop.h"
+#include "Deinterlace.h"
 #include "Difference.h"
 #include "Grade.h"
 #include "Invert.h"
@@ -44,6 +45,7 @@ namespace OFX
             getCopyRectanglePluginID(ids);
             getCornerPinPluginIDs(ids);
             getCropPluginID(ids);
+            getDeinterlacePluginID(ids);
             getDifferencePluginID(ids);
             getGradePluginID(ids);
             getInvertPluginID(ids);

@@ -7,6 +7,7 @@ Constant.o \
 CopyRectangle.o \
 CornerPin.o \
 Crop.o \
+Deinterlace.o \
 Difference.o \
 Grade.o \
 Invert.o \
@@ -46,6 +47,7 @@ VPATH += \
 ../CopyRectangle \
 ../CornerPin \
 ../Crop \
+../Deinterlace \
 ../Difference \
 ../Grade \
 ../Invert \

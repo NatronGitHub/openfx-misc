@@ -8,6 +8,7 @@ ColorMatrix \
 Constant \
 CornerPin \
 Crop \
+Deinterlace \
 Difference \
 Grade \
 Invert \
