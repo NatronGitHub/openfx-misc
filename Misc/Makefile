@@ -82,6 +82,7 @@ CXXFLAGS += \
 -I../CopyRectangle \
 -I../CornerPin \
 -I../Crop \
+-I../Deinterlace \
 -I../Difference \
 -I../Grade \
 -I../Invert \
