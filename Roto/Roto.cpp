@@ -299,7 +299,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(RotoProcessorBase &, const OFX::RenderArguments &args);
 
-    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -499,7 +499,7 @@ RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 }
 
 bool
-RotoPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+RotoPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
 {
     OFX::PixelComponentEnum srcComponents  = srcClip_->getPixelComponents();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();

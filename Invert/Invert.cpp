@@ -303,7 +303,7 @@ class InvertPlugin : public OFX::ImageEffect
     /* set up and run a processor */
     void setupAndProcess(InvertBase &, const OFX::RenderArguments &args);
 
-    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
   private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -467,7 +467,7 @@ InvertPlugin::render(const OFX::RenderArguments &args)
 }
 
 bool
-InvertPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+InvertPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
 {
     bool red, green, blue, alpha;
     double mix;

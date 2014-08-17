@@ -160,6 +160,10 @@ private:
         bool toto = true;
         // TODO: write the render function
         float tmpPix[nComponents];
+        const OfxRectI srcRoD = _srcImg->getRegionOfDefinition();
+        int xmid = srcRoD.x1 + (srcRoD.x2-srcRoD.x1)/2;
+        int ymid = srcRoD.y1 + (srcRoD.y2-srcRoD.y1)/2;
+
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -170,7 +174,7 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
 
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-
+                //if ((x < xmid && y < ymid) || (x >= xmid && y >= ymid))
                 // do we have a source image to scale up
                 if (srcPix) {
                     for (int c = 0; c < nComponents; ++c) {
@@ -235,7 +239,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(TestRenderBase &, const OFX::RenderArguments &args);
 
-    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
@@ -436,7 +440,7 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::ren
 
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
 bool
-TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
 {
     if (!supportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -468,8 +472,21 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isI
         return true;
     }
 
-    const OfxRectI& roi = args.renderWindow;
-    // TODO: if renderWindow is fully in the lower left or upper right corner, return true
+    // if renderWindow is fully in the lower left or upper right corner, return true
+    const OfxRectD rod = dstClip_->getRegionOfDefinition(args.time);
+    OfxRectI roi = args.renderWindow;
+    OfxRectD roiCanonical;
+    roiCanonical.x1 = roi.x1 / args.renderScale.x;
+    roiCanonical.x2 = roi.x2 / args.renderScale.x;
+    roiCanonical.y1 = roi.y1 / args.renderScale.y;
+    roiCanonical.y2 = roi.y2 / args.renderScale.y;
+    double xmid = rod.x1 + (rod.x2 - rod.x1)/2;
+    double ymid = rod.y1 + (rod.y2 - rod.y1)/2;
+    if ((roiCanonical.x2 < xmid && roiCanonical.y2 < ymid) ||
+        (roiCanonical.x2 >= xmid && roiCanonical.y2 >= ymid)) {
+        identityClip = srcClip_;
+        return true;
+    }
 
     return false;
 }

@@ -259,7 +259,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(MergeProcessorBase &, const OFX::RenderArguments &args);
 
-    bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
     
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -499,7 +499,7 @@ MergePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::strin
 }
 
 bool
-MergePlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
 {
     double mix;
     _mix->getValueAtTime(args.time, mix);

@@ -116,7 +116,7 @@ private:
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
 
     /* override is identity */
-    virtual bool isIdentity(const OFX::RenderArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     double getSourceTime(double time) const;
 
@@ -220,7 +220,7 @@ TimeOffsetPlugin::render(const OFX::RenderArguments &args)
 
 // overridden is identity
 bool
-TimeOffsetPlugin::isIdentity(const OFX::RenderArguments &args, OFX::Clip * &identityClip, double &identityTime)
+TimeOffsetPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime)
 {
     identityClip = srcClip_;
     identityTime = getSourceTime(args.time);

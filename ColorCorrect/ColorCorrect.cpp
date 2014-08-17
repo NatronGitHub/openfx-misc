@@ -426,7 +426,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(ColorCorrecterBase &, const OFX::RenderArguments &args);
 
-    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     void fetchColorControlGroup(const std::string& groupName, ColorControlParamGroup* group) {
         assert(group);
@@ -641,7 +641,7 @@ groupIsIdentity(const ColorControlGroup& group)
 }
 
 bool
-ColorCorrectPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+ColorCorrectPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
 {
     //bool red, green, blue, alpha;
     double mix;

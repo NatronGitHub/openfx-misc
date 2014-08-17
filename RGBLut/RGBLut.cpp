@@ -85,6 +85,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
+#include "ofxsMacros.h"
 
 #define kPluginName "RGBLutOFX"
 #define kPluginGrouping "Color"
@@ -491,7 +492,7 @@ public:
      }
 
 private:
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     template <int nComponents, bool masked>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);

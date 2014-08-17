@@ -282,7 +282,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(ColorMatrixProcessorBase &, const OFX::RenderArguments &args);
 
-    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -422,7 +422,7 @@ ColorMatrixPlugin::render(const OFX::RenderArguments &args)
 
 
 bool
-ColorMatrixPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+ColorMatrixPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
 {
     double mix;
     _mix->getValueAtTime(args.time, mix);

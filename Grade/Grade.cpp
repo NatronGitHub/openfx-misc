@@ -312,7 +312,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(GradeProcessorBase &, const OFX::RenderArguments &args);
 
-    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -453,7 +453,7 @@ GradePlugin::render(const OFX::RenderArguments &args)
 
 
 bool
-GradePlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
 {
     double mix;
     _mix->getValueAtTime(args.time, mix);

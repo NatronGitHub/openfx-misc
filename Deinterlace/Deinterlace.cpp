@@ -183,7 +183,7 @@ public:
     }
 
 private:
-    virtual void render(const OFX::RenderArguments &args);
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
@@ -192,7 +192,7 @@ private:
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /* override is identity */
-    virtual bool isIdentity(const OFX::RenderArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE;
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE;
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
@@ -571,7 +571,7 @@ DeinterlacePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
 }
 
 bool
-DeinterlacePlugin::isIdentity(const OFX::RenderArguments &args,
+DeinterlacePlugin::isIdentity(const OFX::IsIdentityArguments &args,
                               OFX::Clip * &identityClip,
                               double &identityTime)
 {

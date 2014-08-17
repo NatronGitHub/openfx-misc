@@ -298,7 +298,7 @@ private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
-    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     template <int nComponents>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
@@ -510,7 +510,7 @@ CopyRectanglePlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDe
 }
 
 bool
-CopyRectanglePlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+CopyRectanglePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
 {
     double mix;
     _mix->getValueAtTime(args.time, mix);

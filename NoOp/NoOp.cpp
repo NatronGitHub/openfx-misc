@@ -153,7 +153,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(CopierBase &, const OFX::RenderArguments &args);
 
-    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
@@ -304,7 +304,7 @@ NoOpPlugin::render(const OFX::RenderArguments &args)
 }
 
 bool
-NoOpPlugin::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+NoOpPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
 {
     bool forceCopy;
     forceCopy_->getValue(forceCopy);

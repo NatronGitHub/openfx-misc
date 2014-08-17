@@ -341,7 +341,7 @@ class PremultPlugin : public OFX::ImageEffect
     /* set up and run a processor */
     void setupAndProcess(PremultBase &, const OFX::RenderArguments &args);
 
-    virtual bool isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
@@ -455,7 +455,7 @@ PremultPlugin<isPremult>::render(const OFX::RenderArguments &args)
 
 template<bool isPremult>
 bool
-PremultPlugin<isPremult>::isIdentity(const RenderArguments &args, Clip * &identityClip, double &identityTime)
+PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
 {
     bool red, green, blue, alpha;
     int premult_i;

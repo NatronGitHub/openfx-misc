@@ -241,7 +241,7 @@ private:
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(AnaglyphBase &, const OFX::RenderArguments &args) OVERRIDE FINAL;
+    void setupAndProcess(AnaglyphBase &, const OFX::RenderArguments &args);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
