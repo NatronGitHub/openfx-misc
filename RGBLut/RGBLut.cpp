@@ -195,7 +195,7 @@ private:
     {
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         assert(_dstImg);
-        assert(!_doMasking);
+        float tmpPix[nComponents];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -207,15 +207,16 @@ private:
                 const PIX *srcPix = (const PIX *) (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 if (srcPix) {
                     for (int c = 0; c < nComponents; c++) {
-                        //assert(0 <= srcPix[c] && srcPix[c] <= maxValue);
-                        dstPix[c] = _lookupTable[c][srcPix[c]];
+                        assert(0 <= srcPix[c] && srcPix[c] <= maxValue);
+                        tmpPix[c] = _lookupTable[c][srcPix[c]];
                     }
                 } else {
                     // no src pixel here, be black and transparent
                     for (int c = 0; c < nComponents; c++) {
-                        dstPix[c] = _lookupTable[c][0];
+                        tmpPix[c] = _lookupTable[c][0];
                     }
                 }
+                OFX::ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
             }
@@ -266,6 +267,7 @@ private:
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         assert(_dstImg);
         assert(!_doMasking);
+        float tmpPix[nComponents];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -277,14 +279,15 @@ private:
                 const PIX *srcPix = (const PIX *) (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 if (srcPix) {
                     for (int c = 0; c < nComponents; c++) {
-                        dstPix[c] = interpolate(c, srcPix[c]);
+                        tmpPix[c] = interpolate(c, srcPix[c]);
                     }
                 } else {
                     // no src pixel here, be black and transparent
                     for (int c = 0; c < nComponents; c++) {
-                        dstPix[c] = interpolate(c, 0);
+                        tmpPix[c] = interpolate(c, 0);
                     }
                 }
+                OFX::ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
             }
