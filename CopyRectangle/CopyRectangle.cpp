@@ -510,7 +510,7 @@ CopyRectanglePlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDe
 }
 
 bool
-CopyRectanglePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+CopyRectanglePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
     double mix;
     _mix->getValueAtTime(args.time, mix);
@@ -584,7 +584,7 @@ void CopyRectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 
 
-OFX::ImageEffect* CopyRectanglePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CopyRectanglePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new CopyRectanglePlugin(handle);
 }

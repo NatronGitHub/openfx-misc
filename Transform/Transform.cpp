@@ -1369,7 +1369,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     Transform3x3DescribeInContextEnd(desc, context, page, false);
 }
 
-OFX::ImageEffect* TransformPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* TransformPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new TransformPlugin(handle, false);
 }
@@ -1400,7 +1400,7 @@ void TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     Transform3x3DescribeInContextEnd(desc, context, page, true);
 }
 
-OFX::ImageEffect* TransformMaskedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* TransformMaskedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new TransformPlugin(handle, true);
 }

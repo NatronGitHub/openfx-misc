@@ -304,7 +304,7 @@ NoOpPlugin::render(const OFX::RenderArguments &args)
 }
 
 bool
-NoOpPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+NoOpPlugin::isIdentity(const IsIdentityArguments &/*args*/, Clip * &identityClip, double &/*identityTime*/)
 {
     bool forceCopy;
     forceCopy_->getValue(forceCopy);
@@ -585,7 +585,7 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     page->addChild(*clipInfo);
 }
 
-OFX::ImageEffect* NoOpPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* NoOpPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new NoOpPlugin(handle);
 }

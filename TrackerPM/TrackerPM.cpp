@@ -248,7 +248,7 @@ private:
         _weightData = (float*)_weightImg->lock();
 
         // sliding pointers
-        size_t patternIdx = 0; // sliding index
+        long patternIdx = 0; // sliding index
         PIX *patternPtr = _patternData;
         float *weightPtr = _weightData;
         _weightTotal = 0.;
@@ -308,7 +308,7 @@ private:
                 otherMean[c] = 0;
             }
             // sliding pointers
-            size_t patternIdx = 0; // sliding index
+            long patternIdx = 0; // sliding index
             const PIX *patternPtr = _patternData;
             float *weightPtr = _weightData;
             for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
@@ -331,7 +331,7 @@ private:
         }
 
         // sliding pointers
-        size_t patternIdx = 0; // sliding index
+        long patternIdx = 0; // sliding index
         const PIX *patternPtr = _patternData;
         float *weightPtr = _weightData;
 
@@ -406,7 +406,7 @@ private:
         }
         if (scoreTypeE == eTrackerZNCC) {
             // sliding pointers
-            size_t patternIdx = 0; // sliding index
+            long patternIdx = 0; // sliding index
             const PIX *patternPtr = _patternData;
             float *weightPtr = _weightData;
             for (int i = _refRectPixel.y1; i < _refRectPixel.y2; ++i) {
@@ -866,7 +866,7 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
 
 
-OFX::ImageEffect* TrackerPMPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* TrackerPMPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new TrackerPMPlugin(handle);
 }

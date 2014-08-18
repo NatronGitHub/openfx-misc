@@ -207,7 +207,7 @@ private:
                 const PIX *srcPix = (const PIX *) (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 if (srcPix) {
                     for (int c = 0; c < nComponents; c++) {
-                        assert(0 <= srcPix[c] && srcPix[c] <= maxValue);
+                        //assert(0 <= srcPix[c] && srcPix[c] <= maxValue);
                         tmpPix[c] = _lookupTable[c][srcPix[c]];
                     }
                 } else {
@@ -366,7 +366,7 @@ private:
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 if (srcPix) {
                     for (int c = 0; c < nComponents; c++) {
-                        assert(0 <= srcPix[c] && srcPix[c] <= maxValue);
+                        //assert(0 <= srcPix[c] && srcPix[c] <= maxValue);
                         tmpPix[c] = _lookupTable[c][srcPix[c]];
                     }
                 } else  {
@@ -841,7 +841,7 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     ofxsMaskMixDescribeParams(desc, page);
 }
 
-OFX::ImageEffect* RGBLutPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* RGBLutPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new RGBLutPlugin(handle);
 }

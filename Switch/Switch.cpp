@@ -142,14 +142,14 @@ SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle)
 }
 
 void
-SwitchPlugin::render(const OFX::RenderArguments &args)
+SwitchPlugin::render(const OFX::RenderArguments &/*args*/)
 {
     // do nothing as this should never be called as isIdentity should always be trapped
 }
 
 // overridden is identity
 bool
-SwitchPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime)
+SwitchPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &/*identityTime*/)
 {
     int input;
     which_->getValueAtTime(args.time, input);
@@ -179,7 +179,7 @@ bool SwitchPlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip *
 #endif
 
 void
-SwitchPlugin::changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName)
+SwitchPlugin::changedClip(const OFX::InstanceChangedArgs &/*args*/, const std::string &/*clipName*/)
 {
     int maxconnected = 1;
     for (int i = 2; i < kSwitchPluginSourceClipCount; ++i) {
@@ -272,7 +272,7 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 #endif
 }
 
-OFX::ImageEffect* SwitchPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* SwitchPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new SwitchPlugin(handle);
 }

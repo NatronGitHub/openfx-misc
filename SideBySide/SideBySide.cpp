@@ -538,7 +538,7 @@ void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     page->addChild(*view2);
 }
 
-OFX::ImageEffect* SideBySidePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* SideBySidePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new SideBySidePlugin(handle);
 }

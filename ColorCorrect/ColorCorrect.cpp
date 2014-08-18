@@ -641,7 +641,7 @@ groupIsIdentity(const ColorControlGroup& group)
 }
 
 bool
-ColorCorrectPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+ColorCorrectPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
     //bool red, green, blue, alpha;
     double mix;
@@ -813,7 +813,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     ofxsMaskMixDescribeParams(desc, page);
 }
 
-OFX::ImageEffect* ColorCorrectPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* ColorCorrectPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new ColorCorrectPlugin(handle);
 }

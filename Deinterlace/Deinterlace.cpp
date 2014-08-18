@@ -561,7 +561,7 @@ DeinterlacePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreference
 
 bool
 DeinterlacePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
-                                         OfxRectD &rod)
+                                         OfxRectD &/*rod*/)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -572,8 +572,8 @@ DeinterlacePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
 
 bool
 DeinterlacePlugin::isIdentity(const OFX::IsIdentityArguments &args,
-                              OFX::Clip * &identityClip,
-                              double &identityTime)
+                              OFX::Clip * &/*identityClip*/,
+                              double &/*identityTime*/)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -614,7 +614,7 @@ void DeinterlacePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 }
 
-void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -710,7 +710,7 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     }
 }
 
-ImageEffect* DeinterlacePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+ImageEffect* DeinterlacePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new DeinterlacePlugin(handle);
 }

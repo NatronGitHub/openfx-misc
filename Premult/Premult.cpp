@@ -455,7 +455,7 @@ PremultPlugin<isPremult>::render(const OFX::RenderArguments &args)
 
 template<bool isPremult>
 bool
-PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
     bool red, green, blue, alpha;
     int premult_i;
@@ -511,7 +511,7 @@ template<bool isPremult>
 void
 PremultPlugin<isPremult>::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
-    if (paramName == kClipInfoParamName) {
+    if (paramName == kClipInfoParamName && args.reason == eChangeUserEdit) {
         std::string msg;
         msg += "Input; ";
         if (!srcClip_) {
@@ -535,7 +535,7 @@ template<bool isPremult>
 void
 PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (srcClip_ && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
         switch (srcClip_->getPreMultiplication()) {
             case eImageOpaque:
                 break;

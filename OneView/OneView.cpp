@@ -410,7 +410,7 @@ void OneViewPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     page->addChild(*view);
 }
 
-OFX::ImageEffect* OneViewPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* OneViewPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new OneViewPlugin(handle);
 }

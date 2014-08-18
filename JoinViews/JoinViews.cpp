@@ -400,7 +400,7 @@ void JoinViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     
 }
 
-OFX::ImageEffect* JoinViewsPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* JoinViewsPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new JoinViewsPlugin(handle);
 }

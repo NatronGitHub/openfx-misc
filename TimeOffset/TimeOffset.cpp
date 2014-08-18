@@ -315,7 +315,7 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* TimeOffsetPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum context)
+ImageEffect* TimeOffsetPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
     return new TimeOffsetPlugin(handle);
 }

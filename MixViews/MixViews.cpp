@@ -423,7 +423,7 @@ void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     page->addChild(*mix);
 }
 
-OFX::ImageEffect* MixViewsPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* MixViewsPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new MixViewsPlugin(handle);
 }

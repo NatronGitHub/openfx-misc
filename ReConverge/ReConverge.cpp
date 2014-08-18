@@ -509,7 +509,7 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     page->addChild(*convergemode);
 }
 
-OFX::ImageEffect* ReConvergePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* ReConvergePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new ReConvergePlugin(handle);
 }
