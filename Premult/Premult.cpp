@@ -505,6 +505,7 @@ static std::string premultString(PreMultiplicationEnum e)
         case eImageUnPreMultiplied:
             return "UnPreMultiplied";
     }
+    return "Unknown";
 }
 
 template<bool isPremult>
@@ -615,7 +616,7 @@ void PremultPluginFactory<isPremult>::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 template<bool isPremult>
-void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip

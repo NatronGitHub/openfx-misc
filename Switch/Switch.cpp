@@ -226,7 +226,7 @@ void SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
-void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip

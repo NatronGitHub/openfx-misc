@@ -884,7 +884,7 @@ void ChromaKeyerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 
-void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent( OFX::ePixelComponentRGBA );

@@ -384,7 +384,7 @@ void MixViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     //}
 }
 
-void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
         throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
