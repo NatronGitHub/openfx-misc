@@ -939,7 +939,7 @@ static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
 }
 
 static void
-CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, PageParamDescriptor *page)
+CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/, PageParamDescriptor *page)
 {
     // NON-GENERIC PARAMETERS
     //

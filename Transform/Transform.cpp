@@ -508,7 +508,6 @@ drawSquare(const OfxPointD& center,
 static void
 drawEllipse(const OfxPointD& center,
             const OfxPointD& radius,
-            const OfxPointD& pixelScale,
             bool hovered,
             int l)
 {
@@ -766,7 +765,7 @@ TransformInteract::draw(const OFX::DrawArgs &args)
         glMultMatrixd(skewMatrix);
         glTranslated(-center.x, -center.y, 0.);
 
-        drawEllipse(center, radius, pscale, _mouseState == eDraggingCircle || _drawState == eCircleHovered, l);
+        drawEllipse(center, radius, _mouseState == eDraggingCircle || _drawState == eCircleHovered, l);
 
         // add 180 to the angle to draw the arrows on the other side. unfortunately, this requires knowing
         // the mouse position in the ellipse frame
@@ -1274,7 +1273,7 @@ mDeclarePluginFactory(TransformPluginFactory, {}, {});
 class TransformOverlayDescriptor : public DefaultEffectOverlayDescriptor<TransformOverlayDescriptor, TransformInteract> {};
 
 static
-void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, PageParamDescriptor *page)
+void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/, PageParamDescriptor *page)
 {
     // NON-GENERIC PARAMETERS
     //
