@@ -366,11 +366,11 @@ static Loader load;
 inline OfxStatus
 fetchHostSuites(int nth)
 {
-    assert(nth < gHost.size());
+    assert(nth < (int)gHost.size());
     if (!gHost[nth])
         return kOfxStatErrMissingHostFeature;
 
-    if (nth+1 > gEffectHost.size()) {
+    if (nth+1 > (int)gEffectHost.size()) {
         gEffectHost.resize(nth+1);
         gEffectProxy.resize(nth+1);
         gPropHost.resize(nth+1);
@@ -443,11 +443,11 @@ fetchHostSuites(int nth)
 inline OfxStatus
 fetchHostDescription(int nth)
 {
-    assert(nth < gHost.size());
+    assert(nth < (int)gHost.size());
     if (!gHost[nth])
         return kOfxStatErrMissingHostFeature;
 
-    if (nth+1 > gHostDescription.size()) {
+    if (nth+1 > (int)gHostDescription.size()) {
         gHostDescription.resize(nth+1);
     }
 
@@ -2019,7 +2019,7 @@ OfxGetPlugin(int nth)
 
      
   // copy it
-  if (nth+1 > gPlugins.size()) {
+  if (nth+1 > (int)gPlugins.size()) {
     gPlugins.resize(nth+1);
     gPluginsMainEntry.resize(nth+1);
     gPluginsOverlayMain.resize(nth+1);
