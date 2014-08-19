@@ -437,7 +437,10 @@ void DeinterlacePlugin::render(const OFX::RenderArguments &args)
     std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time)),
                               srcp(srcClip_->fetchImage(args.time-1.0)),
                               srcn(srcClip_->fetchImage(args.time+1.0));
-                                                                                        
+    if (!src.get() || !dst.get() || !srcp.get() || !srcn.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    
     const OfxRectI rect = dst->getBounds();
 
     int width=rect.x2-rect.x1;
