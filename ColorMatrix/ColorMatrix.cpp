@@ -422,7 +422,7 @@ ColorMatrixPlugin::render(const OFX::RenderArguments &args)
 
 
 bool
-ColorMatrixPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+ColorMatrixPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
     double mix;
     _mix->getValueAtTime(args.time, mix);
@@ -552,7 +552,7 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     ofxsMaskMixDescribeParams(desc, page);
 }
 
-OFX::ImageEffect* ColorMatrixPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* ColorMatrixPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new ColorMatrixPlugin(handle);
 }

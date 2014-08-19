@@ -213,7 +213,7 @@ TimeOffsetPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
 
 // the overridden render function
 void
-TimeOffsetPlugin::render(const OFX::RenderArguments &args)
+TimeOffsetPlugin::render(const OFX::RenderArguments &/*args*/)
 {
     // do nothing as this should never be called as isIdentity should always be trapped
 }
@@ -273,7 +273,7 @@ void TimeOffsetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
+void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     // we are a transition, so define the sourceTo input clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -315,7 +315,7 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* TimeOffsetPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum context)
+ImageEffect* TimeOffsetPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
     return new TimeOffsetPlugin(handle);
 }

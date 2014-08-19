@@ -398,7 +398,7 @@ void DifferencePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(false);
 }
 
-void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     OFX::ClipDescriptor* srcClipB = desc.defineClip(kSourceClipBName);
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
@@ -443,7 +443,7 @@ void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     page->addChild(*gain);
 }
 
-OFX::ImageEffect* DifferencePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* DifferencePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new DifferencePlugin(handle);
 }

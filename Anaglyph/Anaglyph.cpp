@@ -421,7 +421,7 @@ void AnaglyphPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     //}
 }
 
-void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
         throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
@@ -474,7 +474,7 @@ void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     page->addChild(*offset);
 }
 
-OFX::ImageEffect* AnaglyphPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* AnaglyphPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new AnaglyphPlugin(handle);
 }

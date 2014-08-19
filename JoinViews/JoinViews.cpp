@@ -368,7 +368,7 @@ void JoinViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     //}
 }
 
-void JoinViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void JoinViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
         throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
@@ -400,7 +400,7 @@ void JoinViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     
 }
 
-OFX::ImageEffect* JoinViewsPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* JoinViewsPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new JoinViewsPlugin(handle);
 }

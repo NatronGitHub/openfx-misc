@@ -304,7 +304,7 @@ NoOpPlugin::render(const OFX::RenderArguments &args)
 }
 
 bool
-NoOpPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+NoOpPlugin::isIdentity(const IsIdentityArguments &/*args*/, Clip * &identityClip, double &/*identityTime*/)
 {
     bool forceCopy;
     forceCopy_->getValue(forceCopy);
@@ -538,7 +538,7 @@ void NoOpPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(true);
 }
 
-void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -585,7 +585,7 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     page->addChild(*clipInfo);
 }
 
-OFX::ImageEffect* NoOpPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* NoOpPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new NoOpPlugin(handle);
 }

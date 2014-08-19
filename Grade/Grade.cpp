@@ -453,7 +453,7 @@ GradePlugin::render(const OFX::RenderArguments &args)
 
 
 bool
-GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
     double mix;
     _mix->getValueAtTime(args.time, mix);
@@ -587,7 +587,7 @@ void GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     ofxsMaskMixDescribeParams(desc, page);
 }
 
-OFX::ImageEffect* GradePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* GradePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new GradePlugin(handle);
 }

@@ -499,7 +499,7 @@ MergePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::strin
 }
 
 bool
-MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
     double mix;
     _mix->getValueAtTime(args.time, mix);
@@ -687,7 +687,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
  
 }
 
-OFX::ImageEffect* MergePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* MergePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new MergePlugin(handle);
 }

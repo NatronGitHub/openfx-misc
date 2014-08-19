@@ -455,7 +455,7 @@ PremultPlugin<isPremult>::render(const OFX::RenderArguments &args)
 
 template<bool isPremult>
 bool
-PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
     bool red, green, blue, alpha;
     int premult_i;
@@ -505,13 +505,14 @@ static std::string premultString(PreMultiplicationEnum e)
         case eImageUnPreMultiplied:
             return "UnPreMultiplied";
     }
+    return "Unknown";
 }
 
 template<bool isPremult>
 void
 PremultPlugin<isPremult>::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
-    if (paramName == kClipInfoParamName) {
+    if (paramName == kClipInfoParamName && args.reason == eChangeUserEdit) {
         std::string msg;
         msg += "Input; ";
         if (!srcClip_) {
@@ -535,7 +536,7 @@ template<bool isPremult>
 void
 PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (srcClip_ && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
         switch (srcClip_->getPreMultiplication()) {
             case eImageOpaque:
                 break;
@@ -615,7 +616,7 @@ void PremultPluginFactory<isPremult>::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 template<bool isPremult>
-void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip

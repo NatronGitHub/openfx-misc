@@ -140,8 +140,6 @@ public:
 };
 
 
-// The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
-// by the compiler, using the same generic code for all filters.
 template <class PIX, int nComponents, int maxValue>
 class CropProcessor : public CropProcessorBase
 {
@@ -213,7 +211,7 @@ class CropPlugin : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
-    CropPlugin(OfxImageEffectHandle handle, bool masked)
+    CropPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClip_(0)
@@ -577,15 +575,15 @@ void CropPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 
 
-OFX::ImageEffect* CropPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CropPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
-    return new CropPlugin(handle, false);
+    return new CropPlugin(handle);
 }
 
 
 
 
-void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip

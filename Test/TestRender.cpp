@@ -157,12 +157,11 @@ private:
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        bool toto = true;
-        // TODO: write the render function
+#pragma message WARN("TODO: write the render function as described in the plugin help")
         float tmpPix[nComponents];
-        const OfxRectI srcRoD = _srcImg->getRegionOfDefinition();
-        int xmid = srcRoD.x1 + (srcRoD.x2-srcRoD.x1)/2;
-        int ymid = srcRoD.y1 + (srcRoD.y2-srcRoD.y1)/2;
+        //const OfxRectI srcRoD = _srcImg->getRegionOfDefinition();
+        //int xmid = srcRoD.x1 + (srcRoD.x2-srcRoD.x1)/2;
+        //int ymid = srcRoD.y1 + (srcRoD.y2-srcRoD.y1)/2;
 
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
@@ -440,7 +439,7 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::ren
 
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
 bool
-TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
     if (!supportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -681,7 +680,7 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::cha
 
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
 bool
-TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &/*rod*/)
 {
     if (!supportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);

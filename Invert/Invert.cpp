@@ -467,7 +467,7 @@ InvertPlugin::render(const OFX::RenderArguments &args)
 }
 
 bool
-InvertPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+InvertPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
     bool red, green, blue, alpha;
     double mix;

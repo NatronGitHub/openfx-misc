@@ -499,7 +499,7 @@ RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 }
 
 bool
-RotoPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+RotoPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
     OFX::PixelComponentEnum srcComponents  = srcClip_->getPixelComponents();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
@@ -563,7 +563,7 @@ RotoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 
 OFX::ImageEffect*
-RotoPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+RotoPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new RotoPlugin(handle, false);
 }

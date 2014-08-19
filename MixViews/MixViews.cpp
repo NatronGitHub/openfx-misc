@@ -384,7 +384,7 @@ void MixViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     //}
 }
 
-void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
         throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
@@ -423,7 +423,7 @@ void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     page->addChild(*mix);
 }
 
-OFX::ImageEffect* MixViewsPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* MixViewsPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new MixViewsPlugin(handle);
 }

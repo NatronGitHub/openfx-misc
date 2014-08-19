@@ -762,7 +762,7 @@ ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::str
 {
     if (paramName == kOutputComponentsParamName) {
         enableComponents();
-    } else if (paramName == kClipInfoParamName) {
+    } else if (paramName == kClipInfoParamName && args.reason == eChangeUserEdit) {
         std::string msg;
         msg += "Input A: ";
         if (!srcClipA_) {
@@ -792,7 +792,7 @@ ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::str
 }
 
 void
-ShufflePlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+ShufflePlugin::changedClip(const InstanceChangedArgs &/*args*/, const std::string &clipName)
 {
     if (getContext() == eContextGeneral &&
         (clipName == kSourceClipAName || clipName == kSourceClipBName)) {

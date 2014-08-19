@@ -668,6 +668,7 @@
 		1E083209199FEB6F00A819A5 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E08320A199FEB6F00A819A5 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E08320B199FEB6F00A819A5 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		1E08326919A1E0DF00A819A5 /* Makefile.master */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Makefile.master; path = openfx/Support/Plugins/Makefile.master; sourceTree = SOURCE_ROOT; };
 		1E10A7071997BFE400EE87A1 /* ColorMatrix.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorMatrix.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E10A7091997C03100EE87A1 /* ColorMatrix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ColorMatrix.cpp; path = ColorMatrix/ColorMatrix.cpp; sourceTree = "<group>"; };
 		1E10A70C1997C04500EE87A1 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PluginRegistration.cpp; path = ColorMatrix/PluginRegistration.cpp; sourceTree = "<group>"; };
@@ -1271,6 +1272,7 @@
 		1E3E3CB417995D15005F2132 /* Library */ = {
 			isa = PBXGroup;
 			children = (
+				1E08326919A1E0DF00A819A5 /* Makefile.master */,
 				1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */,
 				1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */,
 				1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */,
@@ -3375,6 +3377,7 @@
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					"NDEBUG=1",
 					"$(inherited)",
 					OFX_EXTENSIONS_NUKE,
 					OFX_EXTENSIONS_VEGAS,

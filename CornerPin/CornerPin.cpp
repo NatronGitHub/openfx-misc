@@ -939,7 +939,7 @@ static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
 }
 
 static void
-CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context, PageParamDescriptor *page)
+CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/, PageParamDescriptor *page)
 {
     // NON-GENERIC PARAMETERS
     //
@@ -1027,7 +1027,7 @@ void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 }
 
 
-OFX::ImageEffect* CornerPinPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CornerPinPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new CornerPinPlugin(handle, false);
 }
@@ -1059,7 +1059,7 @@ void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     Transform3x3DescribeInContextEnd(desc, context, page, true);
 }
 
-OFX::ImageEffect* CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new CornerPinPlugin(handle, true);
 }

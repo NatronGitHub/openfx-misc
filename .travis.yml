@@ -18,6 +18,7 @@ install:
 
 # The CImg.h on ubuntu precise 12.04 is too old to compile with clang
 script:
-  - if [ "$CC" = "gcc" ]; then make BITS=64 HAVE_CIMG=1 CIMG_INCLUDE=/usr/include; else make BITS=64; fi
-  - if [ "$CC" = "gcc" ]; then make nomulti BITS=64 HAVE_CIMG=1 CIMG_INCLUDE=/usr/include; else make nomulti BITS=64; fi
+  - if [ "$CC" = "gcc" ]; then make CONFIG=debug HAVE_CIMG=1 CIMG_INCLUDE=/usr/include; else make CONFIG=debug; fi
+  - if [ "$CC" = "gcc" ]; then make nomulti CONFIG=debug HAVE_CIMG=1 CIMG_INCLUDE=/usr/include; else make nomulti CONFIG=debug; fi
+
 

@@ -483,7 +483,7 @@ void SideBySidePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     //}
 }
 
-void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
         throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
@@ -538,7 +538,7 @@ void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     page->addChild(*view2);
 }
 
-OFX::ImageEffect* SideBySidePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* SideBySidePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new SideBySidePlugin(handle);
 }
