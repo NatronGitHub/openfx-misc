@@ -242,7 +242,7 @@ private:
 
                 // merge/over
                 for (int c = 0; c < dstNComponents; ++c) {
-                    dstPix[c] = proc[c] ? OFX::MergeImages2D::overFunctor<PIX,maxValue>(maskPix[c], srcVal[c], maskAlpha, srcAlpha) : srcVal[c];
+                    dstPix[c] = proc[c] ? OFX::MergeImages2D::overFunctor<PIX,maxValue>(maskPix ? maskPix[c] : 0., srcVal[c], maskAlpha, srcAlpha) : srcVal[c];
                 }
             }
         }
