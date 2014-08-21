@@ -234,7 +234,9 @@ private:
                    }
                 } else {
                     // no src pixel here, be black and transparent
-                    std::memset(dstPix ,0, nComponents * sizeof(PIX));
+                    for (int c = 0; c < nComponents; ++c) {
+                        tmpPix[c] = apply(c, 0., 0., 0., 0.);
+                    }
                 }
                 ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 // increment the dst pixel
