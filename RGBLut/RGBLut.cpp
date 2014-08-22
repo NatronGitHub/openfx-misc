@@ -235,20 +235,11 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++)  {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                if (nComponents == 1) {
-                    if (srcPix) {
-                        tmpPix[0] = interpolate(0, (float)srcPix[0] / maxValue);
-                    } else {
-                        tmpPix[0] = _lookupTable[0][0];
-                    }
-                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
-                } else {
-                    ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
-                    for (int c = 0; c < 4; ++c) {
-                        tmpPix[c] = interpolate(c, unpPix[c]) * maxValue;
-                    }
-                    ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
+                for (int c = 0; c < 4; ++c) {
+                    tmpPix[c] = interpolate(c, unpPix[c]) * maxValue;
                 }
+                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
             }
