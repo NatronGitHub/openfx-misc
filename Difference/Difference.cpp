@@ -88,9 +88,9 @@
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 
-#define kOffsetParamName "offset"
-#define kOffsetParamLabel "Offset"
-#define kOffsetParamHint "Value subtracted to each pixel of the output"
+#define kParamOffset "offset"
+#define kParamOffsetLabel "Offset"
+#define kParamOffsetHint "Value subtracted to each pixel of the output"
 #define kGainParamName "gain"
 #define kGainParamLabel "Gain"
 #define kGainParamHint "Multiply each pixel of the output by this value"
@@ -207,7 +207,7 @@ public:
         assert(srcClipA_ && (srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA || srcClipA_->getPixelComponents() == ePixelComponentAlpha));
         srcClipB_ = fetchClip(kSourceClipBName);
         assert(srcClipB_ && (srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA || srcClipB_->getPixelComponents() == ePixelComponentAlpha));
-        _offset = fetchDoubleParam(kOffsetParamName);
+        _offset = fetchDoubleParam(kParamOffset);
         assert(_offset);
         _gain = fetchDoubleParam(kGainParamName);
         assert(_gain);
@@ -425,9 +425,9 @@ void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    DoubleParamDescriptor *offset = desc.defineDoubleParam(kOffsetParamName);
-    offset->setLabels(kOffsetParamLabel, kOffsetParamLabel, kOffsetParamLabel);
-    offset->setHint(kOffsetParamHint);
+    DoubleParamDescriptor *offset = desc.defineDoubleParam(kParamOffset);
+    offset->setLabels(kParamOffsetLabel, kParamOffsetLabel, kParamOffsetLabel);
+    offset->setHint(kParamOffsetHint);
     offset->setDefault(0.);
     offset->setIncrement(0.005);
     offset->setDisplayRange(0., 1.);

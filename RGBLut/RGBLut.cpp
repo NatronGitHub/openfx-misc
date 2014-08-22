@@ -94,13 +94,13 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kLookupTableParamName "lookupTable"
-#define kLookupTableParamLabel "Lookup Table"
-#define kLookupTableParamHint "Colour lookup table. The master curve is combined with the red, green and blue curves, but not with the alpha curve."
-#define kAddCtrlPtsParamName "addCtrlPts"
-#define kAddCtrlPtsParamLabel "Add Control Points"
-#define kResetCtrlPtsParamName "resetCtrlPts"
-#define kResetCtrlPtsParamLabel "Reset"
+#define kParamLookupTable "lookupTable"
+#define kParamLookupTableLabel "Lookup Table"
+#define kParamLookupTableHint "Colour lookup table. The master curve is combined with the red, green and blue curves, but not with the alpha curve."
+#define kParamAddCtrlPts "addCtrlPts"
+#define kParamAddCtrlPtsLabel "Add Control Points"
+#define kParamResetCtrlPts "resetCtrlPts"
+#define kParamResetCtrlPtsLabel "Reset"
 
 #define kCurveMaster 0
 #define kCurveRed 1
@@ -109,20 +109,26 @@
 #define kCurveAlpha 4
 #define kCurveNb 5
 
-class RGBLutBase : public OFX::ImageProcessor {
+using namespace OFX;
+
+class RGBLutProcessorBase : public OFX::ImageProcessor {
 protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
     bool   _doMasking;
+    bool _premult;
+    int _premultChannel;
     double _mix;
     bool _maskInvert;
 
 public:
-    RGBLutBase(OFX::ImageEffect &instance)
+    RGBLutProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
     , _doMasking(false)
+    , _premult(false)
+    , _premultChannel(3)
     , _mix(1.)
     , _maskInvert(false)
     {
@@ -133,9 +139,13 @@ public:
 
     void doMasking(bool v) {_doMasking = v;}
 
-    void setValues(double mix,
+    void setValues(bool premult,
+                   int premultChannel,
+                   double mix,
                    bool maskInvert)
     {
+        _premult = premult;
+        _premultChannel = premultChannel;
         _mix = mix;
         _maskInvert = maskInvert;
     }
@@ -178,12 +188,12 @@ float clamp<float>(float value, int maxValue)
 // nbValues is the number of values in the LUT minus 1. For integer types, it should be the same as
 // maxValue
 template <class PIX, int nComponents, int maxValue, int nbValues>
-class ImageRGBLutProcessor : public RGBLutBase
+class RGBLutProcessor : public RGBLutProcessorBase
 {
 public:
     // ctor
-    ImageRGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTable)
-    : RGBLutBase(instance)
+    RGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTable)
+    : RGBLutProcessorBase(instance)
     {
         // build the LUT
         assert(lookupTable);
@@ -214,7 +224,8 @@ private:
     {
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         assert(_dstImg);
-        float tmpPix[nComponents];
+        float unpPix[4];
+        float tmpPix[4];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -224,18 +235,20 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++)  {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                if (srcPix) {
-                    for (int c = 0; c < nComponents; c++) {
-                        //assert(0 <= srcPix[c] && srcPix[c] <= maxValue);
-                        tmpPix[c] = interpolate(c, (float)srcPix[c] / maxValue);
+                if (nComponents == 1) {
+                    if (srcPix) {
+                        tmpPix[0] = interpolate(0, (float)srcPix[0] / maxValue);
+                    } else {
+                        tmpPix[0] = _lookupTable[0][0];
                     }
-                } else  {
-                    // no src pixel here, be black and transparent
-                    for (int c = 0; c < nComponents; c++) {
-                        tmpPix[c] = _lookupTable[c][0];
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                } else {
+                    ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
+                    for (int c = 0; c < 4; ++c) {
+                        tmpPix[c] = interpolate(c, unpPix[c]) * maxValue;
                     }
+                    ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 }
-                OFX::ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
             }
@@ -281,8 +294,11 @@ public:
 
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
-        lookupTable_ = fetchParametricParam(kLookupTableParamName);
+        lookupTable_ = fetchParametricParam(kParamLookupTable);
         assert(lookupTable_);
+        _premult = fetchBooleanParam(kParamPremult);
+        _premultChannel = fetchChoiceParam(kParamPremultChannel);
+        assert(_premult && _premultChannel);
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
@@ -294,10 +310,10 @@ private:
     template <int nComponents>
     void renderForComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
-    void setupAndProcess(RGBLutBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(RGBLutProcessorBase &, const OFX::RenderArguments &args);
     void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
     {
-        if (paramName == kAddCtrlPtsParamName) {
+        if (paramName == kParamAddCtrlPts) {
             for (int component = 0; component < kCurveNb; ++component) {
                 int n = lookupTable_->getNControlPoints(component, args.time);
                 if (n <= 1) {
@@ -338,7 +354,7 @@ private:
                 }
             }
 #if 0
-        } else if (paramName == kResetCtrlPtsParamName) {
+        } else if (paramName == kParamResetCtrlPts) {
             OFX::Message::MessageReplyEnum reply = sendMessage(OFX::Message::eMessageQuestion, "", "Delete all control points for all components?");
             // Nuke seems to always reply eMessageReplyOK, whatever the real answer was
             switch (reply) {
@@ -377,12 +393,14 @@ private:
     OFX::Clip *srcClip_;
     OFX::Clip *maskClip_;
     OFX::ParametricParam  *lookupTable_;
+    OFX::BooleanParam* _premult;
+    OFX::ChoiceParam* _premultChannel;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
 };
 
 
-void RGBLutPlugin::setupAndProcess(RGBLutBase &processor, const OFX::RenderArguments &args)
+void RGBLutPlugin::setupAndProcess(RGBLutProcessorBase &processor, const OFX::RenderArguments &args)
 {
     assert(dstClip_);
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
@@ -426,11 +444,15 @@ void RGBLutPlugin::setupAndProcess(RGBLutBase &processor, const OFX::RenderArgum
     processor.setDstImg(dst.get());
     processor.setSrcImg(src.get());
     processor.setRenderWindow(args.renderWindow);
+    bool premult;
+    int premultChannel;
+    _premult->getValueAtTime(args.time, premult);
+    _premultChannel->getValueAtTime(args.time, premultChannel);
     double mix;
     _mix->getValueAtTime(args.time, mix);
     bool maskInvert;
     _maskInvert->getValueAtTime(args.time, maskInvert);
-    processor.setValues(mix, maskInvert);
+    processor.setValues(premult, premultChannel, mix, maskInvert);
     processor.process();
 }
 
@@ -441,15 +463,15 @@ RGBLutPlugin::renderForComponents(const OFX::RenderArguments &args, OFX::BitDept
 {
     switch(dstBitDepth) {
         case OFX::eBitDepthUByte: {
-            ImageRGBLutProcessor<unsigned char, nComponents, 255, 255> fred(*this, args, lookupTable_);
+            RGBLutProcessor<unsigned char, nComponents, 255, 255> fred(*this, args, lookupTable_);
             setupAndProcess(fred, args);
         }   break;
         case OFX::eBitDepthUShort: {
-            ImageRGBLutProcessor<unsigned short, nComponents, 65535, 65535> fred(*this, args, lookupTable_);
+            RGBLutProcessor<unsigned short, nComponents, 65535, 65535> fred(*this, args, lookupTable_);
             setupAndProcess(fred, args);
         }   break;
         case OFX::eBitDepthFloat: {
-            ImageRGBLutProcessor<float, nComponents, 1, 1023> fred(*this, args, lookupTable_);
+            RGBLutProcessor<float, nComponents, 1, 1023> fred(*this, args, lookupTable_);
             setupAndProcess(fred, args);
         }   break;
         default :
@@ -540,66 +562,69 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     // define it
-    OFX::ParametricParamDescriptor* lookupTable = desc.defineParametricParam(kLookupTableParamName);
-    assert(lookupTable);
-    lookupTable->setLabels(kLookupTableParamLabel, kLookupTableParamLabel, kLookupTableParamLabel);
-    lookupTable->setHint(kLookupTableParamHint);
+    {
+        OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamLookupTable);
+        assert(param);
+        param->setLabels(kParamLookupTableLabel, kParamLookupTableLabel, kParamLookupTableLabel);
+        param->setHint(kParamLookupTableHint);
 
-    // define it as three dimensional
-    lookupTable->setDimension(kCurveNb);
-    
-    // label our dimensions are r/g/b
-    lookupTable->setDimensionLabel("master", kCurveMaster);
-    lookupTable->setDimensionLabel("red", kCurveRed);
-    lookupTable->setDimensionLabel("green", kCurveGreen);
-    lookupTable->setDimensionLabel("blue", kCurveBlue);
-    lookupTable->setDimensionLabel("alpha", kCurveAlpha);
+        // define it as three dimensional
+        param->setDimension(kCurveNb);
 
-    // set the UI colour for each dimension
-    const OfxRGBColourD master  = {0.9,0.9,0.9};
-    // the following are magic colors, they all have the same luminance
-    const OfxRGBColourD red   = {0.711519527404004, 0.164533420851110, 0.164533420851110};		//set red color to red curve
-    const OfxRGBColourD green = {0., 0.546986106552894, 0.};		//set green color to green curve
-    const OfxRGBColourD blue  = {0.288480472595996, 0.288480472595996, 0.835466579148890};		//set blue color to blue curve
-    const OfxRGBColourD alpha  = {0.398979,0.398979,0.398979};
-    lookupTable->setUIColour( kCurveRed, red );
-    lookupTable->setUIColour( kCurveGreen, green );
-    lookupTable->setUIColour( kCurveBlue, blue );
-    lookupTable->setUIColour( kCurveAlpha, alpha );
-    lookupTable->setUIColour( kCurveMaster, master );
+        // label our dimensions are r/g/b
+        param->setDimensionLabel("master", kCurveMaster);
+        param->setDimensionLabel("red", kCurveRed);
+        param->setDimensionLabel("green", kCurveGreen);
+        param->setDimensionLabel("blue", kCurveBlue);
+        param->setDimensionLabel("alpha", kCurveAlpha);
 
-    // set the min/max parametric range to 0..1
-    lookupTable->setRange(0.0, 1.0);
-    
-    /*
-     // set a default curve, this example sets identity
-     for (int component = 0; component < 3; ++component) {
-     // add a control point at 0, value is 0
-     lookupTable->addControlPoint(component, // curve to set
-     0.0,   // time, ignored in this case, as we are not adding a key
-     0.0,   // parametric position, zero
-     0.0,   // value to be, 0
-     false);   // don't add a key
-     // add a control point at 1, value is 1
-     lookupTable->addControlPoint(component, 0.0, 1.0, 1.0, false);
-     }
-     */
-    lookupTable->setIdentity();
-    
-    page->addChild(*lookupTable);
-    
-    OFX::PushButtonParamDescriptor* addCtrlPts = desc.definePushButtonParam(kAddCtrlPtsParamName);
-    addCtrlPts->setLabels(kAddCtrlPtsParamLabel, kAddCtrlPtsParamLabel, kAddCtrlPtsParamLabel);
-    
-    page->addChild(*addCtrlPts);
-    
+        // set the UI colour for each dimension
+        const OfxRGBColourD master  = {0.9,0.9,0.9};
+        // the following are magic colors, they all have the same luminance
+        const OfxRGBColourD red   = {0.711519527404004, 0.164533420851110, 0.164533420851110};		//set red color to red curve
+        const OfxRGBColourD green = {0., 0.546986106552894, 0.};		//set green color to green curve
+        const OfxRGBColourD blue  = {0.288480472595996, 0.288480472595996, 0.835466579148890};		//set blue color to blue curve
+        const OfxRGBColourD alpha  = {0.398979,0.398979,0.398979};
+        param->setUIColour( kCurveRed, red );
+        param->setUIColour( kCurveGreen, green );
+        param->setUIColour( kCurveBlue, blue );
+        param->setUIColour( kCurveAlpha, alpha );
+        param->setUIColour( kCurveMaster, master );
+
+        // set the min/max parametric range to 0..1
+        param->setRange(0.0, 1.0);
+
+        /*
+         // set a default curve, this example sets identity
+         for (int component = 0; component < 3; ++component) {
+         // add a control point at 0, value is 0
+         param->addControlPoint(component, // curve to set
+         0.0,   // time, ignored in this case, as we are not adding a key
+         0.0,   // parametric position, zero
+         0.0,   // value to be, 0
+         false);   // don't add a key
+         // add a control point at 1, value is 1
+         param->addControlPoint(component, 0.0, 1.0, 1.0, false);
+         }
+         */
+        param->setIdentity();
+
+        page->addChild(*param);
+    }
+    {
+        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAddCtrlPts);
+        param->setLabels(kParamAddCtrlPtsLabel, kParamAddCtrlPtsLabel, kParamAddCtrlPtsLabel);
+        page->addChild(*param);
+    }
 #if 0
-    OFX::PushButtonParamDescriptor* resetCtrlPts = desc.definePushButtonParam(kResetCtrlPtsParamName);
-    resetCtrlPts->setLabels(kResetCtrlPtsParamLabel, kResetCtrlPtsParamLabel, kResetCtrlPtsParamLabel);
-    
-    page->addChild(*resetCtrlPts);
+    {
+        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamResetCtrlPts);
+        param->setLabels(kParamResetCtrlPtsLabel, kParamResetCtrlPtsLabel, kParamResetCtrlPtsLabel);
+        page->addChild(*param);
+    }
 #endif
 
+    ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
 }
 

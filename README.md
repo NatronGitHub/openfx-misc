@@ -42,12 +42,12 @@ grouping).
 ### Color
 
 * ColorCorrectOFX: Adjusts the saturation, constrast, gamma, gain and offset of an image.
+* ColorMatrixOFX: Multiply the RGBA channels by an arbitrary 4x4 matrix.
 * GradeOFX: Modify the tonal spread of an image from the white and black points.
 * InvertOFX: Inverse the selected channels.
 * RGBLutOFX: Apply a parametric lookup curve to each channel  
   separately.
-* ColorMatrixOFX: Multiply the RGBA channels by an arbitrary 4x4 matrix.
-   
+
 ### Keyer
 
 * ChromaKeyerOFX: Apply chroma keying, as described in "Video Demystified" by Keith Jack.  

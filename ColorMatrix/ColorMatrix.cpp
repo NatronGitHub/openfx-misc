@@ -105,24 +105,13 @@
 #define kParamOutputAlphaLabel "Output Alpha"
 #define kParamOutputAlphaHint  "values for alpha output component."
 
-#define kBlackPointParamName "blackPoint"
-#define kBlackPointParamLabel "Black Point"
-#define kWhitePointParamName "whitePoint"
-#define kWhitePointParamLabel "White Point"
-#define kBlackParamName "black"
-#define kBlackParamLabel "Black"
-#define kWhiteParamName "white"
-#define kWhiteParamLabel "White"
-#define kMultiplyParamName "multiply"
-#define kMultiplyParamLabel "Multiply"
-#define kOffsetParamName "offset"
-#define kOffsetParamLabel "Offset"
-#define kGammaParamName "gamma"
-#define kGammaParamLabel "Gamma"
-#define kClampBlackParamName "clampBlack"
-#define kClampBlackParamLabel "Clamp Black"
-#define kClampWhiteParamName "clampWhite"
-#define kClampWhiteParamLabel "Clamp White"
+#define kParamClampBlack "clampBlack"
+#define kParamClampBlackLabel "Clamp Black"
+#define kParamClampBlackHint "All colors below 0 on output are set to 0."
+
+#define kParamClampWhite "clampWhite"
+#define kParamClampWhiteLabel "Clamp White"
+#define kParamClampWhiteHint "All colors above 1 on output are set to 1."
 
 
 using namespace OFX;
@@ -142,6 +131,8 @@ protected:
     RGBAValues _matrix[4];
     bool _clampBlack;
     bool _clampWhite;
+    bool _premult;
+    int _premultChannel;
     bool   _doMasking;
     double _mix;
     bool _maskInvert;
@@ -152,6 +143,8 @@ public:
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
+    , _premult(false)
+    , _premultChannel(3)
     , _doMasking(false)
     , _mix(1.)
     , _maskInvert(false)
@@ -170,6 +163,8 @@ public:
                    const RGBAValues& outputAlpha,
                    bool clampBlack,
                    bool clampWhite,
+                   bool premult,
+                   int premultChannel,
                    double mix,
                    bool maskInvert)
     {
@@ -179,6 +174,8 @@ public:
         _matrix[3] = outputAlpha;
         _clampBlack = clampBlack;
         _clampWhite = clampWhite;
+        _premult = premult;
+        _premultChannel = premultChannel;
         _mix = mix;
         _maskInvert = maskInvert;
     }
@@ -214,7 +211,8 @@ private:
     {
         assert(nComponents == 3 || nComponents == 4);
         assert(_dstImg);
-        float tmpPix[nComponents];
+        float unpPix[4];
+        float tmpPix[4];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -224,21 +222,11 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                if (srcPix) {
-                    double inR = srcPix[0];
-                    double inG = srcPix[1];
-                    double inB = srcPix[2];
-                    float inA = (nComponents == 4) ? srcPix[3] : 0.0;
-                    for (int c = 0; c < nComponents; ++c) {
-                        tmpPix[c] = apply(c, inR, inG, inB, inA);
-                   }
-                } else {
-                    // no src pixel here, be black and transparent
-                    for (int c = 0; c < nComponents; ++c) {
-                        tmpPix[c] = apply(c, 0., 0., 0., 0.);
-                    }
+                ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
+                for (int c = 0; c < 4; ++c) {
+                    tmpPix[c] = apply(c, unpPix[0], unpPix[1], unpPix[2], unpPix[3]);
                 }
-                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
             }
@@ -269,9 +257,12 @@ public:
         _outputGreen = fetchRGBAParam(kParamOutputGreenName);
         _outputBlue = fetchRGBAParam(kParamOutputBlueName);
         _outputAlpha = fetchRGBAParam(kParamOutputAlphaName);
-        _clampBlack = fetchBooleanParam(kClampBlackParamName);
-        _clampWhite = fetchBooleanParam(kClampWhiteParamName);
+        _clampBlack = fetchBooleanParam(kParamClampBlack);
+        _clampWhite = fetchBooleanParam(kParamClampWhite);
         assert(_outputRed && _outputGreen && _outputBlue && _outputAlpha && _clampBlack && _clampWhite);
+        _premult = fetchBooleanParam(kParamPremult);
+        _premultChannel = fetchChoiceParam(kParamPremultChannel);
+        assert(_premult && _premultChannel);
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
@@ -297,6 +288,8 @@ private:
     OFX::RGBAParam *_outputAlpha;
     OFX::BooleanParam* _clampBlack;
     OFX::BooleanParam* _clampWhite;
+    OFX::BooleanParam* _premult;
+    OFX::ChoiceParam* _premultChannel;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
 };
@@ -352,11 +345,15 @@ ColorMatrixPlugin::setupAndProcess(ColorMatrixProcessorBase &processor, const OF
     bool clampBlack,clampWhite;
     _clampBlack->getValueAtTime(args.time, clampBlack);
     _clampWhite->getValueAtTime(args.time, clampWhite);
+    bool premult;
+    int premultChannel;
+    _premult->getValueAtTime(args.time, premult);
+    _premultChannel->getValueAtTime(args.time, premultChannel);
     double mix;
     _mix->getValueAtTime(args.time, mix);
     bool maskInvert;
     _maskInvert->getValueAtTime(args.time, maskInvert);
-    processor.setValues(r, g, b, a, clampBlack, clampWhite, mix, maskInvert);
+    processor.setValues(r, g, b, a, clampBlack, clampWhite, premult, premultChannel, mix, maskInvert);
  
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -509,48 +506,56 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    RGBAParamDescriptor *paramRed = desc.defineRGBAParam(kParamOutputRedName);
-    paramRed->setLabels(kParamOutputRedLabel, kParamOutputRedLabel, kParamOutputRedLabel);
-    paramRed->setHint(kParamOutputRedHint);
-    paramRed->setDefault(1.0, 0.0, 0.0, 0.0);
-    paramRed->setAnimates(true); // can animate
-    page->addChild(*paramRed);
+    {
+        RGBAParamDescriptor *param = desc.defineRGBAParam(kParamOutputRedName);
+        param->setLabels(kParamOutputRedLabel, kParamOutputRedLabel, kParamOutputRedLabel);
+        param->setHint(kParamOutputRedHint);
+        param->setDefault(1.0, 0.0, 0.0, 0.0);
+        param->setAnimates(true); // can animate
+        page->addChild(*param);
+    }
+    {
+        RGBAParamDescriptor *param = desc.defineRGBAParam(kParamOutputGreenName);
+        param->setLabels(kParamOutputGreenLabel, kParamOutputGreenLabel, kParamOutputGreenLabel);
+        param->setHint(kParamOutputGreenHint);
+        param->setDefault(0.0, 1.0, 0.0, 0.0);
+        param->setAnimates(true); // can animate
+        page->addChild(*param);
+    }
+    {
+        RGBAParamDescriptor *param = desc.defineRGBAParam(kParamOutputBlueName);
+        param->setLabels(kParamOutputBlueLabel, kParamOutputBlueLabel, kParamOutputBlueLabel);
+        param->setHint(kParamOutputBlueHint);
+        param->setDefault(0.0, 0.0, 1.0, 0.0);
+        param->setAnimates(true); // can animate
+        page->addChild(*param);
+    }
+    {
+        RGBAParamDescriptor *param = desc.defineRGBAParam(kParamOutputAlphaName);
+        param->setLabels(kParamOutputAlphaLabel, kParamOutputAlphaLabel, kParamOutputAlphaLabel);
+        param->setHint(kParamOutputAlphaHint);
+        param->setDefault(0.0, 0.0, 0.0, 1.0);
+        param->setAnimates(true); // can animate
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
+        param->setLabels(kParamClampBlackLabel, kParamClampBlackLabel, kParamClampBlackLabel);
+        param->setHint(kParamClampBlackHint);
+        param->setDefault(true);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampWhite);
+        param->setLabels(kParamClampWhiteLabel, kParamClampWhiteLabel, kParamClampWhiteLabel);
+        param->setHint(kParamClampWhiteHint);
+        param->setDefault(true);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 
-    RGBAParamDescriptor *paramGreen = desc.defineRGBAParam(kParamOutputGreenName);
-    paramGreen->setLabels(kParamOutputGreenLabel, kParamOutputGreenLabel, kParamOutputGreenLabel);
-    paramGreen->setHint(kParamOutputGreenHint);
-    paramGreen->setDefault(0.0, 1.0, 0.0, 0.0);
-    paramGreen->setAnimates(true); // can animate
-    page->addChild(*paramGreen);
-
-    RGBAParamDescriptor *paramBlue = desc.defineRGBAParam(kParamOutputBlueName);
-    paramBlue->setLabels(kParamOutputBlueLabel, kParamOutputBlueLabel, kParamOutputBlueLabel);
-    paramBlue->setHint(kParamOutputBlueHint);
-    paramBlue->setDefault(0.0, 0.0, 1.0, 0.0);
-    paramBlue->setAnimates(true); // can animate
-    page->addChild(*paramBlue);
-
-    RGBAParamDescriptor *paramAlpha = desc.defineRGBAParam(kParamOutputAlphaName);
-    paramAlpha->setLabels(kParamOutputAlphaLabel, kParamOutputAlphaLabel, kParamOutputAlphaLabel);
-    paramAlpha->setHint(kParamOutputAlphaHint);
-    paramAlpha->setDefault(0.0, 0.0, 0.0, 1.0);
-    paramAlpha->setAnimates(true); // can animate
-    page->addChild(*paramAlpha);
-    
-    BooleanParamDescriptor *clampBlackParam = desc.defineBooleanParam(kClampBlackParamName);
-    clampBlackParam->setLabels(kClampBlackParamLabel, kClampBlackParamLabel, kClampBlackParamLabel);
-    clampBlackParam->setHint("All colors below 0 will be set to 0.");
-    clampBlackParam->setDefault(true);
-    clampBlackParam->setAnimates(true);
-    page->addChild(*clampBlackParam);
-    
-    BooleanParamDescriptor *clampWhiteParam = desc.defineBooleanParam(kClampWhiteParamName);
-    clampWhiteParam->setLabels(kClampWhiteParamLabel, kClampWhiteParamLabel, kClampWhiteParamLabel);
-    clampWhiteParam->setHint("All colors above 1 will be set to 1.");
-    clampWhiteParam->setDefault(true);
-    clampWhiteParam->setAnimates(true);
-    page->addChild(*clampWhiteParam);
-
+    ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
 }
 

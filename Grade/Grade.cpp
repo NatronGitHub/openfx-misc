@@ -96,25 +96,41 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kBlackPointParamName "blackPoint"
-#define kBlackPointParamLabel "Black Point"
-#define kWhitePointParamName "whitePoint"
-#define kWhitePointParamLabel "White Point"
-#define kBlackParamName "black"
-#define kBlackParamLabel "Black"
-#define kWhiteParamName "white"
-#define kWhiteParamLabel "White"
-#define kMultiplyParamName "multiply"
-#define kMultiplyParamLabel "Multiply"
-#define kOffsetParamName "offset"
-#define kOffsetParamLabel "Offset"
-#define kGammaParamName "gamma"
-#define kGammaParamLabel "Gamma"
-#define kClampBlackParamName "clampBlack"
-#define kClampBlackParamLabel "Clamp Black"
-#define kClampWhiteParamName "clampWhite"
-#define kClampWhiteParamLabel "Clamp White"
+#define kParamBlackPoint "blackPoint"
+#define kParamBlackPointLabel "Black Point"
+#define kParamBlackPointHint "Set the color of the darkest pixels in the image"
 
+#define kParamWhitePoint "whitePoint"
+#define kParamWhitePointLabel "White Point"
+#define kParamWhitePointHint "Set the color of the brightest pixels in the image"
+
+#define kParamBlack "black"
+#define kParamBlackLabel "Black"
+#define kParamBlackHint "Colors corresponding to the blackpoint are set to this value"
+
+#define kParamWhite "white"
+#define kParamWhiteLabel "White"
+#define kParamWhiteHint "Colors corresponding to the whitepoint are set to this value"
+
+#define kParamMultiply "multiply"
+#define kParamMultiplyLabel "Multiply"
+#define kParamMultiplyHint "Multiplies the result by this value"
+
+#define kParamOffset "offset"
+#define kParamOffsetLabel "Offset"
+#define kParamOffsetHint "Adds this value to the result (this applies to black and white)"
+
+#define kParamGamma "gamma"
+#define kParamGammaLabel "Gamma"
+#define kParamGammaHint "Final gamma correction"
+
+#define kParamClampBlack "clampBlack"
+#define kParamClampBlackLabel "Clamp Black"
+#define kParamClampBlackHint "All colors below 0 on output are set to 0."
+
+#define kParamClampWhite "clampWhite"
+#define kParamClampWhiteLabel "Clamp White"
+#define kParamClampWhiteHint "All colors above 1 on output are set to 1."
 
 using namespace OFX;
 
@@ -130,6 +146,8 @@ class GradeProcessorBase : public OFX::ImageProcessor
 protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
+    bool _premult;
+    int _premultChannel;
     bool   _doMasking;
     double _mix;
     bool _maskInvert;
@@ -140,6 +158,8 @@ public:
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
+    , _premult(false)
+    , _premultChannel(3)
     , _doMasking(false)
     , _mix(1.)
     , _maskInvert(false)
@@ -161,6 +181,8 @@ public:
                    const RGBAValues& gamma,
                    bool clampBlack,
                    bool clampWhite,
+                   bool premult,
+                   int premultChannel,
                    double mix,
                    bool maskInvert)
     {
@@ -173,6 +195,8 @@ public:
         _gamma = gamma;
         _clampBlack = clampBlack;
         _clampWhite = clampWhite;
+        _premult = premult;
+        _premultChannel = premultChannel;
         _mix = mix;
         _maskInvert = maskInvert;
     }
@@ -229,7 +253,8 @@ private:
     {
         assert(nComponents == 3 || nComponents == 4);
         assert(_dstImg);
-        float tmpPix[nComponents];
+        float unpPix[4];
+        float tmpPix[4];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -239,31 +264,18 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                if (srcPix) {
-                    double t_r = srcPix[0] / double(maxValue);
-                    double t_g = srcPix[1] / double(maxValue);
-                    double t_b = srcPix[2] / double(maxValue);
-                    grade(&t_r, &t_g, &t_b);
-                    tmpPix[0] = t_r * maxValue;
-                    tmpPix[1] = t_g * maxValue;
-                    tmpPix[2] = t_b * maxValue;
-                    if (nComponents == 4) {
-                        tmpPix[nComponents-1] = srcPix[nComponents-1];
-                    }
-                } else {
-                    // no src pixel here, be black and transparent
-                    double t_r = 0.;
-                    double t_g = 0.;
-                    double t_b = 0.;
-                    grade(&t_r, &t_g, &t_b);
-                    tmpPix[0] = t_r * maxValue;
-                    tmpPix[1] = t_g * maxValue;
-                    tmpPix[2] = t_b * maxValue;
-                    if (nComponents == 4) {
-                        tmpPix[nComponents-1] = 0.;
-                    }
+                ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
+                double t_r = unpPix[0];
+                double t_g = unpPix[1];
+                double t_b = unpPix[2];
+                grade(&t_r, &t_g, &t_b);
+                tmpPix[0] = t_r;
+                tmpPix[1] = t_g;
+                tmpPix[2] = t_b;
+                if (nComponents == 4) {
+                    tmpPix[3] = unpPix[3];
                 }
-                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
             }
@@ -290,16 +302,19 @@ public:
         assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
-        _blackPoint = fetchRGBAParam(kBlackPointParamName);
-        _whitePoint = fetchRGBAParam(kWhitePointParamName);
-        _black = fetchRGBAParam(kBlackParamName);
-        _white = fetchRGBAParam(kWhiteParamName);
-        _multiply = fetchRGBAParam(kMultiplyParamName);
-        _offset = fetchRGBAParam(kOffsetParamName);
-        _gamma = fetchRGBAParam(kGammaParamName);
-        _clampBlack = fetchBooleanParam(kClampBlackParamName);
-        _clampWhite = fetchBooleanParam(kClampWhiteParamName);
+        _blackPoint = fetchRGBAParam(kParamBlackPoint);
+        _whitePoint = fetchRGBAParam(kParamWhitePoint);
+        _black = fetchRGBAParam(kParamBlack);
+        _white = fetchRGBAParam(kParamWhite);
+        _multiply = fetchRGBAParam(kParamMultiply);
+        _offset = fetchRGBAParam(kParamOffset);
+        _gamma = fetchRGBAParam(kParamGamma);
+        _clampBlack = fetchBooleanParam(kParamClampBlack);
+        _clampWhite = fetchBooleanParam(kParamClampWhite);
         assert(_blackPoint && _whitePoint && _black && _white && _multiply && _offset && _gamma && _clampBlack && _clampWhite);
+        _premult = fetchBooleanParam(kParamPremult);
+        _premultChannel = fetchChoiceParam(kParamPremultChannel);
+        assert(_premult && _premultChannel);
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
@@ -328,6 +343,8 @@ private:
     OFX::RGBAParam* _gamma;
     OFX::BooleanParam* _clampBlack;
     OFX::BooleanParam* _clampWhite;
+    OFX::BooleanParam* _premult;
+    OFX::ChoiceParam* _premultChannel;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
 };
@@ -384,11 +401,15 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     bool clampBlack,clampWhite;
     _clampBlack->getValueAtTime(args.time, clampBlack);
     _clampWhite->getValueAtTime(args.time, clampWhite);
+    bool premult;
+    int premultChannel;
+    _premult->getValueAtTime(args.time, premult);
+    _premultChannel->getValueAtTime(args.time, premultChannel);
     double mix;
     _mix->getValueAtTime(args.time, mix);
     bool maskInvert;
     _maskInvert->getValueAtTime(args.time, maskInvert);
-    processor.setValues(blackPoint, whitePoint, black, white, multiply, offset, gamma, clampBlack, clampWhite, mix, maskInvert);
+    processor.setValues(blackPoint, whitePoint, black, white, multiply, offset, gamma, clampBlack, clampWhite, premult, premultChannel, mix, maskInvert);
     processor.process();
 }
 
@@ -558,32 +579,32 @@ void GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    defineRGBAScaleParam(desc, kBlackPointParamName, kBlackPointParamName, "Set the color of the darkest pixels in the image", page, 0., -1., 1.);
-    defineRGBAScaleParam(desc, kWhitePointParamName, kWhitePointParamName, "Set the color of the brightest pixels in the image",
-                         page, 1., 0., 4.);
-    defineRGBAScaleParam(desc, kBlackParamName, kBlackParamName, "Colors corresponding to the blackpoint are set to this value",
-                         page, 0., -1., 1.);
-    defineRGBAScaleParam(desc, kWhiteParamName, kWhiteParamName, "Colors corresponding to the whitepoint are set to this value"
-                         , page, 1., 0., 4.);
-    defineRGBAScaleParam(desc, kMultiplyParamName, kMultiplyParamName, "Multiplies the result by this value", page, 1., 0., 4.);
-    defineRGBAScaleParam(desc, kOffsetParamName, kOffsetParamName, "Adds this value to the result (this applies to black and white)",
-                         page, 0., -1., 1.);
-    defineRGBAScaleParam(desc, kGammaParamName, kGammaParamName, "Final gamma correction", page, 1., 0.2, 5.);
-    
-    BooleanParamDescriptor *clampBlackParam = desc.defineBooleanParam(kClampBlackParamName);
-    clampBlackParam->setLabels(kClampBlackParamLabel, kClampBlackParamLabel, kClampBlackParamLabel);
-    clampBlackParam->setHint("All colors below 0 will be set to 0.");
-    clampBlackParam->setDefault(true);
-    clampBlackParam->setAnimates(true);
-    page->addChild(*clampBlackParam);
-    
-    BooleanParamDescriptor *clampWhiteParam = desc.defineBooleanParam(kClampWhiteParamName);
-    clampWhiteParam->setLabels(kClampWhiteParamLabel, kClampWhiteParamLabel, kClampWhiteParamLabel);
-    clampWhiteParam->setHint("All colors above 1 will be set to 1.");
-    clampWhiteParam->setDefault(true);
-    clampWhiteParam->setAnimates(true);
-    page->addChild(*clampWhiteParam);
+    defineRGBAScaleParam(desc, kParamBlackPoint, kParamBlackPointLabel, kParamBlackPointHint, page, 0., -1., 1.);
+    defineRGBAScaleParam(desc, kParamWhitePoint, kParamWhitePointLabel, kParamWhitePointHint, page, 1., 0., 4.);
+    defineRGBAScaleParam(desc, kParamBlack, kParamBlackLabel, kParamBlackHint, page, 0., -1., 1.);
+    defineRGBAScaleParam(desc, kParamWhite, kParamWhiteLabel, kParamWhiteHint, page, 1., 0., 4.);
+    defineRGBAScaleParam(desc, kParamMultiply, kParamMultiplyLabel, kParamMultiplyHint, page, 1., 0., 4.);
+    defineRGBAScaleParam(desc, kParamOffset, kParamOffsetLabel, kParamOffsetHint, page, 0., -1., 1.);
+    defineRGBAScaleParam(desc, kParamGamma, kParamGammaLabel, kParamGammaHint, page, 1., 0.2, 5.);
 
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
+        param->setLabels(kParamClampBlackLabel, kParamClampBlackLabel, kParamClampBlackLabel);
+        param->setHint(kParamClampBlackHint);
+        param->setDefault(true);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampWhite);
+        param->setLabels(kParamClampWhiteLabel, kParamClampWhiteLabel, kParamClampWhiteLabel);
+        param->setHint(kParamClampWhiteHint);
+        param->setDefault(true);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    
+    ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
 }
 

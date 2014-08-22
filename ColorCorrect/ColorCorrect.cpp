@@ -90,10 +90,10 @@
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 ////std strings because we need them in changedParam
-static const std::string kColorCorrectMasterGroupName = std::string("Master");
-static const std::string kColorCorrectShadowsGroupName = std::string("Shadows");
-static const std::string kColorCorrectMidtonesGroupName = std::string("Midtones");
-static const std::string kColorCorrectHighlightsGroupName = std::string("Highlights");
+static const std::string kGroupColorCorrectMaster = std::string("Master");
+static const std::string kGroupColorCorrectShadows = std::string("Shadows");
+static const std::string kGroupColorCorrectMidtones = std::string("Midtones");
+static const std::string kGroupColorCorrectHighlights = std::string("Highlights");
 
 static const std::string kColorCorrectSaturationName = std::string("Saturation");
 static const std::string kColorCorrectContrastName = std::string("Contrast");
@@ -101,11 +101,11 @@ static const std::string kColorCorrectGammaName = std::string("Gamma");
 static const std::string kColorCorrectGainName = std::string("Gain");
 static const std::string kColorCorrectOffsetName = std::string("Offset");
 
-#define kColorCorrectToneRangesParamName "toneRanges"
-#define kColorCorrectToneRangesParamLabel "Tone Ranges"
-#define kColorCorrectToneRangesParamHint "Tone ranges lookup table"
-#define kColorCorrectToneRangesParamDim0 "Shadow"
-#define kColorCorrectToneRangesParamDim1 "Highlight"
+#define kParamColorCorrectToneRanges "toneRanges"
+#define kParamColorCorrectToneRangesLabel "Tone Ranges"
+#define kParamColorCorrectToneRangesHint "Tone ranges lookup table"
+#define kParamColorCorrectToneRangesDim0 "Shadow"
+#define kParamColorCorrectToneRangesDim1 "Highlight"
 
 #define LUT_MAX_PRECISION 100
 
@@ -232,6 +232,8 @@ class ColorCorrecterBase : public OFX::ImageProcessor
 protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
+    bool _premult;
+    int _premultChannel;
     bool   _doMasking;
     double _mix;
     bool _maskInvert;
@@ -241,12 +243,14 @@ public:
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
+    , _premult(false)
+    , _premultChannel(3)
     , _doMasking(false)
     , _mix(1.)
     , _maskInvert(false)
     {
         // build the LUT
-        OFX::ParametricParam  *lookupTable = instance.fetchParametricParam(kColorCorrectToneRangesParamName);
+        OFX::ParametricParam  *lookupTable = instance.fetchParametricParam(kParamColorCorrectToneRanges);
         assert(lookupTable);
         for (int curve = 0; curve < 2; ++curve) {
             for (int position = 0; position <= LUT_MAX_PRECISION; ++position) {
@@ -272,6 +276,8 @@ public:
                                const ColorControlGroup& shadow,
                                const ColorControlGroup& midtone,
                                const ColorControlGroup& hightlights,
+                               bool premult,
+                               int premultChannel,
                                double mix,
                                bool maskInvert)
     {
@@ -279,6 +285,8 @@ public:
         _shadowValues = shadow;
         _midtoneValues = midtone;
         _highlightsValues = hightlights;
+        _premult = premult;
+        _premultChannel = premultChannel;
         _mix = mix;
         _maskInvert = maskInvert;
     }
@@ -341,7 +349,8 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         assert(nComponents == 3 || nComponents == 4);
-        float tmpPix[nComponents];
+        float unpPix[4];
+        float tmpPix[4];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -350,22 +359,16 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                if (srcPix) {
-                    double t_r = srcPix[0] / double(maxValue);
-                    double t_g = srcPix[1] / double(maxValue);
-                    double t_b = srcPix[2] / double(maxValue);
-                    colorTransform(&t_r, &t_g, &t_b);
-                    tmpPix[0] = t_r * maxValue;
-                    tmpPix[1] = t_g * maxValue;
-                    tmpPix[2] = t_b * maxValue;
-                    if (nComponents == 4) {
-                        tmpPix[nComponents-1] = srcPix[nComponents-1];
-                    }
-                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
-                } else {
-                    for (int c = 0; c < nComponents; c++)
-                        dstPix[c] = 0;
-                }
+                ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
+                double t_r = unpPix[0];
+                double t_g = unpPix[1];
+                double t_b = unpPix[2];
+                colorTransform(&t_r, &t_g, &t_b);
+                tmpPix[0] = t_r;
+                tmpPix[1] = t_g;
+                tmpPix[2] = t_b;
+                tmpPix[3] = unpPix[3];
+                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 dstPix += nComponents;
             }
         }
@@ -408,12 +411,15 @@ public:
         assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
-        fetchColorControlGroup(kColorCorrectMasterGroupName, &_masterParamsGroup);
-        fetchColorControlGroup(kColorCorrectShadowsGroupName, &_shadowsParamsGroup);
-        fetchColorControlGroup(kColorCorrectMidtonesGroupName, &_midtonesParamsGroup);
-        fetchColorControlGroup(kColorCorrectHighlightsGroupName, &_highlightsParamsGroup);
-        _rangesParam = fetchParametricParam(kColorCorrectToneRangesParamName);
+        fetchColorControlGroup(kGroupColorCorrectMaster, &_masterParamsGroup);
+        fetchColorControlGroup(kGroupColorCorrectShadows, &_shadowsParamsGroup);
+        fetchColorControlGroup(kGroupColorCorrectMidtones, &_midtonesParamsGroup);
+        fetchColorControlGroup(kGroupColorCorrectHighlights, &_highlightsParamsGroup);
+        _rangesParam = fetchParametricParam(kParamColorCorrectToneRanges);
         assert(_rangesParam);
+        _premult = fetchBooleanParam(kParamPremult);
+        _premultChannel = fetchChoiceParam(kParamPremultChannel);
+        assert(_premult && _premultChannel);
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
@@ -467,6 +473,8 @@ private:
     ColorControlParamGroup _midtonesParamsGroup;
     ColorControlParamGroup _highlightsParamsGroup;
     OFX::ParametricParam* _rangesParam;
+    OFX::BooleanParam* _premult;
+    OFX::ChoiceParam* _premultChannel;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
 };
@@ -541,11 +549,15 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
     getColorCorrectGroupValues(args.time, &shadowValues,    eGroupShadow);
     getColorCorrectGroupValues(args.time, &midtoneValues,   eGroupMidtone);
     getColorCorrectGroupValues(args.time, &highlightValues, eGroupHighlight);
+    bool premult;
+    int premultChannel;
+    _premult->getValueAtTime(args.time, premult);
+    _premultChannel->getValueAtTime(args.time, premultChannel);
     double mix;
     _mix->getValueAtTime(args.time, mix);
     bool maskInvert;
     _maskInvert->getValueAtTime(args.time, maskInvert);
-    processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, mix, maskInvert);
+    processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, premult, premultChannel, mix, maskInvert);
     processor.process();
 }
 
@@ -771,45 +783,47 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    defineColorGroup(kColorCorrectMasterGroupName, "", page, desc, true);
-    defineColorGroup(kColorCorrectShadowsGroupName, "", page, desc, false);
-    defineColorGroup(kColorCorrectMidtonesGroupName, "", page, desc, false);
-    defineColorGroup(kColorCorrectHighlightsGroupName, "", page, desc, false);
+    defineColorGroup(kGroupColorCorrectMaster, "", page, desc, true);
+    defineColorGroup(kGroupColorCorrectShadows, "", page, desc, false);
+    defineColorGroup(kGroupColorCorrectMidtones, "", page, desc, false);
+    defineColorGroup(kGroupColorCorrectHighlights, "", page, desc, false);
     
     PageParamDescriptor* ranges = desc.definePageParam("Ranges");
-    
-    OFX::ParametricParamDescriptor* lookupTable = desc.defineParametricParam(kColorCorrectToneRangesParamName);
-    assert(lookupTable);
-    lookupTable->setLabels(kColorCorrectToneRangesParamLabel, kColorCorrectToneRangesParamLabel, kColorCorrectToneRangesParamLabel);
-    lookupTable->setHint(kColorCorrectToneRangesParamHint);
 
-    // define it as two dimensional
-    lookupTable->setDimension(2);
-    
-    lookupTable->setDimensionLabel(kColorCorrectToneRangesParamDim0, 0);
-    lookupTable->setDimensionLabel(kColorCorrectToneRangesParamDim1, 1);
-    
-    // set the UI colour for each dimension
-    const OfxRGBColourD shadow   = {0.6,0.4,0.6};
-    const OfxRGBColourD highlight  =  {0.8,0.7,0.6};
-    lookupTable->setUIColour( 0, shadow );
-    lookupTable->setUIColour( 1, highlight );
-    
-    // set the min/max parametric range to 0..1
-    lookupTable->setRange(0.0, 1.0);
-    
-    lookupTable->addControlPoint(0, // curve to set
-                                 0.0,   // time, ignored in this case, as we are not adding a key
-                                 0.0,   // parametric position, zero
-                                 1.0,   // value to be, 0
-                                 false);   // don't add a key
-    lookupTable->addControlPoint(0, 0.0, 0.09, 0.0,false);
-    
-    lookupTable->addControlPoint(1, 0.0, 0.5, 0.0,false);
-    lookupTable->addControlPoint(1, 0.0, 1.0, 1.0,false);
-    
-    ranges->addChild(*lookupTable);
+    {
+        OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamColorCorrectToneRanges);
+        assert(param);
+        param->setLabels(kParamColorCorrectToneRangesLabel, kParamColorCorrectToneRangesLabel, kParamColorCorrectToneRangesLabel);
+        param->setHint(kParamColorCorrectToneRangesHint);
 
+        // define it as two dimensional
+        param->setDimension(2);
+
+        param->setDimensionLabel(kParamColorCorrectToneRangesDim0, 0);
+        param->setDimensionLabel(kParamColorCorrectToneRangesDim1, 1);
+
+        // set the UI colour for each dimension
+        const OfxRGBColourD shadow   = {0.6,0.4,0.6};
+        const OfxRGBColourD highlight  =  {0.8,0.7,0.6};
+        param->setUIColour( 0, shadow );
+        param->setUIColour( 1, highlight );
+
+        // set the min/max parametric range to 0..1
+        param->setRange(0.0, 1.0);
+
+        param->addControlPoint(0, // curve to set
+                                     0.0,   // time, ignored in this case, as we are not adding a key
+                                     0.0,   // parametric position, zero
+                                     1.0,   // value to be, 0
+                                     false);   // don't add a key
+        param->addControlPoint(0, 0.0, 0.09, 0.0,false);
+
+        param->addControlPoint(1, 0.0, 0.5, 0.0,false);
+        param->addControlPoint(1, 0.0, 1.0, 1.0,false);
+        ranges->addChild(*param);
+    }
+
+    ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
 }
 

@@ -95,9 +95,9 @@
 #define kSwapParamLabel "(right=red)"
 #define kSwapParamHint "Swap left and right views"
 
-#define kOffsetParamName "offset"
-#define kOffsetParamLabel "Horizontal Offset"
-#define kOffsetParamHint "Horizontal offset. " \
+#define kParamOffset "offset"
+#define kParamOffsetLabel "Horizontal Offset"
+#define kParamOffsetHint "Horizontal offset. " \
 "The red view is shifted to the left by half this amount, " \
 "and the cyan view is shifted to the right by half this amount (in pixels)."  // rounded up // rounded down
 
@@ -232,7 +232,7 @@ public:
         assert(srcClip_ && srcClip_->getPixelComponents() == ePixelComponentRGBA);
         amtcolour_  = fetchDoubleParam(kAmtColourParamName);
         swap_ = fetchBooleanParam(kSwapParamName);
-        offset_ = fetchIntParam(kOffsetParamName);
+        offset_ = fetchIntParam(kParamOffset);
         assert(amtcolour_ && swap_ && offset_);
     }
 
@@ -463,9 +463,9 @@ void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     
     page->addChild(*swap);
     
-    IntParamDescriptor *offset = desc.defineIntParam(kOffsetParamName);
-    offset->setLabels(kOffsetParamLabel, kOffsetParamLabel, kOffsetParamLabel);
-    offset->setHint(kOffsetParamHint);
+    IntParamDescriptor *offset = desc.defineIntParam(kParamOffset);
+    offset->setLabels(kParamOffsetLabel, kParamOffsetLabel, kParamOffsetLabel);
+    offset->setHint(kParamOffsetHint);
     offset->setDefault(0);
     offset->setRange(-1000, 1000);
     offset->setDisplayRange(-100, 100);

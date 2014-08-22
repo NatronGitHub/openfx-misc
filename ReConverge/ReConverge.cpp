@@ -105,9 +105,9 @@
 #define kConvergePointParamLabel "Converge Upon"
 #define kConvergePointParamHint "Position of the tracked point when the convergence is set"
 
-#define kOffsetParamName "offset"
-#define kOffsetParamLabel "Convergence Offset"
-#define kOffsetParamHint "The disparity of the tracked point will be set to this"
+#define kParamOffset "offset"
+#define kParamOffsetLabel "Convergence Offset"
+#define kParamOffsetHint "The disparity of the tracked point will be set to this"
 
 #define kConvergeModeParamName "convergeMode"
 #define kConvergeModeParamLabel "Mode"
@@ -214,7 +214,7 @@ public:
         assert(!dispClip_ || (dispClip_->getPixelComponents() == ePixelComponentAlpha || dispClip_->getPixelComponents() == ePixelComponentRGB || dispClip_->getPixelComponents() == ePixelComponentRGBA));
 
         convergepoint_ = fetchDouble2DParam(kConvergePointParamName);
-        offset_ = fetchIntParam(kOffsetParamName);
+        offset_ = fetchIntParam(kParamOffset);
         convergemode_ = fetchChoiceParam(kConvergeModeParamName);
         assert(convergepoint_ && offset_ && convergepoint_);
     }
@@ -488,9 +488,9 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         page->addChild(*convergepoint);
     }
     
-    IntParamDescriptor *offset = desc.defineIntParam(kOffsetParamName);
-    offset->setLabels(kOffsetParamLabel, kOffsetParamLabel, kOffsetParamLabel);
-    offset->setHint(kOffsetParamHint);
+    IntParamDescriptor *offset = desc.defineIntParam(kParamOffset);
+    offset->setLabels(kParamOffsetLabel, kParamOffsetLabel, kParamOffsetLabel);
+    offset->setHint(kParamOffsetHint);
     offset->setDefault(0);
     offset->setRange(-1000, 1000);
     offset->setDisplayRange(-100, 100);

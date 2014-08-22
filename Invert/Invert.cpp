@@ -118,6 +118,8 @@ protected:
     bool _green;
     bool _blue;
     bool _alpha;
+    bool _premult;
+    int _premultChannel;
     double _mix;
     bool _maskInvert;
 
@@ -132,6 +134,8 @@ public:
     , _green(true)
     , _blue(true)
     , _alpha(false)
+    , _premult(false)
+    , _premultChannel(3)
     , _mix(1.)
     , _maskInvert(false)
     {
@@ -144,12 +148,21 @@ public:
 
     void doMasking(bool v) {_doMasking = v;}
 
-    void setValues(bool red, bool green, bool blue, bool alpha, double mix, bool maskInvert)
+    void setValues(bool red,
+                   bool green,
+                   bool blue,
+                   bool alpha,
+                   bool premult,
+                   int premultChannel,
+                   double mix,
+                   bool maskInvert)
     {
         _red = red;
         _green = green;
         _blue = blue;
         _alpha = alpha;
+        _premult = premult;
+        _premultChannel = premultChannel;
         _mix = mix;
         _maskInvert = maskInvert;
     }
@@ -211,7 +224,8 @@ class ImageInverter : public InvertBase
     template<bool dored, bool dogreen, bool doblue, bool doalpha>
     void process(const OfxRectI& procWindow)
     {
-        float tmpPix[nComponents];
+        float unpPix[4];
+        float tmpPix[4];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -224,43 +238,20 @@ class ImageInverter : public InvertBase
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
 
                 // do we have a source image to scale up
-                if (srcPix) {
-                    switch (nComponents) {
-                        case 1: // Alpha
-                            tmpPix[0] = doalpha ? (maxValue - srcPix[0]) : srcPix[0];
-                            break;
-                        case 3: // RGB
-                            tmpPix[0] = dored   ? (maxValue - srcPix[0]) : srcPix[0];
-                            tmpPix[1] = dogreen ? (maxValue - srcPix[1]) : srcPix[1];
-                            tmpPix[2] = doblue  ? (maxValue - srcPix[2]) : srcPix[2];
-                            break;
-                        case 4: // RGBA
-                            tmpPix[0] = dored   ? (maxValue - srcPix[0]) : srcPix[0];
-                            tmpPix[1] = dogreen ? (maxValue - srcPix[1]) : srcPix[1];
-                            tmpPix[2] = doblue  ? (maxValue - srcPix[2]) : srcPix[2];
-                            tmpPix[3] = doalpha ? (maxValue - srcPix[3]) : srcPix[3];
-                            break;
+                if (nComponents == 1) { // Alpha
+                    if (srcPix) {
+                        tmpPix[0] = doalpha ? (maxValue - srcPix[0]) : srcPix[0];
+                    } else {
+                        tmpPix[0] = doalpha ? maxValue : 0;
                     }
-                } else {
-                    // no src pixel here, be black and transparent
-                    switch (nComponents) {
-                        case 1: // Alpha
-                            tmpPix[0] = doalpha ? maxValue : 0;
-                            break;
-                        case 3: // RGB
-                            tmpPix[0] = dored   ? maxValue : 0;
-                            tmpPix[1] = dogreen ? maxValue : 0;
-                            tmpPix[2] = doblue  ? maxValue : 0;
-                            break;
-                        case 4: // RGBA
-                            tmpPix[0] = dored   ? maxValue : 0;
-                            tmpPix[1] = dogreen ? maxValue : 0;
-                            tmpPix[2] = doblue  ? maxValue : 0;
-                            tmpPix[3] = doalpha ? maxValue : 0;
-                            break;
-                    }
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                } else { // RGB & RGBA: apply (un)premult
+                    ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
+                    tmpPix[0] = dored   ? (1. - unpPix[0]) : unpPix[0];
+                    tmpPix[1] = dogreen ? (1. - unpPix[1]) : unpPix[1];
+                    tmpPix[2] = doblue  ? (1. - unpPix[2]) : unpPix[2];
+                    ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 }
-                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
 
                 // increment the dst pixel
                 dstPix += nComponents;
@@ -291,6 +282,9 @@ class InvertPlugin : public OFX::ImageEffect
         _paramProcessB = fetchBooleanParam(kParamProcessB);
         _paramProcessA = fetchBooleanParam(kParamProcessA);
         assert(_paramProcessR && _paramProcessG && _paramProcessB && _paramProcessA);
+        _premult = fetchBooleanParam(kParamPremult);
+        _premultChannel = fetchChoiceParam(kParamPremultChannel);
+        assert(_premult && _premultChannel);
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
@@ -315,6 +309,8 @@ class InvertPlugin : public OFX::ImageEffect
     OFX::BooleanParam* _paramProcessG;
     OFX::BooleanParam* _paramProcessB;
     OFX::BooleanParam* _paramProcessA;
+    OFX::BooleanParam* _premult;
+    OFX::ChoiceParam* _premultChannel;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
 };
@@ -370,11 +366,15 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
     _paramProcessG->getValueAtTime(args.time, green);
     _paramProcessB->getValueAtTime(args.time, blue);
     _paramProcessA->getValueAtTime(args.time, alpha);
+    bool premult;
+    int premultChannel;
+    _premult->getValueAtTime(args.time, premult);
+    _premultChannel->getValueAtTime(args.time, premultChannel);
     double mix;
     _mix->getValueAtTime(args.time, mix);
     bool maskInvert;
     _maskInvert->getValueAtTime(args.time, maskInvert);
-    processor.setValues(red, green, blue, alpha, mix, maskInvert);
+    processor.setValues(red, green, blue, alpha, premult, premultChannel, mix, maskInvert);
 
     // set the images
     processor.setDstImg(dst.get());
@@ -549,33 +549,39 @@ void InvertPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    OFX::BooleanParamDescriptor* processR = desc.defineBooleanParam(kParamProcessR);
-    processR->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
-    processR->setHint(kParamProcessRHint);
-    processR->setDefault(true);
-    processR->setLayoutHint(eLayoutHintNoNewLine);
-    page->addChild(*processR);
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+        param->setHint(kParamProcessRHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+        param->setHint(kParamProcessGHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
+        param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+        param->setHint(kParamProcessBHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
+        param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+        param->setHint(kParamProcessAHint);
+        param->setDefault(true);
+        page->addChild(*param);
+    }
 
-    OFX::BooleanParamDescriptor* processG = desc.defineBooleanParam(kParamProcessG);
-    processG->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
-    processG->setHint(kParamProcessGHint);
-    processG->setDefault(true);
-    processG->setLayoutHint(eLayoutHintNoNewLine);
-    page->addChild(*processG);
-
-    OFX::BooleanParamDescriptor* processB = desc.defineBooleanParam( kParamProcessB );
-    processB->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
-    processB->setHint(kParamProcessBHint);
-    processB->setDefault(true);
-    processB->setLayoutHint(eLayoutHintNoNewLine);
-    page->addChild(*processB);
-
-    OFX::BooleanParamDescriptor* processA = desc.defineBooleanParam( kParamProcessA );
-    processA->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
-    processA->setHint(kParamProcessAHint);
-    processA->setDefault(true);
-    page->addChild(*processA);
-
+    ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
 }
 
