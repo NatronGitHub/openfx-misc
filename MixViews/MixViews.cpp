@@ -88,9 +88,9 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kMixParamName "mix"
-#define kMixParamLabel "Mix"
-#define kMixParamHint "Mix factor for the right view"
+#define kParamMix "mix"
+#define kParamMixLabel "Mix"
+#define kParamMixHint "Mix factor for the right view"
 
 // Base class for the RGBA and the Alpha processor
 class MixViewsBase : public OFX::ImageProcessor
@@ -174,7 +174,7 @@ public:
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
-        mix_  = fetchDoubleParam(kMixParamName);
+        mix_  = fetchDoubleParam(kParamMix);
         assert(mix_);
     }
 
@@ -410,9 +410,9 @@ void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     // make some pages and to things in 
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    DoubleParamDescriptor *mix = desc.defineDoubleParam(kMixParamName);
-    mix->setLabels(kMixParamLabel, kMixParamLabel, kMixParamLabel);
-    mix->setHint(kMixParamHint);
+    DoubleParamDescriptor *mix = desc.defineDoubleParam(kParamMix);
+    mix->setLabels(kParamMixLabel, kParamMixLabel, kParamMixLabel);
+    mix->setHint(kParamMixHint);
     mix->setDefault(0.);
     mix->setRange(0., 1.);
     mix->setIncrement(0.01);

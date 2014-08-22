@@ -291,8 +291,8 @@ class InvertPlugin : public OFX::ImageEffect
         _paramProcessB = fetchBooleanParam(kParamProcessB);
         _paramProcessA = fetchBooleanParam(kParamProcessA);
         assert(_paramProcessR && _paramProcessG && _paramProcessB && _paramProcessA);
-        _mix = fetchDoubleParam(kMixParamName);
-        _maskInvert = fetchBooleanParam(kMaskInvertParamName);
+        _mix = fetchDoubleParam(kParamMix);
+        _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
     }
 

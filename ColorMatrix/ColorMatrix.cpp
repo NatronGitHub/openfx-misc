@@ -272,8 +272,8 @@ public:
         _clampBlack = fetchBooleanParam(kClampBlackParamName);
         _clampWhite = fetchBooleanParam(kClampWhiteParamName);
         assert(_outputRed && _outputGreen && _outputBlue && _outputAlpha && _clampBlack && _clampWhite);
-        _mix = fetchDoubleParam(kMixParamName);
-        _maskInvert = fetchBooleanParam(kMaskInvertParamName);
+        _mix = fetchDoubleParam(kParamMix);
+        _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
     }
     

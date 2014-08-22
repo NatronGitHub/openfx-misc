@@ -226,8 +226,8 @@ public:
         _forceCopy = fetchBooleanParam(kParamForceCopy);
         assert(_identityEven && _identityOdd && _forceCopy);
 
-        _mix = fetchDoubleParam(kMixParamName);
-        _maskInvert = fetchBooleanParam(kMaskInvertParamName);
+        _mix = fetchDoubleParam(kParamMix);
+        _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
     }
 

@@ -97,19 +97,19 @@
 
 #define kParamProcessR      "r"
 #define kParamProcessRLabel "R"
-#define kParamProcessRHint  "Multiply/divide red component"
+#define kParamProcessRHint  " the red component"
 #define kParamProcessG      "g"
 #define kParamProcessGLabel "G"
-#define kParamProcessGHint  "Multiply/divide green component"
+#define kParamProcessGHint  "the green component"
 #define kParamProcessB      "b"
 #define kParamProcessBLabel "B"
-#define kParamProcessBHint  "Multiply/divide blue component"
+#define kParamProcessBHint  " the blue component"
 #define kParamProcessA      "a"
 #define kParamProcessALabel "A"
-#define kParamProcessAHint  "Multiply/divide alpha component"
+#define kParamProcessAHint  " the alpha component"
 #define kParamPremultName   "premultChannel"
 #define kParamPremultLabel  "By"
-#define kParamPremultHint   "Multiply/divide by this input channel"
+#define kParamPremultHint   " by this input channel"
 
 #define kInputChannelNoneOption "None"
 #define kInputChannelNoneHint "Don't multiply/divide"
@@ -639,55 +639,71 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     const std::string premultString = isPremult ? "Multiply " : "Divide ";
-    OFX::BooleanParamDescriptor* processR = desc.defineBooleanParam(kParamProcessR);
-    processR->setLabels(premultString+kParamProcessRLabel, premultString+kParamProcessRLabel, premultString+kParamProcessRLabel);
-    processR->setHint(kParamProcessRHint);
-    processR->setDefault(true);
-    desc.addClipPreferencesSlaveParam(*processR);
-    page->addChild(*processR);
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+        param->setHint(premultString+kParamProcessRHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        desc.addClipPreferencesSlaveParam(*param);
+        page->addChild(*param);
+    }
 
-    OFX::BooleanParamDescriptor* processG = desc.defineBooleanParam(kParamProcessG);
-    processG->setLabels(premultString+kParamProcessGLabel, premultString+kParamProcessGLabel, premultString+kParamProcessGLabel);
-    processG->setHint(kParamProcessGHint);
-    processG->setDefault(true);
-    desc.addClipPreferencesSlaveParam(*processG);
-    page->addChild(*processG);
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+        param->setHint(premultString+kParamProcessGHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        desc.addClipPreferencesSlaveParam(*param);
+        page->addChild(*param);
+    }
 
-    OFX::BooleanParamDescriptor* processB = desc.defineBooleanParam( kParamProcessB );
-    processB->setLabels(premultString+kParamProcessBLabel, premultString+kParamProcessBLabel, premultString+kParamProcessBLabel);
-    processB->setHint(kParamProcessBHint);
-    processB->setDefault(true);
-    desc.addClipPreferencesSlaveParam(*processB);
-    page->addChild(*processB);
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
+        param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+        param->setHint(premultString+kParamProcessBHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        desc.addClipPreferencesSlaveParam(*param);
+        page->addChild(*param);
+    }
 
-    OFX::BooleanParamDescriptor* processA = desc.defineBooleanParam( kParamProcessA );
-    processA->setLabels(premultString+kParamProcessALabel, premultString+kParamProcessALabel, premultString+kParamProcessALabel);
-    processA->setHint(kParamProcessAHint);
-    processA->setDefault(false);
-    desc.addClipPreferencesSlaveParam(*processA);
-    page->addChild(*processA);
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
+        param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+        param->setHint(premultString+kParamProcessAHint);
+        param->setDefault(false);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        desc.addClipPreferencesSlaveParam(*param);
+        page->addChild(*param);
+    }
 
-    ChoiceParamDescriptor *premultChannel = desc.defineChoiceParam(kParamPremultName);
-    premultChannel->setLabels(kParamPremultLabel, kParamPremultLabel, kParamPremultLabel);
-    premultChannel->setHint(kParamPremultHint);
-    assert(premultChannel->getNOptions() == eInputChannelNone);
-    premultChannel->appendOption(kInputChannelNoneOption, kInputChannelNoneHint);
-    assert(premultChannel->getNOptions() == eInputChannelR);
-    premultChannel->appendOption(kInputChannelROption, kInputChannelRHint);
-    assert(premultChannel->getNOptions() == eInputChannelG);
-    premultChannel->appendOption(kInputChannelGOption, kInputChannelGHint);
-    assert(premultChannel->getNOptions() == eInputChannelB);
-    premultChannel->appendOption(kInputChannelBOption, kInputChannelBHint);
-    assert(premultChannel->getNOptions() == eInputChannelA);
-    premultChannel->appendOption(kInputChannelAOption, kInputChannelAHint);
-    premultChannel->setDefault((int)eInputChannelA);
-    desc.addClipPreferencesSlaveParam(*premultChannel);
-    page->addChild(*premultChannel);
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamPremultName);
+        param->setLabels(kParamPremultLabel, kParamPremultLabel, kParamPremultLabel);
+        param->setHint(kParamPremultHint);
+        assert(param->getNOptions() == eInputChannelNone);
+        param->appendOption(kInputChannelNoneOption, kInputChannelNoneHint);
+        assert(param->getNOptions() == eInputChannelR);
+        param->appendOption(kInputChannelROption, kInputChannelRHint);
+        assert(param->getNOptions() == eInputChannelG);
+        param->appendOption(kInputChannelGOption, kInputChannelGHint);
+        assert(param->getNOptions() == eInputChannelB);
+        param->appendOption(kInputChannelBOption, kInputChannelBHint);
+        assert(param->getNOptions() == eInputChannelA);
+        param->appendOption(kInputChannelAOption, kInputChannelAHint);
+        param->setDefault((int)eInputChannelA);
+        desc.addClipPreferencesSlaveParam(*param);
+        page->addChild(*param);
+    }
 
-    PushButtonParamDescriptor *clipInfo = desc.definePushButtonParam(kClipInfoParamName);
-    clipInfo->setLabels(kClipInfoParamLabel, kClipInfoParamLabel, kClipInfoParamLabel);
-    clipInfo->setHint(kClipInfoParamHint);
-    page->addChild(*clipInfo);
+    {
+    PushButtonParamDescriptor *param = desc.definePushButtonParam(kClipInfoParamName);
+    param->setLabels(kClipInfoParamLabel, kClipInfoParamLabel, kClipInfoParamLabel);
+    param->setHint(kClipInfoParamHint);
+    page->addChild(*param);
+    }
 }
 
 template<bool isPremult>

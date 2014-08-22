@@ -242,8 +242,8 @@ public:
         _bbox = fetchChoiceParam(kBboxParamName);
         _alphaMasking = fetchBooleanParam(kAlphaMaskingParamName);
         assert(_operation && _operationString && _bbox && _alphaMasking);
-        _mix = fetchDoubleParam(kMixParamName);
-        _maskInvert = fetchBooleanParam(kMaskInvertParamName);
+        _mix = fetchDoubleParam(kParamMix);
+        _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
     }
     

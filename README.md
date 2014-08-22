@@ -109,8 +109,7 @@ Parametric parameters seem to work in older versions of Nuke (at least up to Nuk
 Installation
 ------------
 
-These plugins are distributed precompiled with each version of
-[Natron](http://natron.inria.fr).
+These plugins are included in the binary distributions of [Natron](http://natron.inria.fr).
 
 If you want to compile the plugins from source, you may either use the
 provided Unix Makefile, the Xcode project, or the Visual Studio project.

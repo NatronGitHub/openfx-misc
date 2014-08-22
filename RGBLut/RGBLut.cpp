@@ -283,8 +283,8 @@ public:
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
         lookupTable_ = fetchParametricParam(kLookupTableParamName);
         assert(lookupTable_);
-        _mix = fetchDoubleParam(kMixParamName);
-        _maskInvert = fetchBooleanParam(kMaskInvertParamName);
+        _mix = fetchDoubleParam(kParamMix);
+        _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
      }
 
