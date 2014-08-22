@@ -298,6 +298,9 @@ public:
 private:
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
+    /** @brief called when a clip has just been changed in some way (a rewire maybe) */
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+
     template <int nComponents>
     void renderForComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
@@ -391,7 +394,9 @@ private:
 };
 
 
-void RGBLutPlugin::setupAndProcess(RGBLutProcessorBase &processor, const OFX::RenderArguments &args)
+void
+RGBLutPlugin::setupAndProcess(RGBLutProcessorBase &processor,
+                              const OFX::RenderArguments &args)
 {
     assert(dstClip_);
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
@@ -470,7 +475,8 @@ RGBLutPlugin::renderForComponents(const OFX::RenderArguments &args, OFX::BitDept
     }
 }
 
-void RGBLutPlugin::render(const OFX::RenderArguments &args)
+void
+RGBLutPlugin::render(const OFX::RenderArguments &args)
 {
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
@@ -485,12 +491,30 @@ void RGBLutPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+void
+RGBLutPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+{
+    if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
+        switch (srcClip_->getPreMultiplication()) {
+            case eImageOpaque:
+                break;
+            case eImagePreMultiplied:
+                _premult->setValue(true);
+                break;
+            case eImageUnPreMultiplied:
+                _premult->setValue(false);
+                break;
+        }
+    }
+}
+
 
 using namespace OFX;
 
 mDeclarePluginFactory(RGBLutPluginFactory, {}, {});
 
-void RGBLutPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+RGBLutPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     desc.setLabels(kPluginName, kPluginName, kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -517,7 +541,8 @@ void RGBLutPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     //}
 }
 
-void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void
+RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     if (!OFX::getImageEffectHostDescription()->supportsParametricParameter) {
         throwHostMissingSuiteException(kOfxParametricParameterSuite);
@@ -619,7 +644,8 @@ void RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     ofxsMaskMixDescribeParams(desc, page);
 }
 
-OFX::ImageEffect* RGBLutPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+RGBLutPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new RGBLutPlugin(handle);
 }

@@ -329,6 +329,9 @@ private:
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
+    /** @brief called when a clip has just been changed in some way (a rewire maybe) */
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
@@ -510,9 +513,27 @@ GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
     return false;
 }
 
+void
+GradePlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+{
+    if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
+        switch (srcClip_->getPreMultiplication()) {
+            case eImageOpaque:
+                break;
+            case eImagePreMultiplied:
+                _premult->setValue(true);
+                break;
+            case eImageUnPreMultiplied:
+                _premult->setValue(false);
+                break;
+        }
+    }
+}
+
 mDeclarePluginFactory(GradePluginFactory, {}, {});
 
-void GradePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+GradePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabels(kPluginName, kPluginName, kPluginName);
@@ -551,7 +572,8 @@ void defineRGBAScaleParam(OFX::ImageEffectDescriptor &desc,
 }
 
 
-void GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void
+GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -608,7 +630,8 @@ void GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     ofxsMaskMixDescribeParams(desc, page);
 }
 
-OFX::ImageEffect* GradePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+GradePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new GradePlugin(handle);
 }

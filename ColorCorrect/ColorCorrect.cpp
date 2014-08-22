@@ -434,6 +434,9 @@ private:
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
+    /** @brief called when a clip has just been changed in some way (a rewire maybe) */
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+
     void fetchColorControlGroup(const std::string& groupName, ColorControlParamGroup* group) {
         assert(group);
         group->saturation = fetchRGBAParam(groupName + '.' + kColorCorrectSaturationName);
@@ -681,6 +684,24 @@ ColorCorrectPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identity
     }
     return false;
 }
+
+void
+ColorCorrectPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+{
+    if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
+        switch (srcClip_->getPreMultiplication()) {
+            case eImageOpaque:
+                break;
+            case eImagePreMultiplied:
+                _premult->setValue(true);
+                break;
+            case eImageUnPreMultiplied:
+                _premult->setValue(false);
+                break;
+        }
+    }
+}
+
 
 mDeclarePluginFactory(ColorCorrectPluginFactory, {}, {});
 

@@ -101,7 +101,7 @@
 
 #define kPremultParamName "premultiply"
 #define kPremultParamLabel "Premultiply"
-#define kPremultParamHint "Premultiply the red,green and blue channels with the alpha channel produced by the mask."
+#define kPremultParamHint "Premultiply the red, green and blue channels with the alpha channel produced by the mask."
 
 #define kOutputCompsParamName "outputComponents"
 #define kOutputCompsParamLabel "Output components"

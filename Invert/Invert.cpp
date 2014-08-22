@@ -341,6 +341,9 @@ class InvertPlugin : public OFX::ImageEffect
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
+    /** @brief called when a clip has just been changed in some way (a rewire maybe) */
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+
   private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
@@ -524,6 +527,23 @@ InvertPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, 
         return true;
     } else {
         return false;
+    }
+}
+
+void
+InvertPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+{
+    if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
+        switch (srcClip_->getPreMultiplication()) {
+            case eImageOpaque:
+                break;
+            case eImagePreMultiplied:
+                _premult->setValue(true);
+                break;
+            case eImageUnPreMultiplied:
+                _premult->setValue(false);
+                break;
+        }
     }
 }
 
