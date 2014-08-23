@@ -399,7 +399,15 @@ RotoPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, 
         return false;
     } else {
         rod = srcClip_->getRegionOfDefinition(args.time);
-        OfxRectD rotoRod = rotoClip_->getRegionOfDefinition(args.time);
+        OfxRectD rotoRod;
+        try {
+            rotoRod = rotoClip_->getRegionOfDefinition(args.time);
+        } catch (...) {
+            ///If an exception is thrown, that is because the RoD of the roto is NULL (i.e there isn't any shape)
+            ///Don't fail getRoD, just take the RoD of the source instead so that in RGBA mode is still displays the source
+            ///image
+            return true;
+        }
         rod.x1 = std::min(rod.x1, rotoRod.x1);
         rod.x2 = std::max(rod.x2, rotoRod.x2);
         rod.y1 = std::min(rod.y1, rotoRod.y1);
