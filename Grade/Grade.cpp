@@ -272,9 +272,7 @@ private:
                 tmpPix[0] = t_r;
                 tmpPix[1] = t_g;
                 tmpPix[2] = t_b;
-                if (nComponents == 4) {
-                    tmpPix[3] = unpPix[3];
-                }
+                tmpPix[3] = unpPix[3];
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
