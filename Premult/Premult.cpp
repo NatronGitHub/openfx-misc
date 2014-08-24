@@ -262,6 +262,7 @@ class ImagePremulter : public PremultBase
         doc[1] = dogreen;
         doc[2] = doblue;
         doc[3] = doalpha;
+        const float fltmin = std::numeric_limits<float>::min();
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -276,18 +277,16 @@ class ImagePremulter : public PremultBase
                 // do we have a source image to scale up
                 if (srcPix) {
                     if (_p >= 0 && (dored || dogreen || doblue || doalpha)) {
-                        PIX p = srcPix[_p];
+                        PIX alpha = srcPix[_p];
                         for (int c = 0; c < nComponents; c++) {
                             if (isPremult) {
-                                dstPix[c] = doc[c] ? ((srcPix[c]*p)/maxValue) : srcPix[c];
+                                dstPix[c] = doc[c] ? (((float)srcPix[c]*alpha)/maxValue) : srcPix[c];
                             } else {
                                 PIX val;
-                                if (!doc[c]) {
+                                if (!doc[c] || (alpha <= (PIX)(fltmin * maxValue))) {
                                     val = srcPix[c];
-                                } else if (p == 0) {
-                                    val = maxValue;
                                 } else {
-                                    val = ClampNonFloat<PIX, maxValue>((srcPix[c]*maxValue)/p);
+                                    val = ClampNonFloat<PIX, maxValue>(((float)srcPix[c]*maxValue)/alpha);
                                 }
                                 dstPix[c] = val;
                             }
