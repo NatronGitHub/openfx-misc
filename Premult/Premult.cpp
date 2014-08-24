@@ -73,6 +73,8 @@
 
 #include "Premult.h"
 
+#include <limits>
+
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
