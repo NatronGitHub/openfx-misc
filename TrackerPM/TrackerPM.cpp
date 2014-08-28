@@ -226,10 +226,14 @@ public:
 
     ~TrackerPMProcessor()
     {
-        _patternImg->unlock();
-        delete _patternImg;
-        _weightImg->unlock();
-        delete _weightImg;
+        if (_patternImg) {
+            _patternImg->unlock();
+            delete _patternImg;
+        }
+        if (_weightImg) {
+            _weightImg->unlock();
+            delete _weightImg;
+        }
     }
 private:
     /** @brief set the processing parameters. return false if processing cannot be done. */
@@ -238,6 +242,14 @@ private:
     {
         size_t rowsize = pattern.x2 - pattern.x1;
         size_t nPix = rowsize * (pattern.y2 - pattern.y1);
+        
+        
+        // This happens if the pattern is empty. Most probably this is because it is totally outside the image
+        // we better return quickly.
+        if (nPix == 0) {
+            return false;
+        }
+        
         _patternImg = new ImageMemory(sizeof(PIX) * nComponents * nPix, &_effect);
         _weightImg = new ImageMemory(sizeof(float) * nPix, &_effect);
         _otherImg = other;
