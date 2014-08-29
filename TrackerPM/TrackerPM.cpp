@@ -83,7 +83,11 @@
 #define kPluginGrouping "Transform"
 #define kPluginDescription \
 "Point tracker based on pattern matching using an exhaustive search within an image region.\n" \
-"The Mask input is used to weight the pattern, so that only pixels from the Mask will be tracked."
+"The Mask input is used to weight the pattern, so that only pixels from the Mask will be tracked. \n" \
+"The tracker always takes the previous/next frame as reference when searching for a pattern in an image. This can " \
+"overtime make a track drift from its original pattern.\n"\
+"Canceling a tracking operation will not wipe all the data analysed so far. If you resume a previously canceled tracking, " \
+"the tracker will continue tracking, picking up the previous/next frame as reference. "
 #define kPluginIdentifier "net.sf.openfx:TrackerPM"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
