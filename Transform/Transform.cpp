@@ -117,23 +117,23 @@
 #endif
 
 // NON-GENERIC
-#define kTranslateParamName "translate"
-#define kTranslateParamLabel "Translate"
-#define kRotateParamName "rotate"
-#define kRotateParamLabel "Rotate"
-#define kScaleParamName "scale"
-#define kScaleParamLabel "Scale"
-#define kScaleUniformParamName "uniform"
-#define kScaleUniformParamLabel "Uniform"
-#define kScaleUniformParamHint "Use the X scale for both directions"
-#define kSkewXParamName "skewX"
-#define kSkewXParamLabel "Skew X"
-#define kSkewYParamName "skewY"
-#define kSkewYParamLabel "Skew Y"
-#define kSkewOrderParamName "skewOrder"
-#define kSkewOrderParamLabel "Skew Order"
-#define kCenterParamName "center"
-#define kCenterParamLabel "Center"
+#define kParamTranslate "translate"
+#define kParamTranslateLabel "Translate"
+#define kParamRotate "rotate"
+#define kParamRotateLabel "Rotate"
+#define kParamScale "scale"
+#define kParamScaleLabel "Scale"
+#define kParamScaleUniform "uniform"
+#define kParamScaleUniformLabel "Uniform"
+#define kParamScaleUniformHint "Use the X scale for both directions"
+#define kParamSkewX "skewX"
+#define kParamSkewXLabel "Skew X"
+#define kParamSkewY "skewY"
+#define kParamSkewYLabel "Skew Y"
+#define kParamSkewOrder "skewOrder"
+#define kParamSkewOrderLabel "Skew Order"
+#define kParamCenter "center"
+#define kParamCenterLabel "Center"
 
 
 #define CIRCLE_RADIUS_BASE 30.
@@ -167,14 +167,14 @@ public:
     , _center(0)
     {
         // NON-GENERIC
-        _translate = fetchDouble2DParam(kTranslateParamName);
-        _rotate = fetchDoubleParam(kRotateParamName);
-        _scale = fetchDouble2DParam(kScaleParamName);
-        _scaleUniform = fetchBooleanParam(kScaleUniformParamName);
-        _skewX = fetchDoubleParam(kSkewXParamName);
-        _skewY = fetchDoubleParam(kSkewYParamName);
-        _skewOrder = fetchChoiceParam(kSkewOrderParamName);
-        _center = fetchDouble2DParam(kCenterParamName);
+        _translate = fetchDouble2DParam(kParamTranslate);
+        _rotate = fetchDoubleParam(kParamRotate);
+        _scale = fetchDouble2DParam(kParamScale);
+        _scaleUniform = fetchBooleanParam(kParamScaleUniform);
+        _skewX = fetchDoubleParam(kParamSkewX);
+        _skewY = fetchDoubleParam(kParamSkewY);
+        _skewOrder = fetchChoiceParam(kParamSkewOrder);
+        _center = fetchDouble2DParam(kParamCenter);
     }
 
 private:
@@ -263,14 +263,14 @@ bool TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX
 
 void TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
-    if (paramName == kTranslateParamName ||
-        paramName == kRotateParamName ||
-        paramName == kScaleParamName ||
-        paramName == kScaleUniformParamName ||
-        paramName == kSkewXParamName ||
-        paramName == kSkewYParamName ||
-        paramName == kSkewOrderParamName ||
-        paramName == kCenterParamName) {
+    if (paramName == kParamTranslate ||
+        paramName == kParamRotate ||
+        paramName == kParamScale ||
+        paramName == kParamScaleUniform ||
+        paramName == kParamSkewX ||
+        paramName == kParamSkewY ||
+        paramName == kParamSkewOrder ||
+        paramName == kParamCenter) {
         changedTransform(args);
     } else {
         Transform3x3Plugin::changedParam(args, paramName);
@@ -329,14 +329,14 @@ public:
         assert(_plugin);
         _lastMousePos.x = _lastMousePos.y = 0.;
         // NON-GENERIC
-        _translate = _plugin->fetchDouble2DParam(kTranslateParamName);
-        _rotate = _plugin->fetchDoubleParam(kRotateParamName);
-        _scale = _plugin->fetchDouble2DParam(kScaleParamName);
-        _scaleUniform = _plugin->fetchBooleanParam(kScaleUniformParamName);
-        _skewX = _plugin->fetchDoubleParam(kSkewXParamName);
-        _skewY = _plugin->fetchDoubleParam(kSkewYParamName);
-        _skewOrder = _plugin->fetchChoiceParam(kSkewOrderParamName);
-        _center = _plugin->fetchDouble2DParam(kCenterParamName);
+        _translate = _plugin->fetchDouble2DParam(kParamTranslate);
+        _rotate = _plugin->fetchDoubleParam(kParamRotate);
+        _scale = _plugin->fetchDouble2DParam(kParamScale);
+        _scaleUniform = _plugin->fetchBooleanParam(kParamScaleUniform);
+        _skewX = _plugin->fetchDoubleParam(kParamSkewX);
+        _skewY = _plugin->fetchDoubleParam(kParamSkewY);
+        _skewOrder = _plugin->fetchChoiceParam(kParamSkewOrder);
+        _center = _plugin->fetchDouble2DParam(kParamCenter);
         _invert = _plugin->fetchBooleanParam(kTransform3x3InvertParamName);
         addParamToSlaveTo(_translate);
         addParamToSlaveTo(_rotate);
@@ -1277,8 +1277,8 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
 {
     // NON-GENERIC PARAMETERS
     //
-    Double2DParamDescriptor* translate = desc.defineDouble2DParam(kTranslateParamName);
-    translate->setLabels(kTranslateParamLabel, kTranslateParamLabel, kTranslateParamLabel);
+    Double2DParamDescriptor* translate = desc.defineDouble2DParam(kParamTranslate);
+    translate->setLabels(kParamTranslateLabel, kParamTranslateLabel, kParamTranslateLabel);
     //translate->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
     translate->setDoubleType(eDoubleTypeXYAbsolute);
     //translate->setDimensionLabels("x","y");
@@ -1286,8 +1286,8 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     translate->setIncrement(10.);
     page->addChild(*translate);
 
-    DoubleParamDescriptor* rotate = desc.defineDoubleParam(kRotateParamName);
-    rotate->setLabels(kRotateParamLabel, kRotateParamLabel, kRotateParamLabel);
+    DoubleParamDescriptor* rotate = desc.defineDoubleParam(kParamRotate);
+    rotate->setLabels(kParamRotateLabel, kParamRotateLabel, kParamRotateLabel);
     rotate->setDoubleType(eDoubleTypeAngle);
     rotate->setDefault(0);
     //rotate->setRange(-180, 180); // the angle may be -infinity..+infinity
@@ -1295,8 +1295,8 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     rotate->setIncrement(0.1);
     page->addChild(*rotate);
 
-    Double2DParamDescriptor* scale = desc.defineDouble2DParam(kScaleParamName);
-    scale->setLabels(kScaleParamLabel, kScaleParamLabel, kScaleParamLabel);
+    Double2DParamDescriptor* scale = desc.defineDouble2DParam(kParamScale);
+    scale->setLabels(kParamScaleLabel, kParamScaleLabel, kParamScaleLabel);
     scale->setDoubleType(eDoubleTypeScale);
     //scale->setDimensionLabels("w","h");
     scale->setDefault(1,1);
@@ -1306,37 +1306,37 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     scale->setLayoutHint(OFX::eLayoutHintNoNewLine);
     page->addChild(*scale);
 
-    BooleanParamDescriptor* scaleUniform = desc.defineBooleanParam(kScaleUniformParamName);
-    scaleUniform->setLabels(kScaleUniformParamName, kScaleUniformParamName, kScaleUniformParamName);
-    scaleUniform->setHint(kScaleUniformParamHint);
+    BooleanParamDescriptor* scaleUniform = desc.defineBooleanParam(kParamScaleUniform);
+    scaleUniform->setLabels(kParamScaleUniform, kParamScaleUniform, kParamScaleUniform);
+    scaleUniform->setHint(kParamScaleUniformHint);
     scaleUniform->setDefault(true);
     scaleUniform->setAnimates(true);
     page->addChild(*scaleUniform);
 
-    DoubleParamDescriptor* skewX = desc.defineDoubleParam(kSkewXParamName);
-    skewX->setLabels(kSkewXParamName, kSkewXParamName, kSkewXParamName);
+    DoubleParamDescriptor* skewX = desc.defineDoubleParam(kParamSkewX);
+    skewX->setLabels(kParamSkewX, kParamSkewX, kParamSkewX);
     skewX->setDefault(0);
     skewX->setDisplayRange(-1,1);
     skewX->setIncrement(0.01);
     page->addChild(*skewX);
 
-    DoubleParamDescriptor* skewY = desc.defineDoubleParam(kSkewYParamName);
-    skewY->setLabels(kSkewYParamLabel, kSkewYParamLabel, kSkewYParamLabel);
+    DoubleParamDescriptor* skewY = desc.defineDoubleParam(kParamSkewY);
+    skewY->setLabels(kParamSkewYLabel, kParamSkewYLabel, kParamSkewYLabel);
     skewY->setDefault(0);
     skewY->setDisplayRange(-1,1);
     skewY->setIncrement(0.01);
     page->addChild(*skewY);
 
-    ChoiceParamDescriptor* skewOrder = desc.defineChoiceParam(kSkewOrderParamName);
-    skewOrder->setLabels(kSkewOrderParamLabel, kSkewOrderParamLabel, kSkewOrderParamLabel);
+    ChoiceParamDescriptor* skewOrder = desc.defineChoiceParam(kParamSkewOrder);
+    skewOrder->setLabels(kParamSkewOrderLabel, kParamSkewOrderLabel, kParamSkewOrderLabel);
     skewOrder->setDefault(0);
     skewOrder->appendOption("XY");
     skewOrder->appendOption("YX");
     skewOrder->setAnimates(true);
     page->addChild(*skewOrder);
 
-    Double2DParamDescriptor* center = desc.defineDouble2DParam(kCenterParamName);
-    center->setLabels(kCenterParamLabel, kCenterParamLabel, kCenterParamLabel);
+    Double2DParamDescriptor* center = desc.defineDouble2DParam(kParamCenter);
+    center->setLabels(kParamCenterLabel, kParamCenterLabel, kParamCenterLabel);
     //center->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
     center->setDoubleType(eDoubleTypeXYAbsolute);
     //center->setDimensionLabels("x","y");

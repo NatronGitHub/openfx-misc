@@ -87,19 +87,19 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kSrcClipAName "A"
-#define kSrcClipBName "B"
-#define kSoftnessParamName "softness"
-#define kSoftnessParamLabel "Softness"
-#define kSoftnessParamHint "Size of the fade around edges of the rectangle to apply"
-#define kRedParamName "red"
-#define kRedParamLabel "Red"
-#define kGreenParamName "green"
-#define kGreenParamLabel "Green"
-#define kBlueParamName "blue"
-#define kBlueParamLabel "Blue"
-#define kAlphaParamName "alpha"
-#define kAlphaParamLabel "Alpha"
+#define kClipA "A"
+#define kClipB "B"
+#define kParamSoftness "softness"
+#define kParamSoftnessLabel "Softness"
+#define kParamSoftnessHint "Size of the fade around edges of the rectangle to apply"
+#define kParamRed "red"
+#define kParamRedLabel "Red"
+#define kParamGreen "green"
+#define kParamGreenLabel "Green"
+#define kParamBlue "blue"
+#define kParamBlueLabel "Blue"
+#define kParamAlpha "alpha"
+#define kParamAlphaLabel "Alpha"
 
 
 using namespace OFX;
@@ -269,20 +269,20 @@ public:
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
-        srcClipA_ = fetchClip(kSrcClipAName);
+        srcClipA_ = fetchClip(kClipA);
         assert(srcClipA_ && (srcClipA_->getPixelComponents() == ePixelComponentAlpha || srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA));
-        srcClipB_ = fetchClip(kSrcClipBName);
+        srcClipB_ = fetchClip(kClipB);
         assert(srcClipB_ && (srcClipB_->getPixelComponents() == ePixelComponentAlpha || srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA));
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
 
         _btmLeft = fetchDouble2DParam(kRectInteractBtmLeftParamName);
         _size = fetchDouble2DParam(kRectInteractSizeParamName);
-        _softness = fetchDoubleParam(kSoftnessParamName);
-        _red = fetchBooleanParam(kRedParamName);
-        _green = fetchBooleanParam(kGreenParamName);
-        _blue = fetchBooleanParam(kBlueParamName);
-        _alpha = fetchBooleanParam(kAlphaParamName);
+        _softness = fetchDoubleParam(kParamSoftness);
+        _red = fetchBooleanParam(kParamRed);
+        _green = fetchBooleanParam(kParamGreen);
+        _blue = fetchBooleanParam(kParamBlue);
+        _alpha = fetchBooleanParam(kParamAlpha);
         assert(_btmLeft && _size && _softness && _red && _green && _blue && _alpha);
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
@@ -602,7 +602,7 @@ static void defineComponentParam(OFX::ImageEffectDescriptor &desc,PageParamDescr
 void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     
-    ClipDescriptor *srcClipB = desc.defineClip(kSrcClipBName);
+    ClipDescriptor *srcClipB = desc.defineClip(kClipB);
     srcClipB->addSupportedComponent(ePixelComponentRGBA);
     srcClipB->addSupportedComponent(ePixelComponentRGB);
     srcClipB->addSupportedComponent(ePixelComponentAlpha);
@@ -610,7 +610,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     srcClipB->setSupportsTiles(true);
     srcClipB->setIsMask(false);
     
-    ClipDescriptor *srcClipA = desc.defineClip(kSrcClipAName);
+    ClipDescriptor *srcClipA = desc.defineClip(kClipA);
     srcClipA->addSupportedComponent(ePixelComponentRGBA);
     srcClipA->addSupportedComponent(ePixelComponentRGB);
     srcClipA->addSupportedComponent(ePixelComponentAlpha);
@@ -663,17 +663,17 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     page->addChild(*size);
     
     
-    defineComponentParam(desc, page, kRedParamName, kRedParamLabel);
-    defineComponentParam(desc, page, kGreenParamName, kGreenParamLabel);
-    defineComponentParam(desc, page, kBlueParamName, kBlueParamLabel);
-    defineComponentParam(desc, page, kAlphaParamName, kAlphaParamLabel);
+    defineComponentParam(desc, page, kParamRed, kParamRedLabel);
+    defineComponentParam(desc, page, kParamGreen, kParamGreenLabel);
+    defineComponentParam(desc, page, kParamBlue, kParamBlueLabel);
+    defineComponentParam(desc, page, kParamAlpha, kParamAlphaLabel);
     
-    DoubleParamDescriptor* softness = desc.defineDoubleParam(kSoftnessParamName);
-    softness->setLabels(kSoftnessParamLabel, kSoftnessParamLabel, kSoftnessParamLabel);
+    DoubleParamDescriptor* softness = desc.defineDoubleParam(kParamSoftness);
+    softness->setLabels(kParamSoftnessLabel, kParamSoftnessLabel, kParamSoftnessLabel);
     softness->setDefault(0);
     softness->setRange(0., 100.);
     softness->setIncrement(1.);
-    softness->setHint(kSoftnessParamHint);
+    softness->setHint(kParamSoftnessHint);
     page->addChild(*softness);
 
     ofxsMaskMixDescribeParams(desc, page);

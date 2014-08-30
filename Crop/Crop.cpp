@@ -86,14 +86,14 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kReformatParamName "reformat"
-#define kReformatParamLabel "Reformat"
-#define kIntersectParamName "intersect"
-#define kIntersectParamLabel "Intersect"
-#define kBlackOutsideParamName "blackOutside"
-#define kBlackOutsideParamLabel "Black Outside"
-#define kSoftnessParamName "softness"
-#define kSoftnessParamLabel "Softness"
+#define kParamReformat "reformat"
+#define kParamReformatLabel "Reformat"
+#define kParamIntersect "intersect"
+#define kParamIntersectLabel "Intersect"
+#define kParamBlackOutside "blackOutside"
+#define kParamBlackOutsideLabel "Black Outside"
+#define kParamSoftness "softness"
+#define kParamSoftnessLabel "Softness"
 
 using namespace OFX;
 
@@ -229,10 +229,10 @@ public:
         
         _btmLeft = fetchDouble2DParam(kRectInteractBtmLeftParamName);
         _size = fetchDouble2DParam(kRectInteractSizeParamName);
-        _softness = fetchDoubleParam(kSoftnessParamName);
-        _reformat = fetchBooleanParam(kReformatParamName);
-        _intersect = fetchBooleanParam(kIntersectParamName);
-        _blackOutside = fetchBooleanParam(kBlackOutsideParamName);
+        _softness = fetchDoubleParam(kParamSoftness);
+        _reformat = fetchBooleanParam(kParamReformat);
+        _intersect = fetchBooleanParam(kParamIntersect);
+        _blackOutside = fetchBooleanParam(kParamBlackOutside);
         
         assert(_btmLeft && _size && _softness && _reformat && _intersect && _blackOutside);
     }
@@ -480,7 +480,7 @@ CropPlugin::render(const OFX::RenderArguments &args)
 void
 CropPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
-    if (paramName == kReformatParamName) {
+    if (paramName == kParamReformat) {
         bool reformat;
         _reformat->getValueAtTime(args.time, reformat);
         _btmLeft->setEnabled(!reformat);
@@ -499,7 +499,7 @@ public:
     , _reformat(0)
     , _isReformated(false)
     {
-        _reformat = effect->fetchBooleanParam(kReformatParamName);
+        _reformat = effect->fetchBooleanParam(kParamReformat);
         addParamToSlaveTo(_reformat);
         assert(_reformat);
     }
@@ -632,32 +632,32 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     size->setDigits(0);
     page->addChild(*size);
     
-    DoubleParamDescriptor* softness = desc.defineDoubleParam(kSoftnessParamName);
-    softness->setLabels(kSoftnessParamLabel, kSoftnessParamLabel, kSoftnessParamLabel);
+    DoubleParamDescriptor* softness = desc.defineDoubleParam(kParamSoftness);
+    softness->setLabels(kParamSoftnessLabel, kParamSoftnessLabel, kParamSoftnessLabel);
     softness->setDefault(0);
     softness->setRange(0., 100.);
     softness->setIncrement(1.);
     softness->setHint("Size of the fade to black around edges to apply");
     page->addChild(*softness);
     
-    BooleanParamDescriptor* reformat = desc.defineBooleanParam(kReformatParamName);
-    reformat->setLabels(kReformatParamLabel, kReformatParamLabel, kReformatParamLabel);
+    BooleanParamDescriptor* reformat = desc.defineBooleanParam(kParamReformat);
+    reformat->setLabels(kParamReformatLabel, kParamReformatLabel, kParamReformatLabel);
     reformat->setHint("Translates the bottom left corner of the crop rectangle to be in (0,0).");
     reformat->setDefault(false);
     reformat->setAnimates(true);
     reformat->setLayoutHint(OFX::eLayoutHintNoNewLine);
     page->addChild(*reformat);
     
-    BooleanParamDescriptor* intersect = desc.defineBooleanParam(kIntersectParamName);
-    intersect->setLabels(kIntersectParamLabel, kIntersectParamLabel, kIntersectParamLabel);
+    BooleanParamDescriptor* intersect = desc.defineBooleanParam(kParamIntersect);
+    intersect->setLabels(kParamIntersectLabel, kParamIntersectLabel, kParamIntersectLabel);
     intersect->setHint("Intersects the crop rectangle with the input region of definition instead of extending it");
     intersect->setLayoutHint(OFX::eLayoutHintNoNewLine);
     intersect->setDefault(false);
     intersect->setAnimates(true);
     page->addChild(*intersect);
     
-    BooleanParamDescriptor* blackOutside = desc.defineBooleanParam(kBlackOutsideParamName);
-    blackOutside->setLabels(kBlackOutsideParamLabel, kBlackOutsideParamLabel, kBlackOutsideParamLabel);
+    BooleanParamDescriptor* blackOutside = desc.defineBooleanParam(kParamBlackOutside);
+    blackOutside->setLabels(kParamBlackOutsideLabel, kParamBlackOutsideLabel, kParamBlackOutsideLabel);
     blackOutside->setDefault(false);
     blackOutside->setAnimates(true);
     blackOutside->setHint("Add 1 black pixel to the region of definition so that all the area outside the crop rectangle is black");

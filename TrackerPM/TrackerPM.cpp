@@ -92,17 +92,17 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kScoreParamName "score"
-#define kScoreParamLabel "Score"
-#define kScoreParamHint "Correlation score computation method"
-#define kScoreParamOptionSSD "SSD"
-#define kScoreParamOptionSSDHint "Sum of Squared Differences"
-#define kScoreParamOptionSAD "SAD"
-#define kScoreParamOptionSADHint "Sum of Absolute Differences, more robust to occlusions"
-#define kScoreParamOptionNCC "NCC"
-#define kScoreParamOptionNCCHint "Normalized Cross-Correlation"
-#define kScoreParamOptionZNCC "ZNCC"
-#define kScoreParamOptionZNCCHint "Zero-mean Normalized Cross-Correlation, less sensitive to illumination changes"
+#define kParamScore "score"
+#define kParamScoreLabel "Score"
+#define kParamScoreHint "Correlation score computation method"
+#define kParamScoreOptionSSD "SSD"
+#define kParamScoreOptionSSDHint "Sum of Squared Differences"
+#define kParamScoreOptionSAD "SAD"
+#define kParamScoreOptionSADHint "Sum of Absolute Differences, more robust to occlusions"
+#define kParamScoreOptionNCC "NCC"
+#define kParamScoreOptionNCCHint "Normalized Cross-Correlation"
+#define kParamScoreOptionZNCC "ZNCC"
+#define kParamScoreOptionZNCCHint "Zero-mean Normalized Cross-Correlation, less sensitive to illumination changes"
 
 using namespace OFX;
 
@@ -127,7 +127,7 @@ public:
     {
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
-        _score = fetchChoiceParam(kScoreParamName);
+        _score = fetchChoiceParam(kParamScore);
         assert(_score);
     }
     
@@ -865,17 +865,17 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         maskClip->setIsMask(true);
     }
 
-    ChoiceParamDescriptor* score = desc.defineChoiceParam(kScoreParamName);
-    score->setLabels(kScoreParamLabel, kScoreParamLabel, kScoreParamLabel);
-    score->setHint(kScoreParamHint);
+    ChoiceParamDescriptor* score = desc.defineChoiceParam(kParamScore);
+    score->setLabels(kParamScoreLabel, kParamScoreLabel, kParamScoreLabel);
+    score->setHint(kParamScoreHint);
     assert(score->getNOptions() == eTrackerSSD);
-    score->appendOption(kScoreParamOptionSSD, kScoreParamOptionSSDHint);
+    score->appendOption(kParamScoreOptionSSD, kParamScoreOptionSSDHint);
     assert(score->getNOptions() == eTrackerSAD);
-    score->appendOption(kScoreParamOptionSAD, kScoreParamOptionSADHint);
+    score->appendOption(kParamScoreOptionSAD, kParamScoreOptionSADHint);
     assert(score->getNOptions() == eTrackerNCC);
-    score->appendOption(kScoreParamOptionNCC, kScoreParamOptionNCCHint);
+    score->appendOption(kParamScoreOptionNCC, kParamScoreOptionNCCHint);
     assert(score->getNOptions() == eTrackerZNCC);
-    score->appendOption(kScoreParamOptionZNCC, kScoreParamOptionZNCCHint);
+    score->appendOption(kParamScoreOptionZNCC, kParamScoreOptionZNCCHint);
     score->setDefault((int)eTrackerSAD);
     page->addChild(*score);
 }

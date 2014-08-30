@@ -124,26 +124,26 @@
 #undef OFX_EXTENSIONS_NUKE // host transform is the only nuke extension used
 #endif
 
-#define kToParamGroupName "to"
-#define kToParamGroupLabel "To"
-static const char* const kToParamName[4] = {
+#define kGroupTo "to"
+#define kGroupToLabel "To"
+static const char* const kParamTo[4] = {
     "to1",
     "to2",
     "to3",
     "to4"
 };
 
-static const char* const kEnableParamName[4] = {
+static const char* const kParamEnable[4] = {
     "enable1",
     "enable2",
     "enable3",
     "enable4"
 };
-#define kEnableParamHint "Enables the point on the left."
+#define kParamEnableHint "Enables the point on the left."
 
-#define kFromParamGroupName "from"
-#define kFromParamGroupLabel "From"
-static const char* const kFromParamName[4] = {
+#define kGroupFrom "from"
+#define kGroupFromLabel "From"
+static const char* const kParamFrom[4] = {
     "from1",
     "from2",
     "from3",
@@ -151,28 +151,28 @@ static const char* const kFromParamName[4] = {
 };
 
 
-#define kCopyFromParamName "copyFrom"
-#define kCopyFromParamLabel "Copy \"From\" points"
-#define kCopyFromParamHint "Copy the content from the \"to\" points to the \"from\" points."
+#define kParamCopyFrom "copyFrom"
+#define kParamCopyFromLabel "Copy \"From\" points"
+#define kParamCopyFromHint "Copy the content from the \"to\" points to the \"from\" points."
 
-#define kCopyToParamName "copyTo"
-#define kCopyToParamLabel "Copy \"To\" points"
-#define kCopyToParamHint "Copy the content from the \"from\" points to the \"to\" points."
+#define kParamCopyTo "copyTo"
+#define kParamCopyToLabel "Copy \"To\" points"
+#define kParamCopyToHint "Copy the content from the \"from\" points to the \"to\" points."
 
-#define kCopyInputRoDParamName "setToInputRod"
-#define kCopyInputRoDParamLabel "Set to input rod"
-#define kCopyInputRoDParamHint "Copy the values from the source region of definition into the \"to\" points."
+#define kParamCopyInputRoD "setToInputRod"
+#define kParamCopyInputRoDLabel "Set to input rod"
+#define kParamCopyInputRoDHint "Copy the values from the source region of definition into the \"to\" points."
 
-#define kOverlayPointsParamName "overlayPoints"
-#define kOverlayPointsParamLabel "Overlay points"
-#define kOverlayPointsParamHint "Whether to display the \"from\" or the \"to\" points in the overlay"
+#define kParamOverlayPoints "overlayPoints"
+#define kParamOverlayPointsLabel "Overlay points"
+#define kParamOverlayPointsHint "Whether to display the \"from\" or the \"to\" points in the overlay"
 
-#define kExtraMatrixParamName "transformMatrix"
-#define kExtraMatrixParamLabel "Extra matrix"
-#define kExtraMatrixParamHint "This matrix gets concatenated to the transform defined by the other parameters."
-#define kExtraMatrixRow1ParamName "row1"
-#define kExtraMatrixRow2ParamName "row2"
-#define kExtraMatrixRow3ParamName "row3"
+#define kGroupExtraMatrix "transformMatrix"
+#define kGroupExtraMatrixLabel "Extra matrix"
+#define kGroupExtraMatrixHint "This matrix gets concatenated to the transform defined by the other parameters."
+#define kParamExtraMatrixRow1 "row1"
+#define kParamExtraMatrixRow2 "row2"
+#define kParamExtraMatrixRow3 "row3"
 
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
 
@@ -356,20 +356,20 @@ public:
     {
         // NON-GENERIC
         for (int i = 0; i < 4; ++i) {
-            _to[i] = fetchDouble2DParam(kToParamName[i]);
-            _enable[i] = fetchBooleanParam(kEnableParamName[i]);
-            _from[i] = fetchDouble2DParam(kFromParamName[i]);
+            _to[i] = fetchDouble2DParam(kParamTo[i]);
+            _enable[i] = fetchBooleanParam(kParamEnable[i]);
+            _from[i] = fetchDouble2DParam(kParamFrom[i]);
             assert(_to[i] && _enable[i] && _from[i]);
         }
 
-        _extraMatrixRow1 = fetchDouble3DParam(kExtraMatrixRow1ParamName);
-        _extraMatrixRow2 = fetchDouble3DParam(kExtraMatrixRow2ParamName);
-        _extraMatrixRow3 = fetchDouble3DParam(kExtraMatrixRow3ParamName);
+        _extraMatrixRow1 = fetchDouble3DParam(kParamExtraMatrixRow1);
+        _extraMatrixRow2 = fetchDouble3DParam(kParamExtraMatrixRow2);
+        _extraMatrixRow3 = fetchDouble3DParam(kParamExtraMatrixRow3);
         assert(_extraMatrixRow1 && _extraMatrixRow2 && _extraMatrixRow3);
 
-        _copyFromButton = fetchPushButtonParam(kCopyFromParamName);
-        _copyToButton = fetchPushButtonParam(kCopyToParamName);
-        _copyInputButton = fetchPushButtonParam(kCopyInputRoDParamName);
+        _copyFromButton = fetchPushButtonParam(kParamCopyFrom);
+        _copyToButton = fetchPushButtonParam(kParamCopyTo);
+        _copyInputButton = fetchPushButtonParam(kParamCopyInputRoD);
         assert(_copyInputButton && _copyToButton && _copyFromButton);
     }
 private:
@@ -517,44 +517,44 @@ static void copyPoint(OFX::Double2DParam* from, OFX::Double2DParam* to)
 
 void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
-    if (paramName == kCopyInputRoDParamName) {
+    if (paramName == kParamCopyInputRoD) {
         const OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
-        beginEditBlock(kCopyInputRoDParamName);
+        beginEditBlock(kParamCopyInputRoD);
         _from[0]->setValue(srcRoD.x1, srcRoD.y1);
         _from[1]->setValue(srcRoD.x2, srcRoD.y1);
         _from[2]->setValue(srcRoD.x2, srcRoD.y2);
         _from[3]->setValue(srcRoD.x1, srcRoD.y2);
         endEditBlock();
         changedTransform(args);
-    } else if (paramName == kCopyFromParamName) {
-        beginEditBlock(kCopyFromParamName);
+    } else if (paramName == kParamCopyFrom) {
+        beginEditBlock(kParamCopyFrom);
         for (int i=0; i<4; ++i) {
             copyPoint(_from[i],_to[i]);
         }
         endEditBlock();
         changedTransform(args);
-    } else if (paramName == kCopyToParamName) {
-        beginEditBlock(kCopyToParamName);
+    } else if (paramName == kParamCopyTo) {
+        beginEditBlock(kParamCopyTo);
         for (int i=0; i<4; ++i) {
             copyPoint(_to[i],_from[i]);
         }
         endEditBlock();
         changedTransform(args);
-    } else if (paramName == kToParamName[0] ||
-               paramName == kToParamName[1] ||
-               paramName == kToParamName[2] ||
-               paramName == kToParamName[3] ||
-               paramName == kEnableParamName[0] ||
-               paramName == kEnableParamName[1] ||
-               paramName == kEnableParamName[2] ||
-               paramName == kEnableParamName[3] ||
-               paramName == kFromParamName[0] ||
-               paramName == kFromParamName[1] ||
-               paramName == kFromParamName[2] ||
-               paramName == kFromParamName[3] ||
-               paramName == kExtraMatrixRow1ParamName ||
-               paramName == kExtraMatrixRow2ParamName ||
-               paramName == kExtraMatrixRow3ParamName) {
+    } else if (paramName == kParamTo[0] ||
+               paramName == kParamTo[1] ||
+               paramName == kParamTo[2] ||
+               paramName == kParamTo[3] ||
+               paramName == kParamEnable[0] ||
+               paramName == kParamEnable[1] ||
+               paramName == kParamEnable[2] ||
+               paramName == kParamEnable[3] ||
+               paramName == kParamFrom[0] ||
+               paramName == kParamFrom[1] ||
+               paramName == kParamFrom[2] ||
+               paramName == kParamFrom[3] ||
+               paramName == kParamExtraMatrixRow1 ||
+               paramName == kParamExtraMatrixRow2 ||
+               paramName == kParamExtraMatrixRow3) {
         changedTransform(args);
     } else {
         Transform3x3Plugin::changedParam(args, paramName);
@@ -576,9 +576,9 @@ public:
     , _lastPenDownPos()
     {
         for (int i = 0; i < 4; ++i) {
-            _to[i] = effect->fetchDouble2DParam(kToParamName[i]);
-            _from[i] = effect->fetchDouble2DParam(kFromParamName[i]);
-            _enable[i] = effect->fetchBooleanParam(kEnableParamName[i]);
+            _to[i] = effect->fetchDouble2DParam(kParamTo[i]);
+            _from[i] = effect->fetchDouble2DParam(kParamFrom[i]);
+            _enable[i] = effect->fetchBooleanParam(kParamEnable[i]);
             assert(_to[i] && _from[i] && _enable[i]);
             addParamToSlaveTo(_to[i]);
             addParamToSlaveTo(_from[i]);
@@ -586,7 +586,7 @@ public:
         }
         _invert = effect->fetchBooleanParam(kTransform3x3InvertParamName);
         addParamToSlaveTo(_invert);
-        _overlayChoice = effect->fetchChoiceParam(kOverlayPointsParamName);
+        _overlayChoice = effect->fetchChoiceParam(kParamOverlayPoints);
         addParamToSlaveTo(_overlayChoice);
     }
 
@@ -725,7 +725,7 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
         glColor3f(0.8*l, 0.8*l, 0.8*l);
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
-                TextRenderer::bitmapString(p[i].x, p[i].y, useFrom ? kFromParamName[i] : kToParamName[i]);
+                TextRenderer::bitmapString(p[i].x, p[i].y, useFrom ? kParamFrom[i] : kParamTo[i]);
             }
         }
         if (l == 0) {
@@ -881,8 +881,8 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
                                            double x,
                                            double y)
 {
-    Double2DParamDescriptor* size = desc.defineDouble2DParam(kToParamName[i]);
-    size->setLabels(kToParamName[i], kToParamName[i], kToParamName[i]);
+    Double2DParamDescriptor* size = desc.defineDouble2DParam(kParamTo[i]);
+    size->setLabels(kParamTo[i], kParamTo[i], kParamTo[i]);
     size->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     size->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     size->setAnimates(true);
@@ -893,11 +893,11 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
     size->setParent(*group);
     page->addChild(*size);
 
-    BooleanParamDescriptor* enable = desc.defineBooleanParam(kEnableParamName[i]);
-    enable->setLabels(kEnableParamName[i], kEnableParamName[i], kEnableParamName[i]);
+    BooleanParamDescriptor* enable = desc.defineBooleanParam(kParamEnable[i]);
+    enable->setLabels(kParamEnable[i], kParamEnable[i], kParamEnable[i]);
     enable->setDefault(true);
     enable->setAnimates(true);
-    enable->setHint(kEnableParamHint);
+    enable->setHint(kParamEnableHint);
     enable->setParent(*group);
     page->addChild(*enable);
 }
@@ -909,8 +909,8 @@ static void defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
                                               double x,
                                               double y)
 {
-    Double2DParamDescriptor* size = desc.defineDouble2DParam(kFromParamName[i]);
-    size->setLabels(kFromParamName[i], kFromParamName[i], kFromParamName[i]);
+    Double2DParamDescriptor* size = desc.defineDouble2DParam(kParamFrom[i]);
+    size->setLabels(kParamFrom[i], kParamFrom[i], kParamFrom[i]);
     size->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     size->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     size->setAnimates(true);
@@ -943,58 +943,58 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
 {
     // NON-GENERIC PARAMETERS
     //
-    GroupParamDescriptor* toPoints = desc.defineGroupParam(kToParamGroupName);
-    toPoints->setLabels(kToParamGroupName, kToParamGroupName, kToParamGroupName);
+    GroupParamDescriptor* toPoints = desc.defineGroupParam(kGroupTo);
+    toPoints->setLabels(kGroupTo, kGroupTo, kGroupTo);
     toPoints->setAsTab();
     defineCornerPinToDouble2DParam(desc, page, toPoints, 0, 0, 0);
     defineCornerPinToDouble2DParam(desc, page, toPoints, 1, 1, 0);
     defineCornerPinToDouble2DParam(desc, page, toPoints, 2, 1, 1);
     defineCornerPinToDouble2DParam(desc, page, toPoints, 3, 0, 1);
     
-    PushButtonParamDescriptor* copyFrom = desc.definePushButtonParam(kCopyFromParamName);
-    copyFrom->setLabels(kCopyFromParamLabel, kCopyFromParamLabel, kCopyFromParamLabel);
-    copyFrom->setHint(kCopyFromParamHint);
+    PushButtonParamDescriptor* copyFrom = desc.definePushButtonParam(kParamCopyFrom);
+    copyFrom->setLabels(kParamCopyFromLabel, kParamCopyFromLabel, kParamCopyFromLabel);
+    copyFrom->setHint(kParamCopyFromHint);
     copyFrom->setParent(*toPoints);
     page->addChild(*copyFrom);
     
     page->addChild(*toPoints);
 
-    GroupParamDescriptor* fromPoints = desc.defineGroupParam(kFromParamGroupName);
-    fromPoints->setLabels(kFromParamGroupName, kFromParamGroupName, kFromParamGroupName);
+    GroupParamDescriptor* fromPoints = desc.defineGroupParam(kGroupFrom);
+    fromPoints->setLabels(kGroupFrom, kGroupFrom, kGroupFrom);
     fromPoints->setAsTab();
     defineCornerPinFromsDouble2DParam(desc, page, fromPoints, 0, 0, 0);
     defineCornerPinFromsDouble2DParam(desc, page, fromPoints, 1, 1, 0);
     defineCornerPinFromsDouble2DParam(desc, page, fromPoints, 2, 1, 1);
     defineCornerPinFromsDouble2DParam(desc, page, fromPoints, 3, 0, 1);
     
-    PushButtonParamDescriptor* setToInput = desc.definePushButtonParam(kCopyInputRoDParamName);
-    setToInput->setLabels(kCopyInputRoDParamLabel, kCopyInputRoDParamLabel, kCopyInputRoDParamLabel);
-    setToInput->setHint(kCopyInputRoDParamHint);
+    PushButtonParamDescriptor* setToInput = desc.definePushButtonParam(kParamCopyInputRoD);
+    setToInput->setLabels(kParamCopyInputRoDLabel, kParamCopyInputRoDLabel, kParamCopyInputRoDLabel);
+    setToInput->setHint(kParamCopyInputRoDHint);
     setToInput->setLayoutHint(OFX::eLayoutHintNoNewLine);
     setToInput->setParent(*fromPoints);
     page->addChild(*setToInput);
     
-    PushButtonParamDescriptor* copyTo = desc.definePushButtonParam(kCopyToParamName);
-    copyTo->setLabels(kCopyToParamLabel, kCopyToParamLabel, kCopyToParamLabel);
-    copyTo->setHint(kCopyToParamHint);
+    PushButtonParamDescriptor* copyTo = desc.definePushButtonParam(kParamCopyTo);
+    copyTo->setLabels(kParamCopyToLabel, kParamCopyToLabel, kParamCopyToLabel);
+    copyTo->setHint(kParamCopyToHint);
     copyTo->setParent(*fromPoints);
     page->addChild(*copyTo);
     
     page->addChild(*fromPoints);
 
     
-    GroupParamDescriptor* extraMatrix = desc.defineGroupParam(kExtraMatrixParamName);
-    extraMatrix->setLabels(kExtraMatrixParamLabel, kExtraMatrixParamLabel, kExtraMatrixParamLabel);
-    extraMatrix->setHint(kExtraMatrixParamHint);
+    GroupParamDescriptor* extraMatrix = desc.defineGroupParam(kGroupExtraMatrix);
+    extraMatrix->setLabels(kGroupExtraMatrixLabel, kGroupExtraMatrixLabel, kGroupExtraMatrixLabel);
+    extraMatrix->setHint(kGroupExtraMatrixHint);
     extraMatrix->setOpen(false);
-    defineExtraMatrixRow(desc, page, extraMatrix,kExtraMatrixRow1ParamName,1,0,0);
-    defineExtraMatrixRow(desc, page, extraMatrix,kExtraMatrixRow2ParamName,0,1,0);
-    defineExtraMatrixRow(desc, page, extraMatrix,kExtraMatrixRow3ParamName,0,0,1);
+    defineExtraMatrixRow(desc, page, extraMatrix,kParamExtraMatrixRow1,1,0,0);
+    defineExtraMatrixRow(desc, page, extraMatrix,kParamExtraMatrixRow2,0,1,0);
+    defineExtraMatrixRow(desc, page, extraMatrix,kParamExtraMatrixRow3,0,0,1);
     page->addChild(*extraMatrix);
 
-    ChoiceParamDescriptor* overlayChoice = desc.defineChoiceParam(kOverlayPointsParamName);
-    overlayChoice->setLabels(kOverlayPointsParamLabel, kOverlayPointsParamLabel, kOverlayPointsParamLabel);
-    overlayChoice->setHint(kOverlayPointsParamHint);
+    ChoiceParamDescriptor* overlayChoice = desc.defineChoiceParam(kParamOverlayPoints);
+    overlayChoice->setLabels(kParamOverlayPointsLabel, kParamOverlayPointsLabel, kParamOverlayPointsLabel);
+    overlayChoice->setHint(kParamOverlayPointsHint);
     overlayChoice->appendOption("To");
     overlayChoice->appendOption("From");
     overlayChoice->setDefault(0);

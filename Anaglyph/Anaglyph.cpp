@@ -88,12 +88,13 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kAmtColourParamName "amtcolor"
-#define kAmtColourParamLabel "Color Amount"
-#define kAmtColourParamHint "Amount of colour in the anaglyph: 0 = grayscale anaglyph, 1 = full-color anaglyph. Fusion is more difficult with full-color anaglyphs."
-#define kSwapParamName "swap"
-#define kSwapParamLabel "(right=red)"
-#define kSwapParamHint "Swap left and right views"
+#define kParamAmtColour "amtcolor"
+#define kParamAmtColourLabel "Color Amount"
+#define kParamAmtColourHint "Amount of colour in the anaglyph: 0 = grayscale anaglyph, 1 = full-color anaglyph. Fusion is more difficult with full-color anaglyphs."
+
+#define kParamSwap "swap"
+#define kParamSwapLabel "(right=red)"
+#define kParamSwapHint "Swap left and right views"
 
 #define kParamOffset "offset"
 #define kParamOffsetLabel "Horizontal Offset"
@@ -230,8 +231,8 @@ public:
         assert(dstClip_ && dstClip_->getPixelComponents() == ePixelComponentRGBA);
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(srcClip_ && srcClip_->getPixelComponents() == ePixelComponentRGBA);
-        amtcolour_  = fetchDoubleParam(kAmtColourParamName);
-        swap_ = fetchBooleanParam(kSwapParamName);
+        amtcolour_  = fetchDoubleParam(kParamAmtColour);
+        swap_ = fetchBooleanParam(kParamSwap);
         offset_ = fetchIntParam(kParamOffset);
         assert(amtcolour_ && swap_ && offset_);
     }
@@ -443,9 +444,9 @@ void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    DoubleParamDescriptor *amtcolour = desc.defineDoubleParam(kAmtColourParamName);
-    amtcolour->setLabels(kAmtColourParamLabel, kAmtColourParamLabel, kAmtColourParamLabel);
-    amtcolour->setHint(kAmtColourParamHint);
+    DoubleParamDescriptor *amtcolour = desc.defineDoubleParam(kParamAmtColour);
+    amtcolour->setLabels(kParamAmtColourLabel, kParamAmtColourLabel, kParamAmtColourLabel);
+    amtcolour->setHint(kParamAmtColourHint);
     amtcolour->setDefault(0.);
     amtcolour->setRange(0., 1.);
     amtcolour->setIncrement(0.01);
@@ -455,10 +456,10 @@ void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     
     page->addChild(*amtcolour);
     
-    BooleanParamDescriptor *swap = desc.defineBooleanParam(kSwapParamName);
-    swap->setLabels(kSwapParamLabel, kSwapParamLabel, kSwapParamLabel);
+    BooleanParamDescriptor *swap = desc.defineBooleanParam(kParamSwap);
+    swap->setLabels(kParamSwapLabel, kParamSwapLabel, kParamSwapLabel);
     swap->setDefault(false);
-    swap->setHint(kSwapParamHint);
+    swap->setHint(kParamSwapHint);
     swap->setAnimates(true);
     
     page->addChild(*swap);

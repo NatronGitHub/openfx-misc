@@ -88,11 +88,11 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kViewParamName "view"
-#define kViewParamLabel "View"
-#define kViewParamHint "View to take from the input"
-#define kViewParamOptionLeft "Left"
-#define kViewParamOptionRight "Right"
+#define kParamView "view"
+#define kParamViewLabel "View"
+#define kParamViewHint "View to take from the input"
+#define kParamViewOptionLeft "Left"
+#define kParamViewOptionRight "Right"
 
 // Base class for the RGBA and the Alpha processor
 class CopierBase : public OFX::ImageProcessor
@@ -175,7 +175,7 @@ public:
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
-        view_ = fetchChoiceParam(kViewParamName);
+        view_ = fetchChoiceParam(kParamView);
         assert(view_);
     }
 
@@ -399,11 +399,11 @@ void OneViewPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     // make some pages and to things in 
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    ChoiceParamDescriptor *view = desc.defineChoiceParam(kViewParamName);
-    view->setLabels(kViewParamLabel, kViewParamLabel, kViewParamLabel);
-    view->setHint(kViewParamHint);
-    view->appendOption(kViewParamOptionLeft);
-    view->appendOption(kViewParamOptionRight);
+    ChoiceParamDescriptor *view = desc.defineChoiceParam(kParamView);
+    view->setLabels(kParamViewLabel, kParamViewLabel, kParamViewLabel);
+    view->setHint(kParamViewHint);
+    view->appendOption(kParamViewOptionLeft);
+    view->appendOption(kParamViewOptionRight);
     view->setDefault(0);
     view->setAnimates(true);
     

@@ -102,58 +102,58 @@
   [2] High Quality Chroma Key, Michael Ashikhmin, http://www.cs.utah.edu/~michael/chroma/
 */
 
-#define kKeyColorParamName "keyColor"
-#define kKeyColorParamLabel "Key Color"
-#define kKeyColorParamHint \
+#define kParamKeyColor "keyColor"
+#define kParamKeyColorLabel "Key Color"
+#define kParamKeyColorHint \
 "Foreground key color; foreground areas containing the key color are replaced with the background image."
 
-#define kAcceptanceAngleParamName "acceptanceAngle"
-#define kAcceptanceAngleParamLabel "Acceptance Angle"
-#define kAcceptanceAngleParamHint \
+#define kParamAcceptanceAngle "acceptanceAngle"
+#define kParamAcceptanceAngleLabel "Acceptance Angle"
+#define kParamAcceptanceAngleHint \
 "Foreground colors are only suppressed inside the acceptance angle (alpha)."
 
-#define kSuppressionAngleParamName "suppressionAngle"
-#define kSuppressionAngleParamLabel "Suppression Angle"
-#define kSuppressionAngleParamHint \
+#define kParamSuppressionAngle "suppressionAngle"
+#define kParamSuppressionAngleLabel "Suppression Angle"
+#define kParamSuppressionAngleHint \
 "The chrominance of foreground colors inside the suppression angle (beta) is set to zero on output, to deal with noise. Use no more than one third of acceptance angle."
 
-#define kKeyLiftParamName "keyLift"
-#define kKeyLiftParamLabel "Key Lift"
-#define kKeyLiftParamHint \
+#define kParamKeyLift "keyLift"
+#define kParamKeyLiftLabel "Key Lift"
+#define kParamKeyLiftHint \
 "Raise it so that less pixels are classified as background. Makes a sharper transition between foreground and background. Defaults to 0."
 
-#define kKeyGainParamName "keyGain"
-#define kKeyGainParamLabel "Key Gain"
-#define kKeyGainParamHint \
+#define kParamKeyGain "keyGain"
+#define kParamKeyGainLabel "Key Gain"
+#define kParamKeyGainHint \
 "Lower it to classify more colors as background. Defaults to 1."
 
-#define kOutputModeParamName "show"
-#define kOutputModeParamLabel "Output Mode"
-#define kOutputModeParamHint \
+#define kParamOutputMode "show"
+#define kParamOutputModeLabel "Output Mode"
+#define kParamOutputModeHint \
 "What image to output."
-#define kOutputModeIntermediateOption "Intermediate"
-#define kOutputModeIntermediateHint "Color is the source color. Alpha is the foreground key. Use for multi-pass keying."
-#define kOutputModePremultipliedOption "Premultiplied"
-#define kOutputModePremultipliedHint "Color is the Source color after key color suppression, multiplied by alpha. Alpha is the foreground key."
-#define kOutputModeUnpremultipliedOption "Unpremultiplied"
-#define kOutputModeUnpremultipliedHint "Color is the Source color after key color suppression. Alpha is the foreground key."
-#define kOutputModeCompositeOption "Composite"
-#define kOutputModeCompositeHint "Color is the composite of Source and Bg. Alpha is the foreground key."
+#define kParamOutputModeOptionIntermediate "Intermediate"
+#define kParamOutputModeOptionIntermediateHint "Color is the source color. Alpha is the foreground key. Use for multi-pass keying."
+#define kParamOutputModeOptionPremultiplied "Premultiplied"
+#define kParamOutputModeOptionPremultipliedHint "Color is the Source color after key color suppression, multiplied by alpha. Alpha is the foreground key."
+#define kParamOutputModeOptionUnpremultiplied "Unpremultiplied"
+#define kParamOutputModeOptionUnpremultipliedHint "Color is the Source color after key color suppression. Alpha is the foreground key."
+#define kParamOutputModeOptionComposite "Composite"
+#define kParamOutputModeOptionCompositeHint "Color is the composite of Source and Bg. Alpha is the foreground key."
 
-#define kSourceAlphaParamName "sourceAlphaHandling"
-#define kSourceAlphaParamLabel "Source Alpha"
-#define kSourceAlphaParamHint \
+#define kParamSourceAlpha "sourceAlphaHandling"
+#define kParamSourceAlphaLabel "Source Alpha"
+#define kParamSourceAlphaHint \
 "How the alpha embedded in the Source input should be used"
-#define kSourceAlphaIgnoreOption "Ignore"
-#define kSourceAlphaIgnoreHint "Ignore the source alpha."
-#define kSourceAlphaAddToInsideMaskOption "Add to Inside Mask"
-#define kSourceAlphaAddToInsideMaskHint "Source alpha is added to the inside mask. Use for multi-pass keying."
+#define kParamSourceAlphaOptionIgnore "Ignore"
+#define kParamSourceAlphaOptionIgnoreHint "Ignore the source alpha."
+#define kParamSourceAlphaOptionAddToInsideMask "Add to Inside Mask"
+#define kParamSourceAlphaOptionAddToInsideMaskHint "Source alpha is added to the inside mask. Use for multi-pass keying."
 #define kSourceAlphaNormalOption "Normal"
-#define kSourceAlphaNormalHint "Foreground key is multiplied by source alpha when compositing."
+#define kParamSourceAlphaOptionNormalHint "Foreground key is multiplied by source alpha when compositing."
 
-#define kBgClipName "Bg"
-#define kInsideMaskClipName "InM"
-#define kOutsideMaskClipName "OutM"
+#define kClipBg "Bg"
+#define kClipInsideMask "InM"
+#define kClipOutsidemask "OutM"
 
 enum OutputModeEnum {
     eOutputModeIntermediate,
@@ -628,19 +628,19 @@ public:
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
-        bgClip_ = fetchClip(kBgClipName);
+        bgClip_ = fetchClip(kClipBg);
         assert(bgClip_ && (bgClip_->getPixelComponents() == ePixelComponentRGB || bgClip_->getPixelComponents() == ePixelComponentRGBA));
-        inMaskClip_ = fetchClip(kInsideMaskClipName);;
+        inMaskClip_ = fetchClip(kClipInsideMask);;
         assert(inMaskClip_ && inMaskClip_->getPixelComponents() == ePixelComponentAlpha);
-        outMaskClip_ = fetchClip(kOutsideMaskClipName);;
+        outMaskClip_ = fetchClip(kClipOutsidemask);;
         assert(outMaskClip_ && outMaskClip_->getPixelComponents() == ePixelComponentAlpha);
-        keyColor_ = fetchRGBParam(kKeyColorParamName);
-        acceptanceAngle_ = fetchDoubleParam(kAcceptanceAngleParamName);
-        suppressionAngle_ = fetchDoubleParam(kSuppressionAngleParamName);
-        keyLift_ = fetchDoubleParam(kKeyLiftParamName);
-        keyGain_ = fetchDoubleParam(kKeyGainParamName);
-        outputMode_ = fetchChoiceParam(kOutputModeParamName);
-        sourceAlpha_ = fetchChoiceParam(kSourceAlphaParamName);
+        keyColor_ = fetchRGBParam(kParamKeyColor);
+        acceptanceAngle_ = fetchDoubleParam(kParamAcceptanceAngle);
+        suppressionAngle_ = fetchDoubleParam(kParamSuppressionAngle);
+        keyLift_ = fetchDoubleParam(kParamKeyLift);
+        keyGain_ = fetchDoubleParam(kParamKeyGain);
+        outputMode_ = fetchChoiceParam(kParamOutputMode);
+        sourceAlpha_ = fetchChoiceParam(kParamSourceAlpha);
         assert(keyColor_ && acceptanceAngle_ && suppressionAngle_ && keyLift_ && keyGain_ && outputMode_ && sourceAlpha_);
     }
  
@@ -894,7 +894,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     srcClip->setOptional(false);
     
     // create the inside mask clip
-    ClipDescriptor *inMaskClip =  desc.defineClip(kInsideMaskClipName);
+    ClipDescriptor *inMaskClip =  desc.defineClip(kClipInsideMask);
     inMaskClip->addSupportedComponent(ePixelComponentAlpha);
     inMaskClip->setTemporalClipAccess(false);
     inMaskClip->setOptional(true);
@@ -902,14 +902,14 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     inMaskClip->setIsMask(true);
 
     // outside mask clip (garbage matte)
-    ClipDescriptor *outMaskClip =  desc.defineClip(kOutsideMaskClipName);
+    ClipDescriptor *outMaskClip =  desc.defineClip(kClipOutsidemask);
     outMaskClip->addSupportedComponent(ePixelComponentAlpha);
     outMaskClip->setTemporalClipAccess(false);
     outMaskClip->setOptional(true);
     outMaskClip->setSupportsTiles(true);
     outMaskClip->setIsMask(true);
 
-    ClipDescriptor* bgClip = desc.defineClip(kBgClipName);
+    ClipDescriptor* bgClip = desc.defineClip(kClipBg);
     bgClip->addSupportedComponent( OFX::ePixelComponentRGBA );
     bgClip->addSupportedComponent( OFX::ePixelComponentRGB );
     bgClip->setTemporalClipAccess(false);
@@ -926,9 +926,9 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    RGBParamDescriptor* keyColor = desc.defineRGBParam(kKeyColorParamName);
-    keyColor->setLabels(kKeyColorParamLabel, kKeyColorParamLabel, kKeyColorParamLabel);
-    keyColor->setHint(kKeyColorParamHint);
+    RGBParamDescriptor* keyColor = desc.defineRGBParam(kParamKeyColor);
+    keyColor->setLabels(kParamKeyColorLabel, kParamKeyColorLabel, kParamKeyColorLabel);
+    keyColor->setHint(kParamKeyColorHint);
     keyColor->setDefault(0., 0., 0.);
     // the following should be the default
     double kmin = -std::numeric_limits<double>::max();
@@ -938,9 +938,9 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     keyColor->setAnimates(true);
     page->addChild(*keyColor);
     
-    DoubleParamDescriptor* acceptanceAngle = desc.defineDoubleParam(kAcceptanceAngleParamName);
-    acceptanceAngle->setLabels(kAcceptanceAngleParamLabel, kAcceptanceAngleParamLabel, kAcceptanceAngleParamLabel);
-    acceptanceAngle->setHint(kAcceptanceAngleParamHint);
+    DoubleParamDescriptor* acceptanceAngle = desc.defineDoubleParam(kParamAcceptanceAngle);
+    acceptanceAngle->setLabels(kParamAcceptanceAngleLabel, kParamAcceptanceAngleLabel, kParamAcceptanceAngleLabel);
+    acceptanceAngle->setHint(kParamAcceptanceAngleHint);
     acceptanceAngle->setDoubleType(eDoubleTypeAngle);;
     acceptanceAngle->setRange(0., 180.);
     acceptanceAngle->setDisplayRange(0., 180.);
@@ -948,9 +948,9 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     acceptanceAngle->setAnimates(true);
     page->addChild(*acceptanceAngle);
 
-    DoubleParamDescriptor* suppressionAngle = desc.defineDoubleParam(kSuppressionAngleParamName);
-    suppressionAngle->setLabels(kSuppressionAngleParamLabel, kSuppressionAngleParamLabel, kSuppressionAngleParamLabel);
-    suppressionAngle->setHint(kSuppressionAngleParamHint);
+    DoubleParamDescriptor* suppressionAngle = desc.defineDoubleParam(kParamSuppressionAngle);
+    suppressionAngle->setLabels(kParamSuppressionAngleLabel, kParamSuppressionAngleLabel, kParamSuppressionAngleLabel);
+    suppressionAngle->setHint(kParamSuppressionAngleHint);
     suppressionAngle->setDoubleType(eDoubleTypeAngle);;
     suppressionAngle->setRange(0., 180.);
     suppressionAngle->setDisplayRange(0., 180.);
@@ -958,9 +958,9 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     suppressionAngle->setAnimates(true);
     page->addChild(*suppressionAngle);
 
-    DoubleParamDescriptor* keyLift = desc.defineDoubleParam(kKeyLiftParamName);
-    keyLift->setLabels(kKeyLiftParamLabel, kKeyLiftParamLabel, kKeyLiftParamLabel);
-    keyLift->setHint(kKeyLiftParamHint);
+    DoubleParamDescriptor* keyLift = desc.defineDoubleParam(kParamKeyLift);
+    keyLift->setLabels(kParamKeyLiftLabel, kParamKeyLiftLabel, kParamKeyLiftLabel);
+    keyLift->setHint(kParamKeyLiftHint);
     keyLift->setRange(0., 1.);
     keyLift->setDisplayRange(0., 1.);
     keyLift->setIncrement(0.01);
@@ -969,9 +969,9 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     keyLift->setAnimates(true);
     page->addChild(*keyLift);
 
-    DoubleParamDescriptor* keyGain = desc.defineDoubleParam(kKeyGainParamName);
-    keyGain->setLabels(kKeyGainParamLabel, kKeyGainParamLabel, kKeyGainParamLabel);
-    keyGain->setHint(kKeyGainParamHint);
+    DoubleParamDescriptor* keyGain = desc.defineDoubleParam(kParamKeyGain);
+    keyGain->setLabels(kParamKeyGainLabel, kParamKeyGainLabel, kParamKeyGainLabel);
+    keyGain->setHint(kParamKeyGainHint);
     keyGain->setRange(0., std::numeric_limits<double>::max());
     keyGain->setDisplayRange(0., 2.);
     keyGain->setIncrement(0.01);
@@ -980,31 +980,31 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     keyGain->setAnimates(true);
     page->addChild(*keyGain);
 
-    ChoiceParamDescriptor* outputMode = desc.defineChoiceParam(kOutputModeParamName);
-    outputMode->setLabels(kOutputModeParamLabel, kOutputModeParamLabel, kOutputModeParamLabel);
-    outputMode->setHint(kOutputModeParamHint);
+    ChoiceParamDescriptor* outputMode = desc.defineChoiceParam(kParamOutputMode);
+    outputMode->setLabels(kParamOutputModeLabel, kParamOutputModeLabel, kParamOutputModeLabel);
+    outputMode->setHint(kParamOutputModeHint);
     assert(outputMode->getNOptions() == (int)eOutputModeIntermediate);
-    outputMode->appendOption(kOutputModeIntermediateOption, kOutputModeIntermediateHint);
+    outputMode->appendOption(kParamOutputModeOptionIntermediate, kParamOutputModeOptionIntermediateHint);
     assert(outputMode->getNOptions() == (int)eOutputModePremultiplied);
-    outputMode->appendOption(kOutputModePremultipliedOption, kOutputModePremultipliedHint);
+    outputMode->appendOption(kParamOutputModeOptionPremultiplied, kParamOutputModeOptionPremultipliedHint);
     assert(outputMode->getNOptions() == (int)eOutputModeUnpremultiplied);
-    outputMode->appendOption(kOutputModeUnpremultipliedOption, kOutputModeUnpremultipliedHint);
+    outputMode->appendOption(kParamOutputModeOptionUnpremultiplied, kParamOutputModeOptionUnpremultipliedHint);
     assert(outputMode->getNOptions() == (int)eOutputModeComposite);
-    outputMode->appendOption(kOutputModeCompositeOption, kOutputModeCompositeHint);
+    outputMode->appendOption(kParamOutputModeOptionComposite, kParamOutputModeOptionCompositeHint);
     outputMode->setDefault((int)eOutputModeComposite);
     outputMode->setAnimates(true);
     page->addChild(*outputMode);
     desc.addClipPreferencesSlaveParam(*outputMode);
 
-    ChoiceParamDescriptor* sourceAlpha = desc.defineChoiceParam(kSourceAlphaParamName);
-    sourceAlpha->setLabels(kSourceAlphaParamLabel, kSourceAlphaParamLabel, kSourceAlphaParamLabel);
-    sourceAlpha->setHint(kSourceAlphaParamHint);
+    ChoiceParamDescriptor* sourceAlpha = desc.defineChoiceParam(kParamSourceAlpha);
+    sourceAlpha->setLabels(kParamSourceAlphaLabel, kParamSourceAlphaLabel, kParamSourceAlphaLabel);
+    sourceAlpha->setHint(kParamSourceAlphaHint);
     assert(sourceAlpha->getNOptions() == (int)eSourceAlphaIgnore);
-    sourceAlpha->appendOption(kSourceAlphaIgnoreOption, kSourceAlphaIgnoreHint);
+    sourceAlpha->appendOption(kParamSourceAlphaOptionIgnore, kParamSourceAlphaOptionIgnoreHint);
     assert(sourceAlpha->getNOptions() == (int)eSourceAlphaAddToInsideMask);
-    sourceAlpha->appendOption(kSourceAlphaAddToInsideMaskOption, kSourceAlphaAddToInsideMaskHint);
+    sourceAlpha->appendOption(kParamSourceAlphaOptionAddToInsideMask, kParamSourceAlphaOptionAddToInsideMaskHint);
     assert(sourceAlpha->getNOptions() == (int)eSourceAlphaNormal);
-    sourceAlpha->appendOption(kSourceAlphaNormalOption, kSourceAlphaNormalHint);
+    sourceAlpha->appendOption(kSourceAlphaNormalOption, kParamSourceAlphaOptionNormalHint);
     sourceAlpha->setDefault((int)eSourceAlphaIgnore);
     sourceAlpha->setAnimates(true);
     page->addChild(*sourceAlpha);

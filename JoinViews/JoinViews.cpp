@@ -89,6 +89,9 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kClipLeft "Left"
+#define kClipRight "Right"
+
 // Base class for the RGBA and the Alpha processor
 class CopierBase : public OFX::ImageProcessor
 {
@@ -169,9 +172,9 @@ public:
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
-        srcLeftClip_ = fetchClip("Left");
+        srcLeftClip_ = fetchClip(kClipLeft);
         assert(srcLeftClip_ && (srcLeftClip_->getPixelComponents() == ePixelComponentAlpha || srcLeftClip_->getPixelComponents() == ePixelComponentRGB || srcLeftClip_->getPixelComponents() == ePixelComponentRGBA));
-        srcRightClip_ = fetchClip("Right");
+        srcRightClip_ = fetchClip(kClipRight);
         assert(srcRightClip_ && (srcRightClip_->getPixelComponents() == ePixelComponentAlpha || srcRightClip_->getPixelComponents() == ePixelComponentRGB || srcRightClip_->getPixelComponents() == ePixelComponentRGBA));
     }
 
@@ -375,7 +378,7 @@ void JoinViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     // create the source clips from the rightmost one (in Nuke's GUI) to the leftmost
-    ClipDescriptor *srcRightClip = desc.defineClip("Right");
+    ClipDescriptor *srcRightClip = desc.defineClip(kClipRight);
     srcRightClip->addSupportedComponent(ePixelComponentRGB);
     srcRightClip->addSupportedComponent(ePixelComponentRGBA);
     srcRightClip->addSupportedComponent(ePixelComponentAlpha);
@@ -383,7 +386,7 @@ void JoinViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     srcRightClip->setSupportsTiles(true);
     srcRightClip->setIsMask(false);
     
-    ClipDescriptor *srcLeftClip = desc.defineClip("Left");
+    ClipDescriptor *srcLeftClip = desc.defineClip(kClipLeft);
     srcLeftClip->addSupportedComponent(ePixelComponentRGB);
     srcLeftClip->addSupportedComponent(ePixelComponentRGBA);
     srcLeftClip->addSupportedComponent(ePixelComponentAlpha);

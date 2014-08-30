@@ -87,13 +87,13 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kNoiseParamName "noise"
-#define kNoiseParamLabel "Noise"
-#define kNoiseParamHint "How much noise to make."
+#define kParamNoiseLevel "noise"
+#define kParamNoiseLevelLabel "Noise"
+#define kParamNoiseLevelHint "How much noise to make."
 
-#define kSeedParamName "seed"
-#define kSeedParamLabel "Seed"
-#define kSeedParamHint "Random seed: change this if you want different instances to have different noise."
+#define kParamSeed "seed"
+#define kParamSeedLabel "Seed"
+#define kParamSeedHint "Random seed: change this if you want different instances to have different noise."
 
 using namespace OFX;
 
@@ -206,8 +206,8 @@ public:
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha));
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA || srcClip_->getPixelComponents() == ePixelComponentAlpha));
-        noise_   = fetchDoubleParam(kNoiseParamName);
-        seed_   = fetchIntParam(kSeedParamName);
+        noise_   = fetchDoubleParam(kParamNoiseLevel);
+        seed_   = fetchIntParam(kParamSeed);
         assert(noise_ && seed_);
     }
 
@@ -379,9 +379,9 @@ void NoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
 
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    DoubleParamDescriptor *noise = desc.defineDoubleParam(kNoiseParamName);
-    noise->setLabels(kNoiseParamLabel, kNoiseParamLabel, kNoiseParamLabel);
-    noise->setHint(kNoiseParamHint);
+    DoubleParamDescriptor *noise = desc.defineDoubleParam(kParamNoiseLevel);
+    noise->setLabels(kParamNoiseLevelLabel, kParamNoiseLevelLabel, kParamNoiseLevelLabel);
+    noise->setHint(kParamNoiseLevelHint);
     noise->setDefault(0.2);
     noise->setRange(0, 10);
     noise->setIncrement(0.1);
@@ -390,9 +390,9 @@ void NoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
     noise->setDoubleType(eDoubleTypeScale);
     page->addChild(*noise);
 
-    IntParamDescriptor *seed = desc.defineIntParam(kSeedParamName);
-    seed->setLabels(kSeedParamName, kSeedParamName, kSeedParamLabel);
-    seed->setHint(kSeedParamHint);
+    IntParamDescriptor *seed = desc.defineIntParam(kParamSeed);
+    seed->setLabels(kParamSeed, kParamSeed, kParamSeedLabel);
+    seed->setHint(kParamSeedHint);
     seed->setDefault(2000);
     seed->setAnimates(true); // can animate
     page->addChild(*seed);

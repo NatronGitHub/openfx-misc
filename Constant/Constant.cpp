@@ -87,13 +87,13 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kColorParamName "color"
-#define kColorParamLabel "Color"
-#define kColorParamHint "Color to fill the image with."
+#define kParamColor "color"
+#define kParamColorLabel "Color"
+#define kParamColorHint "Color to fill the image with."
 
-#define kRangeParamName "frameRange"
-#define kRangeParamLabel "Frame Range"
-#define kRangeParamHint "Time domain."
+#define kParamRange "frameRange"
+#define kParamRangeLabel "Frame Range"
+#define kParamRangeHint "Time domain."
 
 /** @brief  Base class used to blend two images together */
 class ConstantGeneratorBase : public OFX::ImageProcessor {
@@ -224,8 +224,8 @@ public:
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGB || dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentAlpha));
-        color_   = fetchRGBAParam(kColorParamName);
-        range_   = fetchInt2DParam(kRangeParamName);
+        color_   = fetchRGBAParam(kParamColor);
+        range_   = fetchInt2DParam(kParamRange);
         assert(color_ && range_);
     }
 
@@ -434,16 +434,16 @@ void ConstantPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     dstClip->setFieldExtraction(eFieldExtractSingle);
     
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    RGBAParamDescriptor* color = desc.defineRGBAParam(kColorParamName);
-    color->setLabels(kColorParamLabel, kColorParamLabel, kColorParamLabel);
-    color->setHint(kColorParamHint);
+    RGBAParamDescriptor* color = desc.defineRGBAParam(kParamColor);
+    color->setLabels(kParamColorLabel, kParamColorLabel, kParamColorLabel);
+    color->setHint(kParamColorHint);
     color->setDefault(0.0, 0.0, 0.0, 1.0);
     color->setAnimates(true); // can animate
     page->addChild(*color);
     
-    Int2DParamDescriptor *range = desc.defineInt2DParam(kRangeParamName);
-    range->setLabels(kRangeParamLabel, kRangeParamLabel, kRangeParamLabel);
-    range->setHint(kRangeParamHint);
+    Int2DParamDescriptor *range = desc.defineInt2DParam(kParamRange);
+    range->setLabels(kParamRangeLabel, kParamRangeLabel, kParamRangeLabel);
+    range->setHint(kParamRangeHint);
     range->setDefault(1, 1);
     range->setAnimates(false); // can not animate, because it defines the time domain
     page->addChild(*range);

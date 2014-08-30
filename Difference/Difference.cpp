@@ -91,12 +91,12 @@
 #define kParamOffset "offset"
 #define kParamOffsetLabel "Offset"
 #define kParamOffsetHint "Value subtracted to each pixel of the output"
-#define kGainParamName "gain"
-#define kGainParamLabel "Gain"
-#define kGainParamHint "Multiply each pixel of the output by this value"
+#define kParamGain "gain"
+#define kParamGainLabel "Gain"
+#define kParamGainHint "Multiply each pixel of the output by this value"
 
-#define kSourceClipAName "A"
-#define kSourceClipBName "B"
+#define kClipA "A"
+#define kClipB "B"
 
 
 using namespace OFX;
@@ -203,13 +203,13 @@ public:
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
-        srcClipA_ = fetchClip(kSourceClipAName);
+        srcClipA_ = fetchClip(kClipA);
         assert(srcClipA_ && (srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA || srcClipA_->getPixelComponents() == ePixelComponentAlpha));
-        srcClipB_ = fetchClip(kSourceClipBName);
+        srcClipB_ = fetchClip(kClipB);
         assert(srcClipB_ && (srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA || srcClipB_->getPixelComponents() == ePixelComponentAlpha));
         _offset = fetchDoubleParam(kParamOffset);
         assert(_offset);
-        _gain = fetchDoubleParam(kGainParamName);
+        _gain = fetchDoubleParam(kParamGain);
         assert(_gain);
     }
     
@@ -400,7 +400,7 @@ void DifferencePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
-    OFX::ClipDescriptor* srcClipB = desc.defineClip(kSourceClipBName);
+    OFX::ClipDescriptor* srcClipB = desc.defineClip(kClipB);
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGB );
     srcClipB->addSupportedComponent( OFX::ePixelComponentAlpha );
@@ -408,7 +408,7 @@ void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     srcClipB->setSupportsTiles(true);
     srcClipB->setOptional(false);
 
-    OFX::ClipDescriptor* srcClipA = desc.defineClip(kSourceClipAName);
+    OFX::ClipDescriptor* srcClipA = desc.defineClip(kClipA);
     srcClipA->addSupportedComponent( OFX::ePixelComponentRGBA );
     srcClipA->addSupportedComponent( OFX::ePixelComponentRGB );
     srcClipA->addSupportedComponent( OFX::ePixelComponentAlpha );
@@ -433,9 +433,9 @@ void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     offset->setDisplayRange(0., 1.);
     page->addChild(*offset);
 
-    DoubleParamDescriptor *gain = desc.defineDoubleParam(kGainParamName);
-    gain->setLabels(kGainParamLabel, kGainParamLabel, kGainParamLabel);
-    gain->setHint(kGainParamHint);
+    DoubleParamDescriptor *gain = desc.defineDoubleParam(kParamGain);
+    gain->setLabels(kParamGainLabel, kParamGainLabel, kParamGainLabel);
+    gain->setHint(kParamGainHint);
     gain->setDefault(1.);
     gain->setIncrement(0.005);
     gain->setDisplayRange(0., 1.);

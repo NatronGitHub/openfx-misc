@@ -90,16 +90,16 @@
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 ////std strings because we need them in changedParam
-static const std::string kGroupColorCorrectMaster = std::string("Master");
-static const std::string kGroupColorCorrectShadows = std::string("Shadows");
-static const std::string kGroupColorCorrectMidtones = std::string("Midtones");
-static const std::string kGroupColorCorrectHighlights = std::string("Highlights");
+static const std::string kGroupMaster = std::string("Master");
+static const std::string kGroupShadows = std::string("Shadows");
+static const std::string kGroupMidtones = std::string("Midtones");
+static const std::string kGroupHighlights = std::string("Highlights");
 
-static const std::string kColorCorrectSaturationName = std::string("Saturation");
-static const std::string kColorCorrectContrastName = std::string("Contrast");
-static const std::string kColorCorrectGammaName = std::string("Gamma");
-static const std::string kColorCorrectGainName = std::string("Gain");
-static const std::string kColorCorrectOffsetName = std::string("Offset");
+static const std::string kParamSaturation = std::string("Saturation");
+static const std::string kParamContrast = std::string("Contrast");
+static const std::string kParamGamma = std::string("Gamma");
+static const std::string kParamGain = std::string("Gain");
+static const std::string kParamOffset = std::string("Offset");
 
 #define kParamColorCorrectToneRanges "toneRanges"
 #define kParamColorCorrectToneRangesLabel "Tone Ranges"
@@ -411,10 +411,10 @@ public:
         assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
-        fetchColorControlGroup(kGroupColorCorrectMaster, &_masterParamsGroup);
-        fetchColorControlGroup(kGroupColorCorrectShadows, &_shadowsParamsGroup);
-        fetchColorControlGroup(kGroupColorCorrectMidtones, &_midtonesParamsGroup);
-        fetchColorControlGroup(kGroupColorCorrectHighlights, &_highlightsParamsGroup);
+        fetchColorControlGroup(kGroupMaster, &_masterParamsGroup);
+        fetchColorControlGroup(kGroupShadows, &_shadowsParamsGroup);
+        fetchColorControlGroup(kGroupMidtones, &_midtonesParamsGroup);
+        fetchColorControlGroup(kGroupHighlights, &_highlightsParamsGroup);
         _rangesParam = fetchParametricParam(kParamColorCorrectToneRanges);
         assert(_rangesParam);
         _premult = fetchBooleanParam(kParamPremult);
@@ -439,11 +439,11 @@ private:
 
     void fetchColorControlGroup(const std::string& groupName, ColorControlParamGroup* group) {
         assert(group);
-        group->saturation = fetchRGBAParam(groupName + '.' + kColorCorrectSaturationName);
-        group->contrast = fetchRGBAParam(groupName + '.' + kColorCorrectContrastName);
-        group->gamma = fetchRGBAParam(groupName + '.' + kColorCorrectGammaName);
-        group->gain = fetchRGBAParam(groupName + '.' + kColorCorrectGainName);
-        group->offset = fetchRGBAParam(groupName + '.' + kColorCorrectOffsetName);
+        group->saturation = fetchRGBAParam(groupName + '.' + kParamSaturation);
+        group->contrast = fetchRGBAParam(groupName + '.' + kParamContrast);
+        group->gamma = fetchRGBAParam(groupName + '.' + kParamGamma);
+        group->gain = fetchRGBAParam(groupName + '.' + kParamGain);
+        group->offset = fetchRGBAParam(groupName + '.' + kParamOffset);
         assert(group->saturation && group->contrast && group->gamma && group->gain && group->offset);
     }
     
@@ -766,11 +766,11 @@ defineColorGroup(const std::string& groupName,
     groupDesc->setHint(hint);
     groupDesc->setOpen(open);
     
-    defineRGBAScaleParam(desc, groupName + '.' + kColorCorrectSaturationName, kColorCorrectSaturationName, hint, groupDesc, page, 1, 0, 4);
-    defineRGBAScaleParam(desc, groupName + '.' + kColorCorrectContrastName, kColorCorrectContrastName, hint, groupDesc, page, 1, 0, 4);
-    defineRGBAScaleParam(desc, groupName + '.' + kColorCorrectGammaName, kColorCorrectGammaName, hint, groupDesc, page, 1, 0.2, 5);
-    defineRGBAScaleParam(desc, groupName + '.' + kColorCorrectGainName, kColorCorrectGainName, hint, groupDesc, page, 1, 0, 4);
-    defineRGBAScaleParam(desc, groupName + '.' + kColorCorrectOffsetName, kColorCorrectOffsetName, hint, groupDesc, page, 0, -1, 1);
+    defineRGBAScaleParam(desc, groupName + '.' + kParamSaturation, kParamSaturation, hint, groupDesc, page, 1, 0, 4);
+    defineRGBAScaleParam(desc, groupName + '.' + kParamContrast, kParamContrast, hint, groupDesc, page, 1, 0, 4);
+    defineRGBAScaleParam(desc, groupName + '.' + kParamGamma, kParamGamma, hint, groupDesc, page, 1, 0.2, 5);
+    defineRGBAScaleParam(desc, groupName + '.' + kParamGain, kParamGain, hint, groupDesc, page, 1, 0, 4);
+    defineRGBAScaleParam(desc, groupName + '.' + kParamOffset, kParamOffset, hint, groupDesc, page, 0, -1, 1);
      page->addChild(*groupDesc);
 }
 
@@ -804,10 +804,10 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    defineColorGroup(kGroupColorCorrectMaster, "", page, desc, true);
-    defineColorGroup(kGroupColorCorrectShadows, "", page, desc, false);
-    defineColorGroup(kGroupColorCorrectMidtones, "", page, desc, false);
-    defineColorGroup(kGroupColorCorrectHighlights, "", page, desc, false);
+    defineColorGroup(kGroupMaster, "", page, desc, true);
+    defineColorGroup(kGroupShadows, "", page, desc, false);
+    defineColorGroup(kGroupMidtones, "", page, desc, false);
+    defineColorGroup(kGroupHighlights, "", page, desc, false);
     
     PageParamDescriptor* ranges = desc.definePageParam("Ranges");
 

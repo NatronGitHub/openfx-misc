@@ -113,19 +113,19 @@
 #define kParamPremultLabel  "By"
 #define kParamPremultHint   " by this input channel"
 
-#define kInputChannelNoneOption "None"
-#define kInputChannelNoneHint "Don't multiply/divide"
-#define kInputChannelROption "R"
-#define kInputChannelRHint "R channel from input"
-#define kInputChannelGOption "G"
-#define kInputChannelGHint "G channel from input"
-#define kInputChannelBOption "B"
-#define kInputChannelBHint "B channel from input"
-#define kInputChannelAOption "A"
-#define kInputChannelAHint "A channel from input"
-#define kClipInfoParamName "clipInfo"
-#define kClipInfoParamLabel "Clip Info..."
-#define kClipInfoParamHint "Display information about the inputs"
+#define kParamPremultOptionNone "None"
+#define kParamPremultOptionNoneHint "Don't multiply/divide"
+#define kParamPremultOptionR "R"
+#define kParamPremultOptionRHint "R channel from input"
+#define kParamPremultOptionG "G"
+#define kParamPremultOptionGHint "G channel from input"
+#define kParamPremultOptionB "B"
+#define kParamPremultOptionBHint "B channel from input"
+#define kParamPremultOptionA "A"
+#define kParamPremultOptionAHint "A channel from input"
+#define kParamClipInfo "clipInfo"
+#define kParamClipInfoLabel "Clip Info..."
+#define kParamClipInfoHint "Display information about the inputs"
 
 // TODO: sRGB conversions for short and byte types
 
@@ -513,7 +513,7 @@ template<bool isPremult>
 void
 PremultPlugin<isPremult>::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
-    if (paramName == kClipInfoParamName && args.reason == eChangeUserEdit) {
+    if (paramName == kParamClipInfo && args.reason == eChangeUserEdit) {
         std::string msg;
         msg += "Input; ";
         if (!srcClip_) {
@@ -685,24 +685,24 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         param->setLabels(kParamPremultLabel, kParamPremultLabel, kParamPremultLabel);
         param->setHint(kParamPremultHint);
         assert(param->getNOptions() == eInputChannelNone);
-        param->appendOption(kInputChannelNoneOption, kInputChannelNoneHint);
+        param->appendOption(kParamPremultOptionNone, kParamPremultOptionNoneHint);
         assert(param->getNOptions() == eInputChannelR);
-        param->appendOption(kInputChannelROption, kInputChannelRHint);
+        param->appendOption(kParamPremultOptionR, kParamPremultOptionRHint);
         assert(param->getNOptions() == eInputChannelG);
-        param->appendOption(kInputChannelGOption, kInputChannelGHint);
+        param->appendOption(kParamPremultOptionG, kParamPremultOptionGHint);
         assert(param->getNOptions() == eInputChannelB);
-        param->appendOption(kInputChannelBOption, kInputChannelBHint);
+        param->appendOption(kParamPremultOptionB, kParamPremultOptionBHint);
         assert(param->getNOptions() == eInputChannelA);
-        param->appendOption(kInputChannelAOption, kInputChannelAHint);
+        param->appendOption(kParamPremultOptionA, kParamPremultOptionAHint);
         param->setDefault((int)eInputChannelA);
         desc.addClipPreferencesSlaveParam(*param);
         page->addChild(*param);
     }
 
     {
-    PushButtonParamDescriptor *param = desc.definePushButtonParam(kClipInfoParamName);
-    param->setLabels(kClipInfoParamLabel, kClipInfoParamLabel, kClipInfoParamLabel);
-    param->setHint(kClipInfoParamHint);
+    PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
+    param->setLabels(kParamClipInfoLabel, kParamClipInfoLabel, kParamClipInfoLabel);
+    param->setHint(kParamClipInfoHint);
     page->addChild(*param);
     }
 }

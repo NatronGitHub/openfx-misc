@@ -93,10 +93,13 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kSwitchPluginSourceClipCount 10
-#define kSwitchPluginParamWhich "which"
-#define kSwitchPluginParamWhichLabel "Which"
-#define kSwitchPluginParamWhichHint "The input to display. Each input is displayed at the value corresponding to the number of the input. For example, setting which to 4 displays the image from input 4."
+#define kParamWhich "which"
+#define kParamWhichLabel "Which"
+#define kParamWhichHint \
+"The input to display. Each input is displayed at the value corresponding to the number of the input. For example, setting which to 4 displays the image from input 4."
+
+#define kClipSourceCount 10
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class SwitchPlugin : public OFX::ImageEffect
@@ -122,7 +125,7 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *srcClip_[kSwitchPluginSourceClipCount];
+    OFX::Clip *srcClip_[kClipSourceCount];
 
     OFX::IntParam *which_;
 };
@@ -131,13 +134,13 @@ SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle)
 : ImageEffect(handle)
 , which_(0)
 {
-    for (int i = 0; i < kSwitchPluginSourceClipCount; ++i) {
+    for (int i = 0; i < kClipSourceCount; ++i) {
         std::stringstream s;
         s << i;
         srcClip_[i] = fetchClip(s.str());
         assert(srcClip_[i]);
     }
-    which_  = fetchIntParam(kSwitchPluginParamWhich);
+    which_  = fetchIntParam(kParamWhich);
     assert(which_);
 }
 
@@ -182,7 +185,7 @@ void
 SwitchPlugin::changedClip(const OFX::InstanceChangedArgs &/*args*/, const std::string &/*clipName*/)
 {
     int maxconnected = 1;
-    for (int i = 2; i < kSwitchPluginSourceClipCount; ++i) {
+    for (int i = 2; i < kClipSourceCount; ++i) {
         if (srcClip_[i]->isConnected()) {
             maxconnected = i;
         }
@@ -230,7 +233,7 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 {
     // Source clip only in the filter context
     // create the mandated source clip
-    for (int i = 0; i < kSwitchPluginSourceClipCount; ++i) {
+    for (int i = 0; i < kClipSourceCount; ++i) {
         std::stringstream s;
         s << i;
         ClipDescriptor *srcClip = desc.defineClip(s.str());
@@ -255,11 +258,11 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    IntParamDescriptor *which = desc.defineIntParam(kSwitchPluginParamWhich);
-    which->setLabels(kSwitchPluginParamWhichLabel, kSwitchPluginParamWhichLabel, kSwitchPluginParamWhichLabel);
-    which->setHint(kSwitchPluginParamWhichHint);
+    IntParamDescriptor *which = desc.defineIntParam(kParamWhich);
+    which->setLabels(kParamWhichLabel, kParamWhichLabel, kParamWhichLabel);
+    which->setHint(kParamWhichHint);
     which->setDefault(0);
-    which->setRange(0, kSwitchPluginSourceClipCount);
+    which->setRange(0, kClipSourceCount);
     which->setDisplayRange(0, 1);
     which->setAnimates(true);
     

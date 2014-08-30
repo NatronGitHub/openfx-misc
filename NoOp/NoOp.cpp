@@ -53,13 +53,13 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kClipInfoParamName "clipInfo"
-#define kClipInfoParamLabel "Clip Info..."
-#define kClipInfoParamHint "Display information about the inputs"
+#define kParamClipInfo "clipInfo"
+#define kParamClipInfoLabel "Clip Info..."
+#define kParamClipInfoHint "Display information about the inputs"
 
-#define kForceCopyParamName "forceCopy"
-#define kForceCopyParamLabel "Force Copy"
-#define kForceCopyParamHint "Force copy from input to output"
+#define kParamForceCopy "forceCopy"
+#define kParamForceCopyLabel "Force Copy"
+#define kParamForceCopyHint "Force copy from input to output"
 
 // Base class for the RGBA and the Alpha processor
 class CopierBase : public OFX::ImageProcessor
@@ -142,7 +142,7 @@ public:
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
-        forceCopy_ = fetchBooleanParam(kForceCopyParamName);
+        forceCopy_ = fetchBooleanParam(kParamForceCopy);
         assert(forceCopy_);
     }
 
@@ -409,7 +409,7 @@ fieldOrderString(FieldEnum e)
 void
 NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
-    if (paramName == kClipInfoParamName) {
+    if (paramName == kParamClipInfo) {
         std::ostringstream oss;
         oss << "Clip Info:\n\n";
         oss << "Input: ";
@@ -572,16 +572,16 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // make some pages and to things in 
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    BooleanParamDescriptor *forceCopy = desc.defineBooleanParam(kForceCopyParamName);
-    forceCopy->setLabels(kForceCopyParamLabel, kForceCopyParamLabel, kForceCopyParamLabel);
-    forceCopy->setHint(kForceCopyParamHint);
+    BooleanParamDescriptor *forceCopy = desc.defineBooleanParam(kParamForceCopy);
+    forceCopy->setLabels(kParamForceCopyLabel, kParamForceCopyLabel, kParamForceCopyLabel);
+    forceCopy->setHint(kParamForceCopyHint);
     forceCopy->setDefault(false);
     forceCopy->setAnimates(false);
     page->addChild(*forceCopy);
 
-    PushButtonParamDescriptor *clipInfo = desc.definePushButtonParam(kClipInfoParamName);
-    clipInfo->setLabels(kClipInfoParamLabel, kClipInfoParamLabel, kClipInfoParamLabel);
-    clipInfo->setHint(kClipInfoParamHint);
+    PushButtonParamDescriptor *clipInfo = desc.definePushButtonParam(kParamClipInfo);
+    clipInfo->setLabels(kParamClipInfoLabel, kParamClipInfoLabel, kParamClipInfoLabel);
+    clipInfo->setHint(kParamClipInfoHint);
     page->addChild(*clipInfo);
 }
 

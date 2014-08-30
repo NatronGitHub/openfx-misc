@@ -87,56 +87,62 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kOutputComponentsParamName "outputComponents"
-#define kOutputComponentsParamLabel "Output Components"
-#define kOutputComponentsParamHint "Components in the output"
-#define kOutputComponentsRGBAOption "RGBA"
-#define kOutputComponentsRGBOption "RGB"
-#define kOutputComponentsAlphaOption "Alpha"
-#define kOutputBitDepthParamName "outputBitDepth"
-#define kOutputBitDepthParamLabel "Output Bit Depth"
-#define kOutputBitDepthParamHint "Bit depth of the output.\nWARNING: the conversion is linear, even for 8-bit or 16-bit depth. Use with care."
-#define kOutputBitDepthByteOption "Byte (8 bits)"
-#define kOutputBitDepthShortOption "Short (16 bits)"
-#define kOutputBitDepthFloatOption "Float (32 bits)"
-#define kOutputRParamName "outputR"
-#define kOutputRParamLabel "Output R"
-#define kOutputRParamHint "Input channel for the output red channel"
-#define kOutputGParamName "outputG"
-#define kOutputGParamLabel "Output G"
-#define kOutputGParamHint "Input channel for the output green channel"
-#define kOutputBParamName "outputB"
-#define kOutputBParamLabel "Output B"
-#define kOutputBParamHint "Input channel for the output blue channel"
-#define kOutputAParamName "outputA"
-#define kOutputAParamLabel "Output A"
-#define kOutputAParamHint "Input channel for the output alpha channel"
-#define kClipInfoParamName "clipInfo"
-#define kClipInfoParamLabel "Clip Info..."
-#define kClipInfoParamHint "Display information about the inputs"
+#define kParamOutputComponents "outputComponents"
+#define kParamOutputComponentsLabel "Output Components"
+#define kParamOutputComponentsHint "Components in the output"
+#define kParamOutputComponentsOptionRGBA "RGBA"
+#define kParamOutputComponentsOptionRGB "RGB"
+#define kParamOutputComponentsOptionAlpha "Alpha"
 
-#define kInputChannelAROption "A.r"
-#define kInputChannelARHint "R channel from input A"
-#define kInputChannelAGOption "A.g"
-#define kInputChannelAGHint "G channel from input A"
-#define kInputChannelABOption "A.b"
-#define kInputChannelABHint "B channel from input A"
-#define kInputChannelAAOption "A.a"
-#define kInputChannelAAHint "A channel from input A"
-#define kInputChannel0Option "0"
-#define kInputChannel0Hint "0 constant channel"
-#define kInputChannel1Option "1"
-#define kInputChannel1Hint "1 constant channel"
-#define kInputChannelBROption "B.r"
-#define kInputChannelBRHint "R channel from input B"
-#define kInputChannelBGOption "B.g"
-#define kInputChannelBGHint "G channel from input B"
-#define kInputChannelBBOption "B.b"
-#define kInputChannelBBHint "B channel from input B"
-#define kInputChannelBAOption "B.a"
-#define kInputChannelBAHint "A channel from input B"
+#define kParamOutputBitDepth "outputBitDepth"
+#define kParamOutputBitDepthLabel "Output Bit Depth"
+#define kParamOutputBitDepthHint "Bit depth of the output.\nWARNING: the conversion is linear, even for 8-bit or 16-bit depth. Use with care."
+#define kParamOutputBitDepthOptionByte "Byte (8 bits)"
+#define kParamOutputBitDepthOptionShort "Short (16 bits)"
+#define kParamOutputBitDepthOptionFloat "Float (32 bits)"
 
-// TODO: sRGB conversions for short and byte types
+#define kParamOutputR "outputR"
+#define kParamOutputRLabel "Output R"
+#define kParamOutputRHint "Input channel for the output red channel"
+
+#define kParamOutputG "outputG"
+#define kParamOutputGLabel "Output G"
+#define kParamOutputGHint "Input channel for the output green channel"
+
+#define kParamOutputB "outputB"
+#define kParamOutputBLabel "Output B"
+#define kParamOutputBHint "Input channel for the output blue channel"
+
+#define kParamOutputA "outputA"
+#define kParamOutputALabel "Output A"
+#define kParamOutputAHint "Input channel for the output alpha channel"
+
+#define kParamOutputOptionAR "A.r"
+#define kParamOutputOptionARHint "R channel from input A"
+#define kParamOutputOptionAG "A.g"
+#define kParamOutputOptionAGHint "G channel from input A"
+#define kParamOutputOptionAB "A.b"
+#define kParamOutputOptionABHint "B channel from input A"
+#define kParamOutputOptionAA "A.a"
+#define kParamOutputOptionAAHint "A channel from input A"
+#define kParamOutputOption0 "0"
+#define kParamOutputOption0Hint "0 constant channel"
+#define kParamOutputOption1 "1"
+#define kParamOutputOption1Hint "1 constant channel"
+#define kParamOutputOptionBR "B.r"
+#define kParamOutputOptionBRHint "R channel from input B"
+#define kParamOutputOptionBG "B.g"
+#define kParamOutputOptionBGHint "G channel from input B"
+#define kParamOutputOptionBB "B.b"
+#define kParamOutputOptionBBHint "B channel from input B"
+#define kParamOutputOptionBA "B.a"
+#define kParamOutputOptionBAHint "A channel from input B"
+
+#define kParamClipInfo "clipInfo"
+#define kParamClipInfoLabel "Clip Info..."
+#define kParamClipInfoHint "Display information about the inputs"
+
+// TODO: sRGB/Rec.709 conversions for byte/short types
 
 enum InputChannelEnum {
     eInputChannelAR = 0,
@@ -151,8 +157,8 @@ enum InputChannelEnum {
     eInputChannelBA,
 };
 
-#define kSourceClipAName "A"
-#define kSourceClipBName "B"
+#define kClipA "A"
+#define kClipB "B"
 
 static bool gSupportsBytes  = false;
 static bool gSupportsShorts = false;
@@ -442,20 +448,20 @@ public:
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha));
-        srcClipA_ = fetchClip(context == eContextGeneral ? kSourceClipAName : kOfxImageEffectSimpleSourceClipName);
+        srcClipA_ = fetchClip(context == eContextGeneral ? kClipA : kOfxImageEffectSimpleSourceClipName);
         assert(srcClipA_ && (srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA || srcClipA_->getPixelComponents() == ePixelComponentAlpha));
         if (context == eContextGeneral) {
-            srcClipB_ = fetchClip(kSourceClipBName);
+            srcClipB_ = fetchClip(kClipB);
             assert(srcClipB_ && (srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA || srcClipB_->getPixelComponents() == ePixelComponentAlpha));
         }
-        _outputComponents = fetchChoiceParam(kOutputComponentsParamName);
+        _outputComponents = fetchChoiceParam(kParamOutputComponents);
         if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
-            _outputBitDepth = fetchChoiceParam(kOutputBitDepthParamName);
+            _outputBitDepth = fetchChoiceParam(kParamOutputBitDepth);
         }
-        _r = fetchChoiceParam(kOutputRParamName);
-        _g = fetchChoiceParam(kOutputGParamName);
-        _b = fetchChoiceParam(kOutputBParamName);
-        _a = fetchChoiceParam(kOutputAParamName);
+        _r = fetchChoiceParam(kParamOutputR);
+        _g = fetchChoiceParam(kParamOutputG);
+        _b = fetchChoiceParam(kParamOutputB);
+        _a = fetchChoiceParam(kParamOutputA);
         enableComponents();
     }
 
@@ -760,9 +766,9 @@ imageFormatString(PixelComponentEnum components, BitDepthEnum bitDepth)
 void
 ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
-    if (paramName == kOutputComponentsParamName) {
+    if (paramName == kParamOutputComponents) {
         enableComponents();
-    } else if (paramName == kClipInfoParamName && args.reason == eChangeUserEdit) {
+    } else if (paramName == kParamClipInfo && args.reason == eChangeUserEdit) {
         std::string msg;
         msg += "Input A: ";
         if (!srcClipA_) {
@@ -795,7 +801,7 @@ void
 ShufflePlugin::changedClip(const InstanceChangedArgs &/*args*/, const std::string &clipName)
 {
     if (getContext() == eContextGeneral &&
-        (clipName == kSourceClipAName || clipName == kSourceClipBName)) {
+        (clipName == kClipA || clipName == kClipB)) {
         // check that A and B are compatible if they're both connected
         OFX::BitDepthEnum srcBitDepth = srcClipA_->getPixelDepth();
 
@@ -943,26 +949,26 @@ static void
 addInputChannelOtions(ChoiceParamDescriptor* outputR, InputChannelEnum def, OFX::ContextEnum context)
 {
     assert(outputR->getNOptions() == eInputChannelAR);
-    outputR->appendOption(kInputChannelAROption,kInputChannelARHint);
+    outputR->appendOption(kParamOutputOptionAR,kParamOutputOptionARHint);
     assert(outputR->getNOptions() == eInputChannelAG);
-    outputR->appendOption(kInputChannelAGOption,kInputChannelAGHint);
+    outputR->appendOption(kParamOutputOptionAG,kParamOutputOptionAGHint);
     assert(outputR->getNOptions() == eInputChannelAB);
-    outputR->appendOption(kInputChannelABOption,kInputChannelABHint);
+    outputR->appendOption(kParamOutputOptionAB,kParamOutputOptionABHint);
     assert(outputR->getNOptions() == eInputChannelAA);
-    outputR->appendOption(kInputChannelAAOption,kInputChannelAAHint);
+    outputR->appendOption(kParamOutputOptionAA,kParamOutputOptionAAHint);
     assert(outputR->getNOptions() == eInputChannel0);
-    outputR->appendOption(kInputChannel0Option,kInputChannel0Hint);
+    outputR->appendOption(kParamOutputOption0,kParamOutputOption0Hint);
     assert(outputR->getNOptions() == eInputChannel1);
-    outputR->appendOption(kInputChannel1Option,kInputChannel1Hint);
+    outputR->appendOption(kParamOutputOption1,kParamOutputOption1Hint);
     if (context == eContextGeneral) {
         assert(outputR->getNOptions() == eInputChannelBR);
-        outputR->appendOption(kInputChannelBROption,kInputChannelBRHint);
+        outputR->appendOption(kParamOutputOptionBR,kParamOutputOptionBRHint);
         assert(outputR->getNOptions() == eInputChannelBG);
-        outputR->appendOption(kInputChannelBGOption,kInputChannelBGHint);
+        outputR->appendOption(kParamOutputOptionBG,kParamOutputOptionBGHint);
         assert(outputR->getNOptions() == eInputChannelBB);
-        outputR->appendOption(kInputChannelBBOption,kInputChannelBBHint);
+        outputR->appendOption(kParamOutputOptionBB,kParamOutputOptionBBHint);
         assert(outputR->getNOptions() == eInputChannelBA);
-        outputR->appendOption(kInputChannelBAOption,kInputChannelBAHint);
+        outputR->appendOption(kParamOutputOptionBA,kParamOutputOptionBAHint);
     }
     outputR->setDefault(def);
 }
@@ -970,7 +976,7 @@ addInputChannelOtions(ChoiceParamDescriptor* outputR, InputChannelEnum def, OFX:
 void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     if (context == eContextGeneral) {
-        ClipDescriptor* srcClipB = desc.defineClip(kSourceClipBName);
+        ClipDescriptor* srcClipB = desc.defineClip(kClipB);
         srcClipB->addSupportedComponent(ePixelComponentRGBA);
         srcClipB->addSupportedComponent(ePixelComponentRGB);
         srcClipB->addSupportedComponent(ePixelComponentAlpha);
@@ -978,7 +984,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         srcClipB->setSupportsTiles(true);
         srcClipB->setOptional(true);
 
-        ClipDescriptor* srcClipA = desc.defineClip(kSourceClipAName);
+        ClipDescriptor* srcClipA = desc.defineClip(kClipA);
         srcClipA->addSupportedComponent(ePixelComponentRGBA);
         srcClipA->addSupportedComponent(ePixelComponentRGB);
         srcClipA->addSupportedComponent(ePixelComponentAlpha);
@@ -1005,21 +1011,21 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    ChoiceParamDescriptor *outputComponents = desc.defineChoiceParam(kOutputComponentsParamName);
-    outputComponents->setLabels(kOutputComponentsParamLabel, kOutputComponentsParamLabel, kOutputComponentsParamLabel);
-    outputComponents->setHint(kOutputComponentsParamHint);
+    ChoiceParamDescriptor *outputComponents = desc.defineChoiceParam(kParamOutputComponents);
+    outputComponents->setLabels(kParamOutputComponentsLabel, kParamOutputComponentsLabel, kParamOutputComponentsLabel);
+    outputComponents->setHint(kParamOutputComponentsHint);
     // the following must be in the same order as in describe(), so that the map works
     if (gSupportsRGBA) {
         assert(gOutputComponentsMap[outputComponents->getNOptions()] == ePixelComponentRGBA);
-        outputComponents->appendOption(kOutputComponentsRGBAOption);
+        outputComponents->appendOption(kParamOutputComponentsOptionRGBA);
     }
     if (gSupportsRGB) {
         assert(gOutputComponentsMap[outputComponents->getNOptions()] == ePixelComponentRGB);
-        outputComponents->appendOption(kOutputComponentsRGBOption);
+        outputComponents->appendOption(kParamOutputComponentsOptionRGB);
     }
     if (gSupportsAlpha) {
         assert(gOutputComponentsMap[outputComponents->getNOptions()] == ePixelComponentAlpha);
-        outputComponents->appendOption(kOutputComponentsAlphaOption);
+        outputComponents->appendOption(kParamOutputComponentsOptionAlpha);
     }
     outputComponents->setDefault(0);
     outputComponents->setAnimates(false);
@@ -1027,21 +1033,21 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     desc.addClipPreferencesSlaveParam(*outputComponents);
 
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
-        ChoiceParamDescriptor *outputBitDepth = desc.defineChoiceParam(kOutputBitDepthParamName);
-        outputBitDepth->setLabels(kOutputBitDepthParamLabel, kOutputBitDepthParamLabel, kOutputBitDepthParamLabel);
-        outputBitDepth->setHint(kOutputBitDepthParamHint);
+        ChoiceParamDescriptor *outputBitDepth = desc.defineChoiceParam(kParamOutputBitDepth);
+        outputBitDepth->setLabels(kParamOutputBitDepthLabel, kParamOutputBitDepthLabel, kParamOutputBitDepthLabel);
+        outputBitDepth->setHint(kParamOutputBitDepthHint);
         // the following must be in the same order as in describe(), so that the map works
         if (gSupportsFloats) {
             assert(gOutputBitDepthMap[outputBitDepth->getNOptions()] == eBitDepthFloat);
-            outputBitDepth->appendOption(kOutputBitDepthFloatOption);
+            outputBitDepth->appendOption(kParamOutputBitDepthOptionFloat);
         }
         if (gSupportsShorts) {
             assert(gOutputBitDepthMap[outputBitDepth->getNOptions()] == eBitDepthUShort);
-            outputBitDepth->appendOption(kOutputBitDepthShortOption);
+            outputBitDepth->appendOption(kParamOutputBitDepthOptionShort);
         }
         if (gSupportsBytes) {
             assert(gOutputBitDepthMap[outputBitDepth->getNOptions()] == eBitDepthUByte);
-            outputBitDepth->appendOption(kOutputBitDepthByteOption);
+            outputBitDepth->appendOption(kParamOutputBitDepthOptionByte);
         }
         outputBitDepth->setDefault(0);
         outputBitDepth->setAnimates(false);
@@ -1055,33 +1061,33 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     }
 
     if (gSupportsRGB || gSupportsRGBA) {
-        ChoiceParamDescriptor *outputR = desc.defineChoiceParam(kOutputRParamName);
-        outputR->setLabels(kOutputRParamLabel, kOutputRParamLabel, kOutputRParamLabel);
-        outputR->setHint(kOutputRParamHint);
+        ChoiceParamDescriptor *outputR = desc.defineChoiceParam(kParamOutputR);
+        outputR->setLabels(kParamOutputRLabel, kParamOutputRLabel, kParamOutputRLabel);
+        outputR->setHint(kParamOutputRHint);
         addInputChannelOtions(outputR, eInputChannelAR, context);
         page->addChild(*outputR);
-        ChoiceParamDescriptor *outputG = desc.defineChoiceParam(kOutputGParamName);
-        outputG->setLabels(kOutputGParamLabel, kOutputGParamLabel, kOutputGParamLabel);
-        outputG->setHint(kOutputGParamHint);
+        ChoiceParamDescriptor *outputG = desc.defineChoiceParam(kParamOutputG);
+        outputG->setLabels(kParamOutputGLabel, kParamOutputGLabel, kParamOutputGLabel);
+        outputG->setHint(kParamOutputGHint);
         addInputChannelOtions(outputG, eInputChannelAG, context);
         page->addChild(*outputG);
-        ChoiceParamDescriptor *outputB = desc.defineChoiceParam(kOutputBParamName);
-        outputB->setLabels(kOutputBParamLabel, kOutputBParamLabel, kOutputBParamLabel);
-        outputB->setHint(kOutputBParamHint);
+        ChoiceParamDescriptor *outputB = desc.defineChoiceParam(kParamOutputB);
+        outputB->setLabels(kParamOutputBLabel, kParamOutputBLabel, kParamOutputBLabel);
+        outputB->setHint(kParamOutputBHint);
         addInputChannelOtions(outputB, eInputChannelAB, context);
         page->addChild(*outputB);
     }
     if (gSupportsRGBA || gSupportsAlpha) {
-        ChoiceParamDescriptor *outputA = desc.defineChoiceParam(kOutputAParamName);
-        outputA->setLabels(kOutputAParamLabel, kOutputAParamLabel, kOutputAParamLabel);
-        outputA->setHint(kOutputAParamHint);
+        ChoiceParamDescriptor *outputA = desc.defineChoiceParam(kParamOutputA);
+        outputA->setLabels(kParamOutputALabel, kParamOutputALabel, kParamOutputALabel);
+        outputA->setHint(kParamOutputAHint);
         addInputChannelOtions(outputA, eInputChannelAA, context);
         page->addChild(*outputA);
     }
 
-    PushButtonParamDescriptor *clipInfo = desc.definePushButtonParam(kClipInfoParamName);
-    clipInfo->setLabels(kClipInfoParamLabel, kClipInfoParamLabel, kClipInfoParamLabel);
-    clipInfo->setHint(kClipInfoParamHint);
+    PushButtonParamDescriptor *clipInfo = desc.definePushButtonParam(kParamClipInfo);
+    clipInfo->setLabels(kParamClipInfoLabel, kParamClipInfoLabel, kParamClipInfoLabel);
+    clipInfo->setHint(kParamClipInfoHint);
     page->addChild(*clipInfo);
 }
 

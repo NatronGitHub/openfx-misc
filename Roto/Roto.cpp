@@ -99,14 +99,14 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kPremultParamName "premultiply"
-#define kPremultParamLabel "Premultiply"
-#define kPremultParamHint "Premultiply the red, green and blue channels with the alpha channel produced by the mask."
+#define kParamPremult "premultiply"
+#define kParamPremultLabel "Premultiply"
+#define kParamPremultHint "Premultiply the red, green and blue channels with the alpha channel produced by the mask."
 
-#define kOutputCompsParamName "outputComponents"
-#define kOutputCompsParamLabel "Output components"
-#define kOutputCompsParamOptionAlpha "Alpha"
-#define kOutputCompsParamOptionRGBA "RGBA"
+#define kParamOutputComponents "outputComponents"
+#define kParamOutputComponentsLabel "Output components"
+#define kParamOutputComponentsOptionAlpha "Alpha"
+#define kParamOutputComponentsOptionRGBA "RGBA"
 
 #define kParamProcessR      "r"
 #define kParamProcessRLabel "R"
@@ -272,7 +272,7 @@ public:
         // name of mask clip depends on the context
         rotoClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Roto");
         assert(rotoClip_ && (rotoClip_->getPixelComponents() == ePixelComponentAlpha || rotoClip_->getPixelComponents() == ePixelComponentRGBA));
-        _outputComps = fetchChoiceParam(kOutputCompsParamName);
+        _outputComps = fetchChoiceParam(kParamOutputComponents);
         assert(_outputComps);
         _paramProcessR = fetchBooleanParam(kParamProcessR);
         _paramProcessG = fetchBooleanParam(kParamProcessG);
@@ -619,11 +619,11 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    ChoiceParamDescriptor* outputComps = desc.defineChoiceParam(kOutputCompsParamName);
-    outputComps->setLabels(kOutputCompsParamLabel, kOutputCompsParamLabel, kOutputCompsParamLabel);
+    ChoiceParamDescriptor* outputComps = desc.defineChoiceParam(kParamOutputComponents);
+    outputComps->setLabels(kParamOutputComponentsLabel, kParamOutputComponentsLabel, kParamOutputComponentsLabel);
     outputComps->setAnimates(false);
-    outputComps->appendOption(kOutputCompsParamOptionAlpha);
-    outputComps->appendOption(kOutputCompsParamOptionRGBA);
+    outputComps->appendOption(kParamOutputComponentsOptionAlpha);
+    outputComps->appendOption(kParamOutputComponentsOptionRGBA);
     outputComps->setDefault(0);
     desc.addClipPreferencesSlaveParam(*outputComps);
     page->addChild(*outputComps);

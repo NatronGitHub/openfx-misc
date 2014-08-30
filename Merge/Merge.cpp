@@ -91,22 +91,25 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kOperationParamName "operation"
-#define kOperationParamLabel "Operation"
-#define kOperationParamHint \
+#define kParamOperation "operation"
+#define kParamOperationLabel "Operation"
+#define kParamOperationHint \
 "The operation used to merge the input A and B images.\n" \
 "The operator formula is applied to each component: A and B represent the input component (Red, Green, Blue, or Alpha) of each input, and a and b represent the Alpha component of each input.\n" \
 "If Alpha masking is checked, the output alpha is computed using a different formula (a+b - a*b)"
-#define kAlphaMaskingParamName "screenAlpha"
-#define kAlphaMaskingParamLabel "Alpha masking"
-#define kAlphaMaskingParamHint "When enabled, the input images are unchanged where the other image has 0 alpha, and" \
+
+#define kParamAlphaMasking "screenAlpha"
+#define kParamAlphaMaskingLabel "Alpha masking"
+#define kParamAlphaMaskingHint "When enabled, the input images are unchanged where the other image has 0 alpha, and" \
     " the output alpha is set to a+b - a*b. When disabled the alpha channel is processed as " \
     "any other channel. Option is disabled for operations where it does not apply or makes no difference."
-#define kBboxParamName "bbox"
-#define kBboxParamLabel "Bounding Box"
-#define kBboxParamHint "What to use to produce the output image's bounding box."
-#define kSourceClipAName "A"
-#define kSourceClipBName "B"
+
+#define kParamBbox "bbox"
+#define kParamBboxLabel "Bounding Box"
+#define kParamBboxHint "What to use to produce the output image's bounding box."
+
+#define kClipA "A"
+#define kClipB "B"
 
 using namespace OFX;
 using namespace MergeImages2D;
@@ -231,16 +234,16 @@ public:
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha));
-        srcClipA_ = fetchClip(kSourceClipAName);
+        srcClipA_ = fetchClip(kClipA);
         assert(srcClipA_ && (srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA || srcClipA_->getPixelComponents() == ePixelComponentAlpha));
-        srcClipB_ = fetchClip(kSourceClipBName);
+        srcClipB_ = fetchClip(kClipB);
         assert(srcClipB_ && (srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA || srcClipB_->getPixelComponents() == ePixelComponentAlpha));
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
-        _operation = fetchChoiceParam(kOperationParamName);
+        _operation = fetchChoiceParam(kParamOperation);
         _operationString = fetchStringParam(kOfxParamStringSublabelName);
-        _bbox = fetchChoiceParam(kBboxParamName);
-        _alphaMasking = fetchBooleanParam(kAlphaMaskingParamName);
+        _bbox = fetchChoiceParam(kParamBbox);
+        _alphaMasking = fetchBooleanParam(kParamAlphaMasking);
         assert(_operation && _operationString && _bbox && _alphaMasking);
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
@@ -489,7 +492,7 @@ MergePlugin::render(const OFX::RenderArguments &args)
 void
 MergePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
-    if (paramName == kOperationParamName) {
+    if (paramName == kParamOperation) {
         int operation_i;
         _operation->getValueAtTime(args.time, operation_i);
         // depending on the operation, enable/disable alpha masking
@@ -542,7 +545,7 @@ void MergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
-    OFX::ClipDescriptor* srcClipB = desc.defineClip(kSourceClipBName);
+    OFX::ClipDescriptor* srcClipB = desc.defineClip(kClipB);
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGB );
     srcClipB->addSupportedComponent( OFX::ePixelComponentAlpha );
@@ -550,7 +553,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     srcClipB->setSupportsTiles(true);
     srcClipB->setOptional(false);
 
-    OFX::ClipDescriptor* srcClipA = desc.defineClip(kSourceClipAName);
+    OFX::ClipDescriptor* srcClipA = desc.defineClip(kClipA);
     srcClipA->addSupportedComponent( OFX::ePixelComponentRGBA );
     srcClipA->addSupportedComponent( OFX::ePixelComponentRGB );
     srcClipA->addSupportedComponent( OFX::ePixelComponentAlpha );
@@ -587,9 +590,9 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     operationString->setDefault(getOperationString(eMergeOver));
     page->addChild(*operationString);
  
-    ChoiceParamDescriptor* operation = desc.defineChoiceParam(kOperationParamName);
-    operation->setLabels(kOperationParamLabel, kOperationParamLabel, kOperationParamLabel);
-    operation->setHint(kOperationParamHint);
+    ChoiceParamDescriptor* operation = desc.defineChoiceParam(kParamOperation);
+    operation->setLabels(kParamOperationLabel, kParamOperationLabel, kParamOperationLabel);
+    operation->setHint(kParamOperationHint);
     assert(operation->getNOptions() == eMergeATop);
     operation->appendOption( "atop", "Ab + B(1 - a)" );
     assert(operation->getNOptions() == eMergeAverage);
@@ -664,9 +667,9 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     page->addChild(*operation);
     
     
-    ChoiceParamDescriptor* boundingBox = desc.defineChoiceParam(kBboxParamName);
-    boundingBox->setLabels(kBboxParamLabel, kBboxParamLabel, kBboxParamLabel);
-    boundingBox->setHint(kBboxParamHint);
+    ChoiceParamDescriptor* boundingBox = desc.defineChoiceParam(kParamBbox);
+    boundingBox->setLabels(kParamBboxLabel, kParamBboxLabel, kParamBboxLabel);
+    boundingBox->setHint(kParamBboxHint);
     boundingBox->appendOption("Union");
     boundingBox->appendOption("Intersection");
     boundingBox->appendOption("A");
@@ -675,12 +678,12 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     boundingBox->setDefault(0);
     page->addChild(*boundingBox);
     
-    BooleanParamDescriptor* alphaMasking = desc.defineBooleanParam(kAlphaMaskingParamName);
-    alphaMasking->setLabels(kAlphaMaskingParamLabel, kAlphaMaskingParamLabel, kAlphaMaskingParamLabel);
+    BooleanParamDescriptor* alphaMasking = desc.defineBooleanParam(kParamAlphaMasking);
+    alphaMasking->setLabels(kParamAlphaMaskingLabel, kParamAlphaMaskingLabel, kParamAlphaMaskingLabel);
     alphaMasking->setAnimates(true);
     alphaMasking->setDefault(false);
     alphaMasking->setEnabled(MergeImages2D::isMaskable(eMergeOver));
-    alphaMasking->setHint(kAlphaMaskingParamHint);
+    alphaMasking->setHint(kParamAlphaMaskingHint);
     page->addChild(*alphaMasking);
     
     ofxsMaskMixDescribeParams(desc, page);

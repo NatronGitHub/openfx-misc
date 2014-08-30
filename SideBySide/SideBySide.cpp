@@ -88,18 +88,18 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kVerticalParamName "vertical"
-#define kVerticalParamLabel "Vertical"
-#define kVerticalParamHint "Stack views vertically instead of horizontally"
+#define kParamVertical "vertical"
+#define kParamVerticalLabel "Vertical"
+#define kParamVerticalHint "Stack views vertically instead of horizontally"
 
-#define kView1ParamName "view1"
-#define kView1ParamLabel "View 1"
-#define kView1ParamHint "First view"
-#define kView2ParamName "view2"
-#define kView2ParamLabel "View 2"
-#define kView2ParamHint "Second view"
-#define kViewOptionLeft "Left"
-#define kViewOptionRight "Right"
+#define kParamView1 "view1"
+#define kParamView1Label "View 1"
+#define kParamView1Hint "First view"
+#define kParamView2 "view2"
+#define kParamView2Label "View 2"
+#define kParamView2Hint "Second view"
+#define kParamViewOptionLeft "Left"
+#define kParamViewOptionRight "Right"
 
 // Base class for the RGBA and the Alpha processor
 class SideBySideBase : public OFX::ImageProcessor {
@@ -197,9 +197,9 @@ public:
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
-        vertical_ = fetchBooleanParam(kVerticalParamName);
-        view1_ = fetchChoiceParam(kView1ParamName);
-        view2_ = fetchChoiceParam(kView2ParamName);
+        vertical_ = fetchBooleanParam(kParamVertical);
+        view1_ = fetchChoiceParam(kParamView1);
+        view2_ = fetchChoiceParam(kParamView2);
     }
 
 private:
@@ -509,29 +509,29 @@ void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // make some pages and to things in 
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    BooleanParamDescriptor *vertical = desc.defineBooleanParam(kVerticalParamName);
+    BooleanParamDescriptor *vertical = desc.defineBooleanParam(kParamVertical);
     vertical->setDefault(false);
-    vertical->setHint(kVerticalParamHint);
-    vertical->setLabels(kVerticalParamLabel, kVerticalParamLabel, kVerticalParamLabel);
+    vertical->setHint(kParamVerticalHint);
+    vertical->setLabels(kParamVerticalLabel, kParamVerticalLabel, kParamVerticalLabel);
     vertical->setAnimates(true);
     
     page->addChild(*vertical);
     
-    ChoiceParamDescriptor *view1 = desc.defineChoiceParam(kView1ParamName);
-    view1->setHint(kView1ParamHint);
-    view1->setLabels(kView1ParamLabel, kView1ParamLabel, kView1ParamLabel);
-    view1->appendOption(kViewOptionLeft);
-    view1->appendOption(kViewOptionRight);
+    ChoiceParamDescriptor *view1 = desc.defineChoiceParam(kParamView1);
+    view1->setHint(kParamView1Hint);
+    view1->setLabels(kParamView1Label, kParamView1Label, kParamView1Label);
+    view1->appendOption(kParamViewOptionLeft);
+    view1->appendOption(kParamViewOptionRight);
     view1->setDefault(0);
     view1->setAnimates(true);
     
     page->addChild(*view1);
     
-    ChoiceParamDescriptor *view2 = desc.defineChoiceParam(kView2ParamName);
-    view2->setHint(kView2ParamHint);
-    view2->setLabels(kView2ParamLabel, kView2ParamLabel, kView2ParamLabel);
-    view2->appendOption(kViewOptionLeft);
-    view2->appendOption(kViewOptionRight);
+    ChoiceParamDescriptor *view2 = desc.defineChoiceParam(kParamView2);
+    view2->setHint(kParamView2Hint);
+    view2->setLabels(kParamView2Label, kParamView2Label, kParamView2Label);
+    view2->appendOption(kParamViewOptionLeft);
+    view2->appendOption(kParamViewOptionRight);
     view2->setDefault(1);
     view2->setAnimates(true);
     

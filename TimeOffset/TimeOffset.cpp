@@ -86,12 +86,12 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kTimeOffsetParamName "timeOffset"
-#define kTimeOffsetParamLabel "Time offset (frames)"
-#define kTimeOffsetParamHint "Offset in frames (frame f from the input will be at f+offset)"
-#define kReverseInputParamName "reverseInput"
-#define kReverseInputParamLabel "Reverse input"
-#define kReverseInputParamHint "Reverse the order of the input frames so that last one is first"
+#define kParamTimeOffset "timeOffset"
+#define kParamTimeOffsetLabel "Time offset (frames)"
+#define kParamTimeOffsetHint "Offset in frames (frame f from the input will be at f+offset)"
+#define kParamReverseInput "reverseInput"
+#define kParamReverseInputLabel "Reverse input"
+#define kParamReverseInputHint "Reverse the order of the input frames so that last one is first"
 
 namespace OFX {
     extern ImageEffectHostDescription gHostDescription;
@@ -138,8 +138,8 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
     srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip_ && (srcClip_->getPixelComponents() == OFX::ePixelComponentAlpha || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB || srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA));
 
-    time_offset_   = fetchIntParam(kTimeOffsetParamName);
-    reverse_input_ = fetchBooleanParam(kReverseInputParamName);
+    time_offset_   = fetchIntParam(kParamTimeOffset);
+    reverse_input_ = fetchBooleanParam(kParamReverseInput);
     assert(time_offset_ && reverse_input_);
 }
 
@@ -293,9 +293,9 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    IntParamDescriptor *time_offset = desc.defineIntParam(kTimeOffsetParamName);
-    time_offset->setLabels(kTimeOffsetParamLabel,kTimeOffsetParamLabel,kTimeOffsetParamLabel);
-    time_offset->setHint(kTimeOffsetParamHint);
+    IntParamDescriptor *time_offset = desc.defineIntParam(kParamTimeOffset);
+    time_offset->setLabels(kParamTimeOffsetLabel,kParamTimeOffsetLabel,kParamTimeOffsetLabel);
+    time_offset->setHint(kParamTimeOffsetHint);
     time_offset->setDefault(0);
     // keep default range (INT_MIN..INT_MAX)
     // no display range
@@ -304,10 +304,10 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 
     page->addChild(*time_offset);
 
-    BooleanParamDescriptor *reverse_input = desc.defineBooleanParam(kReverseInputParamName);
+    BooleanParamDescriptor *reverse_input = desc.defineBooleanParam(kParamReverseInput);
     reverse_input->setDefault(false);
-    reverse_input->setHint(kReverseInputParamHint);
-    reverse_input->setLabels(kReverseInputParamLabel,kReverseInputParamLabel,kReverseInputParamLabel);
+    reverse_input->setHint(kParamReverseInputHint);
+    reverse_input->setLabels(kParamReverseInputLabel,kParamReverseInputLabel,kParamReverseInputLabel);
     reverse_input->setAnimates(true);
 
     page->addChild(*reverse_input);

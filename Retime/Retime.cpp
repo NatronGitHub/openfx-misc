@@ -105,13 +105,13 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kSpeedParamName "speed"
-#define kSpeedParamLabel "Speed"
-#define kSpeedParamHint "How much to changed the speed of the input clip"
+#define kParamSpeed "speed"
+#define kParamSpeedLabel "Speed"
+#define kParamSpeedHint "How much to changed the speed of the input clip"
 
-#define kDurationParamName "duration"
-#define kDurationParamLabel "Duration"
-#define kDurationParamHint "How long the output clip should be, as a proportion of the input clip's length."
+#define kParamDuration "duration"
+#define kParamDurationLabel "Duration"
+#define kParamDurationHint "How long the output clip should be, as a proportion of the input clip's length."
 
 namespace OFX {
     extern ImageEffectHostDescription gHostDescription;
@@ -149,12 +149,12 @@ public:
             assert(sourceTime_);
         } else { // context == OFX::eContextFilter || context == OFX::eContextGeneral
             // filter context means we are in charge of how to retime, and our example is using a speed curve to do that
-            speed_ = fetchDoubleParam(kSpeedParamName);
+            speed_ = fetchDoubleParam(kParamSpeed);
             assert(speed_);
         }
         // fetch duration param for general context
         if (getContext() == OFX::eContextGeneral) {
-            duration_ = fetchDoubleParam(kDurationParamName);
+            duration_ = fetchDoubleParam(kParamDuration);
             assert(duration_);
         }
     }
@@ -435,9 +435,9 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         (void)param;
     }  else {
         // We are a general or filter context, define a speed param and a page of controls to put that in
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kSpeedParamName);
-        param->setLabels(kSpeedParamLabel, kSpeedParamLabel, kSpeedParamLabel);
-        param->setHint(kSpeedParamHint);
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSpeed);
+        param->setLabels(kParamSpeedLabel, kParamSpeedLabel, kParamSpeedLabel);
+        param->setHint(kParamSpeedHint);
         param->setDefault(1);
         param->setRange(-FLT_MAX, FLT_MAX);
         param->setIncrement(0.05);
@@ -456,9 +456,9 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         // duration (the speed may be animating or wired to an expression).
         if (context == OFX::eContextGeneral) {
             // We are a general or filter context, define a speed param and a page of controls to put that in
-            DoubleParamDescriptor *param = desc.defineDoubleParam(kDurationParamName);
-            param->setLabels(kDurationParamLabel, kDurationParamLabel, kDurationParamLabel);
-            param->setHint(kDurationParamHint);
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDuration);
+            param->setLabels(kParamDurationLabel, kParamDurationLabel, kParamDurationLabel);
+            param->setHint(kParamDurationHint);
             param->setDefault(1);
             param->setRange(0, 10);
             param->setIncrement(0.1);
