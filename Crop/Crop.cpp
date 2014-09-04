@@ -227,8 +227,8 @@ public:
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
         
-        _btmLeft = fetchDouble2DParam(kRectInteractBtmLeftParamName);
-        _size = fetchDouble2DParam(kRectInteractSizeParamName);
+        _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
+        _size = fetchDouble2DParam(kParamRectangleInteractSize);
         _softness = fetchDoubleParam(kParamSoftness);
         _reformat = fetchBooleanParam(kParamReformat);
         _intersect = fetchBooleanParam(kParamIntersect);
@@ -610,8 +610,8 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
     
-    Double2DParamDescriptor* btmLeft = desc.defineDouble2DParam(kRectInteractBtmLeftParamName);
-    btmLeft->setLabels(kRectInteractBtmLeftParamLabel,kRectInteractBtmLeftParamLabel,kRectInteractBtmLeftParamLabel);
+    Double2DParamDescriptor* btmLeft = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
+    btmLeft->setLabels(kParamRectangleInteractBtmLeftLabel,kParamRectangleInteractBtmLeftLabel,kParamRectangleInteractBtmLeftLabel);
     btmLeft->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     btmLeft->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     btmLeft->setDefault(0., 0.);
@@ -620,8 +620,8 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     btmLeft->setDigits(0);
     page->addChild(*btmLeft);
     
-    Double2DParamDescriptor* size = desc.defineDouble2DParam(kRectInteractSizeParamName);
-    size->setLabels(kRectInteractSizeParamLabel, kRectInteractSizeParamLabel, kRectInteractSizeParamLabel);
+    Double2DParamDescriptor* size = desc.defineDouble2DParam(kParamRectangleInteractSize);
+    size->setLabels(kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel);
     size->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     size->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     size->setDefault(1., 1.);

@@ -584,7 +584,7 @@ public:
             addParamToSlaveTo(_from[i]);
             addParamToSlaveTo(_enable[i]);
         }
-        _invert = effect->fetchBooleanParam(kTransform3x3InvertParamName);
+        _invert = effect->fetchBooleanParam(kParamTransform3x3Invert);
         addParamToSlaveTo(_invert);
         _overlayChoice = effect->fetchChoiceParam(kParamOverlayPoints);
         addParamToSlaveTo(_overlayChoice);

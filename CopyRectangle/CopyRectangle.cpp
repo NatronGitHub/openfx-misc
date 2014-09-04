@@ -276,8 +276,8 @@ public:
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
 
-        _btmLeft = fetchDouble2DParam(kRectInteractBtmLeftParamName);
-        _size = fetchDouble2DParam(kRectInteractSizeParamName);
+        _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
+        _size = fetchDouble2DParam(kParamRectangleInteractSize);
         _softness = fetchDoubleParam(kParamSoftness);
         _red = fetchBooleanParam(kParamRed);
         _green = fetchBooleanParam(kParamGreen);
@@ -641,23 +641,23 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
     
-    Double2DParamDescriptor* btmLeft = desc.defineDouble2DParam(kRectInteractBtmLeftParamName);
-    btmLeft->setLabels(kRectInteractBtmLeftParamLabel, kRectInteractBtmLeftParamLabel, kRectInteractBtmLeftParamLabel);
+    Double2DParamDescriptor* btmLeft = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
+    btmLeft->setLabels(kParamRectangleInteractBtmLeftLabel, kParamRectangleInteractBtmLeftLabel, kParamRectangleInteractBtmLeftLabel);
     btmLeft->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     btmLeft->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     btmLeft->setDefault(0., 0.);
     btmLeft->setIncrement(1.);
-    btmLeft->setHint(kRectInteractBtmLeftParamHint);
+    btmLeft->setHint(kParamRectangleInteractBtmLeftHint);
     btmLeft->setDigits(0);
     page->addChild(*btmLeft);
     
-    Double2DParamDescriptor* size = desc.defineDouble2DParam(kRectInteractSizeParamName);
-    size->setLabels(kRectInteractSizeParamLabel, kRectInteractSizeParamLabel, kRectInteractSizeParamLabel);
+    Double2DParamDescriptor* size = desc.defineDouble2DParam(kParamRectangleInteractSize);
+    size->setLabels(kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel);
     size->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     size->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     size->setDefault(1., 1.);
-    size->setDimensionLabels(kRectInteractSizeParamDim1, kRectInteractSizeParamDim2);
-    size->setHint(kRectInteractSizeParamHint);
+    size->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
+    size->setHint(kParamRectangleInteractSizeHint);
     size->setIncrement(1.);
     size->setDigits(0);
     page->addChild(*size);

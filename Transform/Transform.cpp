@@ -337,7 +337,7 @@ public:
         _skewY = _plugin->fetchDoubleParam(kParamSkewY);
         _skewOrder = _plugin->fetchChoiceParam(kParamSkewOrder);
         _center = _plugin->fetchDouble2DParam(kParamCenter);
-        _invert = _plugin->fetchBooleanParam(kTransform3x3InvertParamName);
+        _invert = _plugin->fetchBooleanParam(kParamTransform3x3Invert);
         addParamToSlaveTo(_translate);
         addParamToSlaveTo(_rotate);
         addParamToSlaveTo(_scale);
