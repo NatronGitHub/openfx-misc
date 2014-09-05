@@ -65,7 +65,9 @@ namespace OFX
             getShufflePluginID(ids);
             getSideBySidePluginID(ids);
             getSwitchPluginID(ids);
+#ifdef DEBUG
             getTestRenderPluginID(ids);
+#endif
             getTimeOffsetPluginID(ids);
             getTrackerPMPluginID(ids);
             getTransformPluginIDs(ids);
