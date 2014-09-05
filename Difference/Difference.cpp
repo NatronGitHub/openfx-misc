@@ -80,7 +80,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 
-#define kPluginLabel "DifferenceOFX"
+#define kPluginName "DifferenceOFX"
 #define kPluginGrouping "Keyer"
 #define kPluginDescription "Produce a rough matte from the difference of two input images. A is the background without the subject (clean plate). B is the subject with the background. RGB is copied from B, the difference is output to alpha, after applying offset & gain."
 #define kPluginIdentifier "net.sf.openfx:DifferencePlugin"
@@ -378,7 +378,7 @@ mDeclarePluginFactory(DifferencePluginFactory, {}, {});
 void DifferencePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginLabel, kPluginLabel, kPluginLabel);
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
     

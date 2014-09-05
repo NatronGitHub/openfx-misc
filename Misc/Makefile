@@ -9,6 +9,7 @@ CornerPin.o \
 Crop.o \
 Deinterlace.o \
 Difference.o \
+Dissolve.o \
 Grade.o \
 Invert.o \
 JoinViews.o \
@@ -49,6 +50,7 @@ VPATH += \
 ../Crop \
 ../Deinterlace \
 ../Difference \
+../Dissolve \
 ../Grade \
 ../Invert \
 ../JoinViews \

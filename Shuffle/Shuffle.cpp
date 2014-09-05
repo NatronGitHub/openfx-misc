@@ -80,7 +80,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 
-#define kPluginLabel "ShuffleOFX"
+#define kPluginName "ShuffleOFX"
 #define kPluginGrouping "Channel"
 #define kPluginDescription "Rearrange channels from one or two inputs and/or convert to different bit depth or components. No colorspace conversion is done (mapping is linear, even for 8-bit and 16-bit types)."
 #define kPluginIdentifier "net.sf.openfx:ShufflePlugin"
@@ -852,7 +852,7 @@ mDeclarePluginFactory(ShufflePluginFactory, {}, {});
 void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginLabel, kPluginLabel, kPluginLabel);
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
