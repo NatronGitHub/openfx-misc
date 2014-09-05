@@ -434,19 +434,26 @@ void ConstantPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     dstClip->setFieldExtraction(eFieldExtractSingle);
     
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    RGBAParamDescriptor* color = desc.defineRGBAParam(kParamColor);
-    color->setLabels(kParamColorLabel, kParamColorLabel, kParamColorLabel);
-    color->setHint(kParamColorHint);
-    color->setDefault(0.0, 0.0, 0.0, 1.0);
-    color->setAnimates(true); // can animate
-    page->addChild(*color);
-    
-    Int2DParamDescriptor *range = desc.defineInt2DParam(kParamRange);
-    range->setLabels(kParamRangeLabel, kParamRangeLabel, kParamRangeLabel);
-    range->setHint(kParamRangeHint);
-    range->setDefault(1, 1);
-    range->setAnimates(false); // can not animate, because it defines the time domain
-    page->addChild(*range);
+
+    // color
+    {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor);
+        param->setLabels(kParamColorLabel, kParamColorLabel, kParamColorLabel);
+        param->setHint(kParamColorHint);
+        param->setDefault(0.0, 0.0, 0.0, 1.0);
+        param->setAnimates(true); // can animate
+        page->addChild(*param);
+    }
+
+    // range
+    {
+        Int2DParamDescriptor *param = desc.defineInt2DParam(kParamRange);
+        param->setLabels(kParamRangeLabel, kParamRangeLabel, kParamRangeLabel);
+        param->setHint(kParamRangeHint);
+        param->setDefault(1, 1);
+        param->setAnimates(false); // can not animate, because it defines the time domain
+        page->addChild(*param);
+    }
 }
 
 ImageEffect* ConstantPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)

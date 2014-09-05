@@ -592,11 +592,11 @@ OFX::ImageEffect* CopyRectanglePluginFactory::createInstance(OfxImageEffectHandl
 
 static void defineComponentParam(OFX::ImageEffectDescriptor &desc,PageParamDescriptor* page,const std::string& name,const std::string& label)
 {
-    BooleanParamDescriptor* comp = desc.defineBooleanParam(name);
-    comp->setLabels(label, label, label);
-    comp->setDefault(true);
-    comp->setHint("Copy " + name);
-    page->addChild(*comp);
+    BooleanParamDescriptor* param = desc.defineBooleanParam(name);
+    param->setLabels(label, label, label);
+    param->setDefault(true);
+    param->setHint("Copy " + name);
+    page->addChild(*param);
 }
 
 void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
@@ -640,41 +640,48 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    
-    Double2DParamDescriptor* btmLeft = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
-    btmLeft->setLabels(kParamRectangleInteractBtmLeftLabel, kParamRectangleInteractBtmLeftLabel, kParamRectangleInteractBtmLeftLabel);
-    btmLeft->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-    btmLeft->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
-    btmLeft->setDefault(0., 0.);
-    btmLeft->setIncrement(1.);
-    btmLeft->setHint(kParamRectangleInteractBtmLeftHint);
-    btmLeft->setDigits(0);
-    page->addChild(*btmLeft);
-    
-    Double2DParamDescriptor* size = desc.defineDouble2DParam(kParamRectangleInteractSize);
-    size->setLabels(kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel);
-    size->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-    size->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
-    size->setDefault(1., 1.);
-    size->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
-    size->setHint(kParamRectangleInteractSizeHint);
-    size->setIncrement(1.);
-    size->setDigits(0);
-    page->addChild(*size);
-    
+    // btmLeft
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
+        param->setLabels(kParamRectangleInteractBtmLeftLabel, kParamRectangleInteractBtmLeftLabel, kParamRectangleInteractBtmLeftLabel);
+        param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+        param->setDefault(0., 0.);
+        param->setIncrement(1.);
+        param->setHint(kParamRectangleInteractBtmLeftHint);
+        param->setDigits(0);
+        page->addChild(*param);
+    }
+
+    // size
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
+        param->setLabels(kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel);
+        param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+        param->setDefault(1., 1.);
+        param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
+        param->setHint(kParamRectangleInteractSizeHint);
+        param->setIncrement(1.);
+        param->setDigits(0);
+        page->addChild(*param);
+    }
     
     defineComponentParam(desc, page, kParamRed, kParamRedLabel);
     defineComponentParam(desc, page, kParamGreen, kParamGreenLabel);
     defineComponentParam(desc, page, kParamBlue, kParamBlueLabel);
     defineComponentParam(desc, page, kParamAlpha, kParamAlphaLabel);
     
-    DoubleParamDescriptor* softness = desc.defineDoubleParam(kParamSoftness);
-    softness->setLabels(kParamSoftnessLabel, kParamSoftnessLabel, kParamSoftnessLabel);
-    softness->setDefault(0);
-    softness->setRange(0., 100.);
-    softness->setIncrement(1.);
-    softness->setHint(kParamSoftnessHint);
-    page->addChild(*softness);
+    // softness
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSoftness);
+        param->setLabels(kParamSoftnessLabel, kParamSoftnessLabel, kParamSoftnessLabel);
+        param->setDefault(0);
+        param->setRange(0., 100.);
+        param->setIncrement(1.);
+        param->setHint(kParamSoftnessHint);
+        page->addChild(*param);
+    }
 
     ofxsMaskMixDescribeParams(desc, page);
 }

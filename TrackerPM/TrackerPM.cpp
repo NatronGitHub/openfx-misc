@@ -865,19 +865,22 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         maskClip->setIsMask(true);
     }
 
-    ChoiceParamDescriptor* score = desc.defineChoiceParam(kParamScore);
-    score->setLabels(kParamScoreLabel, kParamScoreLabel, kParamScoreLabel);
-    score->setHint(kParamScoreHint);
-    assert(score->getNOptions() == eTrackerSSD);
-    score->appendOption(kParamScoreOptionSSD, kParamScoreOptionSSDHint);
-    assert(score->getNOptions() == eTrackerSAD);
-    score->appendOption(kParamScoreOptionSAD, kParamScoreOptionSADHint);
-    assert(score->getNOptions() == eTrackerNCC);
-    score->appendOption(kParamScoreOptionNCC, kParamScoreOptionNCCHint);
-    assert(score->getNOptions() == eTrackerZNCC);
-    score->appendOption(kParamScoreOptionZNCC, kParamScoreOptionZNCCHint);
-    score->setDefault((int)eTrackerSAD);
-    page->addChild(*score);
+    // score
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamScore);
+        param->setLabels(kParamScoreLabel, kParamScoreLabel, kParamScoreLabel);
+        param->setHint(kParamScoreHint);
+        assert(param->getNOptions() == eTrackerSSD);
+        param->appendOption(kParamScoreOptionSSD, kParamScoreOptionSSDHint);
+        assert(param->getNOptions() == eTrackerSAD);
+        param->appendOption(kParamScoreOptionSAD, kParamScoreOptionSADHint);
+        assert(param->getNOptions() == eTrackerNCC);
+        param->appendOption(kParamScoreOptionNCC, kParamScoreOptionNCCHint);
+        assert(param->getNOptions() == eTrackerZNCC);
+        param->appendOption(kParamScoreOptionZNCC, kParamScoreOptionZNCCHint);
+        param->setDefault((int)eTrackerSAD);
+        page->addChild(*param);
+    }
 }
 
 

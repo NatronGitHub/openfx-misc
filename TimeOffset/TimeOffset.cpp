@@ -293,25 +293,28 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    IntParamDescriptor *time_offset = desc.defineIntParam(kParamTimeOffset);
-    time_offset->setLabels(kParamTimeOffsetLabel,kParamTimeOffsetLabel,kParamTimeOffsetLabel);
-    time_offset->setHint(kParamTimeOffsetHint);
-    time_offset->setDefault(0);
-    // keep default range (INT_MIN..INT_MAX)
-    // no display range
-    // time_offset->setDisplayRange(0, 0);
-    time_offset->setAnimates(true);
+    // time_offset
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamTimeOffset);
+        param->setLabels(kParamTimeOffsetLabel,kParamTimeOffsetLabel,kParamTimeOffsetLabel);
+        param->setHint(kParamTimeOffsetHint);
+        param->setDefault(0);
+        // keep default range (INT_MIN..INT_MAX)
+        // no display range
+        // param->setDisplayRange(0, 0);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 
-    page->addChild(*time_offset);
-
-    BooleanParamDescriptor *reverse_input = desc.defineBooleanParam(kParamReverseInput);
-    reverse_input->setDefault(false);
-    reverse_input->setHint(kParamReverseInputHint);
-    reverse_input->setLabels(kParamReverseInputLabel,kParamReverseInputLabel,kParamReverseInputLabel);
-    reverse_input->setAnimates(true);
-
-    page->addChild(*reverse_input);
-
+    // reverse_input
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamReverseInput);
+        param->setDefault(false);
+        param->setHint(kParamReverseInputHint);
+        param->setLabels(kParamReverseInputLabel,kParamReverseInputLabel,kParamReverseInputLabel);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 }
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */

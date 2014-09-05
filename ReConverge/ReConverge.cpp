@@ -476,37 +476,42 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
+    // convergepoint
     if (context == eContextGeneral) {
-        Double2DParamDescriptor *convergepoint = desc.defineDouble2DParam(kParamConvergePoint);
-        convergepoint->setLabels(kParamConvergePointLabel, kParamConvergePointLabel, kParamConvergePointLabel);
-        convergepoint->setHint(kParamConvergePointHint);
-        convergepoint->setDoubleType(eDoubleTypeXYAbsolute);
-        convergepoint->setDefaultCoordinateSystem(eCoordinatesNormalised);
-        convergepoint->setDefault(0.5, 0.5);
-        convergepoint->setIncrement(1.);
-        convergepoint->setAnimates(true);
-        page->addChild(*convergepoint);
+        Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamConvergePoint);
+        param->setLabels(kParamConvergePointLabel, kParamConvergePointLabel, kParamConvergePointLabel);
+        param->setHint(kParamConvergePointHint);
+        param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        param->setDefault(0.5, 0.5);
+        param->setIncrement(1.);
+        param->setAnimates(true);
+        page->addChild(*param);
     }
-    
-    IntParamDescriptor *offset = desc.defineIntParam(kParamOffset);
-    offset->setLabels(kParamOffsetLabel, kParamOffsetLabel, kParamOffsetLabel);
-    offset->setHint(kParamOffsetHint);
-    offset->setDefault(0);
-    offset->setRange(-1000, 1000);
-    offset->setDisplayRange(-100, 100);
-    offset->setAnimates(true);
-    
-    page->addChild(*offset);
-    
-    ChoiceParamDescriptor *convergemode = desc.defineChoiceParam(kParamConvergeMode);
-    convergemode->setLabels(kParamConvergeModeLabel, kParamConvergeModeLabel, kParamConvergeModeLabel);
-    convergemode->setHint(kParamConvergeModeHint);
-    convergemode->appendOption(kParamConvergeModeOptionShiftRight);
-    convergemode->appendOption(kParamConvergeModeOptionShiftLeft);
-    convergemode->appendOption(kParamConvergeModeOptionShiftBoth);
-    convergemode->setAnimates(true);
-    
-    page->addChild(*convergemode);
+
+    // offset
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamOffset);
+        param->setLabels(kParamOffsetLabel, kParamOffsetLabel, kParamOffsetLabel);
+        param->setHint(kParamOffsetHint);
+        param->setDefault(0);
+        param->setRange(-1000, 1000);
+        param->setDisplayRange(-100, 100);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+
+    // convergemode
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamConvergeMode);
+        param->setLabels(kParamConvergeModeLabel, kParamConvergeModeLabel, kParamConvergeModeLabel);
+        param->setHint(kParamConvergeModeHint);
+        param->appendOption(kParamConvergeModeOptionShiftRight);
+        param->appendOption(kParamConvergeModeOptionShiftLeft);
+        param->appendOption(kParamConvergeModeOptionShiftBoth);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 }
 
 OFX::ImageEffect* ReConvergePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

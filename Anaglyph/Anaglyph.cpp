@@ -444,35 +444,36 @@ void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    DoubleParamDescriptor *amtcolour = desc.defineDoubleParam(kParamAmtColour);
-    amtcolour->setLabels(kParamAmtColourLabel, kParamAmtColourLabel, kParamAmtColourLabel);
-    amtcolour->setHint(kParamAmtColourHint);
-    amtcolour->setDefault(0.);
-    amtcolour->setRange(0., 1.);
-    amtcolour->setIncrement(0.01);
-    amtcolour->setDisplayRange(0., 1.);
-    amtcolour->setDoubleType(eDoubleTypeScale);
-    amtcolour->setAnimates(true);
-    
-    page->addChild(*amtcolour);
-    
-    BooleanParamDescriptor *swap = desc.defineBooleanParam(kParamSwap);
-    swap->setLabels(kParamSwapLabel, kParamSwapLabel, kParamSwapLabel);
-    swap->setDefault(false);
-    swap->setHint(kParamSwapHint);
-    swap->setAnimates(true);
-    
-    page->addChild(*swap);
-    
-    IntParamDescriptor *offset = desc.defineIntParam(kParamOffset);
-    offset->setLabels(kParamOffsetLabel, kParamOffsetLabel, kParamOffsetLabel);
-    offset->setHint(kParamOffsetHint);
-    offset->setDefault(0);
-    offset->setRange(-1000, 1000);
-    offset->setDisplayRange(-100, 100);
-    offset->setAnimates(true);
-    
-    page->addChild(*offset);
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAmtColour);
+        param->setLabels(kParamAmtColourLabel, kParamAmtColourLabel, kParamAmtColourLabel);
+        param->setHint(kParamAmtColourHint);
+        param->setDefault(0.);
+        param->setRange(0., 1.);
+        param->setIncrement(0.01);
+        param->setDisplayRange(0., 1.);
+        param->setDoubleType(eDoubleTypeScale);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamSwap);
+        param->setLabels(kParamSwapLabel, kParamSwapLabel, kParamSwapLabel);
+        param->setDefault(false);
+        param->setHint(kParamSwapHint);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamOffset);
+        param->setLabels(kParamOffsetLabel, kParamOffsetLabel, kParamOffsetLabel);
+        param->setHint(kParamOffsetHint);
+        param->setDefault(0);
+        param->setRange(-1000, 1000);
+        param->setDisplayRange(-100, 100);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 }
 
 OFX::ImageEffect* AnaglyphPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

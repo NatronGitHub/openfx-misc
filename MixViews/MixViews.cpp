@@ -409,18 +409,20 @@ void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     
     // make some pages and to things in 
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    
-    DoubleParamDescriptor *mix = desc.defineDoubleParam(kParamMix);
-    mix->setLabels(kParamMixLabel, kParamMixLabel, kParamMixLabel);
-    mix->setHint(kParamMixHint);
-    mix->setDefault(0.);
-    mix->setRange(0., 1.);
-    mix->setIncrement(0.01);
-    mix->setDisplayRange(0., 1.);
-    mix->setDoubleType(eDoubleTypeScale);
-    mix->setAnimates(true);
-    
-    page->addChild(*mix);
+
+    // mix
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamMix);
+        param->setLabels(kParamMixLabel, kParamMixLabel, kParamMixLabel);
+        param->setHint(kParamMixHint);
+        param->setDefault(0.);
+        param->setRange(0., 1.);
+        param->setIncrement(0.01);
+        param->setDisplayRange(0., 1.);
+        param->setDoubleType(eDoubleTypeScale);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 }
 
 OFX::ImageEffect* MixViewsPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

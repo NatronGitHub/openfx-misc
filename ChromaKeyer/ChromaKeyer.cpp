@@ -916,98 +916,119 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     bgClip->setSupportsTiles(true);
     bgClip->setOptional(true);
 
-   // create the mandated output clip
+    // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->setSupportsTiles(true);
-    
+
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    RGBParamDescriptor* keyColor = desc.defineRGBParam(kParamKeyColor);
-    keyColor->setLabels(kParamKeyColorLabel, kParamKeyColorLabel, kParamKeyColorLabel);
-    keyColor->setHint(kParamKeyColorHint);
-    keyColor->setDefault(0., 0., 0.);
-    // the following should be the default
-    double kmin = -std::numeric_limits<double>::max();
-    double kmax = std::numeric_limits<double>::max();
-    keyColor->setRange(kmin, kmin, kmin, kmax, kmax, kmax);
-    keyColor->setDisplayRange(0., 0., 0., 1., 1., 1.);
-    keyColor->setAnimates(true);
-    page->addChild(*keyColor);
-    
-    DoubleParamDescriptor* acceptanceAngle = desc.defineDoubleParam(kParamAcceptanceAngle);
-    acceptanceAngle->setLabels(kParamAcceptanceAngleLabel, kParamAcceptanceAngleLabel, kParamAcceptanceAngleLabel);
-    acceptanceAngle->setHint(kParamAcceptanceAngleHint);
-    acceptanceAngle->setDoubleType(eDoubleTypeAngle);;
-    acceptanceAngle->setRange(0., 180.);
-    acceptanceAngle->setDisplayRange(0., 180.);
-    acceptanceAngle->setDefault(120.);
-    acceptanceAngle->setAnimates(true);
-    page->addChild(*acceptanceAngle);
+    // key color
+    {
+        RGBParamDescriptor* param = desc.defineRGBParam(kParamKeyColor);
+        param->setLabels(kParamKeyColorLabel, kParamKeyColorLabel, kParamKeyColorLabel);
+        param->setHint(kParamKeyColorHint);
+        param->setDefault(0., 0., 0.);
+        // the following should be the default
+        double kmin = -std::numeric_limits<double>::max();
+        double kmax = std::numeric_limits<double>::max();
+        param->setRange(kmin, kmin, kmin, kmax, kmax, kmax);
+        param->setDisplayRange(0., 0., 0., 1., 1., 1.);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 
-    DoubleParamDescriptor* suppressionAngle = desc.defineDoubleParam(kParamSuppressionAngle);
-    suppressionAngle->setLabels(kParamSuppressionAngleLabel, kParamSuppressionAngleLabel, kParamSuppressionAngleLabel);
-    suppressionAngle->setHint(kParamSuppressionAngleHint);
-    suppressionAngle->setDoubleType(eDoubleTypeAngle);;
-    suppressionAngle->setRange(0., 180.);
-    suppressionAngle->setDisplayRange(0., 180.);
-    suppressionAngle->setDefault(40.);
-    suppressionAngle->setAnimates(true);
-    page->addChild(*suppressionAngle);
+    // acceptance angle
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAcceptanceAngle);
+        param->setLabels(kParamAcceptanceAngleLabel, kParamAcceptanceAngleLabel, kParamAcceptanceAngleLabel);
+        param->setHint(kParamAcceptanceAngleHint);
+        param->setDoubleType(eDoubleTypeAngle);;
+        param->setRange(0., 180.);
+        param->setDisplayRange(0., 180.);
+        param->setDefault(120.);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 
-    DoubleParamDescriptor* keyLift = desc.defineDoubleParam(kParamKeyLift);
-    keyLift->setLabels(kParamKeyLiftLabel, kParamKeyLiftLabel, kParamKeyLiftLabel);
-    keyLift->setHint(kParamKeyLiftHint);
-    keyLift->setRange(0., 1.);
-    keyLift->setDisplayRange(0., 1.);
-    keyLift->setIncrement(0.01);
-    keyLift->setDefault(0.);
-    keyLift->setDigits(4);
-    keyLift->setAnimates(true);
-    page->addChild(*keyLift);
+    // suppression angle
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSuppressionAngle);
+        param->setLabels(kParamSuppressionAngleLabel, kParamSuppressionAngleLabel, kParamSuppressionAngleLabel);
+        param->setHint(kParamSuppressionAngleHint);
+        param->setDoubleType(eDoubleTypeAngle);;
+        param->setRange(0., 180.);
+        param->setDisplayRange(0., 180.);
+        param->setDefault(40.);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 
-    DoubleParamDescriptor* keyGain = desc.defineDoubleParam(kParamKeyGain);
-    keyGain->setLabels(kParamKeyGainLabel, kParamKeyGainLabel, kParamKeyGainLabel);
-    keyGain->setHint(kParamKeyGainHint);
-    keyGain->setRange(0., std::numeric_limits<double>::max());
-    keyGain->setDisplayRange(0., 2.);
-    keyGain->setIncrement(0.01);
-    keyGain->setDefault(1.);
-    keyGain->setDigits(4);
-    keyGain->setAnimates(true);
-    page->addChild(*keyGain);
+    // key lift
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamKeyLift);
+        param->setLabels(kParamKeyLiftLabel, kParamKeyLiftLabel, kParamKeyLiftLabel);
+        param->setHint(kParamKeyLiftHint);
+        param->setRange(0., 1.);
+        param->setDisplayRange(0., 1.);
+        param->setIncrement(0.01);
+        param->setDefault(0.);
+        param->setDigits(4);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 
-    ChoiceParamDescriptor* outputMode = desc.defineChoiceParam(kParamOutputMode);
-    outputMode->setLabels(kParamOutputModeLabel, kParamOutputModeLabel, kParamOutputModeLabel);
-    outputMode->setHint(kParamOutputModeHint);
-    assert(outputMode->getNOptions() == (int)eOutputModeIntermediate);
-    outputMode->appendOption(kParamOutputModeOptionIntermediate, kParamOutputModeOptionIntermediateHint);
-    assert(outputMode->getNOptions() == (int)eOutputModePremultiplied);
-    outputMode->appendOption(kParamOutputModeOptionPremultiplied, kParamOutputModeOptionPremultipliedHint);
-    assert(outputMode->getNOptions() == (int)eOutputModeUnpremultiplied);
-    outputMode->appendOption(kParamOutputModeOptionUnpremultiplied, kParamOutputModeOptionUnpremultipliedHint);
-    assert(outputMode->getNOptions() == (int)eOutputModeComposite);
-    outputMode->appendOption(kParamOutputModeOptionComposite, kParamOutputModeOptionCompositeHint);
-    outputMode->setDefault((int)eOutputModeComposite);
-    outputMode->setAnimates(true);
-    page->addChild(*outputMode);
-    desc.addClipPreferencesSlaveParam(*outputMode);
+    // key gain
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamKeyGain);
+        param->setLabels(kParamKeyGainLabel, kParamKeyGainLabel, kParamKeyGainLabel);
+        param->setHint(kParamKeyGainHint);
+        param->setRange(0., std::numeric_limits<double>::max());
+        param->setDisplayRange(0., 2.);
+        param->setIncrement(0.01);
+        param->setDefault(1.);
+        param->setDigits(4);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 
-    ChoiceParamDescriptor* sourceAlpha = desc.defineChoiceParam(kParamSourceAlpha);
-    sourceAlpha->setLabels(kParamSourceAlphaLabel, kParamSourceAlphaLabel, kParamSourceAlphaLabel);
-    sourceAlpha->setHint(kParamSourceAlphaHint);
-    assert(sourceAlpha->getNOptions() == (int)eSourceAlphaIgnore);
-    sourceAlpha->appendOption(kParamSourceAlphaOptionIgnore, kParamSourceAlphaOptionIgnoreHint);
-    assert(sourceAlpha->getNOptions() == (int)eSourceAlphaAddToInsideMask);
-    sourceAlpha->appendOption(kParamSourceAlphaOptionAddToInsideMask, kParamSourceAlphaOptionAddToInsideMaskHint);
-    assert(sourceAlpha->getNOptions() == (int)eSourceAlphaNormal);
-    sourceAlpha->appendOption(kSourceAlphaNormalOption, kParamSourceAlphaOptionNormalHint);
-    sourceAlpha->setDefault((int)eSourceAlphaIgnore);
-    sourceAlpha->setAnimates(true);
-    page->addChild(*sourceAlpha);
+    // output mode
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputMode);
+        param->setLabels(kParamOutputModeLabel, kParamOutputModeLabel, kParamOutputModeLabel);
+        param->setHint(kParamOutputModeHint);
+        assert(param->getNOptions() == (int)eOutputModeIntermediate);
+        param->appendOption(kParamOutputModeOptionIntermediate, kParamOutputModeOptionIntermediateHint);
+        assert(param->getNOptions() == (int)eOutputModePremultiplied);
+        param->appendOption(kParamOutputModeOptionPremultiplied, kParamOutputModeOptionPremultipliedHint);
+        assert(param->getNOptions() == (int)eOutputModeUnpremultiplied);
+        param->appendOption(kParamOutputModeOptionUnpremultiplied, kParamOutputModeOptionUnpremultipliedHint);
+        assert(param->getNOptions() == (int)eOutputModeComposite);
+        param->appendOption(kParamOutputModeOptionComposite, kParamOutputModeOptionCompositeHint);
+        param->setDefault((int)eOutputModeComposite);
+        param->setAnimates(true);
+        desc.addClipPreferencesSlaveParam(*param);
+        page->addChild(*param);
+    }
+
+    // source alpha
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamSourceAlpha);
+        param->setLabels(kParamSourceAlphaLabel, kParamSourceAlphaLabel, kParamSourceAlphaLabel);
+        param->setHint(kParamSourceAlphaHint);
+        assert(param->getNOptions() == (int)eSourceAlphaIgnore);
+        param->appendOption(kParamSourceAlphaOptionIgnore, kParamSourceAlphaOptionIgnoreHint);
+        assert(param->getNOptions() == (int)eSourceAlphaAddToInsideMask);
+        param->appendOption(kParamSourceAlphaOptionAddToInsideMask, kParamSourceAlphaOptionAddToInsideMaskHint);
+        assert(param->getNOptions() == (int)eSourceAlphaNormal);
+        param->appendOption(kSourceAlphaNormalOption, kParamSourceAlphaOptionNormalHint);
+        param->setDefault((int)eSourceAlphaIgnore);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 }
 
 OFX::ImageEffect* ChromaKeyerPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

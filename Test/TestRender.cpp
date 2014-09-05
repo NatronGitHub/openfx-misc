@@ -773,74 +773,103 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    RGBAParamDescriptor *color0 = desc.defineRGBAParam(kParamColor0);
-    color0->setLabels(kParamColor0Label, kParamColor0Label, kParamColor0Label);
-    color0->setHint(kParamColor0Hint);
-    color0->setDefault(0.0, 1.0, 1.0, 1.0);
-    color0->setAnimates(true); // can animate
-    page->addChild(*color0);
+    // color0
+    {
+        RGBAParamDescriptor *param = desc.defineRGBAParam(kParamColor0);
+        param->setLabels(kParamColor0Label, kParamColor0Label, kParamColor0Label);
+        param->setHint(kParamColor0Hint);
+        param->setDefault(0.0, 1.0, 1.0, 1.0);
+        param->setAnimates(true); // can animate
+        page->addChild(*param);
+    }
 
-    RGBAParamDescriptor *color1 = desc.defineRGBAParam(kParamColor1);
-    color1->setLabels(kParamColor1Label, kParamColor1Label, kParamColor1Label);
-    color1->setHint(kParamColor1Hint);
-    color1->setDefault(1.0, 0.0, 1.0, 1.0);
-    color1->setAnimates(true); // can animate
-    page->addChild(*color1);
+    // color1
+    {
+        RGBAParamDescriptor *param = desc.defineRGBAParam(kParamColor1);
+        param->setLabels(kParamColor1Label, kParamColor1Label, kParamColor1Label);
+        param->setHint(kParamColor1Hint);
+        param->setDefault(1.0, 0.0, 1.0, 1.0);
+        param->setAnimates(true); // can animate
+        page->addChild(*param);
+    }
 
-    RGBAParamDescriptor *color2 = desc.defineRGBAParam(kParamColor2);
-    color2->setLabels(kParamColor2Label, kParamColor2Label, kParamColor2Label);
-    color2->setHint(kParamColor2Hint);
-    color2->setDefault(1.0, 1.0, 0.0, 1.0);
-    color2->setAnimates(true); // can animate
-    page->addChild(*color2);
+    // color2
+    {
+        RGBAParamDescriptor *param = desc.defineRGBAParam(kParamColor2);
+        param->setLabels(kParamColor2Label, kParamColor2Label, kParamColor2Label);
+        param->setHint(kParamColor2Hint);
+        param->setDefault(1.0, 1.0, 0.0, 1.0);
+        param->setAnimates(true); // can animate
+        page->addChild(*param);
+    }
 
-    RGBAParamDescriptor *color3 = desc.defineRGBAParam(kParamColor3);
-    color3->setLabels(kParamColor3Label, kParamColor3Label, kParamColor3Label);
-    color3->setHint(kParamColor3Hint);
-    color3->setDefault(1.0, 0.0, 0.0, 1.0);
-    color3->setAnimates(true); // can animate
-    page->addChild(*color3);
+    // color3
+    {
+        RGBAParamDescriptor *param = desc.defineRGBAParam(kParamColor3);
+        param->setLabels(kParamColor3Label, kParamColor3Label, kParamColor3Label);
+        param->setHint(kParamColor3Hint);
+        param->setDefault(1.0, 0.0, 0.0, 1.0);
+        param->setAnimates(true); // can animate
+        page->addChild(*param);
+    }
 
-    RGBAParamDescriptor *color4 = desc.defineRGBAParam(kParamColor4);
-    color4->setLabels(kParamColor4Label, kParamColor4Label, kParamColor4Label);
-    color4->setHint(kParamColor4Hint);
-    color4->setDefault(0.0, 1.0, 0.0, 1.0);
-    color4->setAnimates(true); // can animate
-    page->addChild(*color4);
+    // color4
+    {
+        RGBAParamDescriptor *param = desc.defineRGBAParam(kParamColor4);
+        param->setLabels(kParamColor4Label, kParamColor4Label, kParamColor4Label);
+        param->setHint(kParamColor4Hint);
+        param->setDefault(0.0, 1.0, 0.0, 1.0);
+        param->setAnimates(true); // can animate
+        page->addChild(*param);
+    }
 
-    RGBAParamDescriptor *color5 = desc.defineRGBAParam(kParamColor5);
-    color5->setLabels(kParamColor5Label, kParamColor5Label, kParamColor5Label);
-    color5->setHint(kParamColor5Hint);
-    color5->setDefault(0.0, 0.0, 1.0, 1.0);
-    color5->setAnimates(true); // can animate
-    page->addChild(*color5);
+    // color5
+    {
+        RGBAParamDescriptor *param = desc.defineRGBAParam(kParamColor5);
+        param->setLabels(kParamColor5Label, kParamColor5Label, kParamColor5Label);
+        param->setHint(kParamColor5Hint);
+        param->setDefault(0.0, 0.0, 1.0, 1.0);
+        param->setAnimates(true); // can animate
+        page->addChild(*param);
+    }
 
+    // identityEven
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamIdentityEven);
+        param->setLabels(kParamIdentityEvenLabel, kParamIdentityEvenLabel, kParamIdentityEvenLabel);
+        param->setHint(kParamIdentityEvenHint);
+        param->setDefault(false);
+        param->setAnimates(false);
+        page->addChild(*param);
+    }
 
-    BooleanParamDescriptor *identityEven = desc.defineBooleanParam(kParamIdentityEven);
-    identityEven->setLabels(kParamIdentityEvenLabel, kParamIdentityEvenLabel, kParamIdentityEvenLabel);
-    identityEven->setHint(kParamIdentityEvenHint);
-    identityEven->setDefault(false);
-    identityEven->setAnimates(false);
-    page->addChild(*identityEven);
+    // identityOdd
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamIdentityOdd);
+        param->setLabels(kParamIdentityOddLabel, kParamIdentityOddLabel, kParamIdentityOddLabel);
+        param->setHint(kParamIdentityOddHint);
+        param->setDefault(false);
+        param->setAnimates(false);
+        page->addChild(*param);
+    }
 
-    BooleanParamDescriptor *identityOdd = desc.defineBooleanParam(kParamIdentityOdd);
-    identityOdd->setLabels(kParamIdentityOddLabel, kParamIdentityOddLabel, kParamIdentityOddLabel);
-    identityOdd->setHint(kParamIdentityOddHint);
-    identityOdd->setDefault(false);
-    identityOdd->setAnimates(false);
-    page->addChild(*identityOdd);
+    // forceCopy
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamForceCopy);
+        param->setLabels(kParamForceCopyLabel, kParamForceCopyLabel, kParamForceCopyLabel);
+        param->setHint(kParamForceCopyHint);
+        param->setDefault(false);
+        param->setAnimates(false);
+        page->addChild(*param);
+    }
 
-    BooleanParamDescriptor *forceCopy = desc.defineBooleanParam(kParamForceCopy);
-    forceCopy->setLabels(kParamForceCopyLabel, kParamForceCopyLabel, kParamForceCopyLabel);
-    forceCopy->setHint(kParamForceCopyHint);
-    forceCopy->setDefault(false);
-    forceCopy->setAnimates(false);
-    page->addChild(*forceCopy);
-
-    PushButtonParamDescriptor *clipInfo = desc.definePushButtonParam(kParamClipInfo);
-    clipInfo->setLabels(kParamClipInfoLabel, kParamClipInfoLabel, kParamClipInfoLabel);
-    clipInfo->setHint(kParamClipInfoHint);
-    page->addChild(*clipInfo);
+    // clipInfo
+    {
+        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
+        param->setLabels(kParamClipInfoLabel, kParamClipInfoLabel, kParamClipInfoLabel);
+        param->setHint(kParamClipInfoHint);
+        page->addChild(*param);
+    }
 
     ofxsMaskMixDescribeParams(desc, page);
 }

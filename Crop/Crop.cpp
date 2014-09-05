@@ -596,7 +596,6 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(true);
     srcClip->setIsMask(false);
-    
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
@@ -605,63 +604,79 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(true);
 
-
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    
-    
-    Double2DParamDescriptor* btmLeft = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
-    btmLeft->setLabels(kParamRectangleInteractBtmLeftLabel,kParamRectangleInteractBtmLeftLabel,kParamRectangleInteractBtmLeftLabel);
-    btmLeft->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-    btmLeft->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
-    btmLeft->setDefault(0., 0.);
-    btmLeft->setIncrement(1.);
-    btmLeft->setHint("Coordinates of the bottom left corner of the crop rectangle");
-    btmLeft->setDigits(0);
-    page->addChild(*btmLeft);
-    
-    Double2DParamDescriptor* size = desc.defineDouble2DParam(kParamRectangleInteractSize);
-    size->setLabels(kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel);
-    size->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-    size->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
-    size->setDefault(1., 1.);
-    size->setIncrement(1.);
-    size->setDimensionLabels("width", "height");
-    size->setHint("Width and height of the crop rectangle");
-    size->setIncrement(1.);
-    size->setDigits(0);
-    page->addChild(*size);
-    
-    DoubleParamDescriptor* softness = desc.defineDoubleParam(kParamSoftness);
-    softness->setLabels(kParamSoftnessLabel, kParamSoftnessLabel, kParamSoftnessLabel);
-    softness->setDefault(0);
-    softness->setRange(0., 100.);
-    softness->setIncrement(1.);
-    softness->setHint("Size of the fade to black around edges to apply");
-    page->addChild(*softness);
-    
-    BooleanParamDescriptor* reformat = desc.defineBooleanParam(kParamReformat);
-    reformat->setLabels(kParamReformatLabel, kParamReformatLabel, kParamReformatLabel);
-    reformat->setHint("Translates the bottom left corner of the crop rectangle to be in (0,0).");
-    reformat->setDefault(false);
-    reformat->setAnimates(true);
-    reformat->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    page->addChild(*reformat);
-    
-    BooleanParamDescriptor* intersect = desc.defineBooleanParam(kParamIntersect);
-    intersect->setLabels(kParamIntersectLabel, kParamIntersectLabel, kParamIntersectLabel);
-    intersect->setHint("Intersects the crop rectangle with the input region of definition instead of extending it");
-    intersect->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    intersect->setDefault(false);
-    intersect->setAnimates(true);
-    page->addChild(*intersect);
-    
-    BooleanParamDescriptor* blackOutside = desc.defineBooleanParam(kParamBlackOutside);
-    blackOutside->setLabels(kParamBlackOutsideLabel, kParamBlackOutsideLabel, kParamBlackOutsideLabel);
-    blackOutside->setDefault(false);
-    blackOutside->setAnimates(true);
-    blackOutside->setHint("Add 1 black pixel to the region of definition so that all the area outside the crop rectangle is black");
-    page->addChild(*blackOutside);
+
+    // btmLeft
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
+        param->setLabels(kParamRectangleInteractBtmLeftLabel,kParamRectangleInteractBtmLeftLabel,kParamRectangleInteractBtmLeftLabel);
+        param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+        param->setDefault(0., 0.);
+        param->setIncrement(1.);
+        param->setHint("Coordinates of the bottom left corner of the crop rectangle");
+        param->setDigits(0);
+        page->addChild(*param);
+    }
+
+    // size
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
+        param->setLabels(kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel);
+        param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+        param->setDefault(1., 1.);
+        param->setIncrement(1.);
+        param->setDimensionLabels("width", "height");
+        param->setHint("Width and height of the crop rectangle");
+        param->setIncrement(1.);
+        param->setDigits(0);
+        page->addChild(*param);
+    }
+
+    // softness
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSoftness);
+        param->setLabels(kParamSoftnessLabel, kParamSoftnessLabel, kParamSoftnessLabel);
+        param->setDefault(0);
+        param->setRange(0., 100.);
+        param->setIncrement(1.);
+        param->setHint("Size of the fade to black around edges to apply");
+        page->addChild(*param);
+    }
+
+    // reformat
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamReformat);
+        param->setLabels(kParamReformatLabel, kParamReformatLabel, kParamReformatLabel);
+        param->setHint("Translates the bottom left corner of the crop rectangle to be in (0,0).");
+        param->setDefault(false);
+        param->setAnimates(true);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+
+    // intersect
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamIntersect);
+        param->setLabels(kParamIntersectLabel, kParamIntersectLabel, kParamIntersectLabel);
+        param->setHint("Intersects the crop rectangle with the input region of definition instead of extending it");
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        param->setDefault(false);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+
+    // blackOutside
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBlackOutside);
+        param->setLabels(kParamBlackOutsideLabel, kParamBlackOutsideLabel, kParamBlackOutsideLabel);
+        param->setDefault(false);
+        param->setAnimates(true);
+        param->setHint("Add 1 black pixel to the region of definition so that all the area outside the crop rectangle is black");
+        page->addChild(*param);
+    }
 }
 
 void getCropPluginID(OFX::PluginFactoryArray &ids)

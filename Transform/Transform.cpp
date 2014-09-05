@@ -1277,73 +1277,97 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
 {
     // NON-GENERIC PARAMETERS
     //
-    Double2DParamDescriptor* translate = desc.defineDouble2DParam(kParamTranslate);
-    translate->setLabels(kParamTranslateLabel, kParamTranslateLabel, kParamTranslateLabel);
-    //translate->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
-    translate->setDoubleType(eDoubleTypeXYAbsolute);
-    //translate->setDimensionLabels("x","y");
-    translate->setDefault(0, 0);
-    translate->setIncrement(10.);
-    page->addChild(*translate);
+    // translate
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTranslate);
+        param->setLabels(kParamTranslateLabel, kParamTranslateLabel, kParamTranslateLabel);
+        //param->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
+        param->setDoubleType(eDoubleTypeXYAbsolute);
+        //param->setDimensionLabels("x","y");
+        param->setDefault(0, 0);
+        param->setIncrement(10.);
+        page->addChild(*param);
+    }
 
-    DoubleParamDescriptor* rotate = desc.defineDoubleParam(kParamRotate);
-    rotate->setLabels(kParamRotateLabel, kParamRotateLabel, kParamRotateLabel);
-    rotate->setDoubleType(eDoubleTypeAngle);
-    rotate->setDefault(0);
-    //rotate->setRange(-180, 180); // the angle may be -infinity..+infinity
-    rotate->setDisplayRange(-180, 180);
-    rotate->setIncrement(0.1);
-    page->addChild(*rotate);
+    // rotate
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamRotate);
+        param->setLabels(kParamRotateLabel, kParamRotateLabel, kParamRotateLabel);
+        param->setDoubleType(eDoubleTypeAngle);
+        param->setDefault(0);
+        //param->setRange(-180, 180); // the angle may be -infinity..+infinity
+        param->setDisplayRange(-180, 180);
+        param->setIncrement(0.1);
+        page->addChild(*param);
+    }
 
-    Double2DParamDescriptor* scale = desc.defineDouble2DParam(kParamScale);
-    scale->setLabels(kParamScaleLabel, kParamScaleLabel, kParamScaleLabel);
-    scale->setDoubleType(eDoubleTypeScale);
-    //scale->setDimensionLabels("w","h");
-    scale->setDefault(1,1);
-    //scale->setRange(0.1,0.1,10,10);
-    scale->setDisplayRange(0.1, 0.1, 10, 10);
-    scale->setIncrement(0.01);
-    scale->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    page->addChild(*scale);
+    // scale
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamScale);
+        param->setLabels(kParamScaleLabel, kParamScaleLabel, kParamScaleLabel);
+        param->setDoubleType(eDoubleTypeScale);
+        //param->setDimensionLabels("w","h");
+        param->setDefault(1,1);
+        //param->setRange(0.1,0.1,10,10);
+        param->setDisplayRange(0.1, 0.1, 10, 10);
+        param->setIncrement(0.01);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
 
-    BooleanParamDescriptor* scaleUniform = desc.defineBooleanParam(kParamScaleUniform);
-    scaleUniform->setLabels(kParamScaleUniform, kParamScaleUniform, kParamScaleUniform);
-    scaleUniform->setHint(kParamScaleUniformHint);
-    scaleUniform->setDefault(true);
-    scaleUniform->setAnimates(true);
-    page->addChild(*scaleUniform);
+    // scaleUniform
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamScaleUniform);
+        param->setLabels(kParamScaleUniform, kParamScaleUniform, kParamScaleUniform);
+        param->setHint(kParamScaleUniformHint);
+        param->setDefault(true);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 
-    DoubleParamDescriptor* skewX = desc.defineDoubleParam(kParamSkewX);
-    skewX->setLabels(kParamSkewX, kParamSkewX, kParamSkewX);
-    skewX->setDefault(0);
-    skewX->setDisplayRange(-1,1);
-    skewX->setIncrement(0.01);
-    page->addChild(*skewX);
+    // skewX
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSkewX);
+        param->setLabels(kParamSkewX, kParamSkewX, kParamSkewX);
+        param->setDefault(0);
+        param->setDisplayRange(-1,1);
+        param->setIncrement(0.01);
+        page->addChild(*param);
+    }
 
-    DoubleParamDescriptor* skewY = desc.defineDoubleParam(kParamSkewY);
-    skewY->setLabels(kParamSkewYLabel, kParamSkewYLabel, kParamSkewYLabel);
-    skewY->setDefault(0);
-    skewY->setDisplayRange(-1,1);
-    skewY->setIncrement(0.01);
-    page->addChild(*skewY);
+    // skewY
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSkewY);
+        param->setLabels(kParamSkewYLabel, kParamSkewYLabel, kParamSkewYLabel);
+        param->setDefault(0);
+        param->setDisplayRange(-1,1);
+        param->setIncrement(0.01);
+        page->addChild(*param);
+    }
 
-    ChoiceParamDescriptor* skewOrder = desc.defineChoiceParam(kParamSkewOrder);
-    skewOrder->setLabels(kParamSkewOrderLabel, kParamSkewOrderLabel, kParamSkewOrderLabel);
-    skewOrder->setDefault(0);
-    skewOrder->appendOption("XY");
-    skewOrder->appendOption("YX");
-    skewOrder->setAnimates(true);
-    page->addChild(*skewOrder);
+    // skewOrder
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamSkewOrder);
+        param->setLabels(kParamSkewOrderLabel, kParamSkewOrderLabel, kParamSkewOrderLabel);
+        param->setDefault(0);
+        param->appendOption("XY");
+        param->appendOption("YX");
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 
-    Double2DParamDescriptor* center = desc.defineDouble2DParam(kParamCenter);
-    center->setLabels(kParamCenterLabel, kParamCenterLabel, kParamCenterLabel);
-    //center->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
-    center->setDoubleType(eDoubleTypeXYAbsolute);
-    //center->setDimensionLabels("x","y");
-    center->setDefaultCoordinateSystem(eCoordinatesNormalised);
-    center->setDefault(0.5, 0.5);
-    center->setIncrement(1.);
-    page->addChild(*center);
+    // center
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamCenter);
+        param->setLabels(kParamCenterLabel, kParamCenterLabel, kParamCenterLabel);
+        //param->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
+        param->setDoubleType(eDoubleTypeXYAbsolute);
+        //param->setDimensionLabels("x","y");
+        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        param->setDefault(0.5, 0.5);
+        param->setIncrement(1.);
+        page->addChild(*param);
+    }
 }
 
 void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)

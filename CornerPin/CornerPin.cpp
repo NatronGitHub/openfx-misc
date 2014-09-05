@@ -569,7 +569,7 @@ public:
     CornerPinTransformInteract(OfxInteractHandle handle, OFX::ImageEffect* effect)
     : OFX::OverlayInteract(handle)
     , _invert(0)
-    , _overlayChoice(0)
+    , _overlayPoints(0)
     , _dragging(-1)
     , _hovering(-1)
     , _lastMousePos()
@@ -586,8 +586,8 @@ public:
         }
         _invert = effect->fetchBooleanParam(kParamTransform3x3Invert);
         addParamToSlaveTo(_invert);
-        _overlayChoice = effect->fetchChoiceParam(kParamOverlayPoints);
-        addParamToSlaveTo(_overlayChoice);
+        _overlayPoints = effect->fetchChoiceParam(kParamOverlayPoints);
+        addParamToSlaveTo(_overlayPoints);
     }
 
     // overridden functions from OFX::Interact to do things
@@ -607,7 +607,7 @@ private:
     bool isFromPoints(double time) const
     {
         int v;
-        _overlayChoice->getValueAtTime(time, v);
+        _overlayPoints->getValueAtTime(time, v);
         return v == 1;
     }
 
@@ -615,7 +615,7 @@ private:
     OFX::Double2DParam* _from[4];
     OFX::BooleanParam* _enable[4];
     OFX::BooleanParam* _invert;
-    OFX::ChoiceParam* _overlayChoice;
+    OFX::ChoiceParam* _overlayPoints;
     
     int _dragging; // -1: idle, else dragging point number
     int _hovering; // -1: idle, else hovering point number
@@ -881,25 +881,31 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
                                            double x,
                                            double y)
 {
-    Double2DParamDescriptor* size = desc.defineDouble2DParam(kParamTo[i]);
-    size->setLabels(kParamTo[i], kParamTo[i], kParamTo[i]);
-    size->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-    size->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
-    size->setAnimates(true);
-    size->setDefault(x, y);
-    size->setIncrement(1.);
-    size->setDimensionLabels("x", "y");
-    size->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    size->setParent(*group);
-    page->addChild(*size);
+    // size
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTo[i]);
+        param->setLabels(kParamTo[i], kParamTo[i], kParamTo[i]);
+        param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+        param->setAnimates(true);
+        param->setDefault(x, y);
+        param->setIncrement(1.);
+        param->setDimensionLabels("x", "y");
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        param->setParent(*group);
+        page->addChild(*param);
+    }
 
-    BooleanParamDescriptor* enable = desc.defineBooleanParam(kParamEnable[i]);
-    enable->setLabels(kParamEnable[i], kParamEnable[i], kParamEnable[i]);
-    enable->setDefault(true);
-    enable->setAnimates(true);
-    enable->setHint(kParamEnableHint);
-    enable->setParent(*group);
-    page->addChild(*enable);
+    // enable
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamEnable[i]);
+        param->setLabels(kParamEnable[i], kParamEnable[i], kParamEnable[i]);
+        param->setDefault(true);
+        param->setAnimates(true);
+        param->setHint(kParamEnableHint);
+        param->setParent(*group);
+        page->addChild(*param);
+    }
 }
 
 static void defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
@@ -909,16 +915,16 @@ static void defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
                                               double x,
                                               double y)
 {
-    Double2DParamDescriptor* size = desc.defineDouble2DParam(kParamFrom[i]);
-    size->setLabels(kParamFrom[i], kParamFrom[i], kParamFrom[i]);
-    size->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-    size->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
-    size->setAnimates(true);
-    size->setDefault(x, y);
-    size->setIncrement(1.);
-    size->setDimensionLabels("x", "y");
-    size->setParent(*group);
-    page->addChild(*size);
+    Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamFrom[i]);
+    param->setLabels(kParamFrom[i], kParamFrom[i], kParamFrom[i]);
+    param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
+    param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+    param->setAnimates(true);
+    param->setDefault(x, y);
+    param->setIncrement(1.);
+    param->setDimensionLabels("x", "y");
+    param->setParent(*group);
+    page->addChild(*param);
 }
 
 static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
@@ -929,13 +935,13 @@ static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
                                  double y,
                                  double z)
 {
-    Double3DParamDescriptor* row = desc.defineDouble3DParam(name);
-    row->setLabels("", "", "");
-    row->setAnimates(true);
-    row->setDefault(x,y,z);
-    row->setIncrement(0.01);
-    row->setParent(*group);
-    page->addChild(*row);
+    Double3DParamDescriptor* param = desc.defineDouble3DParam(name);
+    param->setLabels("", "", "");
+    param->setAnimates(true);
+    param->setDefault(x,y,z);
+    param->setIncrement(0.01);
+    param->setParent(*group);
+    page->addChild(*param);
 }
 
 static void
@@ -943,63 +949,87 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
 {
     // NON-GENERIC PARAMETERS
     //
-    GroupParamDescriptor* toPoints = desc.defineGroupParam(kGroupTo);
-    toPoints->setLabels(kGroupTo, kGroupTo, kGroupTo);
-    toPoints->setAsTab();
-    defineCornerPinToDouble2DParam(desc, page, toPoints, 0, 0, 0);
-    defineCornerPinToDouble2DParam(desc, page, toPoints, 1, 1, 0);
-    defineCornerPinToDouble2DParam(desc, page, toPoints, 2, 1, 1);
-    defineCornerPinToDouble2DParam(desc, page, toPoints, 3, 0, 1);
-    
-    PushButtonParamDescriptor* copyFrom = desc.definePushButtonParam(kParamCopyFrom);
-    copyFrom->setLabels(kParamCopyFromLabel, kParamCopyFromLabel, kParamCopyFromLabel);
-    copyFrom->setHint(kParamCopyFromHint);
-    copyFrom->setParent(*toPoints);
-    page->addChild(*copyFrom);
-    
-    page->addChild(*toPoints);
+    // toPoints
+    {
+        GroupParamDescriptor* group = desc.defineGroupParam(kGroupTo);
+        group->setLabels(kGroupTo, kGroupTo, kGroupTo);
+        group->setAsTab();
 
-    GroupParamDescriptor* fromPoints = desc.defineGroupParam(kGroupFrom);
-    fromPoints->setLabels(kGroupFrom, kGroupFrom, kGroupFrom);
-    fromPoints->setAsTab();
-    defineCornerPinFromsDouble2DParam(desc, page, fromPoints, 0, 0, 0);
-    defineCornerPinFromsDouble2DParam(desc, page, fromPoints, 1, 1, 0);
-    defineCornerPinFromsDouble2DParam(desc, page, fromPoints, 2, 1, 1);
-    defineCornerPinFromsDouble2DParam(desc, page, fromPoints, 3, 0, 1);
-    
-    PushButtonParamDescriptor* setToInput = desc.definePushButtonParam(kParamCopyInputRoD);
-    setToInput->setLabels(kParamCopyInputRoDLabel, kParamCopyInputRoDLabel, kParamCopyInputRoDLabel);
-    setToInput->setHint(kParamCopyInputRoDHint);
-    setToInput->setLayoutHint(OFX::eLayoutHintNoNewLine);
-    setToInput->setParent(*fromPoints);
-    page->addChild(*setToInput);
-    
-    PushButtonParamDescriptor* copyTo = desc.definePushButtonParam(kParamCopyTo);
-    copyTo->setLabels(kParamCopyToLabel, kParamCopyToLabel, kParamCopyToLabel);
-    copyTo->setHint(kParamCopyToHint);
-    copyTo->setParent(*fromPoints);
-    page->addChild(*copyTo);
-    
-    page->addChild(*fromPoints);
+        defineCornerPinToDouble2DParam(desc, page, group, 0, 0, 0);
+        defineCornerPinToDouble2DParam(desc, page, group, 1, 1, 0);
+        defineCornerPinToDouble2DParam(desc, page, group, 2, 1, 1);
+        defineCornerPinToDouble2DParam(desc, page, group, 3, 0, 1);
 
-    
-    GroupParamDescriptor* extraMatrix = desc.defineGroupParam(kGroupExtraMatrix);
-    extraMatrix->setLabels(kGroupExtraMatrixLabel, kGroupExtraMatrixLabel, kGroupExtraMatrixLabel);
-    extraMatrix->setHint(kGroupExtraMatrixHint);
-    extraMatrix->setOpen(false);
-    defineExtraMatrixRow(desc, page, extraMatrix,kParamExtraMatrixRow1,1,0,0);
-    defineExtraMatrixRow(desc, page, extraMatrix,kParamExtraMatrixRow2,0,1,0);
-    defineExtraMatrixRow(desc, page, extraMatrix,kParamExtraMatrixRow3,0,0,1);
-    page->addChild(*extraMatrix);
+        // copyFrom
+        {
+            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyFrom);
+            param->setLabels(kParamCopyFromLabel, kParamCopyFromLabel, kParamCopyFromLabel);
+            param->setHint(kParamCopyFromHint);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
 
-    ChoiceParamDescriptor* overlayChoice = desc.defineChoiceParam(kParamOverlayPoints);
-    overlayChoice->setLabels(kParamOverlayPointsLabel, kParamOverlayPointsLabel, kParamOverlayPointsLabel);
-    overlayChoice->setHint(kParamOverlayPointsHint);
-    overlayChoice->appendOption("To");
-    overlayChoice->appendOption("From");
-    overlayChoice->setDefault(0);
-    overlayChoice->setEvaluateOnChange(false);
-    page->addChild(*overlayChoice);
+        page->addChild(*group);
+    }
+
+    // fromPoints
+    {
+        GroupParamDescriptor* group = desc.defineGroupParam(kGroupFrom);
+        group->setLabels(kGroupFrom, kGroupFrom, kGroupFrom);
+        group->setAsTab();
+
+        defineCornerPinFromsDouble2DParam(desc, page, group, 0, 0, 0);
+        defineCornerPinFromsDouble2DParam(desc, page, group, 1, 1, 0);
+        defineCornerPinFromsDouble2DParam(desc, page, group, 2, 1, 1);
+        defineCornerPinFromsDouble2DParam(desc, page, group, 3, 0, 1);
+
+        // setToInput
+        {
+            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyInputRoD);
+            param->setLabels(kParamCopyInputRoDLabel, kParamCopyInputRoDLabel, kParamCopyInputRoDLabel);
+            param->setHint(kParamCopyInputRoDHint);
+            param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
+
+        // copyTo
+        {
+            PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyTo);
+            param->setLabels(kParamCopyToLabel, kParamCopyToLabel, kParamCopyToLabel);
+            param->setHint(kParamCopyToHint);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
+        
+        page->addChild(*group);
+    }
+    
+    // extraMatrix
+    {
+        GroupParamDescriptor* group = desc.defineGroupParam(kGroupExtraMatrix);
+        group->setLabels(kGroupExtraMatrixLabel, kGroupExtraMatrixLabel, kGroupExtraMatrixLabel);
+        group->setHint(kGroupExtraMatrixHint);
+        group->setOpen(false);
+
+        defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow1, 1, 0, 0);
+        defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow2, 0, 1, 0);
+        defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow3, 0, 0, 1);
+
+        page->addChild(*group);
+    }
+
+    // overlayPoints
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOverlayPoints);
+        param->setLabels(kParamOverlayPointsLabel, kParamOverlayPointsLabel, kParamOverlayPointsLabel);
+        param->setHint(kParamOverlayPointsHint);
+        param->appendOption("To");
+        param->appendOption("From");
+        param->setDefault(0);
+        param->setEvaluateOnChange(false);
+        page->addChild(*param);
+    }
 }
 
 mDeclarePluginFactory(CornerPinPluginFactory, {}, {});

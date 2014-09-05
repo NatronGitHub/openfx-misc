@@ -398,16 +398,18 @@ void OneViewPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     
     // make some pages and to things in 
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    
-    ChoiceParamDescriptor *view = desc.defineChoiceParam(kParamView);
-    view->setLabels(kParamViewLabel, kParamViewLabel, kParamViewLabel);
-    view->setHint(kParamViewHint);
-    view->appendOption(kParamViewOptionLeft);
-    view->appendOption(kParamViewOptionRight);
-    view->setDefault(0);
-    view->setAnimates(true);
-    
-    page->addChild(*view);
+
+    // view
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamView);
+        param->setLabels(kParamViewLabel, kParamViewLabel, kParamViewLabel);
+        param->setHint(kParamViewHint);
+        param->appendOption(kParamViewOptionLeft);
+        param->appendOption(kParamViewOptionRight);
+        param->setDefault(0);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 }
 
 OFX::ImageEffect* OneViewPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

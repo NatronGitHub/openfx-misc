@@ -379,23 +379,29 @@ void NoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
 
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    DoubleParamDescriptor *noise = desc.defineDoubleParam(kParamNoiseLevel);
-    noise->setLabels(kParamNoiseLevelLabel, kParamNoiseLevelLabel, kParamNoiseLevelLabel);
-    noise->setHint(kParamNoiseLevelHint);
-    noise->setDefault(0.2);
-    noise->setRange(0, 10);
-    noise->setIncrement(0.1);
-    noise->setDisplayRange(0, 1);
-    noise->setAnimates(true); // can animate
-    noise->setDoubleType(eDoubleTypeScale);
-    page->addChild(*noise);
+    // noise
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamNoiseLevel);
+        param->setLabels(kParamNoiseLevelLabel, kParamNoiseLevelLabel, kParamNoiseLevelLabel);
+        param->setHint(kParamNoiseLevelHint);
+        param->setDefault(0.2);
+        param->setRange(0, 10);
+        param->setIncrement(0.1);
+        param->setDisplayRange(0, 1);
+        param->setAnimates(true); // can animate
+        param->setDoubleType(eDoubleTypeScale);
+        page->addChild(*param);
+    }
 
-    IntParamDescriptor *seed = desc.defineIntParam(kParamSeed);
-    seed->setLabels(kParamSeed, kParamSeed, kParamSeedLabel);
-    seed->setHint(kParamSeedHint);
-    seed->setDefault(2000);
-    seed->setAnimates(true); // can animate
-    page->addChild(*seed);
+    // seed
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamSeed);
+        param->setLabels(kParamSeed, kParamSeed, kParamSeedLabel);
+        param->setHint(kParamSeedHint);
+        param->setDefault(2000);
+        param->setAnimates(true); // can animate
+        page->addChild(*param);
+    }
 }
 
 ImageEffect* NoisePluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)

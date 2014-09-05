@@ -619,41 +619,56 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    ChoiceParamDescriptor* outputComps = desc.defineChoiceParam(kParamOutputComponents);
-    outputComps->setLabels(kParamOutputComponentsLabel, kParamOutputComponentsLabel, kParamOutputComponentsLabel);
-    outputComps->setAnimates(false);
-    outputComps->appendOption(kParamOutputComponentsOptionAlpha);
-    outputComps->appendOption(kParamOutputComponentsOptionRGBA);
-    outputComps->setDefault(0);
-    desc.addClipPreferencesSlaveParam(*outputComps);
-    page->addChild(*outputComps);
+    // outputComps
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputComponents);
+        param->setLabels(kParamOutputComponentsLabel, kParamOutputComponentsLabel, kParamOutputComponentsLabel);
+        param->setAnimates(false);
+        param->appendOption(kParamOutputComponentsOptionAlpha);
+        param->appendOption(kParamOutputComponentsOptionRGBA);
+        param->setDefault(0);
+        desc.addClipPreferencesSlaveParam(*param);
+        page->addChild(*param);
+    }
 
-    OFX::BooleanParamDescriptor* processR = desc.defineBooleanParam(kParamProcessR);
-    processR->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
-    processR->setHint(kParamProcessRHint);
-    processR->setDefault(true);
-    processR->setLayoutHint(eLayoutHintNoNewLine);
-    page->addChild(*processR);
+    // processR
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+        param->setHint(kParamProcessRHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
 
-    OFX::BooleanParamDescriptor* processG = desc.defineBooleanParam(kParamProcessG);
-    processG->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
-    processG->setHint(kParamProcessGHint);
-    processG->setDefault(true);
-    processG->setLayoutHint(eLayoutHintNoNewLine);
-    page->addChild(*processG);
+    // processG
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+        param->setHint(kParamProcessGHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
 
-    OFX::BooleanParamDescriptor* processB = desc.defineBooleanParam( kParamProcessB );
-    processB->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
-    processB->setHint(kParamProcessBHint);
-    processB->setDefault(true);
-    processB->setLayoutHint(eLayoutHintNoNewLine);
-    page->addChild(*processB);
+    // processB
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
+        param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+        param->setHint(kParamProcessBHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
 
-    OFX::BooleanParamDescriptor* processA = desc.defineBooleanParam( kParamProcessA );
-    processA->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
-    processA->setHint(kParamProcessAHint);
-    processA->setDefault(true);
-    page->addChild(*processA);
+    // processA
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
+        param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+        param->setHint(kParamProcessAHint);
+        param->setDefault(true);
+        page->addChild(*param);
+    }
 }
 
 void getRotoPluginID(OFX::PluginFactoryArray &ids)
