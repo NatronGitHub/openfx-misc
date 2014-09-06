@@ -194,6 +194,7 @@ public:
     // ctor
     RGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTable)
     : RGBLutProcessorBase(instance)
+    , _lookupTable(nComponents * (nbValues + 1))
     {
         // build the LUT
         assert(lookupTable);
@@ -213,7 +214,7 @@ public:
                     value += lookupTable->getValue(kCurveMaster, args.time, parametricPos) - parametricPos;
                 }
                 // set that in the lut
-                _lookupTable[component][position] = clamp<PIX>(value, maxValue);
+                _lookupTable[component * (nbValues + 1) + position] = clamp<PIX>(value, maxValue);
             }
         }
     }
@@ -249,20 +250,21 @@ private:
     // on input to interpolate, value should be normalized to the [0-1] range
     float interpolate(int component, float value) {
         if (value < 0.) {
-            return _lookupTable[component][0];
+            return _lookupTable[component * (nbValues + 1)];
         } else if (value >= 1.) {
-            return _lookupTable[component][nbValues];
+            return _lookupTable[component * (nbValues + 1) + nbValues];
         } else {
             int i = (int)(value * nbValues);
             assert(0 <= i && i < nbValues);
             float alpha = value * nbValues - i;
             assert(0 <= alpha && alpha < 1.);
-            return _lookupTable[component][i] * (1.-alpha) + _lookupTable[component][i+1] * alpha;
+            return _lookupTable[component * (nbValues + 1) + i] * (1.-alpha) + _lookupTable[component * (nbValues + 1) + i + 1] * alpha;
         }
     }
 
 private:
-    float _lookupTable[nComponents][nbValues+1];
+    //float _lookupTable[nComponents][nbValues+1];
+    std::vector<float> _lookupTable;
 };
 
 using namespace OFX;
