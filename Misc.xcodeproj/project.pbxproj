@@ -16,25 +16,32 @@
 				1E0E4EAC194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4EAE194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4EB0194CB2C30072248F /* PBXTargetDependency */,
+				1EA0C21A19BA12A0006AB602 /* PBXTargetDependency */,
 				1E0E4EB2194CB2C30072248F /* PBXTargetDependency */,
 				1E52FFD61955D3130000FB79 /* PBXTargetDependency */,
 				1E0E4EB4194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4EB6194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4EA6194CB2970072248F /* PBXTargetDependency */,
+				1EA0C21C19BA12A0006AB602 /* PBXTargetDependency */,
 				1E0E4EB8194CB2C30072248F /* PBXTargetDependency */,
+				1EA0C21E19BA12A0006AB602 /* PBXTargetDependency */,
 				1E0E4EBA194CB2C30072248F /* PBXTargetDependency */,
 				1E52FFD81955D3130000FB79 /* PBXTargetDependency */,
 				1E0E4EBC194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4EBE194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4EC0194CB2C30072248F /* PBXTargetDependency */,
+				1EA0C22019BA12A0006AB602 /* PBXTargetDependency */,
+				1EA0C22219BA12A0006AB602 /* PBXTargetDependency */,
 				1E0E4EC2194CB2C30072248F /* PBXTargetDependency */,
 				1E52FFDA1955D3130000FB79 /* PBXTargetDependency */,
 				1E0E4EC4194CB2C30072248F /* PBXTargetDependency */,
+				1EA0C22419BA12A0006AB602 /* PBXTargetDependency */,
 				1E0E4EC6194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4EC8194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4ECA194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4ECC194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4ECE194CB2C30072248F /* PBXTargetDependency */,
+				1EA0C22619BA12A0006AB602 /* PBXTargetDependency */,
 				1E0E4ED0194CB2C30072248F /* PBXTargetDependency */,
 				D733F7031959803600028B57 /* PBXTargetDependency */,
 				1E0E4ED2194CB2C30072248F /* PBXTargetDependency */,
@@ -249,6 +256,18 @@
 		1E9B5F69198A52590095C8AA /* ofxsOGLTextRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F4F198A51840095C8AA /* ofxsOGLTextRenderer.cpp */; };
 		1E9B5F74198A5BF60095C8AA /* ofxsOGLTextRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F4F198A51840095C8AA /* ofxsOGLTextRenderer.cpp */; };
 		1E9B5F75198A5BFB0095C8AA /* ofxsOGLFontData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F4D198A51840095C8AA /* ofxsOGLFontData.cpp */; };
+		1EA0C20819BA1243006AB602 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1EA0C20919BA1243006AB602 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1EA0C20A19BA1243006AB602 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1EA0C20B19BA1243006AB602 /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1EA0C20C19BA1243006AB602 /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1EA0C20D19BA1243006AB602 /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1EA0C20E19BA1243006AB602 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1EA0C20F19BA1243006AB602 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1EA0C21119BA1243006AB602 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1EA0C21719BA128C006AB602 /* Dissolve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA0C1FF19BA1234006AB602 /* Dissolve.cpp */; };
+		1EA0C21819BA128C006AB602 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA0C20319BA1234006AB602 /* PluginRegistration.cpp */; };
+		1EA0C22719BA12D3006AB602 /* Dissolve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA0C1FF19BA1234006AB602 /* Dissolve.cpp */; };
 		1EB9C071196DD64E003C1849 /* OneView.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDE1BC9182D3F90002392CB /* OneView.cpp */; };
 		1EB9C072196DD64E003C1849 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E8B5D7418B7805D00C31FDC /* PluginRegistration.cpp */; };
 		1EB9C073196DD64E003C1849 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
@@ -630,6 +649,55 @@
 			remoteGlobalIDString = 1E8B5D4A18B76A7500C31FDC;
 			remoteInfo = Misc.ofx;
 		};
+		1EA0C21919BA12A0006AB602 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E10A6F61997BFE400EE87A1;
+			remoteInfo = ColorMatrix.ofx;
+		};
+		1EA0C21B19BA12A0006AB602 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E0831F4199FEB1F00A819A5;
+			remoteInfo = Deinterlace.ofx;
+		};
+		1EA0C21D19BA12A0006AB602 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1EA0C20419BA1243006AB602;
+			remoteInfo = Dissolve.ofx;
+		};
+		1EA0C21F19BA12A0006AB602 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1ED4AE951973DCAD00EE64C8;
+			remoteInfo = Noise.ofx;
+		};
+		1EA0C22119BA12A0006AB602 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1EB9C06F196DD64E003C1849;
+			remoteInfo = NoOp.ofx;
+		};
+		1EA0C22319BA12A0006AB602 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E2A93471990EE690061B1F1;
+			remoteInfo = Retime.ofx;
+		};
+		1EA0C22519BA12A0006AB602 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1EBAEFD0199A81DB0037B3E6;
+			remoteInfo = TestRender.ofx;
+		};
 		1ECE5471185F24B7001ED442 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
@@ -784,6 +852,12 @@
 		1E9B5F6C198A54210095C8AA /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README.md; sourceTree = "<group>"; };
 		1E9FC1CE180BF74400EFE0F9 /* camera.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = camera.h; sourceTree = "<group>"; };
 		1E9FC1CF180BF74400EFE0F9 /* fnPublicOfxExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fnPublicOfxExtensions.h; sourceTree = "<group>"; };
+		1EA0C1FF19BA1234006AB602 /* Dissolve.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Dissolve.cpp; sourceTree = "<group>"; };
+		1EA0C20019BA1234006AB602 /* Dissolve.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Dissolve.h; sourceTree = "<group>"; };
+		1EA0C20119BA1234006AB602 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1EA0C20219BA1234006AB602 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EA0C20319BA1234006AB602 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		1EA0C21519BA1243006AB602 /* Dissolve.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Dissolve.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EB0C41E180DCAB500C25D1E /* RGBLut.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RGBLut.cpp; sourceTree = "<group>"; };
 		1EB9C080196DD64E003C1849 /* NoOp.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NoOp.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EB9C082196DD697003C1849 /* NoOp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NoOp.cpp; sourceTree = "<group>"; };
@@ -1013,6 +1087,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E8B5D5718B76A7500C31FDC /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EA0C21019BA1243006AB602 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EA0C21119BA1243006AB602 /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1380,6 +1462,7 @@
 				1E10A7071997BFE400EE87A1 /* ColorMatrix.ofx.bundle */,
 				1EBAEFE1199A81DB0037B3E6 /* TestRender.ofx.bundle */,
 				1E083205199FEB1F00A819A5 /* Deinterlace.ofx.bundle */,
+				1EA0C21519BA1243006AB602 /* Dissolve.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -1402,6 +1485,7 @@
 				1ECE5453185F240A001ED442 /* DebugProxy */,
 				1E0831F3199FEB0600A819A5 /* Deinterlace */,
 				1EFB4E0919461AE7005932AF /* Difference */,
+				1EA0C1FE19BA1053006AB602 /* Dissolve */,
 				D725A2C818E0D308001A1E3E /* Grade */,
 				1E181AE919518BF900FAB9A9 /* Invert */,
 				1EDE1BAF182D39DA002392CB /* JoinViews */,
@@ -1498,6 +1582,18 @@
 			);
 			name = nuke;
 			path = ../../include/nuke;
+			sourceTree = "<group>";
+		};
+		1EA0C1FE19BA1053006AB602 /* Dissolve */ = {
+			isa = PBXGroup;
+			children = (
+				1EA0C1FF19BA1234006AB602 /* Dissolve.cpp */,
+				1EA0C20019BA1234006AB602 /* Dissolve.h */,
+				1EA0C20119BA1234006AB602 /* Info.plist */,
+				1EA0C20219BA1234006AB602 /* Makefile */,
+				1EA0C20319BA1234006AB602 /* PluginRegistration.cpp */,
+			);
+			path = Dissolve;
 			sourceTree = "<group>";
 		};
 		1EB9C06E196DD61B003C1849 /* NoOp */ = {
@@ -1974,6 +2070,22 @@
 			productReference = 1E8B5D5B18B76A7500C31FDC /* Misc.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
+		1EA0C20419BA1243006AB602 /* Dissolve.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1EA0C21219BA1243006AB602 /* Build configuration list for PBXNativeTarget "Dissolve.ofx" */;
+			buildPhases = (
+				1EA0C20519BA1243006AB602 /* Sources */,
+				1EA0C21019BA1243006AB602 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Dissolve.ofx;
+			productName = basic.ofx;
+			productReference = 1EA0C21519BA1243006AB602 /* Dissolve.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 		1EB9C06F196DD64E003C1849 /* NoOp.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1EB9C07D196DD64E003C1849 /* Build configuration list for PBXNativeTarget "NoOp.ofx" */;
@@ -2293,9 +2405,10 @@
 				D730310519518B6B0024BCA4 /* CopyRectangle.ofx */,
 				D7257D4B192E91120040CD9C /* CornerPin.ofx */,
 				D74A80B3194059CC007C3E1C /* Crop.ofx */,
-				1EFB4E0A19461B13005932AF /* Difference.ofx */,
 				1ECE5459185F2433001ED442 /* DebugProxy.ofx */,
 				1E0831F4199FEB1F00A819A5 /* Deinterlace.ofx */,
+				1EFB4E0A19461B13005932AF /* Difference.ofx */,
+				1EA0C20419BA1243006AB602 /* Dissolve.ofx */,
 				1E1FB8E3190696F200F5515D /* Grade.ofx */,
 				1E181AEA19518CCF00FAB9A9 /* Invert.ofx */,
 				1EDE1B9D182D3985002392CB /* JoinViews.ofx */,
@@ -2555,11 +2668,10 @@
 				D730310419518B560024BCA4 /* CopyRectangle.cpp in Sources */,
 				D7257D5F192E91510040CD9C /* CornerPin.cpp in Sources */,
 				D7B4C97818D9DBE70004137D /* ColorCorrect.cpp in Sources */,
-				1E08320D199FEB7800A819A5 /* Deinterlace.cpp in Sources */,
 				D74A80C719405A14007C3E1C /* Crop.cpp in Sources */,
-				1E9B5F5C198A51D40095C8AA /* ofxsRectangleInteract.cpp in Sources */,
-				1E9B5F5F198A51F40095C8AA /* ofxsOGLTextRenderer.cpp in Sources */,
+				1E08320D199FEB7800A819A5 /* Deinterlace.cpp in Sources */,
 				1EFB4E2019461B76005932AF /* Difference.cpp in Sources */,
+				1EA0C22719BA12D3006AB602 /* Dissolve.cpp in Sources */,
 				1E10A70B1997C03100EE87A1 /* ColorMatrix.cpp in Sources */,
 				D725A2E318E0D54E001A1E3E /* Grade.cpp in Sources */,
 				1E52FFD01955CE720000FB79 /* Premult.cpp in Sources */,
@@ -2575,8 +2687,6 @@
 				1E2A935C1990EEB60061B1F1 /* Retime.cpp in Sources */,
 				1E8B5D6818B76F8700C31FDC /* RGBLut.cpp in Sources */,
 				D721EC17191120F30069DB1D /* Roto.cpp in Sources */,
-				1E9B5F67198A52460095C8AA /* ofxsTracking.cpp in Sources */,
-				1E9B5F61198A52060095C8AA /* ofxsTransform3x3.cpp in Sources */,
 				1EF46F48194A39C800825BDF /* Shuffle.cpp in Sources */,
 				1ED4AEB81973DE1200EE64C8 /* randomGenerator.cpp in Sources */,
 				1E8B5D6D18B77F1600C31FDC /* SideBySide.cpp in Sources */,
@@ -2585,6 +2695,10 @@
 				D780C414198938AD002470C9 /* TrackerPM.cpp in Sources */,
 				D7349E8E18E776780097DB1D /* Transform.cpp in Sources */,
 				1E8B5D5D18B76AB300C31FDC /* PluginRegistrationCombined.cpp in Sources */,
+				1E9B5F5C198A51D40095C8AA /* ofxsRectangleInteract.cpp in Sources */,
+				1E9B5F5F198A51F40095C8AA /* ofxsOGLTextRenderer.cpp in Sources */,
+				1E9B5F67198A52460095C8AA /* ofxsTracking.cpp in Sources */,
+				1E9B5F61198A52060095C8AA /* ofxsTransform3x3.cpp in Sources */,
 				1E9B5F63198A52210095C8AA /* ofxsOGLFontData.cpp in Sources */,
 				1E8B5D4C18B76A7500C31FDC /* ofxsCore.cpp in Sources */,
 				1E8B5D4D18B76A7500C31FDC /* ofxsImageEffect.cpp in Sources */,
@@ -2594,6 +2708,23 @@
 				1E8B5D5218B76A7500C31FDC /* ofxsParams.cpp in Sources */,
 				1E8B5D5418B76A7500C31FDC /* ofxsProperty.cpp in Sources */,
 				1E8B5D5518B76A7500C31FDC /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EA0C20519BA1243006AB602 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EA0C21719BA128C006AB602 /* Dissolve.cpp in Sources */,
+				1EA0C21819BA128C006AB602 /* PluginRegistration.cpp in Sources */,
+				1EA0C20819BA1243006AB602 /* ofxsCore.cpp in Sources */,
+				1EA0C20919BA1243006AB602 /* ofxsImageEffect.cpp in Sources */,
+				1EA0C20A19BA1243006AB602 /* ofxsInteract.cpp in Sources */,
+				1EA0C20B19BA1243006AB602 /* ofxsLog.cpp in Sources */,
+				1EA0C20C19BA1243006AB602 /* ofxsMultiThread.cpp in Sources */,
+				1EA0C20D19BA1243006AB602 /* ofxsParams.cpp in Sources */,
+				1EA0C20E19BA1243006AB602 /* ofxsProperty.cpp in Sources */,
+				1EA0C20F19BA1243006AB602 /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3037,6 +3168,41 @@
 			target = 1E8B5D4A18B76A7500C31FDC /* Misc.ofx */;
 			targetProxy = 1E8B5D5E18B76ACD00C31FDC /* PBXContainerItemProxy */;
 		};
+		1EA0C21A19BA12A0006AB602 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1E10A6F61997BFE400EE87A1 /* ColorMatrix.ofx */;
+			targetProxy = 1EA0C21919BA12A0006AB602 /* PBXContainerItemProxy */;
+		};
+		1EA0C21C19BA12A0006AB602 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1E0831F4199FEB1F00A819A5 /* Deinterlace.ofx */;
+			targetProxy = 1EA0C21B19BA12A0006AB602 /* PBXContainerItemProxy */;
+		};
+		1EA0C21E19BA12A0006AB602 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1EA0C20419BA1243006AB602 /* Dissolve.ofx */;
+			targetProxy = 1EA0C21D19BA12A0006AB602 /* PBXContainerItemProxy */;
+		};
+		1EA0C22019BA12A0006AB602 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1ED4AE951973DCAD00EE64C8 /* Noise.ofx */;
+			targetProxy = 1EA0C21F19BA12A0006AB602 /* PBXContainerItemProxy */;
+		};
+		1EA0C22219BA12A0006AB602 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1EB9C06F196DD64E003C1849 /* NoOp.ofx */;
+			targetProxy = 1EA0C22119BA12A0006AB602 /* PBXContainerItemProxy */;
+		};
+		1EA0C22419BA12A0006AB602 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1E2A93471990EE690061B1F1 /* Retime.ofx */;
+			targetProxy = 1EA0C22319BA12A0006AB602 /* PBXContainerItemProxy */;
+		};
+		1EA0C22619BA12A0006AB602 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1EBAEFD0199A81DB0037B3E6 /* TestRender.ofx */;
+			targetProxy = 1EA0C22519BA12A0006AB602 /* PBXContainerItemProxy */;
+		};
 		1ECE5472185F24B7001ED442 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 1ECE5459185F2433001ED442 /* DebugProxy.ofx */;
@@ -3451,6 +3617,28 @@
 				INFOPLIST_FILE = Misc/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = Misc.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+		1EA0C21319BA1243006AB602 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Dissolve/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = Dissolve.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1EA0C21419BA1243006AB602 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Dissolve/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = Dissolve.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
@@ -4017,6 +4205,15 @@
 			buildConfigurations = (
 				1E8B5D5918B76A7500C31FDC /* Debug */,
 				1E8B5D5A18B76A7500C31FDC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1EA0C21219BA1243006AB602 /* Build configuration list for PBXNativeTarget "Dissolve.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1EA0C21319BA1243006AB602 /* Debug */,
+				1EA0C21419BA1243006AB602 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

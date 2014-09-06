@@ -10,6 +10,7 @@ CornerPin \
 Crop \
 Deinterlace \
 Difference \
+Dissolve \
 Grade \
 Invert \
 JoinViews \

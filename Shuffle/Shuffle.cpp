@@ -80,7 +80,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 
-#define kPluginLabel "ShuffleOFX"
+#define kPluginName "ShuffleOFX"
 #define kPluginGrouping "Channel"
 #define kPluginDescription "Rearrange channels from one or two inputs and/or convert to different bit depth or components. No colorspace conversion is done (mapping is linear, even for 8-bit and 16-bit types)."
 #define kPluginIdentifier "net.sf.openfx:ShufflePlugin"
@@ -852,7 +852,7 @@ mDeclarePluginFactory(ShufflePluginFactory, {}, {});
 void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginLabel, kPluginLabel, kPluginLabel);
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -1011,6 +1011,8 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
+    // outputComponents
+    {
     ChoiceParamDescriptor *outputComponents = desc.defineChoiceParam(kParamOutputComponents);
     outputComponents->setLabels(kParamOutputComponentsLabel, kParamOutputComponentsLabel, kParamOutputComponentsLabel);
     outputComponents->setHint(kParamOutputComponentsHint);
@@ -1029,9 +1031,11 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     }
     outputComponents->setDefault(0);
     outputComponents->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*outputComponents);
     page->addChild(*outputComponents);
-    desc.addClipPreferencesSlaveParam(*outputComponents);
+    }
 
+    // ouputBitDepth
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         ChoiceParamDescriptor *outputBitDepth = desc.defineChoiceParam(kParamOutputBitDepth);
         outputBitDepth->setLabels(kParamOutputBitDepthLabel, kParamOutputBitDepthLabel, kParamOutputBitDepthLabel);
@@ -1056,39 +1060,54 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         // Disable it for now (in the future, there may be colorspace conversion options)
         outputBitDepth->setIsSecret(true);
 #endif
-        page->addChild(*outputBitDepth);
         desc.addClipPreferencesSlaveParam(*outputBitDepth);
+        page->addChild(*outputBitDepth);
     }
 
     if (gSupportsRGB || gSupportsRGBA) {
-        ChoiceParamDescriptor *outputR = desc.defineChoiceParam(kParamOutputR);
-        outputR->setLabels(kParamOutputRLabel, kParamOutputRLabel, kParamOutputRLabel);
-        outputR->setHint(kParamOutputRHint);
-        addInputChannelOtions(outputR, eInputChannelAR, context);
-        page->addChild(*outputR);
-        ChoiceParamDescriptor *outputG = desc.defineChoiceParam(kParamOutputG);
-        outputG->setLabels(kParamOutputGLabel, kParamOutputGLabel, kParamOutputGLabel);
-        outputG->setHint(kParamOutputGHint);
-        addInputChannelOtions(outputG, eInputChannelAG, context);
-        page->addChild(*outputG);
-        ChoiceParamDescriptor *outputB = desc.defineChoiceParam(kParamOutputB);
-        outputB->setLabels(kParamOutputBLabel, kParamOutputBLabel, kParamOutputBLabel);
-        outputB->setHint(kParamOutputBHint);
-        addInputChannelOtions(outputB, eInputChannelAB, context);
-        page->addChild(*outputB);
+        // outputR
+        {
+            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputR);
+            param->setLabels(kParamOutputRLabel, kParamOutputRLabel, kParamOutputRLabel);
+            param->setHint(kParamOutputRHint);
+            addInputChannelOtions(param, eInputChannelAR, context);
+            page->addChild(*param);
+        }
+
+        // outputG
+        {
+            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputG);
+            param->setLabels(kParamOutputGLabel, kParamOutputGLabel, kParamOutputGLabel);
+            param->setHint(kParamOutputGHint);
+            addInputChannelOtions(param, eInputChannelAG, context);
+            page->addChild(*param);
+        }
+
+        // outputB
+        {
+            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputB);
+            param->setLabels(kParamOutputBLabel, kParamOutputBLabel, kParamOutputBLabel);
+            param->setHint(kParamOutputBHint);
+            addInputChannelOtions(param, eInputChannelAB, context);
+            page->addChild(*param);
+        }
     }
+    // ouputA
     if (gSupportsRGBA || gSupportsAlpha) {
-        ChoiceParamDescriptor *outputA = desc.defineChoiceParam(kParamOutputA);
-        outputA->setLabels(kParamOutputALabel, kParamOutputALabel, kParamOutputALabel);
-        outputA->setHint(kParamOutputAHint);
-        addInputChannelOtions(outputA, eInputChannelAA, context);
-        page->addChild(*outputA);
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputA);
+        param->setLabels(kParamOutputALabel, kParamOutputALabel, kParamOutputALabel);
+        param->setHint(kParamOutputAHint);
+        addInputChannelOtions(param, eInputChannelAA, context);
+        page->addChild(*param);
     }
 
-    PushButtonParamDescriptor *clipInfo = desc.definePushButtonParam(kParamClipInfo);
-    clipInfo->setLabels(kParamClipInfoLabel, kParamClipInfoLabel, kParamClipInfoLabel);
-    clipInfo->setHint(kParamClipInfoHint);
-    page->addChild(*clipInfo);
+    // clipInfo
+    {
+        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
+        param->setLabels(kParamClipInfoLabel, kParamClipInfoLabel, kParamClipInfoLabel);
+        param->setHint(kParamClipInfoHint);
+        page->addChild(*param);
+    }
 }
 
 OFX::ImageEffect* ShufflePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)

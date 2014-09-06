@@ -494,7 +494,7 @@ PremultPlugin<isPremult>::getClipPreferences(OFX::ClipPreferencesSetter &clipPre
     if (premult == eInputChannelA && red && green && blue && !alpha) {
         clipPreferences.setOutputPremultiplication(isPremult ? eImagePreMultiplied : eImageUnPreMultiplied);
     }
- }
+}
 
 static std::string premultString(PreMultiplicationEnum e)
 {

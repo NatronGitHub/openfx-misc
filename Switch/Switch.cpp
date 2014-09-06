@@ -258,15 +258,17 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    IntParamDescriptor *which = desc.defineIntParam(kParamWhich);
-    which->setLabels(kParamWhichLabel, kParamWhichLabel, kParamWhichLabel);
-    which->setHint(kParamWhichHint);
-    which->setDefault(0);
-    which->setRange(0, kClipSourceCount);
-    which->setDisplayRange(0, 1);
-    which->setAnimates(true);
-    
-    page->addChild(*which);
+    // which
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamWhich);
+        param->setLabels(kParamWhichLabel, kParamWhichLabel, kParamWhichLabel);
+        param->setHint(kParamWhichHint);
+        param->setDefault(0);
+        param->setRange(0, kClipSourceCount);
+        param->setDisplayRange(0, 1);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 
 #ifdef OFX_EXTENSIONS_NUKE
     // Enable transform by the host.

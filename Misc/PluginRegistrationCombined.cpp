@@ -8,6 +8,7 @@
 #include "Crop.h"
 #include "Deinterlace.h"
 #include "Difference.h"
+#include "Dissolve.h"
 #include "Grade.h"
 #include "Invert.h"
 #include "JoinViews.h"
@@ -47,6 +48,7 @@ namespace OFX
             getCropPluginID(ids);
             getDeinterlacePluginID(ids);
             getDifferencePluginID(ids);
+            getDissolvePluginID(ids);
             getGradePluginID(ids);
             getInvertPluginID(ids);
             getJoinViewsPluginID(ids);
@@ -65,7 +67,9 @@ namespace OFX
             getShufflePluginID(ids);
             getSideBySidePluginID(ids);
             getSwitchPluginID(ids);
+#ifdef DEBUG
             getTestRenderPluginID(ids);
+#endif
             getTimeOffsetPluginID(ids);
             getTrackerPMPluginID(ids);
             getTransformPluginIDs(ids);

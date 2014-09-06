@@ -508,34 +508,40 @@ void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     
     // make some pages and to things in 
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    
-    BooleanParamDescriptor *vertical = desc.defineBooleanParam(kParamVertical);
-    vertical->setDefault(false);
-    vertical->setHint(kParamVerticalHint);
-    vertical->setLabels(kParamVerticalLabel, kParamVerticalLabel, kParamVerticalLabel);
-    vertical->setAnimates(true);
-    
-    page->addChild(*vertical);
-    
-    ChoiceParamDescriptor *view1 = desc.defineChoiceParam(kParamView1);
-    view1->setHint(kParamView1Hint);
-    view1->setLabels(kParamView1Label, kParamView1Label, kParamView1Label);
-    view1->appendOption(kParamViewOptionLeft);
-    view1->appendOption(kParamViewOptionRight);
-    view1->setDefault(0);
-    view1->setAnimates(true);
-    
-    page->addChild(*view1);
-    
-    ChoiceParamDescriptor *view2 = desc.defineChoiceParam(kParamView2);
-    view2->setHint(kParamView2Hint);
-    view2->setLabels(kParamView2Label, kParamView2Label, kParamView2Label);
-    view2->appendOption(kParamViewOptionLeft);
-    view2->appendOption(kParamViewOptionRight);
-    view2->setDefault(1);
-    view2->setAnimates(true);
-    
-    page->addChild(*view2);
+
+    // vertical
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamVertical);
+        param->setDefault(false);
+        param->setHint(kParamVerticalHint);
+        param->setLabels(kParamVerticalLabel, kParamVerticalLabel, kParamVerticalLabel);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+
+    // view1
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamView1);
+        param->setHint(kParamView1Hint);
+        param->setLabels(kParamView1Label, kParamView1Label, kParamView1Label);
+        param->appendOption(kParamViewOptionLeft);
+        param->appendOption(kParamViewOptionRight);
+        param->setDefault(0);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+
+    // view2
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamView2);
+        param->setHint(kParamView2Hint);
+        param->setLabels(kParamView2Label, kParamView2Label, kParamView2Label);
+        param->appendOption(kParamViewOptionLeft);
+        param->appendOption(kParamViewOptionRight);
+        param->setDefault(1);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 }
 
 OFX::ImageEffect* SideBySidePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

@@ -571,18 +571,24 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     
     // make some pages and to things in 
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    
-    BooleanParamDescriptor *forceCopy = desc.defineBooleanParam(kParamForceCopy);
-    forceCopy->setLabels(kParamForceCopyLabel, kParamForceCopyLabel, kParamForceCopyLabel);
-    forceCopy->setHint(kParamForceCopyHint);
-    forceCopy->setDefault(false);
-    forceCopy->setAnimates(false);
-    page->addChild(*forceCopy);
 
-    PushButtonParamDescriptor *clipInfo = desc.definePushButtonParam(kParamClipInfo);
-    clipInfo->setLabels(kParamClipInfoLabel, kParamClipInfoLabel, kParamClipInfoLabel);
-    clipInfo->setHint(kParamClipInfoHint);
-    page->addChild(*clipInfo);
+    // forceCopy
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamForceCopy);
+        param->setLabels(kParamForceCopyLabel, kParamForceCopyLabel, kParamForceCopyLabel);
+        param->setHint(kParamForceCopyHint);
+        param->setDefault(false);
+        param->setAnimates(false);
+        page->addChild(*param);
+    }
+
+    // clipInfo
+    {
+        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
+        param->setLabels(kParamClipInfoLabel, kParamClipInfoLabel, kParamClipInfoLabel);
+        param->setHint(kParamClipInfoHint);
+        page->addChild(*param);
+    }
 }
 
 OFX::ImageEffect* NoOpPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

@@ -80,7 +80,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 
-#define kPluginLabel "DifferenceOFX"
+#define kPluginName "DifferenceOFX"
 #define kPluginGrouping "Keyer"
 #define kPluginDescription "Produce a rough matte from the difference of two input images. A is the background without the subject (clean plate). B is the subject with the background. RGB is copied from B, the difference is output to alpha, after applying offset & gain."
 #define kPluginIdentifier "net.sf.openfx:DifferencePlugin"
@@ -378,7 +378,7 @@ mDeclarePluginFactory(DifferencePluginFactory, {}, {});
 void DifferencePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginLabel, kPluginLabel, kPluginLabel);
+    desc.setLabels(kPluginName, kPluginName, kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
     
@@ -421,26 +421,32 @@ void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->setSupportsTiles(true);
-    
+
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    DoubleParamDescriptor *offset = desc.defineDoubleParam(kParamOffset);
-    offset->setLabels(kParamOffsetLabel, kParamOffsetLabel, kParamOffsetLabel);
-    offset->setHint(kParamOffsetHint);
-    offset->setDefault(0.);
-    offset->setIncrement(0.005);
-    offset->setDisplayRange(0., 1.);
-    page->addChild(*offset);
+    // offset
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOffset);
+        param->setLabels(kParamOffsetLabel, kParamOffsetLabel, kParamOffsetLabel);
+        param->setHint(kParamOffsetHint);
+        param->setDefault(0.);
+        param->setIncrement(0.005);
+        param->setDisplayRange(0., 1.);
+        page->addChild(*param);
+    }
 
-    DoubleParamDescriptor *gain = desc.defineDoubleParam(kParamGain);
-    gain->setLabels(kParamGainLabel, kParamGainLabel, kParamGainLabel);
-    gain->setHint(kParamGainHint);
-    gain->setDefault(1.);
-    gain->setIncrement(0.005);
-    gain->setDisplayRange(0., 1.);
-    gain->setDoubleType(eDoubleTypeScale);
-    page->addChild(*gain);
+    // gain
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamGain);
+        param->setLabels(kParamGainLabel, kParamGainLabel, kParamGainLabel);
+        param->setHint(kParamGainHint);
+        param->setDefault(1.);
+        param->setIncrement(0.005);
+        param->setDisplayRange(0., 1.);
+        param->setDoubleType(eDoubleTypeScale);
+        page->addChild(*param);
+    }
 }
 
 OFX::ImageEffect* DifferencePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
