@@ -74,11 +74,9 @@
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
-#include "ofxsImageBlender.H"
+#include "ofxsImageBlenderMasked.h"
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
-
-#pragma message WARN("TODO: support Mask+Mix")
 
 #define kPluginName "DissolveOFX"
 #define kPluginGrouping "Merge"
@@ -86,6 +84,13 @@
 #define kPluginIdentifier "net.sf.openfx:DissolvePlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
+#define kClipFrom "0"
+#define kClipTo "1"
+
+#define kParamWhich "which"
+#define kParamWhichLabel "Which"
+#define kParamWhichHint "Mix factor between the two inputs."
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -104,13 +109,13 @@ public:
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGB || dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentAlpha));
-        fromClip_ = fetchClip(kOfxImageEffectTransitionSourceFromClipName);
+        fromClip_ = fetchClip(getContext() == OFX::eContextTransition ?  kOfxImageEffectTransitionSourceFromClipName : kClipFrom);
         assert(fromClip_ && (fromClip_->getPixelComponents() == OFX::ePixelComponentRGB || fromClip_->getPixelComponents() == OFX::ePixelComponentRGBA || fromClip_->getPixelComponents() == OFX::ePixelComponentAlpha));
-        toClip_   = fetchClip(kOfxImageEffectTransitionSourceToClipName);
+        toClip_   = fetchClip(getContext() == OFX::eContextTransition ? kOfxImageEffectTransitionSourceToClipName : kClipTo);
         assert(toClip_ && (toClip_->getPixelComponents() == OFX::ePixelComponentRGB || toClip_->getPixelComponents() == OFX::ePixelComponentRGBA || toClip_->getPixelComponents() == OFX::ePixelComponentAlpha));
-        maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        maskClip_ = fetchClip("Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == OFX::ePixelComponentAlpha);
-        _transition = fetchDoubleParam(kOfxImageEffectTransitionParamName);
+        _transition = fetchDoubleParam(getContext() == OFX::eContextTransition ? kOfxImageEffectTransitionParamName : kParamWhich);
         assert(_transition);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_maskInvert);
@@ -123,9 +128,16 @@ public:
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(OFX::ImageBlenderBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(OFX::ImageBlenderMaskedBase &, const OFX::RenderArguments &args);
 
 private:
+
+    template<int nComponents>
+    void renderForComponents(const OFX::RenderArguments &args);
+
+    template <class PIX, int nComponents, int maxValue>
+    void renderForBitDepth(const OFX::RenderArguments &args);
+
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
     OFX::Clip *fromClip_;
@@ -159,28 +171,65 @@ checkComponents(const OFX::Image &src,
 
 /* set up and run a processor */
 void
-DissolvePlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
+DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
                                 const OFX::RenderArguments &args)
 {
     // get a dst image
     std::auto_ptr<OFX::Image>  dst( dstClip_->fetchImage(args.time) );
-    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    if (dst->getRenderScale().x != args.renderScale.x ||
+        dst->getRenderScale().y != args.renderScale.y ||
+        dst->getField() != args.fieldToRender) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum dstBitDepth = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents = dst->getPixelComponents();
 
     // fetch the two source images
-    std::auto_ptr<OFX::Image> fromImg( fromClip_->fetchImage(args.time) );
-    std::auto_ptr<OFX::Image> toImg( toClip_->fetchImage(args.time) );
+    std::auto_ptr<OFX::Image> fromImg(fromClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> toImg(toClip_->fetchImage(args.time));
 
     // make sure bit depths are sane
-    if ( fromImg.get() ) {
+    if (fromImg.get()) {
         checkComponents(*fromImg, dstBitDepth, dstComponents);
+        if (fromImg->getRenderScale().x != args.renderScale.x ||
+            fromImg->getRenderScale().y != args.renderScale.y ||
+            fromImg->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
     }
-    if ( toImg.get() ) {
+    if (toImg.get()) {
         checkComponents(*toImg, dstBitDepth, dstComponents);
+        if (toImg->getRenderScale().x != args.renderScale.x ||
+            toImg->getRenderScale().y != args.renderScale.y ||
+            toImg->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+    }
+
+    std::auto_ptr<OFX::Image> mask(maskClip_->fetchImage(args.time));
+    if (mask.get()) {
+        if (mask->getRenderScale().x != args.renderScale.x ||
+            mask->getRenderScale().y != args.renderScale.y ||
+            mask->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+    }
+    if (getContext() != OFX::eContextFilter &&
+        getContext() != OFX::eContextTransition &&
+        maskClip_->isConnected()) {
+        processor.doMasking(true);
+        processor.setMaskImg(mask.get());
     }
 
     // get the transition value
-    float blend = (float)_transition->getValueAtTime(args.time);
+    float blend = std::max(0., std::min(_transition->getValueAtTime(args.time), 1.));
 
     // set the images
     processor.setDstImg( dst.get() );
@@ -202,56 +251,55 @@ void
 DissolvePlugin::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
 
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
-        switch (dstBitDepth) {
-        case OFX::eBitDepthUByte: {
-            OFX::ImageBlender<unsigned char, 4> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-
-        case OFX::eBitDepthUShort: {
-            OFX::ImageBlender<unsigned short, 4> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-
-        case OFX::eBitDepthFloat: {
-            OFX::ImageBlender<float, 4> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
-    } else {
-        switch (dstBitDepth) {
-        case OFX::eBitDepthUByte: {
-            OFX::ImageBlender<unsigned char, 1> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-
-        case OFX::eBitDepthUShort: {
-            OFX::ImageBlender<unsigned short, 1> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-
-        case OFX::eBitDepthFloat: {
-            OFX::ImageBlender<float, 1> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderForComponents<4>(args);
+    } else if (dstComponents == OFX::ePixelComponentRGB) {
+        renderForComponents<3>(args);
+    }  else {
+        assert(dstComponents == OFX::ePixelComponentAlpha);
+        renderForComponents<1>(args);
     } // switch
 } // render
+
+template<int nComponents>
+void
+DissolvePlugin::renderForComponents(const OFX::RenderArguments &args)
+{
+    OFX::BitDepthEnum dstBitDepth    = dstClip_->getPixelDepth();
+    switch (dstBitDepth) {
+        case OFX::eBitDepthUByte:
+            renderForBitDepth<unsigned char, nComponents, 255>(args);
+            break;
+
+        case OFX::eBitDepthUShort:
+            renderForBitDepth<unsigned short, nComponents, 65535>(args);
+            break;
+
+        case OFX::eBitDepthFloat:
+            renderForBitDepth<float, nComponents, 1>(args);
+            break;
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
+template <class PIX, int nComponents, int maxValue>
+void
+DissolvePlugin::renderForBitDepth(const OFX::RenderArguments &args)
+{
+    if (getContext() != OFX::eContextFilter &&
+        getContext() != OFX::eContextTransition &&
+        maskClip_->isConnected()) {
+        OFX::ImageBlenderMasked<PIX, nComponents, maxValue, true> fred(*this);
+        setupAndProcess(fred, args);
+    } else {
+        OFX::ImageBlenderMasked<PIX, nComponents, maxValue, false> fred(*this);
+        setupAndProcess(fred, args);
+    }
+}
 
 // overridden is identity
 bool
@@ -273,7 +321,8 @@ DissolvePlugin::isIdentity(const OFX::IsIdentityArguments &args,
     }
 
     // at the end?
-    if (blend >= 1.0) {
+    if (blend >= 1.0 &&
+        (!maskClip_ || !maskClip_->isConnected())) {
         identityClip = toClip_;
         identityTime = args.time;
 
@@ -320,7 +369,7 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                                          ContextEnum context)
 {
     // we are a transition, so define the sourceFrom input clip
-    ClipDescriptor *fromClip = desc.defineClip(kOfxImageEffectTransitionSourceFromClipName);
+    ClipDescriptor *fromClip = desc.defineClip(context == OFX::eContextTransition ? kOfxImageEffectTransitionSourceFromClipName : kClipFrom);
 
     fromClip->addSupportedComponent(ePixelComponentRGBA);
     fromClip->addSupportedComponent(ePixelComponentRGB);
@@ -329,7 +378,7 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     fromClip->setSupportsTiles(true);
 
     // we are a transition, so define the sourceTo input clip
-    ClipDescriptor *toClip = desc.defineClip(kOfxImageEffectTransitionSourceToClipName);
+    ClipDescriptor *toClip = desc.defineClip(context == OFX::eContextTransition ? kOfxImageEffectTransitionSourceToClipName : kClipTo);
     toClip->addSupportedComponent(ePixelComponentRGBA);
     toClip->addSupportedComponent(ePixelComponentRGB);
     toClip->addSupportedComponent(ePixelComponentAlpha);
@@ -343,16 +392,14 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(true);
 
-    if (context == eContextGeneral || context == eContextPaint) {
-        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
-        maskClip->addSupportedComponent(ePixelComponentAlpha);
-        maskClip->setTemporalClipAccess(false);
-        if (context == eContextGeneral) {
-            maskClip->setOptional(true);
-        }
-        maskClip->setSupportsTiles(true);
-        maskClip->setIsMask(true);
+    ClipDescriptor *maskClip = desc.defineClip("Mask");
+    maskClip->addSupportedComponent(ePixelComponentAlpha);
+    maskClip->setTemporalClipAccess(false);
+    if (context == eContextGeneral) {
+        maskClip->setOptional(true);
     }
+    maskClip->setSupportsTiles(true);
+    maskClip->setIsMask(true);
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
@@ -360,9 +407,17 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // Define the mandated "Transition" param, note that we don't do anything with this other than.
     // describe it. It is not a true param but how the host indicates to the plug-in how far through
     // the transition it is. It appears on no plug-in side UI, it is purely the hosts to manage.
-    {
+    if (context == OFX::eContextTransition) {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kOfxImageEffectTransitionParamName);
+        // The host should have its own interface to the Transition param.
+        // (range is 0-1)
         (void)param;
+    } else {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamWhich);
+        param->setLabels(kParamWhichLabel, kParamWhichLabel, kParamWhichLabel);
+        param->setHint(kParamWhichHint);
+        param->setRange(0., 1.);
+        page->addChild(*param);
     }
 
     // don't define the mix param

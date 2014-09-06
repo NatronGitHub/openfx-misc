@@ -880,6 +880,7 @@
 		1ECE5456185F2429001ED442 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1ECE546B185F2433001ED442 /* DebugProxy.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DebugProxy.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ECE546D185F24A1001ED442 /* ofxhBinary.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ofxhBinary.cpp; path = openfx/HostSupport/src/ofxhBinary.cpp; sourceTree = SOURCE_ROOT; };
+		1ED4569C19BBB0E00019E8CF /* ofxsImageBlenderMasked.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsImageBlenderMasked.h; sourceTree = "<group>"; };
 		1ED4AEA61973DCAD00EE64C8 /* Noise.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Noise.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ED4AEA91973DD4800EE64C8 /* Noise.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Noise.cpp; sourceTree = "<group>"; };
 		1ED4AEAF1973DD5700EE64C8 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
@@ -1547,6 +1548,7 @@
 				1E9B5F47198A51840095C8AA /* ofxsCopier.h */,
 				1E9B5F48198A51840095C8AA /* ofxsFilter.h */,
 				1E9B5F49198A51840095C8AA /* ofxsFormatResolution.h */,
+				1ED4569C19BBB0E00019E8CF /* ofxsImageBlenderMasked.h */,
 				1EBAF03E199B74370037B3E6 /* ofxsMacros.h */,
 				1E9B5F4A198A51840095C8AA /* ofxsMaskMix.h */,
 				1E9B5F4B198A51840095C8AA /* ofxsMatrix2D.h */,
