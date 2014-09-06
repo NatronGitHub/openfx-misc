@@ -194,7 +194,6 @@ public:
     // ctor
     RGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTable)
     : RGBLutProcessorBase(instance)
-    , _lookupTable(nComponents * (nbValues + 1))
     {
         // build the LUT
         assert(lookupTable);
@@ -202,6 +201,7 @@ public:
         // except for float, maxValue is the same as nbValues
         assert(maxValue == 1 || (maxValue == nbValues));
         for (int component = 0; component < nComponents; ++component) {
+            _lookupTable[component].resize(nbValues+1);
             int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
             bool applyMaster = lutIndex != kCurveAlpha;
             for (int position = 0; position <= nbValues; ++position) {
@@ -214,7 +214,7 @@ public:
                     value += lookupTable->getValue(kCurveMaster, args.time, parametricPos) - parametricPos;
                 }
                 // set that in the lut
-                _lookupTable[component * (nbValues + 1) + position] = clamp<PIX>(value, maxValue);
+                _lookupTable[component][position] = clamp<PIX>(value, maxValue);
             }
         }
     }
@@ -250,21 +250,20 @@ private:
     // on input to interpolate, value should be normalized to the [0-1] range
     float interpolate(int component, float value) {
         if (value < 0.) {
-            return _lookupTable[component * (nbValues + 1)];
+            return _lookupTable[component][0];
         } else if (value >= 1.) {
-            return _lookupTable[component * (nbValues + 1) + nbValues];
+            return _lookupTable[component][nbValues];
         } else {
             int i = (int)(value * nbValues);
             assert(0 <= i && i < nbValues);
             float alpha = value * nbValues - i;
             assert(0 <= alpha && alpha < 1.);
-            return _lookupTable[component * (nbValues + 1) + i] * (1.-alpha) + _lookupTable[component * (nbValues + 1) + i + 1] * alpha;
+            return _lookupTable[component][i] * (1.-alpha) + _lookupTable[component][i+1] * alpha;
         }
     }
 
 private:
-    //float _lookupTable[nComponents][nbValues+1];
-    std::vector<float> _lookupTable;
+    std::vector<float> _lookupTable[nComponents];
 };
 
 using namespace OFX;
