@@ -86,6 +86,7 @@ CXXFLAGS += \
 -I../Crop \
 -I../Deinterlace \
 -I../Difference \
+-I../Dissolve \
 -I../Grade \
 -I../Invert \
 -I../JoinViews \
