@@ -110,11 +110,10 @@ public:
         assert(toClip_ && (toClip_->getPixelComponents() == OFX::ePixelComponentRGB || toClip_->getPixelComponents() == OFX::ePixelComponentRGBA || toClip_->getPixelComponents() == OFX::ePixelComponentAlpha));
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == OFX::ePixelComponentAlpha);
-        _transition = fetchDoubleParam("Transition");
+        _transition = fetchDoubleParam(kOfxImageEffectTransitionParamName);
         assert(_transition);
-        _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
-        assert(_mix && _maskInvert);
+        assert(_maskInvert);
     }
 
     /* Override the render */
@@ -132,8 +131,7 @@ private:
     OFX::Clip *fromClip_;
     OFX::Clip *toClip_;
     OFX::Clip *maskClip_;
-    OFX::DoubleParam  *_transition;
-    OFX::DoubleParam* _mix;
+    OFX::DoubleParam* _transition;
     OFX::BooleanParam* _maskInvert;
 };
 
@@ -363,11 +361,12 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // describe it. It is not a true param but how the host indicates to the plug-in how far through
     // the transition it is. It appears on no plug-in side UI, it is purely the hosts to manage.
     {
-        DoubleParamDescriptor *param = desc.defineDoubleParam("Transition");
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kOfxImageEffectTransitionParamName);
         (void)param;
     }
 
-    ofxsMaskMixDescribeParams(desc, page);
+    // don't define the mix param
+    ofxsMaskDescribeParams(desc, page);
 }
 
 ImageEffect*
