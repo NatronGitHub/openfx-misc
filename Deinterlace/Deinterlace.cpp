@@ -91,7 +91,7 @@
 "- Mean: Blender (half resolution). Display a half-picture that is created as the average of the two original half-pictures.\n" \
 "- Yadif: Interpolator (Yet Another DeInterlacing Filter) from MPlayer by Michael Niedermayer (http://www.mplayerhq.hu). It checks pixels of previous, current and next frames to re-create the missed field by some local adaptive method (edge-directed interpolation) and uses spatial check to prevent most artifacts." \
 
-#define kPluginIdentifier    "net.sf.openfx:Deinterlace"
+#define kPluginIdentifier    "net.sf.openfx.Deinterlace"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

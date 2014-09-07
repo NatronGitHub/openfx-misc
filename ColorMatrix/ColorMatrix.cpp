@@ -85,7 +85,7 @@
 #define kPluginName "ColorMatrixOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription "Multiply the RGBA channels by an arbitrary 4x4 matrix."
-#define kPluginIdentifier "net.sf.openfx:ColorMatrixPlugin"
+#define kPluginIdentifier "net.sf.openfx.ColorMatrixPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

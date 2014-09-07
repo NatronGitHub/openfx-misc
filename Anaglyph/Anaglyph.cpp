@@ -84,7 +84,7 @@
 #define kPluginName "AnaglyphOFX"
 #define kPluginGrouping "Views/Stereo"
 #define kPluginDescription "Make an anaglyph image out of the two views of the input."
-#define kPluginIdentifier "net.sf.openfx:anaglyphPlugin"
+#define kPluginIdentifier "net.sf.openfx.anaglyphPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

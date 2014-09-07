@@ -49,7 +49,7 @@
 #define kPluginName "NoOpOFX"
 #define kPluginGrouping "Other"
 #define kPluginDescription "Copies the input to the ouput."
-#define kPluginIdentifier "net.sf.openfx:NoOpPlugin"
+#define kPluginIdentifier "net.sf.openfx.NoOpPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

@@ -85,7 +85,7 @@
 #define kPluginGrouping "Views"
 #define kPluginDescription "JoinView inputs to make a stereo output. " \
 "The first view from each input is copied to the left and right views of the output."
-#define kPluginIdentifier "net.sf.openfx:joinViewsPlugin"
+#define kPluginIdentifier "net.sf.openfx.joinViewsPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

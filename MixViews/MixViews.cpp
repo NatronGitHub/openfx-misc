@@ -84,7 +84,7 @@
 #define kPluginName "MixViewsOFX"
 #define kPluginGrouping "Views/Stereo"
 #define kPluginDescription "Mix two views together."
-#define kPluginIdentifier "net.sf.openfx:mixViewsPlugin"
+#define kPluginIdentifier "net.sf.openfx.mixViewsPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

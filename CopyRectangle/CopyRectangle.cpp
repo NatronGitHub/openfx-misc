@@ -83,7 +83,7 @@
 #define kPluginName "CopyRectangleOFX"
 #define kPluginGrouping "Merge"
 #define kPluginDescription "Copies a rectangle from the input A to the input B in output. It can be used to limit an effect to a rectangle of the original image by plugging the original image into the input B."
-#define kPluginIdentifier "net.sf.openfx:CopyRectanglePlugin"
+#define kPluginIdentifier "net.sf.openfx.CopyRectanglePlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

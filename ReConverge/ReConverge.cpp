@@ -97,7 +97,7 @@
 "If no disparity is given, only the offset is taken into account. " \
 "The amount of shift in pixels is rounded to the closest integer. " \
 "The ReConverge node only shifts views horizontally, not vertically."
-#define kPluginIdentifier "net.sf.openfx:reConvergePlugin"
+#define kPluginIdentifier "net.sf.openfx.reConvergePlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

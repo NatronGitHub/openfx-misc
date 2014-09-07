@@ -64,7 +64,7 @@
 "multiresolution enabled/disabled (MrOK/MrNo), render scale support enabled/disabled (RsOK/RsNo)." \
 "The effect returns a region-dependent value for isIdentity."
 
-#define kPluginIdentifier "net.sf.openfx:TestRender"
+#define kPluginIdentifier "net.sf.openfx.TestRender"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
