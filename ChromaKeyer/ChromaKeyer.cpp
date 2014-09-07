@@ -84,7 +84,7 @@
 #define kPluginName "ChromaKeyerOFX"
 #define kPluginGrouping "Keyer"
 #define kPluginDescription "Apply chroma keying"
-#define kPluginIdentifier "net.sf.openfx:ChromaKeyerPlugin"
+#define kPluginIdentifier "net.sf.openfx.ChromaKeyerPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

@@ -89,11 +89,11 @@
 #define kPluginPremultName "PremultOFX"
 #define kPluginPremultGrouping "Merge"
 #define kPluginPremultDescription "Multiply the selected channels by alpha (or another channel)"
-#define kPluginPremultIdentifier "net.sf.openfx:Premult"
+#define kPluginPremultIdentifier "net.sf.openfx.Premult"
 #define kPluginUnpremultName "UnpremultOFX"
 #define kPluginUnpremultGrouping "Merge"
 #define kPluginUnpremultDescription "Divide the selected channels by alpha (or another channel)"
-#define kPluginUnpremultIdentifier "net.sf.openfx:Unpremult"
+#define kPluginUnpremultIdentifier "net.sf.openfx.Unpremult"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

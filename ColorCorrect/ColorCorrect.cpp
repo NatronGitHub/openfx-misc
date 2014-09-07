@@ -85,7 +85,7 @@
 #define kPluginDescription "Adjusts the saturation, constrast, gamma, gain and offset of an image. " \
                           "The ranges of the shadows, midtones and highlights are controlled by the curves " \
                           "in the \"Ranges\" tab. "
-#define kPluginIdentifier "net.sf.openfx:ColorCorrectPlugin"
+#define kPluginIdentifier "net.sf.openfx.ColorCorrectPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

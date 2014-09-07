@@ -92,7 +92,7 @@
                           "A = multiply * (white - black) / (whitepoint - blackpoint) \n" \
                           "B = offset + black - A * blackpoint \n" \
                           "output = pow(A * input + B, 1 / gamma)."
-#define kPluginIdentifier "net.sf.openfx:GradePlugin"
+#define kPluginIdentifier "net.sf.openfx.GradePlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

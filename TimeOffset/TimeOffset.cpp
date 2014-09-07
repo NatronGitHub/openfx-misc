@@ -82,7 +82,7 @@
 #define kPluginGrouping "Time"
 #define kPluginDescription "Move the input clip forward or backward in time. " \
                            "This can also reverse the order of the input frames so that last one is first."
-#define kPluginIdentifier "net.sf.openfx:timeOffset"
+#define kPluginIdentifier "net.sf.openfx.timeOffset"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

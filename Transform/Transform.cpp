@@ -107,8 +107,8 @@
 #define kPluginMaskedName "TransformMaskedOFX"
 #define kPluginGrouping "Transform"
 #define kPluginDescription "Translate / Rotate / Scale a 2D image."
-#define kPluginIdentifier "net.sf.openfx:TransformPlugin"
-#define kPluginMaskedIdentifier "net.sf.openfx:TransformMaskedPlugin"
+#define kPluginIdentifier "net.sf.openfx.TransformPlugin"
+#define kPluginMaskedIdentifier "net.sf.openfx.TransformMaskedPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

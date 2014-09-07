@@ -101,7 +101,7 @@
 #define kPluginName "RetimeOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription "Change the timing of the input clip."
-#define kPluginIdentifier "net.sf.openfx:Retime"
+#define kPluginIdentifier "net.sf.openfx.Retime"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

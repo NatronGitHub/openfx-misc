@@ -83,7 +83,7 @@
 #define kPluginName "ShuffleOFX"
 #define kPluginGrouping "Channel"
 #define kPluginDescription "Rearrange channels from one or two inputs and/or convert to different bit depth or components. No colorspace conversion is done (mapping is linear, even for 8-bit and 16-bit types)."
-#define kPluginIdentifier "net.sf.openfx:ShufflePlugin"
+#define kPluginIdentifier "net.sf.openfx.ShufflePlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

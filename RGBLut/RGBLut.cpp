@@ -90,7 +90,7 @@
 #define kPluginName "RGBLutOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription "Apply a parametric lookup curve to each channel separately. The master curve is combined with the red, green and blue curves, but not with the alpha curve."
-#define kPluginIdentifier "net.sf.openfx:RGBLutPlugin"
+#define kPluginIdentifier "net.sf.openfx.RGBLutPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

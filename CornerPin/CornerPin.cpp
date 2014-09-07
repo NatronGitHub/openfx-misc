@@ -112,8 +112,8 @@
 "The resulting transform is a translation if 1 point is enabled, a " \
 "similarity if 2 are enabled, an affine transform if 3 are enabled, " \
 "and a homography if they are all enabled."
-#define kPluginIdentifier "net.sf.openfx:CornerPinPlugin"
-#define kPluginMaskedIdentifier "net.sf.openfx:CornerPinMaskedPlugin"
+#define kPluginIdentifier "net.sf.openfx.CornerPinPlugin"
+#define kPluginMaskedIdentifier "net.sf.openfx.CornerPinMaskedPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

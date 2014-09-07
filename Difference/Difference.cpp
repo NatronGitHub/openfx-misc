@@ -83,7 +83,7 @@
 #define kPluginName "DifferenceOFX"
 #define kPluginGrouping "Keyer"
 #define kPluginDescription "Produce a rough matte from the difference of two input images. A is the background without the subject (clean plate). B is the subject with the background. RGB is copied from B, the difference is output to alpha, after applying offset & gain."
-#define kPluginIdentifier "net.sf.openfx:DifferencePlugin"
+#define kPluginIdentifier "net.sf.openfx.DifferencePlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 

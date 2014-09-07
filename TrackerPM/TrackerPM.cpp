@@ -88,7 +88,7 @@
 "overtime make a track drift from its original pattern.\n"\
 "Canceling a tracking operation will not wipe all the data analysed so far. If you resume a previously canceled tracking, " \
 "the tracker will continue tracking, picking up the previous/next frame as reference. "
-#define kPluginIdentifier "net.sf.openfx:TrackerPM"
+#define kPluginIdentifier "net.sf.openfx.TrackerPM"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
