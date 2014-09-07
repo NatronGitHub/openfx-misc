@@ -224,8 +224,10 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
     if (getContext() != OFX::eContextFilter &&
         getContext() != OFX::eContextTransition &&
         maskClip_->isConnected()) {
+        bool maskInvert;
+        _maskInvert->getValueAtTime(args.time, maskInvert);
         processor.doMasking(true);
-        processor.setMaskImg(mask.get());
+        processor.setMaskImg(mask.get(), maskInvert);
     }
 
     // get the transition value
