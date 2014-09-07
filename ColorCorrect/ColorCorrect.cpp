@@ -268,7 +268,7 @@ public:
 
     void setSrcImg(const OFX::Image *v) {_srcImg = v;}
 
-    void setMaskImg(const OFX::Image *v) {_maskImg = v;}
+    void setMaskImg(const OFX::Image *v, bool maskInvert) {_maskImg = v; _maskInvert = maskInvert;}
 
     void doMasking(bool v) {_doMasking = v;}
 
@@ -278,8 +278,7 @@ public:
                                const ColorControlGroup& hightlights,
                                bool premult,
                                int premultChannel,
-                               double mix,
-                               bool maskInvert)
+                               double mix)
     {
         _masterValues = master;
         _shadowValues = shadow;
@@ -288,7 +287,6 @@ public:
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
-        _maskInvert = maskInvert;
     }
 
     void colorTransform(double *r, double *g, double *b)
@@ -539,8 +537,10 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
         }
     }
     if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+        bool maskInvert;
+        _maskInvert->getValueAtTime(args.time, maskInvert);
         processor.doMasking(true);
-        processor.setMaskImg(mask.get());
+        processor.setMaskImg(mask.get(), maskInvert);
     }
     
     processor.setDstImg(dst.get());
@@ -558,9 +558,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
     _premultChannel->getValueAtTime(args.time, premultChannel);
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    bool maskInvert;
-    _maskInvert->getValueAtTime(args.time, maskInvert);
-    processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, premult, premultChannel, mix, maskInvert);
+    processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, premult, premultChannel, mix);
     processor.process();
 }
 

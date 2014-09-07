@@ -153,7 +153,7 @@ public:
     
     void setSrcImg(const OFX::Image *v) {_srcImg = v;}
     
-    void setMaskImg(const OFX::Image *v) {_maskImg = v;}
+    void setMaskImg(const OFX::Image *v, bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
     
     void doMasking(bool v) {_doMasking = v;}
     
@@ -165,8 +165,7 @@ public:
                    bool clampWhite,
                    bool premult,
                    int premultChannel,
-                   double mix,
-                   bool maskInvert)
+                   double mix)
     {
         _matrix[0] = outputRed;
         _matrix[1] = outputGreen;
@@ -177,7 +176,6 @@ public:
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
-        _maskInvert = maskInvert;
     }
 
 private:
@@ -330,8 +328,10 @@ ColorMatrixPlugin::setupAndProcess(ColorMatrixProcessorBase &processor, const OF
     }
     std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
     if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+        bool maskInvert;
+        _maskInvert->getValueAtTime(args.time, maskInvert);
         processor.doMasking(true);
-        processor.setMaskImg(mask.get());
+        processor.setMaskImg(mask.get(), maskInvert);
     }
     
     // set the images
@@ -354,9 +354,7 @@ ColorMatrixPlugin::setupAndProcess(ColorMatrixProcessorBase &processor, const OF
     _premultChannel->getValueAtTime(args.time, premultChannel);
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    bool maskInvert;
-    _maskInvert->getValueAtTime(args.time, maskInvert);
-    processor.setValues(r, g, b, a, clampBlack, clampWhite, premult, premultChannel, mix, maskInvert);
+    processor.setValues(r, g, b, a, clampBlack, clampWhite, premult, premultChannel, mix);
  
     // Call the base class process member, this will call the derived templated process code
     processor.process();

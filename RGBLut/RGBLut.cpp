@@ -135,19 +135,17 @@ public:
     }
     void setSrcImg(const OFX::Image *v) {_srcImg = v;}
 
-    void setMaskImg(const OFX::Image *v) {_maskImg = v;}
+    void setMaskImg(const OFX::Image *v, bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
 
     void doMasking(bool v) {_doMasking = v;}
 
     void setValues(bool premult,
                    int premultChannel,
-                   double mix,
-                   bool maskInvert)
+                   double mix)
     {
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
-        _maskInvert = maskInvert;
     }
 
 };
@@ -423,8 +421,10 @@ RGBLutPlugin::setupAndProcess(RGBLutProcessorBase &processor,
     }
     std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
     if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+        bool maskInvert;
+        _maskInvert->getValueAtTime(args.time, maskInvert);
         processor.doMasking(true);
-        processor.setMaskImg(mask.get());
+        processor.setMaskImg(mask.get(), maskInvert);
     }
 
     if (src.get() && dst.get()) {
@@ -447,9 +447,7 @@ RGBLutPlugin::setupAndProcess(RGBLutProcessorBase &processor,
     _premultChannel->getValueAtTime(args.time, premultChannel);
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    bool maskInvert;
-    _maskInvert->getValueAtTime(args.time, maskInvert);
-    processor.setValues(premult, premultChannel, mix, maskInvert);
+    processor.setValues(premult, premultChannel, mix);
     processor.process();
 }
 

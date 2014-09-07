@@ -146,17 +146,19 @@ public:
     
     void setSrcImg(const OFX::Image *A, const OFX::Image *B) {_srcImgA = A; _srcImgB = B;}
     
-    void setMaskImg(const OFX::Image *v) {_maskImg = v;}
+    void setMaskImg(const OFX::Image *v, bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
     
     void doMasking(bool v) {_doMasking = v;}
 
-    void setValues(MergingFunctionEnum operation, int bboxChoice, bool alphaMasking, double mix, bool maskInvert)
+    void setValues(MergingFunctionEnum operation,
+                   int bboxChoice,
+                   bool alphaMasking,
+                   double mix)
     {
         _operation = operation;
         _bbox = bboxChoice;
         _alphaMasking = MergeImages2D::isMaskable(operation) ? alphaMasking : false;
         _mix = mix;
-        _maskInvert = maskInvert;
     }
     
 };
@@ -372,11 +374,14 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     
     // do we do masking
     if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+        bool maskInvert;
+        _maskInvert->getValueAtTime(args.time, maskInvert);
+
         // say we are masking
         processor.doMasking(true);
 
         // Set it in the processor
-        processor.setMaskImg(mask.get());
+        processor.setMaskImg(mask.get(), maskInvert);
     }
 
     int operation;
@@ -387,9 +392,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     _alphaMasking->getValueAtTime(args.time, alphaMasking);
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    bool maskInvert;
-    _maskInvert->getValueAtTime(args.time, maskInvert);
-    processor.setValues((MergingFunctionEnum)operation, bboxChoice, alphaMasking, mix, maskInvert);
+    processor.setValues((MergingFunctionEnum)operation, bboxChoice, alphaMasking, mix);
     processor.setDstImg(dst.get());
     processor.setSrcImg(srcA.get(),srcB.get());
     processor.setRenderWindow(args.renderWindow);
