@@ -430,7 +430,10 @@ PremultPlugin<isPremult>::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
 
     // do the rendering
-    assert(dstComponents == OFX::ePixelComponentRGBA);
+    if (dstComponents != OFX::ePixelComponentRGBA) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Host didn't take clip pixel components into account");
+        throwSuiteStatusException(kOfxStatErrImageFormat);
+    }
     switch (dstBitDepth) {
         case OFX::eBitDepthUByte : {
             ImagePremulter<unsigned char, 4, 255, isPremult> fred(*this);
@@ -494,6 +497,9 @@ PremultPlugin<isPremult>::getClipPreferences(OFX::ClipPreferencesSetter &clipPre
     if (premult == eInputChannelA && red && green && blue && !alpha) {
         clipPreferences.setOutputPremultiplication(isPremult ? eImagePreMultiplied : eImageUnPreMultiplied);
     }
+    
+    clipPreferences.setClipComponents(*srcClip_, OFX::ePixelComponentRGBA);
+    clipPreferences.setClipComponents(*dstClip_, OFX::ePixelComponentRGBA);
 }
 
 static std::string premultString(PreMultiplicationEnum e)
