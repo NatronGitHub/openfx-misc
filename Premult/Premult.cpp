@@ -430,10 +430,6 @@ PremultPlugin<isPremult>::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
 
     // do the rendering
-    if (dstComponents != OFX::ePixelComponentRGBA) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Host didn't take clip pixel components into account");
-        throwSuiteStatusException(kOfxStatErrImageFormat);
-    }
     switch (dstBitDepth) {
         case OFX::eBitDepthUByte : {
             ImagePremulter<unsigned char, 4, 255, isPremult> fred(*this);
@@ -497,9 +493,6 @@ PremultPlugin<isPremult>::getClipPreferences(OFX::ClipPreferencesSetter &clipPre
     if (premult == eInputChannelA && red && green && blue && !alpha) {
         clipPreferences.setOutputPremultiplication(isPremult ? eImagePreMultiplied : eImageUnPreMultiplied);
     }
-    
-    clipPreferences.setClipComponents(*srcClip_, OFX::ePixelComponentRGBA);
-    clipPreferences.setClipComponents(*dstClip_, OFX::ePixelComponentRGBA);
 }
 
 static std::string premultString(PreMultiplicationEnum e)
@@ -629,8 +622,8 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
-    srcClip->addSupportedComponent(ePixelComponentAlpha);
+    //srcClip->addSupportedComponent(ePixelComponentRGB);
+    //srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(true);
     srcClip->setIsMask(false);
@@ -638,8 +631,8 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
-    dstClip->addSupportedComponent(ePixelComponentAlpha);
+    //dstClip->addSupportedComponent(ePixelComponentRGB);
+    //dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(true);
 
     // make some pages and to things in
