@@ -382,6 +382,28 @@
 		1EFB4E2019461B76005932AF /* Difference.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFB4E1D19461B76005932AF /* Difference.cpp */; };
 		1EFB4E2519461B86005932AF /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFB4E2319461B86005932AF /* PluginRegistration.cpp */; };
 		1EFC1700180DCE6500AD7B86 /* RGBLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0C41E180DCAB500C25D1E /* RGBLut.cpp */; };
+		D707756519C1DF3200C55D6C /* net.sf.openfx.ConstantPlugin.png in Resources */ = {isa = PBXBuildFile; fileRef = D707756419C1DF3200C55D6C /* net.sf.openfx.ConstantPlugin.png */; };
+		D70775BC19C1E7D500C55D6C /* net.sf.openfx.ChromaKeyerPlugin.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775BB19C1E7D500C55D6C /* net.sf.openfx.ChromaKeyerPlugin.png */; };
+		D70775BE19C1E7E800C55D6C /* net.sf.openfx.ColorCorrectPlugin.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775BD19C1E7E800C55D6C /* net.sf.openfx.ColorCorrectPlugin.png */; };
+		D70775C019C1E80F00C55D6C /* net.sf.openfx.CornerPinMaskedPlugin.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775BF19C1E80F00C55D6C /* net.sf.openfx.CornerPinMaskedPlugin.png */; };
+		D70775C219C1E81300C55D6C /* net.sf.openfx.CornerPinPlugin.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775C119C1E81300C55D6C /* net.sf.openfx.CornerPinPlugin.png */; };
+		D70775C419C1E81F00C55D6C /* net.sf.openfx.CropPlugin.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775C319C1E81F00C55D6C /* net.sf.openfx.CropPlugin.png */; };
+		D70775C619C1E82900C55D6C /* net.sf.openfx.DifferencePlugin.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775C519C1E82900C55D6C /* net.sf.openfx.DifferencePlugin.png */; };
+		D70775C819C1E82F00C55D6C /* net.sf.openfx.DissolvePlugin.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775C719C1E82F00C55D6C /* net.sf.openfx.DissolvePlugin.png */; };
+		D70775CA19C1E83500C55D6C /* net.sf.openfx.GradePlugin.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775C919C1E83500C55D6C /* net.sf.openfx.GradePlugin.png */; };
+		D70775CC19C1E83C00C55D6C /* net.sf.openfx.Invert.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775CB19C1E83C00C55D6C /* net.sf.openfx.Invert.png */; };
+		D70775CE19C1E84500C55D6C /* net.sf.openfx.MergePlugin.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775CD19C1E84500C55D6C /* net.sf.openfx.MergePlugin.png */; };
+		D70775D119C1E85200C55D6C /* net.sf.openfx.Premult.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775CF19C1E85200C55D6C /* net.sf.openfx.Premult.png */; };
+		D70775D219C1E85200C55D6C /* net.sf.openfx.Unpremult.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775D019C1E85200C55D6C /* net.sf.openfx.Unpremult.png */; };
+		D70775D419C1E85900C55D6C /* net.sf.openfx.Retime.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775D319C1E85900C55D6C /* net.sf.openfx.Retime.png */; };
+		D70775D619C1E85F00C55D6C /* net.sf.openfx.RGBLutPlugin.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775D519C1E85F00C55D6C /* net.sf.openfx.RGBLutPlugin.png */; };
+		D70775D819C1E86400C55D6C /* net.sf.openfx.RotoPlugin.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775D719C1E86400C55D6C /* net.sf.openfx.RotoPlugin.png */; };
+		D70775DA19C1E86A00C55D6C /* net.sf.openfx.ShufflePlugin.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775D919C1E86A00C55D6C /* net.sf.openfx.ShufflePlugin.png */; };
+		D70775DC19C1E87100C55D6C /* net.sf.openfx.switchPlugin.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775DB19C1E87100C55D6C /* net.sf.openfx.switchPlugin.png */; };
+		D70775DE19C1E87600C55D6C /* net.sf.openfx.timeOffset.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775DD19C1E87600C55D6C /* net.sf.openfx.timeOffset.png */; };
+		D70775E019C1E87B00C55D6C /* net.sf.openfx.TrackerPM.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775DF19C1E87B00C55D6C /* net.sf.openfx.TrackerPM.png */; };
+		D70775E319C1E88100C55D6C /* net.sf.openfx.TransformMaskedPlugin.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775E119C1E88100C55D6C /* net.sf.openfx.TransformMaskedPlugin.png */; };
+		D70775E419C1E88100C55D6C /* net.sf.openfx.TransformPlugin.png in Resources */ = {isa = PBXBuildFile; fileRef = D70775E219C1E88100C55D6C /* net.sf.openfx.TransformPlugin.png */; };
 		D721EC06191120B30069DB1D /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		D721EC07191120B30069DB1D /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		D721EC08191120B30069DB1D /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -920,6 +942,28 @@
 		1EFB4E2119461B86005932AF /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EFB4E2219461B86005932AF /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EFB4E2319461B86005932AF /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		D707756419C1DF3200C55D6C /* net.sf.openfx.ConstantPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.ConstantPlugin.png; path = Constant/Resources/net.sf.openfx.ConstantPlugin.png; sourceTree = "<group>"; };
+		D70775BB19C1E7D500C55D6C /* net.sf.openfx.ChromaKeyerPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.ChromaKeyerPlugin.png; path = ChromaKeyer/Resources/net.sf.openfx.ChromaKeyerPlugin.png; sourceTree = "<group>"; };
+		D70775BD19C1E7E800C55D6C /* net.sf.openfx.ColorCorrectPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.ColorCorrectPlugin.png; path = ColorCorrect/Resources/net.sf.openfx.ColorCorrectPlugin.png; sourceTree = "<group>"; };
+		D70775BF19C1E80F00C55D6C /* net.sf.openfx.CornerPinMaskedPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.CornerPinMaskedPlugin.png; path = CornerPin/Resources/net.sf.openfx.CornerPinMaskedPlugin.png; sourceTree = "<group>"; };
+		D70775C119C1E81300C55D6C /* net.sf.openfx.CornerPinPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.CornerPinPlugin.png; path = CornerPin/Resources/net.sf.openfx.CornerPinPlugin.png; sourceTree = "<group>"; };
+		D70775C319C1E81F00C55D6C /* net.sf.openfx.CropPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.CropPlugin.png; path = Crop/Resources/net.sf.openfx.CropPlugin.png; sourceTree = "<group>"; };
+		D70775C519C1E82900C55D6C /* net.sf.openfx.DifferencePlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.DifferencePlugin.png; path = Difference/Resources/net.sf.openfx.DifferencePlugin.png; sourceTree = "<group>"; };
+		D70775C719C1E82F00C55D6C /* net.sf.openfx.DissolvePlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.DissolvePlugin.png; path = Dissolve/Resources/net.sf.openfx.DissolvePlugin.png; sourceTree = "<group>"; };
+		D70775C919C1E83500C55D6C /* net.sf.openfx.GradePlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.GradePlugin.png; path = Grade/Resources/net.sf.openfx.GradePlugin.png; sourceTree = "<group>"; };
+		D70775CB19C1E83C00C55D6C /* net.sf.openfx.Invert.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.Invert.png; path = Invert/Resources/net.sf.openfx.Invert.png; sourceTree = "<group>"; };
+		D70775CD19C1E84500C55D6C /* net.sf.openfx.MergePlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.MergePlugin.png; path = Merge/Resources/net.sf.openfx.MergePlugin.png; sourceTree = "<group>"; };
+		D70775CF19C1E85200C55D6C /* net.sf.openfx.Premult.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.Premult.png; path = Premult/Resources/net.sf.openfx.Premult.png; sourceTree = "<group>"; };
+		D70775D019C1E85200C55D6C /* net.sf.openfx.Unpremult.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.Unpremult.png; path = Premult/Resources/net.sf.openfx.Unpremult.png; sourceTree = "<group>"; };
+		D70775D319C1E85900C55D6C /* net.sf.openfx.Retime.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.Retime.png; path = Retime/Resources/net.sf.openfx.Retime.png; sourceTree = "<group>"; };
+		D70775D519C1E85F00C55D6C /* net.sf.openfx.RGBLutPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.RGBLutPlugin.png; path = RGBLut/Resources/net.sf.openfx.RGBLutPlugin.png; sourceTree = "<group>"; };
+		D70775D719C1E86400C55D6C /* net.sf.openfx.RotoPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.RotoPlugin.png; path = Roto/Resources/net.sf.openfx.RotoPlugin.png; sourceTree = "<group>"; };
+		D70775D919C1E86A00C55D6C /* net.sf.openfx.ShufflePlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.ShufflePlugin.png; path = Shuffle/Resources/net.sf.openfx.ShufflePlugin.png; sourceTree = "<group>"; };
+		D70775DB19C1E87100C55D6C /* net.sf.openfx.switchPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.switchPlugin.png; path = Switch/Resources/net.sf.openfx.switchPlugin.png; sourceTree = "<group>"; };
+		D70775DD19C1E87600C55D6C /* net.sf.openfx.timeOffset.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.timeOffset.png; path = TimeOffset/Resources/net.sf.openfx.timeOffset.png; sourceTree = "<group>"; };
+		D70775DF19C1E87B00C55D6C /* net.sf.openfx.TrackerPM.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.TrackerPM.png; path = TrackerPM/Resources/net.sf.openfx.TrackerPM.png; sourceTree = "<group>"; };
+		D70775E119C1E88100C55D6C /* net.sf.openfx.TransformMaskedPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.TransformMaskedPlugin.png; path = Transform/Resources/net.sf.openfx.TransformMaskedPlugin.png; sourceTree = "<group>"; };
+		D70775E219C1E88100C55D6C /* net.sf.openfx.TransformPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.openfx.TransformPlugin.png; path = Transform/Resources/net.sf.openfx.TransformPlugin.png; sourceTree = "<group>"; };
 		D721EBFD1911209B0069DB1D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D721EBFE1911209B0069DB1D /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D721EBFF1911209B0069DB1D /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
@@ -1417,6 +1461,28 @@
 		1E551EB817994D4000A4135C = {
 			isa = PBXGroup;
 			children = (
+				D70775E119C1E88100C55D6C /* net.sf.openfx.TransformMaskedPlugin.png */,
+				D70775E219C1E88100C55D6C /* net.sf.openfx.TransformPlugin.png */,
+				D70775DF19C1E87B00C55D6C /* net.sf.openfx.TrackerPM.png */,
+				D70775DD19C1E87600C55D6C /* net.sf.openfx.timeOffset.png */,
+				D70775DB19C1E87100C55D6C /* net.sf.openfx.switchPlugin.png */,
+				D70775D919C1E86A00C55D6C /* net.sf.openfx.ShufflePlugin.png */,
+				D70775D719C1E86400C55D6C /* net.sf.openfx.RotoPlugin.png */,
+				D70775D519C1E85F00C55D6C /* net.sf.openfx.RGBLutPlugin.png */,
+				D70775D319C1E85900C55D6C /* net.sf.openfx.Retime.png */,
+				D70775CF19C1E85200C55D6C /* net.sf.openfx.Premult.png */,
+				D70775D019C1E85200C55D6C /* net.sf.openfx.Unpremult.png */,
+				D70775CD19C1E84500C55D6C /* net.sf.openfx.MergePlugin.png */,
+				D70775CB19C1E83C00C55D6C /* net.sf.openfx.Invert.png */,
+				D70775C919C1E83500C55D6C /* net.sf.openfx.GradePlugin.png */,
+				D70775C719C1E82F00C55D6C /* net.sf.openfx.DissolvePlugin.png */,
+				D70775C519C1E82900C55D6C /* net.sf.openfx.DifferencePlugin.png */,
+				D70775C319C1E81F00C55D6C /* net.sf.openfx.CropPlugin.png */,
+				D70775C119C1E81300C55D6C /* net.sf.openfx.CornerPinPlugin.png */,
+				D70775BF19C1E80F00C55D6C /* net.sf.openfx.CornerPinMaskedPlugin.png */,
+				D70775BD19C1E7E800C55D6C /* net.sf.openfx.ColorCorrectPlugin.png */,
+				D70775BB19C1E7D500C55D6C /* net.sf.openfx.ChromaKeyerPlugin.png */,
+				D707756419C1DF3200C55D6C /* net.sf.openfx.ConstantPlugin.png */,
 				1E3E3D30179960F9005F2132 /* Headers */,
 				1E551ED217994DEF00A4135C /* Sources */,
 				1E551EDA17994E8100A4135C /* Frameworks */,
@@ -2058,6 +2124,7 @@
 			buildPhases = (
 				1E8B5D4B18B76A7500C31FDC /* Sources */,
 				1E8B5D5618B76A7500C31FDC /* Frameworks */,
+				D707756319C1DED500C55D6C /* Resources */,
 			);
 			buildRules = (
 			);
@@ -2431,6 +2498,38 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D707756319C1DED500C55D6C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D70775BE19C1E7E800C55D6C /* net.sf.openfx.ColorCorrectPlugin.png in Resources */,
+				D70775C819C1E82F00C55D6C /* net.sf.openfx.DissolvePlugin.png in Resources */,
+				D70775CA19C1E83500C55D6C /* net.sf.openfx.GradePlugin.png in Resources */,
+				D70775D119C1E85200C55D6C /* net.sf.openfx.Premult.png in Resources */,
+				D70775D219C1E85200C55D6C /* net.sf.openfx.Unpremult.png in Resources */,
+				D70775C619C1E82900C55D6C /* net.sf.openfx.DifferencePlugin.png in Resources */,
+				D70775C219C1E81300C55D6C /* net.sf.openfx.CornerPinPlugin.png in Resources */,
+				D70775D619C1E85F00C55D6C /* net.sf.openfx.RGBLutPlugin.png in Resources */,
+				D70775DE19C1E87600C55D6C /* net.sf.openfx.timeOffset.png in Resources */,
+				D70775D819C1E86400C55D6C /* net.sf.openfx.RotoPlugin.png in Resources */,
+				D70775D419C1E85900C55D6C /* net.sf.openfx.Retime.png in Resources */,
+				D70775DC19C1E87100C55D6C /* net.sf.openfx.switchPlugin.png in Resources */,
+				D70775E019C1E87B00C55D6C /* net.sf.openfx.TrackerPM.png in Resources */,
+				D70775E319C1E88100C55D6C /* net.sf.openfx.TransformMaskedPlugin.png in Resources */,
+				D70775E419C1E88100C55D6C /* net.sf.openfx.TransformPlugin.png in Resources */,
+				D70775DA19C1E86A00C55D6C /* net.sf.openfx.ShufflePlugin.png in Resources */,
+				D70775CC19C1E83C00C55D6C /* net.sf.openfx.Invert.png in Resources */,
+				D70775CE19C1E84500C55D6C /* net.sf.openfx.MergePlugin.png in Resources */,
+				D70775C419C1E81F00C55D6C /* net.sf.openfx.CropPlugin.png in Resources */,
+				D70775C019C1E80F00C55D6C /* net.sf.openfx.CornerPinMaskedPlugin.png in Resources */,
+				D70775BC19C1E7D500C55D6C /* net.sf.openfx.ChromaKeyerPlugin.png in Resources */,
+				D707756519C1DF3200C55D6C /* net.sf.openfx.ConstantPlugin.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		1E0831F5199FEB1F00A819A5 /* Sources */ = {
