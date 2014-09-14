@@ -99,7 +99,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OFX_EXTENSIONS_VEGAS;OFX_EXTENSIONS_TUTTLE;OFX_EXTENSIONS_NUKE;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;WIN32;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\RGBLut;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\RGBLut;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\Test;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -109,6 +109,30 @@
       <ImportLibrary>$(OutDir)$(ProjectName).lib</ImportLibrary>
       <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(SolutionDir)..\ChromaKeyer\Resources\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ColorCorrect\Resources\net.sf.openfx.ColorCorrectPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Constant\Resources\net.sf.openfx.ConstantPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CornerPin\Resources\net.sf.openfx.CornerPinPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CornerPin\Resources\net.sf.openfx.CornerPinMaskedPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Crop\Resources\net.sf.openfx.CropPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Difference\Resources\net.sf.openfx.DifferencePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Dissolve\Resources\net.sf.openfx.DissolvePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Grade\Resources\net.sf.openfx.GradePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Invert\Resources\net.sf.openfx.Invert.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Merge\Resources\net.sf.openfx.MergePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Premult\Resources\net.sf.openfx.Premult.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Premult\Resources\net.sf.openfx.Unpremult.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Retime\Resources\net.sf.openfx.Retime.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\RGBLut\Resources\net.sf.openfx.RGBLutPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Roto\Resources\net.sf.openfx.RotoPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Shuffle\Resources\net.sf.openfx.ShufflePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Switch\Resources\net.sf.openfx.switchPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\TimeOffset\Resources\net.sf.openfx.timeOffset.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\TrackerPM\Resources\net.sf.openfx.TrackerPM.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Transform\Resources\net.sf.openfx.TransformPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Transform\Resources\net.sf.openfx.TransformMaskedPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -127,6 +151,9 @@
       <ImportLibrary>$(OutDir)$(ProjectName).lib</ImportLibrary>
       <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(SolutionDir)..\ChromaKeyer\Resources\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Anaglyph\Anaglyph.cpp" />
@@ -139,6 +166,7 @@
     <ClCompile Include="..\Crop\Crop.cpp" />
     <ClCompile Include="..\Deinterlace\Deinterlace.cpp" />
     <ClCompile Include="..\Difference\Difference.cpp" />
+    <ClCompile Include="..\Dissolve\Dissolve.cpp" />
     <ClCompile Include="..\Grade\Grade.cpp" />
     <ClCompile Include="..\Invert\Invert.cpp" />
     <ClCompile Include="..\JoinViews\JoinViews.cpp" />
@@ -185,6 +213,7 @@
     <ClInclude Include="..\Crop\Crop.h" />
     <ClInclude Include="..\Deinterlace\Deinterlace.h" />
     <ClInclude Include="..\Difference\Difference.h" />
+    <ClInclude Include="..\Dissolve\Dissolve.h" />
     <ClInclude Include="..\Grade\Grade.h" />
     <ClInclude Include="..\Invert\Invert.h" />
     <ClInclude Include="..\JoinViews\JoinViews.h" />
