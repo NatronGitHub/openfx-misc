@@ -151,8 +151,8 @@ RESOURCES = ../ChromaKeyer/net.sf.openfx.ChromaKeyerPlugin.png \
 ../RGBLut/net.sf.openfx.RGBLutPlugin.png \
 ../Roto/net.sf.openfx.RotoPlugin.png \
 ../Shuffle/net.sf.openfx.ShufflePlugin.png \
-../Switch/net.sf.openfx.SwitchPlugin.png \
-../TimeOffset/net.sf.openfx.TimeOffset.png \
+../Switch/net.sf.openfx.switchPlugin.png \
+../TimeOffset/net.sf.openfx.timeOffset.png \
 ../TrackerPM/net.sf.openfx.TrackerPM.png \
 ../Transform/net.sf.openfx.TransformPlugin.png \
 ../Transform/net.sf.openfx.TransformMaskedPlugin.png \
