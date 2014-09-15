@@ -39,6 +39,32 @@ randomGenerator.o \
 PluginRegistrationCombined.o
 
 PLUGINNAME = Misc
+
+# ls */*png|sed -e 's!^!../!' -e 's!$! \\!'
+RESOURCES = \
+../ChromaKeyer/net.sf.openfx.ChromaKeyerPlugin.png \
+../ColorCorrect/net.sf.openfx.ColorCorrectPlugin.png \
+../Constant/net.sf.openfx.ConstantPlugin.png \
+../CornerPin/net.sf.openfx.CornerPinMaskedPlugin.png \
+../CornerPin/net.sf.openfx.CornerPinPlugin.png \
+../Crop/net.sf.openfx.CropPlugin.png \
+../Difference/net.sf.openfx.DifferencePlugin.png \
+../Dissolve/net.sf.openfx.DissolvePlugin.png \
+../Grade/net.sf.openfx.GradePlugin.png \
+../Invert/net.sf.openfx.Invert.png \
+../Merge/net.sf.openfx.MergePlugin.png \
+../Premult/net.sf.openfx.Premult.png \
+../Premult/net.sf.openfx.Unpremult.png \
+../RGBLut/net.sf.openfx.RGBLutPlugin.png \
+../Retime/net.sf.openfx.Retime.png \
+../Roto/net.sf.openfx.RotoPlugin.png \
+../Shuffle/net.sf.openfx.ShufflePlugin.png \
+../Switch/net.sf.openfx.switchPlugin.png \
+../TimeOffset/net.sf.openfx.timeOffset.png \
+../TrackerPM/net.sf.openfx.TrackerPM.png \
+../Transform/net.sf.openfx.TransformMaskedPlugin.png \
+../Transform/net.sf.openfx.TransformPlugin.png \
+
 VPATH += \
 ../Anaglyph \
 ../ChromaKeyer \

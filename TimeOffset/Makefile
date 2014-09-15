@@ -1,6 +1,6 @@
 PLUGINOBJECTS = TimeOffset.o PluginRegistration.o
 PLUGINNAME = TimeOffset
-PATHTOROOT = ../../
+RESOURCES = net.sf.openfx.timeOffset.png
 
 include ../Makefile.master
 

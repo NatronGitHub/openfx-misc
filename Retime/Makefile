@@ -1,6 +1,6 @@
 PLUGINOBJECTS = Retime.o PluginRegistration.o
 PLUGINNAME = Retime
-PATHTOROOT = ../../
+RESOURCES = net.sf.openfx.Retime.png
 
 include ../Makefile.master
 
