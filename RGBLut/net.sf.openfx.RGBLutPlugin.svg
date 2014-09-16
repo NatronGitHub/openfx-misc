@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- Generator: Adobe Illustrator 16.0.3, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="512px"
+	 height="512px" viewBox="0 0 512 512" style="enable-background:new 0 0 512 512;" xml:space="preserve">
+<g id="LUT">
+	
+		<line style="fill:none;stroke:#666666;stroke-width:30;stroke-linejoin:round;stroke-miterlimit:10;" x1="12" y1="256" x2="500" y2="256"/>
+	
+		<line style="fill:none;stroke:#666666;stroke-width:30;stroke-linejoin:round;stroke-miterlimit:10;" x1="256" y1="12" x2="256" y2="498"/>
+	<path style="fill:none;stroke:#0000FF;stroke-width:30;stroke-linecap:round;stroke-miterlimit:10;" d="M25.102,488.579
+		c0,0,211.49-3.089,307.485-109.689c95.995-106.6,151.492-353.788,151.492-353.788"/>
+	<path style="fill:none;stroke:#00FF00;stroke-width:30;stroke-linecap:round;stroke-miterlimit:10;" d="M25.102,488.579
+		c0,0,112.194,3.635,175.151-62.866c59.52-62.87,39.594-259.632,119.089-337.628c77.981-76.511,164.736-62.982,164.736-62.982"/>
+	
+		<line style="fill:none;stroke:#FF0000;stroke-width:30;stroke-linecap:round;stroke-miterlimit:10;" x1="484.079" y1="25.102" x2="25.102" y2="488.579"/>
+	<g>
+		<path style="fill:#B3B3B3;" d="M492,20v472H20V20H492 M512,0H0v512h512V0L512,0z"/>
+	</g>
+</g>
+<g id="Layer_1">
+</g>
+</svg>
