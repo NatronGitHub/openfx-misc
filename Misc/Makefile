@@ -64,6 +64,28 @@ RESOURCES = \
 ../TrackerPM/net.sf.openfx.TrackerPM.png \
 ../Transform/net.sf.openfx.TransformMaskedPlugin.png \
 ../Transform/net.sf.openfx.TransformPlugin.png \
+../ChromaKeyer/net.sf.openfx.ChromaKeyerPlugin.svg \
+../ColorCorrect/net.sf.openfx.ColorCorrectPlugin.svg \
+../Constant/net.sf.openfx.ConstantPlugin.svg \
+../CornerPin/net.sf.openfx.CornerPinMaskedPlugin.svg \
+../CornerPin/net.sf.openfx.CornerPinPlugin.svg \
+../Crop/net.sf.openfx.CropPlugin.svg \
+../Difference/net.sf.openfx.DifferencePlugin.svg \
+../Dissolve/net.sf.openfx.DissolvePlugin.svg \
+../Grade/net.sf.openfx.GradePlugin.svg \
+../Invert/net.sf.openfx.Invert.svg \
+../Merge/net.sf.openfx.MergePlugin.svg \
+../Premult/net.sf.openfx.Premult.svg \
+../Premult/net.sf.openfx.Unpremult.svg \
+../RGBLut/net.sf.openfx.RGBLutPlugin.svg \
+../Retime/net.sf.openfx.Retime.svg \
+../Roto/net.sf.openfx.RotoPlugin.svg \
+../Shuffle/net.sf.openfx.ShufflePlugin.svg \
+../Switch/net.sf.openfx.switchPlugin.svg \
+../TimeOffset/net.sf.openfx.timeOffset.svg \
+../TrackerPM/net.sf.openfx.TrackerPM.svg \
+../Transform/net.sf.openfx.TransformMaskedPlugin.svg \
+../Transform/net.sf.openfx.TransformPlugin.svg \
 
 VPATH += \
 ../Anaglyph \
