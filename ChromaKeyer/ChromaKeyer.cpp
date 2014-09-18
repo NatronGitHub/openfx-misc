@@ -856,6 +856,9 @@ ChromaKeyerPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreference
             clipPreferences.setOutputPremultiplication(eImagePreMultiplied);
             break;
     }
+    
+    // Output is RGBA
+    clipPreferences.setClipComponents(*dstClip_, ePixelComponentRGBA);
 }
 
 mDeclarePluginFactory(ChromaKeyerPluginFactory, {}, {});
