@@ -362,10 +362,10 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     }
 
     bool red, green, blue, alpha;
-    _paramProcessR->getValueAtTime(args.time, red);
-    _paramProcessG->getValueAtTime(args.time, green);
-    _paramProcessB->getValueAtTime(args.time, blue);
-    _paramProcessA->getValueAtTime(args.time, alpha);
+    _paramProcessR->getValue(red);
+    _paramProcessG->getValue(green);
+    _paramProcessB->getValue(blue);
+    _paramProcessA->getValue(alpha);
     processor.setValues(red, green, blue, alpha);
 
     // set the images
@@ -516,16 +516,16 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, do
     }
 
     bool alpha;
-    _paramProcessA->getValueAtTime(args.time, alpha);
+    _paramProcessA->getValue(alpha);
 
     if (srcComponents == ePixelComponentAlpha && !alpha) {
         identityClip = srcClip_;
         return true;
     }
     bool red, green, blue;
-    _paramProcessR->getValueAtTime(args.time, red);
-    _paramProcessG->getValueAtTime(args.time, green);
-    _paramProcessB->getValueAtTime(args.time, blue);
+    _paramProcessR->getValue(red);
+    _paramProcessG->getValue(green);
+    _paramProcessB->getValue(blue);
     if (srcComponents == ePixelComponentRGBA && !red && !green && !blue && !alpha) {
         identityClip = srcClip_;
         return true;
@@ -626,7 +626,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
         param->setAnimates(false);
         param->appendOption(kParamOutputComponentsOptionAlpha);
         param->appendOption(kParamOutputComponentsOptionRGBA);
-        param->setDefault(0);
+        param->setDefault(1);
         desc.addClipPreferencesSlaveParam(*param);
         page->addChild(*param);
     }
@@ -636,7 +636,8 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
         param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
-        param->setDefault(true);
+        param->setAnimates(false);
+        param->setDefault(false);
         param->setLayoutHint(eLayoutHintNoNewLine);
         page->addChild(*param);
     }
@@ -646,7 +647,8 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
         param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
-        param->setDefault(true);
+        param->setAnimates(false);
+        param->setDefault(false);
         param->setLayoutHint(eLayoutHintNoNewLine);
         page->addChild(*param);
     }
@@ -656,7 +658,8 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
         param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
-        param->setDefault(true);
+        param->setAnimates(false);
+        param->setDefault(false);
         param->setLayoutHint(eLayoutHintNoNewLine);
         page->addChild(*param);
     }
@@ -666,6 +669,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
         param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
         param->setHint(kParamProcessAHint);
+        param->setAnimates(false);
         param->setDefault(true);
         page->addChild(*param);
     }
