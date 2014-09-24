@@ -223,8 +223,7 @@ private:
     {
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         assert(_dstImg);
-        float unpPix[4];
-        float tmpPix[4];
+        float tmpPix[nComponents];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -234,11 +233,25 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++)  {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
-                for (int c = 0; c < 4; ++c) {
-                    tmpPix[c] = interpolate(c, unpPix[c]) * maxValue;
+                if (nComponents == 1 || nComponents == 3) {
+                    // RGB and Alpha: don't premult/unpremult, just apply curves
+                    // normalize/denormalize properly
+                    for (int c = 0; c < nComponents; ++c) {
+                        tmpPix[c] = interpolate(c, srcPix[c] / (double)maxValue) * maxValue;
+                    }
+                    // ofxsMaskMix expects denormalized input
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                } else {
+                    //assert(nComponents == 4);
+                    float unpPix[nComponents];
+                    ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
+                    // ofxsUnPremult outputs normalized data
+                    for (int c = 0; c < nComponents; ++c) {
+                        tmpPix[c] = interpolate(c, unpPix[c]);
+                    }
+                    // ofxsPremultMaskMixPix expects normalized input
+                    ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 }
-                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
             }
