@@ -88,11 +88,17 @@
 
 #define kPluginPremultName "PremultOFX"
 #define kPluginPremultGrouping "Merge"
-#define kPluginPremultDescription "Multiply the selected channels by alpha (or another channel)"
+#define kPluginPremultDescription \
+"Multiply the selected channels by alpha (or another channel).\n\n" \
+"If no channel is selected, or the premultChannel is set to None, the " \
+"image data is left untouched, but its premultiplication state is set to PreMultiplied."
 #define kPluginPremultIdentifier "net.sf.openfx.Premult"
 #define kPluginUnpremultName "UnpremultOFX"
 #define kPluginUnpremultGrouping "Merge"
-#define kPluginUnpremultDescription "Divide the selected channels by alpha (or another channel)"
+#define kPluginUnpremultDescription \
+"Divide the selected channels by alpha (or another channel)\n\n" \
+"If no channel is selected, or the premultChannel is set to None, the " \
+"image data is left untouched, but its premultiplication state is set to UnPreMultiplied."
 #define kPluginUnpremultIdentifier "net.sf.openfx.Unpremult"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -457,6 +463,17 @@ template<bool isPremult>
 bool
 PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
+    if (isPremult) {
+        if (srcClip_->getPreMultiplication() != eImagePreMultiplied) {
+            // input is UnPremult, output is Premult: no identity
+            return false;
+        }
+    } else {
+        if (srcClip_->getPreMultiplication() != eImageUnPreMultiplied) {
+            // input is Premult, output is UnPremult: no identity
+            return false;
+        }
+    }
     bool red, green, blue, alpha;
     int premult_i;
     _paramProcessR->getValueAtTime(args.time, red);
@@ -467,9 +484,11 @@ PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args, Clip * &id
     InputChannelEnum premult = InputChannelEnum(premult_i);
 
     if (premult == eInputChannelNone || (!red && !green && !blue && !alpha)) {
+        // no processing: identity
         identityClip = srcClip_;
         return true;
     } else {
+        // data is changed: no identity
         return false;
     }
 }
@@ -480,6 +499,7 @@ template<bool isPremult>
 void
 PremultPlugin<isPremult>::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
+#if 0
     // set the premultiplication of dstClip_
     bool red, green, blue, alpha;
     int premult_i;
@@ -493,6 +513,11 @@ PremultPlugin<isPremult>::getClipPreferences(OFX::ClipPreferencesSetter &clipPre
     if (premult == eInputChannelA && red && green && blue && !alpha) {
         clipPreferences.setOutputPremultiplication(isPremult ? eImagePreMultiplied : eImageUnPreMultiplied);
     }
+#else
+    // Whatever the input is or the processed channels are, set the output premiltiplication.
+    // This allows setting the output premult without changing the image data.
+    clipPreferences.setOutputPremultiplication(isPremult ? eImagePreMultiplied : eImageUnPreMultiplied);
+#endif
 }
 
 static std::string premultString(PreMultiplicationEnum e)
