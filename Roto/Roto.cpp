@@ -504,6 +504,14 @@ RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
     clipPreferences.setClipComponents(*rotoClip_, outputComponents);
     clipPreferences.setClipComponents(*dstClip_, outputComponents);
+
+    PreMultiplicationEnum srcPremult = srcClip_->getPreMultiplication();
+    bool alpha;
+    _paramProcessA->getValue(alpha);
+    if (srcPremult == eImageOpaque && alpha) {
+        // we're changing alpha, the image becomes UnPremultiplied
+        clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
+    }
 }
 
 bool
