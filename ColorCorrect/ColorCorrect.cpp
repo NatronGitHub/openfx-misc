@@ -107,6 +107,14 @@ static const std::string kParamOffset = std::string("Offset");
 #define kParamColorCorrectToneRangesDim0 "Shadow"
 #define kParamColorCorrectToneRangesDim1 "Highlight"
 
+#define kParamClampBlack "clampBlack"
+#define kParamClampBlackLabel "Clamp Black"
+#define kParamClampBlackHint "All colors below 0 on output are set to 0."
+
+#define kParamClampWhite "clampWhite"
+#define kParamClampWhiteLabel "Clamp White"
+#define kParamClampWhiteHint "All colors above 1 on output are set to 1."
+
 #define LUT_MAX_PRECISION 100
 
 // Rec.709 luminance:
@@ -149,6 +157,29 @@ namespace {
         {
         }
 
+        void applySMH(const ColorControlGroup& sValues,
+                      double s_scale,
+                      const ColorControlGroup& mValues,
+                      double m_scale,
+                      const ColorControlGroup& hValues,
+                      double h_scale,
+                      const ColorControlGroup& masterValues)
+        {
+            RGBPixel s = *this;
+            RGBPixel m = *this;
+            RGBPixel h = *this;
+            s.applyGroup(sValues);
+            m.applyGroup(mValues);
+            h.applyGroup(hValues);
+
+            r = s.r * s_scale + m.r * m_scale + h.r * h_scale;
+            g = s.g * s_scale + m.g * m_scale + h.g * h_scale;
+            b = s.b * s_scale + m.b * m_scale + h.b * h_scale;
+
+            applyGroup(masterValues);
+        }
+
+    private:
         void applySaturation(const ColorControlValues &c)
         {
             double tmp_r ,tmp_g,tmp_b ;
@@ -203,27 +234,6 @@ namespace {
             applyOffset(group.offset);
         }
 
-        void applySMH(const ColorControlGroup& sValues,
-                      double s_scale,
-                      const ColorControlGroup& mValues,
-                      double m_scale,
-                      const ColorControlGroup& hValues,
-                      double h_scale,
-                      const ColorControlGroup& masterValues)
-        {
-            RGBPixel s = *this;
-            RGBPixel m = *this;
-            RGBPixel h = *this;
-            s.applyGroup(sValues);
-            m.applyGroup(mValues);
-            h.applyGroup(hValues);
-
-            r = s.r * s_scale + m.r * m_scale + h.r * h_scale;
-            g = s.g * s_scale + m.g * m_scale + h.g * h_scale;
-            b = s.b * s_scale + m.b * m_scale + h.b * h_scale;
-
-            applyGroup(masterValues);
-        }
     };
 }
 
@@ -243,6 +253,8 @@ public:
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
+    , _clampBlack(true)
+    , _clampWhite(true)
     , _premult(false)
     , _premultChannel(3)
     , _doMasking(false)
@@ -276,6 +288,8 @@ public:
                                const ColorControlGroup& shadow,
                                const ColorControlGroup& midtone,
                                const ColorControlGroup& hightlights,
+                               bool clampBlack,
+                               bool clampWhite,
                                bool premult,
                                int premultChannel,
                                double mix)
@@ -284,6 +298,8 @@ public:
         _shadowValues = shadow;
         _midtoneValues = midtone;
         _highlightsValues = hightlights;
+        _clampBlack = clampBlack;
+        _clampWhite = clampWhite;
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
@@ -301,12 +317,22 @@ public:
                    _midtoneValues, m_scale,
                    _highlightsValues, h_scale,
                    _masterValues);
-        *r = p.r;
-        *g = p.g;
-        *b = p.b;
+        *r = clamp(p.r);
+        *g = clamp(p.g);
+        *b = clamp(p.b);
     }
 
 private:
+    double clamp(double comp)
+    {
+        if (_clampBlack && comp < 0.) {
+            comp = 0.;
+        } else  if (_clampWhite && comp > 1.0) {
+            comp = 1.0;
+        }
+        return comp;
+    }
+
     float interpolate(int curve, double value)
     {
         if (value < 0.) {
@@ -328,6 +354,8 @@ private:
     ColorControlGroup _shadowValues;
     ColorControlGroup _midtoneValues;
     ColorControlGroup _highlightsValues;
+    bool _clampBlack;
+    bool _clampWhite;
 
     double _lookupTable[2][LUT_MAX_PRECISION + 1];
 };
@@ -415,6 +443,9 @@ public:
         fetchColorControlGroup(kGroupHighlights, &_highlightsParamsGroup);
         _rangesParam = fetchParametricParam(kParamColorCorrectToneRanges);
         assert(_rangesParam);
+        _clampBlack = fetchBooleanParam(kParamClampBlack);
+        _clampWhite = fetchBooleanParam(kParamClampWhite);
+        assert(_clampBlack && _clampWhite);
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
@@ -474,6 +505,8 @@ private:
     ColorControlParamGroup _midtonesParamsGroup;
     ColorControlParamGroup _highlightsParamsGroup;
     OFX::ParametricParam* _rangesParam;
+    OFX::BooleanParam* _clampBlack;
+    OFX::BooleanParam* _clampWhite;
     OFX::BooleanParam* _premult;
     OFX::ChoiceParam* _premultChannel;
     OFX::DoubleParam* _mix;
@@ -552,13 +585,16 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
     getColorCorrectGroupValues(args.time, &shadowValues,    eGroupShadow);
     getColorCorrectGroupValues(args.time, &midtoneValues,   eGroupMidtone);
     getColorCorrectGroupValues(args.time, &highlightValues, eGroupHighlight);
+    bool clampBlack,clampWhite;
+    _clampBlack->getValueAtTime(args.time, clampBlack);
+    _clampWhite->getValueAtTime(args.time, clampWhite);
     bool premult;
     int premultChannel;
     _premult->getValueAtTime(args.time, premult);
     _premultChannel->getValueAtTime(args.time, premultChannel);
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, premult, premultChannel, mix);
+    processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, clampBlack, clampWhite, premult, premultChannel, mix);
     processor.process();
 }
 
@@ -668,6 +704,14 @@ ColorCorrectPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identity
         identityClip = srcClip_;
         return true;
     }
+
+    bool clampBlack,clampWhite;
+    _clampBlack->getValueAtTime(args.time, clampBlack);
+    _clampWhite->getValueAtTime(args.time, clampWhite);
+    if (clampBlack || clampWhite) {
+        return false;
+    }
+
     ColorControlGroup masterValues,shadowValues,midtoneValues,highlightValues;
     getColorCorrectGroupValues(args.time, &masterValues,    eGroupMaster);
     getColorCorrectGroupValues(args.time, &shadowValues,    eGroupShadow);
@@ -840,6 +884,23 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->addControlPoint(1, 0.0, 0.5, 0.0,false);
         param->addControlPoint(1, 0.0, 1.0, 1.0,false);
         ranges->addChild(*param);
+    }
+
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
+        param->setLabels(kParamClampBlackLabel, kParamClampBlackLabel, kParamClampBlackLabel);
+        param->setHint(kParamClampBlackHint);
+        param->setDefault(true);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampWhite);
+        param->setLabels(kParamClampWhiteLabel, kParamClampWhiteLabel, kParamClampWhiteLabel);
+        param->setHint(kParamClampWhiteHint);
+        param->setDefault(true);
+        param->setAnimates(true);
+        page->addChild(*param);
     }
 
     ofxsPremultDescribeParams(desc, page);
