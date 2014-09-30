@@ -42,7 +42,7 @@ HAVE_CIMG ?= 0
 # Build CImg-based plugins separately.
 ifneq ($(HAVE_CIMG),0)
 # add plugins which may use CImg here
-#  SUBDIRS += GMIC
+  SUBDIRS += CImg
 endif
 
 all: subdirs
