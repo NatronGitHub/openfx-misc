@@ -460,9 +460,13 @@ CopyRectanglePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments 
     // intersect the crop rectangle with args.regionOfInterest
     MergeImages2D::rectIntersection(rectangle, args.regionOfInterest, &rectangle);
 
-    double mix;
-    _mix->getValueAtTime(args.time, mix);
-    if (mix != 1.) {
+    double mix = 1.;
+    const bool doMasking = getContext() != OFX::eContextFilter && maskClip_->isConnected();
+    if (doMasking) {
+        _mix->getValueAtTime(args.time, mix);
+    }
+    if (doMasking && mix != 1.) {
+        // for masking or mixing, we also need the source image.
         // compute the bounding box with the default ROI
         MergeImages2D::rectBoundingBox(rectangle, args.regionOfInterest, &rectangle);
     }
