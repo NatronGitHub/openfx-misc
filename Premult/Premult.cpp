@@ -433,7 +433,6 @@ PremultPlugin<isPremult>::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
 
     // do the rendering
     switch (dstBitDepth) {
@@ -638,6 +637,7 @@ void PremultPluginFactory<isPremult>::describe(OFX::ImageEffectDescriptor &desc)
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
+    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
 }
 
 template<bool isPremult>

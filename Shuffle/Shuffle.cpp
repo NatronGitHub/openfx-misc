@@ -943,6 +943,7 @@ void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(false);
     // say we can support multiple pixel depths on in and out
     desc.setSupportsMultipleClipDepths(true);
+    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
 }
 
 static void

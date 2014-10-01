@@ -358,6 +358,7 @@ void NoisePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
     desc.setRenderTwiceAlways(false);
+    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
 }
 
 void NoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)

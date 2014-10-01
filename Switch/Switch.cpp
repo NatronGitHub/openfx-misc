@@ -227,6 +227,7 @@ void SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // It is only possible for transforms which can be represented as a 3x3 matrix.
     desc.setCanTransform(true);
 #endif
+    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
 }
 
 void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)

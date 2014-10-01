@@ -553,6 +553,7 @@ GradePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
+    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
     
 }
 

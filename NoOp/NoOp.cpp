@@ -536,6 +536,7 @@ void NoOpPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipDepths(true);
     desc.setSupportsMultipleClipPARs(true);
+    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
 }
 
 void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)

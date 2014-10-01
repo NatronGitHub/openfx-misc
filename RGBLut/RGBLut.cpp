@@ -546,7 +546,7 @@ RGBLutPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
-
+    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
     // returning an error here crashes Nuke
     //if (!OFX::getImageEffectHostDescription()->supportsParametricParameter) {
     //  throwHostMissingSuiteException(kOfxParametricParameterSuite);

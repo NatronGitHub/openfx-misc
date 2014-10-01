@@ -843,6 +843,7 @@ void TrackerPMPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
     // rendertwicealways must be set to true if the tracker cannot handle interlaced content (most don't)
     desc.setRenderTwiceAlways(true);
+    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
     desc.setOverlayInteractDescriptor(new TrackerRegionOverlayDescriptor);
 }
 

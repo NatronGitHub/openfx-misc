@@ -265,7 +265,7 @@ void TimeOffsetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setTemporalClipAccess(true); // say we will be doing random time access on clips
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
-
+    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
     // we can't be used on hosts that don't perfrom temporal clip access
     if (!gHostDescription.temporalClipAccess) {
         throw OFX::Exception::HostInadequate("Need random temporal image access to work");
