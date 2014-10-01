@@ -212,9 +212,9 @@ template <class PIX, int nComponents, int maxValue, TrackerScoreEnum scoreType>
 class TrackerPMProcessor : public TrackerPMProcessorBase
 {
 protected:
-    ImageMemory *_patternImg;
+    std::auto_ptr<OFX::ImageMemory> _patternImg;
     PIX *_patternData;
-    ImageMemory *_weightImg;
+    std::auto_ptr<OFX::ImageMemory> _weightImg;
     float *_weightData;
     double _weightTotal;
 public:
@@ -230,14 +230,6 @@ public:
 
     ~TrackerPMProcessor()
     {
-        if (_patternImg) {
-            _patternImg->unlock();
-            delete _patternImg;
-        }
-        if (_weightImg) {
-            _weightImg->unlock();
-            delete _weightImg;
-        }
     }
 private:
     /** @brief set the processing parameters. return false if processing cannot be done. */
@@ -254,8 +246,8 @@ private:
             return false;
         }
         
-        _patternImg = new ImageMemory(sizeof(PIX) * nComponents * nPix, &_effect);
-        _weightImg = new ImageMemory(sizeof(float) * nPix, &_effect);
+        _patternImg.reset(new ImageMemory(sizeof(PIX) * nComponents * nPix, &_effect));
+        _weightImg.reset(new ImageMemory(sizeof(float) * nPix, &_effect));
         _otherImg = other;
         _refRectPixel = pattern;
         _refCenterI = centeri;
@@ -402,7 +394,7 @@ private:
     template<enum TrackerScoreEnum scoreTypeE>
     void multiThreadProcessImagesForScore(const OfxRectI& procWindow)
     {
-        assert(_patternImg && _patternData && _weightImg && _weightData && _otherImg);
+        assert(_patternImg.get() && _patternData && _weightImg.get() && _weightData && _otherImg);
         assert(scoreType == scoreTypeE);
         double bestScore = std::numeric_limits<double>::infinity();
         OfxPointI point;
