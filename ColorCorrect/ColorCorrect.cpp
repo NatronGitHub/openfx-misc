@@ -258,13 +258,13 @@ public:
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
-    , _clampBlack(true)
-    , _clampWhite(true)
     , _premult(false)
     , _premultChannel(3)
     , _doMasking(false)
     , _mix(1.)
     , _maskInvert(false)
+    , _clampBlack(true)
+    , _clampWhite(true)
     {
         // build the LUT
         OFX::ParametricParam  *lookupTable = instance.fetchParametricParam(kParamColorCorrectToneRanges);
