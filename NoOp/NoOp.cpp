@@ -53,6 +53,11 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsTiles 1
+#define kSupportsMultiResolution 1
+#define kSupportsRenderScale 1
+#define kRenderThreadSafety eRenderFullySafe
+
 #define kParamClipInfo "clipInfo"
 #define kParamClipInfoLabel "Clip Info..."
 #define kParamClipInfoHint "Display information about the inputs"
@@ -530,13 +535,13 @@ void NoOpPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // set a few flags
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
-    desc.setSupportsMultiResolution(true);
-    desc.setSupportsTiles(true);
+    desc.setSupportsMultiResolution(kSupportsMultiResolution);
+    desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipDepths(true);
     desc.setSupportsMultipleClipPARs(true);
-    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
+    desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
 void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
@@ -554,7 +559,7 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
 #endif
     srcClip->addSupportedComponent(ePixelComponentCustom);
     srcClip->setTemporalClipAccess(false);
-    srcClip->setSupportsTiles(true);
+    srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
     
     // create the mandated output clip
@@ -568,7 +573,7 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     //dstClip->addSupportedComponent(ePixelComponentStereoDisparity);
 #endif
     dstClip->addSupportedComponent(ePixelComponentCustom);
-    dstClip->setSupportsTiles(true);
+    dstClip->setSupportsTiles(kSupportsTiles);
     
     // make some pages and to things in 
     PageParamDescriptor *page = desc.definePageParam("Controls");

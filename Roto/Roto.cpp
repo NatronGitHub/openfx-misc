@@ -99,6 +99,11 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsTiles 1
+#define kSupportsMultiResolution 1
+#define kSupportsRenderScale 1
+#define kRenderThreadSafety eRenderFullySafe
+
 #define kParamPremult "premultiply"
 #define kParamPremultLabel "Premultiply"
 #define kParamPremultHint "Premultiply the red, green and blue channels with the alpha channel produced by the mask."
@@ -565,14 +570,14 @@ RotoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(true);
     desc.setSupportsMultipleClipPARs(false);
-    desc.setRenderThreadSafety(eRenderFullySafe);
+    desc.setRenderThreadSafety(kRenderThreadSafety);
     
-    desc.setSupportsTiles(true);
+    desc.setSupportsTiles(kSupportsTiles);
     
     // in order to support multiresolution, render() must take into account the pixelaspectratio and the renderscale
     // and scale the transform appropriately.
     // All other functions are usually in canonical coordinates.
-    desc.setSupportsMultiResolution(true);
+    desc.setSupportsMultiResolution(kSupportsMultiResolution);
 
 }
 
@@ -599,7 +604,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
-    srcClip->setSupportsTiles(true);
+    srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
     srcClip->setOptional(true);
     
@@ -613,7 +618,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
             maskClip->addSupportedComponent(ePixelComponentRGBA); //< our brush can output RGBA
             maskClip->setOptional(false);
         }
-        maskClip->setSupportsTiles(true);
+        maskClip->setSupportsTiles(kSupportsTiles);
         maskClip->setIsMask(context == eContextPaint); // we are a mask input
     }
 
@@ -621,7 +626,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
-    dstClip->setSupportsTiles(true);
+    dstClip->setSupportsTiles(kSupportsTiles);
 
 
     // make some pages and to things in

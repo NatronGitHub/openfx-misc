@@ -88,6 +88,11 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsTiles 1
+#define kSupportsMultiResolution 1
+#define kSupportsRenderScale 1
+#define kRenderThreadSafety eRenderFullySafe
+
 #ifndef M_PI
 #define M_PI        3.14159265358979323846264338327950288   /* pi             */
 #endif
@@ -879,12 +884,12 @@ void ChromaKeyerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // set a few flags
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
-    desc.setSupportsMultiResolution(true);
-    desc.setSupportsTiles(true);
+    desc.setSupportsMultiResolution(kSupportsMultiResolution);
+    desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
-    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
+    desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
 
@@ -894,7 +899,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     srcClip->addSupportedComponent( OFX::ePixelComponentRGBA );
     srcClip->addSupportedComponent( OFX::ePixelComponentRGB );
     srcClip->setTemporalClipAccess(false);
-    srcClip->setSupportsTiles(true);
+    srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setOptional(false);
     
     // create the inside mask clip
@@ -902,7 +907,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     inMaskClip->addSupportedComponent(ePixelComponentAlpha);
     inMaskClip->setTemporalClipAccess(false);
     inMaskClip->setOptional(true);
-    inMaskClip->setSupportsTiles(true);
+    inMaskClip->setSupportsTiles(kSupportsTiles);
     inMaskClip->setIsMask(true);
 
     // outside mask clip (garbage matte)
@@ -910,21 +915,21 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     outMaskClip->addSupportedComponent(ePixelComponentAlpha);
     outMaskClip->setTemporalClipAccess(false);
     outMaskClip->setOptional(true);
-    outMaskClip->setSupportsTiles(true);
+    outMaskClip->setSupportsTiles(kSupportsTiles);
     outMaskClip->setIsMask(true);
 
     ClipDescriptor* bgClip = desc.defineClip(kClipBg);
     bgClip->addSupportedComponent( OFX::ePixelComponentRGBA );
     bgClip->addSupportedComponent( OFX::ePixelComponentRGB );
     bgClip->setTemporalClipAccess(false);
-    bgClip->setSupportsTiles(true);
+    bgClip->setSupportsTiles(kSupportsTiles);
     bgClip->setOptional(true);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
-    dstClip->setSupportsTiles(true);
+    dstClip->setSupportsTiles(kSupportsTiles);
 
 
     // make some pages and to things in

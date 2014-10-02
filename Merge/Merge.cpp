@@ -91,6 +91,11 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsTiles 1
+#define kSupportsMultiResolution 1
+#define kSupportsRenderScale 1
+#define kRenderThreadSafety eRenderFullySafe
+
 #define kParamOperation "operation"
 #define kParamOperationLabel "Operation"
 #define kParamOperationHint \
@@ -537,12 +542,12 @@ void MergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // set a few flags
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
-    desc.setSupportsMultiResolution(true);
-    desc.setSupportsTiles(true);
+    desc.setSupportsMultiResolution(kSupportsMultiResolution);
+    desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
-    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
+    desc.setRenderThreadSafety(kRenderThreadSafety);
     
 }
 
@@ -554,7 +559,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGB );
     srcClipB->addSupportedComponent( OFX::ePixelComponentAlpha );
     srcClipB->setTemporalClipAccess(false);
-    srcClipB->setSupportsTiles(true);
+    srcClipB->setSupportsTiles(kSupportsTiles);
     srcClipB->setOptional(false);
 
     OFX::ClipDescriptor* srcClipA = desc.defineClip(kClipA);
@@ -562,7 +567,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     srcClipA->addSupportedComponent( OFX::ePixelComponentRGB );
     srcClipA->addSupportedComponent( OFX::ePixelComponentAlpha );
     srcClipA->setTemporalClipAccess(false);
-    srcClipA->setSupportsTiles(true);
+    srcClipA->setSupportsTiles(kSupportsTiles);
     srcClipA->setOptional(false);
 
     
@@ -571,7 +576,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
-    dstClip->setSupportsTiles(true);
+    dstClip->setSupportsTiles(kSupportsTiles);
 
     if (context == eContextGeneral || context == eContextPaint) {
         ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
@@ -579,7 +584,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         maskClip->setTemporalClipAccess(false);
         if (context == eContextGeneral)
             maskClip->setOptional(true);
-        maskClip->setSupportsTiles(true);
+        maskClip->setSupportsTiles(kSupportsTiles);
         maskClip->setIsMask(true);
     }
 

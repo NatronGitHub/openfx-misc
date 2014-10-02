@@ -613,7 +613,7 @@ void DeinterlacePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setTemporalClipAccess(true);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
-    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
+    desc.setRenderThreadSafety(kRenderThreadSafety);
 
 }
 
@@ -626,7 +626,7 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(true);
-    srcClip->setSupportsTiles(false);
+    srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
     srcClip->setFieldExtraction(OFX::eFieldExtractBoth);
 
@@ -635,7 +635,7 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
-    dstClip->setSupportsTiles(false);
+    dstClip->setSupportsTiles(kSupportsTiles);
 
 
     PageParamDescriptor *page = desc.definePageParam("Controls");

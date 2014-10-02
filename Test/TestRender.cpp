@@ -748,7 +748,7 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
-    srcClip->setSupportsTiles(true);
+    srcClip->setSupportsTiles(supportsTiles);
     srcClip->setIsMask(false);
 
     // create the mandated output clip
@@ -756,7 +756,7 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
-    dstClip->setSupportsTiles(true);
+    dstClip->setSupportsTiles(supportsTiles);
 
     if (context == eContextGeneral || context == eContextPaint) {
         ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
@@ -765,7 +765,7 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
         if (context == eContextGeneral) {
             maskClip->setOptional(true);
         }
-        maskClip->setSupportsTiles(true);
+        maskClip->setSupportsTiles(supportsTiles);
         maskClip->setIsMask(true);
     }
 

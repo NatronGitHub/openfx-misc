@@ -87,6 +87,11 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsTiles 1
+#define kSupportsMultiResolution 1
+#define kSupportsRenderScale 1
+#define kRenderThreadSafety eRenderFullySafe
+
 #define kClipA "A"
 #define kClipB "B"
 #define kParamSoftness "softness"
@@ -572,14 +577,14 @@ void CopyRectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(true);
     desc.setSupportsMultipleClipPARs(false);
-    desc.setRenderThreadSafety(eRenderFullySafe);
+    desc.setRenderThreadSafety(kRenderThreadSafety);
     
-    desc.setSupportsTiles(true);
+    desc.setSupportsTiles(kSupportsTiles);
     
     // in order to support multiresolution, render() must take into account the pixelaspectratio and the renderscale
     // and scale the transform appropriately.
     // All other functions are usually in canonical coordinates.
-    desc.setSupportsMultiResolution(true);
+    desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setOverlayInteractDescriptor(new RectangleOverlayDescriptor);
 
 }
@@ -609,7 +614,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     srcClipB->addSupportedComponent(ePixelComponentRGB);
     srcClipB->addSupportedComponent(ePixelComponentAlpha);
     srcClipB->setTemporalClipAccess(false);
-    srcClipB->setSupportsTiles(true);
+    srcClipB->setSupportsTiles(kSupportsTiles);
     srcClipB->setIsMask(false);
     
     ClipDescriptor *srcClipA = desc.defineClip(kClipA);
@@ -617,7 +622,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     srcClipA->addSupportedComponent(ePixelComponentRGB);
     srcClipA->addSupportedComponent(ePixelComponentAlpha);
     srcClipA->setTemporalClipAccess(false);
-    srcClipA->setSupportsTiles(true);
+    srcClipA->setSupportsTiles(kSupportsTiles);
     srcClipA->setIsMask(false);
     
 
@@ -626,7 +631,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
-    dstClip->setSupportsTiles(true);
+    dstClip->setSupportsTiles(kSupportsTiles);
 
     if (context == eContextGeneral || context == eContextPaint) {
         ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
@@ -635,7 +640,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
         if (context == eContextGeneral) {
             maskClip->setOptional(true);
         }
-        maskClip->setSupportsTiles(true);
+        maskClip->setSupportsTiles(kSupportsTiles);
         maskClip->setIsMask(true);
     }
 

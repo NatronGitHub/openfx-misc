@@ -103,6 +103,11 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsTiles 1
+#define kSupportsMultiResolution 1
+#define kSupportsRenderScale 1
+#define kRenderThreadSafety eRenderFullySafe
+
 #define kParamProcessR      "r"
 #define kParamProcessRLabel "R"
 #define kParamProcessRHint  " the red component"
@@ -632,12 +637,12 @@ void PremultPluginFactory<isPremult>::describe(OFX::ImageEffectDescriptor &desc)
     // set a few flags
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
-    desc.setSupportsMultiResolution(true);
-    desc.setSupportsTiles(true);
+    desc.setSupportsMultiResolution(kSupportsMultiResolution);
+    desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
-    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
+    desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
 template<bool isPremult>
@@ -650,7 +655,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
     //srcClip->addSupportedComponent(ePixelComponentRGB);
     //srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
-    srcClip->setSupportsTiles(true);
+    srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
     
     // create the mandated output clip
@@ -658,7 +663,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     //dstClip->addSupportedComponent(ePixelComponentRGB);
     //dstClip->addSupportedComponent(ePixelComponentAlpha);
-    dstClip->setSupportsTiles(true);
+    dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");

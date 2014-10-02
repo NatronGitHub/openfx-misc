@@ -85,6 +85,11 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsTiles 1
+#define kSupportsMultiResolution 1
+#define kSupportsRenderScale 1
+#define kRenderThreadSafety eRenderFullySafe
+
 #define kClipFrom "0"
 #define kClipTo "1"
 
@@ -359,12 +364,12 @@ DissolvePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // set a few flags
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
-    desc.setSupportsMultiResolution(true);
-    desc.setSupportsTiles(true);
+    desc.setSupportsMultiResolution(kSupportsMultiResolution);
+    desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
-    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
+    desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
 void
@@ -378,7 +383,7 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     fromClip->addSupportedComponent(ePixelComponentRGB);
     fromClip->addSupportedComponent(ePixelComponentAlpha);
     fromClip->setTemporalClipAccess(false);
-    fromClip->setSupportsTiles(true);
+    fromClip->setSupportsTiles(kSupportsTiles);
 
     // we are a transition, so define the sourceTo input clip
     ClipDescriptor *toClip = desc.defineClip(context == OFX::eContextTransition ? kOfxImageEffectTransitionSourceToClipName : kClipTo);
@@ -386,14 +391,14 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     toClip->addSupportedComponent(ePixelComponentRGB);
     toClip->addSupportedComponent(ePixelComponentAlpha);
     toClip->setTemporalClipAccess(false);
-    toClip->setSupportsTiles(true);
+    toClip->setSupportsTiles(kSupportsTiles);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
-    dstClip->setSupportsTiles(true);
+    dstClip->setSupportsTiles(kSupportsTiles);
 
     ClipDescriptor *maskClip = desc.defineClip("Mask");
     maskClip->addSupportedComponent(ePixelComponentAlpha);
@@ -401,7 +406,7 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     if (context == eContextGeneral) {
         maskClip->setOptional(true);
     }
-    maskClip->setSupportsTiles(true);
+    maskClip->setSupportsTiles(kSupportsTiles);
     maskClip->setIsMask(true);
 
     // make some pages and to things in

@@ -94,6 +94,11 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsTiles 1
+#define kSupportsMultiResolution 1
+#define kSupportsRenderScale 1
+#define kRenderThreadSafety eRenderFullySafe
+
 #define kParamLookupTable "lookupTable"
 #define kParamLookupTableLabel "Lookup Table"
 #define kParamLookupTableHint "Colour lookup table. The master curve is combined with the red, green and blue curves, but not with the alpha curve."
@@ -541,12 +546,12 @@ RGBLutPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
-    desc.setSupportsMultiResolution(true);
-    desc.setSupportsTiles(true);
+    desc.setSupportsMultiResolution(kSupportsMultiResolution);
+    desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
-    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
+    desc.setRenderThreadSafety(kRenderThreadSafety);
     // returning an error here crashes Nuke
     //if (!OFX::getImageEffectHostDescription()->supportsParametricParameter) {
     //  throwHostMissingSuiteException(kOfxParametricParameterSuite);
@@ -566,7 +571,7 @@ RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Co
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
-    srcClip->setSupportsTiles(true);
+    srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
 
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
@@ -574,7 +579,7 @@ RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Co
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
-    dstClip->setSupportsTiles(true);
+    dstClip->setSupportsTiles(kSupportsTiles);
 
     if (context == eContextGeneral || context == eContextPaint) {
         ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
@@ -582,7 +587,7 @@ RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Co
         maskClip->setTemporalClipAccess(false);
         if (context == eContextGeneral)
             maskClip->setOptional(true);
-        maskClip->setSupportsTiles(true);
+        maskClip->setSupportsTiles(kSupportsTiles);
         maskClip->setIsMask(true);
     }
 

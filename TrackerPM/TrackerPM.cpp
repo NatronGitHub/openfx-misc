@@ -92,6 +92,11 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsTiles 1
+#define kSupportsMultiResolution 1
+#define kSupportsRenderScale 1
+#define kRenderThreadSafety eRenderFullySafe
+
 #define kParamScore "score"
 #define kParamScoreLabel "Score"
 #define kParamScoreHint "Correlation score computation method"
@@ -835,7 +840,7 @@ void TrackerPMPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
     // rendertwicealways must be set to true if the tracker cannot handle interlaced content (most don't)
     desc.setRenderTwiceAlways(true);
-    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
+    desc.setRenderThreadSafety(kRenderThreadSafety);
     desc.setOverlayInteractDescriptor(new TrackerRegionOverlayDescriptor);
 }
 
@@ -854,7 +859,7 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         if (context == eContextGeneral) {
             maskClip->setOptional(true);
         }
-        maskClip->setSupportsTiles(true);
+        maskClip->setSupportsTiles(kSupportsTiles);
         maskClip->setIsMask(true);
     }
 

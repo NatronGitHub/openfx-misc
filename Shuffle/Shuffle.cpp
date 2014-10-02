@@ -87,6 +87,11 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsTiles 1
+#define kSupportsMultiResolution 1
+#define kSupportsRenderScale 1
+#define kRenderThreadSafety eRenderFullySafe
+
 #define kParamOutputComponents "outputComponents"
 #define kParamOutputComponentsLabel "Output Components"
 #define kParamOutputComponentsHint "Components in the output"
@@ -936,14 +941,14 @@ void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // set a few flags
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
-    desc.setSupportsMultiResolution(true);
-    desc.setSupportsTiles(true);
+    desc.setSupportsMultiResolution(kSupportsMultiResolution);
+    desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
     // say we can support multiple pixel depths on in and out
     desc.setSupportsMultipleClipDepths(true);
-    desc.setRenderThreadSafety(OFX::eRenderFullySafe);
+    desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
 static void
@@ -982,7 +987,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         srcClipB->addSupportedComponent(ePixelComponentRGB);
         srcClipB->addSupportedComponent(ePixelComponentAlpha);
         srcClipB->setTemporalClipAccess(false);
-        srcClipB->setSupportsTiles(true);
+        srcClipB->setSupportsTiles(kSupportsTiles);
         srcClipB->setOptional(true);
 
         ClipDescriptor* srcClipA = desc.defineClip(kClipA);
@@ -990,7 +995,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         srcClipA->addSupportedComponent(ePixelComponentRGB);
         srcClipA->addSupportedComponent(ePixelComponentAlpha);
         srcClipA->setTemporalClipAccess(false);
-        srcClipA->setSupportsTiles(true);
+        srcClipA->setSupportsTiles(kSupportsTiles);
         srcClipA->setOptional(false);
     } else {
         ClipDescriptor* srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -998,7 +1003,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
         srcClip->setTemporalClipAccess(false);
-        srcClip->setSupportsTiles(true);
+        srcClip->setSupportsTiles(kSupportsTiles);
     }
     {
         // create the mandated output clip
@@ -1006,7 +1011,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         dstClip->addSupportedComponent(ePixelComponentRGBA);
         dstClip->addSupportedComponent(ePixelComponentRGB);
         dstClip->addSupportedComponent(ePixelComponentAlpha);
-        dstClip->setSupportsTiles(true);
+        dstClip->setSupportsTiles(kSupportsTiles);
     }
 
     // make some pages and to things in
