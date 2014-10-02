@@ -101,6 +101,11 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsTiles 1
+#define kSupportsMultiResolution 1
+#define kSupportsRenderScale 1
+#define kRenderThreadSafety eRenderFullySafe
+
 #define kParamConvergePoint "convergePoint"
 #define kParamConvergePointLabel "Converge Upon"
 #define kParamConvergePointHint "Position of the tracked point when the convergence is set"
