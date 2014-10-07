@@ -613,56 +613,45 @@ ColorCorrectPlugin::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
     
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
-    if (dstComponents == OFX::ePixelComponentRGBA)
-    {
-        switch (dstBitDepth)
-        {
-            case OFX::eBitDepthUByte :
-            {
+    if (dstComponents == OFX::ePixelComponentRGBA) {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
                 ColorCorrecter<unsigned char, 4, 255> fred(*this,args);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 ColorCorrecter<unsigned short, 4, 65535> fred(*this,args);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
+            case OFX::eBitDepthFloat: {
                 ColorCorrecter<float,4,1> fred(*this,args);
                 setupAndProcess(fred, args);
                 break;
             }
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
-    }
-    else
-    {
+    } else {
         assert(dstComponents == OFX::ePixelComponentRGB);
-        switch (dstBitDepth)
-        {
-            case OFX::eBitDepthUByte :
-            {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
                 ColorCorrecter<unsigned char, 3, 255> fred(*this,args);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 ColorCorrecter<unsigned short, 3, 65535> fred(*this,args);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
+            case OFX::eBitDepthFloat: {
                 ColorCorrecter<float,3,1> fred(*this,args);
                 setupAndProcess(fred, args);
                 break;
             }
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
