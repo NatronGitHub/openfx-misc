@@ -946,6 +946,9 @@ void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(false);
+    if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
+        desc.setSupportsMultipleClipDepths(true); // plugin may call setClipBitDepth on output clip
+    }
     // say we can support multiple pixel depths on in and out
     desc.setSupportsMultipleClipDepths(true);
     desc.setRenderThreadSafety(kRenderThreadSafety);
@@ -1019,55 +1022,55 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
 
     // outputComponents
     {
-    ChoiceParamDescriptor *outputComponents = desc.defineChoiceParam(kParamOutputComponents);
-    outputComponents->setLabels(kParamOutputComponentsLabel, kParamOutputComponentsLabel, kParamOutputComponentsLabel);
-    outputComponents->setHint(kParamOutputComponentsHint);
-    // the following must be in the same order as in describe(), so that the map works
-    if (gSupportsRGBA) {
-        assert(gOutputComponentsMap[outputComponents->getNOptions()] == ePixelComponentRGBA);
-        outputComponents->appendOption(kParamOutputComponentsOptionRGBA);
-    }
-    if (gSupportsRGB) {
-        assert(gOutputComponentsMap[outputComponents->getNOptions()] == ePixelComponentRGB);
-        outputComponents->appendOption(kParamOutputComponentsOptionRGB);
-    }
-    if (gSupportsAlpha) {
-        assert(gOutputComponentsMap[outputComponents->getNOptions()] == ePixelComponentAlpha);
-        outputComponents->appendOption(kParamOutputComponentsOptionAlpha);
-    }
-    outputComponents->setDefault(0);
-    outputComponents->setAnimates(false);
-        desc.addClipPreferencesSlaveParam(*outputComponents);
-    page->addChild(*outputComponents);
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputComponents);
+        param->setLabels(kParamOutputComponentsLabel, kParamOutputComponentsLabel, kParamOutputComponentsLabel);
+        param->setHint(kParamOutputComponentsHint);
+        // the following must be in the same order as in describe(), so that the map works
+        if (gSupportsRGBA) {
+            assert(gOutputComponentsMap[param->getNOptions()] == ePixelComponentRGBA);
+            param->appendOption(kParamOutputComponentsOptionRGBA);
+        }
+        if (gSupportsRGB) {
+            assert(gOutputComponentsMap[param->getNOptions()] == ePixelComponentRGB);
+            param->appendOption(kParamOutputComponentsOptionRGB);
+        }
+        if (gSupportsAlpha) {
+            assert(gOutputComponentsMap[param->getNOptions()] == ePixelComponentAlpha);
+            param->appendOption(kParamOutputComponentsOptionAlpha);
+        }
+        param->setDefault(0);
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
+        page->addChild(*param);
     }
 
     // ouputBitDepth
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
-        ChoiceParamDescriptor *outputBitDepth = desc.defineChoiceParam(kParamOutputBitDepth);
-        outputBitDepth->setLabels(kParamOutputBitDepthLabel, kParamOutputBitDepthLabel, kParamOutputBitDepthLabel);
-        outputBitDepth->setHint(kParamOutputBitDepthHint);
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputBitDepth);
+        param->setLabels(kParamOutputBitDepthLabel, kParamOutputBitDepthLabel, kParamOutputBitDepthLabel);
+        param->setHint(kParamOutputBitDepthHint);
         // the following must be in the same order as in describe(), so that the map works
         if (gSupportsFloats) {
-            assert(gOutputBitDepthMap[outputBitDepth->getNOptions()] == eBitDepthFloat);
-            outputBitDepth->appendOption(kParamOutputBitDepthOptionFloat);
+            assert(gOutputBitDepthMap[param->getNOptions()] == eBitDepthFloat);
+            param->appendOption(kParamOutputBitDepthOptionFloat);
         }
         if (gSupportsShorts) {
-            assert(gOutputBitDepthMap[outputBitDepth->getNOptions()] == eBitDepthUShort);
-            outputBitDepth->appendOption(kParamOutputBitDepthOptionShort);
+            assert(gOutputBitDepthMap[param->getNOptions()] == eBitDepthUShort);
+            param->appendOption(kParamOutputBitDepthOptionShort);
         }
         if (gSupportsBytes) {
-            assert(gOutputBitDepthMap[outputBitDepth->getNOptions()] == eBitDepthUByte);
-            outputBitDepth->appendOption(kParamOutputBitDepthOptionByte);
+            assert(gOutputBitDepthMap[param->getNOptions()] == eBitDepthUByte);
+            param->appendOption(kParamOutputBitDepthOptionByte);
         }
-        outputBitDepth->setDefault(0);
-        outputBitDepth->setAnimates(false);
+        param->setDefault(0);
+        param->setAnimates(false);
 #ifndef DEBUG
         // Shuffle only does linear conversion, which is useless for 8-bits and 16-bits formats.
         // Disable it for now (in the future, there may be colorspace conversion options)
-        outputBitDepth->setIsSecret(true);
+        param->setIsSecret(true);
 #endif
-        desc.addClipPreferencesSlaveParam(*outputBitDepth);
-        page->addChild(*outputBitDepth);
+        desc.addClipPreferencesSlaveParam(*param);
+        page->addChild(*param);
     }
 
     if (gSupportsRGB || gSupportsRGBA) {
