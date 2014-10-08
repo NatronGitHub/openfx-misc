@@ -363,20 +363,45 @@ static
 bool
 maskLineIsZero(const OFX::Image* mask, int x1, int x2, int y, bool maskInvert)
 {
-    assert(mask->getPixelComponents() == ePixelComponentAlpha && mask->getPixelDepth() == eBitDepthFloat);
+    assert(!mask || (mask->getPixelComponents() == ePixelComponentAlpha && mask->getPixelDepth() == eBitDepthFloat));
 
     if (maskInvert) {
-        for (int x = x1; x < x2; ++x) {
-            const float *p = reinterpret_cast<const float*>(mask->getPixelAddress(x, y));
-            if (!p || *p != 1.) {
+        if (!mask) {
+            return false;
+        }
+        const OfxRectI& maskBounds = mask->getBounds();
+        // if part of the line is out of maskbounds, then mask is 1 at these places
+        if (y < maskBounds.y1 || maskBounds.y2 <= y || x1 < maskBounds.x1 || maskBounds.x2 <= x2) {
+            return false;
+        }
+        // the whole line is within the mask
+        const float *p = reinterpret_cast<const float*>(mask->getPixelAddress(x1, y));
+        assert(p);
+        for (int x = x1; x < x2; ++x, ++p) {
+            if (*p != 1.) {
                 return false;
             }
         }
     } else {
-        for (int x = x1; x < x2; ++x) {
-            const float *p = reinterpret_cast<const float*>(mask->getPixelAddress(x, y));
-            if (p && *p != 0.) {
-                return false;
+        if (!mask) {
+            return true;
+        }
+        const OfxRectI& maskBounds = mask->getBounds();
+        // if the line is completely out of the mask, it is 0
+        if (y < maskBounds.y1 || maskBounds.y2 <= y) {
+            return true;
+        }
+        // restrict the search to the part of the line which is within the mask
+        x1 = std::max(x1, maskBounds.x1);
+        x2 = std::min(x2, maskBounds.x2);
+        if (x1 < x2) { // the line is not empty
+            const float *p = reinterpret_cast<const float*>(mask->getPixelAddress(x1, y));
+            assert(p);
+
+            for (int x = x1; x < x2; ++x, ++p) {
+                if (*p != 0.) {
+                    return false;
+                }
             }
         }
     }
@@ -391,8 +416,18 @@ maskColumnIsZero(const OFX::Image* mask, int x, int y1, int y2, bool maskInvert)
     assert(mask->getPixelComponents() == ePixelComponentAlpha && mask->getPixelDepth() == eBitDepthFloat);
     const int rowElems = mask->getRowBytes() / sizeof(float);
 
-    const float *p = reinterpret_cast<const float*>(mask->getPixelAddress(x, y1));
     if (maskInvert) {
+        if (!mask) {
+            return false;
+        }
+        const OfxRectI& maskBounds = mask->getBounds();
+        // if part of the column is out of maskbounds, then mask is 1 at these places
+        if (x < maskBounds.x1 || maskBounds.x2 <= x || y1 < maskBounds.y1 || maskBounds.y2 <= y2) {
+            return false;
+        }
+        // the whole column is within the mask
+        const float *p = reinterpret_cast<const float*>(mask->getPixelAddress(x, y1));
+        assert(p);
         for (int y = y1; y < y2; ++y) {
             const float *p = reinterpret_cast<const float*>(mask->getPixelAddress(x, y));
             if (p && *p != 1.) {
@@ -400,10 +435,25 @@ maskColumnIsZero(const OFX::Image* mask, int x, int y1, int y2, bool maskInvert)
             }
         }
     } else {
-        for (int y = y1; y < y2; ++y,  p += rowElems) {
-            const float *p = reinterpret_cast<const float*>(mask->getPixelAddress(x, y));
-            if (p && *p != 0.) {
-                return false;
+        if (!mask) {
+            return true;
+        }
+        const OfxRectI& maskBounds = mask->getBounds();
+        // if the column is completely out of the mask, it is 0
+        if (x < maskBounds.x1 || maskBounds.x2 <= x) {
+            return true;
+        }
+        // restrict the search to the part of the column which is within the mask
+        y1 = std::max(y1, maskBounds.y1);
+        y2 = std::min(y2, maskBounds.y2);
+        if (y1 < y2) { // the column is not empty
+            const float *p = reinterpret_cast<const float*>(mask->getPixelAddress(x, y1));
+            assert(p);
+
+            for (int y = y1; y < y2; ++y,  p += rowElems) {
+                if (*p != 0.) {
+                    return false;
+                }
             }
         }
     }
@@ -498,7 +548,7 @@ CImgSmoothPlugin::render(const OFX::RenderArguments &args)
 
     std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(time) : 0);
     OfxRectI processWindow = renderWindow; //!< the window where pixels have to be computed (may be smaller than renderWindow if mask is zero on the borders)
-#if 1
+
     if (mix == 0.) {
         // no processing at all
         processWindow.x2 = processWindow.x1;
@@ -615,7 +665,7 @@ CImgSmoothPlugin::render(const OFX::RenderArguments &args)
         // the area that actually has to be processed is empty, the job is finished!
         return;
     }
-#endif
+    assert(mix != 0.); // mix == 0. should give an empty processWindow
 
     cimg_library::CImg<float> src_img;
 
@@ -643,7 +693,7 @@ CImgSmoothPlugin::render(const OFX::RenderArguments &args)
     _fast_approx->getValue(fast_approx);
 
     // compute the src ROI (must be consistent with getRegionsOfInterest())
-    int delta_pix = std::ceil((amplitude + alpha + sigma) * renderScale.x);
+    int delta_pix = (mix == 0.) ? 0 : std::ceil((amplitude + alpha + sigma) * renderScale.x);
     OfxRectI srcRoI;
     OfxRectI srcRoD = src->getRegionOfDefinition();
     srcRoI.x1 = std::max(srcRoD.x1, processWindow.x1 - delta_pix);
@@ -696,7 +746,7 @@ CImgSmoothPlugin::render(const OFX::RenderArguments &args)
                      premult, premultChannel, mix, maskInvert);
     }
 
-    {
+    if (mix != 0.) {
         // srcCImg uses srcCImgData as its data area
         cimg_library::CImg<float> srcCImg(srcCImgPixelData, srcCImgNComponents, srcCImgWidth, srcCImgHeight, 1, true);
         srcCImg.permute_axes("yzcx");
@@ -779,8 +829,8 @@ CImgSmoothPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
         _mix->getValueAtTime(time, mix);
         if (mix == 0.) {
             // identity transform
-            srcRoI = regionOfInterest;
-            rois.setRegionOfInterest(*srcClip_, srcRoI);
+            //srcRoI = regionOfInterest;
+            //rois.setRegionOfInterest(*srcClip_, srcRoI);
             return;
         }
     }
