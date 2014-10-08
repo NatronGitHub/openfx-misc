@@ -173,18 +173,14 @@ enum InterpEnum
 #define kParamFastApproxHint "Tells if a fast approximation of the gaussian function is used or not"
 #define kParamFastApproxDafault true
 
-// some utility functions
-void copy_ofx_image_to_rgb_cimg(OFX::Image& src, cimg_library::CImg<float>& dst);
-void copy_rgb_cimg_to_ofx_image(const cimg_library::CImg<float>& src, OFX::Image& dst);
-void copy_alpha_channel(OFX::Image& src, OFX::Image& dst);
-
 using namespace OFX;
 
-class CImgSmoothPlugin : public OFX::ImageEffect
+template <class Params>
+class CImgFilterPluginHelper : public OFX::ImageEffect
 {
 public:
 
-    CImgSmoothPlugin(OfxImageEffectHandle handle)
+    CImgFilterPluginHelper(OfxImageEffectHandle handle)
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClip_(0)
@@ -197,24 +193,12 @@ public:
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
 
-        _amplitude  = fetchDoubleParam(kParamAmplitude);
-        _sharpness  = fetchDoubleParam(kParamSharpness);
-        _anisotropy = fetchDoubleParam(kParamAnisotropy);
-        _alpha      = fetchDoubleParam(kParamAlpha);
-        _sigma      = fetchDoubleParam(kParamSigma);
-        _dl         = fetchDoubleParam(kParamDl);
-        _da         = fetchDoubleParam(kParamDa);
-        _gprec      = fetchDoubleParam(kParamGaussPrec);
-        _interp     = fetchChoiceParam(kParamInterp);
-        _fast_approx = fetchBooleanParam(kParamFastApprox);
-        assert(_amplitude && _sharpness && _anisotropy && _alpha && _sigma && _dl && _da && _gprec && _interp && _fast_approx);
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
-
     }
 
     // override the roi call
@@ -226,6 +210,15 @@ public:
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+
+    virtual void getValuesAtTime(double time, Params& params) = 0;
+
+    // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
+    virtual void getRoI(const OfxRectI rect, const OfxPointD& renderScale, const Params& params, OfxRectI* roi) = 0;
+
+    virtual void render(const OfxPointD& renderScale, const Params& params, cimg_library::CImg<float>& cimg) = 0;
+
+    virtual bool isIdentity(const Params& params) { return false; };
 
 private:
     void
@@ -262,26 +255,17 @@ private:
     OFX::Clip *maskClip_;
 
     // params
-    OFX::DoubleParam *_amplitude;
-    OFX::DoubleParam *_sharpness;
-    OFX::DoubleParam *_anisotropy;
-    OFX::DoubleParam *_alpha;
-    OFX::DoubleParam *_sigma;
-    OFX::DoubleParam *_dl;
-    OFX::DoubleParam *_da;
-    OFX::DoubleParam *_gprec;
-    OFX::ChoiceParam *_interp;
-    OFX::BooleanParam *_fast_approx;
-
     OFX::BooleanParam* _premult;
     OFX::ChoiceParam* _premultChannel;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
 };
 
+
 /* set up and run a copy processor */
+template <class Params>
 void
-CImgSmoothPlugin::setupAndFill(OFX::PixelProcessorFilterBase & processor,
+CImgFilterPluginHelper<Params>::setupAndFill(OFX::PixelProcessorFilterBase & processor,
                                const OfxRectI &renderWindow,
                                void *dstPixelData,
                                const OfxRectI& dstBounds,
@@ -308,8 +292,9 @@ isEmpty(const OfxRectI& r)
 }
 
 /* set up and run a copy processor */
+template <class Params>
 void
-CImgSmoothPlugin::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
+CImgFilterPluginHelper<Params>::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
                                double time,
                                const OfxRectI &renderWindow,
                                const void *srcPixelData,
@@ -461,8 +446,9 @@ maskColumnIsZero(const OFX::Image* mask, int x, int y1, int y2, bool maskInvert)
     return true;
 }
 
+template <class Params>
 void
-CImgSmoothPlugin::render(const OFX::RenderArguments &args)
+CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -669,42 +655,18 @@ CImgSmoothPlugin::render(const OFX::RenderArguments &args)
 
     cimg_library::CImg<float> src_img;
 
-    double amplitude;
-    double sharpness;
-    double anisotropy;
-    double alpha;
-    double sigma;
-    double dl;
-    double da;
-    double gprec;
-    int interp_i;
-    //InterpEnum interp;
-    bool fast_approx;
-
-    _amplitude->getValue(amplitude);
-    _sharpness->getValue(sharpness);
-    _anisotropy->getValue(anisotropy);
-    _alpha->getValue(alpha);
-    _sigma->getValue(sigma);
-    _dl->getValue(dl);
-    _da->getValue(da);
-    _gprec->getValue(gprec);
-    _interp->getValue(interp_i);
-    _fast_approx->getValue(fast_approx);
+    Params params;
+    getValuesAtTime(time, params);
 
     // compute the src ROI (must be consistent with getRegionsOfInterest())
-    int delta_pix = (mix == 0.) ? 0 : std::ceil((amplitude + alpha + sigma) * renderScale.x);
     OfxRectI srcRoI;
+    getRoI(processWindow, renderScale, params, &srcRoI);
     OfxRectI srcRoD = src->getRegionOfDefinition();
-    srcRoI.x1 = std::max(srcRoD.x1, processWindow.x1 - delta_pix);
-    srcRoI.x2 = std::min(srcRoD.x2, processWindow.x2 + delta_pix);
-    srcRoI.y1 = std::max(srcRoD.y1, processWindow.y1 - delta_pix);
-    srcRoI.y2 = std::min(srcRoD.y2, processWindow.y2 + delta_pix);
+    MergeImages2D::rectIntersection(srcRoI, srcRoD, &srcRoI);
     assert(src->getBounds().x1 <= srcRoI.x1 && srcRoI.x2 <= src->getBounds().x2 && src->getBounds().y1 <= srcRoI.y1 && srcRoI.y2 <= src->getBounds().y2);
     if(src->getBounds().x1 > srcRoI.x1 || srcRoI.x2 > src->getBounds().x2 || src->getBounds().y1 > srcRoI.y1 || srcRoI.y2 > src->getBounds().y2) {
         throwSuiteStatusException(kOfxStatFailed);
     }
-
 
     // allocate the cimg data to hold the src ROI
     const int srcCImgNComponents = (srcPixelComponents == ePixelComponentAlpha) ? 1 : 3;
@@ -755,18 +717,8 @@ CImgSmoothPlugin::render(const OFX::RenderArguments &args)
         assert(srcCImg.depth() == 1);
         assert(srcCImg.spectrum() == srcCImgNComponents);
 
-        // PROCESSING.
-        // This is the only place where the actual processing takes place
-        srcCImg.blur_anisotropic(amplitude * renderScale.x, // in pixels
-                                 sharpness,
-                                 anisotropy,
-                                 alpha * renderScale.x, // in pixels
-                                 sigma * renderScale.x, // in pixels
-                                 dl, // in pixel, but we don't discretize more
-                                 da,
-                                 gprec,
-                                 interp_i,
-                                 fast_approx);
+        render(renderScale, params, srcCImg);
+
         srcCImg.permute_axes("cxyz");
     }
 
@@ -813,11 +765,49 @@ CImgSmoothPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+
+static void
+toPixelEnclosing(const OfxRectD& regionOfInterest,
+                 const OfxPointD& renderScale,
+                 double par,
+                 OfxRectI *rect)
+{
+    rect->x1 = std::floor(regionOfInterest.x1 * renderScale.x / par);
+    rect->y1 = std::floor(regionOfInterest.y1 * renderScale.y);
+    rect->x2 = std::ceil(regionOfInterest.x2 * renderScale.x / par);
+    rect->y2 = std::ceil(regionOfInterest.y2 * renderScale.y);
+}
+
+static void
+toCanonical(const OfxRectI& rect,
+                 const OfxPointD& renderScale,
+                 double par,
+                 OfxRectD *regionOfInterest)
+{
+    regionOfInterest->x1 = rect.x1 * par / renderScale.x;
+    regionOfInterest->y1 = rect.y1 / renderScale.y;
+    regionOfInterest->x2 = rect.x2 * par / renderScale.x;
+    regionOfInterest->y2 = rect.y2 / renderScale.y;
+}
+
+static void
+enlargeRectI(const OfxRectI& rect,
+                 int delta_pix,
+                 const OfxRectI& bounds,
+                 OfxRectI* rectOut)
+{
+    rectOut->x1 = std::max(bounds.x1, rect.x1 - delta_pix);
+    rectOut->x2 = std::min(bounds.x2, rect.x2 + delta_pix);
+    rectOut->y1 = std::max(bounds.y1, rect.y1 - delta_pix);
+    rectOut->y2 = std::min(bounds.y2, rect.y2 + delta_pix);
+}
+
 // override the roi call
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
+template <class Params>
 void
-CImgSmoothPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+CImgFilterPluginHelper<Params>::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
     const double time = args.time;
     const OfxRectD& regionOfInterest = args.regionOfInterest;
@@ -835,22 +825,15 @@ CImgSmoothPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
         }
     }
 
-    double amplitude;
-    double alpha;
-    double sigma;
-    _amplitude->getValueAtTime(time, amplitude);
-    _alpha->getValue(alpha);
-    _sigma->getValue(sigma);
-    assert(amplitude >= 0 && alpha >= 0 && sigma >= 0);
+    Params params;
+    getValuesAtTime(args.time, params);
 
     double pixelaspectratio = srcClip_->getPixelAspectRatio();
 
-    int delta_pix = std::ceil(amplitude + alpha + sigma);
-    // no need to take the renderscale into account here, because all parameters are scaled
-    srcRoI.x1 = regionOfInterest.x1 - delta_pix / pixelaspectratio; // srcRoI is in canonical coordinates, processing is done in pixels
-    srcRoI.x2 = regionOfInterest.x2 + delta_pix / pixelaspectratio;
-    srcRoI.y1 = regionOfInterest.y1 - delta_pix;
-    srcRoI.y2 = regionOfInterest.y2 + delta_pix;
+    OfxRectI rectPixel;
+    toPixelEnclosing(regionOfInterest, args.renderScale, pixelaspectratio, &rectPixel);
+    getRoI(rectPixel, args.renderScale, params, &rectPixel);
+    toCanonical(rectPixel, args.renderScale, pixelaspectratio, &srcRoI);
 
     if (doMasking && mix != 1.) {
         // for masking or mixing, we also need the source image.
@@ -862,8 +845,9 @@ CImgSmoothPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
     rois.setRegionOfInterest(*srcClip_, srcRoI);
 }
 
+template <class Params>
 bool
-CImgSmoothPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+CImgFilterPluginHelper<Params>::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
                                          OfxRectD &/*rod*/)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
@@ -873,8 +857,9 @@ CImgSmoothPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
     return false;
 }
 
+template <class Params>
 bool
-CImgSmoothPlugin::isIdentity(const OFX::IsIdentityArguments &args,
+CImgFilterPluginHelper<Params>::isIdentity(const OFX::IsIdentityArguments &args,
                               OFX::Clip * &identityClip,
                               double &/*identityTime*/)
 {
@@ -883,16 +868,117 @@ CImgSmoothPlugin::isIdentity(const OFX::IsIdentityArguments &args,
     }
     const double time = args.time;
 
-    double amplitude;
-    _amplitude->getValueAtTime(time, amplitude);
-    double dl;
-    _dl->getValueAtTime(time, dl);
-    if (amplitude <= 0. || dl < 0.) {
+    double mix;
+    _mix->getValueAtTime(time, mix);
+    if (mix == 0.) {
+        identityClip = srcClip_;
+        return true;
+    }
+    Params params;
+    getValuesAtTime(time, params);
+    if (isIdentity(params)) {
         identityClip = srcClip_;
         return true;
     }
     return false;
 }
+
+
+
+/// Smooth plugin
+struct CImgSmoothParams
+{
+    double amplitude;
+    double sharpness;
+    double anisotropy;
+    double alpha;
+    double sigma;
+    double dl;
+    double da;
+    double gprec;
+    int interp_i;
+    //InterpEnum interp;
+    bool fast_approx;
+};
+
+class CImgSmoothPlugin : public CImgFilterPluginHelper<CImgSmoothParams>
+{
+public:
+
+    CImgSmoothPlugin(OfxImageEffectHandle handle)
+    : CImgFilterPluginHelper<CImgSmoothParams>(handle)
+    {
+        _amplitude  = fetchDoubleParam(kParamAmplitude);
+        _sharpness  = fetchDoubleParam(kParamSharpness);
+        _anisotropy = fetchDoubleParam(kParamAnisotropy);
+        _alpha      = fetchDoubleParam(kParamAlpha);
+        _sigma      = fetchDoubleParam(kParamSigma);
+        _dl         = fetchDoubleParam(kParamDl);
+        _da         = fetchDoubleParam(kParamDa);
+        _gprec      = fetchDoubleParam(kParamGaussPrec);
+        _interp     = fetchChoiceParam(kParamInterp);
+        _fast_approx = fetchBooleanParam(kParamFastApprox);
+        assert(_amplitude && _sharpness && _anisotropy && _alpha && _sigma && _dl && _da && _gprec && _interp && _fast_approx);
+    }
+
+    virtual void getValuesAtTime(double time, CImgSmoothParams& params) OVERRIDE FINAL {
+        _amplitude->getValueAtTime(time, params.amplitude);
+        _sharpness->getValueAtTime(time, params.sharpness);
+        _anisotropy->getValueAtTime(time, params.anisotropy);
+        _alpha->getValueAtTime(time, params.alpha);
+        _sigma->getValueAtTime(time, params.sigma);
+        _dl->getValueAtTime(time, params.dl);
+        _da->getValueAtTime(time, params.da);
+        _gprec->getValueAtTime(time, params.gprec);
+        _interp->getValueAtTime(time, params.interp_i);
+        _fast_approx->getValueAtTime(time, params.fast_approx);
+    }
+
+    // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
+    // only called if mix != 0.
+    virtual void getRoI(const OfxRectI rect, const OfxPointD& renderScale, const CImgSmoothParams& params, OfxRectI* roi) OVERRIDE FINAL {
+        int delta_pix = std::ceil((params.amplitude + params.alpha + params.sigma) * renderScale.x);
+        roi->x1 = rect.x1 - delta_pix;
+        roi->x2 = rect.x2 + delta_pix;
+        roi->y1 = rect.y1 - delta_pix;
+        roi->y2 = rect.y2 + delta_pix;
+    }
+
+    virtual void render(const OfxPointD& renderScale, const CImgSmoothParams& params, cimg_library::CImg<float>& cimg) OVERRIDE FINAL {
+        // PROCESSING.
+        // This is the only place where the actual processing takes place
+        cimg.blur_anisotropic(params.amplitude * renderScale.x, // in pixels
+                              params.sharpness,
+                              params.anisotropy,
+                              params.alpha * renderScale.x, // in pixels
+                              params.sigma * renderScale.x, // in pixels
+                              params.dl, // in pixel, but we don't discretize more
+                              params.da,
+                              params.gprec,
+                              params.interp_i,
+                              params.fast_approx);
+
+    }
+
+    virtual bool isIdentity(const CImgSmoothParams& params) OVERRIDE FINAL {
+        return (params.amplitude <= 0. || params.dl < 0.);
+    };
+
+private:
+
+    // params
+    OFX::DoubleParam *_amplitude;
+    OFX::DoubleParam *_sharpness;
+    OFX::DoubleParam *_anisotropy;
+    OFX::DoubleParam *_alpha;
+    OFX::DoubleParam *_sigma;
+    OFX::DoubleParam *_dl;
+    OFX::DoubleParam *_da;
+    OFX::DoubleParam *_gprec;
+    OFX::ChoiceParam *_interp;
+    OFX::BooleanParam *_fast_approx;
+};
+
 
 mDeclarePluginFactory(CImgSmoothPluginFactory, {}, {});
 
@@ -1058,65 +1144,4 @@ void getCImgSmoothPluginID(OFX::PluginFactoryArray &ids)
 {
     static CImgSmoothPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
-}
-
-
-
-// utils
-void copy_ofx_image_to_rgb_cimg(OFX::Image& src, cimg_library::CImg<float>& dst)
-{
-    int width  = src.getBounds().x2 - src.getBounds().x1;
-    int height = src.getBounds().y2 - src.getBounds().y1;
-
-    if ((dst.width() != width) || (dst.height() != height)) {
-        dst.assign(width, height, 1, 3);
-    }
-
-    for (int j = 0; j < height; ++j) {
-        float *psrc = reinterpret_cast<float*>(src.getPixelAddress(src.getBounds().x1, src.getBounds().y1 + j));
-
-        for (int i = 0; i < width; ++i) {
-            dst(i, j, 0, 0) = *psrc++;
-            dst(i, j, 0, 1) = *psrc++;
-            dst(i, j, 0, 2) = *psrc++;
-            ++psrc; // skip alpha
-        }
-    }
-}
-
-void copy_rgb_cimg_to_ofx_image(const cimg_library::CImg<float>& src, OFX::Image& dst)
-{
-    int width  = dst.getBounds().x2 - dst.getBounds().x1;
-    int height = dst.getBounds().y2 - dst.getBounds().y1;
-
-    for (int j = 0; j < height; ++j) {
-        float *pdst = reinterpret_cast<float*>(dst.getPixelAddress(dst.getBounds().x1, dst.getBounds().y1 + j));
-
-        for (int i = 0; i < width; ++i) {
-            *pdst++ = src(i, j, 0, 0);
-            *pdst++ = src(i, j, 0, 1);
-            *pdst++ = src(i, j, 0, 2);
-            ++pdst; // skip alpha
-        }
-    }
-}
-
-void copy_alpha_channel(OFX::Image& src, OFX::Image& dst)
-{
-    int width  = dst.getBounds().x2 - dst.getBounds().x1;
-    int height = dst.getBounds().y2 - dst.getBounds().y1;
-
-    for (int j = 0; j < height; ++j) {
-        float *psrc = reinterpret_cast<float*>(src.getPixelAddress(src.getBounds().x1, src.getBounds().y1 + j));
-        float *pdst = reinterpret_cast<float*>(dst.getPixelAddress(dst.getBounds().x1, dst.getBounds().y1 + j));
-        
-        psrc += 3;
-        pdst += 3;
-        
-        for (int i = 0; i < width; ++i) {
-            *psrc = *pdst;
-            psrc += 4;
-            pdst += 4;
-        }
-    }
 }
