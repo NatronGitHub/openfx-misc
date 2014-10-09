@@ -1,5 +1,5 @@
 /*
- OFX CImgBlur plugin.
+ OFX CImgBilateral plugin.
 
  Copyright (C) 2014 INRIA
 
@@ -74,7 +74,7 @@
 // TODO: handle RGB, Alpha components
 // TODO: support tiles (process src, and copy just the renderWindow to dst)
 
-#include "CImgBlur.h"
+#include "CImgBilateral.h"
 
 #include <memory>
 #include <cmath>
@@ -94,16 +94,16 @@
 
 #include "CImgFilter.h"
 
-#define kPluginName          "BlurCImg"
+#define kPluginName          "BilateralCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-"Blur input stream by a quasi-gaussian or gaussian filter (recursive implementation).\n" \
-"Uses the 'blur' function from the CImg library.\n" \
+"Blur input stream by anisotropic bilateral filtering.\n" \
+"Uses the 'blur_bilateral' function from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
-#define kPluginIdentifier    "net.sf.cimg.CImgBlur"
+#define kPluginIdentifier    "net.sf.cimg.CImgBilateral"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -116,123 +116,77 @@
 #define kSupportsRGB true
 #define kSupportsAlpha true
 
-#define kParamSigma "sigma"
-#define kParamSigmaLabel "Sigma"
-#define kParamSigmaHint "Standard deviation, in pixel units (>=0)."
-#define kParamSigmaDefault 5.0
+#define kParamSigmaS "sigma_s"
+#define kParamSigmaSLabel "Sigma_s"
+#define kParamSigmaSHint "Standard deviation of the spatial kernel, in pixel units (>=0)."
+#define kParamSigmaSDefault 10.0
 
-#define kParamBoundary "boundary"
-#define kParamBoundaryLabel "Boundary conditions"
-#define kParamBoundaryHint "Specifies how pixel values are computed out of the image domain."
-#define kParamBoundaryOptionDirichlet "Dirichlet"
-#define kParamBoundaryOptionDirichletHint "Dirichlet boundary condition: pixel values out of the image domain are zero."
-#define kParamBoundaryOptionNeumann "Neumann"
-#define kParamBoundaryOptionNeumannHint "Neumann boundary condition: pixel values out of the image domain are those of the closest pixel location in the domain."
-#define kParamBoundaryOptionPeriodic "Periodic"
-#define kParamBoundaryOptionPeriodicHint "Image is considered to be periodic out of the image domain."
-#define kParamBoundaryDefault eBoundaryNeumann
-enum BoundaryEnum
-{
-    eBoundaryDirichlet = 0,
-    eBoundaryNeumann,
-    //eBoundaryPeriodic,
-};
-
-#if cimg_version >= 153
-#define kParamFilter "filter"
-#define kParamFilterLabel "Filter"
-#define kParamFilterHint "Bluring filter"
-#define kParamFilterOptionQuasiGaussian "Quasi-Gaussian"
-#define kParamFilterOptionQuasiGaussianHint "Quasi-Gaussian filter (0-order recursive Deriche filter, faster)."
-#define kParamFilterOptionGaussian "Gaussian"
-#define kParamFilterOptionGaussianHint "Gaussian filter (Van Vliet recursive Gaussian filter)."
-#define kParamFilterDefault eFilterQuasiGaussian
-enum FilterEnum
-{
-    eFilterQuasiGaussian = 0,
-    eFilterGaussian,
-};
-#endif
+#define kParamSigmaR "sigma_r"
+#define kParamSigmaRLabel "Sigma_r"
+#define kParamSigmaRHint "Standard deviation of the range kernel, in intensity units (>=0)."
+#define kParamSigmaRDefault 0.05
 
 using namespace OFX;
 
-/// Blur plugin
-struct CImgBlurParams
+/// Bilateral plugin
+struct CImgBilateralParams
 {
-    double sigma;
-    int boundary_i;
-#if cimg_version >= 153
-    int filter_i;
-#endif
+    double sigma_s;
+    double sigma_r;
 };
 
-class CImgBlurPlugin : public CImgFilterPluginHelper<CImgBlurParams>
+class CImgBilateralPlugin : public CImgFilterPluginHelper<CImgBilateralParams>
 {
 public:
 
-    CImgBlurPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgBlurParams>(handle, kSupportsRenderScale)
+    CImgBilateralPlugin(OfxImageEffectHandle handle)
+    : CImgFilterPluginHelper<CImgBilateralParams>(handle, kSupportsRenderScale)
     {
-        _sigma  = fetchDoubleParam(kParamSigma);
-        _boundary  = fetchChoiceParam(kParamBoundary);
-#if cimg_version >= 153
-        _filter = fetchChoiceParam(kParamFilter);
-        assert(_sigma && _boundary && _filter);
-#else
-        assert(_sigma && _boundary);
-#endif
+        _sigma_s  = fetchDoubleParam(kParamSigmaS);
+        _sigma_r  = fetchDoubleParam(kParamSigmaR);
+        assert(_sigma_s && _sigma_r);
     }
 
-    virtual void getValuesAtTime(double time, CImgBlurParams& params) OVERRIDE FINAL
+    virtual void getValuesAtTime(double time, CImgBilateralParams& params) OVERRIDE FINAL
     {
-        _sigma->getValueAtTime(time, params.sigma);
-        _boundary->getValueAtTime(time, params.boundary_i);
-#if cimg_version >= 153
-        _filter->getValueAtTime(time, params.filter_i);
-#endif
+        _sigma_s->getValueAtTime(time, params.sigma_s);
+        _sigma_r->getValueAtTime(time, params.sigma_r);
     }
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI rect, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI rect, const OfxPointD& renderScale, const CImgBilateralParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = std::ceil((params.sigma * 4.) * renderScale.x);
+        int delta_pix = std::ceil((params.sigma_s * 4.) * renderScale.x);
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OfxPointD& renderScale, const CImgBlurParams& params, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
+    virtual void render(const OfxPointD& renderScale, const CImgBilateralParams& params, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-#if cimg_version >= 153
-        cimg.blur(params.sigma * renderScale.x, (bool)params.boundary_i, (bool)params.filter_i);
-#else
-        cimg.blur(params.sigma * renderScale.x, (bool)params.boundary_i);
-#endif
+        cimg.blur_bilateral(cimg, params.sigma_s * renderScale.x, params.sigma_r);
     }
 
-    virtual bool isIdentity(const CImgBlurParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const CImgBilateralParams& params) OVERRIDE FINAL
     {
-        return (params.sigma == 0.);
+        return (params.sigma_r == 0. && params.sigma_r == 0.);
     };
 
 private:
 
     // params
-    OFX::DoubleParam *_sigma;
-    OFX::ChoiceParam *_boundary;
-#if cimg_version >= 153
-    OFX::ChoiceParam *_filter;
-#endif
+    OFX::DoubleParam *_sigma_s;
+    OFX::DoubleParam *_sigma_r;
 };
 
 
-mDeclarePluginFactory(CImgBlurPluginFactory, {}, {});
+mDeclarePluginFactory(CImgBilateralPluginFactory, {}, {});
 
-void CImgBlurPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+void CImgBilateralPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabels(kPluginName, kPluginName, kPluginName);
@@ -259,62 +213,45 @@ void CImgBlurPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
-void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+void CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
 {
     // create the clips and params
-    OFX::PageParamDescriptor *page = CImgBlurPlugin::describeInContextBegin(desc, context,
+    OFX::PageParamDescriptor *page = CImgBilateralPlugin::describeInContextBegin(desc, context,
                                                                               /* supportsRGBA= */ true,
                                                                               /* supportsRGB= */ true,
                                                                               /* supportsAlpha= */ true,
                                                                               kSupportsTiles);
 
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigma);
-        param->setLabels(kParamSigmaLabel, kParamSigmaLabel, kParamSigmaLabel);
-        param->setHint(kParamSigmaHint);
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
+        param->setLabels(kParamSigmaSLabel, kParamSigmaSLabel, kParamSigmaSLabel);
+        param->setHint(kParamSigmaSHint);
         param->setRange(0, 1000);
-        param->setDefault(kParamSigmaDefault);
+        param->setDefault(kParamSigmaSDefault);
         param->setIncrement(0.1);
         page->addChild(*param);
     }
     {
-        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
-        param->setLabels(kParamBoundaryLabel, kParamBoundaryLabel, kParamBoundaryLabel);
-        param->setHint(kParamBoundaryHint);
-        assert(param->getNOptions() == eBoundaryDirichlet && param->getNOptions() == 0);
-        param->appendOption(kParamBoundaryOptionDirichlet, kParamBoundaryOptionDirichletHint);
-        assert(param->getNOptions() == eBoundaryNeumann && param->getNOptions() == 1);
-        param->appendOption(kParamBoundaryOptionNeumann, kParamBoundaryOptionNeumannHint);
-        //assert(param->getNOptions() == eBoundaryPeriodic && param->getNOptions() == 2);
-        //param->appendOption(kParamBoundaryOptionPeriodic, kParamBoundaryOptionPeriodicHint);
-        param->setDefault((int)kParamBoundaryDefault);
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
+        param->setLabels(kParamSigmaRLabel, kParamSigmaRLabel, kParamSigmaRLabel);
+        param->setHint(kParamSigmaRHint);
+        param->setRange(0, 10.0);
+        param->setDefault(kParamSigmaRDefault);
+        param->setIncrement(0.005);
         page->addChild(*param);
     }
-#if cimg_version >= 153
-    {
-        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFilter);
-        param->setLabels(kParamFilterLabel, kParamFilterLabel, kParamFilterLabel);
-        param->setHint(kParamFilterHint);
-        assert(param->getNOptions() == eFilterQuasiGaussian && param->getNOptions() == 0);
-        param->appendOption(kParamFilterOptionQuasiGaussian, kParamFilterOptionQuasiGaussianHint);
-        assert(param->getNOptions() == eFilterGaussian && param->getNOptions() == 1);
-        param->appendOption(kParamFilterOptionGaussian, kParamFilterOptionGaussianHint);
-        param->setDefault((int)kParamFilterDefault);
-        page->addChild(*param);
-    }
-#endif
 
-    CImgBlurPlugin::describeInContextEnd(desc, context, page);
+    CImgBilateralPlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgBlurPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CImgBilateralPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
 {
-    return new CImgBlurPlugin(handle);
+    return new CImgBilateralPlugin(handle);
 }
 
 
-void getCImgBlurPluginID(OFX::PluginFactoryArray &ids)
+void getCImgBilateralPluginID(OFX::PluginFactoryArray &ids)
 {
-    static CImgBlurPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static CImgBilateralPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
