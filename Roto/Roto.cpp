@@ -279,11 +279,11 @@ public:
         assert(rotoClip_ && (rotoClip_->getPixelComponents() == ePixelComponentAlpha || rotoClip_->getPixelComponents() == ePixelComponentRGBA));
         _outputComps = fetchChoiceParam(kParamOutputComponents);
         assert(_outputComps);
-        _paramProcessR = fetchBooleanParam(kParamProcessR);
-        _paramProcessG = fetchBooleanParam(kParamProcessG);
-        _paramProcessB = fetchBooleanParam(kParamProcessB);
-        _paramProcessA = fetchBooleanParam(kParamProcessA);
-        assert(_paramProcessR && _paramProcessG && _paramProcessB && _paramProcessA);
+        _processR = fetchBooleanParam(kParamProcessR);
+        _processG = fetchBooleanParam(kParamProcessG);
+        _processB = fetchBooleanParam(kParamProcessB);
+        _processA = fetchBooleanParam(kParamProcessA);
+        assert(_processR && _processG && _processB && _processA);
     }
     
 private:
@@ -311,10 +311,10 @@ private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::Clip *rotoClip_;
-    OFX::BooleanParam* _paramProcessR;
-    OFX::BooleanParam* _paramProcessG;
-    OFX::BooleanParam* _paramProcessB;
-    OFX::BooleanParam* _paramProcessA;
+    OFX::BooleanParam* _processR;
+    OFX::BooleanParam* _processG;
+    OFX::BooleanParam* _processB;
+    OFX::BooleanParam* _processA;
     ChoiceParam* _outputComps;
 };
 
@@ -367,10 +367,10 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     }
 
     bool red, green, blue, alpha;
-    _paramProcessR->getValue(red);
-    _paramProcessG->getValue(green);
-    _paramProcessB->getValue(blue);
-    _paramProcessA->getValue(alpha);
+    _processR->getValue(red);
+    _processG->getValue(green);
+    _processB->getValue(blue);
+    _processA->getValue(alpha);
     processor.setValues(red, green, blue, alpha);
 
     // set the images
@@ -512,7 +512,7 @@ RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 
     PreMultiplicationEnum srcPremult = srcClip_->getPreMultiplication();
     bool alpha;
-    _paramProcessA->getValue(alpha);
+    _processA->getValue(alpha);
     if (srcPremult == eImageOpaque && alpha) {
         // we're changing alpha, the image becomes UnPremultiplied
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
@@ -529,16 +529,16 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, do
     }
 
     bool alpha;
-    _paramProcessA->getValue(alpha);
+    _processA->getValue(alpha);
 
     if (srcComponents == ePixelComponentAlpha && !alpha) {
         identityClip = srcClip_;
         return true;
     }
     bool red, green, blue;
-    _paramProcessR->getValue(red);
-    _paramProcessG->getValue(green);
-    _paramProcessB->getValue(blue);
+    _processR->getValue(red);
+    _processG->getValue(green);
+    _processB->getValue(blue);
     if (srcComponents == ePixelComponentRGBA && !red && !green && !blue && !alpha) {
         identityClip = srcClip_;
         return true;

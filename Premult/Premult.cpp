@@ -339,11 +339,11 @@ class PremultPlugin : public OFX::ImageEffect
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha));
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA || srcClip_->getPixelComponents() == ePixelComponentAlpha));
-        _paramProcessR = fetchBooleanParam(kParamProcessR);
-        _paramProcessG = fetchBooleanParam(kParamProcessG);
-        _paramProcessB = fetchBooleanParam(kParamProcessB);
-        _paramProcessA = fetchBooleanParam(kParamProcessA);
-        _paramPremult = fetchChoiceParam(kParamPremultName);
+        _processR = fetchBooleanParam(kParamProcessR);
+        _processG = fetchBooleanParam(kParamProcessG);
+        _processB = fetchBooleanParam(kParamProcessB);
+        _processA = fetchBooleanParam(kParamProcessA);
+        _premult = fetchChoiceParam(kParamPremultName);
     }
 
   private:
@@ -368,11 +368,11 @@ class PremultPlugin : public OFX::ImageEffect
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
 
-    OFX::BooleanParam* _paramProcessR;
-    OFX::BooleanParam* _paramProcessG;
-    OFX::BooleanParam* _paramProcessB;
-    OFX::BooleanParam* _paramProcessA;
-    OFX::ChoiceParam* _paramPremult;
+    OFX::BooleanParam* _processR;
+    OFX::BooleanParam* _processG;
+    OFX::BooleanParam* _processB;
+    OFX::BooleanParam* _processA;
+    OFX::ChoiceParam* _premult;
 };
 
 
@@ -412,11 +412,11 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor, const OFX::Ren
 
     bool red, green, blue, alpha;
     int premult_i;
-    _paramProcessR->getValueAtTime(args.time, red);
-    _paramProcessG->getValueAtTime(args.time, green);
-    _paramProcessB->getValueAtTime(args.time, blue);
-    _paramProcessA->getValueAtTime(args.time, alpha);
-    _paramPremult->getValue(premult_i);
+    _processR->getValueAtTime(args.time, red);
+    _processG->getValueAtTime(args.time, green);
+    _processB->getValueAtTime(args.time, blue);
+    _processA->getValueAtTime(args.time, alpha);
+    _premult->getValue(premult_i);
     InputChannelEnum premult = InputChannelEnum(premult_i);
     processor.setValues(red, green, blue, alpha, premult);
 
@@ -480,11 +480,11 @@ PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args, Clip * &id
     }
     bool red, green, blue, alpha;
     int premult_i;
-    _paramProcessR->getValueAtTime(args.time, red);
-    _paramProcessG->getValueAtTime(args.time, green);
-    _paramProcessB->getValueAtTime(args.time, blue);
-    _paramProcessA->getValueAtTime(args.time, alpha);
-    _paramPremult->getValueAtTime(args.time, premult_i);
+    _processR->getValueAtTime(args.time, red);
+    _processG->getValueAtTime(args.time, green);
+    _processB->getValueAtTime(args.time, blue);
+    _processA->getValueAtTime(args.time, alpha);
+    _premult->getValueAtTime(args.time, premult_i);
     InputChannelEnum premult = InputChannelEnum(premult_i);
 
     if (premult == eInputChannelNone || (!red && !green && !blue && !alpha)) {
@@ -507,11 +507,11 @@ PremultPlugin<isPremult>::getClipPreferences(OFX::ClipPreferencesSetter &clipPre
     // set the premultiplication of dstClip_
     bool red, green, blue, alpha;
     int premult_i;
-    _paramProcessR->getValue(red);
-    _paramProcessG->getValue(green);
-    _paramProcessB->getValue(blue);
-    _paramProcessA->getValue(alpha);
-    _paramPremult->getValue(premult_i);
+    _processR->getValue(red);
+    _processG->getValue(green);
+    _processB->getValue(blue);
+    _processA->getValue(alpha);
+    _premult->getValue(premult_i);
     InputChannelEnum premult = InputChannelEnum(premult_i);
 
     if (premult == eInputChannelA && red && green && blue && !alpha) {
@@ -571,24 +571,24 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std
                 break;
             case eImagePreMultiplied:
                 if (isPremult) {
-                    //_paramPremult->setValue(eInputChannelNone);
+                    //_premult->setValue(eInputChannelNone);
                 } else {
-                    _paramProcessR->setValue(true);
-                    _paramProcessG->setValue(true);
-                    _paramProcessB->setValue(true);
-                    _paramProcessA->setValue(false);
-                    _paramPremult->setValue(eInputChannelA);
+                    _processR->setValue(true);
+                    _processG->setValue(true);
+                    _processB->setValue(true);
+                    _processA->setValue(false);
+                    _premult->setValue(eInputChannelA);
                 }
                 break;
             case eImageUnPreMultiplied:
                 if (!isPremult) {
-                    //_paramPremult->setValue(eInputChannelNone);
+                    //_premult->setValue(eInputChannelNone);
                 } else {
-                    _paramProcessR->setValue(true);
-                    _paramProcessG->setValue(true);
-                    _paramProcessB->setValue(true);
-                    _paramProcessA->setValue(false);
-                    _paramPremult->setValue(eInputChannelA);
+                    _processR->setValue(true);
+                    _processG->setValue(true);
+                    _processB->setValue(true);
+                    _processA->setValue(false);
+                    _premult->setValue(eInputChannelA);
                 }
                 break;
         }

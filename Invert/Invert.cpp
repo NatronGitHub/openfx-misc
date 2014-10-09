@@ -322,11 +322,11 @@ class InvertPlugin : public OFX::ImageEffect
         assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA || srcClip_->getPixelComponents() == ePixelComponentAlpha));
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
-        _paramProcessR = fetchBooleanParam(kParamProcessR);
-        _paramProcessG = fetchBooleanParam(kParamProcessG);
-        _paramProcessB = fetchBooleanParam(kParamProcessB);
-        _paramProcessA = fetchBooleanParam(kParamProcessA);
-        assert(_paramProcessR && _paramProcessG && _paramProcessB && _paramProcessA);
+        _processR = fetchBooleanParam(kParamProcessR);
+        _processG = fetchBooleanParam(kParamProcessG);
+        _processB = fetchBooleanParam(kParamProcessB);
+        _processA = fetchBooleanParam(kParamProcessA);
+        assert(_processR && _processG && _processB && _processA);
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
@@ -353,10 +353,10 @@ class InvertPlugin : public OFX::ImageEffect
     OFX::Clip *srcClip_;
     OFX::Clip *maskClip_;
 
-    OFX::BooleanParam* _paramProcessR;
-    OFX::BooleanParam* _paramProcessG;
-    OFX::BooleanParam* _paramProcessB;
-    OFX::BooleanParam* _paramProcessA;
+    OFX::BooleanParam* _processR;
+    OFX::BooleanParam* _processG;
+    OFX::BooleanParam* _processB;
+    OFX::BooleanParam* _processA;
     OFX::BooleanParam* _premult;
     OFX::ChoiceParam* _premultChannel;
     OFX::DoubleParam* _mix;
@@ -413,10 +413,10 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
     }
 
     bool red, green, blue, alpha;
-    _paramProcessR->getValueAtTime(args.time, red);
-    _paramProcessG->getValueAtTime(args.time, green);
-    _paramProcessB->getValueAtTime(args.time, blue);
-    _paramProcessA->getValueAtTime(args.time, alpha);
+    _processR->getValueAtTime(args.time, red);
+    _processG->getValueAtTime(args.time, green);
+    _processB->getValueAtTime(args.time, blue);
+    _processA->getValueAtTime(args.time, alpha);
     bool premult;
     int premultChannel;
     _premult->getValueAtTime(args.time, premult);
@@ -520,10 +520,10 @@ InvertPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, 
 {
     bool red, green, blue, alpha;
     double mix;
-    _paramProcessR->getValueAtTime(args.time, red);
-    _paramProcessG->getValueAtTime(args.time, green);
-    _paramProcessB->getValueAtTime(args.time, blue);
-    _paramProcessA->getValueAtTime(args.time, alpha);
+    _processR->getValueAtTime(args.time, red);
+    _processG->getValueAtTime(args.time, green);
+    _processB->getValueAtTime(args.time, blue);
+    _processA->getValueAtTime(args.time, alpha);
     _mix->getValueAtTime(args.time, mix);
 
     if (mix == 0. || (!red && !green && !blue && !alpha)) {

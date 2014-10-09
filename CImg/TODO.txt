@@ -1,9 +1,7 @@
-- bilateral with guide
-- dilate
 - denoise
 - draw_plasma
 - equalize
-- erode
+- bilateral with guide 
 - hsi2rgb
 - hsl2rgb
 - hsv2rgb

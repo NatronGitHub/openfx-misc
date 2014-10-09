@@ -688,10 +688,10 @@ ColorCorrectPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identity
 {
     //bool red, green, blue, alpha;
     double mix;
-    //_paramProcessR->getValueAtTime(args.time, red);
-    //_paramProcessG->getValueAtTime(args.time, green);
-    //_paramProcessB->getValueAtTime(args.time, blue);
-    //_paramProcessA->getValueAtTime(args.time, alpha);
+    //_processR->getValueAtTime(args.time, red);
+    //_processG->getValueAtTime(args.time, green);
+    //_processB->getValueAtTime(args.time, blue);
+    //_processA->getValueAtTime(args.time, alpha);
     _mix->getValueAtTime(args.time, mix);
 
     if (mix == 0. /*|| (!red && !green && !blue && !alpha)*/) {
