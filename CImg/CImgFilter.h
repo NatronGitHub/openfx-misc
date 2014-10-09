@@ -210,7 +210,7 @@ public:
 
     static void
     describeInContextEnd(OFX::ImageEffectDescriptor &desc,
-                         OFX::ContextEnum context,
+                         OFX::ContextEnum /*context*/,
                          OFX::PageParamDescriptor* page)
     {
         ofxsPremultDescribeParams(desc, page);
