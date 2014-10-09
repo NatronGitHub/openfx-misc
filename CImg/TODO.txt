@@ -1,0 +1,25 @@
+- bilateral with guide
+- dilate
+- denoise
+- draw_plasma
+- equalize
+- erode
+- hsi2rgb
+- hsl2rgb
+- hsv2rgb
+- lab2rgb
+- normalize
+- noise
+- rgb2hsi
+- rgb2hsl
+- rgb2hsv
+- rgb2lab
+- rgb2srgb
+- sharpen
+- watershed
+- distance
+
+later:
+- draw_mandelbrot
+- draw_gaussian
+- draw_quiver
