@@ -275,6 +275,7 @@
 		1E868B7519E6E10100B793BA /* CImgDilate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E868B7319E6E10100B793BA /* CImgDilate.cpp */; };
 		1E868B7819E6E28E00B793BA /* CImgErode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E868B7619E6E28E00B793BA /* CImgErode.cpp */; };
 		1E868B7B19E6E72B00B793BA /* CImgNoise.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E868B7919E6E72B00B793BA /* CImgNoise.cpp */; };
+		1E868B7E19E6F6B500B793BA /* CImgDenoise.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E868B7C19E6F6B500B793BA /* CImgDenoise.cpp */; };
 		1E8B5D4518B7684A00C31FDC /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E8B5D4318B7684A00C31FDC /* PluginRegistration.cpp */; };
 		1E8B5D4C18B76A7500C31FDC /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E8B5D4D18B76A7500C31FDC /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
@@ -1230,6 +1231,8 @@
 		1E868B7719E6E28E00B793BA /* CImgErode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgErode.h; sourceTree = "<group>"; };
 		1E868B7919E6E72B00B793BA /* CImgNoise.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgNoise.cpp; sourceTree = "<group>"; };
 		1E868B7A19E6E72B00B793BA /* CImgNoise.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgNoise.h; sourceTree = "<group>"; };
+		1E868B7C19E6F6B500B793BA /* CImgDenoise.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgDenoise.cpp; sourceTree = "<group>"; };
+		1E868B7D19E6F6B500B793BA /* CImgDenoise.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgDenoise.h; sourceTree = "<group>"; };
 		1E8B5D4218B7658100C31FDC /* Switch.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Switch.h; sourceTree = "<group>"; };
 		1E8B5D4318B7684A00C31FDC /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1E8B5D4718B769CA00C31FDC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -1789,6 +1792,8 @@
 				1E868B7119E6D8CD00B793BA /* CImgBilateral.h */,
 				1E868B6D19E6B8C100B793BA /* CImgBlur.cpp */,
 				1E868B6E19E6B8C100B793BA /* CImgBlur.h */,
+				1E868B7C19E6F6B500B793BA /* CImgDenoise.cpp */,
+				1E868B7D19E6F6B500B793BA /* CImgDenoise.h */,
 				1E868B7319E6E10100B793BA /* CImgDilate.cpp */,
 				1E868B7419E6E10100B793BA /* CImgDilate.h */,
 				1E868B7619E6E28E00B793BA /* CImgErode.cpp */,
@@ -3133,6 +3138,7 @@
 				1E31941419D9B2270027D0E2 /* ofxsImageEffect.cpp in Sources */,
 				1E868B6F19E6B8C100B793BA /* CImgBlur.cpp in Sources */,
 				1E31941519D9B2270027D0E2 /* ofxsInteract.cpp in Sources */,
+				1E868B7E19E6F6B500B793BA /* CImgDenoise.cpp in Sources */,
 				1E868B7819E6E28E00B793BA /* CImgErode.cpp in Sources */,
 				1E31941619D9B2270027D0E2 /* ofxsLog.cpp in Sources */,
 				1E31941719D9B2270027D0E2 /* ofxsMultiThread.cpp in Sources */,

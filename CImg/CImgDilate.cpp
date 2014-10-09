@@ -70,10 +70,6 @@
 
  */
 
-// TODO: masking/mixing
-// TODO: handle RGB, Alpha components
-// TODO: support tiles (process src, and copy just the renderWindow to dst)
-
 #include "CImgDilate.h"
 
 #include <memory>

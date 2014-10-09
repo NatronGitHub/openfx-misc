@@ -824,7 +824,7 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
         //////////////////////////////////////////////////////////////////////////////////////////
         // 3- process the cimg
 
-        render(renderScale, params, cimg);
+        render(args, params, srcRoI.x1, srcRoI.y1, cimg);
 
         //////////////////////////////////////////////////////////////////////////////////////////
         // 4- copy back the processed channels from the cImg to tmp. only processWindow has to be copied

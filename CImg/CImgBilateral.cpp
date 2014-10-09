@@ -70,10 +70,6 @@
 
  */
 
-// TODO: masking/mixing
-// TODO: handle RGB, Alpha components
-// TODO: support tiles (process src, and copy just the renderWindow to dst)
-
 #include "CImgBilateral.h"
 
 #include <memory>
@@ -168,7 +164,7 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        cimg.blur_bilateral(cimg, params.sigma_s * renderScale.x, params.sigma_r);
+        cimg.blur_bilateral(cimg, params.sigma_s * args.renderScale.x, params.sigma_r);
     }
 
     virtual bool isIdentity(const CImgBilateralParams& params) OVERRIDE FINAL
