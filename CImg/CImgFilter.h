@@ -547,11 +547,11 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
     //dstPixelBytes = getPixelBytes(dstPixelComponents, dstBitDepth);
     const int dstRowBytes = dst->getRowBytes();
 
-    bool red, green, blue, alpha;
-    _paramProcessR->getValueAtTime(time, red);
-    _paramProcessG->getValueAtTime(time, green);
-    _paramProcessB->getValueAtTime(time, blue);
-    _paramProcessA->getValueAtTime(time, alpha);
+    bool processR, processG, processB, processA;
+    _paramProcessR->getValueAtTime(time, processR);
+    _paramProcessG->getValueAtTime(time, processG);
+    _paramProcessB->getValueAtTime(time, processB);
+    _paramProcessA->getValueAtTime(time, processA);
     bool premult;
     int premultChannel;
     _premult->getValueAtTime(time, premult);
@@ -682,7 +682,6 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
     }
     assert(mix != 0.); // mix == 0. should give an empty processWindow
 
-    cimg_library::CImg<float> src_img;
 
     Params params;
     getValuesAtTime(time, params);
@@ -696,102 +695,175 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
     if(src->getBounds().x1 > srcRoI.x1 || srcRoI.x2 > src->getBounds().x2 || src->getBounds().y1 > srcRoI.y1 || srcRoI.y2 > src->getBounds().y2) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+    int srcNComponents = ((srcPixelComponents == OFX::ePixelComponentAlpha) ? 1 :
+                          ((srcPixelComponents == OFX::ePixelComponentRGB) ? 3 : 4));
 
-    // allocate the cimg data to hold the src ROI
-    const int srcCImgNComponents = (srcPixelComponents == OFX::ePixelComponentAlpha) ? 1 : 3;
-    const OfxRectI srcCImgBounds = srcRoI;
-    const OFX::PixelComponentEnum srcCImgPixelComponents = (srcPixelComponents == OFX::ePixelComponentRGBA) ? OFX::ePixelComponentRGB : srcPixelComponents;
-    const OFX::BitDepthEnum srcCImgBitDepth = OFX::eBitDepthFloat;
-    const int srcCImgWidth = srcCImgBounds.x2 - srcCImgBounds.x1;
-    const int srcCImgHeight = srcCImgBounds.y2 - srcCImgBounds.y1;
-    const int srcCImgRowBytes = getPixelBytes(srcCImgPixelComponents, srcCImgBitDepth) * srcCImgWidth;
-    size_t srcCImgSize = srcCImgRowBytes * srcCImgHeight;
-    std::auto_ptr<OFX::ImageMemory> srcCImgData(new OFX::ImageMemory(srcCImgSize));
-    float *srcCImgPixelData = (float*)srcCImgData->lock();
+    // from here on, we do the following steps:
+    // 1- copy & unpremult all channels from srcRoI, from src to a tmp image of size srcRoI
+    // 2- extract channels to be processed from tmp to a cimg of size srcRoI (and do the interleaved to coplanar conversion)
+    // 3- process the cimg
+    // 4- copy back the processed channels from the cImg to tmp. only processWindow has to be copied
+    // 5- copy+premult+max+mix tmp to dst (only processWindow)
 
-    // unpremult and copy ROI to CImg
-    // special case for CImgSmooth and other color-based processors: don't process the alpha component, it is just copied at the end
+    //////////////////////////////////////////////////////////////////////////////////////////
+    // 1- copy & unpremult all channels from srcRoI, from src to a tmp image of size srcRoI
+
+    const OfxRectI tmpBounds = srcRoI;
+    const OFX::PixelComponentEnum tmpPixelComponents = srcPixelComponents;
+    const OFX::BitDepthEnum tmpBitDepth = OFX::eBitDepthFloat;
+    const int tmpWidth = tmpBounds.x2 - tmpBounds.x1;
+    const int tmpHeight = tmpBounds.y2 - tmpBounds.y1;
+    const int tmpRowBytes = getPixelBytes(tmpPixelComponents, tmpBitDepth) * tmpWidth;
+    size_t tmpSize = tmpRowBytes * tmpHeight;
+
+    assert(tmpSize > 0);
+    std::auto_ptr<OFX::ImageMemory> tmpData(new OFX::ImageMemory(tmpSize, this));
+    float *tmpPixelData = (float*)tmpData->lock();
+
     if (srcPixelComponents == OFX::ePixelComponentRGBA) {
-        assert(srcCImgNComponents == 3);
-        OFX::PixelCopierUnPremult<float, 4, 1, float, 3, 1> fred(*this);
+        OFX::PixelCopierUnPremult<float, 4, 1, float, 4, 1> fred(*this);
         setupAndCopy(fred, time, srcRoI,
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
-                     srcCImgPixelData, srcCImgBounds, srcCImgPixelComponents, srcCImgBitDepth, srcCImgRowBytes,
+                     tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
                      premult, premultChannel, mix, maskInvert);
     } else if (srcPixelComponents == OFX::ePixelComponentRGB) {
         // just copy, no premult
-        assert(srcCImgNComponents == 3);
         OFX::PixelCopier<float, 3, 1> fred(*this);
         setupAndCopy(fred, time, srcRoI,
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
-                     srcCImgPixelData, srcCImgBounds, srcCImgPixelComponents, srcCImgBitDepth, srcCImgRowBytes,
+                     tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
                      premult, premultChannel, mix, maskInvert);
     } else {
         // just copy, no premult
         assert(srcPixelComponents == OFX::ePixelComponentAlpha);
-        assert(srcCImgNComponents == 1);
         OFX::PixelCopier<float, 1, 1> fred(*this);
         setupAndCopy(fred, time, srcRoI,
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
-                     srcCImgPixelData, srcCImgBounds, srcCImgPixelComponents, srcCImgBitDepth, srcCImgRowBytes,
+                     tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
                      premult, premultChannel, mix, maskInvert);
     }
 
-    if (mix != 0.) {
-        // srcCImg uses srcCImgData as its data area
-        cimg_library::CImg<float> srcCImg(srcCImgPixelData, srcCImgNComponents, srcCImgWidth, srcCImgHeight, 1, true);
-        srcCImg.permute_axes("yzcx");
-        assert(srcCImg.width() == srcCImgWidth);
-        assert(srcCImg.height() == srcCImgHeight);
-        assert(srcCImg.depth() == 1);
-        assert(srcCImg.spectrum() == srcCImgNComponents);
+    //////////////////////////////////////////////////////////////////////////////////////////
+    // 2- extract channels to be processed from tmp to a cimg of size srcRoI (and do the interleaved to coplanar conversion)
 
-        render(renderScale, params, srcCImg);
+    // allocate the cimg data to hold the src ROI
+    const int cimgSpectrum = ((srcPixelComponents == OFX::ePixelComponentAlpha) ? (int)processA :
+                              ((srcPixelComponents == OFX::ePixelComponentRGB) ? ((int)processR + (int)processG + (int) processB) :
+                               ((int)processR + (int)processG + (int) processB + (int)processA)));
+    const int cimgWidth = srcRoI.x2 - srcRoI.x1;
+    const int cimgHeight = srcRoI.y2 - srcRoI.y1;
+    const size_t cimgSize = cimgWidth * cimgHeight * cimgSpectrum * sizeof(float);
+    std::vector<int> srcChannel(cimgSpectrum, -1);
+    std::vector<int> cimgChannel(srcNComponents, -1);
 
-        srcCImg.permute_axes("cxyz");
-    }
-
-    if (srcPixelComponents != OFX::ePixelComponentRGBA) {
-        // trivial case: RGB or ALpha
-        // just copy and mask/mix the results, no premult
-        const bool doMasking = getContext() != OFX::eContextFilter && maskClip_->isConnected();
-        if (srcPixelComponents == OFX::ePixelComponentRGB) {
-            if (doMasking) {
-                OFX::PixelCopierMaskMix<float, 3, 1, true> fred(*this);
-                setupAndCopy(fred, time, processWindow,
-                             srcCImgPixelData, srcCImgBounds, srcCImgPixelComponents, srcCImgBitDepth, srcCImgRowBytes,
-                             dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
-                             premult, premultChannel, mix, maskInvert);
-            } else {
-                OFX::PixelCopierMaskMix<float, 3, 1, false> fred(*this);
-                setupAndCopy(fred, time, processWindow,
-                             srcCImgPixelData, srcCImgBounds, srcCImgPixelComponents, srcCImgBitDepth, srcCImgRowBytes,
-                             dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
-                             premult, premultChannel, mix, maskInvert);
-            }
-        } else if (srcPixelComponents == OFX::ePixelComponentAlpha) {
-            if (doMasking) {
-                OFX::PixelCopierMaskMix<float, 1, 1, true> fred(*this);
-                setupAndCopy(fred, time, processWindow,
-                             srcCImgPixelData, srcCImgBounds, srcCImgPixelComponents, srcCImgBitDepth, srcCImgRowBytes,
-                             dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
-                             premult, premultChannel, mix, maskInvert);
-            } else {
-                OFX::PixelCopierMaskMix<float, 1, 1, false> fred(*this);
-                setupAndCopy(fred, time, processWindow,
-                             srcCImgPixelData, srcCImgBounds, srcCImgPixelComponents, srcCImgBitDepth, srcCImgRowBytes,
-                             dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
-                             premult, premultChannel, mix, maskInvert);
-            }
+    if (srcNComponents == 1) {
+        if (processA) {
+            assert(cimgSpectrum == 1);
+            srcChannel[0] = 0;
+            cimgChannel[0] = 0;
+        } else {
+            assert(cimgSpectrum == 0);
         }
     } else {
-        // take alpha from the original image, and premult
-        OFX::PixelCopierPremultOrigMaskMix<float, 3, 1, float, 4, 1> fred(*this);
-        setupAndCopy(fred, time, processWindow,
-                     srcCImgPixelData, srcCImgBounds, srcCImgPixelComponents, srcCImgBitDepth, srcCImgRowBytes,
+        int c = 0;
+        if (processR) {
+            srcChannel[c] = 0;
+            ++c;
+        }
+        if (processG) {
+            srcChannel[c] = 1;
+            ++c;
+        }
+        if (processB) {
+            srcChannel[c] = 2;
+            ++c;
+        }
+        if (processA && srcNComponents >= 4) {
+            srcChannel[c] = 3;
+            ++c;
+        }
+        assert(c == cimgSpectrum);
+    }
+
+    if (cimgSize) { // may be zero if no channel is processed
+        std::auto_ptr<OFX::ImageMemory> cimgData(new OFX::ImageMemory(cimgSize, this));
+        float *cimgPixelData = (float*)cimgData->lock();
+        cimg_library::CImg<float> cimg(cimgPixelData, cimgWidth, cimgHeight, 1, cimgSpectrum, true);
+
+
+        for (int c=0; c < cimgSpectrum; ++c) {
+            float *dst = cimg.data(0,0,0,c);
+            const float *src = tmpPixelData + srcChannel[c];
+            for (unsigned int siz = cimgWidth * cimgHeight; siz; --siz, src += srcNComponents, ++dst) {
+                *dst = *src;
+            }
+        }
+
+        //////////////////////////////////////////////////////////////////////////////////////////
+        // 3- process the cimg
+
+        render(renderScale, params, cimg);
+
+        //////////////////////////////////////////////////////////////////////////////////////////
+        // 4- copy back the processed channels from the cImg to tmp. only processWindow has to be copied
+
+        // We copy the whole srcRoI. This could be optimized to copy only renderWindow
+        for (int c=0; c < cimgSpectrum; ++c) {
+            const float *src = cimg.data(0,0,0,c);
+            float *dst = tmpPixelData + srcChannel[c];
+            for (unsigned int siz = cimgWidth * cimgHeight; siz; --siz, ++src, dst += srcNComponents) {
+                *dst = *src;
+            }
+        }
+
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////
+    // 5- copy+premult+max+mix tmp to dst (only processWindow)
+
+    const bool doMasking = getContext() != OFX::eContextFilter && maskClip_->isConnected();
+
+    if (srcPixelComponents == OFX::ePixelComponentRGBA) {
+        OFX::PixelCopierPremultMaskMix<float, 4, 1, float, 4, 1> fred(*this);
+        setupAndCopy(fred, time, renderWindow,
+                     tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
+    } else if (srcPixelComponents == OFX::ePixelComponentRGB) {
+        // just copy, no premult
+        if (doMasking) {
+            OFX::PixelCopierMaskMix<float, 3, 1, true> fred(*this);
+            setupAndCopy(fred, time, srcRoI,
+                         tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
+                         dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
+                         premult, premultChannel, mix, maskInvert);
+        } else {
+            OFX::PixelCopierMaskMix<float, 3, 1, false> fred(*this);
+            setupAndCopy(fred, time, srcRoI,
+                         tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
+                         dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
+                         premult, premultChannel, mix, maskInvert);
+        }
+    } else {
+        // just copy, no premult
+        assert(srcPixelComponents == OFX::ePixelComponentAlpha);
+        if (doMasking) {
+            OFX::PixelCopierMaskMix<float, 1, 1, true> fred(*this);
+            setupAndCopy(fred, time, srcRoI,
+                         tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
+                         dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
+                         premult, premultChannel, mix, maskInvert);
+        } else {
+            OFX::PixelCopierMaskMix<float, 1, 1, false> fred(*this);
+            setupAndCopy(fred, time, srcRoI,
+                         tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
+                         dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
+                         premult, premultChannel, mix, maskInvert);
+        }
     }
+
+    //////////////////////////////////////////////////////////////////////////////////////////
+    // done!
 }
 
 
