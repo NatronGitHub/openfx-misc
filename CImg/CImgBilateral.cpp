@@ -164,7 +164,11 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
+#if cimg_version >= 157
         cimg.blur_bilateral(cimg, params.sigma_s * args.renderScale.x, params.sigma_r);
+#else
+        cimg.blur_bilateral(params.sigma_s * args.renderScale.x, params.sigma_r);
+#endif
     }
 
     virtual bool isIdentity(const CImgBilateralParams& params) OVERRIDE FINAL
