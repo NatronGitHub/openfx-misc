@@ -7,7 +7,6 @@
 - hsv2rgb
 - lab2rgb
 - normalize
-- noise
 - rgb2hsi
 - rgb2hsl
 - rgb2hsv
