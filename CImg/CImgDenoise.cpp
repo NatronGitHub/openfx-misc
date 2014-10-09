@@ -127,7 +127,7 @@
 #define kParamPatchSizeHint "Size of the patchs, in pixels (>=0)."
 #define kParamPatchSizeDefault 5
 
-#define kParamLookupSize "psize"
+#define kParamLookupSize "lsize"
 #define kParamLookupSizeLabel "Lookup Size"
 #define kParamLookupSizeHint "Size of the window to search similar patchs, in pixels (>=0)."
 #define kParamLookupSizeDefault 6
