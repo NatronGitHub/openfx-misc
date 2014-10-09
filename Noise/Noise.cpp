@@ -256,7 +256,7 @@ NoisePlugin::setupAndProcess(NoiseGeneratorBase &processor, const OFX::RenderArg
     // noise level depends on the render scale
     // (the following formula is for Gaussian noise only, but we use it as an approximation)
     double noise = noise_->getValueAtTime(args.time);
-    processor.setNoiseLevel((float)(noise * std::sqrt(args.renderScale.x * args.renderScale.y)));
+    processor.setNoiseLevel((float)(noise * std::sqrt(args.renderScale.x)));
     processor.setNoiseMean((float)(noise / 2.));
 
     // set the seed based on the current time, and double it we get difference seeds on different fields
