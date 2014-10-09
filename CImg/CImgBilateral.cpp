@@ -217,9 +217,9 @@ void CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& d
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgBilateralPlugin::describeInContextBegin(desc, context,
-                                                                              /* supportsRGBA= */ true,
-                                                                              /* supportsRGB= */ true,
-                                                                              /* supportsAlpha= */ true,
+                                                                              kSupportsRGBA,
+                                                                              kSupportsRGB,
+                                                                              kSupportsAlpha,
                                                                               kSupportsTiles);
 
     {

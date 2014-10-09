@@ -53,11 +53,11 @@ public:
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == OFX::ePixelComponentAlpha);
 
-        _paramProcessR = fetchBooleanParam(kParamProcessR);
-        _paramProcessG = fetchBooleanParam(kParamProcessG);
-        _paramProcessB = fetchBooleanParam(kParamProcessB);
-        _paramProcessA = fetchBooleanParam(kParamProcessA);
-        assert(_paramProcessR && _paramProcessG && _paramProcessB && _paramProcessA);
+        _processR = fetchBooleanParam(kParamProcessR);
+        _processG = fetchBooleanParam(kParamProcessG);
+        _processB = fetchBooleanParam(kParamProcessB);
+        _processA = fetchBooleanParam(kParamProcessA);
+        assert(_processR && _processG && _processB && _processA);
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
@@ -88,6 +88,24 @@ public:
                     break;
                 case OFX::eImageUnPreMultiplied:
                     _premult->setValue(false);
+                    break;
+            }
+            switch (srcClip_->getPixelComponents()) {
+                case OFX::ePixelComponentAlpha:
+                    _processR->setValue(false);
+                    _processG->setValue(false);
+                    _processB->setValue(false);
+                    _processA->setValue(true);
+                    break;
+                case OFX::ePixelComponentRGBA:
+                case OFX::ePixelComponentRGB:
+                    // Alpha is not processed by default on RGBA images
+                    _processR->setValue(true);
+                    _processG->setValue(true);
+                    _processB->setValue(true);
+                    _processA->setValue(false);
+                    break;
+                default:
                     break;
             }
         }
@@ -381,10 +399,10 @@ private:
     OFX::Clip *maskClip_;
 
     // params
-    OFX::BooleanParam* _paramProcessR;
-    OFX::BooleanParam* _paramProcessG;
-    OFX::BooleanParam* _paramProcessB;
-    OFX::BooleanParam* _paramProcessA;
+    OFX::BooleanParam* _processR;
+    OFX::BooleanParam* _processG;
+    OFX::BooleanParam* _processB;
+    OFX::BooleanParam* _processA;
     OFX::BooleanParam* _premult;
     OFX::ChoiceParam* _premultChannel;
     OFX::DoubleParam* _mix;
@@ -548,10 +566,10 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
     const int dstRowBytes = dst->getRowBytes();
 
     bool processR, processG, processB, processA;
-    _paramProcessR->getValueAtTime(time, processR);
-    _paramProcessG->getValueAtTime(time, processG);
-    _paramProcessB->getValueAtTime(time, processB);
-    _paramProcessA->getValueAtTime(time, processA);
+    _processR->getValueAtTime(time, processR);
+    _processG->getValueAtTime(time, processG);
+    _processB->getValueAtTime(time, processB);
+    _processA->getValueAtTime(time, processA);
     bool premult;
     int premultChannel;
     _premult->getValueAtTime(time, premult);
@@ -946,10 +964,10 @@ CImgFilterPluginHelper<Params>::isIdentity(const OFX::IsIdentityArguments &args,
     }
 
     bool red, green, blue, alpha;
-    _paramProcessR->getValueAtTime(args.time, red);
-    _paramProcessG->getValueAtTime(args.time, green);
-    _paramProcessB->getValueAtTime(args.time, blue);
-    _paramProcessA->getValueAtTime(args.time, alpha);
+    _processR->getValueAtTime(args.time, red);
+    _processG->getValueAtTime(args.time, green);
+    _processB->getValueAtTime(args.time, blue);
+    _processA->getValueAtTime(args.time, alpha);
     if (!red && !green && !blue && !alpha) {
         identityClip = srcClip_;
         return true;

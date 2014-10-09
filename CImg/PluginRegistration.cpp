@@ -1,5 +1,7 @@
 #include "CImgBlur.h"
 #include "CImgBilateral.h"
+#include "CImgDilate.h"
+#include "CImgErode.h"
 #include "CImgSmooth.h"
 
 namespace OFX
@@ -10,6 +12,8 @@ namespace OFX
         {
             getCImgBlurPluginID(ids);
             getCImgBilateralPluginID(ids);
+            getCImgDilatePluginID(ids);
+            getCImgErodePluginID(ids);
             getCImgSmoothPluginID(ids);
         }
     }

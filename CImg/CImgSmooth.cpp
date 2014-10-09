@@ -315,9 +315,9 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgSmoothPlugin::describeInContextBegin(desc, context,
-                                                                              /* supportsRGBA= */ true,
-                                                                              /* supportsRGB= */ true,
-                                                                              /* supportsAlpha= */ true,
+                                                                              kSupportsRGBA,
+                                                                              kSupportsRGB,
+                                                                              kSupportsAlpha,
                                                                               kSupportsTiles);
 
     {
