@@ -540,6 +540,7 @@ InvertPlugin::changedClip(const InstanceChangedArgs &args, const std::string &cl
     if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
         switch (srcClip_->getPreMultiplication()) {
             case eImageOpaque:
+                _premult->setValue(false);
                 break;
             case eImagePreMultiplied:
                 _premult->setValue(true);
