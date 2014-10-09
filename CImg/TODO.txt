@@ -1,4 +1,3 @@
-- denoise
 - draw_plasma
 - equalize
 - bilateral with guide 
