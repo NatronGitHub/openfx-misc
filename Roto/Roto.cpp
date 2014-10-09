@@ -264,7 +264,7 @@ class RotoPlugin : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
-    RotoPlugin(OfxImageEffectHandle handle, bool masked)
+  RotoPlugin(OfxImageEffectHandle handle, bool /*masked*/)
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClip_(0)
@@ -520,7 +520,7 @@ RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 }
 
 bool
-RotoPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
+RotoPlugin::isIdentity(const IsIdentityArguments &/*args*/, Clip * &identityClip, double &/*identityTime*/)
 {
     OFX::PixelComponentEnum srcComponents  = srcClip_->getPixelComponents();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();

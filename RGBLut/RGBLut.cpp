@@ -181,7 +181,7 @@ static float clamp(float value, int maxValue)
 
 // floats don't clamp
 template<>
-float clamp<float>(float value, int maxValue)
+float clamp<float>(float value, int /*maxValue*/)
 {
     return value;
 }
