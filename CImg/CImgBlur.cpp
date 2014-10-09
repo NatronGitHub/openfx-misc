@@ -208,9 +208,9 @@ public:
         // PROCESSING.
         // This is the only place where the actual processing takes place
 #if cimg_version >= 153
-        cimg.blur(params.sigma * renderScale.x, params.boundary_i, params.filter_i);
+        cimg.blur(params.sigma * renderScale.x, (bool)params.boundary_i, (bool)params.filter_i);
 #else
-        cimg.blur(params.sigma * renderScale.x, params.boundary_i);
+        cimg.blur(params.sigma * renderScale.x, (bool)params.boundary_i);
 #endif
     }
 
