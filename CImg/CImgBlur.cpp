@@ -203,14 +203,14 @@ public:
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OfxPointD& renderScale, const CImgBlurParams& params, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &args, const CImgBlurParams& params, int x1, int y1, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
 #if cimg_version >= 153
-        cimg.blur(params.sigma * renderScale.x, (bool)params.boundary_i, (bool)params.filter_i);
+        cimg.blur(params.sigma * args.renderScale.x, (bool)params.boundary_i, (bool)params.filter_i);
 #else
-        cimg.blur(params.sigma * renderScale.x, (bool)params.boundary_i);
+        cimg.blur(params.sigma * args.renderScale.x, (bool)params.boundary_i);
 #endif
     }
 

@@ -118,7 +118,7 @@ public:
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     virtual void getRoI(const OfxRectI rect, const OfxPointD& renderScale, const Params& params, OfxRectI* roi) = 0;
 
-    virtual void render(const OfxPointD& renderScale, const Params& params, cimg_library::CImg<float>& cimg) = 0;
+    virtual void render(const OFX::RenderArguments &args, const Params& params, int x1, int y1,cimg_library::CImg<float>& cimg) = 0;
 
     virtual bool isIdentity(const Params& params) { return false; };
 

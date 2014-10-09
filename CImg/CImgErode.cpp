@@ -159,16 +159,16 @@ public:
         roi->y2 = rect.y2 + delta_pix_y;
     }
 
-    virtual void render(const OfxPointD& renderScale, const CImgErodeParams& params, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &args, const CImgErodeParams& params, int x1, int y1, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        cimg.erode(std::ceil(params.sx * renderScale.x), std::ceil(params.sy * renderScale.y));
+        cimg.erode(std::ceil(params.sx * args.renderScale.x), std::ceil(params.sy * args.renderScale.y));
     }
 
     virtual bool isIdentity(const CImgErodeParams& params) OVERRIDE FINAL
     {
-        return (params.sx == 0. && params.sy == 0.);
+        return (params.sx == 0 && params.sy == 0);
     };
 
 private:
