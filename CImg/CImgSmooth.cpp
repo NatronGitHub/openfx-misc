@@ -98,7 +98,6 @@
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
 "Smooth/Denoise input stream using anisotropic PDE-based smoothing.\n" \
-"If input is RGBA or RGB, only RGB data is smoothed.\n" \
 "Uses the 'blur_anisotropic' function from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
