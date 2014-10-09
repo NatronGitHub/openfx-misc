@@ -115,7 +115,7 @@
 
 #define kParamSigma "sigma"
 #define kParamSigmaLabel "Sigma"
-#define kParamSigmaHint "Amplitude of the random additive noise (except for Poisson noise)."
+#define kParamSigmaHint "Amplitude of the random additive noise."
 #define kParamSigmaDefault 0.01
 
 #define kParamType "type"
@@ -128,7 +128,7 @@
 #define kParamTypeOptionSaltPepper "Salt & Pepper"
 #define kParamTypeOptionSaltPepperHint "Salt & pepper noise."
 #define kParamTypeOptionPoisson "Poisson"
-#define kParamTypeOptionPoissonHint "Poisson noise. Sigma is ignored, as Poisson noise only depends on the image value itself."
+#define kParamTypeOptionPoissonHint "Poisson noise. Image is divided by Sigma before computing noise, then remultiplied by Sigma."
 #define kParamTypeOptionRice "Rice"
 #define kParamTypeOptionRiceHint "Rician noise."
 #define kParamTypeDefault eTypeGaussian
@@ -184,7 +184,13 @@ public:
         // PROCESSING.
         // This is the only place where the actual processing takes place
         // the noise vs. scale dependency formula is only valid for Gaussian noise
+        if (params.type_i == eTypePoisson) {
+            cimg /= params.sigma;
+        }
         cimg.noise(params.sigma * std::sqrt(args.renderScale.x), params.type_i);
+        if (params.type_i == eTypePoisson) {
+            cimg *= params.sigma;
+        }
     }
 
     virtual bool isIdentity(const CImgNoiseParams& params) OVERRIDE FINAL
