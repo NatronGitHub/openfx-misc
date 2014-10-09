@@ -560,6 +560,10 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
     _mix->getValueAtTime(time, mix);
     bool maskInvert;
     _maskInvert->getValueAtTime(time, maskInvert);
+    if (!processR && !processG && !processB) {
+        // no need to (un)premult if we don't change colors
+        premult = false;
+    }
 
     std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(time) : 0);
     OfxRectI processWindow = renderWindow; //!< the window where pixels have to be computed (may be smaller than renderWindow if mask is zero on the borders)
