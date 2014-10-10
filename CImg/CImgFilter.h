@@ -423,6 +423,9 @@ CImgFilterPluginHelper<Params>::setupAndFill(OFX::PixelProcessorFilterBase & pro
                                              OFX::BitDepthEnum dstPixelDepth,
                                              int dstRowBytes)
 {
+    assert(dstPixelData &&
+           dstBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= dstBounds.x2 &&
+           dstBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= dstBounds.y2);
     // set the images
     processor.setDstImg(dstPixelData, dstBounds, dstPixelComponents, dstPixelDepth, dstRowBytes);
 
@@ -455,8 +458,12 @@ CImgFilterPluginHelper<Params>::setupAndCopy(OFX::PixelProcessorFilterBase & pro
                                              double mix,
                                              bool maskInvert)
 {
-    assert(srcPixelData && dstPixelData);
-
+    assert(srcPixelData &&
+           srcBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= srcBounds.x2 &&
+           srcBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= srcBounds.y2 &&
+           dstPixelData &&
+           dstBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= dstBounds.x2 &&
+           dstBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= dstBounds.y2);
     // make sure bit depths are sane
     if(srcBitDepth != dstPixelDepth/* || srcPixelComponents != dstPixelComponents*/) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
@@ -847,7 +854,7 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
 
     if (srcPixelComponents == OFX::ePixelComponentRGBA) {
         OFX::PixelCopierPremultMaskMix<float, 4, 1, float, 4, 1> fred(*this);
-        setupAndCopy(fred, time, renderWindow,
+        setupAndCopy(fred, time, srcRoI,
                      tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
