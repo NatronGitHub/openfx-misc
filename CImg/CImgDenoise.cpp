@@ -160,7 +160,7 @@ class CImgDenoisePlugin : public CImgFilterPluginHelper<CImgDenoiseParams>
 public:
 
     CImgDenoisePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgDenoiseParams>(handle, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgDenoiseParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);
@@ -199,9 +199,9 @@ public:
         cimg.blur_patch(params.sigma_s * args.renderScale.x, params.sigma_r, std::ceil(params.psize * args.renderScale.x), std::ceil(params.lsize * args.renderScale.x), params.smoothness * args.renderScale.x, params.fast_approx);
     }
 
-    virtual bool isIdentity(const CImgDenoiseParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgDenoiseParams& params) OVERRIDE FINAL
     {
-        return (params.sigma_r == 0. && params.sigma_r == 0.);
+        return (params.sigma_s == 0. && params.sigma_r == 0.);
     };
 
 private:

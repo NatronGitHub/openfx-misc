@@ -200,7 +200,7 @@ class CImgSmoothPlugin : public CImgFilterPluginHelper<CImgSmoothParams>
 public:
 
     CImgSmoothPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgSmoothParams>(handle, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgSmoothParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _amplitude  = fetchDoubleParam(kParamAmplitude);
         _sharpness  = fetchDoubleParam(kParamSharpness);
@@ -257,7 +257,7 @@ public:
 
     }
 
-    virtual bool isIdentity(const CImgSmoothParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgSmoothParams& params) OVERRIDE FINAL
     {
         return (params.amplitude <= 0. || params.dl < 0.);
     };

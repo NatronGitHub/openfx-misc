@@ -132,7 +132,7 @@ class CImgErodePlugin : public CImgFilterPluginHelper<CImgErodeParams>
 public:
 
     CImgErodePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgErodeParams>(handle, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgErodeParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _size  = fetchInt2DParam(kParamSize);
         assert(_size);
@@ -159,12 +159,12 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        cimg.erode(std::ceil(params.sx * args.renderScale.x), std::ceil(params.sy * args.renderScale.y));
+        cimg.erode(std::floor(params.sx * args.renderScale.x), std::floor(params.sy * args.renderScale.y));
     }
 
-    virtual bool isIdentity(const CImgErodeParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgErodeParams& params) OVERRIDE FINAL
     {
-        return (params.sx == 0 && params.sy == 0);
+        return (std::floor(params.sx * args.renderScale.x) == 0 && std::floor(params.sy * args.renderScale.y) == 0);
     };
 
 private:

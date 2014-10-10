@@ -132,7 +132,7 @@ class CImgDilatePlugin : public CImgFilterPluginHelper<CImgDilateParams>
 public:
 
     CImgDilatePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgDilateParams>(handle, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgDilateParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _size  = fetchInt2DParam(kParamSize);
         assert(_size);
@@ -159,12 +159,12 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        cimg.dilate(std::ceil(params.sx * args.renderScale.x), std::ceil(params.sy * args.renderScale.y));
+        cimg.dilate(std::floor(params.sx * args.renderScale.x), std::floor(params.sy * args.renderScale.y));
     }
 
-    virtual bool isIdentity(const CImgDilateParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgDilateParams& params) OVERRIDE FINAL
     {
-        return (params.sx == 0 && params.sy == 0);
+        return (std::floor(params.sx * args.renderScale.x) == 0 && std::floor(params.sy * args.renderScale.y) == 0);
     };
 
 private:

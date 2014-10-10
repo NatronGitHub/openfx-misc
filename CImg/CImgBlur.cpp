@@ -167,7 +167,7 @@ class CImgBlurPlugin : public CImgFilterPluginHelper<CImgBlurParams>
 public:
 
     CImgBlurPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgBlurParams>(handle, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgBlurParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _sigma  = fetchDoubleParam(kParamSigma);
         _boundary  = fetchChoiceParam(kParamBoundary);
@@ -210,7 +210,7 @@ public:
 #endif
     }
 
-    virtual bool isIdentity(const CImgBlurParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgBlurParams& params) OVERRIDE FINAL
     {
         return (params.sigma == 0.);
     };

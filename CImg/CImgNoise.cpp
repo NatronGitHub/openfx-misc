@@ -156,7 +156,7 @@ class CImgNoisePlugin : public CImgFilterPluginHelper<CImgNoiseParams>
 public:
 
     CImgNoisePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgNoiseParams>(handle, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgNoiseParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _sigma  = fetchDoubleParam(kParamSigma);
         _type = fetchChoiceParam(kParamType);
@@ -193,7 +193,7 @@ public:
         }
     }
 
-    virtual bool isIdentity(const CImgNoiseParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgNoiseParams& params) OVERRIDE FINAL
     {
         return (params.sigma == 0.);
     };

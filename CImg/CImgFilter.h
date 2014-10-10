@@ -39,11 +39,16 @@ class CImgFilterPluginHelper : public OFX::ImageEffect
 {
 public:
 
-    CImgFilterPluginHelper(OfxImageEffectHandle handle, bool supportsRenderScale)
+    CImgFilterPluginHelper(OfxImageEffectHandle handle,
+                           bool supportsTiles,
+                           bool supportsMultiResolution,
+                           bool supportsRenderScale)
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClip_(0)
     , maskClip_(0)
+    , _supportsTiles(supportsTiles)
+    , _supportsMultiResolution(supportsMultiResolution)
     , _supportsRenderScale(supportsRenderScale)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
@@ -120,7 +125,7 @@ public:
 
     virtual void render(const OFX::RenderArguments &args, const Params& params, int x1, int y1,cimg_library::CImg<float>& cimg) = 0;
 
-    virtual bool isIdentity(const Params& /*params*/) { return false; };
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const Params& /*params*/) { return false; };
 
 
     //static void describe(OFX::ImageEffectDescriptor &desc, bool supportsTiles);
@@ -408,6 +413,8 @@ private:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
 
+    bool _supportsTiles;
+    bool _supportsMultiResolution;
     bool _supportsRenderScale;
 };
 
@@ -560,6 +567,7 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
 
     const void *srcPixelData = src->getPixelData();
     const OfxRectI srcBounds = src->getBounds();
+    const OfxRectI srcRod = src->getRegionOfDefinition();
     const OFX::PixelComponentEnum srcPixelComponents = src->getPixelComponents();
     const OFX::BitDepthEnum srcBitDepth = src->getPixelDepth();
     //srcPixelBytes = getPixelBytes(srcPixelComponents, srcBitDepth);
@@ -567,10 +575,36 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
 
     void *dstPixelData = dst->getPixelData();
     const OfxRectI dstBounds = dst->getBounds();
+    const OfxRectI dstRod = dst->getRegionOfDefinition();
     //const OFX::PixelComponentEnum dstPixelComponents = dst->getPixelComponents();
     //const OFX::BitDepthEnum dstBitDepth = dst->getPixelDepth();
     //dstPixelBytes = getPixelBytes(dstPixelComponents, dstBitDepth);
     const int dstRowBytes = dst->getRowBytes();
+
+    if (!_supportsTiles) {
+        // http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#kOfxImageEffectPropSupportsTiles
+        //  If a clip or plugin does not support tiled images, then the host should supply full RoD images to the effect whenever it fetches one.
+        assert(srcRod.x1 == srcBounds.x1);
+        assert(srcRod.x2 == srcBounds.x2);
+        assert(srcRod.y1 == srcBounds.y1);
+        assert(srcRod.y2 == srcBounds.y2); // crashes on Natron if kSupportsTiles=0 & kSupportsMultiResolution=1
+        assert(dstRod.x1 == dstBounds.x1);
+        assert(dstRod.x2 == dstBounds.x2);
+        assert(dstRod.y1 == dstBounds.y1);
+        assert(dstRod.y2 == dstBounds.y2); // crashes on Natron if kSupportsTiles=0 & kSupportsMultiResolution=1
+    }
+    if (!_supportsMultiResolution) {
+        // http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#kOfxImageEffectPropSupportsMultiResolution
+        //   Multiple resolution images mean...
+        //    input and output images can be of any size
+        //    input and output images can be offset from the origin
+        assert(srcRod.x1 == 0);
+        assert(srcRod.y1 == 0);
+        assert(srcRod.x1 == dstRod.x1);
+        assert(srcRod.x2 == dstRod.x2);
+        assert(srcRod.y1 == dstRod.y1);
+        assert(srcRod.y2 == dstRod.y2); // crashes on Natron if kSupportsMultiResolution=0
+    }
 
     bool processR, processG, processB, processA;
     _processR->getValueAtTime(time, processR);
@@ -904,6 +938,9 @@ template <class Params>
 void
 CImgFilterPluginHelper<Params>::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
+    if (!_supportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
     const double time = args.time;
     const OfxRectD& regionOfInterest = args.regionOfInterest;
     OfxRectD srcRoI;
@@ -982,7 +1019,7 @@ CImgFilterPluginHelper<Params>::isIdentity(const OFX::IsIdentityArguments &args,
 
     Params params;
     getValuesAtTime(time, params);
-    if (isIdentity(params)) {
+    if (isIdentity(args, params)) {
         identityClip = srcClip_;
         return true;
     }

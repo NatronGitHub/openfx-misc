@@ -136,7 +136,7 @@ class CImgBilateralPlugin : public CImgFilterPluginHelper<CImgBilateralParams>
 public:
 
     CImgBilateralPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgBilateralParams>(handle, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgBilateralParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);
@@ -171,9 +171,9 @@ public:
 #endif
     }
 
-    virtual bool isIdentity(const CImgBilateralParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgBilateralParams& params) OVERRIDE FINAL
     {
-        return (params.sigma_r == 0. && params.sigma_r == 0.);
+        return (params.sigma_s == 0. && params.sigma_r == 0.);
     };
 
 private:
