@@ -2,6 +2,7 @@
 #include "CImgBilateral.h"
 #include "CImgDenoise.h"
 #include "CImgDilate.h"
+#include "CImgEqualize.h"
 #include "CImgErode.h"
 #include "CImgNoise.h"
 #include "CImgPlasma.h"
@@ -17,6 +18,7 @@ namespace OFX
             getCImgBilateralPluginID(ids);
             getCImgDenoisePluginID(ids);
             getCImgDilatePluginID(ids);
+            getCImgEqualizePluginID(ids);
             getCImgErodePluginID(ids);
             getCImgNoisePluginID(ids);
             getCImgPlasmaPluginID(ids);

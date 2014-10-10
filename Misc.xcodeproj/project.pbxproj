@@ -332,6 +332,7 @@
 		1EA0C21819BA128C006AB602 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA0C20319BA1234006AB602 /* PluginRegistration.cpp */; };
 		1EA0C22719BA12D3006AB602 /* Dissolve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA0C1FF19BA1234006AB602 /* Dissolve.cpp */; };
 		1EA330AA19E83A33002EFA5B /* CImgPlasma.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA330A819E83A33002EFA5B /* CImgPlasma.cpp */; };
+		1EA330AD19E846F7002EFA5B /* CImgEqualize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA330AB19E846F7002EFA5B /* CImgEqualize.cpp */; };
 		1EB9C073196DD64E003C1849 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EB9C074196DD64E003C1849 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1EB9C075196DD64E003C1849 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -1289,6 +1290,8 @@
 		1EA0C21519BA1243006AB602 /* Dissolve.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Dissolve.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EA330A819E83A33002EFA5B /* CImgPlasma.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgPlasma.cpp; sourceTree = "<group>"; };
 		1EA330A919E83A33002EFA5B /* CImgPlasma.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgPlasma.h; sourceTree = "<group>"; };
+		1EA330AB19E846F7002EFA5B /* CImgEqualize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgEqualize.cpp; sourceTree = "<group>"; };
+		1EA330AC19E846F7002EFA5B /* CImgEqualize.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgEqualize.h; sourceTree = "<group>"; };
 		1EB0C41E180DCAB500C25D1E /* RGBLut.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RGBLut.cpp; sourceTree = "<group>"; };
 		1EB9C080196DD64E003C1849 /* NoOp.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NoOp.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EB9C082196DD697003C1849 /* NoOp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NoOp.cpp; sourceTree = "<group>"; };
@@ -1799,6 +1802,8 @@
 				1E868B7D19E6F6B500B793BA /* CImgDenoise.h */,
 				1E868B7319E6E10100B793BA /* CImgDilate.cpp */,
 				1E868B7419E6E10100B793BA /* CImgDilate.h */,
+				1EA330AB19E846F7002EFA5B /* CImgEqualize.cpp */,
+				1EA330AC19E846F7002EFA5B /* CImgEqualize.h */,
 				1E868B7619E6E28E00B793BA /* CImgErode.cpp */,
 				1E868B7719E6E28E00B793BA /* CImgErode.h */,
 				1E868B7919E6E72B00B793BA /* CImgNoise.cpp */,
@@ -3140,6 +3145,7 @@
 				1E868B6F19E6B8C100B793BA /* CImgBlur.cpp in Sources */,
 				1E868B7E19E6F6B500B793BA /* CImgDenoise.cpp in Sources */,
 				1E868B7519E6E10100B793BA /* CImgDilate.cpp in Sources */,
+				1EA330AD19E846F7002EFA5B /* CImgEqualize.cpp in Sources */,
 				1E868B7819E6E28E00B793BA /* CImgErode.cpp in Sources */,
 				1E868B7B19E6E72B00B793BA /* CImgNoise.cpp in Sources */,
 				1EA330AA19E83A33002EFA5B /* CImgPlasma.cpp in Sources */,

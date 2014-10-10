@@ -1,5 +1,3 @@
-- draw_plasma
-- equalize
 - bilateral with guide 
 - hsi2rgb
 - hsl2rgb
