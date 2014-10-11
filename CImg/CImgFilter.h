@@ -745,6 +745,7 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
     }
     assert(mix != 0.); // mix == 0. should give an empty processWindow
 
+    const bool doMasking = getContext() != OFX::eContextFilter && maskClip_->isConnected();
 
     Params params;
     getValuesAtTime(time, params);
@@ -754,10 +755,20 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
     getRoI(processWindow, renderScale, params, &srcRoI);
     OfxRectI srcRoD = src->getRegionOfDefinition();
     OFX::MergeImages2D::rectIntersection(srcRoI, srcRoD, &srcRoI);
-    assert(src->getBounds().x1 <= srcRoI.x1 && srcRoI.x2 <= src->getBounds().x2 && src->getBounds().y1 <= srcRoI.y1 && srcRoI.y2 <= src->getBounds().y2);
-    if(src->getBounds().x1 > srcRoI.x1 || srcRoI.x2 > src->getBounds().x2 || src->getBounds().y1 > srcRoI.y1 || srcRoI.y2 > src->getBounds().y2) {
+    // the resulting ROI should be within the src bounds, or it means that the host didn't take into account the region of interest (see getRegionsOfInterest() )
+    assert(srcBounds.x1 <= srcRoI.x1 && srcRoI.x2 <= srcBounds.x2 &&
+           srcBounds.y1 <= srcRoI.y1 && srcRoI.y2 <= srcBounds.y2);
+    if(srcBounds.x1 > srcRoI.x1 || srcRoI.x2 > srcBounds.x2 ||
+       srcBounds.y1 > srcRoI.y1 || srcRoI.y2 > srcBounds.y2) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+
+    if (doMasking && mix != 1.) {
+        // the renderWindow should also be contained within srcBounds, since we are mixing
+        assert(srcBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= srcBounds.x2 &&
+               srcBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= srcBounds.y2);
+    }
+
     int srcNComponents = ((srcPixelComponents == OFX::ePixelComponentAlpha) ? 1 :
                           ((srcPixelComponents == OFX::ePixelComponentRGB) ? 3 : 4));
 
@@ -883,8 +894,6 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
 
     //////////////////////////////////////////////////////////////////////////////////////////
     // 5- copy+premult+max+mix tmp to dst (only processWindow)
-
-    const bool doMasking = getContext() != OFX::eContextFilter && maskClip_->isConnected();
 
     if (srcPixelComponents == OFX::ePixelComponentRGBA) {
         OFX::PixelCopierPremultMaskMix<float, 4, 1, float, 4, 1> fred(*this);
