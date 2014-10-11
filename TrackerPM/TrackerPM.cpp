@@ -654,10 +654,6 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
                                  const OfxRectD& trackSearchBounds,
                                  const OFX::Image* otherImg)
 {
-    // set a dummy dstImg so that the processor does the job
-    // (we don't use it anyway)
-    processor.setDstImg((OFX::Image *)0);
-
     OfxRectI trackSearchBoundsPixel;
     trackSearchBoundsPixel.x1 = std::floor(trackSearchBounds.x1);
     trackSearchBoundsPixel.y1 = std::floor(trackSearchBounds.y1);
