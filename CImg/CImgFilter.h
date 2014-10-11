@@ -758,8 +758,8 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
     // the resulting ROI should be within the src bounds, or it means that the host didn't take into account the region of interest (see getRegionsOfInterest() )
     assert(srcBounds.x1 <= srcRoI.x1 && srcRoI.x2 <= srcBounds.x2 &&
            srcBounds.y1 <= srcRoI.y1 && srcRoI.y2 <= srcBounds.y2);
-    if(srcBounds.x1 > srcRoI.x1 || srcRoI.x2 > srcBounds.x2 ||
-       srcBounds.y1 > srcRoI.y1 || srcRoI.y2 > srcBounds.y2) {
+    if (srcBounds.x1 > srcRoI.x1 || srcRoI.x2 > srcBounds.x2 ||
+        srcBounds.y1 > srcRoI.y1 || srcRoI.y2 > srcBounds.y2) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
@@ -767,6 +767,10 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
         // the renderWindow should also be contained within srcBounds, since we are mixing
         assert(srcBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= srcBounds.x2 &&
                srcBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= srcBounds.y2);
+        if (srcBounds.x1 > renderWindow.x1 || renderWindow.x2 > srcBounds.x2 ||
+            srcBounds.y1 > renderWindow.y1 || renderWindow.y2 > srcBounds.y2) {
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
     }
 
     int srcNComponents = ((srcPixelComponents == OFX::ePixelComponentAlpha) ? 1 :
