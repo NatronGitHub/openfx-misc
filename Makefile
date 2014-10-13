@@ -3,6 +3,7 @@ SUBDIRS = Misc
 SUBDIRS_NOMULTI = \
 Anaglyph \
 ChromaKeyer \
+Clamp \
 ColorCorrect \
 ColorMatrix \
 Constant \

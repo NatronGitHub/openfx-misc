@@ -1,6 +1,7 @@
 PLUGINOBJECTS = \
 Anaglyph.o \
 ChromaKeyer.o \
+Clamp.o \
 ColorCorrect.o \
 ColorMatrix.o \
 Constant.o \
@@ -90,6 +91,7 @@ RESOURCES = \
 VPATH += \
 ../Anaglyph \
 ../ChromaKeyer \
+../Clamp \
 ../ColorCorrect \
 ../ColorMatrix \
 ../Constant \
@@ -126,6 +128,7 @@ CXXFLAGS += \
 -I. \
 -I../Anaglyph \
 -I../ChromaKeyer \
+-I../Clamp \
 -I../ColorCorrect \
 -I../ColorMatrix \
 -I../Constant \

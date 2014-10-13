@@ -1,5 +1,6 @@
 #include "Anaglyph.h"
 #include "ChromaKeyer.h"
+#include "Clamp.h"
 #include "ColorCorrect.h"
 #include "ColorMatrix.h"
 #include "Constant.h"
@@ -40,6 +41,7 @@ namespace OFX
         {
             getAnaglyphPluginID(ids);
             getChromaKeyerPluginID(ids);
+            getClampPluginID(ids);
             getColorCorrectPluginID(ids);
             getColorMatrixPluginID(ids);
             getConstantPluginID(ids);
