@@ -107,6 +107,14 @@
 #define kParamResetCtrlPts "resetCtrlPts"
 #define kParamResetCtrlPtsLabel "Reset"
 
+#define kParamClampBlack "clampBlack"
+#define kParamClampBlackLabel "Clamp Black"
+#define kParamClampBlackHint "All colors below 0 on output are set to 0."
+
+#define kParamClampWhite "clampWhite"
+#define kParamClampWhiteLabel "Clamp White"
+#define kParamClampWhiteHint "All colors above 1 on output are set to 1."
+
 #define kCurveMaster 0
 #define kCurveRed 1
 #define kCurveGreen 2
@@ -121,23 +129,28 @@ protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
     bool   _doMasking;
+    bool _clampBlack;
+    bool _clampWhite;
     bool _premult;
     int _premultChannel;
     double _mix;
     bool _maskInvert;
 
 public:
-    RGBLutProcessorBase(OFX::ImageEffect &instance)
+    RGBLutProcessorBase(OFX::ImageEffect &instance, bool clampBlack, bool clampWhite)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
     , _doMasking(false)
+    , _clampBlack(clampBlack)
+    , _clampWhite(clampWhite)
     , _premult(false)
     , _premultChannel(3)
     , _mix(1.)
     , _maskInvert(false)
     {
     }
+
     void setSrcImg(const OFX::Image *v) {_srcImg = v;}
 
     void setMaskImg(const OFX::Image *v, bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
@@ -153,7 +166,28 @@ public:
         _mix = mix;
     }
 
+protected:
+    // clamp for integer types
+    template<class PIX>
+    float clamp(float value, int maxValue)
+    {
+        return std::max(0.f, std::min(value, float(maxValue)));
+    }
 };
+
+
+// floats don't clamp
+template<>
+float RGBLutProcessorBase::clamp<float>(float value, int maxValue)
+{
+    assert(maxValue == 1.);
+    if (_clampBlack && value < 0.) {
+        value = 0.;
+    } else  if (_clampWhite && value > 1.0) {
+        value = 1.0;
+    }
+    return value;
+}
 
 static inline int
 componentToCurve(int comp)
@@ -172,19 +206,6 @@ componentToCurve(int comp)
     }
 }
 
-// clamp for integer types
-template<class PIX>
-static float clamp(float value, int maxValue)
-{
-    return std::max(0.f, std::min(value, float(maxValue)));
-}
-
-// floats don't clamp
-template<>
-float clamp<float>(float value, int /*maxValue*/)
-{
-    return value;
-}
 
 
 // template to do the processing.
@@ -195,8 +216,8 @@ class RGBLutProcessor : public RGBLutProcessorBase
 {
 public:
     // ctor
-    RGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTable)
-    : RGBLutProcessorBase(instance)
+    RGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTable, bool clampBlack, bool clampWhite)
+    : RGBLutProcessorBase(instance, clampBlack, clampWhite)
     {
         // build the LUT
         assert(lookupTable);
@@ -304,6 +325,9 @@ public:
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
         lookupTable_ = fetchParametricParam(kParamLookupTable);
         assert(lookupTable_);
+        _clampBlack = fetchBooleanParam(kParamClampBlack);
+        _clampWhite = fetchBooleanParam(kParamClampWhite);
+        assert(_clampBlack && _clampWhite);
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
@@ -404,6 +428,8 @@ private:
     OFX::Clip *srcClip_;
     OFX::Clip *maskClip_;
     OFX::ParametricParam  *lookupTable_;
+    OFX::BooleanParam* _clampBlack;
+    OFX::BooleanParam* _clampWhite;
     OFX::BooleanParam* _premult;
     OFX::ChoiceParam* _premultChannel;
     OFX::DoubleParam* _mix;
@@ -474,17 +500,20 @@ template <int nComponents>
 void
 RGBLutPlugin::renderForComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
+    bool clampBlack,clampWhite;
+    _clampBlack->getValueAtTime(args.time, clampBlack);
+    _clampWhite->getValueAtTime(args.time, clampWhite);
     switch(dstBitDepth) {
         case OFX::eBitDepthUByte: {
-            RGBLutProcessor<unsigned char, nComponents, 255, 255> fred(*this, args, lookupTable_);
+            RGBLutProcessor<unsigned char, nComponents, 255, 255> fred(*this, args, lookupTable_, clampBlack, clampWhite);
             setupAndProcess(fred, args);
         }   break;
         case OFX::eBitDepthUShort: {
-            RGBLutProcessor<unsigned short, nComponents, 65535, 65535> fred(*this, args, lookupTable_);
+            RGBLutProcessor<unsigned short, nComponents, 65535, 65535> fred(*this, args, lookupTable_, clampBlack, clampWhite);
             setupAndProcess(fred, args);
         }   break;
         case OFX::eBitDepthFloat: {
-            RGBLutProcessor<float, nComponents, 1, 1023> fred(*this, args, lookupTable_);
+            RGBLutProcessor<float, nComponents, 1, 1023> fred(*this, args, lookupTable_, clampBlack, clampWhite);
             setupAndProcess(fred, args);
         }   break;
         default :
@@ -656,6 +685,22 @@ RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Co
         page->addChild(*param);
     }
 #endif
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
+        param->setLabels(kParamClampBlackLabel, kParamClampBlackLabel, kParamClampBlackLabel);
+        param->setHint(kParamClampBlackHint);
+        param->setDefault(true);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampWhite);
+        param->setLabels(kParamClampWhiteLabel, kParamClampWhiteLabel, kParamClampWhiteLabel);
+        param->setHint(kParamClampWhiteHint);
+        param->setDefault(true);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
 
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
