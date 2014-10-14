@@ -1,4 +1,4 @@
-#include "RGBLut.h"
+#include "ColorLookup.h"
 
 namespace OFX
 {
@@ -6,7 +6,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            getRGBLutPluginID(ids);
+            getColorLookupPluginID(ids);
         }
     }
 }

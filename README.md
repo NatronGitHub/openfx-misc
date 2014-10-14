@@ -45,7 +45,7 @@ grouping).
 * ColorMatrixOFX: Multiply the RGBA channels by an arbitrary 4x4 matrix.
 * GradeOFX: Modify the tonal spread of an image from the white and black points.
 * InvertOFX: Inverse the selected channels.
-* RGBLutOFX: Apply a parametric lookup curve to each channel  
+* ColorLookupOFX: Apply a parametric lookup curve to each channel  
   separately.
 
 ### Keyer
@@ -95,9 +95,9 @@ Notes & Caveats
 
 If you use the Roto plugin in any other host than [Natron](http://natron.inria.fr), you will notice that it doesn't do much. It's role is just to provide an entry point for a host-based rotoscoping tool, which provides a roto mask to this plugin.
 
-### RGBLut and ColorCorrect don't work on Nuke 8
+### ColorLookup and ColorCorrect don't work on Nuke 8
 
-The plugins using parametric parameters (RGBLut, ColorCorrect) don't work in Nuke 8 on OS X, and maybe on other platforms. The plugins cannot be instanciated, nothing seems to happen, and the following message appears on the console:
+The plugins using parametric parameters (ColorLookup, ColorCorrect) don't work in Nuke 8 on OS X, and maybe on other platforms. The plugins cannot be instanciated, nothing seems to happen, and the following message appears on the console:
 
     Exception thrown
       basic_string::_S_construct NULL not valid
@@ -170,7 +170,7 @@ Credits
 The stereoscopic plugins Anaglyph, JoinViews, MixViews, OneView,
 ReConverge, SideBySide are by Frederic Devernay.
 
-RGBLut, Switch, TimeOffset, ChromaKeyer, Difference, Constant, Shuffle
+ColorLookup, Switch, TimeOffset, ChromaKeyer, Difference, Constant, Shuffle
 are by Frederic Devernay.
 
 Merge, ColorCorrect, Grade, Roto, Crop, CopyRectangle  are by

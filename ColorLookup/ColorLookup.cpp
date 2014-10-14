@@ -1,5 +1,5 @@
 /*
- OFX RGBLut plugin, a plugin that illustrates the use of the OFX Support library.
+ OFX ColorLookup plugin, a plugin that illustrates the use of the OFX Support library.
 
  Copyright (C) 2013 INRIA
  Author: Frederic Devernay <frederic.devernay@inria.fr>
@@ -71,7 +71,7 @@
 
  */
 
-#include "RGBLut.h"
+#include "ColorLookup.h"
 
 #ifdef _WINDOWS
 #include <windows.h>
@@ -87,13 +87,13 @@
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
 
-#define kPluginName "RGBLutOFX"
+#define kPluginName "ColorLookupOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription \
 "Apply a parametric lookup curve to each channel separately.\n" \
 "The master curve is combined with the red, green and blue curves, but not with the alpha curve.\n" \
 "Computation is faster for values that are within the given range."
-#define kPluginIdentifier "net.sf.openfx.RGBLutPlugin"
+#define kPluginIdentifier "net.sf.openfx.ColorLookupPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -131,7 +131,7 @@
 
 using namespace OFX;
 
-class RGBLutProcessorBase : public OFX::ImageProcessor {
+class ColorLookupProcessorBase : public OFX::ImageProcessor {
 protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
@@ -144,7 +144,7 @@ protected:
     bool _maskInvert;
 
 public:
-    RGBLutProcessorBase(OFX::ImageEffect &instance, bool clampBlack, bool clampWhite)
+    ColorLookupProcessorBase(OFX::ImageEffect &instance, bool clampBlack, bool clampWhite)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
@@ -185,7 +185,7 @@ protected:
 
 // floats don't clamp
 template<>
-float RGBLutProcessorBase::clamp<float>(float value, int maxValue)
+float ColorLookupProcessorBase::clamp<float>(float value, int maxValue)
 {
     assert(maxValue == 1.);
     if (_clampBlack && value < 0.) {
@@ -219,12 +219,12 @@ componentToCurve(int comp)
 // nbValues is the number of values in the LUT minus 1. For integer types, it should be the same as
 // maxValue
 template <class PIX, int nComponents, int maxValue, int nbValues>
-class RGBLutProcessor : public RGBLutProcessorBase
+class ColorLookupProcessor : public ColorLookupProcessorBase
 {
 public:
     // ctor
-    RGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTableParam, double rangeMin, double rangeMax, bool clampBlack, bool clampWhite)
-    : RGBLutProcessorBase(instance, clampBlack, clampWhite)
+    ColorLookupProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTableParam, double rangeMin, double rangeMax, bool clampBlack, bool clampWhite)
+    : ColorLookupProcessorBase(instance, clampBlack, clampWhite)
     , _lookupTableParam(lookupTableParam)
     , _rangeMin(std::min(rangeMin,rangeMax))
     , _rangeMax(std::max(rangeMin,rangeMax))
@@ -327,10 +327,10 @@ using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class RGBLutPlugin : public OFX::ImageEffect
+class ColorLookupPlugin : public OFX::ImageEffect
 {
 public:
-    RGBLutPlugin(OfxImageEffectHandle handle)
+    ColorLookupPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClip_(0)
@@ -366,7 +366,7 @@ private:
     template <int nComponents>
     void renderForComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
-    void setupAndProcess(RGBLutProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(ColorLookupProcessorBase &, const OFX::RenderArguments &args);
     void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
     {
         if (paramName == kParamAddCtrlPts) {
@@ -460,7 +460,7 @@ private:
 
 
 void
-RGBLutPlugin::setupAndProcess(RGBLutProcessorBase &processor,
+ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
                               const OFX::RenderArguments &args)
 {
     assert(dstClip_);
@@ -520,7 +520,7 @@ RGBLutPlugin::setupAndProcess(RGBLutProcessorBase &processor,
 // the internal render function
 template <int nComponents>
 void
-RGBLutPlugin::renderForComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+ColorLookupPlugin::renderForComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
     double rangeMin, rangeMax;
     bool clampBlack, clampWhite;
@@ -529,15 +529,15 @@ RGBLutPlugin::renderForComponents(const OFX::RenderArguments &args, OFX::BitDept
     _clampWhite->getValueAtTime(args.time, clampWhite);
     switch(dstBitDepth) {
         case OFX::eBitDepthUByte: {
-            RGBLutProcessor<unsigned char, nComponents, 255, 255> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
+            ColorLookupProcessor<unsigned char, nComponents, 255, 255> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
             setupAndProcess(fred, args);
         }   break;
         case OFX::eBitDepthUShort: {
-            RGBLutProcessor<unsigned short, nComponents, 65535, 65535> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
+            ColorLookupProcessor<unsigned short, nComponents, 65535, 65535> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
             setupAndProcess(fred, args);
         }   break;
         case OFX::eBitDepthFloat: {
-            RGBLutProcessor<float, nComponents, 1, 1023> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
+            ColorLookupProcessor<float, nComponents, 1, 1023> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
             setupAndProcess(fred, args);
         }   break;
         default :
@@ -546,7 +546,7 @@ RGBLutPlugin::renderForComponents(const OFX::RenderArguments &args, OFX::BitDept
 }
 
 void
-RGBLutPlugin::render(const OFX::RenderArguments &args)
+ColorLookupPlugin::render(const OFX::RenderArguments &args)
 {
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
@@ -562,7 +562,7 @@ RGBLutPlugin::render(const OFX::RenderArguments &args)
 }
 
 void
-RGBLutPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+ColorLookupPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
     if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
         switch (srcClip_->getPreMultiplication()) {
@@ -581,10 +581,10 @@ RGBLutPlugin::changedClip(const InstanceChangedArgs &args, const std::string &cl
 
 using namespace OFX;
 
-mDeclarePluginFactory(RGBLutPluginFactory, {}, {});
+mDeclarePluginFactory(ColorLookupPluginFactory, {}, {});
 
 void
-RGBLutPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+ColorLookupPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     desc.setLabels(kPluginName, kPluginName, kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -612,7 +612,7 @@ RGBLutPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     if (!OFX::getImageEffectHostDescription()->supportsParametricParameter) {
         throwHostMissingSuiteException(kOfxParametricParameterSuite);
@@ -740,14 +740,14 @@ RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Co
 }
 
 OFX::ImageEffect*
-RGBLutPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+ColorLookupPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
-    return new RGBLutPlugin(handle);
+    return new ColorLookupPlugin(handle);
 }
 
-void getRGBLutPluginID(OFX::PluginFactoryArray &ids)
+void getColorLookupPluginID(OFX::PluginFactoryArray &ids)
 {
-    static RGBLutPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static ColorLookupPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 

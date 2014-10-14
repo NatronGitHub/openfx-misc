@@ -22,7 +22,7 @@ OneView.o \
 Premult.o \
 ReConverge.o \
 Retime.o \
-RGBLut.o \
+ColorLookup.o \
 Roto.o \
 Shuffle.o \
 SideBySide.o \
@@ -56,7 +56,7 @@ RESOURCES = \
 ../Merge/net.sf.openfx.MergePlugin.png \
 ../Premult/net.sf.openfx.Premult.png \
 ../Premult/net.sf.openfx.Unpremult.png \
-../RGBLut/net.sf.openfx.RGBLutPlugin.png \
+../ColorLookup/net.sf.openfx.ColorLookupPlugin.png \
 ../Retime/net.sf.openfx.Retime.png \
 ../Roto/net.sf.openfx.RotoPlugin.png \
 ../Shuffle/net.sf.openfx.ShufflePlugin.png \
@@ -78,7 +78,7 @@ RESOURCES = \
 ../Merge/net.sf.openfx.MergePlugin.svg \
 ../Premult/net.sf.openfx.Premult.svg \
 ../Premult/net.sf.openfx.Unpremult.svg \
-../RGBLut/net.sf.openfx.RGBLutPlugin.svg \
+../ColorLookup/net.sf.openfx.ColorLookupPlugin.svg \
 ../Retime/net.sf.openfx.Retime.svg \
 ../Roto/net.sf.openfx.RotoPlugin.svg \
 ../Shuffle/net.sf.openfx.ShufflePlugin.svg \
@@ -112,7 +112,7 @@ VPATH += \
 ../Premult \
 ../ReConverge \
 ../Retime \
-../RGBLut \
+../ColorLookup \
 ../Roto \
 ../Shuffle \
 ../SideBySide \
@@ -130,6 +130,7 @@ CXXFLAGS += \
 -I../ChromaKeyer \
 -I../Clamp \
 -I../ColorCorrect \
+-I../ColorLookup \
 -I../ColorMatrix \
 -I../Constant \
 -I../CopyRectangle \
@@ -149,7 +150,6 @@ CXXFLAGS += \
 -I../Premult \
 -I../ReConverge \
 -I../Retime \
--I../RGBLut \
 -I../Roto \
 -I../Shuffle \
 -I../SideBySide \
@@ -161,6 +161,7 @@ CXXFLAGS += \
 
 RESOURCES = ../ChromaKeyer/net.sf.openfx.ChromaKeyerPlugin.png \
 ../ColorCorrect/net.sf.openfx.ColorCorrectPlugin.png \
+../ColorLookup/net.sf.openfx.ColorLookupPlugin.png \
 ../Constant/net.sf.openfx.ConstantPlugin.png \
 ../CornerPin/net.sf.openfx.CornerPinPlugin.png \
 ../CornerPin/net.sf.openfx.CornerPinMaskedPlugin.png \
@@ -173,7 +174,6 @@ RESOURCES = ../ChromaKeyer/net.sf.openfx.ChromaKeyerPlugin.png \
 ../Premult/net.sf.openfx.Premult.png \
 ../Premult/net.sf.openfx.Unpremult.png \
 ../Retime/net.sf.openfx.Retime.png \
-../RGBLut/net.sf.openfx.RGBLutPlugin.png \
 ../Roto/net.sf.openfx.RotoPlugin.png \
 ../Shuffle/net.sf.openfx.ShufflePlugin.png \
 ../Switch/net.sf.openfx.switchPlugin.png \

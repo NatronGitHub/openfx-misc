@@ -23,7 +23,7 @@
 #include "ReConverge.h"
 #endif
 #include "Retime.h"
-#include "RGBLut.h"
+#include "ColorLookup.h"
 #include "Roto.h"
 #include "Shuffle.h"
 #include "SideBySide.h"
@@ -64,7 +64,7 @@ namespace OFX
             getReConvergePluginID(ids);
 #endif
             getRetimePluginID(ids);
-            getRGBLutPluginID(ids);
+            getColorLookupPluginID(ids);
             getRotoPluginID(ids);
             getShufflePluginID(ids);
             getSideBySidePluginID(ids);

@@ -1,5 +1,5 @@
 /*
-OFX RGBLut plugin, a plugin that illustrates the use of the OFX Support library.
+OFX ColorLookup plugin, a plugin that illustrates the use of the OFX Support library.
 
 Copyright (C) 2013 INRIA
 Author: Frederic Devernay <frederic.devernay@inria.fr>
@@ -35,11 +35,11 @@ Rocquencourt - B.P. 105
 78153 Le Chesnay Cedex - France
 */
 
-#ifndef Misc_RGBLut_h
-#define Misc_RGBLut_h
+#ifndef Misc_ColorLookup_h
+#define Misc_ColorLookup_h
 
 #include "ofxsImageEffect.h"
 
-void getRGBLutPluginID(OFX::PluginFactoryArray &ids);
+void getColorLookupPluginID(OFX::PluginFactoryArray &ids);
 
-#endif // Misc_RGBLut_h
+#endif // Misc_ColorLookup_h

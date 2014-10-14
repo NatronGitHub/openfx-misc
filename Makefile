@@ -5,6 +5,7 @@ Anaglyph \
 ChromaKeyer \
 Clamp \
 ColorCorrect \
+ColorLookup \
 ColorMatrix \
 Constant \
 CornerPin \
@@ -21,7 +22,6 @@ Noise \
 NoOp \
 OneView \
 Premult \
-RGBLut \
 Roto \
 Shuffle \
 SideBySide \
