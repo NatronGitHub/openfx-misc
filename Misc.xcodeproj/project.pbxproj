@@ -317,6 +317,7 @@
 		1E92573719EC1E140018F19A /* Clamp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E92573519EC1E140018F19A /* Clamp.cpp */; };
 		1E92573819EC1E140018F19A /* Clamp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E92573519EC1E140018F19A /* Clamp.cpp */; };
 		1E92573A19EC1E1F0018F19A /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E92573919EC1E1F0018F19A /* PluginRegistration.cpp */; };
+		1E92575119ECF38A0018F19A /* CImgRollingGuidance.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E92574F19ECF38A0018F19A /* CImgRollingGuidance.cpp */; };
 		1E9B5F5B198A51CC0095C8AA /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
 		1E9B5F5C198A51D40095C8AA /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
 		1E9B5F5D198A51E20095C8AA /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
@@ -1288,6 +1289,8 @@
 		1E92573919EC1E1F0018F19A /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1E92573B19EC1E260018F19A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E92573C19EC1E260018F19A /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1E92574F19ECF38A0018F19A /* CImgRollingGuidance.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgRollingGuidance.cpp; sourceTree = "<group>"; };
+		1E92575019ECF38A0018F19A /* CImgRollingGuidance.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgRollingGuidance.h; sourceTree = "<group>"; };
 		1E9B5F47198A51840095C8AA /* ofxsCopier.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsCopier.h; sourceTree = "<group>"; };
 		1E9B5F48198A51840095C8AA /* ofxsFilter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsFilter.h; sourceTree = "<group>"; };
 		1E9B5F49198A51840095C8AA /* ofxsFormatResolution.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsFormatResolution.h; sourceTree = "<group>"; };
@@ -1849,6 +1852,8 @@
 				1E868B7A19E6E72B00B793BA /* CImgNoise.h */,
 				1EA330A819E83A33002EFA5B /* CImgPlasma.cpp */,
 				1EA330A919E83A33002EFA5B /* CImgPlasma.h */,
+				1E92574F19ECF38A0018F19A /* CImgRollingGuidance.cpp */,
+				1E92575019ECF38A0018F19A /* CImgRollingGuidance.h */,
 				1E31940A19D9987F0027D0E2 /* CImgSmooth.cpp */,
 				1E31940B19D9987F0027D0E2 /* CImgSmooth.h */,
 				1ED8BB4319E677BC005F450E /* CImgFilter.h */,
@@ -3220,6 +3225,7 @@
 				1E868B7819E6E28E00B793BA /* CImgErode.cpp in Sources */,
 				1E868B7B19E6E72B00B793BA /* CImgNoise.cpp in Sources */,
 				1EA330AA19E83A33002EFA5B /* CImgPlasma.cpp in Sources */,
+				1E92575119ECF38A0018F19A /* CImgRollingGuidance.cpp in Sources */,
 				1E31942219D9B2560027D0E2 /* CImgSmooth.cpp in Sources */,
 				1E31942319D9B2560027D0E2 /* PluginRegistration.cpp in Sources */,
 				1E31941319D9B2270027D0E2 /* ofxsCore.cpp in Sources */,
