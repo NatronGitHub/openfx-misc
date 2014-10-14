@@ -577,7 +577,7 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampWhite);
         param->setLabels(kParamClampWhiteLabel, kParamClampWhiteLabel, kParamClampWhiteLabel);
         param->setHint(kParamClampWhiteHint);
-        param->setDefault(true);
+        param->setDefault(false);
         param->setAnimates(true);
         page->addChild(*param);
     }
