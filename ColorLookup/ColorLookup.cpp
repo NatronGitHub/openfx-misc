@@ -105,10 +105,40 @@
 #define kParamLookupTable "lookupTable"
 #define kParamLookupTableLabel "Lookup Table"
 #define kParamLookupTableHint "Colour lookup table. The master curve is combined with the red, green and blue curves, but not with the alpha curve."
+
+#define kParamSource "source"
+#define kParamSourceLabel "Source"
+#define kParamSourceHint "Source color for newly added points (x coordinate on the curve)."
+
+#define kParamTarget "target"
+#define kParamTargetLabel "Target"
+#define kParamTargetHint "Target color for newly added points (y coordinate on the curve)."
+
+#define kParamSetMaster "setMaster"
+#define kParamSetMasterLabel "Set Master"
+#define kParamSetMasterHint "Add a new control point mapping source to target to the master curve only red component value is used)."
+
+#define kParamSetRGB "setRGB"
+#define kParamSetRGBLabel "Set RGB"
+#define kParamSetRGBHint "Add a new control point mapping source to target to the red, green, and blue curves."
+
+#define kParamSetRGBA "setRGBA"
+#define kParamSetRGBALabel "Set RGBA"
+#define kParamSetRGBAHint "Add a new control point mapping source to target to the red, green, blue and alpha curves."
+
+#define kParamSetA "setA"
+#define kParamSetALabel "Set A"
+#define kParamSetAHint "Add a new control point mapping source to target to the alpha curve"
+
+#ifdef COLORLOOKUP_ADD
 #define kParamAddCtrlPts "addCtrlPts"
 #define kParamAddCtrlPtsLabel "Add Control Points"
+#endif
+
+#ifdef COLORLOOKUP_RESET
 #define kParamResetCtrlPts "resetCtrlPts"
 #define kParamResetCtrlPtsLabel "Reset"
+#endif
 
 #define kParamRange "range"
 #define kParamRangeLabel "Range"
@@ -346,6 +376,9 @@ public:
         _lookupTable = fetchParametricParam(kParamLookupTable);
         _range = fetchDouble2DParam(kParamRange);
         assert(_lookupTable && _range);
+        _source = fetchRGBAParam(kParamSource);
+        _target = fetchRGBAParam(kParamTarget);
+        assert(_source && _target);
         _clampBlack = fetchBooleanParam(kParamClampBlack);
         _clampWhite = fetchBooleanParam(kParamClampWhite);
         assert(_clampBlack && _clampWhite);
@@ -369,6 +402,36 @@ private:
     void setupAndProcess(ColorLookupProcessorBase &, const OFX::RenderArguments &args);
     void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
     {
+        if (paramName == kParamSetMaster) {
+            double source[4];
+            double target[4];
+            _source->getValueAtTime(args.time, source[0], source[1], source[2], source[3]);
+            _target->getValueAtTime(args.time, target[0], target[1], target[2], target[3]);
+
+            _lookupTable->addControlPoint(kCurveMaster, // curve to set
+                                          args.time,   // time, ignored in this case, as we are not adding a key
+                                          source[0],   // parametric position
+                                          target[0],   // value to be
+                                          false);   // don't add a key
+        }
+        if (paramName == kParamSetRGB || paramName == kParamSetRGBA || paramName == kParamSetA) {
+            double source[4];
+            double target[4];
+            _source->getValueAtTime(args.time, source[0], source[1], source[2], source[3]);
+            _target->getValueAtTime(args.time, target[0], target[1], target[2], target[3]);
+
+            int cbegin = (paramName == kParamSetA) ? 3 : 0;
+            int cend = (paramName == kParamSetRGB) ? 3 : 4;
+            for (int c = cbegin; c < cend; ++c) {
+                int curve = componentToCurve(c);
+                _lookupTable->addControlPoint(curve, // curve to set
+                                              args.time,   // time, ignored in this case, as we are not adding a key
+                                              source[c],   // parametric position
+                                              target[c],   // value to be
+                                              false);   // don't add a key
+            }
+        }
+#ifdef COLORLOOKUP_ADD
         if (paramName == kParamAddCtrlPts) {
             for (int component = 0; component < kCurveNb; ++component) {
                 int n = _lookupTable->getNControlPoints(component, args.time);
@@ -409,8 +472,10 @@ private:
                     }
                 }
             }
-#if 0
-        } else if (paramName == kParamResetCtrlPts) {
+        }
+#endif
+#ifdef COLORLOOKUP_RESET
+        if (paramName == kParamResetCtrlPts) {
             OFX::Message::MessageReplyEnum reply = sendMessage(OFX::Message::eMessageQuestion, "", "Delete all control points for all components?");
             // Nuke seems to always reply eMessageReplyOK, whatever the real answer was
             switch (reply) {
@@ -440,8 +505,8 @@ private:
                     lookupTable->addControlPoint(component, args.time, 1.0, 1.0, false);
                 }
             }
-#endif
         }
+#endif
     }
 
 private:
@@ -450,6 +515,8 @@ private:
     OFX::Clip *maskClip_;
     OFX::ParametricParam  *_lookupTable;
     OFX::Double2DParam* _range;
+    OFX::RGBAParam* _source;
+    OFX::RGBAParam* _target;
     OFX::BooleanParam* _clampBlack;
     OFX::BooleanParam* _clampWhite;
     OFX::BooleanParam* _premult;
@@ -707,11 +774,56 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         page->addChild(*param);
     }
     {
+        OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamSource);
+        param->setLabels(kParamSourceLabel, kParamSourceLabel, kParamSourceLabel);
+        param->setHint(kParamSourceHint);
+        param->setEvaluateOnChange(false);
+        param->setIsPersistant(false);
+        page->addChild(*param);
+    }
+    {
+        OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTarget);
+        param->setLabels(kParamTargetLabel, kParamTargetLabel, kParamTargetLabel);
+        param->setHint(kParamTargetHint);
+        param->setEvaluateOnChange(false);
+        param->setIsPersistant(false);
+        page->addChild(*param);
+    }
+    {
+        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetMaster);
+        param->setLabels(kParamSetMasterLabel, kParamSetMasterLabel, kParamSetMasterLabel);
+        param->setHint(kParamSetMasterHint);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+    {
+        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetRGB);
+        param->setLabels(kParamSetRGBLabel, kParamSetRGBLabel, kParamSetRGBLabel);
+        param->setHint(kParamSetRGBHint);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+    {
+        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetRGBA);
+        param->setLabels(kParamSetRGBALabel, kParamSetRGBALabel, kParamSetRGBALabel);
+        param->setHint(kParamSetRGBAHint);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+    {
+        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetA);
+        param->setLabels(kParamSetALabel, kParamSetALabel, kParamSetALabel);
+        param->setHint(kParamSetAHint);
+        page->addChild(*param);
+    }
+#ifdef COLORLOOKUP_ADD
+    {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAddCtrlPts);
         param->setLabels(kParamAddCtrlPtsLabel, kParamAddCtrlPtsLabel, kParamAddCtrlPtsLabel);
         page->addChild(*param);
     }
-#if 0
+#endif
+#ifdef COLORLOOKUP_RESET
     {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamResetCtrlPts);
         param->setLabels(kParamResetCtrlPtsLabel, kParamResetCtrlPtsLabel, kParamResetCtrlPtsLabel);
