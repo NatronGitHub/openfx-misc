@@ -92,7 +92,7 @@
 #define kPluginDescription \
 "Apply a parametric lookup curve to each channel separately.\n" \
 "The master curve is combined with the red, green and blue curves, but not with the alpha curve.\n" \
-"Input values are clamped to the [0,1] range, unless extendedRange is checked (which may result in slower execution)."
+"Computation is faster for values that are within the given range."
 #define kPluginIdentifier "net.sf.openfx.RGBLutPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -110,9 +110,9 @@
 #define kParamResetCtrlPts "resetCtrlPts"
 #define kParamResetCtrlPtsLabel "Reset"
 
-#define kParamExtendedRange "extendedRange"
-#define kParamExtendedRangeLabel "Extended Range"
-#define kParamExtendedRangeHint "If disabled, input colors below 0 are clamped to 0, and input colors above 1 are clamped to 1. Rendering may be much slower when checking this."
+#define kParamRange "range"
+#define kParamRangeLabel "Range"
+#define kParamRangeHint "Expected range for input values. Within this range, a lookup table is used for faster computation."
 
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"
@@ -223,14 +223,19 @@ class RGBLutProcessor : public RGBLutProcessorBase
 {
 public:
     // ctor
-    RGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTableParam, bool extendedRange, bool clampBlack, bool clampWhite)
+    RGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTableParam, double rangeMin, double rangeMax, bool clampBlack, bool clampWhite)
     : RGBLutProcessorBase(instance, clampBlack, clampWhite)
     , _lookupTableParam(lookupTableParam)
-    , _extendedRange(extendedRange)
+    , _rangeMin(std::min(rangeMin,rangeMax))
+    , _rangeMax(std::max(rangeMin,rangeMax))
     {
         // build the LUT
         assert(_lookupTableParam);
         _time = args.time;
+        if (_rangeMin == _rangeMax) {
+            // avoid divisions by zero
+            _rangeMax = _rangeMin + 1.;
+        }
         assert((PIX)maxValue == maxValue);
         // except for float, maxValue is the same as nbValues
         assert(maxValue == 1 || (maxValue == nbValues));
@@ -240,7 +245,7 @@ public:
             bool applyMaster = lutIndex != kCurveAlpha;
             for (int position = 0; position <= nbValues; ++position) {
                 // position to evaluate the param at
-                float parametricPos = float(position)/nbValues;
+                float parametricPos = _rangeMin + (_rangeMax - _rangeMin) * float(position)/nbValues;
 
                 // evaluate the parametric param
                 double value = _lookupTableParam->getValue(lutIndex, _time, parametricPos);
@@ -296,18 +301,15 @@ private:
 
     // on input to interpolate, value should be normalized to the [0-1] range
     float interpolate(int component, float value) {
-        if (_extendedRange && (value < 0. || 1. < value)) {
+        if (value < _rangeMin || _rangeMax < value) {
             // slow version
             int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
             return _lookupTableParam->getValue(lutIndex, _time, value);
-        } else         if (value < 0.) {
-            return _lookupTable[component][0];
-        } else if (value >= 1.) {
-            return _lookupTable[component][nbValues];
         } else {
-            int i = (int)(value * nbValues);
+            double x = (value - _rangeMin) / (_rangeMax - _rangeMin);
+            int i = (int)(x * nbValues);
             assert(0 <= i && i < nbValues);
-            float alpha = value * nbValues - i;
+            float alpha = x * nbValues - i;
             assert(0 <= alpha && alpha < 1.);
             return _lookupTable[component][i] * (1.-alpha) + _lookupTable[component][i+1] * alpha;
         }
@@ -317,7 +319,8 @@ private:
     std::vector<float> _lookupTable[nComponents];
     OFX::ParametricParam*  _lookupTableParam;
     double _time;
-    bool _extendedRange;
+    double _rangeMin;
+    double _rangeMax;
 };
 
 using namespace OFX;
@@ -341,8 +344,8 @@ public:
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
         _lookupTable = fetchParametricParam(kParamLookupTable);
-        _extendedRange = fetchBooleanParam(kParamExtendedRange);
-        assert(_lookupTable && _extendedRange);
+        _range = fetchDouble2DParam(kParamRange);
+        assert(_lookupTable && _range);
         _clampBlack = fetchBooleanParam(kParamClampBlack);
         _clampWhite = fetchBooleanParam(kParamClampWhite);
         assert(_clampBlack && _clampWhite);
@@ -446,7 +449,7 @@ private:
     OFX::Clip *srcClip_;
     OFX::Clip *maskClip_;
     OFX::ParametricParam  *_lookupTable;
-    OFX::BooleanParam* _extendedRange;
+    OFX::Double2DParam* _range;
     OFX::BooleanParam* _clampBlack;
     OFX::BooleanParam* _clampWhite;
     OFX::BooleanParam* _premult;
@@ -519,21 +522,22 @@ template <int nComponents>
 void
 RGBLutPlugin::renderForComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
-    bool extendedRange, clampBlack, clampWhite;
-    _extendedRange->getValueAtTime(args.time, extendedRange);
+    double rangeMin, rangeMax;
+    bool clampBlack, clampWhite;
+    _range->getValueAtTime(args.time, rangeMin, rangeMax);
     _clampBlack->getValueAtTime(args.time, clampBlack);
     _clampWhite->getValueAtTime(args.time, clampWhite);
     switch(dstBitDepth) {
         case OFX::eBitDepthUByte: {
-            RGBLutProcessor<unsigned char, nComponents, 255, 255> fred(*this, args, _lookupTable, extendedRange, clampBlack, clampWhite);
+            RGBLutProcessor<unsigned char, nComponents, 255, 255> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
             setupAndProcess(fred, args);
         }   break;
         case OFX::eBitDepthUShort: {
-            RGBLutProcessor<unsigned short, nComponents, 65535, 65535> fred(*this, args, _lookupTable, extendedRange, clampBlack, clampWhite);
+            RGBLutProcessor<unsigned short, nComponents, 65535, 65535> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
             setupAndProcess(fred, args);
         }   break;
         case OFX::eBitDepthFloat: {
-            RGBLutProcessor<float, nComponents, 1, 1023> fred(*this, args, _lookupTable, extendedRange, clampBlack, clampWhite);
+            RGBLutProcessor<float, nComponents, 1, 1023> fred(*this, args, _lookupTable, rangeMin, rangeMax, clampBlack, clampWhite);
             setupAndProcess(fred, args);
         }   break;
         default :
@@ -645,6 +649,15 @@ RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Co
 
     // define it
     {
+        Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamRange);
+        param->setLabels(kParamRangeLabel, kParamRangeLabel, kParamRangeLabel);
+        param->setDimensionLabels("min", "max");
+        param->setHint(kParamRangeHint);
+        param->setDefault(0., 1.);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
+    {
         OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamLookupTable);
         assert(param);
         param->setLabels(kParamLookupTableLabel, kParamLookupTableLabel, kParamLookupTableLabel);
@@ -705,14 +718,6 @@ RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Co
         page->addChild(*param);
     }
 #endif
-    {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExtendedRange);
-        param->setLabels(kParamExtendedRangeLabel, kParamExtendedRangeLabel, kParamExtendedRangeLabel);
-        param->setHint(kParamExtendedRangeHint);
-        param->setDefault(false);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
         param->setLabels(kParamClampBlackLabel, kParamClampBlackLabel, kParamClampBlackLabel);
