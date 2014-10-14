@@ -321,6 +321,7 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setLabels(kParamAmplitudeLabel, kParamAmplitudeLabel, kParamAmplitudeLabel);
         param->setHint(kParamAmplitudeHint);
         param->setRange(0, 1000);
+        param->setDisplayRange(0, 100);
         param->setDefault(kParamAmplitudeDefault);
         param->setIncrement(1);
         page->addChild(*param);

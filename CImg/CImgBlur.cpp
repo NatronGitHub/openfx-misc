@@ -269,6 +269,7 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
         param->setLabels(kParamSigmaLabel, kParamSigmaLabel, kParamSigmaLabel);
         param->setHint(kParamSigmaHint);
         param->setRange(0, 1000);
+        param->setDisplayRange(0, 25);
         param->setDefault(kParamSigmaDefault);
         param->setIncrement(0.1);
         page->addChild(*param);

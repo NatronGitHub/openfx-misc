@@ -217,7 +217,7 @@ void CImgErodePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         param->setLabels(kParamSizeLabel, kParamSizeLabel, kParamSizeLabel);
         param->setHint(kParamSizeHint);
         param->setRange(0, 0, 1000, 1000);
-        param->setDisplayRange(0, 0, 100, 100);
+        param->setDisplayRange(0, 0, 25, 25);
         param->setDefault(kParamSizeDefault, kParamSizeDefault);
         page->addChild(*param);
     }

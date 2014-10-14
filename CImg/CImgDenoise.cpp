@@ -259,6 +259,7 @@ void CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
         param->setLabels(kParamSigmaSLabel, kParamSigmaSLabel, kParamSigmaSLabel);
         param->setHint(kParamSigmaSHint);
         param->setRange(0, 1000);
+        param->setDisplayRange(0, 25);
         param->setDefault(kParamSigmaSDefault);
         param->setIncrement(0.1);
         page->addChild(*param);
@@ -268,6 +269,7 @@ void CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
         param->setLabels(kParamSigmaRLabel, kParamSigmaRLabel, kParamSigmaRLabel);
         param->setHint(kParamSigmaRHint);
         param->setRange(0, 10.0);
+        param->setDisplayRange(0, 0.5);
         param->setDefault(kParamSigmaRDefault);
         param->setIncrement(0.005);
         page->addChild(*param);

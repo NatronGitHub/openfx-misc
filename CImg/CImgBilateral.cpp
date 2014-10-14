@@ -164,6 +164,9 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
+        if (params.sigma_s == 0.) {
+            return;
+        }
 #if cimg_version >= 157
         cimg.blur_bilateral(cimg, params.sigma_s * args.renderScale.x, params.sigma_r);
 #else
@@ -173,7 +176,7 @@ public:
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgBilateralParams& params) OVERRIDE FINAL
     {
-        return (params.sigma_s == 0. && params.sigma_r == 0.);
+        return (params.sigma_s == 0.);
     };
 
 private:
@@ -227,6 +230,7 @@ void CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& d
         param->setLabels(kParamSigmaSLabel, kParamSigmaSLabel, kParamSigmaSLabel);
         param->setHint(kParamSigmaSHint);
         param->setRange(0, 1000);
+        param->setDisplayRange(0, 25);
         param->setDefault(kParamSigmaSDefault);
         param->setIncrement(0.1);
         page->addChild(*param);
@@ -236,6 +240,7 @@ void CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& d
         param->setLabels(kParamSigmaRLabel, kParamSigmaRLabel, kParamSigmaRLabel);
         param->setHint(kParamSigmaRHint);
         param->setRange(0, 10.0);
+        param->setDisplayRange(0, 0.5);
         param->setDefault(kParamSigmaRDefault);
         param->setIncrement(0.005);
         page->addChild(*param);
