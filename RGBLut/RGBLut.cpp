@@ -89,7 +89,10 @@
 
 #define kPluginName "RGBLutOFX"
 #define kPluginGrouping "Color"
-#define kPluginDescription "Apply a parametric lookup curve to each channel separately. The master curve is combined with the red, green and blue curves, but not with the alpha curve."
+#define kPluginDescription \
+"Apply a parametric lookup curve to each channel separately.\n" \
+"The master curve is combined with the red, green and blue curves, but not with the alpha curve.\n" \
+"Input values are clamped to the [0,1] range, unless extendedRange is checked (which may result in slower execution)."
 #define kPluginIdentifier "net.sf.openfx.RGBLutPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -106,6 +109,10 @@
 #define kParamAddCtrlPtsLabel "Add Control Points"
 #define kParamResetCtrlPts "resetCtrlPts"
 #define kParamResetCtrlPtsLabel "Reset"
+
+#define kParamExtendedRange "extendedRange"
+#define kParamExtendedRangeLabel "Extended Range"
+#define kParamExtendedRangeHint "If disabled, input colors below 0 are clamped to 0, and input colors above 1 are clamped to 1. Rendering may be much slower when checking this."
 
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"
@@ -216,11 +223,14 @@ class RGBLutProcessor : public RGBLutProcessorBase
 {
 public:
     // ctor
-    RGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTable, bool clampBlack, bool clampWhite)
+    RGBLutProcessor(OFX::ImageEffect &instance, const OFX::RenderArguments &args, OFX::ParametricParam  *lookupTableParam, bool extendedRange, bool clampBlack, bool clampWhite)
     : RGBLutProcessorBase(instance, clampBlack, clampWhite)
+    , _lookupTableParam(lookupTableParam)
+    , _extendedRange(extendedRange)
     {
         // build the LUT
-        assert(lookupTable);
+        assert(_lookupTableParam);
+        _time = args.time;
         assert((PIX)maxValue == maxValue);
         // except for float, maxValue is the same as nbValues
         assert(maxValue == 1 || (maxValue == nbValues));
@@ -233,9 +243,9 @@ public:
                 float parametricPos = float(position)/nbValues;
 
                 // evaluate the parametric param
-                double value = lookupTable->getValue(lutIndex, args.time, parametricPos);
+                double value = _lookupTableParam->getValue(lutIndex, _time, parametricPos);
                 if (applyMaster) {
-                    value += lookupTable->getValue(kCurveMaster, args.time, parametricPos) - parametricPos;
+                    value += _lookupTableParam->getValue(kCurveMaster, _time, parametricPos) - parametricPos;
                 }
                 // set that in the lut
                 _lookupTable[component][position] = clamp<PIX>(value, maxValue);
@@ -286,7 +296,11 @@ private:
 
     // on input to interpolate, value should be normalized to the [0-1] range
     float interpolate(int component, float value) {
-        if (value < 0.) {
+        if (_extendedRange && (value < 0. || 1. < value)) {
+            // slow version
+            int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
+            return _lookupTableParam->getValue(lutIndex, _time, value);
+        } else         if (value < 0.) {
             return _lookupTable[component][0];
         } else if (value >= 1.) {
             return _lookupTable[component][nbValues];
@@ -301,6 +315,9 @@ private:
 
 private:
     std::vector<float> _lookupTable[nComponents];
+    OFX::ParametricParam*  _lookupTableParam;
+    double _time;
+    bool _extendedRange;
 };
 
 using namespace OFX;
@@ -323,8 +340,9 @@ public:
 
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
-        lookupTable_ = fetchParametricParam(kParamLookupTable);
-        assert(lookupTable_);
+        _lookupTable = fetchParametricParam(kParamLookupTable);
+        _extendedRange = fetchBooleanParam(kParamExtendedRange);
+        assert(_lookupTable && _extendedRange);
         _clampBlack = fetchBooleanParam(kParamClampBlack);
         _clampWhite = fetchBooleanParam(kParamClampWhite);
         assert(_clampBlack && _clampWhite);
@@ -350,28 +368,28 @@ private:
     {
         if (paramName == kParamAddCtrlPts) {
             for (int component = 0; component < kCurveNb; ++component) {
-                int n = lookupTable_->getNControlPoints(component, args.time);
+                int n = _lookupTable->getNControlPoints(component, args.time);
                 if (n <= 1) {
                     // less than two points: add the two default control points
                     // add a control point at 0, value is 0
-                    lookupTable_->addControlPoint(component, // curve to set
+                    _lookupTable->addControlPoint(component, // curve to set
                                                  args.time,   // time, ignored in this case, as we are not adding a key
                                                  0.0,   // parametric position, zero
                                                  0.0,   // value to be, 0
                                                  false);   // don't add a key
                     // add a control point at 1, value is 1
-                    lookupTable_->addControlPoint(component, args.time, 1.0, 1.0, false);
+                    _lookupTable->addControlPoint(component, args.time, 1.0, 1.0, false);
                 } else {
-                    std::pair<double, double> prev = lookupTable_->getNthControlPoint(component, args.time, 0);
+                    std::pair<double, double> prev = _lookupTable->getNthControlPoint(component, args.time, 0);
                     std::list<std::pair<double, double> > newCtrlPts;
 
                     // compute new points, put them in a list
                     for (int i = 1; i < n; ++i) {
-                        std::pair<double, double> next = lookupTable_->getNthControlPoint(component, args.time, i);
+                        std::pair<double, double> next = _lookupTable->getNthControlPoint(component, args.time, i);
                         if (prev.first != next.first) { // don't create additional points if there is no space for one
                             // create a new control point between two existing control points
                             double parametricPos = (prev.first + next.first)/2.;
-                            double parametricVal = lookupTable_->getValue(component, args.time, parametricPos);
+                            double parametricVal = _lookupTable->getValue(component, args.time, parametricPos);
                             newCtrlPts.push_back(std::make_pair(parametricPos, parametricVal));
                         }
                         prev = next;
@@ -380,7 +398,7 @@ private:
                     for (std::list<std::pair<double, double> >::const_iterator it = newCtrlPts.begin();
                          it != newCtrlPts.end();
                          ++it) {
-                        lookupTable_->addControlPoint(component, // curve to set
+                        _lookupTable->addControlPoint(component, // curve to set
                                                       args.time,   // time, ignored in this case, as we are not adding a key
                                                       it->first,   // parametric position
                                                       it->second,   // value to be, 0
@@ -408,9 +426,9 @@ private:
             }
             if (reply == OFX::Message::eMessageReplyYes) {
                 for (int component = 0; component < kCurveNb; ++component) {
-                    lookupTable_->deleteControlPoint(component);
+                    _lookupTable->deleteControlPoint(component);
                     // add a control point at 0, value is 0
-                    lookupTable_->addControlPoint(component, // curve to set
+                    _lookupTable->addControlPoint(component, // curve to set
                                                  args.time,   // time, ignored in this case, as we are not adding a key
                                                  0.0,   // parametric position, zero
                                                  0.0,   // value to be, 0
@@ -427,7 +445,8 @@ private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::Clip *maskClip_;
-    OFX::ParametricParam  *lookupTable_;
+    OFX::ParametricParam  *_lookupTable;
+    OFX::BooleanParam* _extendedRange;
     OFX::BooleanParam* _clampBlack;
     OFX::BooleanParam* _clampWhite;
     OFX::BooleanParam* _premult;
@@ -500,20 +519,21 @@ template <int nComponents>
 void
 RGBLutPlugin::renderForComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
-    bool clampBlack,clampWhite;
+    bool extendedRange, clampBlack, clampWhite;
+    _extendedRange->getValueAtTime(args.time, extendedRange);
     _clampBlack->getValueAtTime(args.time, clampBlack);
     _clampWhite->getValueAtTime(args.time, clampWhite);
     switch(dstBitDepth) {
         case OFX::eBitDepthUByte: {
-            RGBLutProcessor<unsigned char, nComponents, 255, 255> fred(*this, args, lookupTable_, clampBlack, clampWhite);
+            RGBLutProcessor<unsigned char, nComponents, 255, 255> fred(*this, args, _lookupTable, extendedRange, clampBlack, clampWhite);
             setupAndProcess(fred, args);
         }   break;
         case OFX::eBitDepthUShort: {
-            RGBLutProcessor<unsigned short, nComponents, 65535, 65535> fred(*this, args, lookupTable_, clampBlack, clampWhite);
+            RGBLutProcessor<unsigned short, nComponents, 65535, 65535> fred(*this, args, _lookupTable, extendedRange, clampBlack, clampWhite);
             setupAndProcess(fred, args);
         }   break;
         case OFX::eBitDepthFloat: {
-            RGBLutProcessor<float, nComponents, 1, 1023> fred(*this, args, lookupTable_, clampBlack, clampWhite);
+            RGBLutProcessor<float, nComponents, 1, 1023> fred(*this, args, _lookupTable, extendedRange, clampBlack, clampWhite);
             setupAndProcess(fred, args);
         }   break;
         default :
@@ -685,6 +705,14 @@ RGBLutPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Co
         page->addChild(*param);
     }
 #endif
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExtendedRange);
+        param->setLabels(kParamExtendedRangeLabel, kParamExtendedRangeLabel, kParamExtendedRangeLabel);
+        param->setHint(kParamExtendedRangeHint);
+        param->setDefault(false);
+        param->setAnimates(true);
+        page->addChild(*param);
+    }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
         param->setLabels(kParamClampBlackLabel, kParamClampBlackLabel, kParamClampBlackLabel);
