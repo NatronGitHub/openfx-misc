@@ -308,7 +308,7 @@ private:
         } else {
             double x = (value - _rangeMin) / (_rangeMax - _rangeMin);
             int i = (int)(x * nbValues);
-            assert(0 <= i && i < nbValues);
+            assert(0 <= i && i <= nbValues);
             float alpha = x * nbValues - i;
             assert(0 <= alpha && alpha < 1.);
             return _lookupTable[component][i] * (1.-alpha) + _lookupTable[component][i+1] * alpha;
