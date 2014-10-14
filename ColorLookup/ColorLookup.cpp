@@ -116,7 +116,7 @@
 
 #define kParamSetMaster "setMaster"
 #define kParamSetMasterLabel "Set Master"
-#define kParamSetMasterHint "Add a new control point mapping source to target to the master curve only red component value is used)."
+#define kParamSetMasterHint "Add a new control point mapping source to target to the master curve (the relative luminance 0.2126 R + 0.7152 G + 0.0722 B is used)."
 
 #define kParamSetRGB "setRGB"
 #define kParamSetRGBLabel "Set RGB"
@@ -408,10 +408,12 @@ private:
             _source->getValueAtTime(args.time, source[0], source[1], source[2], source[3]);
             _target->getValueAtTime(args.time, target[0], target[1], target[2], target[3]);
 
+            double s = 0.2126 * source[0] + 0.7152 * source[1] + 0.0722 *source[2];
+            double t = 0.2126 * target[0] + 0.7152 * target[1] + 0.0722 *target[2];
             _lookupTable->addControlPoint(kCurveMaster, // curve to set
                                           args.time,   // time, ignored in this case, as we are not adding a key
-                                          source[0],   // parametric position
-                                          target[0],   // value to be
+                                          s,   // parametric position
+                                          t,   // value to be
                                           false);   // don't add a key
         }
         if (paramName == kParamSetRGB || paramName == kParamSetRGBA || paramName == kParamSetA) {
