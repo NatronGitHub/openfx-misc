@@ -784,6 +784,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamSource);
         param->setLabels(kParamSourceLabel, kParamSourceLabel, kParamSourceLabel);
         param->setHint(kParamSourceHint);
+        param->setDisplayRange(0., 0., 0., 0., 4., 4., 4., 4.);
         param->setEvaluateOnChange(false);
         param->setIsPersistant(false);
         page->addChild(*param);
@@ -792,6 +793,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTarget);
         param->setLabels(kParamTargetLabel, kParamTargetLabel, kParamTargetLabel);
         param->setHint(kParamTargetHint);
+        param->setDisplayRange(0., 0., 0., 0., 4., 4., 4., 4.);
         param->setEvaluateOnChange(false);
         param->setIsPersistant(false);
         page->addChild(*param);
