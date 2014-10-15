@@ -334,7 +334,12 @@ private:
         if (value < _rangeMin || _rangeMax < value) {
             // slow version
             int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
-            return _lookupTableParam->getValue(lutIndex, _time, value);
+            bool applyMaster = lutIndex != kCurveAlpha;
+            double ret = _lookupTableParam->getValue(lutIndex, _time, value);
+            if (applyMaster) {
+                ret += _lookupTableParam->getValue(kCurveMaster, _time, value) - value;
+            }
+            return ret;
         } else {
             double x = (value - _rangeMin) / (_rangeMax - _rangeMin);
             int i = (int)(x * nbValues);
