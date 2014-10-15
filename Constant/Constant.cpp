@@ -491,6 +491,7 @@ void ConstantPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabels(kParamRangeLabel, kParamRangeLabel, kParamRangeLabel);
         param->setHint(kParamRangeHint);
         param->setDefault(1, 1);
+        param->setDimensionLabels("min", "max");
         param->setAnimates(false); // can not animate, because it defines the time domain
         page->addChild(*param);
     }
