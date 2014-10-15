@@ -100,6 +100,11 @@
 #define kParamRangeLabel "Frame Range"
 #define kParamRangeHint "Time domain."
 
+#include "ofxNatron.h"
+
+static bool gHostIsNatron   = false;
+
+
 /** @brief  Base class used to blend two images together */
 class ConstantGeneratorBase : public OFX::ImageProcessor {
 protected:
@@ -246,6 +251,10 @@ private:
 
     /** @brief The get RoD action.  We flag an infinite rod */
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args,
+                               OFX::Clip * &identityClip,
+                               double &identityTime) OVERRIDE FINAL;
 };
 
 
@@ -396,6 +405,29 @@ ConstantPlugin::getTimeDomain(OfxRangeD &range)
     return false;
 }
 
+bool
+ConstantPlugin::isIdentity(const OFX::IsIdentityArguments &args,
+                                OFX::Clip * &identityClip,
+                                double &identityTime)
+{
+    
+    if (gHostIsNatron) {
+        
+        // only Natron supports setting the identityClip to the output clip
+        
+        int min, max;
+        range_->getValue(min, max);
+        
+        ///If not animated and different than 'min' time, return identity on the min time.
+        if (color_->getNumKeys() == 0 && args.time != min) {
+            identityClip = dstClip_;
+            identityTime = min;
+            return true;
+        }
+    }
+    return false;
+}
+
 using namespace OFX;
 
 mDeclarePluginFactory(ConstantPluginFactory, {}, {});
@@ -424,6 +456,8 @@ void ConstantPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void ConstantPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
+    gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName);
+    
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip( kOfxImageEffectSimpleSourceClipName );
     srcClip->addSupportedComponent(ePixelComponentRGBA);
