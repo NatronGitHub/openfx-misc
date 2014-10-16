@@ -90,7 +90,7 @@
 #define kPluginName          "BilateralCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-"Blur input stream by anisotropic bilateral filtering.\n" \
+"Blur input stream by bilateral filtering.\n" \
 "Uses the 'blur_bilateral' function from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
