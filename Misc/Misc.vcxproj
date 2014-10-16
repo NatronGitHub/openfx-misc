@@ -100,6 +100,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OFX_EXTENSIONS_VEGAS;OFX_EXTENSIONS_TUTTLE;OFX_EXTENSIONS_NUKE;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;WIN32;NOMINMAX;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\RGBLut;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\Test;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -107,7 +108,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <OutputFile>$(OutDir)$(ProjectName).ofx.bundle/Contents/Win32/$(ProjectName).ofx</OutputFile>
       <ImportLibrary>$(OutDir)$(ProjectName).lib</ImportLibrary>
-      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;$(SolutionDir)$(Configuration)\Support.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy $(SolutionDir)..\ChromaKeyer\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -162,7 +163,8 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDi
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OFX_EXTENSIONS_VEGAS;OFX_EXTENSIONS_TUTTLE;OFX_EXTENSIONS_NUKE;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;WIN64;NOMINMAX;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\RGBLut;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Retime;$(SolutionDir)..\Test;$(SolutionDir)..\Dissolve;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\RGBLut;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\Test;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -170,7 +172,7 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDi
       <OptimizeReferences>true</OptimizeReferences>
       <OutputFile>$(OutDir)$(ProjectName).ofx.bundle/Contents/Win64/$(ProjectName).ofx</OutputFile>
       <ImportLibrary>$(OutDir)$(ProjectName).lib</ImportLibrary>
-      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;$(SolutionDir)$(Configuration)\Support.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>xcopy $(SolutionDir)..\ChromaKeyer\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -238,14 +240,6 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDi
     <ClCompile Include="..\Noise\Noise.cpp" />
     <ClCompile Include="..\NoOp\NoOp.cpp" />
     <ClCompile Include="..\OneView\OneView.cpp" />
-    <ClCompile Include="..\openfx\Support\Library\ofxsCore.cpp" />
-    <ClCompile Include="..\openfx\Support\Library\ofxsImageEffect.cpp" />
-    <ClCompile Include="..\openfx\Support\Library\ofxsInteract.cpp" />
-    <ClCompile Include="..\openfx\Support\Library\ofxsLog.cpp" />
-    <ClCompile Include="..\openfx\Support\Library\ofxsMultiThread.cpp" />
-    <ClCompile Include="..\openfx\Support\Library\ofxsParams.cpp" />
-    <ClCompile Include="..\openfx\Support\Library\ofxsProperty.cpp" />
-    <ClCompile Include="..\openfx\Support\Library\ofxsPropertyValidation.cpp" />
     <ClCompile Include="..\Premult\Premult.cpp" />
     <ClCompile Include="..\ReConverge\ReConverge.cpp" />
     <ClCompile Include="..\Retime\Retime.cpp" />
@@ -253,11 +247,6 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDi
     <ClCompile Include="..\Roto\Roto.cpp" />
     <ClCompile Include="..\Shuffle\Shuffle.cpp" />
     <ClCompile Include="..\SideBySide\SideBySide.cpp" />
-    <ClCompile Include="..\SupportExt\ofxsOGLFontData.cpp" />
-    <ClCompile Include="..\SupportExt\ofxsOGLTextRenderer.cpp" />
-    <ClCompile Include="..\SupportExt\ofxsRectangleInteract.cpp" />
-    <ClCompile Include="..\SupportExt\ofxsTracking.cpp" />
-    <ClCompile Include="..\SupportExt\ofxsTransform3x3.cpp" />
     <ClCompile Include="..\Switch\Switch.cpp" />
     <ClCompile Include="..\TimeOffset\TimeOffset.cpp" />
     <ClCompile Include="..\TrackerPM\TrackerPM.cpp" />
@@ -285,17 +274,6 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDi
     <ClInclude Include="..\Noise\Noise.h" />
     <ClInclude Include="..\NoOp\NoOp.h" />
     <ClInclude Include="..\OneView\OneView.h" />
-    <ClInclude Include="..\openfx\Support\include\ofxsCore.h" />
-    <ClInclude Include="..\openfx\Support\include\ofxsImageEffect.h" />
-    <ClInclude Include="..\openfx\Support\include\ofxsInteract.h" />
-    <ClInclude Include="..\openfx\Support\include\ofxsLog.h" />
-    <ClInclude Include="..\openfx\Support\include\ofxsMemory.h" />
-    <ClInclude Include="..\openfx\Support\include\ofxsMessage.h" />
-    <ClInclude Include="..\openfx\Support\include\ofxsMultiThread.h" />
-    <ClInclude Include="..\openfx\Support\include\ofxsParam.h" />
-    <ClInclude Include="..\openfx\Support\Library\ofxsSupportPrivate.h" />
-    <ClInclude Include="..\openfx\Support\Plugins\include\ofxsImageBlender.H" />
-    <ClInclude Include="..\openfx\Support\Plugins\include\ofxsProcessing.H" />
     <ClInclude Include="..\Premult\Premult.h" />
     <ClInclude Include="..\ReConverge\ReConverge.h" />
     <ClInclude Include="..\Retime\Retime.h" />
@@ -303,20 +281,6 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDi
     <ClInclude Include="..\Roto\Roto.h" />
     <ClInclude Include="..\Shuffle\Shuffle.h" />
     <ClInclude Include="..\SideBySide\SideBySide.h" />
-    <ClInclude Include="..\SupportExt\ofxsCopier.h" />
-    <ClInclude Include="..\SupportExt\ofxsFilter.h" />
-    <ClInclude Include="..\SupportExt\ofxsFormatResolution.h" />
-    <ClInclude Include="..\SupportExt\ofxsMaskMix.h" />
-    <ClInclude Include="..\SupportExt\ofxsMatrix2D.h" />
-    <ClInclude Include="..\SupportExt\ofxsMerging.h" />
-    <ClInclude Include="..\SupportExt\ofxsOGLFontUtils.h" />
-    <ClInclude Include="..\SupportExt\ofxsOGLTextRenderer.h" />
-    <ClInclude Include="..\SupportExt\ofxsPixelProcessor.h" />
-    <ClInclude Include="..\SupportExt\ofxsPositionInteract.h" />
-    <ClInclude Include="..\SupportExt\ofxsRectangleInteract.h" />
-    <ClInclude Include="..\SupportExt\ofxsTracking.h" />
-    <ClInclude Include="..\SupportExt\ofxsTransform3x3.h" />
-    <ClInclude Include="..\SupportExt\ofxsTransform3x3Processor.h" />
     <ClInclude Include="..\Switch\Switch.h" />
     <ClInclude Include="..\TimeOffset\TimeOffset.h" />
     <ClInclude Include="..\TrackerPM\TrackerPM.h" />
