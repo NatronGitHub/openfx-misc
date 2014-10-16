@@ -171,7 +171,7 @@ public:
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI rect, const OfxPointD& renderScale, const CImgNoiseParams& params, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgNoiseParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
         roi->x1 = rect.x1;
         roi->x2 = rect.x2;

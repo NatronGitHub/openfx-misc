@@ -145,7 +145,7 @@ public:
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI rect, const OfxPointD& renderScale, const CImgDilateParams& params, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgDilateParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
         int delta_pix_x = std::ceil(params.sx * renderScale.x);
         int delta_pix_y = std::ceil(params.sy * renderScale.y);
