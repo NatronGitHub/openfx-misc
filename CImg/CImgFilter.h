@@ -236,6 +236,8 @@ private:
     setupAndCopy(OFX::PixelProcessorFilterBase & processor,
                  double time,
                  const OfxRectI &renderWindow,
+                 const OFX::Image* orig,
+                 const OFX::Image* mask,
                  const void *srcPixelData,
                  const OfxRectI& srcBounds,
                  OFX::PixelComponentEnum srcPixelComponents,
@@ -450,6 +452,8 @@ void
 CImgFilterPluginHelper<Params>::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
                                              double time,
                                              const OfxRectI &renderWindow,
+                                             const OFX::Image* orig,
+                                             const OFX::Image* mask,
                                              const void *srcPixelData,
                                              const OfxRectI& srcBounds,
                                              OFX::PixelComponentEnum srcPixelComponents,
@@ -479,16 +483,14 @@ CImgFilterPluginHelper<Params>::setupAndCopy(OFX::PixelProcessorFilterBase & pro
     if (isEmpty(renderWindow)) {
         return;
     }
-    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(time) : 0);
-    std::auto_ptr<OFX::Image> orig(srcClip_->fetchImage(time));
     if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
         processor.doMasking(true);
-        processor.setMaskImg(mask.get(), maskInvert);
+        processor.setMaskImg(mask, maskInvert);
     }
 
     // set the images
-    assert(orig.get() && dstPixelData && srcPixelData);
-    processor.setOrigImg(orig.get());
+    assert(orig && dstPixelData && srcPixelData);
+    processor.setOrigImg(orig);
     processor.setDstImg(dstPixelData, dstBounds, dstPixelComponents, dstPixelDepth, dstRowBytes);
     processor.setSrcImg(srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes);
 
@@ -685,55 +687,55 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
     copyWindowE.y2 = processWindow.y2;
     if (dstPixelComponents == OFX::ePixelComponentRGBA) {
         OFX::PixelCopier<float, 4, 1> fred(*this);
-        setupAndCopy(fred, time, copyWindowN,
+        setupAndCopy(fred, time, copyWindowN, src.get(), mask.get(),
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
-        setupAndCopy(fred, time, copyWindowS,
+        setupAndCopy(fred, time, copyWindowS, src.get(), mask.get(),
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
-        setupAndCopy(fred, time, copyWindowW,
+        setupAndCopy(fred, time, copyWindowW, src.get(), mask.get(),
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
-        setupAndCopy(fred, time, copyWindowE,
+        setupAndCopy(fred, time, copyWindowE, src.get(), mask.get(),
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
     } else if (dstPixelComponents == OFX::ePixelComponentRGB) {
         OFX::PixelCopier<float, 3, 1> fred(*this);
-        setupAndCopy(fred, time, copyWindowN,
+        setupAndCopy(fred, time, copyWindowN, src.get(), mask.get(),
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
-        setupAndCopy(fred, time, copyWindowS,
+        setupAndCopy(fred, time, copyWindowS, src.get(), mask.get(),
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
-        setupAndCopy(fred, time, copyWindowW,
+        setupAndCopy(fred, time, copyWindowW, src.get(), mask.get(),
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
-        setupAndCopy(fred, time, copyWindowE,
+        setupAndCopy(fred, time, copyWindowE, src.get(), mask.get(),
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
     }  else if (dstPixelComponents == OFX::ePixelComponentAlpha) {
         OFX::PixelCopier<float, 1, 1> fred(*this);
-        setupAndCopy(fred, time, copyWindowN,
+        setupAndCopy(fred, time, copyWindowN, src.get(), mask.get(),
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
-        setupAndCopy(fred, time, copyWindowS,
+        setupAndCopy(fred, time, copyWindowS, src.get(), mask.get(),
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
-        setupAndCopy(fred, time, copyWindowW,
+        setupAndCopy(fred, time, copyWindowW, src.get(), mask.get(),
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
-        setupAndCopy(fred, time, copyWindowE,
+        setupAndCopy(fred, time, copyWindowE, src.get(), mask.get(),
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
@@ -800,14 +802,14 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
 
     if (srcPixelComponents == OFX::ePixelComponentRGBA) {
         OFX::PixelCopierUnPremult<float, 4, 1, float, 4, 1> fred(*this);
-        setupAndCopy(fred, time, srcRoI,
+        setupAndCopy(fred, time, srcRoI, src.get(), mask.get(),
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
                      tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
                      premult, premultChannel, mix, maskInvert);
     } else if (srcPixelComponents == OFX::ePixelComponentRGB) {
         // just copy, no premult
         OFX::PixelCopier<float, 3, 1> fred(*this);
-        setupAndCopy(fred, time, srcRoI,
+        setupAndCopy(fred, time, srcRoI, src.get(), mask.get(),
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
                      tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
                      premult, premultChannel, mix, maskInvert);
@@ -815,7 +817,7 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
         // just copy, no premult
         assert(srcPixelComponents == OFX::ePixelComponentAlpha);
         OFX::PixelCopier<float, 1, 1> fred(*this);
-        setupAndCopy(fred, time, srcRoI,
+        setupAndCopy(fred, time, srcRoI, src.get(), mask.get(),
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
                      tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
                      premult, premultChannel, mix, maskInvert);
@@ -901,7 +903,7 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
 
     if (srcPixelComponents == OFX::ePixelComponentRGBA) {
         OFX::PixelCopierPremultMaskMix<float, 4, 1, float, 4, 1> fred(*this);
-        setupAndCopy(fred, time, processWindow,
+        setupAndCopy(fred, time, processWindow, src.get(), mask.get(),
                      tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
@@ -909,13 +911,13 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
         // just copy, no premult
         if (doMasking) {
             OFX::PixelCopierMaskMix<float, 3, 1, true> fred(*this);
-            setupAndCopy(fred, time, processWindow,
+            setupAndCopy(fred, time, processWindow, src.get(), mask.get(),
                          tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
                          dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                          premult, premultChannel, mix, maskInvert);
         } else {
             OFX::PixelCopierMaskMix<float, 3, 1, false> fred(*this);
-            setupAndCopy(fred, time, processWindow,
+            setupAndCopy(fred, time, processWindow, src.get(), mask.get(),
                          tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
                          dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                          premult, premultChannel, mix, maskInvert);
@@ -925,13 +927,13 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
         assert(srcPixelComponents == OFX::ePixelComponentAlpha);
         if (doMasking) {
             OFX::PixelCopierMaskMix<float, 1, 1, true> fred(*this);
-            setupAndCopy(fred, time, processWindow,
+            setupAndCopy(fred, time, processWindow, src.get(), mask.get(),
                          tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
                          dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                          premult, premultChannel, mix, maskInvert);
         } else {
             OFX::PixelCopierMaskMix<float, 1, 1, false> fred(*this);
-            setupAndCopy(fred, time, processWindow,
+            setupAndCopy(fred, time, processWindow, src.get(), mask.get(),
                          tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
                          dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                          premult, premultChannel, mix, maskInvert);
