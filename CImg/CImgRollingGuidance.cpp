@@ -86,12 +86,9 @@
 #include "ofxsMerging.h"
 #include "ofxsCopier.h"
 
-#define cimg_display 0
-#include <CImg.h>
+#include "CImgFilter.h"
 
 #if cimg_version >= 157
-
-#include "CImgFilter.h"
 
 #define kPluginName          "RollingGuidanceCImg"
 #define kPluginGrouping      "Filter"

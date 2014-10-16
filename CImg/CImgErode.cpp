@@ -85,9 +85,6 @@
 #include "ofxsMerging.h"
 #include "ofxsCopier.h"
 
-#define cimg_display 0
-#include <CImg.h>
-
 #include "CImgFilter.h"
 
 #define kPluginName          "ErodeCImg"

@@ -85,9 +85,6 @@
 #include "ofxsMerging.h"
 #include "ofxsCopier.h"
 
-#define cimg_display 0
-#include <CImg.h>
-
 #include "CImgFilter.h"
 
 #define kPluginName          "BilateralCImg"
@@ -167,10 +164,10 @@ public:
         if (params.sigma_s == 0.) {
             return;
         }
-#if cimg_version >= 157
 #if cimg_version < 160
-#pragma message WARN("Warning: The bilateral filter in CImg 1.5.7 to 1.5.9 produces incorrect results, please upgrade to CImg >= 1.6.0."
+#pragma message WARN("The bilateral filter before CImg 1.6.0 produces incorrect results, please upgrade CImg."
 #endif
+#if cimg_version >= 157
         cimg.blur_bilateral(cimg, params.sigma_s * args.renderScale.x, params.sigma_r);
 #else
         cimg.blur_bilateral(params.sigma_s * args.renderScale.x, params.sigma_r);
