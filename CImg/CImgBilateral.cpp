@@ -165,7 +165,7 @@ public:
             return;
         }
 #if cimg_version < 160
-#pragma message WARN("The bilateral filter before CImg 1.6.0 produces incorrect results, please upgrade CImg."
+#pragma message WARN("The bilateral filter before CImg 1.6.0 produces incorrect results, please upgrade CImg.")
 #endif
 #if cimg_version >= 157
         cimg.blur_bilateral(cimg, params.sigma_s * args.renderScale.x, params.sigma_r);
