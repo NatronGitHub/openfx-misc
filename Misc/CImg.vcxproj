@@ -100,7 +100,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <OutputFile>$(OutDir)$(ProjectName).ofx.bundle/Contents/Win32/$(ProjectName).ofx</OutputFile>
-      <AdditionalDependencies>$(SolutionDir)$(Configuration)\Support.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;$(SolutionDir)$(Platform)\$(Configuration)\Support.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>
@@ -121,7 +121,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <OutputFile>$(OutDir)$(ProjectName).ofx.bundle/Contents/Win64/$(ProjectName).ofx</OutputFile>
-      <AdditionalDependencies>$(SolutionDir)$(Configuration)\Support.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;$(SolutionDir)$(Platform)\$(Configuration)\Support.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Lib>
       <TargetMachine>MachineX64</TargetMachine>
@@ -132,9 +132,11 @@
     <ClCompile Include="..\CImg\CImgBlur.cpp" />
     <ClCompile Include="..\CImg\CImgDenoise.cpp" />
     <ClCompile Include="..\CImg\CImgDilate.cpp" />
+    <ClCompile Include="..\CImg\CImgEqualize.cpp" />
     <ClCompile Include="..\CImg\CImgErode.cpp" />
     <ClCompile Include="..\CImg\CImgNoise.cpp" />
     <ClCompile Include="..\CImg\CImgPlasma.cpp" />
+    <ClCompile Include="..\CImg\CImgRollingGuidance.cpp" />
     <ClCompile Include="..\CImg\CImgSmooth.cpp" />
     <ClCompile Include="..\CImg\PluginRegistration.cpp" />
   </ItemGroup>
@@ -143,10 +145,12 @@
     <ClInclude Include="..\CImg\CImgBlur.h" />
     <ClInclude Include="..\CImg\CImgDenoise.h" />
     <ClInclude Include="..\CImg\CImgDilate.h" />
+    <ClInclude Include="..\CImg\CImgEqualize.h" />
     <ClInclude Include="..\CImg\CImgErode.h" />
     <ClInclude Include="..\CImg\CImgFilter.h" />
     <ClInclude Include="..\CImg\CImgNoise.h" />
     <ClInclude Include="..\CImg\CImgPlasma.h" />
+    <ClInclude Include="..\CImg\CImgRollingGuidance.h" />
     <ClInclude Include="..\CImg\CImgSmooth.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
