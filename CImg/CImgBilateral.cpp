@@ -114,13 +114,13 @@
 
 #define kParamSigmaS "sigma_s"
 #define kParamSigmaSLabel "Sigma_s"
-#define kParamSigmaSHint "Standard deviation of the spatial kernel, in pixel units (>=0). A reasonable value is 1/16 of the image dimension."
-#define kParamSigmaSDefault 10.0
+#define kParamSigmaSHint "Standard deviation of the spatial kernel (positional sigma), in pixel units (>=0). A reasonable value is 1/16 of the image dimension."
+#define kParamSigmaSDefault 0.4
 
 #define kParamSigmaR "sigma_r"
 #define kParamSigmaRLabel "Sigma_r"
-#define kParamSigmaRHint "Standard deviation of the range kernel, in intensity units (>=0). A reasonable value is 1/10 of the intensity range."
-#define kParamSigmaRDefault 0.05
+#define kParamSigmaRHint "Standard deviation of the range kernel (color sigma), in intensity units (>=0). A reasonable value is 1/10 of the intensity range."
+#define kParamSigmaRDefault 0.4
 
 using namespace OFX;
 
@@ -168,6 +168,9 @@ public:
             return;
         }
 #if cimg_version >= 157
+#if cimg_version < 160
+#pragma message WARN("Warning: The bilateral filter in CImg 1.5.7 to 1.5.9 produces incorrect results, please upgrade to CImg >= 1.6.0."
+#endif
         cimg.blur_bilateral(cimg, params.sigma_s * args.renderScale.x, params.sigma_r);
 #else
         cimg.blur_bilateral(params.sigma_s * args.renderScale.x, params.sigma_r);
@@ -229,8 +232,8 @@ void CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& d
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
         param->setLabels(kParamSigmaSLabel, kParamSigmaSLabel, kParamSigmaSLabel);
         param->setHint(kParamSigmaSHint);
-        param->setRange(0, 1000);
-        param->setDisplayRange(0, 25);
+        param->setRange(0, 100000.);
+        param->setDisplayRange(0.01, 10.);
         param->setDefault(kParamSigmaSDefault);
         param->setIncrement(0.1);
         page->addChild(*param);
@@ -239,8 +242,8 @@ void CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& d
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
         param->setLabels(kParamSigmaRLabel, kParamSigmaRLabel, kParamSigmaRLabel);
         param->setHint(kParamSigmaRHint);
-        param->setRange(0, 10.0);
-        param->setDisplayRange(0, 0.5);
+        param->setRange(0, 100000.);
+        param->setDisplayRange(0.01, 10.);
         param->setDefault(kParamSigmaRDefault);
         param->setIncrement(0.005);
         page->addChild(*param);
