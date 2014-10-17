@@ -1220,6 +1220,7 @@
 		1E52FFD31955CE890000FB79 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E52FFD41955CE890000FB79 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E551F5A179950EC00A4135C /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		1E55FCE619F104C70093F33B /* CImg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImg.h; sourceTree = "<group>"; };
 		1E59337D194A0C6300804448 /* Constant.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Constant.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E59337F194A0CF400804448 /* Constant.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Constant.cpp; sourceTree = "<group>"; };
 		1E593380194A0CF400804448 /* Constant.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Constant.h; sourceTree = "<group>"; };
@@ -1857,6 +1858,7 @@
 				1E31940A19D9987F0027D0E2 /* CImgSmooth.cpp */,
 				1E31940B19D9987F0027D0E2 /* CImgSmooth.h */,
 				1ED8BB4319E677BC005F450E /* CImgFilter.h */,
+				1E55FCE619F104C70093F33B /* CImg.h */,
 				1E31940C19D9987F0027D0E2 /* Info.plist */,
 				1E31940D19D9987F0027D0E2 /* Makefile */,
 				1E31940E19D9987F0027D0E2 /* PluginRegistration.cpp */,

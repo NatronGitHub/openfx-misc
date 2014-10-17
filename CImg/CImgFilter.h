@@ -18,8 +18,16 @@
 #include <cassert>
 #include <memory>
 
+// use the locally-downloaded CImg.h
+//
+// To download the latest CImg.h, use:
+// git archive --remote=git://git.code.sf.net/p/gmic/source HEAD:src CImg.h |tar xf -
+//
+// CImg.h must at least be the version from Oct 17 2014, commit 9b52016cab3368744ea9f3cc20a3e9b4f0c66eb3
+// To download, use:
+// git archive --remote=git://git.code.sf.net/p/gmic/source 9b52016cab3368744ea9f3cc20a3e9b4f0c66eb3:src CImg.h |tar xf -
 #define cimg_display 0
-#include <CImg.h>
+#include "CImg.h"
 
 #define kParamProcessR      "r"
 #define kParamProcessRLabel "R"

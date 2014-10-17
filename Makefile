@@ -38,7 +38,7 @@ ifneq ($(DEBUGFLAG),-O3)
   SUBDIRS += TrackerPM
 endif
 
-HAVE_CIMG ?= 0
+HAVE_CIMG ?= 1
 
 # Build CImg-based plugins separately.
 ifneq ($(HAVE_CIMG),0)
