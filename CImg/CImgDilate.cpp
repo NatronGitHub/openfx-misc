@@ -111,7 +111,7 @@
 
 #define kParamSize "size"
 #define kParamSizeLabel "size"
-#define kParamSizeHint "Size of the rectangular structuring element, in pixel units (>=0)."
+#define kParamSizeHint "Width/height of the rectangular structuring element is 2*size+1, in pixel units (>=0)."
 #define kParamSizeDefault 1
 
 
@@ -156,7 +156,7 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        cimg.dilate(std::floor(params.sx * args.renderScale.x), std::floor(params.sy * args.renderScale.y));
+        cimg.dilate(std::floor(params.sx * args.renderScale.x) * 2 + 1, std::floor(params.sy * args.renderScale.y) * 2 + 1);
     }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgDilateParams& params) OVERRIDE FINAL
@@ -214,7 +214,7 @@ void CImgDilatePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setLabels(kParamSizeLabel, kParamSizeLabel, kParamSizeLabel);
         param->setHint(kParamSizeHint);
         param->setRange(0, 0, 1000, 1000);
-        param->setDisplayRange(0, 0, 25, 25);
+        param->setDisplayRange(0, 0, 100, 100);
         param->setDefault(kParamSizeDefault, kParamSizeDefault);
         page->addChild(*param);
     }
