@@ -111,16 +111,16 @@
 
 #define kParamSigma "sigma"
 #define kParamSigmaLabel "Sigma"
-#define kParamSigmaHint "Standard deviation, in pixel units (>=0)."
+#define kParamSigmaHint "Standard deviation, in pixel units (>=0). The kernel size or diameter is approximately twice this value."
 #define kParamSigmaDefault 5.0
 
 #define kParamBoundary "boundary"
-#define kParamBoundaryLabel "Boundary conditions"
-#define kParamBoundaryHint "Specifies how pixel values are computed out of the image domain."
+#define kParamBoundaryLabel "Boundary Conditions"
+#define kParamBoundaryHint "Specifies how pixel values are computed out of the image domain. This mostly affects values at the boundary of the image. If the image represents intensities, Neumann conditions should be used. If the image represents gradients or derivatives, Dirichlet boundary conditions should be used."
 #define kParamBoundaryOptionDirichlet "Dirichlet"
 #define kParamBoundaryOptionDirichletHint "Dirichlet boundary condition: pixel values out of the image domain are zero."
 #define kParamBoundaryOptionNeumann "Neumann"
-#define kParamBoundaryOptionNeumannHint "Neumann boundary condition: pixel values out of the image domain are those of the closest pixel location in the domain."
+#define kParamBoundaryOptionNeumannHint "Neumann boundary condition: pixel values out of the image domain are those of the closest pixel location in the image domain."
 #define kParamBoundaryOptionPeriodic "Periodic"
 #define kParamBoundaryOptionPeriodicHint "Image is considered to be periodic out of the image domain."
 #define kParamBoundaryDefault eBoundaryNeumann
@@ -134,11 +134,11 @@ enum BoundaryEnum
 #if cimg_version >= 153
 #define kParamFilter "filter"
 #define kParamFilterLabel "Filter"
-#define kParamFilterHint "Bluring filter"
+#define kParamFilterHint "Bluring filter. The quasi-Gaussian filter should be appropriate in most cases. The Gaussian filter is more isotropic (its impulse response has rotational symmetry), but slower."
 #define kParamFilterOptionQuasiGaussian "Quasi-Gaussian"
 #define kParamFilterOptionQuasiGaussianHint "Quasi-Gaussian filter (0-order recursive Deriche filter, faster)."
 #define kParamFilterOptionGaussian "Gaussian"
-#define kParamFilterOptionGaussianHint "Gaussian filter (Van Vliet recursive Gaussian filter)."
+#define kParamFilterOptionGaussianHint "Gaussian filter (Van Vliet recursive Gaussian filter, more isotropic, slower)."
 #define kParamFilterDefault eFilterQuasiGaussian
 enum FilterEnum
 {
