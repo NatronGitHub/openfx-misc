@@ -1,4 +1,4 @@
-PLUGINOBJECTS = CImgBilateral.o CImgBlur.o CImgDenoise.o CImgDilate.o CImgErode.o CImgEqualize.o CImgNoise.o CImgPlasma.o CImgSmooth.o CImgRollingGuidance.o  PluginRegistration.o
+PLUGINOBJECTS = CImgBilateral.o CImgBlur.o CImgDenoise.o CImgDilate.o CImgErode.o CImgErodeSmooth.o CImgEqualize.o CImgNoise.o CImgPlasma.o CImgSmooth.o CImgRollingGuidance.o  PluginRegistration.o
 PLUGINNAME = CImg
 #RESOURCES = net.sf.cimg.CImg.png net.sf.cimg.CImg.svg
 

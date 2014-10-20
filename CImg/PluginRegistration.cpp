@@ -4,6 +4,7 @@
 #include "CImgDilate.h"
 #include "CImgEqualize.h"
 #include "CImgErode.h"
+#include "CImgErodeSmooth.h"
 #include "CImgNoise.h"
 #include "CImgPlasma.h"
 #include "CImgRollingGuidance.h"
@@ -21,6 +22,7 @@ namespace OFX
             getCImgDilatePluginID(ids);
             getCImgEqualizePluginID(ids);
             getCImgErodePluginID(ids);
+            getCImgErodeSmoothPluginID(ids);
             getCImgNoisePluginID(ids);
             getCImgPlasmaPluginID(ids);
             getCImgRollingGuidancePluginID(ids);

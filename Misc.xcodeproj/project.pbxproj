@@ -385,6 +385,7 @@
 		1ECE545B185F2433001ED442 /* DebugProxy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ECE5454185F2429001ED442 /* DebugProxy.cpp */; };
 		1ECE5467185F2433001ED442 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1ECE546E185F24A1001ED442 /* ofxhBinary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ECE546D185F24A1001ED442 /* ofxhBinary.cpp */; };
+		1ECF2F5319F2CB9F00E91A38 /* CImgErodeSmooth.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ECF2F5119F2CB9F00E91A38 /* CImgErodeSmooth.cpp */; };
 		1ED4AE991973DCAD00EE64C8 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1ED4AE9A1973DCAD00EE64C8 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1ED4AE9B1973DCAD00EE64C8 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -1353,6 +1354,8 @@
 		1ECE5456185F2429001ED442 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1ECE546B185F2433001ED442 /* DebugProxy.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DebugProxy.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ECE546D185F24A1001ED442 /* ofxhBinary.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ofxhBinary.cpp; path = openfx/HostSupport/src/ofxhBinary.cpp; sourceTree = SOURCE_ROOT; };
+		1ECF2F5119F2CB9F00E91A38 /* CImgErodeSmooth.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgErodeSmooth.cpp; sourceTree = "<group>"; };
+		1ECF2F5219F2CB9F00E91A38 /* CImgErodeSmooth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgErodeSmooth.h; sourceTree = "<group>"; };
 		1ED4569C19BBB0E00019E8CF /* ofxsImageBlenderMasked.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsImageBlenderMasked.h; sourceTree = "<group>"; };
 		1ED4AEA61973DCAD00EE64C8 /* Noise.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Noise.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ED4AEA91973DD4800EE64C8 /* Noise.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Noise.cpp; sourceTree = "<group>"; };
@@ -1849,6 +1852,8 @@
 				1EA330AC19E846F7002EFA5B /* CImgEqualize.h */,
 				1E868B7619E6E28E00B793BA /* CImgErode.cpp */,
 				1E868B7719E6E28E00B793BA /* CImgErode.h */,
+				1ECF2F5119F2CB9F00E91A38 /* CImgErodeSmooth.cpp */,
+				1ECF2F5219F2CB9F00E91A38 /* CImgErodeSmooth.h */,
 				1E868B7919E6E72B00B793BA /* CImgNoise.cpp */,
 				1E868B7A19E6E72B00B793BA /* CImgNoise.h */,
 				1EA330A819E83A33002EFA5B /* CImgPlasma.cpp */,
@@ -3237,6 +3242,7 @@
 				1E31941719D9B2270027D0E2 /* ofxsMultiThread.cpp in Sources */,
 				1E31941819D9B2270027D0E2 /* ofxsParams.cpp in Sources */,
 				1E31941919D9B2270027D0E2 /* ofxsProperty.cpp in Sources */,
+				1ECF2F5319F2CB9F00E91A38 /* CImgErodeSmooth.cpp in Sources */,
 				1E31941A19D9B2270027D0E2 /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
