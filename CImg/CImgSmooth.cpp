@@ -317,8 +317,8 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAmplitude);
         param->setLabels(kParamAmplitudeLabel, kParamAmplitudeLabel, kParamAmplitudeLabel);
         param->setHint(kParamAmplitudeHint);
-        param->setRange(0, 1000);
-        param->setDisplayRange(0, 100);
+        param->setRange(0., 1000.);
+        param->setDisplayRange(0., 100.);
         param->setDefault(kParamAmplitudeDefault);
         param->setIncrement(1);
         page->addChild(*param);
@@ -326,7 +326,8 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSharpness);
         param->setLabels(kParamSharpnessLabel, kParamSharpnessLabel, kParamSharpnessLabel);
-        param->setRange(0, 1);
+        param->setRange(0., 1.);
+        param->setDisplayRange(0., 1.);
         param->setDefault(kParamSharpnessDefault);
         param->setIncrement(0.05);
         page->addChild(*param);
@@ -335,7 +336,8 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAnisotropy);
         param->setLabels(kParamAnisotropyLabel, kParamAnisotropyLabel, kParamAnisotropyLabel);
         param->setHint(kParamAnisotropyHint);
-        param->setRange(0, 1);
+        param->setRange(0., 1.);
+        param->setDisplayRange(0., 1.);
         param->setDefault(kParamAnisotropyDefault);
         param->setIncrement(0.05);
         page->addChild(*param);
@@ -343,7 +345,8 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAlpha);
         param->setLabels(kParamAlphaLabel, kParamAlphaLabel, kParamAlphaLabel);
-        param->setRange(0, 1);
+        param->setRange(0., 1.);
+        param->setDisplayRange(0., 1.);
         param->setDefault(kParamAlphaDefault);
         param->setIncrement(0.05);
         page->addChild(*param);
@@ -352,7 +355,8 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigma);
         param->setLabels(kParamSigmaLabel, kParamSigmaLabel, kParamSigmaLabel);
         param->setHint(kParamSigmaHint);
-        param->setRange(0, 3);
+        param->setRange(0., 3.);
+        param->setDisplayRange(0., 3.);
         param->setDefault(kParamSigmaDefault);
         param->setIncrement(0.05);
         page->addChild(*param);
@@ -361,7 +365,8 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDl);
         param->setLabels(kParamDlLabel, kParamDlLabel, kParamDlLabel);
         param->setHint(kParamDlHint);
-        param->setRange(0, 1);
+        param->setRange(0., 1.);
+        param->setDisplayRange(0., 1.);
         param->setDefault(kParamDlDefault);
         param->setIncrement(0.05);
         page->addChild(*param);
@@ -370,7 +375,8 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDa);
         param->setLabels(kParamDaLabel, kParamDaLabel, kParamDaLabel);
         param->setHint(kParamDaHint);
-        param->setRange(0, 90);
+        param->setRange(0., 90.);
+        param->setDisplayRange(0., 90.);
         param->setDefault(kParamDaDefault);
         param->setIncrement(0.5);
         page->addChild(*param);
@@ -379,7 +385,8 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamGaussPrec);
         param->setLabels(kParamGaussPrecLabel, kParamGaussPrecLabel, kParamGaussPrecLabel);
         param->setHint(kParamGaussPrecHint);
-        param->setRange(0, 5);
+        param->setRange(0., 5.);
+        param->setDisplayRange(0., 5.);
         param->setDefault(kParamGaussPrecDefault);
         param->setIncrement(0.05);
         page->addChild(*param);

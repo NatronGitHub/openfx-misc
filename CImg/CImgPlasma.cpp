@@ -245,6 +245,7 @@ void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setLabels(kParamAlphaLabel, kParamAlphaLabel, kParamAlphaLabel);
         param->setHint(kParamAlphaHint);
         param->setRange(kParamAlphaMin, kParamAlphaMax);
+        param->setDisplayRange(kParamAlphaMin, kParamAlphaMax);
         param->setDefault(kParamAlphaDefault);
         param->setIncrement(kParamAlphaIncrement);
         page->addChild(*param);
@@ -254,6 +255,7 @@ void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setLabels(kParamBetaLabel, kParamBetaLabel, kParamBetaLabel);
         param->setHint(kParamBetaHint);
         param->setRange(kParamBetaMin, kParamBetaMax);
+        param->setDisplayRange(kParamBetaMin, kParamBetaMax);
         param->setDefault(kParamBetaDefault);
         param->setIncrement(kParamBetaIncrement);
         page->addChild(*param);
@@ -263,6 +265,7 @@ void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setLabels(kParamScaleLabel, kParamScaleLabel, kParamScaleLabel);
         param->setHint(kParamScaleHint);
         param->setRange(kParamScaleMin, kParamScaleMax);
+        param->setDisplayRange(kParamScaleMin, kParamScaleMax);
         param->setDefault(kParamScaleDefault);
         page->addChild(*param);
     }

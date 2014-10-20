@@ -425,6 +425,7 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabels(kParamWhichLabel, kParamWhichLabel, kParamWhichLabel);
         param->setHint(kParamWhichHint);
         param->setRange(0., 1.);
+        param->setDisplayRange(0., 1.);
         page->addChild(*param);
     }
 

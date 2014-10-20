@@ -274,6 +274,7 @@ void CImgRollingGuidancePluginFactory::describeInContext(OFX::ImageEffectDescrip
         param->setLabels(kParamIterationsLabel, kParamIterationsLabel, kParamIterationsLabel);
         param->setHint(kParamIterationsHint);
         param->setRange(0, 10);
+        param->setDisplayRange(0, 10);
         param->setDefault(kParamIterationsDefault);
         page->addChild(*param);
     }

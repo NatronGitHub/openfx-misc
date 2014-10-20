@@ -685,6 +685,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
         param->setLabels(kParamSoftnessLabel, kParamSoftnessLabel, kParamSoftnessLabel);
         param->setDefault(0);
         param->setRange(0., 100.);
+        param->setDisplayRange(0., 100.);
         param->setIncrement(1.);
         param->setHint(kParamSoftnessHint);
         page->addChild(*param);

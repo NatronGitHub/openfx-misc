@@ -646,6 +646,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setLabels(kParamSoftnessLabel, kParamSoftnessLabel, kParamSoftnessLabel);
         param->setDefault(0);
         param->setRange(0., 100.);
+        param->setDisplayRange(0., 100.);
         param->setIncrement(1.);
         param->setHint("Size of the fade to black around edges to apply");
         page->addChild(*param);
