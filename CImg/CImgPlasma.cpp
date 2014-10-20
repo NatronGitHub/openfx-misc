@@ -187,6 +187,12 @@ public:
         return (std::floor(params.scale * args.renderScale.x) == 0);
     };
 
+    /* Override the clip preferences, we need to say we are setting the frame varying flag */
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL
+    {
+        clipPreferences.setOutputFrameVarying(true);
+    }
+
 private:
 
     // params
