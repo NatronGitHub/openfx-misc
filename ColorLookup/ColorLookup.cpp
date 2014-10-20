@@ -405,7 +405,7 @@ private:
     void renderForComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
     void setupAndProcess(ColorLookupProcessorBase &, const OFX::RenderArguments &args);
-    void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL
     {
         if (paramName == kParamSetMaster) {
             double source[4];
@@ -514,6 +514,13 @@ private:
             }
         }
 #endif
+        if (paramName == kParamRange) {
+            double rmin, rmax;
+            _range->getValueAtTime(args.time, rmin, rmax);
+            if (rmax < rmin) {
+                _range->setValue(rmax, rmin);
+            }
+        }
     }
 
 private:
