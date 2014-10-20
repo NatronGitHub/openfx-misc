@@ -395,7 +395,7 @@ private:
                         case eKeyerModeScreen: {
                             double scalarProd = fgr * _keyColor.r + fgg * _keyColor.g + fgb * _keyColor.b;
                             double norm2 = fgr * fgr + fgg * fgg + fgb * fgb;
-                            double d = sqrt(norm2 - ((keyColorNorm2 == 0) ? 0. : (scalarProd * scalarProd / keyColorNorm2)));
+                            double d = std::sqrt(norm2 - ((keyColorNorm2 == 0) ? 0. : (scalarProd * scalarProd / keyColorNorm2)));
                             Kfg = (keyColor111 == 0) ? rgb2luminance(fgr, fgg, fgb) : (scalarProd / keyColor111);
                             Kfg -= d;
                         }   break;
