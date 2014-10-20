@@ -104,6 +104,7 @@ VPATH += \
 ../Grade \
 ../Invert \
 ../JoinViews \
+../Keyer \
 ../Merge \
 ../MixViews \
 ../Noise \
@@ -142,6 +143,7 @@ CXXFLAGS += \
 -I../Grade \
 -I../Invert \
 -I../JoinViews \
+-I../Keyer \
 -I../Merge \
 -I../MixViews \
 -I../Noise \

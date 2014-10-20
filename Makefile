@@ -16,6 +16,7 @@ Dissolve \
 Grade \
 Invert \
 JoinViews \
+Keyer \
 Merge \
 MixViews \
 Noise \

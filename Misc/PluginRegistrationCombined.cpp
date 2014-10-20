@@ -13,6 +13,7 @@
 #include "Grade.h"
 #include "Invert.h"
 #include "JoinViews.h"
+#include "Keyer.h"
 #include "Merge.h"
 #include "MixViews.h"
 #include "Noise.h"
@@ -54,6 +55,7 @@ namespace OFX
             getGradePluginID(ids);
             getInvertPluginID(ids);
             getJoinViewsPluginID(ids);
+            getKeyerPluginID(ids);
             getMergePluginID(ids);
             getMixViewsPluginID(ids);
             getNoisePluginID(ids);
