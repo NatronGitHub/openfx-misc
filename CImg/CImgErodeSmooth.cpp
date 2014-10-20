@@ -95,7 +95,7 @@
 "See \"Robust local max-min filters by normalized power-weighted filtering\" by L.J. van Vliet, " \
 "http://dx.doi.org/10.1109/ICPR.2004.1334273\n" \
 "Smoothing is done using a quasi-gaussian or gaussian filter (recursive implementation).\n" \
-"Uses the 'blur', 'exp' and 'log' functions from the CImg library.\n" \
+"Uses the 'blur' function from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.sourceforge.net)."
