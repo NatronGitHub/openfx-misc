@@ -275,7 +275,7 @@ public:
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL
     {
-        if (paramName == kParamRange) {
+        if (paramName == kParamRange && args.reason == eChangeUserEdit) {
             double rmin, rmax;
             _range->getValueAtTime(args.time, rmin, rmax);
             if (rmax < rmin) {

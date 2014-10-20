@@ -405,9 +405,10 @@ private:
     void renderForComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
     void setupAndProcess(ColorLookupProcessorBase &, const OFX::RenderArguments &args);
+    
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL
     {
-        if (paramName == kParamSetMaster) {
+        if (paramName == kParamSetMaster && args.reason == eChangeUserEdit) {
             double source[4];
             double target[4];
             _source->getValueAtTime(args.time, source[0], source[1], source[2], source[3]);
@@ -421,7 +422,7 @@ private:
                                           t,   // value to be
                                           false);   // don't add a key
         }
-        if (paramName == kParamSetRGB || paramName == kParamSetRGBA || paramName == kParamSetA) {
+        if ((paramName == kParamSetRGB || paramName == kParamSetRGBA || paramName == kParamSetA) && args.reason == eChangeUserEdit) {
             double source[4];
             double target[4];
             _source->getValueAtTime(args.time, source[0], source[1], source[2], source[3]);
@@ -439,7 +440,7 @@ private:
             }
         }
 #ifdef COLORLOOKUP_ADD
-        if (paramName == kParamAddCtrlPts) {
+        if (paramName == kParamAddCtrlPts && args.reason == eChangeUserEdit) {
             for (int component = 0; component < kCurveNb; ++component) {
                 int n = _lookupTable->getNControlPoints(component, args.time);
                 if (n <= 1) {
@@ -482,7 +483,7 @@ private:
         }
 #endif
 #ifdef COLORLOOKUP_RESET
-        if (paramName == kParamResetCtrlPts) {
+        if (paramName == kParamResetCtrlPts && args.reason == eChangeUserEdit) {
             OFX::Message::MessageReplyEnum reply = sendMessage(OFX::Message::eMessageQuestion, "", "Delete all control points for all components?");
             // Nuke seems to always reply eMessageReplyOK, whatever the real answer was
             switch (reply) {
@@ -514,7 +515,7 @@ private:
             }
         }
 #endif
-        if (paramName == kParamRange) {
+        if (paramName == kParamRange && args.reason == eChangeUserEdit) {
             double rmin, rmax;
             _range->getValueAtTime(args.time, rmin, rmax);
             if (rmax < rmin) {
