@@ -131,7 +131,7 @@
 #define kParamKeyerModeOptionColor "Color"
 #define kParamKeyerModeOptionColorHint "Use the color for keying. If the key color is pure green, this corresponds a green keyer, etc."
 #define kParamKeyerModeOptionScreen "Screen"
-#define kParamKeyerModeOptionScreenHint "Use the color minus the other components for keying. If the key color is pure green, this corresponds a greenscreen, etc."
+#define kParamKeyerModeOptionScreenHint "Use the color minus the other components for keying. If the key color is pure green, this corresponds a greenscreen, etc. When in screen mode, the upper tolerance should be set to 1."
 #define kParamKeyerModeDefault eKeyerModeLuminance
 enum KeyerModeEnum {
     eKeyerModeLuminance,
@@ -141,11 +141,11 @@ enum KeyerModeEnum {
 
 #define kParamSoftnessLower "softnessLower"
 #define kParamSoftnessLowerLabel "Softness (lower)"
-#define kParamSoftnessLowerHint "Width of the lower softness range [key-tolerance-softness,key-tolerance]. Background key value goes from 0 to 1 over this range."
+#define kParamSoftnessLowerHint "Width of the lower softness range [key-tolerance-softness,key-tolerance]. Background key value goes from 0 to 1 when foreground key is  over this range."
 
 #define kParamToleranceLower "toleranceLower"
 #define kParamToleranceLowerLabel "Tolerance (lower)"
-#define kParamToleranceLowerHint "Width of the lower tolerance range [key-tolerance,key]. Background key value is 1 over this range."
+#define kParamToleranceLowerHint "Width of the lower tolerance range [key-tolerance,key]. Background key value is 1 when foreground key is  over this range."
 
 #define kParamCenter "center"
 #define kParamCenterLabel "Center"
@@ -153,11 +153,11 @@ enum KeyerModeEnum {
 
 #define kParamToleranceUpper "toleranceUpper"
 #define kParamToleranceUpperLabel "Tolerance (upper)"
-#define kParamToleranceUpperHint "Width of the upper tolerance range [key,key+tolerance]. Background key value is 1 over this range."
+#define kParamToleranceUpperHint "Width of the upper tolerance range [key,key+tolerance]. Background key value is 1 when foreground key is over this range. Should be set to the maximum value when using Screen keyer mode."
 
 #define kParamSoftnessUpper "softnessUpper"
 #define kParamSoftnessUpperLabel "Softness (upper)"
-#define kParamSoftnessUpperHint "Width of the upper softness range [key+tolerance,key+tolerance+softness]. Background key value goes from 1 to 0 over this range."
+#define kParamSoftnessUpperHint "Width of the upper softness range [key+tolerance,key+tolerance+softness]. Background key value goes from 1 to 0 when foreground key is  over this range."
 
 
 
@@ -784,9 +784,11 @@ KeyerPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::strin
         _keyerMode->getValueAtTime(args.time, keyerModeI);
         keyerMode = (KeyerModeEnum)keyerModeI;
         switch (keyerMode) {
-            case eKeyerModeLuminance:
-                _center->setValue(rgb2luminance(keyColor.r, keyColor.g, keyColor.b));
+            case eKeyerModeLuminance: {
+                double l = rgb2luminance(keyColor.r, keyColor.g, keyColor.b);
+                _center->setValue(l);
                 break;
+            }
             case eKeyerModeColor:
             case eKeyerModeScreen: {
                 // for Color and Screen modes, how much the scalar product between RGB and the keyColor must be
