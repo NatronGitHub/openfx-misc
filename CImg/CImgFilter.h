@@ -104,20 +104,19 @@ public:
                     break;
             }
             switch (srcClip_->getPixelComponents()) {
-                    // don't set values here, or values saved into a project will be modified when it's loaded
                 case OFX::ePixelComponentAlpha:
-                    //_processR->setValue(false);
-                    //_processG->setValue(false);
-                    //_processB->setValue(false);
-                    //_processA->setValue(true);
+                    _processR->setValue(false);
+                    _processG->setValue(false);
+                    _processB->setValue(false);
+                    _processA->setValue(true);
                     break;
                 case OFX::ePixelComponentRGBA:
                 case OFX::ePixelComponentRGB:
                     // Alpha is not processed by default on RGBA images
-                    //_processR->setValue(true);
-                    //_processG->setValue(true);
-                    //_processB->setValue(true);
-                    //_processA->setValue(false);
+                    _processR->setValue(true);
+                    _processG->setValue(true);
+                    _processB->setValue(true);
+                    _processA->setValue(false);
                     break;
                 default:
                     break;
