@@ -248,6 +248,7 @@ void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setDisplayRange(kParamAlphaMin, kParamAlphaMax);
         param->setDefault(kParamAlphaDefault);
         param->setIncrement(kParamAlphaIncrement);
+        param->setDigits(4);
         page->addChild(*param);
     }
     {
@@ -258,6 +259,7 @@ void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setDisplayRange(kParamBetaMin, kParamBetaMax);
         param->setDefault(kParamBetaDefault);
         param->setIncrement(kParamBetaIncrement);
+        param->setDigits(2);
         page->addChild(*param);
     }
     {
