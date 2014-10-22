@@ -339,7 +339,7 @@ private:
             if (applyMaster) {
                 ret += _lookupTableParam->getValue(kCurveMaster, _time, value) - value;
             }
-            return ret;
+            return clamp<PIX>(ret, maxValue);;
         } else {
             double x = (value - _rangeMin) / (_rangeMax - _rangeMin);
             int i = (int)(x * nbValues);
