@@ -357,9 +357,6 @@ private:
                 double bgr = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[0]) : 0.;
                 double bgg = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[1]) : 0.;
                 double bgb = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[2]) : 0.;
-                const double fgr_orig = fgr;
-                const double fgg_orig = fgg;
-                const double fgb_orig = fgb;
 
                 // we want to be able to play with the matte even if the background is not connected
                 if (!srcPix) {
@@ -416,7 +413,7 @@ private:
                         Kfg = _tan_acceptanceAngle_2 > 0 ? (fgx - std::abs(fgz)/_tan_acceptanceAngle_2) : 0.;
                     }
                     assert(Kfg >= 0.);
-#ifdef ORIGINAL_MIX // [FD] DON'T ACTIVATE original description in "Video demystified" did the nonadditive mix here, but it produces wrong foreground colors. we do it below (step E)
+                    double fgx_scaled = fgx;
                     ///////////////
                     // STEP B: Nonadditive Mix
 
@@ -427,13 +424,18 @@ private:
                     // outside mask has priority over inside mask, treat inside first
 
                     // Here, Kfg is between 0 (foreground) and _xKey (background)
+                    double Kfg_new = Kfg;
                     if (inMask > 0. && Kfg > 1.-inMask) {
-                        Kfg = 1.-inMask;
+                        Kfg_new = 1.-inMask;
                     }
                     if (outMask > 0. && Kfg < outMask) {
-                        Kfg = outMask;
+                        Kfg_new = outMask;
                     }
-#endif
+                    if (Kfg != 0.) {
+                        // modify the fgx used for the suppression angle test
+                        fgx_scaled = Kfg_new + std::abs(fgz)/_tan_acceptanceAngle_2;
+                    }
+                    Kfg = Kfg_new;
 
                     //////////////////////
                     // STEP C: Foreground suppressor
@@ -449,7 +451,7 @@ private:
                         // [FD] there is an error in the paper, which doesn't take into account chrominance denormalization:
                         // (X,Z) was computed from twice the chrominance, so subtracting Kfg from X means to
                         // subtract Kfg/2 from (Cb,Cr).
-                        if (fgx > 0 && (_tan_suppressionAngle_2 >= 180. || std::abs(fgz)/fgx < _tan_suppressionAngle_2)) {
+                        if (fgx_scaled > 0 && (_suppressionAngle >= 180. || fgx_scaled - std::abs(fgz)/_tan_suppressionAngle_2 > 0.)) {
                             fgcb = 0;
                             fgcr = 0;
                         } else {
@@ -514,55 +516,6 @@ private:
                 }
 
                 // At this point, we have Kbg,
-
-#ifndef ORIGINAL_MIX // [FD] it was at step B in the original description of the algorithm, but this gave bad artifacts in the foreground suppressor
-                ///////////////
-                // STEP E: Nonadditive Mix
-
-                // nonadditive mix between the key generator and the garbage matte (outMask)
-
-                // The garbage matte is added to the foreground key signal (KFG) using a non-additive mixer (NAM). A nonadditive mixer takes the brighter of the two pictures, on a sample-by-sample basis, to generate the key signal. Matting is ideal for any source that generates its own keying signal, such as character generators, and so on.
-
-                // outside mask has priority over inside mask, treat inside first
-                // Here, Kbg is between 0 (foreground) and 1 (background)
-                double Kbg_new = Kbg;
-                bool Kbg_changed = false;
-                if (inMask > 0. && Kbg_new > 1.-inMask) {
-                    Kbg_new = 1.-inMask;
-                    Kbg_changed = true;
-                }
-                if (outMask > 0. && Kbg_new < outMask) {
-                    Kbg_new = outMask;
-                    Kbg_changed = true;
-                }
-                if (Kbg_changed) {
-                    // since we change Kbg, we also have to change the foreground color accordingly (it is premultiplied)
-                    if (Kbg_new >= 1.) {
-                        fgr = 0.;
-                        fgg = 0.;
-                        fgb = 0.;
-                    } else if (Kbg_new <= 0. || Kbg >= 1.) {
-                        fgr = fgr_orig;
-                        fgg = fgg_orig;
-                        fgb = fgb_orig;
-                    } else if (Kbg_new > Kbg) {
-                        // keep the same color for foreground, but interpolate to black
-                        double alpha = (1. - Kbg_new) / (1.-Kbg);
-                        fgr *= alpha;
-                        fgg *= alpha;
-                        fgb *= alpha;
-                    } else if (Kbg_new < Kbg && Kbg > 0.) {
-                        // interpolate between foreground color and original foreground:
-                        // Kbg_new = Kbg should give fgr,fgg,fgb
-                        // Kbg_new = 0. should give fgr_orig,fgg_orig,fgb_orig
-                        // Note: if Kbg = 0., fgr,fgg,fgb should not be changed
-                        fgr = ((Kbg-Kbg_new)*fgr_orig + Kbg_new*fgr)/Kbg;
-                        fgg = ((Kbg-Kbg_new)*fgg_orig + Kbg_new*fgg)/Kbg;
-                        fgb = ((Kbg-Kbg_new)*fgb_orig + Kbg_new*fgb)/Kbg;
-                    }
-                    Kbg = Kbg_new;
-                }
-#endif
 
                 // set the alpha channel to the complement of Kbg
                 double fga = 1. - Kbg;
@@ -755,18 +708,16 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
     double keyLift;
     double keyGain;
     int outputModeI;
-    OutputModeEnum outputMode;
     int sourceAlphaI;
-    SourceAlphaEnum sourceAlpha;
     keyColor_->getValueAtTime(args.time, keyColor.r, keyColor.g, keyColor.b);
     acceptanceAngle_->getValueAtTime(args.time, acceptanceAngle);
     suppressionAngle_->getValueAtTime(args.time, suppressionAngle);
     keyLift_->getValueAtTime(args.time, keyLift);
     keyGain_->getValueAtTime(args.time, keyGain);
     outputMode_->getValueAtTime(args.time, outputModeI);
-    outputMode = (OutputModeEnum)outputModeI;
+    OutputModeEnum outputMode = (OutputModeEnum)outputModeI;
     sourceAlpha_->getValueAtTime(args.time, sourceAlphaI);
-    sourceAlpha = (SourceAlphaEnum)sourceAlphaI;
+    SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)sourceAlphaI;
     processor.setValues(keyColor, acceptanceAngle, suppressionAngle, keyLift, keyGain, outputMode, sourceAlpha);
     processor.setDstImg(dst.get());
     processor.setSrcImgs(src.get(), bg.get(), inMask.get(), outMask.get());
@@ -785,24 +736,19 @@ ChromaKeyerPlugin::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
     
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
-    if (dstComponents == OFX::ePixelComponentRGBA)
-    {
-        switch (dstBitDepth)
-        {
-            //case OFX::eBitDepthUByte :
-            //{
+    if (dstComponents == OFX::ePixelComponentRGBA) {
+        switch (dstBitDepth) {
+            //case OFX::eBitDepthUByte: {
             //    ChromaKeyerProcessor<unsigned char, 4, 255> fred(*this);
             //    setupAndProcess(fred, args);
             //    break;
             //}
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 ChromaKeyerProcessor<unsigned short, 4, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
+            case OFX::eBitDepthFloat: {
                 ChromaKeyerProcessor<float,4,1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
@@ -810,26 +756,20 @@ ChromaKeyerPlugin::render(const OFX::RenderArguments &args)
             default :
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
-    }
-    else
-    {
+    } else {
         assert(dstComponents == OFX::ePixelComponentRGB);
-        switch (dstBitDepth)
-        {
-            //case OFX::eBitDepthUByte :
-            //{
+        switch (dstBitDepth) {
+            //case OFX::eBitDepthUByte: {
             //    ChromaKeyerProcessor<unsigned char, 3, 255> fred(*this);
             //    setupAndProcess(fred, args);
             //    break;
             //}
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 ChromaKeyerProcessor<unsigned short, 3, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
+            case OFX::eBitDepthFloat: {
                 ChromaKeyerProcessor<float,3,1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
