@@ -350,9 +350,10 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         param->setLabels(kParamSigmaLabel, kParamSigmaLabel, kParamSigmaLabel);
         param->setHint(kParamSigmaHint);
         param->setRange(-1000, 1000);
-        param->setDisplayRange(-5, 5);
+        param->setDisplayRange(-1, 1);
         param->setDefault(kParamSigmaDefault);
-        param->setIncrement(0.1);
+        param->setIncrement(0.005);
+        param->setDigits(3);
         page->addChild(*param);
     }
     {
