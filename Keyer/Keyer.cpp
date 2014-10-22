@@ -108,13 +108,7 @@
 #endif
 
 /*
-  Simple  Keyer.
-
-  Algorithm description:
-  [1] Keith Jack, "Video Demystified", Independent Pub Group (Computer), 1996, pp. 214-222, http://www.ee-techs.com/circuit/video-demy5.pdf
-
- A simplified version is described in:
-  [2] High Quality  Key, Michael Ashikhmin, http://www.cs.utah.edu/~michael/chroma/
+  Simple Luma/Color/Screen Keyer.
 */
 
 #define kParamKeyColor "keyColor"
@@ -153,12 +147,15 @@ enum KeyerModeEnum {
 
 #define kParamToleranceUpper "toleranceUpper"
 #define kParamToleranceUpperLabel "Tolerance (upper)"
-#define kParamToleranceUpperHint "Width of the upper tolerance range [key,key+tolerance]. Background key value is 1 when foreground key is over this range. Should be set to the maximum value when using Screen keyer mode."
+#define kParamToleranceUpperHint "Width of the upper tolerance range [key,key+tolerance]. Background key value is 1 when foreground key is over this range. Ignored in Screen keyer mode."
 
 #define kParamSoftnessUpper "softnessUpper"
 #define kParamSoftnessUpperLabel "Softness (upper)"
-#define kParamSoftnessUpperHint "Width of the upper softness range [key+tolerance,key+tolerance+softness]. Background key value goes from 1 to 0 when foreground key is  over this range."
+#define kParamSoftnessUpperHint "Width of the upper softness range [key+tolerance,key+tolerance+softness]. Background key value goes from 1 to 0 when foreground key is  over this range. Ignored in Screen keyer mode."
 
+#define kParamDespill "despill"
+#define kParamDespillLabel "Despill"
+#define kParamDespillHint "Reduces color spill on the foreground object (Screen mode only)."
 
 
 
@@ -228,6 +225,7 @@ protected:
     double _center;
     double _toleranceUpper;
     double _softnessUpper;
+    bool _despill;
     OutputModeEnum _outputMode;
     SourceAlphaEnum _sourceAlpha;
 
@@ -245,6 +243,7 @@ public:
     , _center(0.)
     , _toleranceUpper(0.)
     , _softnessUpper(0.5)
+    , _despill(true)
     , _outputMode(eOutputModeComposite)
     , _sourceAlpha(eSourceAlphaIgnore)
     {
@@ -259,15 +258,22 @@ public:
         _outMaskImg = outMaskImg;
     }
     
-    void setValues(const OfxRGBColourD& keyColor, KeyerModeEnum keyerMode, double softnessLower, double toleranceLower, double center, double toleranceUpper, double softnessUpper, OutputModeEnum outputMode, SourceAlphaEnum sourceAlpha)
+    void setValues(const OfxRGBColourD& keyColor, KeyerModeEnum keyerMode, double softnessLower, double toleranceLower, double center, double toleranceUpper, double softnessUpper, bool despill, OutputModeEnum outputMode, SourceAlphaEnum sourceAlpha)
     {
         _keyColor = keyColor;
         _keyerMode = keyerMode;
         _softnessLower = softnessLower;
         _toleranceLower = toleranceLower;
         _center = center;
-        _toleranceUpper = toleranceUpper;
-        _softnessUpper = softnessUpper;
+        if (_keyerMode == eKeyerModeScreen) {
+            _toleranceUpper = 1.;
+            _softnessUpper = 1.;
+            _despill = despill;
+        } else {
+            _toleranceUpper = toleranceUpper;
+            _softnessUpper = softnessUpper;
+            _despill = false;
+        }
         _outputMode = outputMode;
         _sourceAlpha = sourceAlpha;
     }
@@ -368,9 +374,6 @@ private:
                 double bgr = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[0]) : 0.;
                 double bgg = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[1]) : 0.;
                 double bgb = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[2]) : 0.;
-                const double fgr_orig = fgr;
-                const double fgg_orig = fgg;
-                const double fgb_orig = fgb;
 
                 // we want to be able to play with the matte even if the background is not connected
                 if (!srcPix) {
@@ -384,18 +387,21 @@ private:
                     // from fgr, fgg, fgb, compute Kbg and update fgr, fgg, fgb
 
                     double Kfg;
+                    double scalarProd = 0.;
+                    double norm2 = 0.;
+                    double d = 0.;
                     switch (_keyerMode) {
                         case eKeyerModeLuminance:
                             Kfg = rgb2luminance(fgr, fgg, fgb);
                             break;
                         case eKeyerModeColor: {
-                            double scalarProd = fgr * _keyColor.r + fgg * _keyColor.g + fgb * _keyColor.b;
+                            scalarProd = fgr * _keyColor.r + fgg * _keyColor.g + fgb * _keyColor.b;
                             Kfg = (keyColor111 == 0) ? rgb2luminance(fgr, fgg, fgb) : (scalarProd / keyColor111);
                         }   break;
                         case eKeyerModeScreen: {
-                            double scalarProd = fgr * _keyColor.r + fgg * _keyColor.g + fgb * _keyColor.b;
-                            double norm2 = fgr * fgr + fgg * fgg + fgb * fgb;
-                            double d = std::sqrt(norm2 - ((keyColorNorm2 == 0) ? 0. : (scalarProd * scalarProd / keyColorNorm2)));
+                            scalarProd = fgr * _keyColor.r + fgg * _keyColor.g + fgb * _keyColor.b;
+                            norm2 = fgr * fgr + fgg * fgg + fgb * fgb;
+                            d = std::sqrt(norm2 - ((keyColorNorm2 == 0) ? 0. : (scalarProd * scalarProd / keyColorNorm2)));
                             Kfg = (keyColor111 == 0) ? rgb2luminance(fgr, fgg, fgb) : (scalarProd / keyColor111);
                             Kfg -= d;
                         }   break;
@@ -404,10 +410,30 @@ private:
                     // compute Kbg from Kfg
                     Kbg = key_bg(Kfg);
 
-                    // update fgr, fgg, fgb
-                    fgr -= Kbg * _keyColor.r;
-                    fgg -= Kbg * _keyColor.g;
-                    fgb -= Kbg * _keyColor.b;
+                    // nonadditive mix between the key generator and the garbage matte (outMask)
+                    // note tha in Chromakeyer this is done before on Kfg instead of Kbg.
+                    if (inMask > 0. && Kbg > 1.-inMask) {
+                        Kbg = 1.-inMask;
+                    }
+                    if (outMask > 0. && Kbg < outMask) {
+                        Kbg = outMask;
+                    }
+
+
+                    // despill fgr, fgg, fgb
+                    if (_despill && _keyerMode == eKeyerModeScreen && _outputMode != eOutputModeIntermediate && keyColorNorm2 > 0.) {
+                        // in the direction of keyColor: subtract Kbg*d, in other directions: do nothing
+                        double keyColorNorm = std::sqrt(keyColorNorm2);
+                        double norm = std::sqrt(norm2);
+                        fgr -= (Kbg * d) * fgr * _keyColor.r / (norm * keyColorNorm);
+                        fgg -= (Kbg * d) * fgg * _keyColor.g / (norm * keyColorNorm);
+                        fgb -= (Kbg * d) * fgb * _keyColor.b / (norm * keyColorNorm);
+                    }
+
+                    // premultiply foreground
+                    fgr *= (1.-Kbg);
+                    fgg *= (1.-Kbg);
+                    fgb *= (1.-Kbg);
 
                     // clamp foreground color to [0,1]
                     fgr = std::max(0.,std::min(fgr,1.));
@@ -416,55 +442,6 @@ private:
                 }
 
                 // At this point, we have Kbg,
-
-#ifndef ORIGINAL_MIX // [FD] it was at step B in the original description of the algorithm, but this gave bad artifacts in the foreground suppressor
-                ///////////////
-                // STEP E: Nonadditive Mix
-
-                // nonadditive mix between the key generator and the garbage matte (outMask)
-
-                // The garbage matte is added to the foreground key signal (KFG) using a non-additive mixer (NAM). A nonadditive mixer takes the brighter of the two pictures, on a sample-by-sample basis, to generate the key signal. Matting is ideal for any source that generates its own keying signal, such as character generators, and so on.
-
-                // outside mask has priority over inside mask, treat inside first
-                // Here, Kbg is between 0 (foreground) and 1 (background)
-                double Kbg_new = Kbg;
-                bool Kbg_changed = false;
-                if (inMask > 0. && Kbg_new > 1.-inMask) {
-                    Kbg_new = 1.-inMask;
-                    Kbg_changed = true;
-                }
-                if (outMask > 0. && Kbg_new < outMask) {
-                    Kbg_new = outMask;
-                    Kbg_changed = true;
-                }
-                if (Kbg_changed) {
-                    // since we change Kbg, we also have to change the foreground color accordingly (it is premultiplied)
-                    if (Kbg_new >= 1.) {
-                        fgr = 0.;
-                        fgg = 0.;
-                        fgb = 0.;
-                    } else if (Kbg_new <= 0. || Kbg >= 1.) {
-                        fgr = fgr_orig;
-                        fgg = fgg_orig;
-                        fgb = fgb_orig;
-                    } else if (Kbg_new > Kbg) {
-                        // keep the same color for foreground, but interpolate to black
-                        double alpha = (1. - Kbg_new) / (1.-Kbg);
-                        fgr *= alpha;
-                        fgg *= alpha;
-                        fgb *= alpha;
-                    } else if (Kbg_new < Kbg && Kbg > 0.) {
-                        // interpolate between foreground color and original foreground:
-                        // Kbg_new = Kbg should give fgr,fgg,fgb
-                        // Kbg_new = 0. should give fgr_orig,fgg_orig,fgb_orig
-                        // Note: if Kbg = 0., fgr,fgg,fgb should not be changed
-                        fgr = ((Kbg-Kbg_new)*fgr_orig + Kbg_new*fgr)/Kbg;
-                        fgg = ((Kbg-Kbg_new)*fgg_orig + Kbg_new*fgg)/Kbg;
-                        fgb = ((Kbg-Kbg_new)*fgb_orig + Kbg_new*fgb)/Kbg;
-                    }
-                    Kbg = Kbg_new;
-                }
-#endif
 
                 // set the alpha channel to the complement of Kbg
                 double fga = 1. - Kbg;
@@ -530,6 +507,7 @@ public:
     , _center(0)
     , _toleranceUpper(0)
     , _softnessUpper(0)
+    , _despill(0)
     , _outputMode(0)
     , _sourceAlpha(0)
     {
@@ -550,7 +528,8 @@ public:
         _center = fetchDoubleParam(kParamCenter);
         _toleranceUpper = fetchDoubleParam(kParamToleranceUpper);
         _softnessUpper = fetchDoubleParam(kParamSoftnessUpper);
-        assert(_keyColor && _keyerMode && _softnessLower && _toleranceLower && _center && _toleranceUpper && _softnessUpper);
+        _despill = fetchBooleanParam(kParamDespill);
+        assert(_keyColor && _keyerMode && _softnessLower && _toleranceLower && _center && _toleranceUpper && _softnessUpper && _despill);
         _outputMode = fetchChoiceParam(kParamOutputMode);
         _sourceAlpha = fetchChoiceParam(kParamSourceAlpha);
         assert(_outputMode && _sourceAlpha);
@@ -583,6 +562,7 @@ private:
     OFX::DoubleParam* _center;
     OFX::DoubleParam* _toleranceUpper;
     OFX::DoubleParam* _softnessUpper;
+    OFX::BooleanParam* _despill;
 
     OFX::ChoiceParam* _outputMode;
     OFX::ChoiceParam* _sourceAlpha;
@@ -663,29 +643,28 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArg
 
     OfxRGBColourD keyColor;
     int keyerModeI;
-    KeyerModeEnum keyerMode;
     double softnessLower;
     double toleranceLower;
     double center;
     double toleranceUpper;
     double softnessUpper;
+    bool despill;
     int outputModeI;
-    OutputModeEnum outputMode;
     int sourceAlphaI;
-    SourceAlphaEnum sourceAlpha;
     _keyColor->getValueAtTime(args.time, keyColor.r, keyColor.g, keyColor.b);
     _keyerMode->getValueAtTime(args.time, keyerModeI);
-    keyerMode = (KeyerModeEnum)keyerModeI;
+    KeyerModeEnum keyerMode = (KeyerModeEnum)keyerModeI;
     _softnessLower->getValueAtTime(args.time, softnessLower);
     _toleranceLower->getValueAtTime(args.time, toleranceLower);
     _center->getValueAtTime(args.time, center);
     _toleranceUpper->getValueAtTime(args.time, toleranceUpper);
     _softnessUpper->getValueAtTime(args.time, softnessUpper);
+    _despill->getValueAtTime(args.time, despill);
     _outputMode->getValueAtTime(args.time, outputModeI);
-    outputMode = (OutputModeEnum)outputModeI;
+    OutputModeEnum outputMode = (OutputModeEnum)outputModeI;
     _sourceAlpha->getValueAtTime(args.time, sourceAlphaI);
-    sourceAlpha = (SourceAlphaEnum)sourceAlphaI;
-    processor.setValues(keyColor, keyerMode, softnessLower, toleranceLower, center, toleranceUpper, softnessUpper, outputMode, sourceAlpha);
+    SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)sourceAlphaI;
+    processor.setValues(keyColor, keyerMode, softnessLower, toleranceLower, center, toleranceUpper, softnessUpper, despill, outputMode, sourceAlpha);
     processor.setDstImg(dst.get());
     processor.setSrcImgs(src.get(), bg.get(), inMask.get(), outMask.get());
     processor.setRenderWindow(args.renderWindow);
@@ -713,13 +692,13 @@ KeyerPlugin::render(const OFX::RenderArguments &args)
             case OFX::eBitDepthUShort: {
                 KeyerProcessor<unsigned short, 4, 65535> fred(*this);
                 setupAndProcess(fred, args);
-            }   break;
-
+                break;
+            }
             case OFX::eBitDepthFloat: {
                 KeyerProcessor<float,4,1> fred(*this);
                 setupAndProcess(fred, args);
-            }   break;
-
+                break;
+            }
             default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
@@ -776,13 +755,20 @@ KeyerPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 void
 KeyerPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
+    if (paramName == kParamCenter && args.reason == eChangePluginEdit) {
+        double center;
+        _center->getValueAtTime(args.time, center);
+        printf("->center=%g\n", center);
+    }
     if (paramName == kParamKeyColor && args.reason == eChangeUserEdit) {
+        double center;
+        _center->getValueAtTime(args.time, center);
+        printf("center=%g\n", center);
         OfxRGBColourD keyColor;
         _keyColor->getValueAtTime(args.time, keyColor.r, keyColor.g, keyColor.b);
         int keyerModeI;
-        KeyerModeEnum keyerMode;
         _keyerMode->getValueAtTime(args.time, keyerModeI);
-        keyerMode = (KeyerModeEnum)keyerModeI;
+        KeyerModeEnum keyerMode = (KeyerModeEnum)keyerModeI;
         switch (keyerMode) {
             case eKeyerModeLuminance: {
                 double l = rgb2luminance(keyColor.r, keyColor.g, keyColor.b);
@@ -798,8 +784,17 @@ KeyerPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::strin
                 const double keyColor111 = keyColor.r + keyColor.g + keyColor.b;
                 const double keyColorNorm2 = (keyColor.r*keyColor.r) + (keyColor.g*keyColor.g) + (keyColor.b*keyColor.b);
                 _center->setValue(keyColor111 == 0. ? 0. : (keyColorNorm2/keyColor111));
-            }   break;
+                break;
+            }
         }
+    }
+    if (paramName == kParamKeyerMode && args.reason == eChangeUserEdit) {
+        int keyerModeI;
+        _keyerMode->getValueAtTime(args.time, keyerModeI);
+        KeyerModeEnum keyerMode = (KeyerModeEnum)keyerModeI;
+        _toleranceUpper->setEnabled(keyerMode != eKeyerModeScreen);
+        _softnessUpper->setEnabled(keyerMode != eKeyerModeScreen);
+        _despill->setEnabled(keyerMode == eKeyerModeScreen);
     }
 }
 
@@ -909,6 +904,7 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamSoftnessLowerHint);
         param->setRange(-1., 0.);
         param->setDisplayRange(-1., 0.);
+        param->setDigits(5);
         param->setDefault(-0.5);
         param->setAnimates(true);
         page->addChild(*param);
@@ -921,6 +917,7 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamToleranceLowerHint);
         param->setRange(-1., 0.);
         param->setDisplayRange(-1., 0.);
+        param->setDigits(5);
         param->setDefault(0.);
         param->setAnimates(true);
         page->addChild(*param);
@@ -933,6 +930,7 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamCenterHint);
         param->setRange(0., 1.);
         param->setDisplayRange(0., 1.);
+        param->setDigits(5);
         param->setDefault(1.);
         param->setAnimates(true);
         page->addChild(*param);
@@ -945,6 +943,7 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamToleranceUpperHint);
         param->setRange(0., 1.);
         param->setDisplayRange(0., 1.);
+        param->setDigits(5);
         param->setDefault(0.);
         param->setAnimates(true);
         page->addChild(*param);
@@ -957,8 +956,19 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamSoftnessUpperHint);
         param->setRange(0., 1.);
         param->setDisplayRange(0., 1.);
+        param->setDigits(5);
         param->setDefault(0.5);
         param->setAnimates(true);
+        page->addChild(*param);
+    }
+
+    // despill
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamDespill);
+        param->setLabels(kParamDespillLabel, kParamDespillLabel, kParamDespillLabel);
+        param->setHint(kParamDespillHint);
+        param->setDefault(true);
+        param->setEnabled(kParamKeyerModeDefault == eKeyerModeScreen);
         page->addChild(*param);
     }
 
@@ -975,7 +985,7 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->appendOption(kParamOutputModeOptionUnpremultiplied, kParamOutputModeOptionUnpremultipliedHint);
         assert(param->getNOptions() == (int)eOutputModeComposite);
         param->appendOption(kParamOutputModeOptionComposite, kParamOutputModeOptionCompositeHint);
-        param->setDefault((int)eOutputModeComposite);
+        param->setDefault((int)eOutputModeIntermediate);
         param->setAnimates(true);
         desc.addClipPreferencesSlaveParam(*param);
         page->addChild(*param);

@@ -78,6 +78,7 @@
 		1E08320C199FEB7400A819A5 /* Deinterlace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E083207199FEB6F00A819A5 /* Deinterlace.cpp */; };
 		1E08320D199FEB7800A819A5 /* Deinterlace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E083207199FEB6F00A819A5 /* Deinterlace.cpp */; };
 		1E08320E199FEB8000A819A5 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E08320B199FEB6F00A819A5 /* PluginRegistration.cpp */; };
+		1E0AE22119F7EFBB002FB8DE /* Keyer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ECF2FA119F51DA000E91A38 /* Keyer.cpp */; };
 		1E0E4EA2194CAF9E0072248F /* ReConverge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ECE544F185F23E3001ED442 /* ReConverge.cpp */; };
 		1E10A6FA1997BFE400EE87A1 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E10A6FB1997BFE400EE87A1 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
@@ -3751,6 +3752,7 @@
 			files = (
 				D730311819518B790024BCA4 /* CopyRectangle.cpp in Sources */,
 				D730311919518B7A0024BCA4 /* PluginRegistration.cpp in Sources */,
+				1E0AE22119F7EFBB002FB8DE /* Keyer.cpp in Sources */,
 				D730310919518B6B0024BCA4 /* ofxsCore.cpp in Sources */,
 				D730310A19518B6B0024BCA4 /* ofxsImageEffect.cpp in Sources */,
 				D730310B19518B6B0024BCA4 /* ofxsInteract.cpp in Sources */,
