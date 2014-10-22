@@ -560,7 +560,10 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     srcClipB->addSupportedComponent( OFX::ePixelComponentAlpha );
     srcClipB->setTemporalClipAccess(false);
     srcClipB->setSupportsTiles(kSupportsTiles);
-    srcClipB->setOptional(false);
+    
+    //Optional: If we want a render to be triggered even if one of the inputs is not connected
+    //they need to be optional.
+    srcClipB->setOptional(true);
 
     OFX::ClipDescriptor* srcClipA = desc.defineClip(kClipA);
     srcClipA->addSupportedComponent( OFX::ePixelComponentRGBA );
@@ -568,7 +571,10 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     srcClipA->addSupportedComponent( OFX::ePixelComponentAlpha );
     srcClipA->setTemporalClipAccess(false);
     srcClipA->setSupportsTiles(kSupportsTiles);
-    srcClipA->setOptional(false);
+    
+    //Optional: If we want a render to be triggered even if one of the inputs is not connected
+    //they need to be optional.
+    srcClipA->setOptional(true);
 
     
     // create the mandated output clip
