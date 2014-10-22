@@ -27,7 +27,9 @@
 // To download, use:
 // git archive --remote=git://git.code.sf.net/p/gmic/source 9b52016cab3368744ea9f3cc20a3e9b4f0c66eb3:src CImg.h |tar xf -
 #define cimg_display 0
+CLANG_DIAG_OFF(shorten-64-to-32)
 #include "CImg.h"
+CLANG_DIAG_ON(shorten-64-to-32)
 
 #define kParamProcessR      "r"
 #define kParamProcessRLabel "R"
