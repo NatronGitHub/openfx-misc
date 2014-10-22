@@ -14,6 +14,7 @@ Dissolve.o \
 Grade.o \
 Invert.o \
 JoinViews.o \
+Keyer.o \
 Merge.o \
 MixViews.o \
 Noise.o \
