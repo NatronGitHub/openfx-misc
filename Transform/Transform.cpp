@@ -134,6 +134,9 @@
 #define kParamSkewOrderLabel "Skew Order"
 #define kParamCenter "center"
 #define kParamCenterLabel "Center"
+#define kParamResetCenter "resetCenter"
+#define kParamResetCenterLabel "Reset Center"
+#define kParamResetCenterHint "Reset the position of the center to the center of the input region of definition"
 
 
 #define CIRCLE_RADIUS_BASE 30.
@@ -263,7 +266,13 @@ bool TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX
 
 void TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
-    if (paramName == kParamTranslate ||
+    if (paramName == kParamResetCenter) {
+        OfxRectD rod = srcClip_->getRegionOfDefinition(args.time);
+        if (kOfxFlagInfiniteMin < rod.x1 && rod.x2 < kOfxFlagInfiniteMax &&
+            kOfxFlagInfiniteMin < rod.y1 && rod.y2 < kOfxFlagInfiniteMax) {
+            _center->setValue((rod.x1+rod.x2)/2, (rod.y1+rod.y2)/2);
+        }
+    } else if (paramName == kParamTranslate ||
         paramName == kParamRotate ||
         paramName == kParamScale ||
         paramName == kParamScaleUniform ||
@@ -1366,6 +1375,15 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         param->setDefaultCoordinateSystem(eCoordinatesNormalised);
         param->setDefault(0.5, 0.5);
         param->setIncrement(1.);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+
+    // resetcenter
+    {
+        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamResetCenter);
+        param->setLabels(kParamResetCenterLabel, kParamResetCenterLabel, kParamResetCenterLabel);
+        param->setHint(kParamResetCenterHint);
         page->addChild(*param);
     }
 }
