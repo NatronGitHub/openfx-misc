@@ -185,6 +185,8 @@ private:
 
     virtual bool getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
 
+    void resetCenter(double time);
+
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
@@ -270,14 +272,72 @@ TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX::Mat
 }
 
 void
+TransformPlugin::resetCenter(double time)
+{
+    OfxRectD rod = srcClip_->getRegionOfDefinition(time);
+    if (rod.x1 <= kOfxFlagInfiniteMin || kOfxFlagInfiniteMax <= rod.x2 ||
+        rod.y1 <= kOfxFlagInfiniteMin || kOfxFlagInfiniteMax <= rod.y2) {
+        return;
+    }
+    double currentRotation;
+    _rotate->getValueAtTime(time, currentRotation);
+    double rot = OFX::ofxsToRadians(currentRotation);
+
+    double skewX, skewY;
+    int skewOrderYX;
+    _skewX->getValueAtTime(time, skewX);
+    _skewY->getValueAtTime(time, skewY);
+    _skewOrder->getValueAtTime(time, skewOrderYX);
+
+    OfxPointD scale;
+    _scale->getValueAtTime(time, scale.x, scale.y);
+    bool scaleUniform;
+    _scaleUniform->getValueAtTime(time, scaleUniform);
+    if (scaleUniform) {
+        scale.y = scale.x;
+    }
+    if (std::fabs(scale.x) < SCALE_MIN) {
+        scale.x = scale.x >= 0 ? SCALE_MIN : -SCALE_MIN;
+    }
+    if (std::fabs(scale.y) < SCALE_MIN) {
+        scale.y = scale.y >= 0 ? SCALE_MIN : -SCALE_MIN;
+    }
+    OfxPointD currentTranslation;
+    _translate->getValueAtTime(time, currentTranslation.x, currentTranslation.y);
+    OfxPointD currentCenter;
+    _center->getValueAtTime(time, currentCenter.x, currentCenter.y);
+
+    OFX::Matrix3x3 Rinv = (ofxsMatRotation(-rot) *
+                           ofxsMatSkewXY(skewX, skewY, skewOrderYX) *
+                           ofxsMatScale(scale.x, scale.y));
+
+    double newx = (rod.x1+rod.x2)/2;
+    double newy = (rod.y1+rod.y2)/2;
+    double dxrot = newx - currentCenter.x;
+    double dyrot = newy - currentCenter.y;
+    OFX::Point3D dRot;
+    dRot.x = dxrot;
+    dRot.y = dyrot;
+    dRot.z = 1;
+    dRot = Rinv * dRot;
+    if (dRot.z != 0) {
+        dRot.x /= dRot.z;
+        dRot.y /= dRot.z;
+    }
+    double dx = dRot.x;
+    double dy = dRot.y;
+
+    _center->setValue(newx, newy);
+    currentTranslation.x += dx - dxrot;
+    currentTranslation.y += dy - dyrot;
+    _translate->setValue(currentTranslation.x,currentTranslation.y);
+}
+
+void
 TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
     if (paramName == kParamResetCenter) {
-        OfxRectD rod = srcClip_->getRegionOfDefinition(args.time);
-        if (kOfxFlagInfiniteMin < rod.x1 && rod.x2 < kOfxFlagInfiniteMax &&
-            kOfxFlagInfiniteMin < rod.y1 && rod.y2 < kOfxFlagInfiniteMax) {
-            _center->setValue((rod.x1+rod.x2)/2, (rod.y1+rod.y2)/2);
-        }
+        resetCenter(args.time);
     } else if (paramName == kParamTranslate ||
         paramName == kParamRotate ||
         paramName == kParamScale ||
@@ -296,11 +356,7 @@ void
 TransformPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
     if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
-        OfxRectD rod = srcClip_->getRegionOfDefinition(args.time);
-        if (kOfxFlagInfiniteMin < rod.x1 && rod.x2 < kOfxFlagInfiniteMax &&
-            kOfxFlagInfiniteMin < rod.y1 && rod.y2 < kOfxFlagInfiniteMax) {
-            _center->setValue((rod.x1+rod.x2)/2, (rod.y1+rod.y2)/2);
-        }
+        resetCenter(args.time);
     }
 }
 
@@ -1089,7 +1145,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         _translate->getValueAtTime(args.time, currentTranslation.x, currentTranslation.y);
         OfxPointD currentCenter;
         _center->getValueAtTime(args.time, currentCenter.x, currentCenter.y);
-        OFX::Matrix3x3 R = ofxsMatRotation(rot);
+        OFX::Matrix3x3 R = ofxsMatScale(1. / scale.x, 1. / scale.y) * ofxsMatSkewXY(-skewX, -skewY, !skewOrderYX) * ofxsMatRotation(rot);
 
         double dx = args.penPosition.x - _lastMousePos.x;
         double dy = args.penPosition.y - _lastMousePos.y;
@@ -1115,7 +1171,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         newx = pscale10.x * std::floor(newx/pscale10.x + 0.5);
         newy = pscale10.y * std::floor(newy/pscale10.y + 0.5);
         _center->setValue(newx,newy);
-        // recompure dxrot,dyrot after rounding
+        // recompute dxrot,dyrot after rounding
         dxrot = newx - currentCenter.x;
         dyrot = newy - currentCenter.y;
         currentTranslation.x += dx - dxrot;
