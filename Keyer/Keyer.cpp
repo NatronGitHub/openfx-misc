@@ -103,10 +103,6 @@
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderFullySafe
 
-#ifndef M_PI
-#define M_PI        3.14159265358979323846264338327950288   /* pi             */
-#endif
-
 /*
   Simple Luma/Color/Screen Keyer.
 */
@@ -377,9 +373,6 @@ private:
                 double bgr = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[0]) : 0.;
                 double bgg = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[1]) : 0.;
                 double bgb = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[2]) : 0.;
-                const double fgr_orig = fgr;
-                const double fgg_orig = fgg;
-                const double fgb_orig = fgb;
 
                 // we want to be able to play with the matte even if the background is not connected
                 if (!srcPix) {
