@@ -187,6 +187,9 @@ private:
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
+    /** @brief called when a clip has just been changed in some way (a rewire maybe) */
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+
     // NON-GENERIC
     OFX::Double2DParam* _translate;
     OFX::DoubleParam* _rotate;
@@ -199,7 +202,8 @@ private:
 };
 
 // overridden is identity
-bool TransformPlugin::isIdentity(double time)
+bool
+TransformPlugin::isIdentity(double time)
 {
     // NON-GENERIC
     OfxPointD scale;
@@ -224,7 +228,8 @@ bool TransformPlugin::isIdentity(double time)
     return false;
 }
 
-bool TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) const
+bool
+TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) const
 {
     double scaleX, scaleY;
     double translateX, translateY;
@@ -264,7 +269,8 @@ bool TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX
     return true;
 }
 
-void TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+void
+TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
     if (paramName == kParamResetCenter) {
         OfxRectD rod = srcClip_->getRegionOfDefinition(args.time);
@@ -283,6 +289,18 @@ void TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args, const s
         changedTransform(args);
     } else {
         Transform3x3Plugin::changedParam(args, paramName);
+    }
+}
+
+void
+TransformPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+{
+    if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
+        OfxRectD rod = srcClip_->getRegionOfDefinition(args.time);
+        if (kOfxFlagInfiniteMin < rod.x1 && rod.x2 < kOfxFlagInfiniteMax &&
+            kOfxFlagInfiniteMin < rod.y1 && rod.y2 < kOfxFlagInfiniteMax) {
+            _center->setValue((rod.x1+rod.x2)/2, (rod.y1+rod.y2)/2);
+        }
     }
 }
 
