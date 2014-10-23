@@ -1172,11 +1172,26 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         newy = pscale10.y * std::floor(newy/pscale10.y + 0.5);
         _center->setValue(newx,newy);
         // recompute dxrot,dyrot after rounding
-        dxrot = newx - currentCenter.x;
-        dyrot = newy - currentCenter.y;
-        currentTranslation.x += dx - dxrot;
-        currentTranslation.y += dy - dyrot;
-        _translate->setValue(currentTranslation.x,currentTranslation.y);
+        double det = ofxsMatDeterminant(R);
+        if (det != 0.) {
+            OFX::Matrix3x3 Rinv = ofxsMatInverse(R, det);
+
+            dxrot = newx - currentCenter.x;
+            dyrot = newy - currentCenter.y;
+            dRot.x = dxrot;
+            dRot.y = dyrot;
+            dRot.z = 1;
+            dRot = Rinv * dRot;
+            if (dRot.z != 0) {
+                dRot.x /= dRot.z;
+                dRot.y /= dRot.z;
+            }
+            dx = dRot.x;
+            dy = dRot.y;
+            currentTranslation.x += dx - dxrot;
+            currentTranslation.y += dy - dyrot;
+            _translate->setValue(currentTranslation.x,currentTranslation.y);
+        }
     } else if (_mouseState == eDraggingRotationBar) {
         OfxPointD diffToCenter;
         ///the current mouse position (untransformed) is doing has a certain angle relative to the X axis
