@@ -326,11 +326,13 @@ TransformPlugin::resetCenter(double time)
     }
     double dx = dRot.x;
     double dy = dRot.y;
-
-    _center->setValue(newx, newy);
     currentTranslation.x += dx - dxrot;
     currentTranslation.y += dy - dyrot;
+
+    beginEditBlock("resetCenter");
+    _center->setValue(newx, newy);
     _translate->setValue(currentTranslation.x,currentTranslation.y);
+    endEditBlock();
 }
 
 void
@@ -1170,6 +1172,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         pscale10.y = std::pow(10.,std::floor(std::log10(pscale.y)));
         newx = pscale10.x * std::floor(newx/pscale10.x + 0.5);
         newy = pscale10.y * std::floor(newy/pscale10.y + 0.5);
+        _plugin->beginEditBlock("setCenter");
         _center->setValue(newx,newy);
         // recompute dxrot,dyrot after rounding
         double det = ofxsMatDeterminant(R);
@@ -1192,6 +1195,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
             currentTranslation.y += dy - dyrot;
             _translate->setValue(currentTranslation.x,currentTranslation.y);
         }
+        _plugin->endEditBlock();
     } else if (_mouseState == eDraggingRotationBar) {
         OfxPointD diffToCenter;
         ///the current mouse position (untransformed) is doing has a certain angle relative to the X axis
