@@ -399,6 +399,9 @@ private:
     
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
+    /** @brief called when a clip has just been changed in some way (a rewire maybe) */
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+
 private:
     // NON-GENERIC
     OFX::Double2DParam* _to[4];
@@ -561,6 +564,20 @@ void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const s
     }
 }
 
+void
+CornerPinPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+{
+    if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
+        const OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
+        beginEditBlock(kParamCopyInputRoD);
+        _from[0]->setValue(srcRoD.x1, srcRoD.y1);
+        _from[1]->setValue(srcRoD.x2, srcRoD.y1);
+        _from[2]->setValue(srcRoD.x2, srcRoD.y2);
+        _from[3]->setValue(srcRoD.x1, srcRoD.y2);
+        endEditBlock();
+        changedTransform(args);
+    }
+}
 
 class CornerPinTransformInteract : public OFX::OverlayInteract
 {
