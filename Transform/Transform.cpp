@@ -148,6 +148,15 @@
 
 using namespace OFX;
 
+// round to the closest int, 1/10 int, etc
+// this make parameter editing easier
+// pscale is args.pixelScale.x / args.renderScale.x;
+// pscale10 is the power of 10 below pscale
+static double fround(double val, double pscale)
+{
+    double pscale10 = std::pow(10.,std::floor(std::log10(pscale)));
+    return pscale10 * std::floor(val/pscale10 + 0.5);
+}
 
 
 
@@ -1135,12 +1144,8 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         double newy = currentTranslation.y + dy;
         // round newx/y to the closest int, 1/10 int, etc
         // this make parameter editing easier
-        // pscale10 is the power of 10 below pscale
-        OfxPointD pscale10;
-        pscale10.x = std::pow(10.,std::floor(std::log10(pscale.x)));
-        pscale10.y = std::pow(10.,std::floor(std::log10(pscale.y)));
-        newx = pscale10.x * std::floor(newx/pscale10.x + 0.5);
-        newy = pscale10.y * std::floor(newy/pscale10.y + 0.5);
+        newx = fround(newx, pscale.x);
+        newy = fround(newy, pscale.y);
         _translate->setValue(newx,newy);
     } else if (_mouseState == eDraggingCenter) {
         OfxPointD currentTranslation;
@@ -1166,12 +1171,8 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         double newy = currentCenter.y + dyrot;
         // round newx/y to the closest int, 1/10 int, etc
         // this make parameter editing easier
-        // pscale10 is the power of 10 below pscale
-        OfxPointD pscale10;
-        pscale10.x = std::pow(10.,std::floor(std::log10(pscale.x)));
-        pscale10.y = std::pow(10.,std::floor(std::log10(pscale.y)));
-        newx = pscale10.x * std::floor(newx/pscale10.x + 0.5);
-        newy = pscale10.y * std::floor(newy/pscale10.y + 0.5);
+        newx = fround(newx, pscale.x);
+        newy = fround(newy, pscale.y);
         _plugin->beginEditBlock("setCenter");
         _center->setValue(newx,newy);
         // recompute dxrot,dyrot after rounding
