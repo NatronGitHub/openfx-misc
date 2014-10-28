@@ -21,6 +21,7 @@ Noise.o \
 NoOp.o \
 OneView.o \
 Premult.o \
+Ramp.o \
 ReConverge.o \
 Retime.o \
 ColorLookup.o \
@@ -58,6 +59,7 @@ RESOURCES = \
 ../Premult/net.sf.openfx.Premult.png \
 ../Premult/net.sf.openfx.Unpremult.png \
 ../ColorLookup/net.sf.openfx.ColorLookupPlugin.png \
+../Ramp/net.sf.openfx.Ramp.png \
 ../Retime/net.sf.openfx.Retime.png \
 ../Roto/net.sf.openfx.RotoPlugin.png \
 ../Shuffle/net.sf.openfx.ShufflePlugin.png \
@@ -80,6 +82,7 @@ RESOURCES = \
 ../Premult/net.sf.openfx.Premult.svg \
 ../Premult/net.sf.openfx.Unpremult.svg \
 ../ColorLookup/net.sf.openfx.ColorLookupPlugin.svg \
+../Ramp/net.sf.openfx.Ramp.svg \
 ../Retime/net.sf.openfx.Retime.svg \
 ../Roto/net.sf.openfx.RotoPlugin.svg \
 ../Shuffle/net.sf.openfx.ShufflePlugin.svg \
@@ -113,6 +116,7 @@ VPATH += \
 ../OneView \
 ../Premult \
 ../ReConverge \
+../Ramp \
 ../Retime \
 ../ColorLookup \
 ../Roto \
@@ -152,6 +156,7 @@ CXXFLAGS += \
 -I../OneView \
 -I../Premult \
 -I../ReConverge \
+-I../Ramp \
 -I../Retime \
 -I../Roto \
 -I../Shuffle \
@@ -176,6 +181,7 @@ RESOURCES = ../ChromaKeyer/net.sf.openfx.ChromaKeyerPlugin.png \
 ../Merge/net.sf.openfx.MergePlugin.png \
 ../Premult/net.sf.openfx.Premult.png \
 ../Premult/net.sf.openfx.Unpremult.png \
+../Ramp/net.sf.openfx.Ramp.png \
 ../Retime/net.sf.openfx.Retime.png \
 ../Roto/net.sf.openfx.RotoPlugin.png \
 ../Shuffle/net.sf.openfx.ShufflePlugin.png \
