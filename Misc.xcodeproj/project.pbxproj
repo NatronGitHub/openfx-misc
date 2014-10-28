@@ -522,6 +522,7 @@
 		1EFB4E2019461B76005932AF /* Difference.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFB4E1D19461B76005932AF /* Difference.cpp */; };
 		1EFB4E2519461B86005932AF /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFB4E2319461B86005932AF /* PluginRegistration.cpp */; };
 		1EFC1700180DCE6500AD7B86 /* ColorLookup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0C41E180DCAB500C25D1E /* ColorLookup.cpp */; };
+		AC60A33C19FE9C7900375A86 /* Ramp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32A19FE995F00375A86 /* Ramp.cpp */; };
 		D721EC06191120B30069DB1D /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		D721EC07191120B30069DB1D /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		D721EC08191120B30069DB1D /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -1453,6 +1454,13 @@
 		1EFB4E2119461B86005932AF /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EFB4E2219461B86005932AF /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EFB4E2319461B86005932AF /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		AC60A32519FE995F00375A86 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AC60A32619FE995F00375A86 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		AC60A32719FE995F00375A86 /* net.sf.openfx.Ramp.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.Ramp.png; sourceTree = "<group>"; };
+		AC60A32819FE995F00375A86 /* net.sf.openfx.Ramp.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = net.sf.openfx.Ramp.svg; sourceTree = "<group>"; };
+		AC60A32919FE995F00375A86 /* PluginRegistration.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		AC60A32A19FE995F00375A86 /* Ramp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Ramp.cpp; sourceTree = "<group>"; };
+		AC60A32B19FE995F00375A86 /* Ramp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Ramp.h; sourceTree = "<group>"; };
 		D721EBFD1911209B0069DB1D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D721EBFE1911209B0069DB1D /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D721EBFF1911209B0069DB1D /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
@@ -2108,6 +2116,7 @@
 				1EB9C06E196DD61B003C1849 /* NoOp */,
 				1EDE1BC8182D3F73002392CB /* OneView */,
 				1E52FFB91955CDDA0000FB79 /* Premult */,
+				AC60A32419FE995F00375A86 /* Ramp */,
 				1ECE544E185F23BD001ED442 /* ReConverge */,
 				1E2A93461990EE320061B1F1 /* Retime */,
 				D721EBFC1911209B0069DB1D /* Roto */,
@@ -2378,6 +2387,20 @@
 				1EFB4E2319461B86005932AF /* PluginRegistration.cpp */,
 			);
 			path = Difference;
+			sourceTree = "<group>";
+		};
+		AC60A32419FE995F00375A86 /* Ramp */ = {
+			isa = PBXGroup;
+			children = (
+				AC60A32519FE995F00375A86 /* Info.plist */,
+				AC60A32619FE995F00375A86 /* Makefile */,
+				AC60A32719FE995F00375A86 /* net.sf.openfx.Ramp.png */,
+				AC60A32819FE995F00375A86 /* net.sf.openfx.Ramp.svg */,
+				AC60A32919FE995F00375A86 /* PluginRegistration.cpp */,
+				AC60A32A19FE995F00375A86 /* Ramp.cpp */,
+				AC60A32B19FE995F00375A86 /* Ramp.h */,
+			);
+			path = Ramp;
 			sourceTree = "<group>";
 		};
 		D721EBFC1911209B0069DB1D /* Roto */ = {
@@ -3448,6 +3471,7 @@
 				1ED4AEAC1973DD4800EE64C8 /* Noise.cpp in Sources */,
 				1E8B5D7718B7811500C31FDC /* OneView.cpp in Sources */,
 				1E0E4EA2194CAF9E0072248F /* ReConverge.cpp in Sources */,
+				AC60A33C19FE9C7900375A86 /* Ramp.cpp in Sources */,
 				1E2A935C1990EEB60061B1F1 /* Retime.cpp in Sources */,
 				1E8B5D6818B76F8700C31FDC /* ColorLookup.cpp in Sources */,
 				D721EC17191120F30069DB1D /* Roto.cpp in Sources */,
