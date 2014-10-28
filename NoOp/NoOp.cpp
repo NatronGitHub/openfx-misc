@@ -540,7 +540,7 @@ void NoOpPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipDepths(true);
-    desc.setSupportsMultipleClipPARs(true);
+    desc.setSupportsMultipleClipPARs(false);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
