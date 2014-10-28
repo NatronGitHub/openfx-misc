@@ -242,7 +242,7 @@ public:
         {
             cimg_library::CImg<float> denom(cimg, false);
             const double vmin = std::pow((double)ERODESMOOTH_MIN, (double)1./params.exponent);
-            printf("%g\n",vmin);
+            //printf("%g\n",vmin);
 #ifdef cimg_use_openmp
 #pragma omp parallel for if (denom.size()>=4096)
 #endif
