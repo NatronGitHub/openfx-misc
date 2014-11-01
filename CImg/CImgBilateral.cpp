@@ -111,12 +111,12 @@
 
 #define kParamSigmaS "sigma_s"
 #define kParamSigmaSLabel "Sigma_s"
-#define kParamSigmaSHint "Standard deviation of the spatial kernel (positional sigma), in pixel units (>=0). A reasonable value is 1/16 of the image dimension."
+#define kParamSigmaSHint "Standard deviation of the spatial kernel (positional sigma), in pixel units (>=0). A reasonable value is 1/16 of the image dimension. Small values (1 pixel and below) will slow down filtering."
 #define kParamSigmaSDefault 0.4
 
 #define kParamSigmaR "sigma_r"
 #define kParamSigmaRLabel "Sigma_r"
-#define kParamSigmaRHint "Standard deviation of the range kernel (color sigma), in intensity units (>=0). A reasonable value is 1/10 of the intensity range."
+#define kParamSigmaRHint "Standard deviation of the range kernel (color sigma), in intensity units (>=0). A reasonable value is 1/10 of the intensity range. Small values (1/256 of the intensity range and below) will slow down filtering."
 #define kParamSigmaRDefault 0.4
 
 using namespace OFX;
