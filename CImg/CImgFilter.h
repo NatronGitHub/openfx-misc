@@ -161,6 +161,9 @@ public:
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(supportsTiles);
         srcClip->setIsMask(false);
+        if (context == OFX::eContextGeneral) {
+            srcClip->setOptional(true);
+        }
 
         OFX::ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
         if (supportsRGBA) {
@@ -556,6 +559,7 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
         }
     } else {
         // src is considered black and transparent, just fill black to dst and return
+#pragma message WARN("BUG: even when src is black and transparent, the output may not be black (cf. NoiseCImg)")
         void* dstPixelData = NULL;
         OfxRectI dstBounds;
         OFX::PixelComponentEnum dstPixelComponents;
@@ -577,13 +581,30 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
         return;
     }
 
-    const void *srcPixelData = src->getPixelData();
-    const OfxRectI srcBounds = src->getBounds();
-    const OfxRectI srcRod = src->getRegionOfDefinition();
-    const OFX::PixelComponentEnum srcPixelComponents = src->getPixelComponents();
-    const OFX::BitDepthEnum srcBitDepth = src->getPixelDepth();
+    const void *srcPixelData;
+    OfxRectI srcBounds;
+    OfxRectI srcRod;
+    OFX::PixelComponentEnum srcPixelComponents;
+    OFX::BitDepthEnum srcBitDepth;
     //srcPixelBytes = getPixelBytes(srcPixelComponents, srcBitDepth);
-    const int srcRowBytes = src->getRowBytes();
+    int srcRowBytes = src->getRowBytes();
+    if (!src.get()) {
+        srcPixelData = NULL;
+        srcBounds.x1 = srcBounds.y1 = srcBounds.x2 = srcBounds.y2 = 0;
+        srcRod.x1 = srcRod.y1 = srcRod.x2 = srcRod.y2 = 0;
+        srcPixelComponents = srcClip_->getPixelComponents();
+        srcBitDepth = src->getPixelDepth();
+        //srcPixelBytes = getPixelBytes(srcPixelComponents, srcBitDepth);
+        srcRowBytes = src->getRowBytes();
+    } else {
+        srcPixelData = src->getPixelData();
+        srcBounds = src->getBounds();
+        srcRod = src->getRegionOfDefinition();
+        srcPixelComponents = src->getPixelComponents();
+        srcBitDepth = src->getPixelDepth();
+        //srcPixelBytes = getPixelBytes(srcPixelComponents, srcBitDepth);
+        srcRowBytes = src->getRowBytes();
+    }
 
     void *dstPixelData = dst->getPixelData();
     const OfxRectI dstBounds = dst->getBounds();
