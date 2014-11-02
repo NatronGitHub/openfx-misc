@@ -288,6 +288,14 @@ TransformPlugin::resetCenter(double time)
         rod.y1 <= kOfxFlagInfiniteMin || kOfxFlagInfiniteMax <= rod.y2) {
         return;
     }
+    if (rod.x1 == 0. && rod.x2 == 0. && rod.y1 == 0. && rod.y2 == 0.) {
+        OfxPointD offset = getProjectOffset();
+        OfxPointD extent = getProjectExtent();
+        rod.x1 = offset.x;
+        rod.y1 = offset.y;
+        rod.x2 = extent.x;
+        rod.y2 = extent.y;
+    }
     double currentRotation;
     _rotate->getValueAtTime(time, currentRotation);
     double rot = OFX::ofxsToRadians(currentRotation);
