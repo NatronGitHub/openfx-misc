@@ -132,6 +132,8 @@
 enum RampTypeEnum
 {
     eRampTypeLinear = 0,
+    eRampTypeEaseIn,
+    eRampTypeEaseOut,
     eRampTypeSmooth
 };
 
@@ -188,6 +190,11 @@ static void generateSegmentAlongNormal(const POINT& p0,const POINT& p1,double t,
     normal0.y = normalV.y * t + p0.y;
     normal1.x = normalV.x * -t + p0.x;
     normal1.y = normalV.y * -t + p0.y;
+}
+
+static double clampDouble(double v)
+{
+    return std::max(0.,std::min(1.,v));
 }
 
 enum IntersectType
@@ -471,10 +478,15 @@ private:
             case eRampTypeLinear:
                 processForType<dored,dogreen,doblue,doalpha,0>(procWindow);
                 break;
-            case eRampTypeSmooth:
+            case eRampTypeEaseIn:
                 processForType<dored,dogreen,doblue,doalpha,1>(procWindow);
                 break;
-
+            case eRampTypeEaseOut:
+                processForType<dored,dogreen,doblue,doalpha,2>(procWindow);
+                break;
+            case eRampTypeSmooth:
+                processForType<dored,dogreen,doblue,doalpha,3>(procWindow);
+                break;
         }
     }
     
@@ -527,38 +539,37 @@ private:
                     double distanceFromP0 = std::abs(distanceToP0NormalPlane(p));
                     double totalDistance = distanceFromPoint(_point0, _point1);
                     assert(totalDistance > 0);
-                    double mult = std::min(1.,std::max(0.,distanceFromP0 / totalDistance));
+                    double t = clampDouble(distanceFromP0 / totalDistance);
+                    switch (type) {
+                        case eRampTypeEaseIn:
+                            t *= t;
+                            break;
+                        case eRampTypeEaseOut:
+                            t = - t * (t - 2);
+                            break;
+                        case eRampTypeSmooth:
+                            t *= 2.;
+                            if (t < 1) {
+                                t = t * t / (2.);
+                            } else {
+                                --t;
+                                t =  -0.5 * (t * (t - 2) - 1);
+                            }
+                        default:
+                            break;
+                    }
                     
-                    if (type == eRampTypeLinear) {
-                        if (dored) {
-                            dstPix[0] = PIX(_color0.r * (1 - mult) + _color1.r * mult * maxValue);
-                        }
-                        if (dogreen && nComponents > 1) {
-                            dstPix[1] = PIX(_color0.g * (1 - mult) + _color1.g * mult * maxValue);
-                        }
-                        if (doblue && nComponents > 2) {
-                            dstPix[2] = PIX(_color0.b * (1 - mult) + _color1.b * mult * maxValue);
-                        }
-                        if (doalpha && nComponents > 3) {
-                            dstPix[3] = PIX(_color0.a * (1 - mult) + _color1.a * mult * maxValue);
-                        }
-                    } else if (type == eRampTypeSmooth) {
-                        if (dored) {
-                            double x = mult * (_color1.r - _color0.r);
-                            dstPix[0] = PIX(x * x * (3 - 2 * x) * maxValue);
-                        }
-                        if (dogreen && nComponents > 1) {
-                            double x = mult * (_color1.g - _color0.g);
-                            dstPix[1] = PIX(x * x * (3 - 2 * x) * maxValue);
-                        }
-                        if (doblue && nComponents > 2) {
-                            double x = mult * (_color1.b - _color0.b);
-                            dstPix[2] = PIX(x * x * (3 - 2 * x) * maxValue);
-                        }
-                        if (doalpha && nComponents > 3) {
-                            double x = mult * (_color1.a - _color0.a);
-                            dstPix[3] = PIX(x * x * (3 - 2 * x) * maxValue);
-                        }
+                    if (dored) {
+                        dstPix[0] = PIX(_color0.r * (1 - t) + _color1.r * t * maxValue);
+                    }
+                    if (dogreen && nComponents > 1) {
+                        dstPix[1] = PIX(_color0.g * (1 - t) + _color1.g * t * maxValue);
+                    }
+                    if (doblue && nComponents > 2) {
+                        dstPix[2] = PIX(_color0.b * (1 - t) + _color1.b * t * maxValue);
+                    }
+                    if (doalpha && nComponents > 3) {
+                        dstPix[3] = PIX(_color0.a * (1 - t) + _color1.a * t * maxValue);
                     }
                     
                     
@@ -1165,10 +1176,10 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kTypeParam);
         param->setLabels(kTypeParamLabel, kTypeParamLabel, kTypeParamLabel);
         param->setHint("The type of interpolation used to generate the ramp");
-        param->appendOption("Linear","pixel = color0 * (1 - a) + color1 * a where a is function of the distance of the pixel between point0 and point1");
-        param->appendOption("Smooth","Let 'a' be a function of the distance of the pixel between point0 and point1. \n"
-                            "x = a * (color1 - color0) \n"
-                            "pixel = x * x * (3 - 2 *x)");
+        param->appendOption("Linear");
+        param->appendOption("Ease-in");
+        param->appendOption("Ease-out");
+        param->appendOption("Smooth");
         param->setDefault(eRampTypeLinear);
         param->setAnimates(true);
         page->addChild(*param);
