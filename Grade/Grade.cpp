@@ -137,6 +137,19 @@
 #define kParamClampWhiteLabel "Clamp White"
 #define kParamClampWhiteHint "All colors above 1 on output are set to 1."
 
+#define kParamProcessR      "r"
+#define kParamProcessRLabel "R"
+#define kParamProcessRHint  "Generates red component"
+#define kParamProcessG      "g"
+#define kParamProcessGLabel "G"
+#define kParamProcessGHint  "Generates green component"
+#define kParamProcessB      "b"
+#define kParamProcessBLabel "B"
+#define kParamProcessBHint  "Generates blue component"
+#define kParamProcessA      "a"
+#define kParamProcessALabel "A"
+#define kParamProcessAHint  "Generates alpha component"
+
 using namespace OFX;
 
 
@@ -156,6 +169,7 @@ protected:
     bool   _doMasking;
     double _mix;
     bool _maskInvert;
+    bool _red,_green,_blue,_alpha;
 
 public:
     
@@ -190,7 +204,11 @@ public:
                    bool clampWhite,
                    bool premult,
                    int premultChannel,
-                   double mix)
+                   double mix,
+                   bool doR,
+                   bool doG,
+                   bool doB,
+                   bool doA)
     {
         _blackPoint = blackPoint;
         _whitePoint = whitePoint;
@@ -204,6 +222,10 @@ public:
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
+        _red = doR;
+        _green = doG;
+        _blue = doB;
+        _alpha = doA;
     }
 
     void grade(double* v, double wp, double bp, double white, double black, double mutiply, double offset, double gamma)
@@ -213,20 +235,48 @@ public:
         *v = std::pow((A * *v) + B, 1. / gamma);
     }
     
-    void grade(double *r, double *g, double *b)
+    template<bool dored, bool dogreen, bool doblue, bool doalpha>
+    void grade(double *r, double *g, double *b,double *a)
     {
-        grade(r, _whitePoint.r, _blackPoint.r, _white.r, _black.r, _multiply.r, _offset.r, _gamma.r);
-        grade(g, _whitePoint.g, _blackPoint.g, _white.g, _black.g, _multiply.g, _offset.g, _gamma.g);
-        grade(b, _whitePoint.b, _blackPoint.b, _white.b, _black.b, _multiply.b, _offset.b, _gamma.b);
+        if (dored) {
+            grade(r, _whitePoint.r, _blackPoint.r, _white.r, _black.r, _multiply.r, _offset.r, _gamma.r);
+        }
+        if (dogreen) {
+            grade(g, _whitePoint.g, _blackPoint.g, _white.g, _black.g, _multiply.g, _offset.g, _gamma.g);
+        }
+        if (doblue) {
+            grade(b, _whitePoint.b, _blackPoint.b, _white.b, _black.b, _multiply.b, _offset.b, _gamma.b);
+        }
+        if (doalpha) {
+            grade(a, _whitePoint.a, _blackPoint.a, _white.a, _black.a, _multiply.a, _offset.a, _gamma.a);
+        }
         if (_clampBlack) {
-            *r = std::max(0.,*r);
-            *g = std::max(0.,*g);
-            *b = std::max(0.,*b);
+            if (dored) {
+                *r = std::max(0.,*r);
+            }
+            if (dogreen) {
+                *g = std::max(0.,*g);
+            }
+            if (doblue) {
+                *b = std::max(0.,*b);
+            }
+            if (doalpha) {
+                *a = std::max(0.,*a);
+            }
         }
         if (_clampWhite) {
-            *r = std::min(1.,*r);
-            *g = std::min(1.,*g);
-            *b = std::min(1.,*b);
+            if (dored) {
+                *r = std::min(1.,*r);
+            }
+            if (dogreen) {
+                *g = std::min(1.,*g);
+            }
+            if (doblue) {
+                *b = std::min(1.,*b);
+            }
+            if (doalpha) {
+                *a = std::min(1.,*a);
+            }
         }
     }
 
@@ -253,8 +303,101 @@ public:
     {
     }
     
-private:
     void multiThreadProcessImages(OfxRectI procWindow)
+    {
+        
+        int todo = ((_red ? 0xf000 : 0) | (_green ? 0x0f00 : 0) | (_blue ? 0x00f0 : 0) | (_alpha ? 0x000f : 0));
+        if (nComponents == 1) {
+            switch (todo) {
+                case 0x0000:
+                case 0x00f0:
+                case 0x0f00:
+                case 0x0ff0:
+                case 0xf000:
+                case 0xf0f0:
+                case 0xff00:
+                case 0xfff0:
+                    return process<false,false,false,false>(procWindow);
+                case 0x000f:
+                case 0x00ff:
+                case 0x0f0f:
+                case 0x0fff:
+                case 0xf00f:
+                case 0xf0ff:
+                case 0xff0f:
+                case 0xffff:
+                    return process<false,false,false,true >(procWindow);
+            }
+        } else if (nComponents == 3) {
+            switch (todo) {
+                case 0x0000:
+                case 0x000f:
+                    return process<false,false,false,false>(procWindow);
+                case 0x00f0:
+                case 0x00ff:
+                    return process<false,false,true ,false>(procWindow);
+                case 0x0f00:
+                case 0x0f0f:
+                    return process<false,true ,false,false>(procWindow);
+                case 0x0ff0:
+                case 0x0fff:
+                    return process<false,true ,true ,false>(procWindow);
+                case 0xf000:
+                case 0xf00f:
+                    return process<true ,false,false,false>(procWindow);
+                case 0xf0f0:
+                case 0xf0ff:
+                    return process<true ,false,true ,false>(procWindow);
+                case 0xff00:
+                case 0xff0f:
+                    return process<true ,true ,false,false>(procWindow);
+                case 0xfff0:
+                case 0xffff:
+                    return process<true ,true ,true ,false>(procWindow);
+            }
+        } else if (nComponents == 4) {
+            switch (todo) {
+                case 0x0000:
+                    return process<false,false,false,false>(procWindow);
+                case 0x000f:
+                    return process<false,false,false,true >(procWindow);
+                case 0x00f0:
+                    return process<false,false,true ,false>(procWindow);
+                case 0x00ff:
+                    return process<false,false,true, true >(procWindow);
+                case 0x0f00:
+                    return process<false,true ,false,false>(procWindow);
+                case 0x0f0f:
+                    return process<false,true ,false,true >(procWindow);
+                case 0x0ff0:
+                    return process<false,true ,true ,false>(procWindow);
+                case 0x0fff:
+                    return process<false,true ,true ,true >(procWindow);
+                case 0xf000:
+                    return process<true ,false,false,false>(procWindow);
+                case 0xf00f:
+                    return process<true ,false,false,true >(procWindow);
+                case 0xf0f0:
+                    return process<true ,false,true ,false>(procWindow);
+                case 0xf0ff:
+                    return process<true ,false,true, true >(procWindow);
+                case 0xff00:
+                    return process<true ,true ,false,false>(procWindow);
+                case 0xff0f:
+                    return process<true ,true ,false,true >(procWindow);
+                case 0xfff0:
+                    return process<true ,true ,true ,false>(procWindow);
+                case 0xffff:
+                    return process<true ,true ,true ,true >(procWindow);
+            }
+        }
+    }
+    
+
+private:
+    
+    template<bool dored, bool dogreen, bool doblue, bool doalpha>
+    void process(OfxRectI procWindow)
     {
         assert(nComponents == 3 || nComponents == 4);
         assert(_dstImg);
@@ -273,11 +416,12 @@ private:
                 double t_r = unpPix[0];
                 double t_g = unpPix[1];
                 double t_b = unpPix[2];
-                grade(&t_r, &t_g, &t_b);
+                double t_a = unpPix[3];
+                grade<dored,dogreen,doblue,doalpha>(&t_r,&t_g,&t_b,&t_a);
                 tmpPix[0] = t_r;
                 tmpPix[1] = t_g;
                 tmpPix[2] = t_b;
-                tmpPix[3] = unpPix[3];
+                tmpPix[3] = t_a;
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
@@ -321,6 +465,13 @@ public:
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
+        
+        _processR = fetchBooleanParam(kParamProcessR);
+        _processG = fetchBooleanParam(kParamProcessG);
+        _processB = fetchBooleanParam(kParamProcessB);
+        _processA = fetchBooleanParam(kParamProcessA);
+        assert(_processR && _processG && _processB && _processA);
+
     }
     
 private:
@@ -340,6 +491,10 @@ private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::Clip *maskClip_;
+    BooleanParam* _processR;
+    BooleanParam* _processG;
+    BooleanParam* _processB;
+    BooleanParam* _processA;
     OFX::RGBAParam* _blackPoint;
     OFX::RGBAParam* _whitePoint;
     OFX::RGBAParam* _black;
@@ -415,7 +570,14 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     _premultChannel->getValueAtTime(args.time, premultChannel);
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    processor.setValues(blackPoint, whitePoint, black, white, multiply, offset, gamma, clampBlack, clampWhite, premult, premultChannel, mix);
+    
+    bool doR,doG,doB,doA;
+    _processR->getValue(doR);
+    _processG->getValue(doG);
+    _processB->getValue(doB);
+    _processA->getValue(doA);
+    
+    processor.setValues(blackPoint, whitePoint, black, white, multiply, offset, gamma, clampBlack, clampWhite, premult, premultChannel, mix,doR,doG,doB,doA);
     processor.process();
 }
 
@@ -607,6 +769,40 @@ GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
+    
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+        param->setHint(kParamProcessRHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+        param->setHint(kParamProcessGHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+        param->setHint(kParamProcessBHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+        param->setHint(kParamProcessAHint);
+        param->setDefault(true);
+        page->addChild(*param);
+    }
+    
+    
     defineRGBAScaleParam(desc, kParamBlackPoint, kParamBlackPointLabel, kParamBlackPointHint, page, 0., -1., 1.);
     defineRGBAScaleParam(desc, kParamWhitePoint, kParamWhitePointLabel, kParamWhitePointHint, page, 1., 0., 4.);
     defineRGBAScaleParam(desc, kParamBlack, kParamBlackLabel, kParamBlackHint, page, 0., -1., 1.);
