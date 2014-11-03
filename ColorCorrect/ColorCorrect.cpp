@@ -120,6 +120,19 @@ static const std::string kParamOffset = std::string("Offset");
 #define kParamClampWhiteLabel "Clamp White"
 #define kParamClampWhiteHint "All colors above 1 on output are set to 1."
 
+#define kParamProcessR      "r"
+#define kParamProcessRLabel "R"
+#define kParamProcessRHint  "Generates red component"
+#define kParamProcessG      "g"
+#define kParamProcessGLabel "G"
+#define kParamProcessGHint  "Generates green component"
+#define kParamProcessB      "b"
+#define kParamProcessBLabel "B"
+#define kParamProcessBHint  "Generates blue component"
+#define kParamProcessA      "a"
+#define kParamProcessALabel "A"
+#define kParamProcessAHint  "Generates alpha component"
+
 #define LUT_MAX_PRECISION 100
 
 // Rec.709 luminance:
@@ -151,14 +164,16 @@ namespace {
         ColorControlValues gain;
         ColorControlValues offset;
     };
+    
+    template<bool dored, bool dogreen, bool doblue, bool doalpha>
+    struct RGBAPixel {
+        double r, g, b,a;
 
-    struct RGBPixel {
-        double r, g, b;
-
-        RGBPixel(double r_, double g_, double b_)
+        RGBAPixel(double r_, double g_, double b_,double a_)
         : r(r_)
         , g(g_)
         , b(b_)
+        , a(a_)
         {
         }
 
@@ -170,17 +185,25 @@ namespace {
                       double h_scale,
                       const ColorControlGroup& masterValues)
         {
-            RGBPixel s = *this;
-            RGBPixel m = *this;
-            RGBPixel h = *this;
+            RGBAPixel s = *this;
+            RGBAPixel m = *this;
+            RGBAPixel h = *this;
             s.applyGroup(sValues);
             m.applyGroup(mValues);
             h.applyGroup(hValues);
-
-            r = s.r * s_scale + m.r * m_scale + h.r * h_scale;
-            g = s.g * s_scale + m.g * m_scale + h.g * h_scale;
-            b = s.b * s_scale + m.b * m_scale + h.b * h_scale;
-
+            
+            if (dored) {
+                r = s.r * s_scale + m.r * m_scale + h.r * h_scale;
+            }
+            if (dogreen) {
+                g = s.g * s_scale + m.g * m_scale + h.g * h_scale;
+            }
+            if (doblue) {
+                b = s.b * s_scale + m.b * m_scale + h.b * h_scale;
+            }
+            if (doalpha) {
+                a = s.a * s_scale + m.a * m_scale + h.a * h_scale;
+            }
             applyGroup(masterValues);
         }
 
@@ -188,46 +211,82 @@ namespace {
         void applySaturation(const ColorControlValues &c)
         {
             double tmp_r ,tmp_g,tmp_b ;
-            tmp_r = r *((1.f - c.r) * s_rLum + c.r) + g *((1.f-c.r) * s_gLum) + b *((1.f-c.r) * s_bLum);
-            tmp_g = g *((1.f - c.g) * s_gLum + c.g) + r *((1.f-c.g) * s_rLum) + b *((1.f-c.g) * s_bLum);
-            tmp_b = b *((1.f - c.b) * s_bLum + c.b) + g *((1.f-c.b) * s_gLum) + r *((1.f-c.b) * s_rLum);
-            r = tmp_r;
-            g = tmp_g;
-            b = tmp_b;
+            if (dored) {
+                tmp_r = r *((1.f - c.r) * s_rLum + c.r) + g *((1.f-c.r) * s_gLum) + b *((1.f-c.r) * s_bLum);
+                r = tmp_r;
+            }
+            if (dogreen) {
+                tmp_g = g *((1.f - c.g) * s_gLum + c.g) + r *((1.f-c.g) * s_rLum) + b *((1.f-c.g) * s_bLum);
+                g = tmp_g;
+            }
+            if (doblue) {
+                tmp_b = b *((1.f - c.b) * s_bLum + c.b) + g *((1.f-c.b) * s_gLum) + r *((1.f-c.b) * s_rLum);
+                b = tmp_b;
+            }
         }
 
         void applyContrast(const ColorControlValues &c)
         {
-            r = (r - 0.5f) * c.r  + 0.5f;
-            g = (g - 0.5f) * c.g  + 0.5f;
-            b = (b - 0.5f) * c.b  + 0.5f;
+            if (dored) {
+                r = (r - 0.5f) * c.r  + 0.5f;
+            }
+            if (dogreen) {
+                g = (g - 0.5f) * c.g  + 0.5f;
+            }
+            if (doblue) {
+                b = (b - 0.5f) * c.b  + 0.5f;
+            }
+            if (doalpha) {
+                a = (a - 0.5f) * c.a  + 0.5f;
+            }
         }
 
         void applyGain(const ColorControlValues &c)
         {
-            r = r * c.r;
-            g = g * c.g;
-            b = b * c.b;
+            if (dored) {
+                r = r * c.r;
+            }
+            if (dogreen) {
+                g = g * c.g;
+            }
+            if (doblue) {
+                b = b * c.b;
+            }
+            if (doalpha) {
+                a = a * c.a;
+            }
         }
 
         void applyGamma(const ColorControlValues &c)
         {
-            if (r > 0) {
+            if (dored && r > 0) {
                 r = std::pow(r ,1. / c.r);
             }
-            if (g > 0) {
+            if (dogreen && g > 0) {
                 g = std::pow(g ,1. / c.g);
             }
-            if (b > 0) {
+            if (doblue && b > 0) {
                 b = std::pow(b ,1. / c.b);
+            }
+            if (doalpha && a > 0) {
+                a = std::pow(a ,1. / c.a);
             }
         }
 
         void applyOffset(const ColorControlValues &c)
         {
-            r = r + c.r;
-            g = g + c.g;
-            b = b + c.b;
+            if (dored) {
+                r = r + c.r;
+            }
+            if (dogreen) {
+                g = g + c.g;
+            }
+            if (doblue) {
+                b = b + c.b;
+            }
+            if (doalpha) {
+                a = a + c.a;
+            }
         }
 
         void applyGroup(const ColorControlGroup& group)
@@ -252,7 +311,7 @@ protected:
     bool   _doMasking;
     double _mix;
     bool _maskInvert;
-
+    bool _red,_green,_blue,_alpha;
 public:
     ColorCorrecterBase(OFX::ImageEffect &instance,const OFX::RenderArguments &args)
     : OFX::ImageProcessor(instance)
@@ -281,6 +340,7 @@ public:
                 _lookupTable[curve][position] = (float)std::max(0.,std::min(value*LUT_MAX_PRECISION+0.5, double(LUT_MAX_PRECISION)));
             }
         }
+        
     }
 
     void setSrcImg(const OFX::Image *v) {_srcImg = v;}
@@ -297,7 +357,11 @@ public:
                                bool clampWhite,
                                bool premult,
                                int premultChannel,
-                               double mix)
+                               double mix,
+                               bool doR,
+                               bool doG,
+                               bool doB,
+                               bool doA)
     {
         _masterValues = master;
         _shadowValues = shadow;
@@ -308,23 +372,37 @@ public:
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
+        _red = doR;
+        _green = doG;
+        _blue = doB;
+        _alpha = doA;
     }
 
-    void colorTransform(double *r, double *g, double *b)
+    template<bool dored, bool dogreen, bool doblue, bool doalpha>
+    void colorTransform(double *r, double *g, double *b,double *a)
     {
         double luminance = *r * s_rLum + *g * s_gLum + *b * s_bLum;
         double s_scale = interpolate(0, luminance);
         double h_scale = interpolate(1, luminance);
         double m_scale = 1.f - s_scale - h_scale;
 
-        RGBPixel p(*r, *g, *b);
+        RGBAPixel<dored,dogreen,doblue,doalpha> p(*r, *g, *b, *a);
         p.applySMH(_shadowValues, s_scale,
                    _midtoneValues, m_scale,
                    _highlightsValues, h_scale,
                    _masterValues);
-        *r = clamp(p.r);
-        *g = clamp(p.g);
-        *b = clamp(p.b);
+        if (dored) {
+            *r = clamp(p.r);
+        }
+        if (dogreen) {
+            *g = clamp(p.g);
+        }
+        if (doblue) {
+            *b = clamp(p.b);
+        }
+        if (doalpha) {
+            *a = clamp(p.a);
+        }
     }
 
 private:
@@ -376,8 +454,105 @@ public:
     {
     }
 
-private:
+    
+    
     void multiThreadProcessImages(OfxRectI procWindow)
+    {
+        
+        int todo = ((_red ? 0xf000 : 0) | (_green ? 0x0f00 : 0) | (_blue ? 0x00f0 : 0) | (_alpha ? 0x000f : 0));
+        if (nComponents == 1) {
+            switch (todo) {
+                case 0x0000:
+                case 0x00f0:
+                case 0x0f00:
+                case 0x0ff0:
+                case 0xf000:
+                case 0xf0f0:
+                case 0xff00:
+                case 0xfff0:
+                    return process<false,false,false,false>(procWindow);
+                case 0x000f:
+                case 0x00ff:
+                case 0x0f0f:
+                case 0x0fff:
+                case 0xf00f:
+                case 0xf0ff:
+                case 0xff0f:
+                case 0xffff:
+                    return process<false,false,false,true >(procWindow);
+            }
+        } else if (nComponents == 3) {
+            switch (todo) {
+                case 0x0000:
+                case 0x000f:
+                    return process<false,false,false,false>(procWindow);
+                case 0x00f0:
+                case 0x00ff:
+                    return process<false,false,true ,false>(procWindow);
+                case 0x0f00:
+                case 0x0f0f:
+                    return process<false,true ,false,false>(procWindow);
+                case 0x0ff0:
+                case 0x0fff:
+                    return process<false,true ,true ,false>(procWindow);
+                case 0xf000:
+                case 0xf00f:
+                    return process<true ,false,false,false>(procWindow);
+                case 0xf0f0:
+                case 0xf0ff:
+                    return process<true ,false,true ,false>(procWindow);
+                case 0xff00:
+                case 0xff0f:
+                    return process<true ,true ,false,false>(procWindow);
+                case 0xfff0:
+                case 0xffff:
+                    return process<true ,true ,true ,false>(procWindow);
+            }
+        } else if (nComponents == 4) {
+            switch (todo) {
+                case 0x0000:
+                    return process<false,false,false,false>(procWindow);
+                case 0x000f:
+                    return process<false,false,false,true >(procWindow);
+                case 0x00f0:
+                    return process<false,false,true ,false>(procWindow);
+                case 0x00ff:
+                    return process<false,false,true, true >(procWindow);
+                case 0x0f00:
+                    return process<false,true ,false,false>(procWindow);
+                case 0x0f0f:
+                    return process<false,true ,false,true >(procWindow);
+                case 0x0ff0:
+                    return process<false,true ,true ,false>(procWindow);
+                case 0x0fff:
+                    return process<false,true ,true ,true >(procWindow);
+                case 0xf000:
+                    return process<true ,false,false,false>(procWindow);
+                case 0xf00f:
+                    return process<true ,false,false,true >(procWindow);
+                case 0xf0f0:
+                    return process<true ,false,true ,false>(procWindow);
+                case 0xf0ff:
+                    return process<true ,false,true, true >(procWindow);
+                case 0xff00:
+                    return process<true ,true ,false,false>(procWindow);
+                case 0xff0f:
+                    return process<true ,true ,false,true >(procWindow);
+                case 0xfff0:
+                    return process<true ,true ,true ,false>(procWindow);
+                case 0xffff:
+                    return process<true ,true ,true ,true >(procWindow);
+            }
+        }
+    }
+    
+
+private:
+    
+    
+    template<bool dored, bool dogreen, bool doblue, bool doalpha>
+    void process(OfxRectI procWindow)
+
     {
         assert(nComponents == 3 || nComponents == 4);
         float unpPix[4];
@@ -394,11 +569,12 @@ private:
                 double t_r = unpPix[0];
                 double t_g = unpPix[1];
                 double t_b = unpPix[2];
-                colorTransform(&t_r, &t_g, &t_b);
+                double t_a = unpPix[3];
+                colorTransform<dored,dogreen,doblue,doalpha>(&t_r, &t_g, &t_b,&t_a);
                 tmpPix[0] = t_r;
                 tmpPix[1] = t_g;
                 tmpPix[2] = t_b;
-                tmpPix[3] = unpPix[3];
+                tmpPix[3] = t_a;
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 dstPix += nComponents;
             }
@@ -457,6 +633,13 @@ public:
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
+        
+        _processR = fetchBooleanParam(kParamProcessR);
+        _processG = fetchBooleanParam(kParamProcessG);
+        _processB = fetchBooleanParam(kParamProcessB);
+        _processA = fetchBooleanParam(kParamProcessA);
+        assert(_processR && _processG && _processB && _processA);
+
     }
 
 private:
@@ -509,6 +692,10 @@ private:
     ColorControlParamGroup _shadowsParamsGroup;
     ColorControlParamGroup _midtonesParamsGroup;
     ColorControlParamGroup _highlightsParamsGroup;
+    BooleanParam* _processR;
+    BooleanParam* _processG;
+    BooleanParam* _processB;
+    BooleanParam* _processA;
     OFX::ParametricParam* _rangesParam;
     OFX::BooleanParam* _clampBlack;
     OFX::BooleanParam* _clampWhite;
@@ -599,7 +786,15 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
     _premultChannel->getValueAtTime(args.time, premultChannel);
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, clampBlack, clampWhite, premult, premultChannel, mix);
+    
+    bool doR,doG,doB,doA;
+    _processR->getValue(doR);
+    _processG->getValue(doG);
+    _processB->getValue(doB);
+    _processA->getValue(doA);
+
+    processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, clampBlack, clampWhite, premult, premultChannel, mix,
+                                    doR,doG,doB,doA);
     processor.process();
 }
 
@@ -842,6 +1037,40 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
+    
+    
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+        param->setHint(kParamProcessRHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+        param->setHint(kParamProcessGHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+        param->setHint(kParamProcessBHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+        param->setHint(kParamProcessAHint);
+        param->setDefault(false);
+        page->addChild(*param);
+    }
+    
     defineColorGroup(kGroupMaster, "", page, desc, true);
     defineColorGroup(kGroupShadows, "", page, desc, false);
     defineColorGroup(kGroupMidtones, "", page, desc, false);

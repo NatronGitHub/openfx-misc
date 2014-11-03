@@ -798,7 +798,7 @@ GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
         param->setHint(kParamProcessAHint);
-        param->setDefault(true);
+        param->setDefault(false);
         page->addChild(*param);
     }
     
