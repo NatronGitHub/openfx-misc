@@ -149,6 +149,18 @@ namespace {
         double pscale10 = std::pow(10.,std::floor(std::log10(pscale)));
         return pscale10 * std::floor(val/pscale10 + 0.5);
     }
+    
+    static void
+    toPixelEnclosing(const OfxRectD& regionOfInterest,
+                     const OfxPointD& renderScale,
+                     double par,
+                     OfxRectI *rect)
+    {
+        rect->x1 = std::floor(regionOfInterest.x1 * renderScale.x / par);
+        rect->y1 = std::floor(regionOfInterest.y1 * renderScale.y);
+        rect->x2 = std::ceil(regionOfInterest.x2 * renderScale.x / par);
+        rect->y2 = std::ceil(regionOfInterest.y2 * renderScale.y);
+    }
 }
 
 /**
@@ -274,7 +286,7 @@ public:
         //Generate 2 lines in the direction of the normal vector of the line defined by P0-P1
 
         
-        double t = (_rodPixel.x2 - _rodPixel.x1) * 100;
+        double t = (_rodPixel.x2 - _rodPixel.x1) * 10;
         generateSegmentAlongNormal<OfxPointI>(_point0, _point1, t,_p0normal0,_p0normal1);
         generateSegmentAlongNormal<OfxPointI>(_point1, _point0, t,_p1normal0,_p1normal1);
 
@@ -283,12 +295,12 @@ public:
         
     }
     
-    static double distanceSquaredFromPoint(const OfxPointI& from,const OfxPointI& to)
+    static double distanceFromPoint(const OfxPointI& from,const OfxPointI& to)
     {
-        return (to.x - from.x) * (to.x - from.x) + (to.y - from.y) * (to.y - from.y);
+        return sqrt((to.x - from.x) * (to.x - from.x) + (to.y - from.y) * (to.y - from.y));
     }
     
-    double distanceSquaredToP0NormalPlane(const OfxPointI& p) {
+    double distanceToP0NormalPlane(const OfxPointI& p) {
         // Return minimum distance between line segment vw and point p
         assert(_p0NormalSquared != 0.);
         
@@ -303,7 +315,7 @@ public:
         projection.x = std::floor(_p0normal0.x + t * (_p0normal1.x - _p0normal0.x) + 0.5);
         projection.y = std::floor(_p0normal0.y + t * (_p0normal1.y - _p0normal0.y) + 0.5);
           // Projection falls on the segment
-        return distanceSquaredFromPoint(p, projection);
+        return distanceFromPoint(p, projection);
     }
     
     static double crossProduct(const OfxPointI& v1,const OfxPointI& v2)
@@ -455,7 +467,20 @@ private:
     
     template<bool dored, bool dogreen, bool doblue, bool doalpha>
     void process(const OfxRectI& procWindow) {
-        
+        switch (_type) {
+            case eRampTypeLinear:
+                processForType<dored,dogreen,doblue,doalpha,0>(procWindow);
+                break;
+            case eRampTypeSmooth:
+                processForType<dored,dogreen,doblue,doalpha,1>(procWindow);
+                break;
+
+        }
+    }
+    
+    
+    template<bool dored, bool dogreen, bool doblue, bool doalpha,int type>
+    void processForType(const OfxRectI& procWindow) {
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if (_effect.abort()) {
                 break;
@@ -497,31 +522,51 @@ private:
                     if (doalpha) {
                         dstPix[3] = _color1.a;
                     }
-
-                } else {
-                    double distanceFromP0 = std::abs(distanceSquaredToP0NormalPlane(p));
-                    double totalDistance = distanceSquaredFromPoint(_point0, _point1);
-                    assert(totalDistance > 0);
-                    double mult = 1 - distanceFromP0 / totalDistance;
                     
-                    if (dored) {
-                        dstPix[0] = _color0.r * mult + _color1.r * (1 - mult);
+                } else {
+                    double distanceFromP0 = std::abs(distanceToP0NormalPlane(p));
+                    double totalDistance = distanceFromPoint(_point0, _point1);
+                    assert(totalDistance > 0);
+                    double mult = std::min(1.,std::max(0.,distanceFromP0 / totalDistance));
+                    
+                    if (type == eRampTypeLinear) {
+                        if (dored) {
+                            dstPix[0] = PIX(_color0.r * (1 - mult) + _color1.r * mult * maxValue);
+                        }
+                        if (dogreen && nComponents > 1) {
+                            dstPix[1] = PIX(_color0.g * (1 - mult) + _color1.g * mult * maxValue);
+                        }
+                        if (doblue && nComponents > 2) {
+                            dstPix[2] = PIX(_color0.b * (1 - mult) + _color1.b * mult * maxValue);
+                        }
+                        if (doalpha && nComponents > 3) {
+                            dstPix[3] = PIX(_color0.a * (1 - mult) + _color1.a * mult * maxValue);
+                        }
+                    } else if (type == eRampTypeSmooth) {
+                        if (dored) {
+                            double x = mult * (_color1.r - _color0.r);
+                            dstPix[0] = PIX(x * x * (3 - 2 * x) * maxValue);
+                        }
+                        if (dogreen && nComponents > 1) {
+                            double x = mult * (_color1.g - _color0.g);
+                            dstPix[1] = PIX(x * x * (3 - 2 * x) * maxValue);
+                        }
+                        if (doblue && nComponents > 2) {
+                            double x = mult * (_color1.b - _color0.b);
+                            dstPix[2] = PIX(x * x * (3 - 2 * x) * maxValue);
+                        }
+                        if (doalpha && nComponents > 3) {
+                            double x = mult * (_color1.a - _color0.a);
+                            dstPix[3] = PIX(x * x * (3 - 2 * x) * maxValue);
+                        }
                     }
-                    if (dogreen && nComponents > 1) {
-                        dstPix[1] = _color0.g * mult + _color1.g * (1 - mult);
-                    }
-                    if (doblue && nComponents > 2) {
-                        dstPix[2] = _color0.b * mult + _color1.b * (1 - mult);
-                    }
-                    if (doalpha && nComponents > 3) {
-                        dstPix[3] = _color0.a * mult + _color1.a * (1 - mult);
-                    }
-
+                    
+                    
                 }
-                
             }
         }
     }
+    
 };
 
 
@@ -664,9 +709,11 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor, const OFX::RenderArgum
     _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
     _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
     
-    OfxRectI srcRoDPixel = dst->getRegionOfDefinition();
-    
-    processor.setValues((RampTypeEnum)type_i, color0, color1, doR, doG, doB, doA, point0_pixel, point1_pixel,srcRoDPixel);
+    OfxRectD rod = dstClip_->getRegionOfDefinition(args.time);
+    OfxRectI rodPixel;
+    toPixelEnclosing(rod, args.renderScale, dst->getPixelAspectRatio(), &rodPixel);
+
+    processor.setValues((RampTypeEnum)type_i, color0, color1, doR, doG, doB, doA, point0_pixel, point1_pixel,rodPixel);
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 }
@@ -1118,8 +1165,10 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kTypeParam);
         param->setLabels(kTypeParamLabel, kTypeParamLabel, kTypeParamLabel);
         param->setHint("The type of interpolation used to generate the ramp");
-        param->appendOption("Linear");
-        param->appendOption("Smooth");
+        param->appendOption("Linear","pixel = color0 * (1 - a) + color1 * a where a is function of the distance of the pixel between point0 and point1");
+        param->appendOption("Smooth","Let 'a' be a function of the distance of the pixel between point0 and point1. \n"
+                            "x = a * (color1 - color0) \n"
+                            "pixel = x * x * (3 - 2 *x)");
         param->setDefault(eRampTypeLinear);
         param->setAnimates(true);
         page->addChild(*param);
