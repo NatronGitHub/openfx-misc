@@ -1429,7 +1429,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     // scaleUniform
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamScaleUniform);
-        param->setLabels(kParamScaleUniform, kParamScaleUniform, kParamScaleUniform);
+        param->setLabels(kParamScaleUniformLabel, kParamScaleUniformLabel, kParamScaleUniformLabel);
         param->setHint(kParamScaleUniformHint);
         param->setDefault(true);
         param->setAnimates(true);
@@ -1439,7 +1439,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     // skewX
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSkewX);
-        param->setLabels(kParamSkewX, kParamSkewX, kParamSkewX);
+        param->setLabels(kParamSkewXLabel, kParamSkewXLabel, kParamSkewXLabel);
         param->setDefault(0);
         param->setDisplayRange(-1,1);
         param->setIncrement(0.01);
