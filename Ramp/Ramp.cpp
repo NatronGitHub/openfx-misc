@@ -151,6 +151,78 @@ namespace {
     }
 }
 
+/**
+ * @brief Generates a point
+ **/
+template <typename POINT>
+static void generateSegmentAlongNormal(const POINT& p0,const POINT& p1,double t,POINT &normal0,POINT &normal1)
+{
+    //Normal line intersecting P0
+    OfxPointD normalV;
+    normalV.x = p0.y - p1.y;
+    normalV.y = p1.x - p0.x;
+    
+    double norm = sqrt((p1.x - p0.x) * (p1.x - p0.x) +
+                       (p1.y - p0.y) * (p1.y - p0.y));
+    
+    ///Don't consider points that are equals
+    if (norm == 0) {
+        norm = 1.;
+    }
+    normalV.x /= norm;
+    normalV.y /= norm;
+    
+    normal0.x = normalV.x * t + p0.x;
+    normal0.y = normalV.y * t + p0.y;
+    normal1.x = normalV.x * -t + p0.x;
+    normal1.y = normalV.y * -t + p0.y;
+}
+
+enum IntersectType
+{
+    eIntersectionTypeNone = 0,
+    eIntersectionTypeUnbounded,
+    eIntersectionTypeBounded
+    
+};
+
+static IntersectType lineIntersect(const OfxPointD &p0, const OfxPointD& p1,const OfxPointD &p2, const OfxPointD& p3, OfxPointD *intersectionPoint)
+{
+    // ipmlementation is based on Graphics Gems III's "Faster Line Segment Intersection"
+    OfxPointD a,b,c;
+    a.x = p1.x - p0.x;
+    a.y = p1.y - p0.y;
+    
+    b.x = p2.x - p3.x;
+    b.y = p2.y - p3.y;
+    
+    c.x = p0.x - p2.x;
+    c.y = p0.y - p2.y;
+    
+    const double denominator = a.y * b.x - a.x * b.y;
+    if (denominator == 0) {
+        return eIntersectionTypeNone;
+    }
+    
+    const double reciprocal = 1 / denominator;
+    const double na = (b.y * c.x - b.x * c.y) * reciprocal;
+    if (intersectionPoint) {
+        intersectionPoint->x = p0.x + a.x * na;
+        intersectionPoint->y = p0.x + a.y * na;
+    }
+    
+    if (na < 0 || na > 1)
+        return eIntersectionTypeUnbounded;
+    
+    const double nb = (a.x * c.y - a.y * c.x) * reciprocal;
+    if (nb < 0 || nb > 1) {
+        return eIntersectionTypeUnbounded;
+    }
+    
+    return eIntersectionTypeBounded;
+}
+
+
 using namespace OFX;
 
 class RampProcessorBase : public OFX::ImageProcessor
@@ -203,46 +275,12 @@ public:
 
         
         double t = (_rodPixel.x2 - _rodPixel.x1) * 100;
+        generateSegmentAlongNormal<OfxPointI>(_point0, _point1, t,_p0normal0,_p0normal1);
+        generateSegmentAlongNormal<OfxPointI>(_point1, _point0, t,_p1normal0,_p1normal1);
 
-        {
-            //Normal line intersecting P0
-            OfxPointD normalV;
-            normalV.x = _point0.y -_point1.y;
-            normalV.y = _point1.x - _point0.x;
-            double norm = sqrt((_point1.x - _point0.x) * (_point1.x - _point0.x) +
-                               (_point1.y - _point0.y) * (_point1.y - _point0.y));
-            if (norm == 0) {
-                norm = 1.;
-            }
-            normalV.x /= norm;
-            normalV.y /= norm;
-            
-            _p0normal0.x = normalV.x * t;
-            _p0normal0.y = normalV.y * t;
-            _p0normal1.x = normalV.x * -t;
-            _p0normal1.y = normalV.y * -t;
-            _p0NormalSquared = (_p0normal1.x - _p0normal0.x) * (_p0normal1.x - _p0normal0.x) + (_p0normal1.y - _p0normal0.y) * (_p0normal1.y - _p0normal0.y);
-        }
-        {
-            //Normal line intersecting P1
-            OfxPointD normalV;
-            normalV.x = _point1.y - _point0.y;
-            normalV.y = _point0.x - _point1.x;
-            double norm = sqrt((_point0.x - _point1.x) * (_point0.x - _point1.x) +
-                               (_point0.y - _point1.y) * (_point0.y - _point1.y));
-            if (norm == 0) {
-                norm = 1.;
-            }
-            normalV.x /= norm;
-            normalV.y /= norm;
-
-            _p1normal0.x = normalV.x * t;
-            _p1normal0.y = normalV.y * t;
-            _p1normal1.x = normalV.x * -t;
-            _p1normal1.y = normalV.y * -t;
-            _p1NormalSquared = (_p1normal1.x - _p1normal0.x) * (_p1normal1.x - _p1normal0.x) + (_p1normal1.y - _p1normal0.y) * (_p1normal1.y - _p1normal0.y);
-            
-        }
+        _p0NormalSquared = (_p0normal1.x - _p0normal0.x) * (_p0normal1.x - _p0normal0.x) + (_p0normal1.y - _p0normal0.y) * (_p0normal1.y - _p0normal0.y);
+        _p1NormalSquared = (_p1normal1.x - _p1normal0.x) * (_p1normal1.x - _p1normal0.x) + (_p1normal1.y - _p1normal0.y) * (_p1normal1.y - _p1normal0.y);
+        
     }
     
     static double distanceSquaredFromPoint(const OfxPointI& from,const OfxPointI& to)
@@ -254,11 +292,13 @@ public:
         // Return minimum distance between line segment vw and point p
         assert(_p0NormalSquared != 0.);
         
-        // Consider the line extending the segment, parameterized as v + t (w - v).
+        // Consider the line extending the segment, parameterized as _p0normal0 + t (_p0normal1 - _p0normal0).
         // We find projection of point p onto the line.
-        // It falls where t = [(p-v) . (w-v)] / |w-v|^2
-        const float t = ((p.x - _p0normal0.x) * (_p0normal1.x - _p0normal0.x) + (p.y - _p0normal0.y) * (_p0normal1.y - _p0normal0.y)) / _p0NormalSquared;
-        assert(t >= 0. && t <= 1.); // we don't want to be beyond
+        // It falls where t = [(p-_p0normal0) . (_p0normal1-_p0normal0)] / |_p0normal1-_p0normal0|^2
+        const double t = ((p.x - _p0normal0.x) * (_p0normal1.x - _p0normal0.x) + (p.y - _p0normal0.y) * (_p0normal1.y - _p0normal0.y)) / _p0NormalSquared;
+        if (t < 0. || t >1.) { // we don't want to be beyond
+            return 0.;
+        }
         OfxPointI projection;
         projection.x = std::floor(_p0normal0.x + t * (_p0normal1.x - _p0normal0.x) + 0.5);
         projection.y = std::floor(_p0normal0.y + t * (_p0normal1.y - _p0normal0.y) + 0.5);
@@ -266,9 +306,9 @@ public:
         return distanceSquaredFromPoint(p, projection);
     }
     
-    static double dotProduct(const OfxPointI& v1,const OfxPointI& v2)
+    static double crossProduct(const OfxPointI& v1,const OfxPointI& v2)
     {
-        return v1.x * v2.x + v1.y * v2.y;
+        return v1.x * v2.y - v1.y * v2.x;
     }
     
     // -1 = left, 0 = true, 1 = right
@@ -283,24 +323,24 @@ public:
         normalP0.y = _p0normal1.y - _p0normal0.y;
         
         OfxPointI p0pVec;
-        p0pVec.x = p.x - _point0.x;
-        p0pVec.y = p.y - _point0.y;
+        p0pVec.x = p.x - _p0normal0.x;
+        p0pVec.y = p.y - _p0normal0.y;
         
-        double dot = dotProduct(normalP0, p0pVec);
-        if (dot < 0) {
+        double cp = crossProduct(normalP0, p0pVec);
+        if (cp < 0) {
             return -1;
         }
         
         OfxPointI normalP1;
-        normalP1.x = _p1normal1.x - _p1normal0.x;
-        normalP1.y = _p1normal1.y - _p1normal0.y;
+        normalP1.x = _p1normal0.x - _p1normal1.x;
+        normalP1.y = _p1normal0.y - _p1normal1.y;
         
         OfxPointI p1pVec;
         p1pVec.x = p.x - _point1.x;
         p1pVec.y = p.y - _point1.y;
         
-        dot = dotProduct(normalP1, p1pVec);
-        if (dot > 0) {
+        cp = crossProduct(normalP1, p1pVec);
+        if (cp > 0) {
             return 1;
         }
         
@@ -462,7 +502,7 @@ private:
                     double distanceFromP0 = std::abs(distanceSquaredToP0NormalPlane(p));
                     double totalDistance = distanceSquaredFromPoint(_point0, _point1);
                     assert(totalDistance > 0);
-                    double mult = distanceFromP0 / totalDistance;
+                    double mult = 1 - distanceFromP0 / totalDistance;
                     
                     if (dored) {
                         dstPix[0] = _color0.r * mult + _color1.r * (1 - mult);
@@ -526,6 +566,13 @@ public:
         assert(_point0 && _point1 && _color0 && _color1 && _type);
     }
     
+    OfxRectD getRegionOfDefinitionForInteract(OfxTime time) const
+    {
+        return dstClip_->getRegionOfDefinition(time);
+    }
+    
+    bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &/*args*/, OfxRectD &rod) OVERRIDE FINAL;
+    
 private:
     
     /* Override the render */
@@ -556,6 +603,15 @@ private:
 };
 
 
+/** @brief The get RoD action.  We flag an infinite rod */
+bool
+RampPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &/*args*/, OfxRectD &rod)
+{
+    // we can generate noise anywhere on the image plan, so set our RoD to be infinite
+    rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
+    rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
+    return true;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */
@@ -679,6 +735,8 @@ class RampInteract : public OFX::OverlayInteract
     OfxPointD _point0DragPos,_point1DragPos;
     OfxPointD _lastMousePos;
     InteractState _state;
+    RampPlugin* _effect;
+    
 public:
    
     
@@ -690,9 +748,12 @@ public:
     , _point1DragPos()
     , _lastMousePos()
     , _state(eInteractStateIdle)
+    , _effect(0)
     {
         _point0 = effect->fetchDouble2DParam(kPoint0Param);
         _point1 = effect->fetchDouble2DParam(kPoint1Param);
+        _effect = dynamic_cast<RampPlugin*>(effect);
+        assert(_effect);
     }
     
     /** @brief the function called to draw in the interact */
@@ -721,6 +782,8 @@ public:
   
 };
 
+//static void intersectToRoD(const OfxRectD& rod,const OfxPointD& p0)
+
 bool
 RampInteract::draw(const DrawArgs &args)
 {
@@ -740,7 +803,16 @@ RampInteract::draw(const DrawArgs &args)
     } else {
         _point1->getValueAtTime(args.time, p1.x, p1.y);
     }
+    
+    OfxRectD rod = _effect->getRegionOfDefinitionForInteract(args.time);
+    
+    double t = (rod.x2 - rod.x1) * 100;
+    
+    OfxPointD p0Normal0,p0Normal1,p1Normal0,p1Normal1;
+    generateSegmentAlongNormal(p0, p1, t, p0Normal0, p0Normal1);
+    generateSegmentAlongNormal(p1, p0, t, p1Normal0, p1Normal1);
 
+    ///Clamp points to the rod
     
     glPushAttrib(GL_ALL_ATTRIB_BITS);
     
@@ -779,11 +851,23 @@ RampInteract::draw(const DrawArgs &args)
         glEnd();
         
         
+        glLineStipple(2, 0xAAAA);
+        glEnable(GL_LINE_STIPPLE);
+        glBegin(GL_LINES);
+        glColor3f(0.8*l, 0.8*l, 0.8*l);
+        glVertex2d(p0Normal0.x, p0Normal0.y);
+        glVertex2d(p0Normal1.x, p0Normal1.y);
+        glVertex2d(p1Normal0.x, p1Normal0.y);
+        glVertex2d(p1Normal1.x, p1Normal1.y);
+        glEnd();
+        
         if (l == 0) {
             // translate (-1,1) pixels
             glTranslated(-pscale.x, pscale.y, 0);
         }
     }
+    
+    
     glPopAttrib();
     
     double xoffset = 5 * pscale.x;
