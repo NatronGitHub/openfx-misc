@@ -186,6 +186,49 @@ static void generateSegmentAlongNormal(const POINT& p0,
     normal1.y = normalV.y * -t + p0.y;
 }
 
+enum IntersectionTypeEnum
+{
+    eIntersectionTypeBounded = 0,
+    eIntersectionTypeUnBounded,
+    eIntersectionTypeNoIntersection
+};
+
+static IntersectionTypeEnum
+lineIntersect(const OfxPointD& p0,const OfxPointD& p1,
+                                const OfxPointD& p2,const OfxPointD& p3, OfxPointD *intersectionPoint)
+{
+    OfxPointD a,b,c;
+    a.x = p1.x - p0.x;
+    a.y = p1.y - p0.y;
+    b.x = p2.x - p3.x;
+    b.y = p2.y - p3.y;
+    c.x = p0.x - p2.x;
+    c.y = p0.y - p2.y;
+    
+    double denominator = a.y * b.x - a.x * b.y;
+    if (denominator == 0) {
+        return eIntersectionTypeNoIntersection;
+    }
+    
+    const double reciprocal = 1 / denominator;
+    const double na = (b.y * c.x - b.x * c.y) * reciprocal;
+    if (intersectionPoint) {
+        intersectionPoint->x = p0.x + a.x * na;
+        intersectionPoint->y = p0.y + a.y * na;
+    }
+    
+    if (na < 0 || na > 1) {
+        return eIntersectionTypeUnBounded;
+    }
+    
+    const double nb = (a.x * c.y - a.y * c.x) * reciprocal;
+    if (nb < 0 || nb > 1) {
+        return eIntersectionTypeUnBounded;
+    }
+    
+    return eIntersectionTypeBounded;
+}
+
 using namespace OFX;
 
 class RampProcessorBase : public OFX::ImageProcessor
@@ -833,7 +876,68 @@ RampInteract::draw(const DrawArgs &args)
     OfxPointD p0Normal0,p0Normal1,p1Normal0,p1Normal1;
     generateSegmentAlongNormal(p0, p1, t, p0Normal0, p0Normal1);
     generateSegmentAlongNormal(p1, p0, t, p1Normal0, p1Normal1);
-
+    
+    OfxPointD rodTL;
+    rodTL.x = rod.x1;
+    rodTL.y = rod.y2;
+    
+    OfxPointD rodTR;
+    rodTR.x = rod.x2;
+    rodTR.y = rod.y2;
+    
+    OfxPointD rodBR;
+    rodBR.x = rod.x2;
+    rodBR.y = rod.y1;
+    
+    OfxPointD rodBL;
+    rodBL.x = rod.x1;
+    rodBL.y = rod.y1;
+    
+    IntersectionTypeEnum types0[4];
+    IntersectionTypeEnum types1[4];
+    OfxPointD intersections0[4];
+    OfxPointD intersections1[4];
+    
+    types0[0] = lineIntersect(p0Normal0, p0Normal1, rodBL, rodTL,&intersections0[0]);
+    types0[1] = lineIntersect(p0Normal0, p0Normal1 , rodTL, rodTR,&intersections0[1]);
+    types0[2] = lineIntersect(p0Normal0, p0Normal1 , rodTR, rodBR,&intersections0[2]);
+    types0[3] = lineIntersect(p0Normal0, p0Normal1 , rodBR, rodBL,&intersections0[3]);
+    
+    types1[0] = lineIntersect(p1Normal0, p1Normal1 , rodBL, rodTL,&intersections1[0]);
+    types1[1] = lineIntersect(p1Normal0, p1Normal1 , rodTL, rodTR,&intersections1[1]);
+    types1[2] = lineIntersect(p1Normal0, p1Normal1 , rodTR, rodBR,&intersections1[2]);
+    types1[3] = lineIntersect(p1Normal0, p1Normal1 , rodBR, rodBL,&intersections1[3]);
+    
+    int toTreat[2] = {0, 0};
+    for (int i = 0; i < 4; ++i) {
+        if (types0[i] == eIntersectionTypeBounded) {
+            if (toTreat[0] == 0) {
+                p0Normal0 = intersections0[i];
+                ++toTreat[0];
+            } else if (toTreat[0] == 1) {
+                p0Normal1 = intersections0[i];
+                ++toTreat[0];
+            } else {
+                break;
+            }
+        }
+    }
+    
+    for (int i = 0; i < 4; ++i) {
+        if (types1[i] == eIntersectionTypeBounded) {
+            if (toTreat[1] == 0) {
+                p1Normal0 = intersections1[i];
+                ++toTreat[1];
+            } else if (toTreat[1] == 1) {
+                p1Normal1 = intersections1[i];
+                ++toTreat[1];
+            } else {
+                break;
+            }
+        }
+    }
+    
+    
     ///Clamp points to the rod
     
     glPushAttrib(GL_ALL_ATTRIB_BITS);
@@ -877,10 +981,14 @@ RampInteract::draw(const DrawArgs &args)
         glEnable(GL_LINE_STIPPLE);
         glBegin(GL_LINES);
         glColor3f(0.8*l, 0.8*l, 0.8*l);
-        glVertex2d(p0Normal0.x, p0Normal0.y);
-        glVertex2d(p0Normal1.x, p0Normal1.y);
-        glVertex2d(p1Normal0.x, p1Normal0.y);
-        glVertex2d(p1Normal1.x, p1Normal1.y);
+        if (toTreat[0] == 2) {
+            glVertex2d(p0Normal0.x, p0Normal0.y);
+            glVertex2d(p0Normal1.x, p0Normal1.y);
+        }
+        if (toTreat[1] == 2) {
+            glVertex2d(p1Normal0.x, p1Normal0.y);
+            glVertex2d(p1Normal1.x, p1Normal1.y);
+        }
         glEnd();
 
         double xoffset = 5 * pscale.x;
