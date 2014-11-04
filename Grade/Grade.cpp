@@ -399,6 +399,8 @@ private:
     template<bool dored, bool dogreen, bool doblue, bool doalpha>
     void process(OfxRectI procWindow)
     {
+        assert((!dored && !dogreen && !doblue) || (nComponents == 3 || nComponents == 4));
+        assert(!doalpha || (nComponents == 1 || nComponents == 4));
         assert(nComponents == 3 || nComponents == 4);
         assert(_dstImg);
         float unpPix[4];
@@ -648,6 +650,16 @@ GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
     _mix->getValueAtTime(args.time, mix);
 
     if (mix == 0.) {
+        identityClip = srcClip_;
+        return true;
+    }
+
+    bool red, green, blue, alpha;
+    _processR->getValueAtTime(args.time, red);
+    _processG->getValueAtTime(args.time, green);
+    _processB->getValueAtTime(args.time, blue);
+    _processA->getValueAtTime(args.time, alpha);
+    if (!red && !green && !blue && !alpha) {
         identityClip = srcClip_;
         return true;
     }
