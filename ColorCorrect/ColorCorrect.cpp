@@ -122,16 +122,16 @@ static const std::string kParamOffset = std::string("Offset");
 
 #define kParamProcessR      "r"
 #define kParamProcessRLabel "R"
-#define kParamProcessRHint  "Generates red component"
+#define kParamProcessRHint  "Process red component"
 #define kParamProcessG      "g"
 #define kParamProcessGLabel "G"
-#define kParamProcessGHint  "Generates green component"
+#define kParamProcessGHint  "Process green component"
 #define kParamProcessB      "b"
 #define kParamProcessBLabel "B"
-#define kParamProcessBHint  "Generates blue component"
+#define kParamProcessBHint  "Process blue component"
 #define kParamProcessA      "a"
 #define kParamProcessALabel "A"
-#define kParamProcessAHint  "Generates alpha component"
+#define kParamProcessAHint  "Process alpha component"
 
 #define LUT_MAX_PRECISION 100
 
