@@ -451,24 +451,25 @@ private:
                 tmpPix[2] *= maxValue;
                 tmpPix[3] *= maxValue;
                 if (nComponents >= 3) {
-                    if (dored) {
-                        tmpPix[0] = srcPix[0] * (1.-a) + tmpPix[0]*a;
-                    } else {
-                        tmpPix[0] = srcPix[0];
-                    }
-                    if (dogreen) {
-                        tmpPix[1] = srcPix[1] * (1.-a) + tmpPix[1]*a;
-                    } else {
-                        tmpPix[1] = srcPix[1];
-                    }
-                    if (doblue) {
-                        tmpPix[2] = srcPix[2] * (1.-a) + tmpPix[2]*a;
-                    } else {
-                        tmpPix[2] = srcPix[2];
+                        if (dored) {
+                            tmpPix[0] = (srcPix ? srcPix[0] : 0.) * (1.-a) + tmpPix[0]*a;
+                        } else {
+                            tmpPix[0] = (srcPix ? srcPix[0] : 0.);
+                        }
+                        if (dogreen) {
+                            tmpPix[1] = (srcPix ? srcPix[1] : 0.) * (1.-a) + tmpPix[1]*a;
+                        } else {
+                            tmpPix[1] = (srcPix ? srcPix[1] : 0.);
+                        }
+                        if (doblue) {
+                            tmpPix[2] = (srcPix ? srcPix[2] : 0.) * (1.-a) + tmpPix[2]*a;
+                        } else {
+                            tmpPix[2] = (srcPix ? srcPix[2] : 0.);
+                        }
                     }
                 }
                 if (!doalpha && (nComponents == 1 || nComponents == 4)) {
-                    tmpPix[nComponents-1] = srcPix[nComponents-1];
+                    tmpPix[nComponents-1] = (srcPix ? srcPix[nComponents-1] : 0.);
                 }
                 ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
             }
