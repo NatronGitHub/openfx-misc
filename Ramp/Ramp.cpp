@@ -918,7 +918,12 @@ RampInteract::draw(const DrawArgs &args)
         glVertex2d(p1Normal0.x, p1Normal0.y);
         glVertex2d(p1Normal1.x, p1Normal1.y);
         glEnd();
-        
+
+        double xoffset = 5 * pscale.x;
+        double yoffset = 5 * pscale.y;
+        TextRenderer::bitmapString(p0.x + xoffset, p0.y + yoffset, kPoint0ParamLabel);
+        TextRenderer::bitmapString(p1.x + xoffset, p1.y + yoffset, kPoint1ParamLabel);
+
         if (l == 0) {
             // translate (-1,1) pixels
             glTranslated(-pscale.x, pscale.y, 0);
@@ -928,10 +933,6 @@ RampInteract::draw(const DrawArgs &args)
     
     glPopAttrib();
     
-    double xoffset = 5 * pscale.x;
-    double yoffset = 5 * pscale.y;
-    TextRenderer::bitmapString(p0.x + xoffset, p0.y + yoffset, kPoint0ParamLabel);
-    TextRenderer::bitmapString(p1.x + xoffset, p1.y + yoffset, kPoint1ParamLabel);
 
     return true;
 }
