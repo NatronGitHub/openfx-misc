@@ -416,25 +416,16 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     OfxRectD rectangle;
     getRectanglecanonical(args.time, rectangle);
     OfxRectI rectanglePixel;
-    rectanglePixel.x1 = rectangle.x1;
-    rectanglePixel.y1 = rectangle.y1;
-    rectanglePixel.x2 = rectangle.x2;
-    rectanglePixel.y2 = rectangle.y2;
-    
-    unsigned int mipMapLevel = MergeImages2D::mipmapLevelFromScale(args.renderScale.x);
-    rectanglePixel = MergeImages2D::downscalePowerOfTwoSmallestEnclosing(rectanglePixel, mipMapLevel);
-    
+    double par = dst->getPixelAspectRatio();
+    MergeImages2D::toPixelEnclosing(rectangle, args.renderScale, par, &rectanglePixel);
+
     double softness;
     _softness->getValueAtTime(args.time, softness);
     softness *= args.renderScale.x;
     
     OfxRectD dstRoD = dstClip_->getRegionOfDefinition(args.time);
     OfxRectI dstRoDPix;
-    dstRoDPix.x1 = dstRoD.x1;
-    dstRoDPix.y1 = dstRoD.y1;
-    dstRoDPix.x2 = dstRoD.x2;
-    dstRoDPix.y2 = dstRoD.y2;
-    dstRoDPix = MergeImages2D::downscalePowerOfTwoSmallestEnclosing(dstRoDPix, mipMapLevel);
+    MergeImages2D::toPixelEnclosing(dstRoD, args.renderScale, par, &dstRoDPix);
    
     bool red,green,blue,alpha;
     _red->getValueAtTime(args.time,red);

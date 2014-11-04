@@ -369,13 +369,8 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
     OfxRectD cropRectCanonical;
     getCropRectangle_canonical(args.time, false, false, cropRectCanonical);
     OfxRectI cropRectPixel;
-    cropRectPixel.x1 = std::floor(cropRectCanonical.x1);
-    cropRectPixel.y1 = std::floor(cropRectCanonical.y1);
-    cropRectPixel.x2 = std::ceil(cropRectCanonical.x2);
-    cropRectPixel.y2 = std::ceil(cropRectCanonical.y2);
-    
-    unsigned int mipMapLevel = MergeImages2D::mipmapLevelFromScale(args.renderScale.x);
-    cropRectPixel = MergeImages2D::downscalePowerOfTwoSmallestEnclosing(cropRectPixel, mipMapLevel);
+    double par = dst->getPixelAspectRatio();
+    MergeImages2D::toPixelEnclosing(cropRectCanonical, args.renderScale, par, &cropRectPixel);
     
     double softness;
     _softness->getValueAtTime(args.time, softness);
@@ -383,13 +378,9 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
     
     OfxRectD dstRoD = dstClip_->getRegionOfDefinition(args.time);
     OfxRectI dstRoDPix;
-    dstRoDPix.x1 = std::floor(dstRoD.x1);
-    dstRoDPix.y1 = std::floor(dstRoD.y1);
-    dstRoDPix.x2 = std::ceil(dstRoD.x2);
-    dstRoDPix.y2 = std::ceil(dstRoD.y2);
-    dstRoDPix = MergeImages2D::downscalePowerOfTwoSmallestEnclosing(dstRoDPix, mipMapLevel);
-   
-    processor.setValues(cropRectPixel,dstRoDPix,blackOutside,reformat,softness);
+    MergeImages2D::toPixelEnclosing(dstRoD, args.renderScale, par, &dstRoDPix);
+
+    processor.setValues(cropRectPixel, dstRoDPix, blackOutside, reformat, softness);
     
     // Call the base class process member, this will call the derived templated process code
     processor.process();
