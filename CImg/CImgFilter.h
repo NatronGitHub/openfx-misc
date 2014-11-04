@@ -376,42 +376,6 @@ private:
         return true;
     }
 
-    static void
-    toPixelEnclosing(const OfxRectD& regionOfInterest,
-                     const OfxPointD& renderScale,
-                     double par,
-                     OfxRectI *rect)
-    {
-        rect->x1 = std::floor(regionOfInterest.x1 * renderScale.x / par);
-        rect->y1 = std::floor(regionOfInterest.y1 * renderScale.y);
-        rect->x2 = std::ceil(regionOfInterest.x2 * renderScale.x / par);
-        rect->y2 = std::ceil(regionOfInterest.y2 * renderScale.y);
-    }
-
-    static void
-    toCanonical(const OfxRectI& rect,
-                const OfxPointD& renderScale,
-                double par,
-                OfxRectD *regionOfInterest)
-    {
-        regionOfInterest->x1 = rect.x1 * par / renderScale.x;
-        regionOfInterest->y1 = rect.y1 / renderScale.y;
-        regionOfInterest->x2 = rect.x2 * par / renderScale.x;
-        regionOfInterest->y2 = rect.y2 / renderScale.y;
-    }
-
-    static void
-    enlargeRectI(const OfxRectI& rect,
-                 int delta_pix,
-                 const OfxRectI& bounds,
-                 OfxRectI* rectOut)
-    {
-        rectOut->x1 = std::max(bounds.x1, rect.x1 - delta_pix);
-        rectOut->x2 = std::min(bounds.x2, rect.x2 + delta_pix);
-        rectOut->y1 = std::max(bounds.y1, rect.y1 - delta_pix);
-        rectOut->y2 = std::min(bounds.y2, rect.y2 + delta_pix);
-    }
-
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
@@ -1010,9 +974,9 @@ CImgFilterPluginHelper<Params>::getRegionsOfInterest(const OFX::RegionsOfInteres
     double pixelaspectratio = srcClip_->getPixelAspectRatio();
 
     OfxRectI rectPixel;
-    toPixelEnclosing(regionOfInterest, args.renderScale, pixelaspectratio, &rectPixel);
+    OFX::MergeImages2D::toPixelEnclosing(regionOfInterest, args.renderScale, pixelaspectratio, &rectPixel);
     getRoI(rectPixel, args.renderScale, params, &rectPixel);
-    toCanonical(rectPixel, args.renderScale, pixelaspectratio, &srcRoI);
+    OFX::MergeImages2D::toCanonical(rectPixel, args.renderScale, pixelaspectratio, &srcRoI);
 
     if (doMasking && mix != 1.) {
         // for masking or mixing, we also need the source image.
