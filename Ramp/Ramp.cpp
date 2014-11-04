@@ -1,5 +1,5 @@
 /*
- OFX Crop plugin.
+ OFX Ramp plugin.
  
  Copyright (C) 2014 INRIA
  
@@ -76,6 +76,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMerging.h"
+#include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
 #include "ofxsOGLTextRenderer.h"
 
@@ -141,106 +142,49 @@ namespace {
     struct RGBAValues {
         double r,g,b,a;
     };
-    
-    // round to the closest int, 1/10 int, etc
-    // this make parameter editing easier
-    // pscale is args.pixelScale.x / args.renderScale.x;
-    // pscale10 is the power of 10 below pscale
-    static double fround(double val, double pscale)
-    {
-        double pscale10 = std::pow(10.,std::floor(std::log10(pscale)));
-        return pscale10 * std::floor(val/pscale10 + 0.5);
-    }
-    
-    static void
-    toPixelEnclosing(const OfxRectD& regionOfInterest,
-                     const OfxPointD& renderScale,
-                     double par,
-                     OfxRectI *rect)
-    {
-        rect->x1 = std::floor(regionOfInterest.x1 * renderScale.x / par);
-        rect->y1 = std::floor(regionOfInterest.y1 * renderScale.y);
-        rect->x2 = std::ceil(regionOfInterest.x2 * renderScale.x / par);
-        rect->y2 = std::ceil(regionOfInterest.y2 * renderScale.y);
-    }
 }
+
+// round to the closest int, 1/10 int, etc
+// this make parameter editing easier
+// pscale is args.pixelScale.x / args.renderScale.x;
+// pscale10 is the power of 10 below pscale
+static double fround(double val, double pscale)
+{
+    double pscale10 = std::pow(10.,std::floor(std::log10(pscale)));
+    return pscale10 * std::floor(val/pscale10 + 0.5);
+}
+
 
 /**
  * @brief Generates a point
  **/
 template <typename POINT>
-static void generateSegmentAlongNormal(const POINT& p0,const POINT& p1,double t,POINT &normal0,POINT &normal1)
+static void generateSegmentAlongNormal(const POINT& p0,
+                                       const POINT& p1,
+                                       double t,
+                                       POINT &normal0,
+                                       POINT &normal1)
 {
     //Normal line intersecting P0
     OfxPointD normalV;
     normalV.x = p0.y - p1.y;
     normalV.y = p1.x - p0.x;
-    
+
     double norm = sqrt((p1.x - p0.x) * (p1.x - p0.x) +
                        (p1.y - p0.y) * (p1.y - p0.y));
-    
+
     ///Don't consider points that are equals
     if (norm == 0) {
         norm = 1.;
     }
     normalV.x /= norm;
     normalV.y /= norm;
-    
+
     normal0.x = normalV.x * t + p0.x;
     normal0.y = normalV.y * t + p0.y;
     normal1.x = normalV.x * -t + p0.x;
     normal1.y = normalV.y * -t + p0.y;
 }
-
-static double clampDouble(double v)
-{
-    return std::max(0.,std::min(1.,v));
-}
-
-enum IntersectType
-{
-    eIntersectionTypeNone = 0,
-    eIntersectionTypeUnbounded,
-    eIntersectionTypeBounded
-    
-};
-
-static IntersectType lineIntersect(const OfxPointD &p0, const OfxPointD& p1,const OfxPointD &p2, const OfxPointD& p3, OfxPointD *intersectionPoint)
-{
-    // ipmlementation is based on Graphics Gems III's "Faster Line Segment Intersection"
-    OfxPointD a,b,c;
-    a.x = p1.x - p0.x;
-    a.y = p1.y - p0.y;
-    
-    b.x = p2.x - p3.x;
-    b.y = p2.y - p3.y;
-    
-    c.x = p0.x - p2.x;
-    c.y = p0.y - p2.y;
-    
-    const double denominator = a.y * b.x - a.x * b.y;
-    if (denominator == 0) {
-        return eIntersectionTypeNone;
-    }
-    
-    const double reciprocal = 1 / denominator;
-    const double na = (b.y * c.x - b.x * c.y) * reciprocal;
-    if (intersectionPoint) {
-        intersectionPoint->x = p0.x + a.x * na;
-        intersectionPoint->y = p0.x + a.y * na;
-    }
-    
-    if (na < 0 || na > 1)
-        return eIntersectionTypeUnbounded;
-    
-    const double nb = (a.x * c.y - a.y * c.x) * reciprocal;
-    if (nb < 0 || nb > 1) {
-        return eIntersectionTypeUnbounded;
-    }
-    
-    return eIntersectionTypeBounded;
-}
-
 
 using namespace OFX;
 
@@ -250,21 +194,24 @@ class RampProcessorBase : public OFX::ImageProcessor
     
 protected:
     const OFX::Image *_srcImg;
-   
+    const OFX::Image *_maskImg;
+    bool   _doMasking;
+    double _mix;
+    bool _maskInvert;
+    bool _red, _green, _blue, _alpha;
+
     RampTypeEnum _type;
-    RGBAValues _color0,_color1;
-    bool _red,_green,_blue,_alpha;
-    OfxPointI _point0,_point1;
-    OfxRectI _rodPixel;
-    
-    // These are infinite points along the line in the direction of normals respectively in P0 and P1
-    OfxPointI _p0normal0,_p0normal1,_p1normal0,_p1normal1;
-    double _p0NormalSquared,_p1NormalSquared;
-    
+    RGBAValues _color0, _color1;
+    OfxPointD _point0, _point1;
+
 public:
     RampProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
+    , _maskImg(0)
+    , _doMasking(false)
+    , _mix(1.)
+    , _maskInvert(false)
     {
     }
 
@@ -274,99 +221,39 @@ public:
         _srcImg = v;
     }
 
-    
-    void setValues(RampTypeEnum type,const RGBAValues& color0,const RGBAValues& color1,
-                   bool red,bool green,bool blue,bool alpha,
-                   const OfxPointI& point0,const OfxPointI& point1, const OfxRectI& rodPixel)
+    void setMaskImg(const OFX::Image *v, bool maskInvert)
+    {
+        _maskImg = v;
+        _maskInvert = maskInvert;
+    }
+
+    void doMasking(bool v) {
+        _doMasking = v;
+    }
+
+    void setValues(RampTypeEnum type,
+                   const RGBAValues& color0,
+                   const RGBAValues& color1,
+                   const OfxPointD& point0,
+                   const OfxPointD& point1,
+                   double mix,
+                   bool red,
+                   bool green,
+                   bool blue,
+                   bool alpha)
     {
         _type = type;
         _color0 = color0;
         _color1 = color1;
+        _point0 = point0;
+        _point1 = point1;
+        _mix = mix;
         _red = red;
         _green = green;
         _blue = blue;
         _alpha = alpha;
-        _point0 = point0;
-        _point1 = point1;
-        _rodPixel = rodPixel;
-        
-        //Generate 2 lines in the direction of the normal vector of the line defined by P0-P1
-
-        
-        double t = (_rodPixel.x2 - _rodPixel.x1) * 10;
-        generateSegmentAlongNormal<OfxPointI>(_point0, _point1, t,_p0normal0,_p0normal1);
-        generateSegmentAlongNormal<OfxPointI>(_point1, _point0, t,_p1normal0,_p1normal1);
-
-        _p0NormalSquared = (_p0normal1.x - _p0normal0.x) * (_p0normal1.x - _p0normal0.x) + (_p0normal1.y - _p0normal0.y) * (_p0normal1.y - _p0normal0.y);
-        _p1NormalSquared = (_p1normal1.x - _p1normal0.x) * (_p1normal1.x - _p1normal0.x) + (_p1normal1.y - _p1normal0.y) * (_p1normal1.y - _p1normal0.y);
-        
     }
-    
-    static double distanceFromPoint(const OfxPointI& from,const OfxPointI& to)
-    {
-        return sqrt((to.x - from.x) * (to.x - from.x) + (to.y - from.y) * (to.y - from.y));
-    }
-    
-    double distanceToP0NormalPlane(const OfxPointI& p) {
-        // Return minimum distance between line segment vw and point p
-        assert(_p0NormalSquared != 0.);
-        
-        // Consider the line extending the segment, parameterized as _p0normal0 + t (_p0normal1 - _p0normal0).
-        // We find projection of point p onto the line.
-        // It falls where t = [(p-_p0normal0) . (_p0normal1-_p0normal0)] / |_p0normal1-_p0normal0|^2
-        const double t = ((p.x - _p0normal0.x) * (_p0normal1.x - _p0normal0.x) + (p.y - _p0normal0.y) * (_p0normal1.y - _p0normal0.y)) / _p0NormalSquared;
-        if (t < 0. || t >1.) { // we don't want to be beyond
-            return 0.;
-        }
-        OfxPointI projection;
-        projection.x = std::floor(_p0normal0.x + t * (_p0normal1.x - _p0normal0.x) + 0.5);
-        projection.y = std::floor(_p0normal0.y + t * (_p0normal1.y - _p0normal0.y) + 0.5);
-          // Projection falls on the segment
-        return distanceFromPoint(p, projection);
-    }
-    
-    static double crossProduct(const OfxPointI& v1,const OfxPointI& v2)
-    {
-        return v1.x * v2.y - v1.y * v2.x;
-    }
-    
-    // -1 = left, 0 = true, 1 = right
-    int isPointInside2Planes(const OfxPointI& p) const
-    {
-        ///Compute the cross-product between the normal vector in P0 and
-        ///the vector P0-p. If it is negative, the point is outside of the ramp
-        ///Do the same for P1.
-        
-        OfxPointI normalP0;
-        normalP0.x = _p0normal1.x - _p0normal0.x;
-        normalP0.y = _p0normal1.y - _p0normal0.y;
-        
-        OfxPointI p0pVec;
-        p0pVec.x = p.x - _p0normal0.x;
-        p0pVec.y = p.y - _p0normal0.y;
-        
-        double cp = crossProduct(normalP0, p0pVec);
-        if (cp < 0) {
-            return -1;
-        }
-        
-        OfxPointI normalP1;
-        normalP1.x = _p1normal0.x - _p1normal1.x;
-        normalP1.y = _p1normal0.y - _p1normal1.y;
-        
-        OfxPointI p1pVec;
-        p1pVec.x = p.x - _point1.x;
-        p1pVec.y = p.y - _point1.y;
-        
-        cp = crossProduct(normalP1, p1pVec);
-        if (cp > 0) {
-            return 1;
-        }
-        
-        return 0;
-    }
-
-};
+ };
 
 
 template <class PIX, int nComponents, int maxValue>
@@ -473,26 +360,36 @@ private:
 private:
     
     template<bool dored, bool dogreen, bool doblue, bool doalpha>
-    void process(const OfxRectI& procWindow) {
+    void process(const OfxRectI& procWindow)
+    {
+        assert((!dored && !dogreen && !doblue) || (nComponents == 3 || nComponents == 4));
+        assert(!doalpha || (nComponents == 1 || nComponents == 4));
         switch (_type) {
             case eRampTypeLinear:
-                processForType<dored,dogreen,doblue,doalpha,0>(procWindow);
+                processForType<dored,dogreen,doblue,doalpha,eRampTypeLinear>(procWindow);
                 break;
             case eRampTypeEaseIn:
-                processForType<dored,dogreen,doblue,doalpha,1>(procWindow);
+                processForType<dored,dogreen,doblue,doalpha,eRampTypeEaseIn>(procWindow);
                 break;
             case eRampTypeEaseOut:
-                processForType<dored,dogreen,doblue,doalpha,2>(procWindow);
+                processForType<dored,dogreen,doblue,doalpha,eRampTypeEaseOut>(procWindow);
                 break;
             case eRampTypeSmooth:
-                processForType<dored,dogreen,doblue,doalpha,3>(procWindow);
+                processForType<dored,dogreen,doblue,doalpha,eRampTypeSmooth>(procWindow);
                 break;
         }
     }
     
     
-    template<bool dored, bool dogreen, bool doblue, bool doalpha,int type>
-    void processForType(const OfxRectI& procWindow) {
+    template<bool dored, bool dogreen, bool doblue, bool doalpha, RampTypeEnum type>
+    void processForType(const OfxRectI& procWindow)
+    {
+        float tmpPix[4];
+
+        const double norm2 = (_point1.x - _point0.x)*(_point1.x - _point0.x) + (_point1.y - _point0.y)*(_point1.y - _point0.y);
+        const double nx = norm2 == 0. ? 0. : (_point1.x - _point0.x)/ norm2;
+        const double ny = norm2 == 0. ? 0. : (_point1.y - _point0.y)/ norm2;
+
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if (_effect.abort()) {
                 break;
@@ -501,45 +398,27 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
-                
-                OfxPointI p;
-                p.x = x;
-                p.y = y;
-                
-                int side = isPointInside2Planes(p);
-                if (side == -1) {
-                    if (dored) {
-                        dstPix[0] = _color0.r;
-                    }
-                    if (dogreen) {
-                        dstPix[1] = _color0.g;
-                    }
-                    if (doblue) {
-                        dstPix[2] = _color0.b;
-                    }
-                    if (doalpha) {
-                        dstPix[3] = _color0.a;
-                    }
-                    
-                } else if (side == 1) {
-                    if (dored) {
-                        dstPix[0] = _color1.r;
-                    }
-                    if (dogreen) {
-                        dstPix[1] = _color1.g;
-                    }
-                    if (doblue) {
-                        dstPix[2] = _color1.b;
-                    }
-                    if (doalpha) {
-                        dstPix[3] = _color1.a;
-                    }
-                    
+                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
+                OfxPointI p_pixel;
+                OfxPointD p;
+                p_pixel.x = x;
+                p_pixel.y = y;
+                OFX::MergeImages2D::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
+                double t = (p.x - _point0.x) * nx + (p.y - _point0.y) * ny;
+
+                if (t <= 0) {
+                    tmpPix[0] = _color0.r;
+                    tmpPix[1] = _color0.g;
+                    tmpPix[2] = _color0.b;
+                    tmpPix[3] = _color0.a;
+
+                } else if (t >= 1.) {
+                    tmpPix[0] = _color1.r;
+                    tmpPix[1] = _color1.g;
+                    tmpPix[2] = _color1.b;
+                    tmpPix[3] = _color1.a;
+
                 } else {
-                    double distanceFromP0 = std::abs(distanceToP0NormalPlane(p));
-                    double totalDistance = distanceFromPoint(_point0, _point1);
-                    assert(totalDistance > 0);
-                    double t = clampDouble(distanceFromP0 / totalDistance);
                     switch (type) {
                         case eRampTypeEaseIn:
                             t *= t;
@@ -559,21 +438,39 @@ private:
                             break;
                     }
                     
-                    if (dored) {
-                        dstPix[0] = PIX(_color0.r * (1 - t) + _color1.r * t * maxValue);
-                    }
-                    if (dogreen && nComponents > 1) {
-                        dstPix[1] = PIX(_color0.g * (1 - t) + _color1.g * t * maxValue);
-                    }
-                    if (doblue && nComponents > 2) {
-                        dstPix[2] = PIX(_color0.b * (1 - t) + _color1.b * t * maxValue);
-                    }
-                    if (doalpha && nComponents > 3) {
-                        dstPix[3] = PIX(_color0.a * (1 - t) + _color1.a * t * maxValue);
-                    }
-                    
-                    
+                    tmpPix[0] = _color0.r * (1 - t) + _color1.r * t;
+                    tmpPix[1] = _color0.g * (1 - t) + _color1.g * t;
+                    tmpPix[2] = _color0.b * (1 - t) + _color1.b * t;
+                    tmpPix[3] = _color0.a * (1 - t) + _color1.a * t;
                 }
+                double a = tmpPix[3];
+
+                // ofxsMaskMixPix takes non-normalized values
+                tmpPix[0] *= maxValue;
+                tmpPix[1] *= maxValue;
+                tmpPix[2] *= maxValue;
+                tmpPix[3] *= maxValue;
+                if (nComponents >= 3) {
+                    if (dored) {
+                        tmpPix[0] = srcPix[0] * (1.-a) + tmpPix[0]*a;
+                    } else {
+                        tmpPix[0] = srcPix[0];
+                    }
+                    if (dogreen) {
+                        tmpPix[1] = srcPix[1] * (1.-a) + tmpPix[1]*a;
+                    } else {
+                        tmpPix[1] = srcPix[1];
+                    }
+                    if (doblue) {
+                        tmpPix[2] = srcPix[2] * (1.-a) + tmpPix[2]*a;
+                    } else {
+                        tmpPix[2] = srcPix[2];
+                    }
+                }
+                if (!doalpha && (nComponents == 1 || nComponents == 4)) {
+                    tmpPix[nComponents-1] = srcPix[nComponents-1];
+                }
+                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
             }
         }
     }
@@ -607,28 +504,37 @@ public:
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
-        
+        maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
+
         _processR = fetchBooleanParam(kParamProcessR);
         _processG = fetchBooleanParam(kParamProcessG);
         _processB = fetchBooleanParam(kParamProcessB);
         _processA = fetchBooleanParam(kParamProcessA);
+
         assert(_processR && _processG && _processB && _processA);
         _point0 = fetchDouble2DParam(kPoint0Param);
         _point1 = fetchDouble2DParam(kPoint1Param);
         _color0 = fetchRGBAParam(kColor0Param);
         _color1 = fetchRGBAParam(kColor1Param);
         _type = fetchChoiceParam(kTypeParam);
-        
         assert(_point0 && _point1 && _color0 && _color1 && _type);
+
+        _mix = fetchDoubleParam(kParamMix);
+        _maskInvert = fetchBooleanParam(kParamMaskInvert);
+        assert(_mix && _maskInvert);
     }
-    
+
     OfxRectD getRegionOfDefinitionForInteract(OfxTime time) const
     {
         return dstClip_->getRegionOfDefinition(time);
     }
     
-    bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &/*args*/, OfxRectD &rod) OVERRIDE FINAL;
-    
+    // override the rod call
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &/*args*/, OfxRectD &rod) OVERRIDE FINAL;
+
+    /* override is identity */
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE;
 private:
     
     /* Override the render */
@@ -645,6 +551,7 @@ private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *dstClip_;
     Clip *srcClip_;
+    Clip *maskClip_;
 
     BooleanParam* _processR;
     BooleanParam* _processG;
@@ -655,7 +562,8 @@ private:
     Double2DParam* _point1;
     RGBAParam* _color1;
     ChoiceParam* _type;
-   
+    OFX::DoubleParam* _mix;
+    OFX::BooleanParam* _maskInvert;
 };
 
 
@@ -689,19 +597,43 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor, const OFX::RenderArgum
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    
+    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    assert(srcClip_);
+    std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
+    if (src.get()) {
+        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
+    }
+    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
+    if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+        bool maskInvert;
+        _maskInvert->getValueAtTime(args.time, maskInvert);
+        processor.doMasking(true);
+        processor.setMaskImg(mask.get(), maskInvert);
+    }
+
+    if (src.get() && dst.get()) {
+        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+        OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+
+        // see if they have the same depths and bytes and all
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+    }
+
     // set the images
     processor.setDstImg(dst.get());
-    
+    processor.setSrcImg(src.get());
+
     // set the render window
     processor.setRenderWindow(args.renderWindow);
-    
-    bool doR,doG,doB,doA;
-    _processR->getValue(doR);
-    _processG->getValue(doG);
-    _processB->getValue(doB);
-    _processA->getValue(doA);
-    
+
     int type_i;
     _type->getValue(type_i);
     
@@ -709,22 +641,24 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor, const OFX::RenderArgum
     _point0->getValueAtTime(args.time, point0.x, point0.y);
     _point1->getValueAtTime(args.time, point1.x, point1.y);
     
-    OfxPointI point0_pixel,point1_pixel;
-    point0_pixel.x = std::floor(point0.x * args.renderScale.x + 0.5);
-    point0_pixel.y = std::floor(point0.y * args.renderScale.y + 0.5);
-    point1_pixel.x = std::floor(point1.x * args.renderScale.x + 0.5);
-    point1_pixel.y = std::floor(point1.y * args.renderScale.y + 0.5);
-
-    
     RGBAValues color0,color1;
     _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
     _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
-    
-    OfxRectD rod = dstClip_->getRegionOfDefinition(args.time);
-    OfxRectI rodPixel;
-    toPixelEnclosing(rod, args.renderScale, dst->getPixelAspectRatio(), &rodPixel);
 
-    processor.setValues((RampTypeEnum)type_i, color0, color1, doR, doG, doB, doA, point0_pixel, point1_pixel,rodPixel);
+    bool doR,doG,doB,doA;
+    _processR->getValue(doR);
+    _processG->getValue(doG);
+    _processB->getValue(doB);
+    _processA->getValue(doA);
+
+    double mix;
+    _mix->getValueAtTime(args.time, mix);
+
+    processor.setValues((RampTypeEnum)type_i,
+                        color0, color1,
+                        point0, point1,
+                        mix,
+                        doR, doG, doB, doA);
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 }
@@ -777,10 +711,42 @@ RampPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+bool
+RampPlugin::isIdentity(const OFX::IsIdentityArguments &args,
+                       OFX::Clip * &identityClip,
+                       double &identityTime)
+{
+    double mix;
+    _mix->getValueAtTime(args.time, mix);
+
+    if (mix == 0. /*|| (!red && !green && !blue && !alpha)*/) {
+        identityClip = srcClip_;
+        return true;
+    }
+
+    bool red, green, blue, alpha;
+    _processR->getValueAtTime(args.time, red);
+    _processG->getValueAtTime(args.time, green);
+    _processB->getValueAtTime(args.time, blue);
+    _processA->getValueAtTime(args.time, alpha);
+    if (!red && !green && !blue && !alpha) {
+        identityClip = srcClip_;
+        return true;
+    }
+
+    RGBAValues color0,color1;
+    _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
+    _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
+    if (color0.a == 0. && color1.a == 0.) {
+        identityClip = srcClip_;
+        return true;
+    }
+
+    return false;
+}
 
 class RampInteract : public OFX::OverlayInteract
 {
-    
     enum InteractState
     {
         eInteractStateIdle = 0,
@@ -796,8 +762,6 @@ class RampInteract : public OFX::OverlayInteract
     RampPlugin* _effect;
     
 public:
-   
-    
     RampInteract(OfxInteractHandle handle, OFX::ImageEffect* effect)
     : OFX::OverlayInteract(handle)
     , _point0(0)
@@ -929,10 +893,8 @@ RampInteract::draw(const DrawArgs &args)
             glTranslated(-pscale.x, pscale.y, 0);
         }
     }
-    
-    
+
     glPopAttrib();
-    
 
     return true;
 }
@@ -946,8 +908,6 @@ static bool isNearby(const OfxPointD& p, double x, double y, double tolerance, c
 bool
 RampInteract::penMotion(const PenArgs &args)
 {
-    
-    
     OfxPointD pscale;
     pscale.x = args.pixelScale.x / args.renderScale.x;
     pscale.y = args.pixelScale.y / args.renderScale.y;
@@ -963,26 +923,24 @@ RampInteract::penMotion(const PenArgs &args)
     delta.y = args.penPosition.y - _lastMousePos.y;
     
     if (_state == eInteractStateDraggingPoint0) {
-        
         _point0DragPos.x += delta.x;
         _point0DragPos.y += delta.y;
         didSomething = true;
+
     } else if (_state == eInteractStateDraggingPoint1) {
-        
         _point1DragPos.x += delta.x;
         _point1DragPos.y += delta.y;
         didSomething = true;
     }
     
     _lastMousePos = args.penPosition;
-    return didSomething;
 
+    return didSomething;
 }
 
 bool
 RampInteract::penDown(const PenArgs &args)
 {
-    
     OfxPointD pscale;
     pscale.x = args.pixelScale.x / args.renderScale.x;
     pscale.y = args.pixelScale.y / args.renderScale.y;
@@ -1006,6 +964,7 @@ RampInteract::penDown(const PenArgs &args)
     _point0DragPos = p0;
     _point1DragPos = p1;
     _lastMousePos = args.penPosition;
+
     return true;
 }
 
@@ -1027,6 +986,7 @@ RampInteract::penUp(const PenArgs &args)
         didSmthing = true;
     }
     _state = eInteractStateIdle;
+
     return didSmthing;
 }
 
@@ -1078,7 +1038,7 @@ OFX::ImageEffect* RampPluginFactory::createInstance(OfxImageEffectHandle handle,
 
 
 
-void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -1099,6 +1059,17 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
+
+    if (context == eContextGeneral || context == eContextPaint) {
+        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
+        maskClip->addSupportedComponent(ePixelComponentAlpha);
+        maskClip->setTemporalClipAccess(false);
+        if (context == eContextGeneral) {
+            maskClip->setOptional(true);
+        }
+        maskClip->setSupportsTiles(kSupportsTiles);
+        maskClip->setIsMask(true);
+    }
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
@@ -1140,8 +1111,8 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kPoint0Param);
         param->setLabels(kPoint0ParamLabel,kPoint0ParamLabel,kPoint0ParamLabel);
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
-        param->setDefault(0., 0.5);
+        param->setDefaultCoordinateSystem(OFX::eCoordinatesCanonical);
+        param->setDefault(100., 100.);
         page->addChild(*param);
     }
     
@@ -1159,8 +1130,8 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kPoint1Param);
         param->setLabels(kPoint1ParamLabel,kPoint1ParamLabel,kPoint1ParamLabel);
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
-        param->setDefault(1., 0.5);
+        param->setDefaultCoordinateSystem(OFX::eCoordinatesCanonical);
+        param->setDefault(100., 200.);
         page->addChild(*param);
     }
 
@@ -1185,6 +1156,8 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setAnimates(true);
         page->addChild(*param);
     }
+
+    ofxsMaskMixDescribeParams(desc, page);
 }
 
 void getRampPluginID(OFX::PluginFactoryArray &ids)
