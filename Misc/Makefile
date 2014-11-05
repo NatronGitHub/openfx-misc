@@ -94,7 +94,7 @@ RESOURCES = \
 ../Transform/net.sf.openfx.TransformPlugin.svg \
 
 VPATH += \
-../AdjustRod \
+../AdjustRoD \
 ../Anaglyph \
 ../ChromaKeyer \
 ../Clamp \
@@ -134,6 +134,7 @@ include ../Makefile.master
 
 CXXFLAGS += \
 -I. \
+-I../AdjustRoD \
 -I../Anaglyph \
 -I../ChromaKeyer \
 -I../Clamp \
@@ -169,26 +170,3 @@ CXXFLAGS += \
 -I../TrackerPM \
 -I../Transform
 
-RESOURCES = ../ChromaKeyer/net.sf.openfx.ChromaKeyerPlugin.png \
-../ColorCorrect/net.sf.openfx.ColorCorrectPlugin.png \
-../ColorLookup/net.sf.openfx.ColorLookupPlugin.png \
-../Constant/net.sf.openfx.ConstantPlugin.png \
-../CornerPin/net.sf.openfx.CornerPinPlugin.png \
-../CornerPin/net.sf.openfx.CornerPinMaskedPlugin.png \
-../Crop/net.sf.openfx.CropPlugin.png \
-../Difference/net.sf.openfx.DifferencePlugin.png \
-../Dissolve/net.sf.openfx.DissolvePlugin.png \
-../Grade/net.sf.openfx.GradePlugin.png \
-../Invert/net.sf.openfx.Invert.png \
-../Merge/net.sf.openfx.MergePlugin.png \
-../Premult/net.sf.openfx.Premult.png \
-../Premult/net.sf.openfx.Unpremult.png \
-../Ramp/net.sf.openfx.Ramp.png \
-../Retime/net.sf.openfx.Retime.png \
-../Roto/net.sf.openfx.RotoPlugin.png \
-../Shuffle/net.sf.openfx.ShufflePlugin.png \
-../Switch/net.sf.openfx.switchPlugin.png \
-../TimeOffset/net.sf.openfx.timeOffset.png \
-../TrackerPM/net.sf.openfx.TrackerPM.png \
-../Transform/net.sf.openfx.TransformPlugin.png \
-../Transform/net.sf.openfx.TransformMaskedPlugin.png \
