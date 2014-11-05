@@ -352,7 +352,7 @@
 		1EA0C22719BA12D3006AB602 /* Dissolve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA0C1FF19BA1234006AB602 /* Dissolve.cpp */; };
 		1EA330AA19E83A33002EFA5B /* CImgPlasma.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA330A819E83A33002EFA5B /* CImgPlasma.cpp */; };
 		1EA330AD19E846F7002EFA5B /* CImgEqualize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA330AB19E846F7002EFA5B /* CImgEqualize.cpp */; };
-		1EAD4AE21A0A68FD00AF834D /* AdjustRoDOFX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EAD4AE01A0A68FD00AF834D /* AdjustRoDOFX.cpp */; };
+		1EAD4AE21A0A68FD00AF834D /* AdjustRoD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */; };
 		1EAD4AE71A0A691700AF834D /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EAD4AE81A0A691700AF834D /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1EAD4AE91A0A691700AF834D /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -362,7 +362,7 @@
 		1EAD4AED1A0A691700AF834D /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1EAD4AEE1A0A691700AF834D /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1EAD4AF01A0A691700AF834D /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		1EAD4AF61A0A695500AF834D /* AdjustRoDOFX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EAD4AE01A0A68FD00AF834D /* AdjustRoDOFX.cpp */; };
+		1EAD4AF61A0A695500AF834D /* AdjustRoD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */; };
 		1EAD4AF71A0A695800AF834D /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACC8477D1A0A3F6400B3FAFE /* PluginRegistration.cpp */; };
 		1EB9C073196DD64E003C1849 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EB9C074196DD64E003C1849 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
@@ -1390,8 +1390,8 @@
 		1EA330A919E83A33002EFA5B /* CImgPlasma.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgPlasma.h; sourceTree = "<group>"; };
 		1EA330AB19E846F7002EFA5B /* CImgEqualize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgEqualize.cpp; sourceTree = "<group>"; };
 		1EA330AC19E846F7002EFA5B /* CImgEqualize.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgEqualize.h; sourceTree = "<group>"; };
-		1EAD4AE01A0A68FD00AF834D /* AdjustRoDOFX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AdjustRoDOFX.cpp; sourceTree = "<group>"; };
-		1EAD4AE11A0A68FD00AF834D /* AdjustRoDOFX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AdjustRoDOFX.h; sourceTree = "<group>"; };
+		1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AdjustRoD.cpp; sourceTree = "<group>"; };
+		1EAD4AE11A0A68FD00AF834D /* AdjustRoD.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AdjustRoD.h; sourceTree = "<group>"; };
 		1EAD4AF41A0A691700AF834D /* AdjustRoD.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AdjustRoD.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EB0C41E180DCAB500C25D1E /* ColorLookup.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ColorLookup.cpp; sourceTree = "<group>"; };
 		1EB9C080196DD64E003C1849 /* NoOp.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NoOp.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -2459,14 +2459,13 @@
 		ACC847781A0A3F6400B3FAFE /* AdjustRoD */ = {
 			isa = PBXGroup;
 			children = (
-				1EAD4AE01A0A68FD00AF834D /* AdjustRoDOFX.cpp */,
-				1EAD4AE11A0A68FD00AF834D /* AdjustRoDOFX.h */,
+				1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */,
+				1EAD4AE11A0A68FD00AF834D /* AdjustRoD.h */,
 				ACC8477B1A0A3F6400B3FAFE /* Info.plist */,
 				ACC8477C1A0A3F6400B3FAFE /* Makefile */,
 				ACC8477D1A0A3F6400B3FAFE /* PluginRegistration.cpp */,
 			);
-			name = AdjustRoD;
-			path = AdjustRoDOFX;
+			path = AdjustRoD;
 			sourceTree = "<group>";
 		};
 		D721EBFC1911209B0069DB1D /* Roto */ = {
@@ -3533,7 +3532,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E8B5D8018B7828800C31FDC /* Anaglyph.cpp in Sources */,
-				1EAD4AE21A0A68FD00AF834D /* AdjustRoDOFX.cpp in Sources */,
+				1EAD4AE21A0A68FD00AF834D /* AdjustRoD.cpp in Sources */,
 				1E47341D1907FB9400DC26E1 /* ChromaKeyer.cpp in Sources */,
 				1E593382194A0CF400804448 /* Constant.cpp in Sources */,
 				D730310419518B560024BCA4 /* CopyRectangle.cpp in Sources */,
@@ -3623,7 +3622,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1EAD4AF61A0A695500AF834D /* AdjustRoDOFX.cpp in Sources */,
+				1EAD4AF61A0A695500AF834D /* AdjustRoD.cpp in Sources */,
 				1EAD4AF71A0A695800AF834D /* PluginRegistration.cpp in Sources */,
 				1EAD4AE71A0A691700AF834D /* ofxsCore.cpp in Sources */,
 				1EAD4AE81A0A691700AF834D /* ofxsImageEffect.cpp in Sources */,
