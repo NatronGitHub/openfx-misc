@@ -69,7 +69,7 @@
  England
  
  */
-#include "AdjustRoDOFX.h"
+#include "AdjustRoD.h"
 
 #include <cmath>
 #include <algorithm>
@@ -100,11 +100,11 @@ using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class AdjustRodPlugin : public OFX::ImageEffect
+class AdjustRoDPlugin : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
-    AdjustRodPlugin(OfxImageEffectHandle handle)
+    AdjustRoDPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClip_(0)
@@ -155,7 +155,7 @@ private:
 
 /* set up and run a processor */
 void
-AdjustRodPlugin::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
+AdjustRoDPlugin::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
                               const OFX::RenderArguments &args)
 {
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
@@ -198,7 +198,7 @@ AdjustRodPlugin::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
 void
-AdjustRodPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+AdjustRoDPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
     OfxRectD srcRod = srcClip_->getRegionOfDefinition(args.time);
     double w,h;
@@ -217,7 +217,7 @@ AdjustRodPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
 
 
 bool
-AdjustRodPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+AdjustRoDPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     OfxRectD srcRod = srcClip_->getRegionOfDefinition(args.time);
     double w,h;
@@ -235,7 +235,7 @@ AdjustRodPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
 // the internal render function
 template <int nComponents>
 void
-AdjustRodPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+AdjustRoDPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
         case OFX::eBitDepthUByte: {
@@ -260,7 +260,7 @@ AdjustRodPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthE
 
 // the overridden render function
 void
-AdjustRodPlugin::render(const OFX::RenderArguments &args)
+AdjustRoDPlugin::render(const OFX::RenderArguments &args)
 {
     
     // instantiate the render code based on the pixel depth of the dst clip
@@ -279,7 +279,7 @@ AdjustRodPlugin::render(const OFX::RenderArguments &args)
 }
 
 bool
-AdjustRodPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+AdjustRoDPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
 {
     double w,h;
     _size->getValueAtTime(args.time, w, h);
@@ -291,9 +291,9 @@ AdjustRodPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCli
     return false;
 }
 
-mDeclarePluginFactory(AdjustRodPluginFactory, {}, {});
+mDeclarePluginFactory(AdjustRoDPluginFactory, {}, {});
 
-void AdjustRodPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void AdjustRoDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabels(kPluginName, kPluginName, kPluginName);
@@ -326,15 +326,15 @@ void AdjustRodPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 
 
-OFX::ImageEffect* AdjustRodPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect* AdjustRoDPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
-    return new AdjustRodPlugin(handle);
+    return new AdjustRoDPlugin(handle);
 }
 
 
 
 
-void AdjustRodPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+void AdjustRoDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -377,9 +377,9 @@ void AdjustRodPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
 }
 
-void getAdjustRodPluginID(OFX::PluginFactoryArray &ids)
+void getAdjustRoDPluginID(OFX::PluginFactoryArray &ids)
 {
-    static AdjustRodPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static AdjustRoDPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 
