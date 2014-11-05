@@ -1,7 +1,7 @@
 SUBDIRS = Misc
 
 SUBDIRS_NOMULTI = \
-AdjustRod \
+AdjustRoD \
 Anaglyph \
 ChromaKeyer \
 Clamp \

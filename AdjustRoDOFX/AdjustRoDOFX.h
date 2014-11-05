@@ -39,6 +39,6 @@
 
 #include "ofxsImageEffect.h"
 
-void getAdjustRodPluginID(OFX::PluginFactoryArray &ids);
+void getAdjustRoDPluginID(OFX::PluginFactoryArray &ids);
 
 #endif // MISC_ADJUSTROD_H
