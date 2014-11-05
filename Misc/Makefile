@@ -1,5 +1,5 @@
 PLUGINOBJECTS = \
-AdjustRod.o \
+AdjustRoD.o \
 Anaglyph.o \
 ChromaKeyer.o \
 Clamp.o \
