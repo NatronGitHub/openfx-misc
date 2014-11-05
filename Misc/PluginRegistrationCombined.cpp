@@ -1,3 +1,4 @@
+#include "AdjustRod.h"
 #include "Anaglyph.h"
 #include "ChromaKeyer.h"
 #include "Clamp.h"
@@ -41,6 +42,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
+            getAdjustRodPluginID(ids);
             getAnaglyphPluginID(ids);
             getChromaKeyerPluginID(ids);
             getClampPluginID(ids);

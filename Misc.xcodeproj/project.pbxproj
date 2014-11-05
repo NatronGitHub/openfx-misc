@@ -524,6 +524,9 @@
 		1EFB4E2519461B86005932AF /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFB4E2319461B86005932AF /* PluginRegistration.cpp */; };
 		1EFC1700180DCE6500AD7B86 /* ColorLookup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0C41E180DCAB500C25D1E /* ColorLookup.cpp */; };
 		AC60A33C19FE9C7900375A86 /* Ramp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32A19FE995F00375A86 /* Ramp.cpp */; };
+		ACC8477E1A0A3F9300B3FAFE /* net.sf.openfx.Ramp.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC60A32719FE995F00375A86 /* net.sf.openfx.Ramp.png */; };
+		ACC8477F1A0A3F9500B3FAFE /* net.sf.openfx.Ramp.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC60A32819FE995F00375A86 /* net.sf.openfx.Ramp.svg */; };
+		ACC847801A0A3F9F00B3FAFE /* AdjustRod.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACC847791A0A3F6400B3FAFE /* AdjustRod.cpp */; };
 		D721EC06191120B30069DB1D /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		D721EC07191120B30069DB1D /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		D721EC08191120B30069DB1D /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -1140,6 +1143,8 @@
 				1E814CCE19C983BE00C2C668 /* net.sf.openfx.ColorLookupPlugin.svg in CopyFiles */,
 				1E814CD719C9849C00C2C668 /* net.sf.openfx.Retime.png in CopyFiles */,
 				1E814CD819C9849F00C2C668 /* net.sf.openfx.Retime.svg in CopyFiles */,
+				ACC8477E1A0A3F9300B3FAFE /* net.sf.openfx.Ramp.png in CopyFiles */,
+				ACC8477F1A0A3F9500B3FAFE /* net.sf.openfx.Ramp.svg in CopyFiles */,
 				1EE4A8C119C6EF7D00E6E3AE /* net.sf.openfx.RotoPlugin.png in CopyFiles */,
 				1E814CCF19C983C200C2C668 /* net.sf.openfx.RotoPlugin.svg in CopyFiles */,
 				1EE4A8C219C6EF8000E6E3AE /* net.sf.openfx.ShufflePlugin.png in CopyFiles */,
@@ -1464,6 +1469,11 @@
 		AC60A32919FE995F00375A86 /* PluginRegistration.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		AC60A32A19FE995F00375A86 /* Ramp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Ramp.cpp; sourceTree = "<group>"; };
 		AC60A32B19FE995F00375A86 /* Ramp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Ramp.h; sourceTree = "<group>"; };
+		ACC847791A0A3F6400B3FAFE /* AdjustRod.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AdjustRod.cpp; sourceTree = "<group>"; };
+		ACC8477A1A0A3F6400B3FAFE /* AdjustRod.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AdjustRod.h; sourceTree = "<group>"; };
+		ACC8477B1A0A3F6400B3FAFE /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		ACC8477C1A0A3F6400B3FAFE /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		ACC8477D1A0A3F6400B3FAFE /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		D721EBFD1911209B0069DB1D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D721EBFE1911209B0069DB1D /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D721EBFF1911209B0069DB1D /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
@@ -2096,6 +2106,7 @@
 				1EDE1BE8182D8B18002392CB /* Makefile */,
 				1E9B5F6B198A54210095C8AA /* Makefile.master */,
 				1E9B5F6C198A54210095C8AA /* README.md */,
+				ACC847781A0A3F6400B3FAFE /* AdjustRod */,
 				1EDE1B8E182D0511002392CB /* Anaglyph */,
 				1E31940919D998450027D0E2 /* CImg */,
 				1E3451E0190695070080D699 /* ChromaKeyer */,
@@ -2406,6 +2417,18 @@
 				AC60A32B19FE995F00375A86 /* Ramp.h */,
 			);
 			path = Ramp;
+			sourceTree = "<group>";
+		};
+		ACC847781A0A3F6400B3FAFE /* AdjustRod */ = {
+			isa = PBXGroup;
+			children = (
+				ACC847791A0A3F6400B3FAFE /* AdjustRod.cpp */,
+				ACC8477A1A0A3F6400B3FAFE /* AdjustRod.h */,
+				ACC8477B1A0A3F6400B3FAFE /* Info.plist */,
+				ACC8477C1A0A3F6400B3FAFE /* Makefile */,
+				ACC8477D1A0A3F6400B3FAFE /* PluginRegistration.cpp */,
+			);
+			path = AdjustRod;
 			sourceTree = "<group>";
 		};
 		D721EBFC1911209B0069DB1D /* Roto */ = {
@@ -3454,6 +3477,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ACC847801A0A3F9F00B3FAFE /* AdjustRod.cpp in Sources */,
 				1E8B5D8018B7828800C31FDC /* Anaglyph.cpp in Sources */,
 				1E47341D1907FB9400DC26E1 /* ChromaKeyer.cpp in Sources */,
 				1E593382194A0CF400804448 /* Constant.cpp in Sources */,
