@@ -600,9 +600,6 @@ public:
         return dstClip_->getRegionOfDefinition(time);
     }
     
-    // override the rod call
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &/*args*/, OfxRectD &rod) OVERRIDE FINAL;
-
     /* override is identity */
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE;
 
@@ -641,17 +638,6 @@ private:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
 };
-
-
-/** @brief The get RoD action.  We flag an infinite rod */
-bool
-RampPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &/*args*/, OfxRectD &rod)
-{
-    // we can generate noise anywhere on the image plan, so set our RoD to be infinite
-    rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
-    rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
-    return true;
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */
@@ -794,7 +780,7 @@ RampPlugin::render(const OFX::RenderArguments &args)
 bool
 RampPlugin::isIdentity(const OFX::IsIdentityArguments &args,
                        OFX::Clip * &identityClip,
-                       double &identityTime)
+                       double &/*identityTime*/)
 {
     double mix;
     _mix->getValueAtTime(args.time, mix);
@@ -907,7 +893,6 @@ public:
 bool
 RampInteract::draw(const DrawArgs &args)
 {
-    
     OfxPointD pscale;
     pscale.x = args.pixelScale.x / args.renderScale.x;
     pscale.y = args.pixelScale.y / args.renderScale.y;
@@ -924,8 +909,20 @@ RampInteract::draw(const DrawArgs &args)
         _point1->getValueAtTime(args.time, p1.x, p1.y);
     }
     
+    ///Clamp points to the rod
     OfxRectD rod = _effect->getRegionOfDefinitionForInteract(args.time);
-    
+
+    // A line is represented by a 3-vector (a,b,c), and its equation is (a,b,c).(x,y,1)=0
+    // The intersection of two lines is given by their cross-product: (wx,wy,w) = (a,b,c)x(a',b',c').
+    // The line passing through 2 points is obtained by their cross-product: (a,b,c) = (x,y,1)x(x',y',1)
+    // The two lines passing through p0 and p1 and orthogonal to p0p1 are:
+    // (p1.x - P0.x, p1.y - p0.y, -p0.x*(p1.x-p0.x) - p0.y(p1.y-p0.y)) passing through p0
+    // (p1.x - P0.x, p1.y - p0.y, -p1.x*(p1.x-p0.x) - p1.y(p1.y-p0.y)) passing through p1
+    // the four lines defining the RoD are:
+    // (1,0,-x1) [x=x1]
+    // (1,0,-x2) [x=x2]
+    // (0,1,
+#if 1
     double t = (rod.x2 - rod.x1) * 100;
     
     OfxPointD p0Normal0,p0Normal1,p1Normal0,p1Normal1;
@@ -991,10 +988,9 @@ RampInteract::draw(const DrawArgs &args)
             }
         }
     }
+#endif
     
-    
-    ///Clamp points to the rod
-    
+
     glPushAttrib(GL_ALL_ATTRIB_BITS);
     
     glEnable(GL_LINE_SMOOTH);
