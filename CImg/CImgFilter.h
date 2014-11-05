@@ -446,10 +446,12 @@ CImgFilterPluginHelper<Params>::setupAndCopy(OFX::PixelProcessorFilterBase & pro
                                              double mix,
                                              bool maskInvert)
 {
-    assert(srcPixelData &&
-           srcBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= srcBounds.x2 &&
-           srcBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= srcBounds.y2 &&
-           dstPixelData &&
+    // src may not be valid over the renderWindow
+    //assert(srcPixelData &&
+    //       srcBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= srcBounds.x2 &&
+    //       srcBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= srcBounds.y2);
+    // dst must be valid over the renderWindow
+    assert(dstPixelData &&
            dstBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= dstBounds.x2 &&
            dstBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= dstBounds.y2);
     // make sure bit depths are sane
