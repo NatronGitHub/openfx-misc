@@ -1,5 +1,5 @@
 /*
- OFX AdjustRod plugin.
+ OFX AdjustRoD plugin.
  
  Copyright (C) 2014 INRIA
  
@@ -77,11 +77,12 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsMerging.h"
+#include "ofxsCopier.h"
 
-#define kPluginName "AdjustRod"
+#define kPluginName "AdjustRoD"
 #define kPluginGrouping "Transform"
 #define kPluginDescription "Enlarges the input image by a given amount of black and transparant pixels."
-#define kPluginIdentifier "net.sf.openfx.AdjustRodPlugin"
+#define kPluginIdentifier "net.sf.openfx.AdjustRoDPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -96,72 +97,6 @@
 
 
 using namespace OFX;
-
-class AdjustRodProcessorBase : public OFX::ImageProcessor
-{
-   
-    
-protected:
-    const OFX::Image *_srcImg;
-    
-public:
-    AdjustRodProcessorBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _srcImg(0)
-    {
-    }
-
-    /** @brief set the src image */
-    void setSrcImg(const OFX::Image *v)
-    {
-        _srcImg = v;
-    }
-
-
-};
-
-
-template <class PIX, int nComponents, int maxValue>
-class AdjustRodProcessor : public AdjustRodProcessorBase
-{
-public:
-    AdjustRodProcessor(OFX::ImageEffect &instance)
-    : AdjustRodProcessorBase(instance)
-    {
-    }
-
-private:
-    void multiThreadProcessImages(OfxRectI procWindow)
-    {
-        
-        //assert(filter == _filter);
-        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if (_effect.abort()) {
-                break;
-            }
-            
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-           
-            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
-                
-                const PIX *srcPix = (const PIX*)_srcImg->getPixelAddress(x , y);
-                if (!srcPix) {
-                    for (int k = 0; k < nComponents; ++k) {
-                        dstPix[k] =  0.;
-                    }
-                } else {
-                    for (int k = 0; k < nComponents; ++k) {
-                        dstPix[k] =  srcPix[k];
-                    }
-                }
-            }
-        }
-    }
-};
-
-
-
-
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -200,7 +135,7 @@ private:
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
-    void setupAndProcess(AdjustRodProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndCopy(OFX::PixelProcessorFilterBase &, const OFX::RenderArguments &args);
     
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -220,7 +155,8 @@ private:
 
 /* set up and run a processor */
 void
-AdjustRodPlugin::setupAndProcess(AdjustRodProcessorBase &processor, const OFX::RenderArguments &args)
+AdjustRodPlugin::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
+                              const OFX::RenderArguments &args)
 {
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
     if (!dst.get()) {
@@ -301,23 +237,22 @@ template <int nComponents>
 void
 AdjustRodPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
-    switch (dstBitDepth)
-    {
-        case OFX::eBitDepthUByte :
-        {
-            AdjustRodProcessor<unsigned char, nComponents, 255> fred(*this);
-            setupAndProcess(fred, args);
-        }   break;
-        case OFX::eBitDepthUShort :
-        {
-            AdjustRodProcessor<unsigned short, nComponents, 65535> fred(*this);
-            setupAndProcess(fred, args);
-        }   break;
-        case OFX::eBitDepthFloat :
-        {
-            AdjustRodProcessor<float, nComponents, 1> fred(*this);
-            setupAndProcess(fred, args);
-        }   break;
+    switch (dstBitDepth) {
+        case OFX::eBitDepthUByte: {
+            OFX::PixelCopier<unsigned char, nComponents, 255> fred(*this);
+            setupAndCopy(fred, args);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            OFX::PixelCopier<unsigned short, nComponents, 65535> fred(*this);
+            setupAndCopy(fred, args);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            OFX::PixelCopier<float, nComponents, 1> fred(*this);
+            setupAndCopy(fred, args);
+            break;
+        }
         default :
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
@@ -434,7 +369,7 @@ void AdjustRodPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(0., 0.);
         param->setIncrement(1.);
-        param->setDimensionLabels("width", "height");
+        param->setDimensionLabels("w", "h");
         param->setIncrement(1.);
         param->setDigits(0);
         page->addChild(*param);
