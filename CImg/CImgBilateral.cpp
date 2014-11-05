@@ -128,12 +128,12 @@ struct CImgBilateralParams
     double sigma_r;
 };
 
-class CImgBilateralPlugin : public CImgFilterPluginHelper<CImgBilateralParams>
+class CImgBilateralPlugin : public CImgFilterPluginHelper<CImgBilateralParams,false>
 {
 public:
 
     CImgBilateralPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgBilateralParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);

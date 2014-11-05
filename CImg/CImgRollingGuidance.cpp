@@ -138,12 +138,12 @@ struct CImgRollingGuidanceParams
     int iterations;
 };
 
-class CImgRollingGuidancePlugin : public CImgFilterPluginHelper<CImgRollingGuidanceParams>
+class CImgRollingGuidancePlugin : public CImgFilterPluginHelper<CImgRollingGuidanceParams,false>
 {
 public:
 
     CImgRollingGuidancePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgRollingGuidanceParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);

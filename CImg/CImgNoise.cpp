@@ -148,12 +148,12 @@ struct CImgNoiseParams
     int type_i;
 };
 
-class CImgNoisePlugin : public CImgFilterPluginHelper<CImgNoiseParams>
+class CImgNoisePlugin : public CImgFilterPluginHelper<CImgNoiseParams,true>
 {
 public:
 
     CImgNoisePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgNoiseParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _sigma  = fetchDoubleParam(kParamSigma);
         _type = fetchChoiceParam(kParamType);

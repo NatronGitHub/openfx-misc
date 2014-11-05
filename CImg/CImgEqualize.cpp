@@ -134,12 +134,12 @@ struct CImgEqualizeParams
     double max_value;
 };
 
-class CImgEqualizePlugin : public CImgFilterPluginHelper<CImgEqualizeParams>
+class CImgEqualizePlugin : public CImgFilterPluginHelper<CImgEqualizeParams,false>
 {
 public:
 
     CImgEqualizePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgEqualizeParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _nb_levels  = fetchIntParam(kParamNbLevels);
         _min_value  = fetchDoubleParam(kParamMin);

@@ -178,12 +178,12 @@ struct CImgErodeSmoothParams
 #endif
 };
 
-class CImgErodeSmoothPlugin : public CImgFilterPluginHelper<CImgErodeSmoothParams>
+class CImgErodeSmoothPlugin : public CImgFilterPluginHelper<CImgErodeSmoothParams,false>
 {
 public:
 
     CImgErodeSmoothPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgErodeSmoothParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _range = fetchDouble2DParam(kParamRange);
         _sigma  = fetchDoubleParam(kParamSigma);
@@ -282,7 +282,7 @@ public:
                 _range->setValue(rmax, rmin);
             }
         } else {
-            CImgFilterPluginHelper<CImgErodeSmoothParams>::changedParam(args, paramName);
+            CImgFilterPluginHelper::changedParam(args, paramName);
         }
     }
 private:

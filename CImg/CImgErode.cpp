@@ -124,12 +124,12 @@ struct CImgErodeParams
     int sy;
 };
 
-class CImgErodePlugin : public CImgFilterPluginHelper<CImgErodeParams>
+class CImgErodePlugin : public CImgFilterPluginHelper<CImgErodeParams,false>
 {
 public:
 
     CImgErodePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgErodeParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _size  = fetchInt2DParam(kParamSize);
         assert(_size);

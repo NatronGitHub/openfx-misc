@@ -152,12 +152,12 @@ struct CImgDenoiseParams
     bool fast_approx;
 };
 
-class CImgDenoisePlugin : public CImgFilterPluginHelper<CImgDenoiseParams>
+class CImgDenoisePlugin : public CImgFilterPluginHelper<CImgDenoiseParams,false>
 {
 public:
 
     CImgDenoisePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgDenoiseParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);

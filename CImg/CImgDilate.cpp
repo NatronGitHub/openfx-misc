@@ -124,12 +124,12 @@ struct CImgDilateParams
     int sy;
 };
 
-class CImgDilatePlugin : public CImgFilterPluginHelper<CImgDilateParams>
+class CImgDilatePlugin : public CImgFilterPluginHelper<CImgDilateParams,false>
 {
 public:
 
     CImgDilatePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgDilateParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _size  = fetchInt2DParam(kParamSize);
         assert(_size);

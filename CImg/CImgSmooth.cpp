@@ -192,12 +192,12 @@ struct CImgSmoothParams
     bool fast_approx;
 };
 
-class CImgSmoothPlugin : public CImgFilterPluginHelper<CImgSmoothParams>
+class CImgSmoothPlugin : public CImgFilterPluginHelper<CImgSmoothParams,false>
 {
 public:
 
     CImgSmoothPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgSmoothParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _amplitude  = fetchDoubleParam(kParamAmplitude);
         _sharpness  = fetchDoubleParam(kParamSharpness);

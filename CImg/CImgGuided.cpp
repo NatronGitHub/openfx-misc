@@ -130,12 +130,12 @@ struct CImgGuidedParams
     double epsilon;
 };
 
-class CImgGuidedPlugin : public CImgFilterPluginHelper<CImgGuidedParams>
+class CImgGuidedPlugin : public CImgFilterPluginHelper<CImgGuidedParams,false>
 {
 public:
 
     CImgGuidedPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgGuidedParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _radius  = fetchIntParam(kParamRadius);
         _epsilon  = fetchDoubleParam(kParamEpsilon);

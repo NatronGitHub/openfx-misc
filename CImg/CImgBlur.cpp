@@ -159,12 +159,12 @@ struct CImgBlurParams
 #endif
 };
 
-class CImgBlurPlugin : public CImgFilterPluginHelper<CImgBlurParams>
+class CImgBlurPlugin : public CImgFilterPluginHelper<CImgBlurParams,false>
 {
 public:
 
     CImgBlurPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgBlurParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _sigma  = fetchDoubleParam(kParamSigma);
         _boundary  = fetchChoiceParam(kParamBoundary);

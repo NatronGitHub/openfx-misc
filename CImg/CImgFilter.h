@@ -44,7 +44,7 @@ CLANG_DIAG_ON(shorten-64-to-32)
 #define kParamProcessALabel "A"
 #define kParamProcessAHint  "Process alpha component"
 
-template <class Params>
+template <class Params, bool sourceIsOptional>
 class CImgFilterPluginHelper : public OFX::ImageEffect
 {
 public:
@@ -161,8 +161,8 @@ public:
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(supportsTiles);
         srcClip->setIsMask(false);
-        if (context == OFX::eContextGeneral) {
-            srcClip->setOptional(true);
+        if (context == OFX::eContextGeneral && sourceIsOptional) {
+            srcClip->setOptional(sourceIsOptional);
         }
 
         OFX::ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
@@ -399,15 +399,15 @@ private:
 
 
 /* set up and run a copy processor */
-template <class Params>
+template <class Params, bool sourceIsOptional>
 void
-CImgFilterPluginHelper<Params>::setupAndFill(OFX::PixelProcessorFilterBase & processor,
-                                             const OfxRectI &renderWindow,
-                                             void *dstPixelData,
-                                             const OfxRectI& dstBounds,
-                                             OFX::PixelComponentEnum dstPixelComponents,
-                                             OFX::BitDepthEnum dstPixelDepth,
-                                             int dstRowBytes)
+CImgFilterPluginHelper<Params,sourceIsOptional>::setupAndFill(OFX::PixelProcessorFilterBase & processor,
+                                                              const OfxRectI &renderWindow,
+                                                              void *dstPixelData,
+                                                              const OfxRectI& dstBounds,
+                                                              OFX::PixelComponentEnum dstPixelComponents,
+                                                              OFX::BitDepthEnum dstPixelDepth,
+                                                              int dstRowBytes)
 {
     assert(dstPixelData &&
            dstBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= dstBounds.x2 &&
@@ -424,27 +424,27 @@ CImgFilterPluginHelper<Params>::setupAndFill(OFX::PixelProcessorFilterBase & pro
 
 
 /* set up and run a copy processor */
-template <class Params>
+template <class Params, bool sourceIsOptional>
 void
-CImgFilterPluginHelper<Params>::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
-                                             double time,
-                                             const OfxRectI &renderWindow,
-                                             const OFX::Image* orig,
-                                             const OFX::Image* mask,
-                                             const void *srcPixelData,
-                                             const OfxRectI& srcBounds,
-                                             OFX::PixelComponentEnum srcPixelComponents,
-                                             OFX::BitDepthEnum srcBitDepth,
-                                             int srcRowBytes,
-                                             void *dstPixelData,
-                                             const OfxRectI& dstBounds,
-                                             OFX::PixelComponentEnum dstPixelComponents,
-                                             OFX::BitDepthEnum dstPixelDepth,
-                                             int dstRowBytes,
-                                             bool premult,
-                                             int premultChannel,
-                                             double mix,
-                                             bool maskInvert)
+CImgFilterPluginHelper<Params,sourceIsOptional>::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
+                                                              double time,
+                                                              const OfxRectI &renderWindow,
+                                                              const OFX::Image* orig,
+                                                              const OFX::Image* mask,
+                                                              const void *srcPixelData,
+                                                              const OfxRectI& srcBounds,
+                                                              OFX::PixelComponentEnum srcPixelComponents,
+                                                              OFX::BitDepthEnum srcBitDepth,
+                                                              int srcRowBytes,
+                                                              void *dstPixelData,
+                                                              const OfxRectI& dstBounds,
+                                                              OFX::PixelComponentEnum dstPixelComponents,
+                                                              OFX::BitDepthEnum dstPixelDepth,
+                                                              int dstRowBytes,
+                                                              bool premult,
+                                                              int premultChannel,
+                                                              double mix,
+                                                              bool maskInvert)
 {
     // src may not be valid over the renderWindow
     //assert(srcPixelData &&
@@ -483,9 +483,9 @@ CImgFilterPluginHelper<Params>::setupAndCopy(OFX::PixelProcessorFilterBase & pro
 }
 
 
-template <class Params>
+template <class Params, bool sourceIsOptional>
 void
-CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
+CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArguments &args)
 {
     if (!_supportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -951,9 +951,9 @@ CImgFilterPluginHelper<Params>::render(const OFX::RenderArguments &args)
 // override the roi call
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
-template <class Params>
+template <class Params, bool sourceIsOptional>
 void
-CImgFilterPluginHelper<Params>::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
     if (!_supportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -994,10 +994,10 @@ CImgFilterPluginHelper<Params>::getRegionsOfInterest(const OFX::RegionsOfInteres
     rois.setRegionOfInterest(*srcClip_, srcRoI);
 }
 
-template <class Params>
+template <class Params, bool sourceIsOptional>
 bool
-CImgFilterPluginHelper<Params>::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
-                                                      OfxRectD &/*rod*/)
+CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                                                       OfxRectD &/*rod*/)
 {
     if (!_supportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -1006,11 +1006,11 @@ CImgFilterPluginHelper<Params>::getRegionOfDefinition(const OFX::RegionOfDefinit
     return false;
 }
 
-template <class Params>
+template <class Params, bool sourceIsOptional>
 bool
-CImgFilterPluginHelper<Params>::isIdentity(const OFX::IsIdentityArguments &args,
-                                           OFX::Clip * &identityClip,
-                                           double &/*identityTime*/)
+CImgFilterPluginHelper<Params,sourceIsOptional>::isIdentity(const OFX::IsIdentityArguments &args,
+                                                            OFX::Clip * &identityClip,
+                                                            double &/*identityTime*/)
 {
     if (!_supportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);

@@ -144,12 +144,12 @@ struct CImgPlasmaParams
     int scale;
 };
 
-class CImgPlasmaPlugin : public CImgFilterPluginHelper<CImgPlasmaParams>
+class CImgPlasmaPlugin : public CImgFilterPluginHelper<CImgPlasmaParams,true>
 {
 public:
 
     CImgPlasmaPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgPlasmaParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _alpha  = fetchDoubleParam(kParamAlpha);
         _beta  = fetchDoubleParam(kParamBeta);
