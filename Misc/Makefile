@@ -1,4 +1,5 @@
 PLUGINOBJECTS = \
+AdjustRod.o \
 Anaglyph.o \
 ChromaKeyer.o \
 Clamp.o \
@@ -93,6 +94,7 @@ RESOURCES = \
 ../Transform/net.sf.openfx.TransformPlugin.svg \
 
 VPATH += \
+../AdjustRod \
 ../Anaglyph \
 ../ChromaKeyer \
 ../Clamp \
