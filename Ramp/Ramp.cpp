@@ -93,8 +93,7 @@
 #define kPluginGrouping "Draw"
 #define kPluginDescription \
 "Draw a ramp between 2 edges.\n" \
-"The ramp is composited with the source image using the 'over' operator " \
-"if (un)premult is checked, or the 'matte' operator if it is unckecked."
+"The ramp is composited with the source image using the 'over' operator."
 #define kPluginIdentifier "net.sf.openfx.Ramp"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -166,8 +165,6 @@ class RampProcessorBase : public OFX::ImageProcessor
 protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
-    bool _premult;
-    int _premultChannel;
     bool   _doMasking;
     double _mix;
     bool _maskInvert;
@@ -182,8 +179,6 @@ public:
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
-    , _premult(false)
-    , _premultChannel(3)
     , _doMasking(false)
     , _mix(1.)
     , _maskInvert(false)
@@ -211,8 +206,6 @@ public:
                    const RGBAValues& color1,
                    const OfxPointD& point0,
                    const OfxPointD& point1,
-                   bool premult,
-                   int premultChannel,
                    double mix,
                    bool red,
                    bool green,
@@ -224,8 +217,6 @@ public:
         _color1 = color1;
         _point0 = point0;
         _point1 = point1;
-        _premult = premult;
-        _premultChannel = premultChannel;
         _mix = mix;
         _red = red;
         _green = green;
@@ -368,7 +359,6 @@ private:
         const double norm2 = (_point1.x - _point0.x)*(_point1.x - _point0.x) + (_point1.y - _point0.y)*(_point1.y - _point0.y);
         const double nx = norm2 == 0. ? 0. : (_point1.x - _point0.x)/ norm2;
         const double ny = norm2 == 0. ? 0. : (_point1.y - _point0.y)/ norm2;
-        assert(_premultChannel == 3);
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if (_effect.abort()) {
@@ -424,7 +414,6 @@ private:
                     tmpPix[3] = _color0.a * (1 - t) + _color1.a * t;
                 }
                 double a = tmpPix[3];
-                double aa = _premult ? 1 : a;
 
                 // ofxsMaskMixPix takes non-normalized values
                 tmpPix[0] *= maxValue;
@@ -443,22 +432,22 @@ private:
                     }
                 }
                 if (dored) {
-                    tmpPix[0] = tmpPix[0]*aa + srcPixRGBA[0]*(1.-a);
+                    tmpPix[0] = tmpPix[0] + srcPixRGBA[0]*(1.-a);
                 } else {
                     tmpPix[0] = srcPixRGBA[0];
                 }
                 if (dogreen) {
-                    tmpPix[1] = tmpPix[1]*aa + srcPixRGBA[1]*(1.-a);
+                    tmpPix[1] = tmpPix[1] + srcPixRGBA[1]*(1.-a);
                 } else {
                     tmpPix[1] = srcPixRGBA[1];
                 }
                 if (doblue) {
-                    tmpPix[2] = tmpPix[2]*aa + srcPixRGBA[2]*(1.-a);
+                    tmpPix[2] = tmpPix[2] + srcPixRGBA[2]*(1.-a);
                 } else {
                     tmpPix[2] = srcPixRGBA[2];
                 }
                 if (doalpha) {
-                    tmpPix[3] = tmpPix[3]*aa + srcPixRGBA[3]*(1.-a);
+                    tmpPix[3] = tmpPix[3] + srcPixRGBA[3]*(1.-a);
                 } else {
                     tmpPix[3] = srcPixRGBA[3];
                 }
@@ -512,9 +501,6 @@ public:
         _type = fetchChoiceParam(kTypeParam);
         assert(_point0 && _point1 && _color0 && _color1 && _type);
 
-        _premult = fetchBooleanParam(kParamPremult);
-        _premultChannel = fetchChoiceParam(kParamPremultChannel);
-        assert(_premult && _premultChannel);
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
@@ -527,9 +513,6 @@ public:
     
     /* override is identity */
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE;
-
-    /** @brief called when a clip has just been changed in some way (a rewire maybe) */
-    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
     /* Override the clip preferences */
     void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
@@ -561,8 +544,6 @@ private:
     Double2DParam* _point1;
     RGBAParam* _color1;
     ChoiceParam* _type;
-    OFX::BooleanParam* _premult;
-    OFX::ChoiceParam* _premultChannel;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
 };
@@ -641,17 +622,13 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor, const OFX::RenderArgum
     _processB->getValue(doB);
     _processA->getValue(doA);
 
-    bool premult;
-    int premultChannel;
-    _premult->getValueAtTime(args.time, premult);
-    _premultChannel->getValueAtTime(args.time, premultChannel);
     double mix;
     _mix->getValueAtTime(args.time, mix);
 
     processor.setValues((RampTypeEnum)type_i,
                         color0, color1,
                         point0, point1,
-                        premult, premultChannel, mix,
+                        mix,
                         doR, doG, doB, doA);
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -739,24 +716,6 @@ RampPlugin::isIdentity(const OFX::IsIdentityArguments &args,
     return false;
 }
 
-void
-RampPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
-{
-    if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
-        switch (srcClip_->getPreMultiplication()) {
-            case eImageOpaque:
-                _premult->setValue(false);
-                break;
-            case eImagePreMultiplied:
-                _premult->setValue(true);
-                break;
-            case eImageUnPreMultiplied:
-                _premult->setValue(false);
-                break;
-        }
-    }
-}
-
 /* Override the clip preferences */
 void
 RampPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
@@ -765,13 +724,7 @@ RampPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     bool alpha;
     _processA->getValue(alpha);
     if (alpha && srcClip_->getPreMultiplication() == eImageOpaque) {
-        bool premult;
-        _premult->getValue(premult);
-        if (premult) {
-            clipPreferences.setOutputPremultiplication(eImagePreMultiplied);
-        } else {
-            clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
-        }
+        clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }
 }
 
@@ -1268,7 +1221,6 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         page->addChild(*param);
     }
 
-    ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
 }
 
