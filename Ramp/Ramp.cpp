@@ -157,81 +157,6 @@ static double fround(double val, double pscale)
     return pscale10 * std::floor(val/pscale10 + 0.5);
 }
 
-
-/**
- * @brief Generates a point
- **/
-template <typename POINT>
-static void generateSegmentAlongNormal(const POINT& p0,
-                                       const POINT& p1,
-                                       double t,
-                                       POINT &normal0,
-                                       POINT &normal1)
-{
-    //Normal line intersecting P0
-    OfxPointD normalV;
-    normalV.x = p0.y - p1.y;
-    normalV.y = p1.x - p0.x;
-
-    double norm = sqrt((p1.x - p0.x) * (p1.x - p0.x) +
-                       (p1.y - p0.y) * (p1.y - p0.y));
-
-    ///Don't consider points that are equals
-    if (norm == 0) {
-        norm = 1.;
-    }
-    normalV.x /= norm;
-    normalV.y /= norm;
-
-    normal0.x = normalV.x * t + p0.x;
-    normal0.y = normalV.y * t + p0.y;
-    normal1.x = normalV.x * -t + p0.x;
-    normal1.y = normalV.y * -t + p0.y;
-}
-
-enum IntersectionTypeEnum
-{
-    eIntersectionTypeBounded = 0,
-    eIntersectionTypeUnBounded,
-    eIntersectionTypeNoIntersection
-};
-
-static IntersectionTypeEnum
-lineIntersect(const OfxPointD& p0,const OfxPointD& p1,
-                                const OfxPointD& p2,const OfxPointD& p3, OfxPointD *intersectionPoint)
-{
-    OfxPointD a,b,c;
-    a.x = p1.x - p0.x;
-    a.y = p1.y - p0.y;
-    b.x = p2.x - p3.x;
-    b.y = p2.y - p3.y;
-    c.x = p0.x - p2.x;
-    c.y = p0.y - p2.y;
-    
-    double denominator = a.y * b.x - a.x * b.y;
-    if (denominator == 0) {
-        return eIntersectionTypeNoIntersection;
-    }
-    
-    const double reciprocal = 1 / denominator;
-    const double na = (b.y * c.x - b.x * c.y) * reciprocal;
-    if (intersectionPoint) {
-        intersectionPoint->x = p0.x + a.x * na;
-        intersectionPoint->y = p0.y + a.y * na;
-    }
-    
-    if (na < 0 || na > 1) {
-        return eIntersectionTypeUnBounded;
-    }
-    
-    const double nb = (a.x * c.y - a.y * c.x) * reciprocal;
-    if (nb < 0 || nb > 1) {
-        return eIntersectionTypeUnBounded;
-    }
-    
-    return eIntersectionTypeBounded;
-}
-
 using namespace OFX;
 
 class RampProcessorBase : public OFX::ImageProcessor
@@ -911,6 +836,17 @@ public:
 
 //static void intersectToRoD(const OfxRectD& rod,const OfxPointD& p0)
 
+static inline
+void
+crossProd(const Ofx3DPointD& u,
+          const Ofx3DPointD& v,
+          Ofx3DPointD* w)
+{
+    w->x = u.y*v.z - u.z*v.y;
+    w->y = u.z*v.x - u.x*v.z;
+    w->z = u.x*v.y - u.y*v.x;
+}
+
 bool
 RampInteract::draw(const DrawArgs &args)
 {
@@ -918,16 +854,16 @@ RampInteract::draw(const DrawArgs &args)
     pscale.x = args.pixelScale.x / args.renderScale.x;
     pscale.y = args.pixelScale.y / args.renderScale.y;
     
-    OfxPointD p0,p1;
+    OfxPointD p[2];
     if (_state == eInteractStateDraggingPoint0) {
-        p0 = _point0DragPos;
+        p[0] = _point0DragPos;
     } else {
-        _point0->getValueAtTime(args.time, p0.x, p0.y);
+        _point0->getValueAtTime(args.time, p[0].x, p[0].y);
     }
     if (_state == eInteractStateDraggingPoint1) {
-        p1 = _point1DragPos;
+        p[1] = _point1DragPos;
     } else {
-        _point1->getValueAtTime(args.time, p1.x, p1.y);
+        _point1->getValueAtTime(args.time, p[1].x, p[1].y);
     }
     
     ///Clamp points to the rod
@@ -937,80 +873,89 @@ RampInteract::draw(const DrawArgs &args)
     // The intersection of two lines is given by their cross-product: (wx,wy,w) = (a,b,c)x(a',b',c').
     // The line passing through 2 points is obtained by their cross-product: (a,b,c) = (x,y,1)x(x',y',1)
     // The two lines passing through p0 and p1 and orthogonal to p0p1 are:
-    // (p1.x - P0.x, p1.y - p0.y, -p0.x*(p1.x-p0.x) - p0.y(p1.y-p0.y)) passing through p0
-    // (p1.x - P0.x, p1.y - p0.y, -p1.x*(p1.x-p0.x) - p1.y(p1.y-p0.y)) passing through p1
+    // (p1.x - p0.x, p1.y - p0.y, -p0.x*(p1.x-p0.x) - p0.y*(p1.y-p0.y)) passing through p0
+    // (p1.x - p0.x, p1.y - p0.y, -p1.x*(p1.x-p0.x) - p1.y*(p1.y-p0.y)) passing through p1
     // the four lines defining the RoD are:
     // (1,0,-x1) [x=x1]
     // (1,0,-x2) [x=x2]
-    // (0,1,
-#if 1
-    double t = (rod.x2 - rod.x1) * 100;
-    
-    OfxPointD p0Normal0,p0Normal1,p1Normal0,p1Normal1;
-    generateSegmentAlongNormal(p0, p1, t, p0Normal0, p0Normal1);
-    generateSegmentAlongNormal(p1, p0, t, p1Normal0, p1Normal1);
-    
-    OfxPointD rodTL;
-    rodTL.x = rod.x1;
-    rodTL.y = rod.y2;
-    
-    OfxPointD rodTR;
-    rodTR.x = rod.x2;
-    rodTR.y = rod.y2;
-    
-    OfxPointD rodBR;
-    rodBR.x = rod.x2;
-    rodBR.y = rod.y1;
-    
-    OfxPointD rodBL;
-    rodBL.x = rod.x1;
-    rodBL.y = rod.y1;
-    
-    IntersectionTypeEnum types0[4];
-    IntersectionTypeEnum types1[4];
-    OfxPointD intersections0[4];
-    OfxPointD intersections1[4];
-    
-    types0[0] = lineIntersect(p0Normal0, p0Normal1, rodBL, rodTL,&intersections0[0]);
-    types0[1] = lineIntersect(p0Normal0, p0Normal1 , rodTL, rodTR,&intersections0[1]);
-    types0[2] = lineIntersect(p0Normal0, p0Normal1 , rodTR, rodBR,&intersections0[2]);
-    types0[3] = lineIntersect(p0Normal0, p0Normal1 , rodBR, rodBL,&intersections0[3]);
-    
-    types1[0] = lineIntersect(p1Normal0, p1Normal1 , rodBL, rodTL,&intersections1[0]);
-    types1[1] = lineIntersect(p1Normal0, p1Normal1 , rodTL, rodTR,&intersections1[1]);
-    types1[2] = lineIntersect(p1Normal0, p1Normal1 , rodTR, rodBR,&intersections1[2]);
-    types1[3] = lineIntersect(p1Normal0, p1Normal1 , rodBR, rodBL,&intersections1[3]);
-    
-    int toTreat[2] = {0, 0};
-    for (int i = 0; i < 4; ++i) {
-        if (types0[i] == eIntersectionTypeBounded) {
-            if (toTreat[0] == 0) {
-                p0Normal0 = intersections0[i];
-                ++toTreat[0];
-            } else if (toTreat[0] == 1) {
-                p0Normal1 = intersections0[i];
-                ++toTreat[0];
+    // (0,1,-y1) [x=y1]
+    // (0,1,-y2) [y=y2]
+    const Ofx3DPointD linex1 = {1, 0, -rod.x1};
+    const Ofx3DPointD linex2 = {1, 0, -rod.x2};
+    const Ofx3DPointD liney1 = {0, 1, -rod.y1};
+    const Ofx3DPointD liney2 = {0, 1, -rod.y2};
+
+    Ofx3DPointD line[2];
+    OfxPointD pline1[2];
+    OfxPointD pline2[2];
+
+    // line passing through p0
+    line[0].x = p[1].x - p[0].x;
+    line[0].y = p[1].y - p[0].y;
+    line[0].z = -p[0].x*(p[1].x-p[0].x) - p[0].y*(p[1].y-p[0].y);
+    // line passing through p1
+    line[1].x = p[1].x - p[0].x;
+    line[1].y = p[1].y - p[0].y;
+    line[1].z = -p[1].x*(p[1].x-p[0].x) - p[1].y*(p[1].y-p[0].y);
+    // for each line...
+    for (int i = 0; i < 2; ++i) {
+        // compute the intersection with the four lines
+        Ofx3DPointD interx1, interx2, intery1, intery2;
+
+        crossProd(line[i], linex1, &interx1);
+        crossProd(line[i], linex2, &interx2);
+        crossProd(line[i], liney1, &intery1);
+        crossProd(line[i], liney2, &intery2);
+        if (interx1.z != 0. && interx2.z != 0.) {
+            // initialize pline1 to the intersection with x=x1, pline2 with x=x2
+            pline1[i].x = interx1.x/interx1.z;
+            pline1[i].y = interx1.y/interx1.z;
+            pline2[i].x = interx2.x/interx2.z;
+            pline2[i].y = interx2.y/interx2.z;
+            if ((pline1[i].y > rod.y2 && pline2[i].y > rod.y2) ||
+                (pline1[i].y < rod.y1 && pline2[i].y < rod.y1)) {
+                // line doesn't intersect rectangle, don't draw it.
+                pline1[i].x = p[i].x;
+                pline1[i].y = p[i].y;
+                pline2[i].x = p[i].x;
+                pline2[i].y = p[i].y;
+            } else if (pline1[i].y < pline2[i].y) {
+                // y is an increasing function of x, test the two other endpoints
+                if (intery1.z != 0. && intery1.x/intery1.z > pline1[i].x) {
+                    pline1[i].x = intery1.x/intery1.z;
+                    pline1[i].y = intery1.y/intery1.z;
+                }
+                if (intery2.z != 0. && intery2.x/intery2.z < pline2[i].x) {
+                    pline2[i].x = intery2.x/intery2.z;
+                    pline2[i].y = intery2.y/intery2.z;
+                }
             } else {
-                break;
+                // y is an decreasing function of x, test the two other endpoints
+                if (intery2.z != 0. && intery2.x/intery2.z > pline1[i].x) {
+                    pline1[i].x = intery2.x/intery2.z;
+                    pline1[i].y = intery2.y/intery2.z;
+                }
+                if (intery1.z != 0. && intery1.x/intery1.z < pline2[i].x) {
+                    pline2[i].x = intery1.x/intery1.z;
+                    pline2[i].y = intery1.y/intery1.z;
+                }
+            }
+        } else {
+            // initialize pline1 to the intersection with y=y1, pline2 with y=y2
+            pline1[i].x = intery1.x/intery1.z;
+            pline1[i].y = intery1.y/intery1.z;
+            pline2[i].x = intery2.x/intery2.z;
+            pline2[i].y = intery2.y/intery2.z;
+            if ((pline1[i].x > rod.x2 && pline2[i].x > rod.x2) ||
+                (pline1[i].x < rod.x1 && pline2[i].x < rod.x1)) {
+                // line doesn't intersect rectangle, don't draw it.
+                pline1[i].x = p[i].x;
+                pline1[i].y = p[i].y;
+                pline2[i].x = p[i].x;
+                pline2[i].y = p[i].y;
             }
         }
     }
-    
-    for (int i = 0; i < 4; ++i) {
-        if (types1[i] == eIntersectionTypeBounded) {
-            if (toTreat[1] == 0) {
-                p1Normal0 = intersections1[i];
-                ++toTreat[1];
-            } else if (toTreat[1] == 1) {
-                p1Normal1 = intersections1[i];
-                ++toTreat[1];
-            } else {
-                break;
-            }
-        }
-    }
-#endif
-    
 
     glPushAttrib(GL_ALL_ATTRIB_BITS);
     
@@ -1030,44 +975,30 @@ RampInteract::draw(const DrawArgs &args)
             // translate (1,-1) pixels
             glTranslated(pscale.x, -pscale.y, 0);
         }
-        
-        
-        glBegin(GL_POINTS);
-        if (_state == eInteractStateDraggingPoint0) {
-            glColor3f(0.*l, 1.*l, 0.*l);
-        } else {
+
+        for (int i = 0; i < 2; ++i) {
+            bool dragging = _state == (i == 0 ? eInteractStateDraggingPoint0 : eInteractStateDraggingPoint1);
+            glBegin(GL_POINTS);
+            if (dragging) {
+                glColor3f(0.*l, 1.*l, 0.*l);
+            } else {
+                glColor3f(0.8*l, 0.8*l, 0.8*l);
+            }
+            glVertex2d(p[i].x, p[i].y);
+            glEnd();
+
+            glLineStipple(2, 0xAAAA);
+            glEnable(GL_LINE_STIPPLE);
+            glBegin(GL_LINES);
             glColor3f(0.8*l, 0.8*l, 0.8*l);
-        }
-        glVertex2d(p0.x, p0.y);
-        if (_state == eInteractStateDraggingPoint1) {
-            glColor3f(0.*l, 1.*l, 0.*l);
-        } else {
-            glColor3f(0.8*l, 0.8*l, 0.8*l);
-        }
-        glVertex2d(p1.x, p1.y);
+            glVertex2d(pline1[i].x, pline1[i].y);
+            glVertex2d(pline2[i].x, pline2[i].y);
+            glEnd();
 
-        glEnd();
-        
-        
-        glLineStipple(2, 0xAAAA);
-        glEnable(GL_LINE_STIPPLE);
-        glBegin(GL_LINES);
-        glColor3f(0.8*l, 0.8*l, 0.8*l);
-        if (toTreat[0] == 2) {
-            glVertex2d(p0Normal0.x, p0Normal0.y);
-            glVertex2d(p0Normal1.x, p0Normal1.y);
+            double xoffset = 5 * pscale.x;
+            double yoffset = 5 * pscale.y;
+            TextRenderer::bitmapString(p[i].x + xoffset, p[i].y + yoffset, i == 0 ? kPoint0ParamLabel : kPoint1ParamLabel);
         }
-        if (toTreat[1] == 2) {
-            glVertex2d(p1Normal0.x, p1Normal0.y);
-            glVertex2d(p1Normal1.x, p1Normal1.y);
-        }
-        glEnd();
-
-        double xoffset = 5 * pscale.x;
-        double yoffset = 5 * pscale.y;
-        TextRenderer::bitmapString(p0.x + xoffset, p0.y + yoffset, kPoint0ParamLabel);
-        TextRenderer::bitmapString(p1.x + xoffset, p1.y + yoffset, kPoint1ParamLabel);
-
         if (l == 0) {
             // translate (-1,1) pixels
             glTranslated(-pscale.x, pscale.y, 0);
