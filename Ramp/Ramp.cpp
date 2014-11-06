@@ -606,6 +606,9 @@ public:
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
+    /* Override the clip preferences */
+    void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+
 private:
     
     /* Override the render */
@@ -825,6 +828,24 @@ RampPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clip
             case eImageUnPreMultiplied:
                 _premult->setValue(false);
                 break;
+        }
+    }
+}
+
+/* Override the clip preferences */
+void
+RampPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    // set the premultiplication of dstClip_ if alpha is affected and source is Opaque
+    bool alpha;
+    _processA->getValue(alpha);
+    if (alpha && srcClip_->getPreMultiplication() == eImageOpaque) {
+        bool premult;
+        _premult->getValue(premult);
+        if (premult) {
+            clipPreferences.setOutputPremultiplication(eImagePreMultiplied);
+        } else {
+            clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         }
     }
 }
