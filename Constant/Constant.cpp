@@ -248,9 +248,6 @@ private:
 
     /* set up and run a processor */
     void setupAndProcess(ConstantGeneratorBase &, const OFX::RenderArguments &args);
-
-    /** @brief The get RoD action.  We flag an infinite rod */
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
     
     virtual bool isIdentity(const OFX::IsIdentityArguments &args,
                                OFX::Clip * &identityClip,
@@ -287,16 +284,6 @@ ConstantPlugin::setupAndProcess(ConstantGeneratorBase &processor, const OFX::Ren
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
-}
-
-/** @brief The get RoD action.  We flag an infinite rod */
-bool
-ConstantPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &/*args*/, OfxRectD &rod)
-{
-    // we can generate noise anywhere on the image plan, so set our RoD to be infinite
-    rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
-    rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
-    return true;
 }
 
 // the overridden render function

@@ -224,9 +224,6 @@ public:
 
     /* set up and run a processor */
     void setupAndProcess(NoiseGeneratorBase &, const OFX::RenderArguments &args);
-
-    /** @brief The get RoD action.  We flag an infinite rod */
-    bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 };
 
 
@@ -271,16 +268,6 @@ void
 NoisePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     clipPreferences.setOutputFrameVarying(true);
-}
-
-/** @brief The get RoD action.  We flag an infinite rod */
-bool
-NoisePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &/*args*/, OfxRectD &rod)
-{
-    // we can generate noise anywhere on the image plan, so set our RoD to be infinite
-    rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
-    rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
-    return true;
 }
 
 // the overridden render function
