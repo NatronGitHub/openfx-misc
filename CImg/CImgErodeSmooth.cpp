@@ -282,7 +282,7 @@ public:
                 _range->setValue(rmax, rmin);
             }
         } else {
-            CImgFilterPluginHelper::changedParam(args, paramName);
+            CImgFilterPluginHelper<CImgErodeSmoothParams,false>::changedParam(args, paramName);
         }
     }
 private:
