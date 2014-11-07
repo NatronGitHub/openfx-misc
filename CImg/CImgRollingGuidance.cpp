@@ -143,7 +143,7 @@ class CImgRollingGuidancePlugin : public CImgFilterPluginHelper<CImgRollingGuida
 public:
 
     CImgRollingGuidancePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgRollingGuidanceParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);

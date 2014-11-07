@@ -133,7 +133,7 @@ class CImgBilateralPlugin : public CImgFilterPluginHelper<CImgBilateralParams,fa
 public:
 
     CImgBilateralPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgBilateralParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);

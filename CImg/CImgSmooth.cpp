@@ -197,7 +197,7 @@ class CImgSmoothPlugin : public CImgFilterPluginHelper<CImgSmoothParams,false>
 public:
 
     CImgSmoothPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgSmoothParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _amplitude  = fetchDoubleParam(kParamAmplitude);
         _sharpness  = fetchDoubleParam(kParamSharpness);

@@ -183,7 +183,7 @@ class CImgErodeSmoothPlugin : public CImgFilterPluginHelper<CImgErodeSmoothParam
 public:
 
     CImgErodeSmoothPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgErodeSmoothParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _range = fetchDouble2DParam(kParamRange);
         _sigma  = fetchDoubleParam(kParamSigma);

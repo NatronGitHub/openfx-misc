@@ -149,7 +149,7 @@ class CImgPlasmaPlugin : public CImgFilterPluginHelper<CImgPlasmaParams,true>
 public:
 
     CImgPlasmaPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgPlasmaParams,true>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _alpha  = fetchDoubleParam(kParamAlpha);
         _beta  = fetchDoubleParam(kParamBeta);

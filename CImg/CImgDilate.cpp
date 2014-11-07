@@ -129,7 +129,7 @@ class CImgDilatePlugin : public CImgFilterPluginHelper<CImgDilateParams,false>
 public:
 
     CImgDilatePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgDilateParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _size  = fetchInt2DParam(kParamSize);
         assert(_size);

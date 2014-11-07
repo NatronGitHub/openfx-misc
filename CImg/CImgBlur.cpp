@@ -164,7 +164,7 @@ class CImgBlurPlugin : public CImgFilterPluginHelper<CImgBlurParams,false>
 public:
 
     CImgBlurPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgBlurParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _sigma  = fetchDoubleParam(kParamSigma);
         _boundary  = fetchChoiceParam(kParamBoundary);

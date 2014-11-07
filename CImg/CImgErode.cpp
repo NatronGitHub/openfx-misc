@@ -129,7 +129,7 @@ class CImgErodePlugin : public CImgFilterPluginHelper<CImgErodeParams,false>
 public:
 
     CImgErodePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgErodeParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _size  = fetchInt2DParam(kParamSize);
         assert(_size);
