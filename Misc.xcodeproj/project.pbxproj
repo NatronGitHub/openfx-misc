@@ -1554,6 +1554,7 @@
 		D7B4C96118D9DA410004137D /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D7B4C96218D9DA410004137D /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		D7BB85C91955C00100A86649 /* TrackerPM.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TrackerPM.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		D7C6B8691A0CF2F300950A28 /* ofxsGenerator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsGenerator.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -2236,6 +2237,7 @@
 		1E9B5F46198A51590095C8AA /* SupportExt */ = {
 			isa = PBXGroup;
 			children = (
+				D7C6B8691A0CF2F300950A28 /* ofxsGenerator.h */,
 				1E9B5F47198A51840095C8AA /* ofxsCopier.h */,
 				1E9B5F48198A51840095C8AA /* ofxsFilter.h */,
 				1E9B5F49198A51840095C8AA /* ofxsFormatResolution.h */,
