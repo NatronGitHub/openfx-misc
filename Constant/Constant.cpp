@@ -79,6 +79,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
+#include "ofxsGenerator.h"
 
 #define kPluginName "ConstantOFX"
 #define kPluginGrouping "Image"
@@ -215,25 +216,21 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class ConstantPlugin : public OFX::ImageEffect
+class ConstantPlugin : public GeneratorPlugin
 {
 protected:
-    // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-
+ 
     OFX::RGBAParam  *color_;
     OFX::Int2DParam  *range_;
 
 public:
     /** @brief ctor */
     ConstantPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , dstClip_(0)
+    : GeneratorPlugin(handle)
     , color_(0)
     , range_(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGB || dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentAlpha));
+        
         color_   = fetchRGBAParam(kParamColor);
         range_   = fetchInt2DParam(kParamRange);
         assert(color_ && range_);
@@ -439,9 +436,11 @@ void ConstantPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(false);
     desc.setRenderTwiceAlways(false);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+    
+    generatorDescribeInteract(desc);
 }
 
-void ConstantPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void ConstantPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
     gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName);
     
@@ -461,6 +460,8 @@ void ConstantPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     dstClip->setFieldExtraction(eFieldExtractSingle);
     
     PageParamDescriptor *page = desc.definePageParam("Controls");
+    
+    generatorDescribeInContext(page, desc, context);
 
     // color
     {
