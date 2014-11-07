@@ -148,6 +148,7 @@
     <ClCompile Include="..\CImg\CImgEqualize.cpp" />
     <ClCompile Include="..\CImg\CImgErode.cpp" />
     <ClCompile Include="..\CImg\CImgErodeSmooth.cpp" />
+    <ClCompile Include="..\CImg\CImgGuided.cpp" />
     <ClCompile Include="..\CImg\CImgNoise.cpp" />
     <ClCompile Include="..\CImg\CImgPlasma.cpp" />
     <ClCompile Include="..\CImg\CImgRollingGuidance.cpp" />
@@ -163,6 +164,7 @@
     <ClInclude Include="..\CImg\CImgErode.h" />
     <ClInclude Include="..\CImg\CImgErodeSmooth.h" />
     <ClInclude Include="..\CImg\CImgFilter.h" />
+    <ClInclude Include="..\CImg\CImgGuided.h" />
     <ClInclude Include="..\CImg\CImgNoise.h" />
     <ClInclude Include="..\CImg\CImgPlasma.h" />
     <ClInclude Include="..\CImg\CImgRollingGuidance.h" />

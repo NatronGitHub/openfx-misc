@@ -107,7 +107,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OFX_EXTENSIONS_VEGAS;OFX_EXTENSIONS_TUTTLE;OFX_EXTENSIONS_NUKE;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;WIN32;NOMINMAX;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Clamp;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\Test;$(SolutionDir)..\Keyer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Clamp;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\Test;$(SolutionDir)..\Keyer;$(SolutionDir)..\AdjustRoD;$(SolutionDir)..\Ramp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -171,7 +171,7 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDi
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OFX_EXTENSIONS_VEGAS;OFX_EXTENSIONS_TUTTLE;OFX_EXTENSIONS_NUKE;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;WIN64;NOMINMAX;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Clamp;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\Test;$(SolutionDir)..\Keyer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Clamp;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\Test;$(SolutionDir)..\Keyer;$(SolutionDir)..\AdjustRoD;$(SolutionDir)..\Ramp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -183,7 +183,9 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDi
       <AdditionalDependencies>opengl32.lib;$(SolutionDir)$(Platform)\$(Configuration)\Support.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(SolutionDir)..\ChromaKeyer\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+      <Command>xcopy $(SolutionDir)..\Ramp\net.sf.openfx.Ramp.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\ChromaKeyer\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\ColorCorrect\net.sf.openfx.ColorCorrectPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
@@ -229,6 +231,7 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDi
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\AdjustRoD\AdjustRoD.cpp" />
     <ClCompile Include="..\Anaglyph\Anaglyph.cpp" />
     <ClCompile Include="..\ChromaKeyer\ChromaKeyer.cpp" />
     <ClCompile Include="..\Clamp\Clamp.cpp" />
@@ -252,6 +255,7 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDi
     <ClCompile Include="..\NoOp\NoOp.cpp" />
     <ClCompile Include="..\OneView\OneView.cpp" />
     <ClCompile Include="..\Premult\Premult.cpp" />
+    <ClCompile Include="..\Ramp\Ramp.cpp" />
     <ClCompile Include="..\ReConverge\ReConverge.cpp" />
     <ClCompile Include="..\Retime\Retime.cpp" />
     <ClCompile Include="..\Roto\Roto.cpp" />
@@ -265,6 +269,7 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDi
     <ClCompile Include="randomGenerator.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\AdjustRoD\AdjustRoD.h" />
     <ClInclude Include="..\Anaglyph\Anaglyph.h" />
     <ClInclude Include="..\ChromaKeyer\ChromaKeyer.h" />
     <ClInclude Include="..\Clamp\Clamp.h" />
@@ -288,6 +293,7 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDi
     <ClInclude Include="..\NoOp\NoOp.h" />
     <ClInclude Include="..\OneView\OneView.h" />
     <ClInclude Include="..\Premult\Premult.h" />
+    <ClInclude Include="..\Ramp\Ramp.h" />
     <ClInclude Include="..\ReConverge\ReConverge.h" />
     <ClInclude Include="..\Retime\Retime.h" />
     <ClInclude Include="..\Roto\Roto.h" />

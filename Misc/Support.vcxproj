@@ -48,6 +48,7 @@
     <ClInclude Include="..\SupportExt\ofxsCopier.h" />
     <ClInclude Include="..\SupportExt\ofxsFilter.h" />
     <ClInclude Include="..\SupportExt\ofxsFormatResolution.h" />
+    <ClInclude Include="..\SupportExt\ofxsGenerator.h" />
     <ClInclude Include="..\SupportExt\ofxsImageBlenderMasked.h" />
     <ClInclude Include="..\SupportExt\ofxsMacros.h" />
     <ClInclude Include="..\SupportExt\ofxsMaskMix.h" />
