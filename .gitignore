@@ -174,3 +174,6 @@ Desktop.ini
 $RECYCLE.BIN/
 
 CImg/CImg.h
+CImg/gmic.h
+CImg/gmic.cpp
+CImg/gmic_def.h

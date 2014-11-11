@@ -13,6 +13,12 @@ CXXFLAGS += -I$(CIMG_INCLUDE)
 CIMGVERSION=eccc25012e96872312f4aa33c3596c257fe6d32c
 CImg.h:
 	git archive --remote=git://git.code.sf.net/p/gmic/source $(CIMGVERSION):src CImg.h | tar xf -
+#gmic_def.h:
+#	git archive --remote=git://git.code.sf.net/p/gmic/source $(CIMGVERSION):src gmic_def.h | tar xf -
+#gmic.h:
+#	git archive --remote=git://git.code.sf.net/p/gmic/source $(CIMGVERSION):src gmic.h | tar xf -
+#gmic.cpp:
+#	git archive --remote=git://git.code.sf.net/p/gmic/source $(CIMGVERSION):src gmic.cpp | tar xf -
 
 $(OBJECTPATH)/CImgBilateral.o: CImgBilateral.cpp CImg.h
 
