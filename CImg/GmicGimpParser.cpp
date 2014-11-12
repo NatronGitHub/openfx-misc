@@ -115,7 +115,7 @@ ParameterBase::ParameterBase(const std::string& label,int nDim)
 
 ParameterBase::~ParameterBase()
 {
-    
+    delete _imp;
 }
 
 const std::string&

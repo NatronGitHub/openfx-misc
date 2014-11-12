@@ -48,6 +48,7 @@ main(int argc,char* argv[])
 {
     
     Gmic::GmicGimpParser parser;
-    parser.parse();
+    std::string errors;
+    parser.parse(&errors,true);
     parser.printTree();
 }

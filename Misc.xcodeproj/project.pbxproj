@@ -5028,9 +5028,7 @@
 					"DEBUG=1",
 					"$(inherited)",
 					gmic_build,
-					gmic_build,
 					"cimg_display=0",
-					cimg_use_zlib,
 				);
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -5038,10 +5036,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				MACOSX_DEPLOYMENT_TARGET = "";
 				MTL_ENABLE_DEBUG_INFO = YES;
-				OTHER_LDFLAGS = (
-					"-L/opt/local/lib",
-					"-lz",
-				);
+				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 			};
@@ -5069,7 +5064,6 @@
 					OFX_EXTENSIONS_TUTTLE,
 					gmic_build,
 					"cimg_display=0",
-					cimg_use_zlib,
 				);
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
@@ -5077,10 +5071,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				MACOSX_DEPLOYMENT_TARGET = "";
 				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_LDFLAGS = (
-					"-L/opt/local/lib",
-					"-lz",
-				);
+				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 			};
