@@ -47,11 +47,7 @@ int
 main(int argc,char* argv[])
 {
     
-    GmicGimpParser parser;
-//    CImgList<char> sources;
-//    CImgList<char> invalid_servers;
-//    
-//    parser.downloadFilters(sources, invalid_servers);
+    Gmic::GmicGimpParser parser;
     parser.parse();
     parser.printTree();
 }

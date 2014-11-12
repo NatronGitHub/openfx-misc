@@ -540,7 +540,7 @@ GmicGimpParser::GmicGimpParserPrivate::downloadFilters(cimg_library::CImgList<ch
 } // void downloadFilters(cimg_library::CImgList<char>& sources,cimg_library::CImgList<char>& invalid_servers)
 
 void
-GmicGimpParser::parse(const char* locale)
+GmicGimpParser::parse(std::string* errors,bool tryNetUpdate,const char* locale)
 {
    //Reset the parser's state if it was already used
     reset();
@@ -552,22 +552,22 @@ GmicGimpParser::parse(const char* locale)
     char command[1024] = { 0 };
 
     CImgList<char> sources;
-    CImgList<char> invalid_servers;
 
     char filename[1024] = { 0 };
     const char *const path_conf = get_conf_path();
-    //const char *const path_tmp = cimg::temporary_path();
-
     
     //Initialize resources
     gmic_additional_commands.assign();
-//    gmic_faves.assign();
-//    gmic_commands.assign(1);
-//    gmic_preview_commands.assign(1);
-//    gmic_preview_factors.assign(1);
-//    gmic_arguments.assign(1);
     
-    _imp->downloadFilters(sources, invalid_servers);
+    if (tryNetUpdate) {
+        CImgList<char> invalid_servers;
+        _imp->downloadFilters(sources, invalid_servers);
+        cimglist_for(sources,l) {
+            const char *s_basename = gmic_basename(sources[l]);
+            errors->append(s_basename);
+            errors->append(": Failed to contact the server. \n");
+        }
+    }
     
     
     progressSetText(" G'MIC : Update filters...");
@@ -608,20 +608,6 @@ GmicGimpParser::parse(const char* locale)
     
     GmicTreeNode* parent[8] ;
     memset(parent, 0, sizeof(GmicTreeNode*) * 8);
-    
-    //GtkTreeIter iter, fave_iter, parent[8];
-   // char filename_gmic_faves[1024] = { 0 };
-    //tree_view_store = gtk_tree_store_new(2,G_TYPE_UINT,G_TYPE_STRING);
-   // cimg_snprintf(filename_gmic_faves,sizeof(filename_gmic_faves),"%s%c%sgmic_faves",
-    //              path_conf,cimg_file_separator,_gmic_file_prefix);
-   // std::FILE *file_gmic_faves = std::fopen(filename_gmic_faves,"rb");
-    //if (file_gmic_faves) {
-        //gtk_tree_store_append(tree_view_store,&fave_iter,0);
-        //gtk_tree_store_set(tree_view_store,&fave_iter,0,0,1,"<b>Faves</b>",-1);
-        //const char *treepath = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(tree_view_store),&fave_iter);
-       // CImg<char>::vector(0).move_to(gmic_1stlevel_names);
-      //  CImg<char>::string(treepath).move_to(gmic_1stlevel_entries);
-    //}
     
     // Parse filters descriptions for GIMP, and create corresponding sorted treeview_store.
     char line[256*1024] = { 0 }, preview_command[256] = { 0 }, arguments[65536] = { 0 },
@@ -815,126 +801,24 @@ GmicGimpParser::parse(const char* locale)
                 }
             }
         } else { // Line is the continuation of an entry.
-//            if (gmic_arguments) {
-                
-//                if (gmic_arguments.back()) {
-//                    gmic_arguments.back().back() = ' ';
-//                }
-                
+
                 cimg::strpare(++_line,' ',false,true);
                 
                 std::string toAppend(_line);
                 assert(lastProcessedNode);
                 
                 lastProcessedNode->appendGmicArguments(toAppend);
-//            }
         }
-   // }
-    
-    
-    // Load faves.
-  //  char label[256] = { 0 };
-   // indice_faves = gmic_entries.size();
-//    if (file_gmic_faves) {
-//        for (unsigned int line_nb = 1; std::fscanf(file_gmic_faves," %[^\n]",line)==1; ++line_nb) {
-//            char sep = 0;
-//            if (std::sscanf(line,"{%255[^}]}{%255[^}]}{%255[^}]}{%255[^}]%c",
-//                            label,entry,command,preview_command,&sep)==5 && sep=='}') {
-//                const char *_line = line + 8 + std::strlen(label) + std::strlen(entry) + std::strlen(command) +
-//                std::strlen(preview_command);
-//                int entry_found = -1, command_found = -1, preview_found = -1;
-//                unsigned int filter = 0;
-//                for (filter = 1; filter<indice_faves; ++filter) {
-//                    const bool
-//                    is_entry_match = !std::strcmp(gmic_entries[filter].data(),entry),
-//                    is_command_match = !std::strcmp(gmic_commands[filter].data(),command),
-//                    is_preview_match = !std::strcmp(gmic_preview_commands[filter].data(),preview_command);
-//                    if (is_entry_match) entry_found = filter;
-//                    if (is_command_match) command_found = filter;
-//                    if (is_preview_match) preview_found = filter;
-//                    if (is_command_match && is_preview_match) break;
-//                }
-                
-//                CImg<char>::string(line).move_to(gmic_faves);
-//                // Get back '}' if necessary.
-//                for (char *p = std::strchr(label,_rbrace); p; p = std::strchr(p,_rbrace)) *p = '}';
-//                for (char *p = std::strchr(entry,_rbrace); p; p = std::strchr(p,_rbrace)) *p = '}';
-//                
-//                if (filter>=indice_faves) { // Entry not found.
-//                    CImg<char>::string(label).move_to(gmic_entries);
-//                    CImg<char>::string("_none_").move_to(gmic_commands);
-//                    CImg<char>::string("_none_").move_to(gmic_preview_commands);
-//                    std::sprintf(line,"note = note{\"<span foreground=\"red\"><b>Warning : </b></span>This fave links to an "
-//                                 "unreferenced entry/set of G'MIC commands :\n\n"
-//                                 "   - '<span foreground=\"purple\">%s</span>' as the entry name (%s%s%s%s%s).\n\n"
-//                                 "   - '<span foreground=\"purple\">%s</span>' as the command to compute the filter "
-//                                 "(%s%s%s%s%s).\n\n"
-//                                 "   - '<span foreground=\"purple\">%s</span>' as the command to preview the filter "
-//                                 "(%s%s%s%s%s)."
-//                                 "\"}",
-//                                 entry,
-//                                 entry_found>=0?"recognized, associated to <i>":"<b>not recognized</b>",
-//                                 entry_found>=0?gmic_commands[entry_found].data():"",
-//                                 entry_found>=0?", ":"",
-//                                 entry_found>=0?gmic_preview_commands[entry_found].data():"",
-//                                 entry_found>=0?"</i>":"",
-//                                 command,
-//                                 command_found>=0?"recognized, associated to <i>":"<b>not recognized</b>",
-//                                 command_found>=0?gmic_entries[command_found].data():"",
-//                                 command_found>=0?", ":"",
-//                                 command_found>=0?gmic_preview_commands[command_found].data():"",
-//                                 command_found>=0?"</i>":"",
-//                                 preview_command,
-//                                 preview_found>=0?"recognized, associated to <i>":"<b>not recognized</b>",
-//                                 preview_found>=0?gmic_entries[preview_found].data():"",
-//                                 preview_found>=0?", ":"",
-//                                 preview_found>=0?gmic_commands[preview_found].data():"",
-//                                 preview_found>=0?"</i>":"");
-//                    
-//                    CImg<char>::string(line).move_to(gmic_arguments);
-//                    CImg<double>::vector(0).move_to(gmic_preview_factors);
-//                    set_filter_nbparams(gmic_entries.size()-1,0);
-//                } else { // Entry found.
-//                    CImg<char>::string(label).move_to(gmic_entries);
-//                    gmic_commands.insert(gmic_commands[filter]);
-//                    gmic_preview_commands.insert(gmic_preview_commands[filter]);
-//                    gmic_arguments.insert(gmic_arguments[filter]);
-//                    gmic_preview_factors.insert(gmic_preview_factors[filter]);
-//                    unsigned int nbp = 0;
-//                    for (nbp = 0; std::sscanf(_line,"{%65533[^}]%c",arguments,&sep)==2 && sep=='}'; ++nbp) {
-//                        // Get back '}' if necessary.
-//                        for (char *p = std::strchr(arguments,_rbrace); p; p = std::strchr(p,_rbrace)) *p = '}';
-//                        // Get back '\n' if necessary.
-//                        for (char *p = std::strchr(arguments,_newline); p; p = std::strchr(p,_newline)) *p = '\n';
-//                        set_fave_parameter(gmic_entries.size()-1,nbp,arguments);
-//                        _line+=2 + std::strlen(arguments);
-//                    }
-//                    set_filter_nbparams(gmic_entries.size()-1,nbp);
-//                }
-//                gtk_tree_store_append(tree_view_store,&iter,&fave_iter);
-//                gtk_tree_store_set(tree_view_store,&iter,0,gmic_entries.size()-1,1,label,-1);
-//            } else if (get_verbosity_mode())
-//                std::fprintf(cimg::output(),
-//                             "\n[gmic_gimp]./error/ Malformed line %u in fave file '%s' : '%s'.\n",
-//                             line_nb,filename_gmic_faves,line);
-//        }
-//        std::fclose(file_gmic_faves);
     }
-    
-    
-    
-    //if (tryNetUpdate) {
-        //gimp_progress_update(1);
-        //gimp_progress_end();
-   // }
-//    return invalid_servers;
     
     
     ///Build parameters recursively for all GmicTreeNode
-    
+    progressSetText("Updating parameters....");
     for (std::list<GmicTreeNode*>::iterator it = _imp->firstLevelEntries.begin(); it != _imp->firstLevelEntries.end(); ++it) {
         (*it)->parseParametersFromGmicArgs();
     }
+    
+    progressEnd();
 }
 
 static void printRecursive(GmicTreeNode* node,int nTabs)
@@ -1171,27 +1055,18 @@ GmicTreeNode::parseParametersFromGmicArgs()
                         param->setDefaultValue(3, alpha / 255.f);
                     }
                     
-                } else if (argumentType == "const") {
+                } else if (argumentType == "note" ||
+                           argumentType == "const") { //< treat const as note, don't know what to do with them otherwise
                     
-                    const char *value = argument_arg;
-                    if (is_fave) value = argument_fave;
-                    if (!reset_params && *argument_value) value = argument_value;
-                    set_filter_parameter(filter,current_argument,value);
-                    found_valid_argument = true; ++current_argument;
+                    StringParam* param = new StringParam(argumentName);
+                    param->setType(StringParam::eStringParamTypeLabel);
                     
-                } else if (argumentType == "note") {
+                    char *value = argument_arg;
+                    cimg::strpare(value,' ',false,true);
+                    cimg::strpare(value,'\"',true);
                     
-                    cimg::strpare(argument_arg,' ',false,true);
-                    cimg::strpare(argument_arg,'\"',true);
-                    cimg::strunescape(argument_arg);
-                    GtkWidget *const label = gtk_label_new(NULL);
-                    gtk_label_set_markup(GTK_LABEL(label),argument_arg);
-                    gtk_label_set_line_wrap(GTK_LABEL(label),true);
-                    gtk_widget_show(label);
-                    gtk_table_attach(GTK_TABLE(table),label,0,3,(int)current_table_line,(int)current_table_line+1,
-                                     (GtkAttachOptions)(GTK_EXPAND | GTK_FILL),GTK_SHRINK,0,0);
-                    gtk_misc_set_alignment(GTK_MISC(label),0,0.5);
-                    found_valid_argument = true;
+                    param->setDefaultValue(0, std::string(value));
+                    addParameterAndTakeOwnership(param);
                     
                 } else if (argumentType == "link") {
                     
@@ -1207,35 +1082,31 @@ GmicTreeNode::parseParametersFromGmicArgs()
                     cimg::strunescape(label);
                     cimg::strpare(url,' ',false,true);
                     cimg::strpare(url,'\"',true);
-                    GtkWidget *const link = gtk_link_button_new_with_label(url,label);
-                    gtk_widget_show(link);
-                    gtk_button_set_alignment(GTK_BUTTON(link),alignment,0.5);
-                    gtk_table_attach(GTK_TABLE(table),link,0,3,(int)current_table_line,(int)current_table_line+1,
-                                     (GtkAttachOptions)(GTK_EXPAND | GTK_FILL),GTK_SHRINK,0,0);
-                    found_valid_argument = true;
                     
-                } else if (argumentType == "separator") {
+                    StringParam* param = new StringParam(argumentName);
+                    param->setType(StringParam::eStringParamTypeLabel);
                     
-                    GtkWidget *const separator = gtk_hseparator_new();
-                    gtk_widget_show(separator);
-                    gtk_table_attach(GTK_TABLE(table),separator,0,3,(int)current_table_line,(int)current_table_line+1,
-                                     (GtkAttachOptions)(GTK_EXPAND | GTK_FILL),GTK_SHRINK,0,0);
-                    found_valid_argument = true;
-                } else {
-                    if (get_verbosity_mode()) {
-                        std::fprintf(cimg::output(),
-                                     "\n[gmic_gimp]./error/ Found invalid parameter type '%s' for argument '%s'.\n",
-                                     argument_type,argument_name);
-                        std::fflush(cimg::output());
-                    }
+                    
+                    param->setDefaultValue(0, std::string(url));
+                    addParameterAndTakeOwnership(param);
+    
+                    
+                }
+                //Ignore separators, they are not of any value for us
+                else if (argumentType == "separator") {
+                
+                
+                }
+                else {
+                    std::fprintf(cimg::output(),
+                                    "\n[gmic_gimp]./error/ Found invalid parameter type '%s' for argument '%s'.\n",
+                                    argumentType.c_str(),argument_name);
+                    std::fflush(cimg::output());
                 }
             } else { // if (err>=2) {
                 break;
             }
         }
-        set_filter_nbparams(filter,current_argument);
-    }
-    
 
     }
 

@@ -366,10 +366,13 @@ public:
     void reset();
     
     /**
-     * @brief Downloads gmic def file from the remote repositories indicated by the gimp_filter_sources command and parses them
-     * to extract the "tree" structure where each node contains either a plug-in definition or a menu level.
+     * @brief Extracts the "tree" structure from gmic defintion files where each node contains either a plug-in definition or a menu level.
+     * The definition files are either to be found locally (via the GMIC_GIMP_PATH, HOME (or APPDATA) env. vars) or via online packages.
+     * @param tryNetUpdateDownloads Tries to load gmic def file from the remote repositories indicated by the gimp_filter_sources command.
+     * This requires a working internet connexion. Internally curl is used and if it doesn't work wget will be used.
+     * @param errors[out] If not empty, this will be a buffer storing all errors that happened during the parsing.
      **/
-    void parse(const char* locale = "en\0");
+    void parse(std::string* errors,bool tryNetUpdate,const char* locale = "en\0");
     
     /**
      * Gmic defines its plug-ins in a tree form with menus and submenus.
@@ -384,11 +387,19 @@ public:
     
 private:
     
-    virtual unsigned int get_verbosity_mode(const bool normalized = true) { return 2; }
+    virtual unsigned int get_verbosity_mode() {
+#ifdef NDEBUG
+        return 0;
+#else
+        return 2;
+#endif
+    }
     
     virtual void initProgress(const std::string& /*message*/) {}
     
     virtual void progressSetText(const std::string& /*message*/) {}
+    
+    virtual void progressEnd() {}
     
     struct GmicGimpParserPrivate;
     GmicGimpParserPrivate* _imp;
