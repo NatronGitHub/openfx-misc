@@ -984,7 +984,6 @@ defineRGBAScaleParam(OFX::ImageEffectDescriptor &desc,
     param->setLabels(label, label, label);
     param->setHint(hint);
     param->setDefault(def,def,def,def);
-    param->setRange(min,min,min,min, max,max,max,max);
     param->setDisplayRange(min,min,min,min,max,max,max,max);
     if (parent) {
         param->setParent(*parent);
