@@ -42,7 +42,6 @@
 #include <iostream>
 #include "GmicGimpParser.h"
 
-using namespace cimg_library;
 
 int
 main(int argc,char* argv[])
@@ -53,6 +52,6 @@ main(int argc,char* argv[])
 //    CImgList<char> invalid_servers;
 //    
 //    parser.downloadFilters(sources, invalid_servers);
-    parser.parse(true);
-    
+    parser.parse();
+    parser.printTree();
 }

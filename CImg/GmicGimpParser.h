@@ -44,7 +44,72 @@
 #define __Misc__GmicGimpParser__
 
 #include <string>
-#include "CImg.h"
+#include <list>
+
+/**
+ * @brief Gmic defines its plug-ins in a tree form with menus and submenus.
+ * A GmicTreeNode is a menu entry, which can either point to a submenu or be a leaf.
+ **/
+class GmicTreeNode
+{
+    
+public:
+    
+    GmicTreeNode();
+    
+    /**
+     * @brief Deleting this node will also delete all its children.
+     **/
+    ~GmicTreeNode();
+    
+    GmicTreeNode* getParent() const;
+    
+    /**
+     * @brief Set the given node to be the parent of this node. This will add this node as a child of the parent node
+     * and remove it from the list of the children of the previous parent if it had any.
+     **/
+    void setParent(GmicTreeNode* parent);
+    
+    const std::list<GmicTreeNode*>& getChildren() const;
+    
+private:
+    /**
+     * @brief Tries to add child as a children of this node, if it doesn't already exists.
+     **/
+    bool tryAddChild(GmicTreeNode* child);
+    
+    /**
+     * @brief Tries to remove the given child from the children list of this node it it exists.
+     **/
+    bool tryRemoveChild(GmicTreeNode* child);
+    
+public:
+    
+    
+    bool isLeaf() const { return getChildren().empty(); }
+    
+    bool isTopLevelNode() const { return getParent() == 0; }
+    
+    const std::string& getName() const;
+    void setName(const std::string& name);
+    
+    const std::string& getGmicCommand() const;
+    void setGmicCommand(const std::string& command);
+    
+    const std::string& getGmicPreviewCommand() const;
+    void setGmicPreviewCommand(const std::string& pCommand);
+    
+    const std::string& getGmicArguments() const;
+    void setGmicArguments(const std::string& args);
+    void appendGmicArguments(const std::string& args);
+    
+    double getPreviewZoomFactor() const;
+    void setPreviewZoomFactor(double s);
+private:
+    
+    struct GmicTreeNodePrivate;
+    GmicTreeNodePrivate* _imp;
+};
 
 class GmicGimpParser
 {
@@ -58,12 +123,23 @@ public:
     
     ~GmicGimpParser();
     
-    void downloadFilters(cimg_library::CImgList<char>& sources,cimg_library::CImgList<char>& invalid_servers);
     
     /**
-     * @brief Parses the given gmic definition file, an exception is thrown upon error.
+     * @brief Downloads gmic def file from the remote repositories indicated by the gimp_filter_sources command and parses them
+     * to extract the "tree" structure where each node contains either a plug-in definition or a menu level.
      **/
-    void parse(const bool tryNetUpdate,const char* locale = "en\0");
+    void parse(const char* locale = "en\0");
+    
+    /**
+     * Gmic defines its plug-ins in a tree form with menus and submenus.
+     * This returns the first level entries (which don't have parent menus).
+     **/
+    const std::list<GmicTreeNode*>& getFirstLevelEntries() const;
+
+    /**
+     * @brief For debug purposes.
+     **/
+    void printTree();
     
 private:
     

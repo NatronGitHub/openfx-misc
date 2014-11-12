@@ -36,8 +36,10 @@ GmicGimpParser plugin.
  78153 Le Chesnay Cedex - France
  */
 
+#include <cassert>
+#include <iostream>
 #include "GmicGimpParser.h"
-
+#include "CImg.h"
 #include "gmic.h"
 
 
@@ -83,25 +85,204 @@ namespace {
 
 struct GmicGimpParser::GmicGimpParserPrivate
 {
-    GmicGimpParserPrivate()
+    GmicGimpParser* publicInterface;
+    
+    //The root of the plugins tree
+    std::list<GmicTreeNode*> firstLevelEntries;
+    
+    GmicGimpParserPrivate(GmicGimpParser* publicInterface)
+    : publicInterface(publicInterface)
+    , firstLevelEntries()
     {
         
     }
+    
+    void downloadFilters(cimg_library::CImgList<char>& sources,cimg_library::CImgList<char>& invalid_servers);
+
 };
 
 GmicGimpParser::GmicGimpParser()
-: _imp(new GmicGimpParser::GmicGimpParserPrivate())
+: _imp(new GmicGimpParser::GmicGimpParserPrivate(this))
 {
     
 }
 
 GmicGimpParser::~GmicGimpParser()
 {
+    for (std::list<GmicTreeNode*>::iterator it = _imp->firstLevelEntries.begin(); it != _imp->firstLevelEntries.end(); ++it) {
+        delete *it;
+    }
     delete _imp;
 }
 
+const std::list<GmicTreeNode*>&
+GmicGimpParser::getFirstLevelEntries() const
+{
+    return _imp->firstLevelEntries;
+}
+
+struct GmicTreeNode::GmicTreeNodePrivate
+{
+    GmicTreeNode* parent;
+    std::list<GmicTreeNode*> children;
+    
+    std::string name;
+    std::string command;
+    std::string previewCommand;
+    std::string arguments;
+    
+    double previewFactor;
+    
+    bool doNotRemoveFromParentChildrenOnDeletion;
+    
+    GmicTreeNodePrivate()
+    : parent(0)
+    , children()
+    , name()
+    , command()
+    , previewCommand()
+    , arguments()
+    , previewFactor(1.)
+    , doNotRemoveFromParentChildrenOnDeletion(false)
+    {
+        
+    }
+};
+
+GmicTreeNode::GmicTreeNode()
+: _imp(new GmicTreeNodePrivate())
+{
+    
+}
+
+GmicTreeNode::~GmicTreeNode()
+{
+    if (_imp->parent && !_imp->doNotRemoveFromParentChildrenOnDeletion) {
+        _imp->parent->tryRemoveChild(this);
+    }
+    for (std::list<GmicTreeNode*>::iterator it = _imp->children.begin(); it != _imp->children.end(); ++it) {
+        (*it)->_imp->doNotRemoveFromParentChildrenOnDeletion = true;
+        delete *it;
+    }
+    delete _imp;
+}
+
+GmicTreeNode*
+GmicTreeNode::getParent() const
+{
+    return _imp->parent;
+}
+
 void
-GmicGimpParser::downloadFilters(cimg_library::CImgList<char>& sources,cimg_library::CImgList<char>& invalid_servers)
+GmicTreeNode::setParent(GmicTreeNode* parent)
+{
+
+    if (_imp->parent) {
+        _imp->parent->tryRemoveChild(this);
+    }
+    _imp->parent = parent;
+    if (parent) {
+        parent->tryAddChild(this);
+    }
+}
+
+const std::list<GmicTreeNode*>&
+GmicTreeNode::getChildren() const
+{
+    return _imp->children;
+}
+
+
+bool
+GmicTreeNode::tryAddChild(GmicTreeNode* child)
+{
+    std::list<GmicTreeNode*>::iterator found = std::find(_imp->children.begin(), _imp->children.end(), child);
+    if (found == _imp->children.end()) {
+        _imp->children.push_back(child);
+        return true;
+    }
+    return false;
+}
+
+bool
+GmicTreeNode::tryRemoveChild(GmicTreeNode* child)
+{
+    std::list<GmicTreeNode*>::iterator found = std::find(_imp->children.begin(), _imp->children.end(), child);
+    if (found != _imp->children.end()) {
+        _imp->children.erase(found);
+        return true;
+    }
+    return false;
+}
+
+const std::string&
+GmicTreeNode::getName() const
+{
+    return _imp->name;
+}
+
+void
+GmicTreeNode::setName(const std::string& name)
+{
+    _imp->name = name;
+}
+
+const std::string&
+GmicTreeNode::getGmicCommand() const
+{
+    return _imp->command;
+}
+
+void
+GmicTreeNode::setGmicCommand(const std::string& command)
+{
+    _imp->command = command;
+}
+
+const std::string&
+GmicTreeNode::getGmicPreviewCommand() const
+{
+    return _imp->previewCommand;
+}
+
+void
+GmicTreeNode::setGmicPreviewCommand(const std::string& pCommand)
+{
+    _imp->previewCommand = pCommand;
+}
+
+const std::string&
+GmicTreeNode::getGmicArguments() const
+{
+    return _imp->arguments;
+}
+
+void
+GmicTreeNode::setGmicArguments(const std::string& args)
+{
+    _imp->arguments = args;
+}
+
+void
+GmicTreeNode::appendGmicArguments(const std::string& args)
+{
+    _imp->arguments.append(args);
+}
+
+double
+GmicTreeNode::getPreviewZoomFactor() const
+{
+    return _imp->previewFactor;
+}
+
+void
+GmicTreeNode::setPreviewZoomFactor(double s)
+{
+    _imp->previewFactor = s;
+}
+
+void
+GmicGimpParser::GmicGimpParserPrivate::downloadFilters(cimg_library::CImgList<char>& sources,cimg_library::CImgList<char>& invalid_servers)
 {
     // Build list of filter sources.
     CImgList<float> _sources;
@@ -111,7 +292,7 @@ GmicGimpParser::downloadFilters(cimg_library::CImgList<char>& sources,cimg_libra
 
     
     cimg_snprintf(command,sizeof(command),"%s-gimp_filter_sources",
-                  get_verbosity_mode()>4?"-debug ":get_verbosity_mode()>2?"":"-v -99 ");
+                  publicInterface->get_verbosity_mode() > 4? "-debug " : publicInterface->get_verbosity_mode() > 2 ? "" : "-v -99 ");
     
     try {
         gmic(command,_sources,_names,gmic_additional_commands,true);
@@ -132,7 +313,7 @@ GmicGimpParser::downloadFilters(cimg_library::CImgList<char>& sources,cimg_libra
         }
     }
     
-    initProgress(" G'MIC : Update filters...");
+    publicInterface->initProgress(" G'MIC : Update filters...");
 
     
     // Get filter definition files from external web servers.
@@ -150,7 +331,7 @@ GmicGimpParser::downloadFilters(cimg_library::CImgList<char>& sources,cimg_libra
                 std::string progressText(" G'MIC : Update filters '");
                 progressText.append(s_basename);
                 progressText.append("'...");
-                progressSetText(progressText);
+                publicInterface->progressSetText(progressText);
             }
             
             cimg_snprintf(filename_tmp,sizeof(filename_tmp),"%s%c%s%s",
@@ -160,7 +341,7 @@ GmicGimpParser::downloadFilters(cimg_library::CImgList<char>& sources,cimg_libra
             std::remove(filename_tmp);
             
             // Try curl first.
-            if (get_verbosity_mode()) { // Verbose mode.
+            if (publicInterface->get_verbosity_mode()) { // Verbose mode.
                 cimg_snprintf(command,sizeof(command),_gmic_path "curl -f --compressed -o \"%s\" %s",
                               filename_tmp,sources[l].data());
                 std::fprintf(cimg::output(),"\n[gmic_gimp]./update/ %s\n",command);
@@ -178,7 +359,7 @@ GmicGimpParser::downloadFilters(cimg_library::CImgList<char>& sources,cimg_libra
             
             // Try with 'wget' if 'curl' failed.
             if (!file) {
-                if (get_verbosity_mode()) { // Verbose mode.
+                if (publicInterface->get_verbosity_mode()) { // Verbose mode.
                     cimg_snprintf(command,sizeof(command),_gmic_path "wget -r -l 0 --no-cache -O \"%s\" %s",
                                   filename_tmp,sources[l].data());
                     std::fprintf(cimg::output(),"\n[gmic_gimp]./update/ %s\n",command);
@@ -204,7 +385,7 @@ GmicGimpParser::downloadFilters(cimg_library::CImgList<char>& sources,cimg_libra
                     std::fclose(file);
                     cimg_snprintf(command,sizeof(command),"%s.gz",filename_tmp);
                     std::rename(filename_tmp,command);
-                    if (get_verbosity_mode()) { // Verbose mode.
+                    if (publicInterface->get_verbosity_mode()) { // Verbose mode.
                         cimg_snprintf(command,sizeof(command),_gmic_path "gunzip %s.gz",
                                       filename_tmp);
                         std::fprintf(cimg::output(),
@@ -242,7 +423,7 @@ GmicGimpParser::downloadFilters(cimg_library::CImgList<char>& sources,cimg_libra
                         is_cimg = false;
                         std::rewind(file);
                     }
-                    if (get_verbosity_mode()) {
+                    if (publicInterface->get_verbosity_mode()) {
                         std::fprintf(cimg::output(),
                                      "\n[gmic_gimp]./update/ File '%s' was%s in .cimg[z] format.\n",
                                      filename_tmp,is_cimg?"":" not");
@@ -264,15 +445,13 @@ GmicGimpParser::downloadFilters(cimg_library::CImgList<char>& sources,cimg_libra
         }
     } // cimglist_for(sources,l) {
 
-}
+} // void downloadFilters(cimg_library::CImgList<char>& sources,cimg_library::CImgList<char>& invalid_servers)
 
 void
-GmicGimpParser::parse(const bool tryNetUpdate,const char* locale)
+GmicGimpParser::parse(const char* locale)
 {
    
     
-    CImgList<char> gmic_entries;                   // The list of recognized G'MIC menu entries.
-    CImgList<char> gmic_1stlevel_entries;          // The treepath positions of 1st-level G'MIC menu entries.
     CImgList<char> gmic_commands;                  // The list of corresponding G'MIC commands to process the image.
     CImgList<char> gmic_preview_commands;          // The list of corresponding G'MIC commands to preview the image.
     CImgList<char> gmic_arguments;                 // The list of corresponding needed filter arguments.
@@ -294,17 +473,13 @@ GmicGimpParser::parse(const bool tryNetUpdate,const char* locale)
     
     //Initialize resources
     gmic_additional_commands.assign();
-    gmic_1stlevel_entries.assign();
     gmic_faves.assign();
-    gmic_entries.assign(1);
     gmic_commands.assign(1);
     gmic_preview_commands.assign(1);
     gmic_preview_factors.assign(1);
     gmic_arguments.assign(1);
     
-    if (tryNetUpdate) {
-        downloadFilters(sources, invalid_servers);
-    }
+    _imp->downloadFilters(sources, invalid_servers);
     
     
     progressSetText(" G'MIC : Update filters...");
@@ -330,9 +505,7 @@ GmicGimpParser::parse(const bool tryNetUpdate,const char* locale)
             std::fflush(cimg::output());
         }
         cimg::exception_mode(old_exception_mode);
-        if (tryNetUpdate) {
- //           gimp_progress_pulse();
-        }
+ 
     }
     
     if (!is_default_update) { // Add hardcoded default filters if no updates of the default commands.
@@ -344,6 +517,10 @@ GmicGimpParser::parse(const bool tryNetUpdate,const char* locale)
     
     // Add fave folder if necessary (make it before actually adding faves to make tree paths valids).
     CImgList<char> gmic_1stlevel_names;
+    
+    GmicTreeNode* parent[8] ;
+    memset(parent, 0, sizeof(GmicTreeNode*) * 8);
+    
     //GtkTreeIter iter, fave_iter, parent[8];
     char filename_gmic_faves[1024] = { 0 };
     //tree_view_store = gtk_tree_store_new(2,G_TYPE_UINT,G_TYPE_STRING);
@@ -371,6 +548,8 @@ GmicGimpParser::parse(const bool tryNetUpdate,const char* locale)
     if (!std::strstr(gmic_additional_commands,line)) {
         locale_[0] = 'e'; locale_[1] = 'n'; locale_[2] = 0;
     }
+    
+    GmicTreeNode* lastProcessedNode = 0;
     
     for (const char *data = gmic_additional_commands; *data; ) {
         char *_line = line;
@@ -427,7 +606,8 @@ GmicGimpParser::parse(const bool tryNetUpdate,const char* locale)
                 
                 char *nentry = entry;
                 while (*nentry=='_') {
-                    ++nentry; --level;
+                    ++nentry;
+                    --level;
                 }
                 
                 //Clamp menu level to [0,7]
@@ -441,20 +621,32 @@ GmicGimpParser::parse(const bool tryNetUpdate,const char* locale)
                 cimg::strpare(nentry,'\"',true);
                 
                 if (*nentry) {
+                    
+                    std::string entryName(nentry);
+
                     if (level) {
-                       // gtk_tree_store_append(tree_view_store,&parent[level],level?&parent[level-1]:0);
-                       // gtk_tree_store_set(tree_view_store,&parent[level],0,0,1,nentry,-1);
+                        
+                        
+                        GmicTreeNode* node = new GmicTreeNode();
+                        node->setName(entryName);
+                        GmicTreeNode* p = parent[level - 1];
+                        assert(p);
+                        node->setParent(p);
+                        parent[level] = node;
+                        lastProcessedNode = node;
+                        
                     } else { // 1st-level folder.
-                        bool is_duplicate = false;
-                        cimglist_for(gmic_1stlevel_names,l) {
-                            if (!std::strcmp(nentry,gmic_1stlevel_names[l].data())) { // Folder name is a duplicate.
-                                //if (gtk_tree_model_get_iter_from_string(GTK_TREE_MODEL(tree_view_store),&parent[level],
-                                //                                       gmic_1stlevel_entries[l].data())) {
-                                is_duplicate = true;
+                        
+                        
+                        bool isDuplicate = false;
+                        for (std::list<GmicTreeNode*>::const_iterator it = _imp->firstLevelEntries.begin(); it != _imp->firstLevelEntries.end();++it)
+                        {
+                            if ((*it)->getName() == entryName) {
+                                isDuplicate = true;
                                 break;
-                                //}
                             }
                         }
+                       
                         
                         // Detect if filter is in 'Testing/' (won't be count in number of filters).
                         //GtkWidget *const markup2ascii = gtk_label_new(0);
@@ -462,20 +654,15 @@ GmicGimpParser::parse(const bool tryNetUpdate,const char* locale)
                         //const char *_nentry = gtk_label_get_text(GTK_LABEL(markup2ascii));
                         //is_testing = !std::strcmp(_nentry,"Testing");
                         
-                        if (!is_duplicate) {
-                          //  gtk_tree_store_append(tree_view_store,&parent[level],level?&parent[level-1]:0);
-                           // gtk_tree_store_set(tree_view_store,&parent[level],0,0,1,nentry,-1);
-                            //const char *treepath = gtk_tree_model_get_string_from_iter(GTK_TREE_MODEL(tree_view_store),
-                             //                                                          &parent[level]);
-                            CImg<char>::string(nentry).move_to(gmic_1stlevel_names);
-                            //CImg<char>::string(treepath).move_to(gmic_1stlevel_entries);
-//                            unsigned int order = 0;
-//                            for (unsigned int i = 0; i<4; ++i) {
-//                                order<<=8;
-//                                if (*_nentry) order|=(unsigned char)cimg::uncase(*(_nentry++));
-//                            }
+                        if (!isDuplicate) {
+                            
+                            
+                            GmicTreeNode* topLevelNode = new GmicTreeNode();
+                            topLevelNode->setName(entryName);
+                            _imp->firstLevelEntries.push_back(topLevelNode);
+                            parent[level] = topLevelNode;
+                            lastProcessedNode = topLevelNode;
                         }
-//                        gtk_widget_destroy(markup2ascii);
                     }
                     ++level;
                 }
@@ -501,34 +688,39 @@ GmicGimpParser::parse(const bool tryNetUpdate,const char* locale)
                 cimg::strpare(arguments,' ',false,true);
                 
                 if (*nentry) {
-                    CImg<char>::string(nentry).move_to(gmic_entries);
-                    CImg<char>::string(command).move_to(gmic_commands);
-                    CImg<char>::string(arguments).move_to(gmic_arguments);
+                    
+                    std::string entryName(nentry);
+
+                    GmicTreeNode* node = new GmicTreeNode();
+                    node->setName(entryName);
+                    if (level) {
+                        GmicTreeNode* p = parent[level - 1];
+                        assert(p);
+                        node->setParent(p);
+                    } else {
+                        _imp->firstLevelEntries.push_back(node);
+                    }
+                    node->setGmicCommand(command);
+                    node->setGmicArguments(arguments);
+                    lastProcessedNode = node;
                     
                     if (err >= 3) { // Filter has a specified preview command.
                         cimg::strpare(preview_command,' ',false,true);
                         char *const preview_mode = std::strchr(preview_command,'(');
                         double factor = 1;
                         char sep = 0;
-                        if (preview_mode && std::sscanf(preview_mode+1,"%lf%c",&factor,&sep)==2 && factor>=0 && sep==')')
+                        if (preview_mode && std::sscanf(preview_mode+1,"%lf%c",&factor,&sep)==2 && factor>=0 && sep==')') {
                             *preview_mode = 0;
-                        else factor = -1;
-                        CImg<char>::string(preview_command).move_to(gmic_preview_commands);
-                        CImg<double>::vector(factor).move_to(gmic_preview_factors);
+                        } else {
+                            factor = -1;
+                        }
+                        node->setGmicPreviewCommand(preview_command);
+                        node->setPreviewZoomFactor(factor);
                     } else {
-                        CImg<char>::string("_none_").move_to(gmic_preview_commands);
-                        CImg<double>::vector(-1).move_to(gmic_preview_factors);
+                        node->setGmicPreviewCommand("_none_");
+                        node->setPreviewZoomFactor(-1);
                     }
-               //     gtk_tree_store_append(tree_view_store,&iter,level?&parent[level-1]:0);
-               //     gtk_tree_store_set(tree_view_store,&iter,0,gmic_entries.size()-1,1,nentry,-1);
-                    if (!level) {
-                 //       GtkWidget *const markup2ascii = gtk_label_new(0);
-                  //      gtk_label_set_markup(GTK_LABEL(markup2ascii),nentry);
-                    //    const char *_nentry = gtk_label_get_text(GTK_LABEL(markup2ascii));
-                        unsigned int order = 0;
-                      //  for (unsigned int i = 0; i<3; ++i) { order<<=8; if (*_nentry) order|=cimg::uncase(*(_nentry++)); }
-                       // gtk_widget_destroy(markup2ascii);
-                    }
+                
                     if (!is_testing) {
                         ++nb_available_filters;
                     } // Count only non-testing filters.
@@ -537,13 +729,16 @@ GmicGimpParser::parse(const bool tryNetUpdate,const char* locale)
         } else { // Line is the continuation of an entry.
             if (gmic_arguments) {
                 
-                if (gmic_arguments.back()) {
-                    gmic_arguments.back().back() = ' ';
-                }
+//                if (gmic_arguments.back()) {
+//                    gmic_arguments.back().back() = ' ';
+//                }
                 
                 cimg::strpare(++_line,' ',false,true);
                 
-                gmic_arguments.back().append(CImg<char>(_line,std::strlen(_line)+1,1,1,1,true),'x');
+                std::string toAppend(_line);
+                assert(lastProcessedNode);
+                
+                lastProcessedNode->appendGmicArguments(toAppend);
             }
         }
     }
@@ -638,13 +833,43 @@ GmicGimpParser::parse(const bool tryNetUpdate,const char* locale)
         std::fclose(file_gmic_faves);
     }
     
-    if (tryNetUpdate) {
+    
+    
+    //if (tryNetUpdate) {
         //gimp_progress_update(1);
         //gimp_progress_end();
-    }
+   // }
 //    return invalid_servers;
 }
 
+static void printRecursive(GmicTreeNode* node,int nTabs)
+{
+    std::string spaces;
+    for (int i = 0; i < nTabs; ++i) {
+        spaces.push_back(' ');
+    }
+    std::cout << spaces << node->getName() << std::endl;
+    if (!node->getGmicCommand().empty()) {
+        std::cout << spaces << "  COMMAND: " << node->getGmicCommand() << std::endl;
+        std::cout << spaces << "  ARGS: " << node->getGmicArguments() << std::endl;
+        if (!node->getGmicPreviewCommand().empty()) {
+            std::cout << spaces << "  PREVIEW COMMAND: " << node->getGmicPreviewCommand() << std::endl;
+            std::cout << spaces << "  PREVIEW FACTOR: " << node->getPreviewZoomFactor() << std::endl;
+        }
+    }
+    const std::list<GmicTreeNode*>& children = node->getChildren();
+    for (std::list<GmicTreeNode*>::const_iterator it = children.begin(); it != children.end(); ++it) {
+        printRecursive(*it,nTabs + 4);
+    }
+}
+
+void
+GmicGimpParser::printTree()
+{
+    for (std::list<GmicTreeNode*>::iterator it = _imp->firstLevelEntries.begin(); it != _imp->firstLevelEntries.end(); ++it) {
+        printRecursive(*it,4);
+    }
+}
 
 
 
