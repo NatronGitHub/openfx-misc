@@ -371,6 +371,7 @@ public:
      * @param tryNetUpdateDownloads Tries to load gmic def file from the remote repositories indicated by the gimp_filter_sources command.
      * This requires a working internet connexion. Internally curl is used and if it doesn't work wget will be used.
      * @param errors[out] If not empty, this will be a buffer storing all errors that happened during the parsing.
+     * @note This is safe to call parse() several times in row without harming the parser's state, it will be reseted between 2 calls.
      **/
     void parse(std::string* errors,bool tryNetUpdate,const char* locale = "en\0");
     
@@ -380,6 +381,12 @@ public:
      **/
     const std::list<GmicTreeNode*>& getFirstLevelEntries() const;
 
+    /**
+     * @brief Get the number of plug-ins that were successfully parsed. It is meant to be called
+     * after parse() has been called.
+     **/
+    int getNPlugins() const;
+    
     /**
      * @brief For debug purposes.
      **/

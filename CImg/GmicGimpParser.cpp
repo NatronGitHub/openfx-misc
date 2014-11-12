@@ -152,12 +152,14 @@ ParameterBase::setSilent(bool silent)
 struct GmicGimpParser::GmicGimpParserPrivate
 {
     GmicGimpParser* publicInterface;
+    int nPlugins;
     
     //The root of the plugins tree
     std::list<GmicTreeNode*> firstLevelEntries;
     
     GmicGimpParserPrivate(GmicGimpParser* publicInterface)
     : publicInterface(publicInterface)
+    , nPlugins(0)
     , firstLevelEntries()
     {
         
@@ -182,6 +184,7 @@ GmicGimpParser::~GmicGimpParser()
 void
 GmicGimpParser::reset()
 {
+    _imp->nPlugins = 0;
     for (std::list<GmicTreeNode*>::iterator it = _imp->firstLevelEntries.begin(); it != _imp->firstLevelEntries.end(); ++it) {
         delete *it;
     }
@@ -778,6 +781,8 @@ GmicGimpParser::parse(std::string* errors,bool tryNetUpdate,const char* locale)
                     node->setGmicArguments(arguments);
                     lastProcessedNode = node;
                     
+                    ++_imp->nPlugins;
+                    
                     if (err >= 3) { // Filter has a specified preview command.
                         cimg::strpare(preview_command,' ',false,true);
                         char *const preview_mode = std::strchr(preview_command,'(');
@@ -819,6 +824,12 @@ GmicGimpParser::parse(std::string* errors,bool tryNetUpdate,const char* locale)
     }
     
     progressEnd();
+}
+
+int
+GmicGimpParser::getNPlugins() const
+{
+    return _imp->nPlugins;
 }
 
 static void printRecursive(GmicTreeNode* node,int nTabs)
