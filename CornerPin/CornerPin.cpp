@@ -400,7 +400,7 @@ private:
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
-    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+    //virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
 private:
     // NON-GENERIC
@@ -564,9 +564,9 @@ void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const s
     }
 }
 
-void
-CornerPinPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
-{
+//void
+//CornerPinPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+//{
     ///Commented-out because if the corner pin is used as a Tracker export from Natron we want the "From" points to stay the same.
     ///Preventing the call to this function in Natron is really messy and quite inapropriate (because we have to differentiate "regular"
     ///CornerPin nodes from "Exported" ones.) Imho the best is to just do nothing here.
@@ -580,7 +580,7 @@ CornerPinPlugin::changedClip(const InstanceChangedArgs &args, const std::string 
 //        endEditBlock();
 //        changedTransform(args);
 //    }
-}
+//}
 
 class CornerPinTransformInteract : public OFX::OverlayInteract
 {

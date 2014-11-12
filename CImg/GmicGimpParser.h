@@ -44,7 +44,232 @@
 #define __Misc__GmicGimpParser__
 
 #include <string>
+#include <vector>
 #include <list>
+#include <cfloat>
+#include <limits>
+
+namespace Gmic {
+    
+
+class ParameterBase
+{
+public:
+    
+    ParameterBase(const std::string& label,int nDim);
+    
+    virtual ~ParameterBase();
+    
+    int getNDim() const;
+    
+    /**
+     * @brief The label of the parameter as described by the .gmic file
+     **/
+    const std::string& getLabel() const;
+    
+    /**
+     * @brief Same as the label but without spaces and starts with a lower-case letter.
+     **/
+    const std::string& getScriptName() const;
+    
+    /**
+     * @brief A parameter is silent when it corresponds to the case exhibited in the documentation:
+            You can also replace 'typedef' by '_typedef' to tell the plug-in not
+            to update the image preview when the corresponding parameter is modified.
+     **/
+    bool isSilent() const;
+    void setSilent(bool silent);
+    
+private:
+    
+    struct ParameterBasePrivate;
+    ParameterBasePrivate* _imp;
+};
+
+template <typename T>
+class Param : public ParameterBase
+{
+    
+public:
+    
+    Param(const std::string& label,int nDim)
+    : ParameterBase(label,nDim)
+    , defaultValues(nDim)
+    {
+        for (int i = 0; i < nDim; ++i) {
+            defaultValues[i] = T();
+        }
+    }
+    
+    virtual ~Param()
+    {
+        
+    }
+    
+    void setDefaultValue(int dimIndex,const T& value) {
+        defaultValues[dimIndex] = value;
+    }
+    
+    const T& getDefaultValue(int dimIndex) const
+    {
+        return defaultValues[dimIndex];
+    }
+    
+private:
+    
+    std::vector<T> defaultValues;
+};
+
+class IntParam : public Param<int>
+{
+public:
+    
+    IntParam(const std::string& label,int nDim)
+    : Param<int>(label,nDim)
+    , rangeMin(INT_MIN)
+    , rangeMax(INT_MAX)
+    {
+        
+    }
+    
+    void setRange(int min,int max)
+    {
+        rangeMin = min;
+        rangeMax = max;
+    }
+    
+    void getRange(int* min,int* max) const
+    {
+        *min = rangeMin;
+        *max = rangeMax;
+    }
+    
+private:
+    
+    int rangeMin,rangeMax;
+};
+
+
+class FloatParam : public Param<double>
+{
+public:
+    
+    FloatParam(const std::string& label,int nDim)
+    : Param<double>(label,nDim)
+    , rangeMin(-DBL_MAX)
+    , rangeMax(DBL_MAX)
+    {
+        
+    }
+    
+    void setRange(double min,double max)
+    {
+        rangeMin = min;
+        rangeMax = max;
+    }
+    
+    void getRange(double* min,double* max) const
+    {
+        *min = rangeMin;
+        *max = rangeMax;
+    }
+    
+private:
+    
+    double rangeMin,rangeMax;
+};
+
+class BooleanParam : public Param<bool>
+{
+public:
+    
+    BooleanParam(const std::string& label)
+    : Param<bool>(label,1)
+    {
+        
+    }
+};
+
+class ButtonParam : public Param<bool>
+{
+public:
+    
+    ButtonParam(const std::string& label)
+    : Param<bool>(label,1)
+    {
+        
+    }
+};
+
+
+class ChoiceParam : public Param<int>
+{
+public:
+    
+    ChoiceParam(const std::string& label)
+    : Param<int>(label,1)
+    , options()
+    {
+        
+    }
+    
+    void addOption(const std::string& option)
+    {
+        options.push_back(option);
+    }
+    
+    const std::list<std::string>& getOptions() const { return options; }
+    
+private:
+    
+    std::list<std::string> options;
+};
+
+class ColorParam : public Param<double>
+{
+public:
+    
+    ColorParam(const std::string& label,int nDim)
+    : Param<double>(label,nDim)
+    {
+        
+    }
+};
+
+class StringParam : public Param<std::string>
+{
+public:
+    
+    enum StringParamTypeEnum
+    {
+        eStringParamTypeLabel,
+        eStringParamTypeUrl,
+        eStringParamTypeText,
+        eStringParamTypeMultiLineText,
+        eStringParamTypeFile,
+        eStringParamTypeFolder
+    };
+    
+    StringParam(const std::string& label)
+    : Param<std::string>(label,1)
+    , type(eStringParamTypeLabel)
+    {
+        
+    }
+    
+    void setType(StringParamTypeEnum type)
+    {
+        this->type = type;
+    }
+    
+    StringParamTypeEnum getType() const {
+        return type;
+    }
+    
+private:
+    
+    StringParamTypeEnum type;
+};
 
 /**
  * @brief Gmic defines its plug-ins in a tree form with menus and submenus.
@@ -71,6 +296,17 @@ public:
     void setParent(GmicTreeNode* parent);
     
     const std::list<GmicTreeNode*>& getChildren() const;
+    
+    /**
+     * @brief Build the data structures representing each parameter of the filter (if it has any) from the raw
+     * gmic arguments that were passed as a string beforehand via setGmicArguments().
+     * This function is recursive and will create all parameters of the children nodes as needed.
+     **/
+    void parseParametersFromGmicArgs();
+    
+    void addParameterAndTakeOwnership(ParameterBase* param);
+    
+    const std::list<ParameterBase*>& getParameters() const;
     
 private:
     /**
@@ -123,6 +359,11 @@ public:
     
     ~GmicGimpParser();
     
+    /**
+     * @brief Resets the state of the parser as it is when the constructor only has been called.
+     * Under the hood it deallocates all the node trees and parameters it has previously created.
+     **/
+    void reset();
     
     /**
      * @brief Downloads gmic def file from the remote repositories indicated by the gimp_filter_sources command and parses them
@@ -154,5 +395,6 @@ private:
     
 };
 
+} //namespace Gmic
 
 #endif /* defined(__Misc__GmicGimpParser__) */
