@@ -567,16 +567,19 @@ void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const s
 void
 CornerPinPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
-        const OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
-        beginEditBlock(kParamCopyInputRoD);
-        _from[0]->setValue(srcRoD.x1, srcRoD.y1);
-        _from[1]->setValue(srcRoD.x2, srcRoD.y1);
-        _from[2]->setValue(srcRoD.x2, srcRoD.y2);
-        _from[3]->setValue(srcRoD.x1, srcRoD.y2);
-        endEditBlock();
-        changedTransform(args);
-    }
+    ///Commented-out because if the corner pin is used as a Tracker export from Natron we want the "From" points to stay the same.
+    ///Preventing the call to this function in Natron is really messy and quite inapropriate (because we have to differentiate "regular"
+    ///CornerPin nodes from "Exported" ones.) Imho the best is to just do nothing here.
+//    if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
+//        const OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
+//        beginEditBlock(kParamCopyInputRoD);
+//        _from[0]->setValue(srcRoD.x1, srcRoD.y1);
+//        _from[1]->setValue(srcRoD.x2, srcRoD.y1);
+//        _from[2]->setValue(srcRoD.x2, srcRoD.y2);
+//        _from[3]->setValue(srcRoD.x1, srcRoD.y2);
+//        endEditBlock();
+//        changedTransform(args);
+//    }
 }
 
 class CornerPinTransformInteract : public OFX::OverlayInteract
