@@ -41,10 +41,12 @@
 #include <vector>
 #include <string>
 #include <cassert>
+#include <cmath>
 
 #include "ofxImageEffect.h"
 #include "ofxProgress.h"
 #include "ofxTimeLine.h"
+
 
 #include "GmicGimpParser.h"
 
@@ -52,9 +54,21 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsTiles 1
+#define kSupportsMultiResolution 1
+
+///Hard limit, we can't have more plug-ins defined by this file
+#define GMIC_OFX_MAX_PLUGINS_COUNT 1000
 
 //The parser of the .gmic definition file
 static Gmic::GmicGimpParser gmicParser;
+
+//A vector containing a copy of the list returned by Gmic::GmicGimpParser::getPluginsByDeclarationOrder()
+//stored in a vector for random access
+static std::vector<Gmic::GmicTreeNode*> pluginsByRandomAccess;
+
+//Same size as pluginsByRandomAccess, corresponds to plugin ids
+static std::vector<std::string> pluginsIds;
 
 typedef void (OfxSetHost)(OfxHost *);
 
@@ -123,10 +137,8 @@ public:
 
 // pointers to various bits of the host
 static std::vector<OfxHost*>                          gHost;
-static std::vector<OfxHost>                           gProxy;
 static std::vector<ImageEffectHostDescription>        gHostDescription;
 static std::vector<OfxImageEffectSuiteV1*>            gEffectHost;
-static std::vector<OfxImageEffectSuiteV1>             gEffectProxy;
 static std::vector<OfxPropertySuiteV1*>               gPropHost;
 static std::vector<OfxParameterSuiteV1*>              gParamHost;
 static std::vector<OfxMemorySuiteV1*>                 gMemoryHost;
@@ -141,11 +153,145 @@ static std::vector<OfxInteractSuiteV1*>    gInteractHost;
 // the plugin struct
 static std::vector<OfxPlugin> gPlugins;
 static int gPluginsNb = 0;
-static std::vector<OfxPluginEntryPoint*> gPluginsMainEntry;
-static std::vector<OfxPluginEntryPoint*> gPluginsOverlayMain;
-static std::vector<OfxSetHost*> gPluginsSetHost;
 
 
+namespace OFX {
+    
+  
+    
+    /** @brief maps status to a string */
+    const char* mapStatusToString(OfxStatus stat)
+    {
+        switch(stat)
+        {
+            case kOfxStatOK             : return "kOfxStatOK";
+            case kOfxStatFailed         : return "kOfxStatFailed";
+            case kOfxStatErrFatal       : return "kOfxStatErrFatal";
+            case kOfxStatErrUnknown     : return "kOfxStatErrUnknown";
+            case kOfxStatErrMissingHostFeature : return "kOfxStatErrMissingHostFeature";
+            case kOfxStatErrUnsupported : return "kOfxStatErrUnsupported";
+            case kOfxStatErrExists      : return "kOfxStatErrExists";
+            case kOfxStatErrFormat      : return "kOfxStatErrFormat";
+            case kOfxStatErrMemory      : return "kOfxStatErrMemory";
+            case kOfxStatErrBadHandle   : return "kOfxStatErrBadHandle";
+            case kOfxStatErrBadIndex    : return "kOfxStatErrBadIndex";
+            case kOfxStatErrValue       : return "kOfxStatErrValue";
+            case kOfxStatReplyYes       : return "kOfxStatReplyYes";
+            case kOfxStatReplyNo        : return "kOfxStatReplyNo";
+            case kOfxStatReplyDefault   : return "kOfxStatReplyDefault";
+            case kOfxStatErrImageFormat : return "kOfxStatErrImageFormat";
+        }
+        return "UNKNOWN STATUS CODE";
+    }
+
+namespace Exception {
+    
+    /** @brief thrown when a suite returns a dud status code
+     */
+    class Suite : public std::exception {
+        protected :
+        OfxStatus _status;
+        public :
+        Suite(OfxStatus s) : _status(s) {}
+        OfxStatus status(void) {return _status;}
+        operator OfxStatus() {return _status;}
+        
+        /** @brief reimplemented from std::exception */
+        virtual const char * what () const throw () {return mapStatusToString(_status);}
+        
+    };
+    
+    /** @brief Exception indicating that a host doesn't know about a property that is should do */
+    class PropertyUnknownToHost : public std::exception {
+        protected :
+        std::string _what;
+        public :
+        PropertyUnknownToHost(const char *what) : _what(what) {}
+        virtual ~PropertyUnknownToHost() throw() {}
+        
+        /** @brief reimplemented from std::exception */
+        virtual const char * what () const throw ()
+        {
+            return _what.c_str();
+        }
+    };
+    
+    /** @brief exception indicating that the host thinks a property has an illegal value */
+    class PropertyValueIllegalToHost : public std::exception {
+        protected :
+        std::string _what;
+        public :
+        PropertyValueIllegalToHost(const char *what) : _what(what) {}
+        virtual ~PropertyValueIllegalToHost() throw() {}
+        
+        /** @brief reimplemented from std::exception */
+        virtual const char * what () const throw ()
+        {
+            return _what.c_str();
+        }
+    };
+} //namespace Exception
+    
+    /** @brief Throws an @ref OFX::Exception depending on the status flag passed in */
+    void throwSuiteStatusException(OfxStatus stat) throw(OFX::Exception::Suite, std::bad_alloc)
+    {
+        switch (stat)
+        {
+            case kOfxStatOK :
+            case kOfxStatReplyYes :
+            case kOfxStatReplyNo :
+            case kOfxStatReplyDefault :
+                break;
+                
+            case kOfxStatErrMemory :
+                throw std::bad_alloc();
+                
+            default :
+                throw OFX::Exception::Suite(stat);
+        }
+    }
+    
+    void throwHostMissingSuiteException(std::string name) throw(OFX::Exception::Suite)
+    {
+        throw OFX::Exception::Suite(kOfxStatErrUnsupported);
+    }
+    
+    void throwPropertyException(OfxStatus stat,
+                                const std::string &propName) throw(std::bad_alloc,
+    OFX::Exception::PropertyUnknownToHost,
+    OFX::Exception::PropertyValueIllegalToHost,
+    OFX::Exception::Suite) {
+        switch (stat)
+        {
+            case kOfxStatOK :
+            case kOfxStatReplyYes :
+            case kOfxStatReplyNo :
+            case kOfxStatReplyDefault :
+                // Throw nothing!
+                break;
+                
+            case kOfxStatErrUnknown :
+            case kOfxStatErrUnsupported : // unsupported implies unknow here
+                throw OFX::Exception::PropertyUnknownToHost(propName.c_str());
+                break;
+                
+            case kOfxStatErrMemory :
+                throw std::bad_alloc();
+                break;
+                
+            case kOfxStatErrValue :
+                throw  OFX::Exception::PropertyValueIllegalToHost(propName.c_str());
+                break;
+                
+            case kOfxStatErrBadHandle :
+            case kOfxStatErrBadIndex :
+            default :
+                throwSuiteStatusException(stat);
+                break;
+        }
+    }
+    
+}
 
 /* fetch our host APIs from the host struct given us
  the plugin's set host function must have been already called
@@ -159,7 +305,6 @@ fetchHostSuites(int nth)
     
     if (nth+1 > (int)gEffectHost.size()) {
         gEffectHost.resize(nth+1);
-        gEffectProxy.resize(nth+1);
         gPropHost.resize(nth+1);
         gParamHost.resize(nth+1);
         gMemoryHost.resize(nth+1);
@@ -185,21 +330,6 @@ fetchHostSuites(int nth)
     gInteractHost[nth]   = (OfxInteractSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxInteractSuite, 1);
     if (!gEffectHost[nth] || !gPropHost[nth] || !gParamHost[nth] || !gMemoryHost[nth] || !gThreadHost[nth])
         return kOfxStatErrMissingHostFeature;
-    // setup proxies
-    gEffectProxy[nth] = *gEffectHost[nth];
-    gEffectProxy[nth].getPropertySet = getPropertySetNthFunc(nth);
-    gEffectProxy[nth].getParamSet = getParamSetNthFunc(nth);
-    gEffectProxy[nth].clipDefine = clipDefineNthFunc(nth);
-    gEffectProxy[nth].clipGetHandle = clipGetHandleNthFunc(nth);
-    gEffectProxy[nth].clipGetPropertySet = clipGetPropertySetNthFunc(nth);
-    gEffectProxy[nth].clipGetImage = clipGetImageNthFunc(nth);
-    gEffectProxy[nth].clipReleaseImage = clipReleaseImageNthFunc(nth);
-    gEffectProxy[nth].clipGetRegionOfDefinition = clipGetRegionOfDefinitionNthFunc(nth);
-    gEffectProxy[nth].abort = abortNthFunc(nth);
-    gEffectProxy[nth].imageMemoryAlloc = imageMemoryAllocNthFunc(nth);
-    gEffectProxy[nth].imageMemoryFree = imageMemoryFreeNthFunc(nth);
-    gEffectProxy[nth].imageMemoryLock = imageMemoryLockNthFunc(nth);
-    gEffectProxy[nth].imageMemoryUnlock = imageMemoryUnlockNthFunc(nth);
     return kOfxStatOK;
 }
 
@@ -358,11 +488,290 @@ NTHFUNC10(nth+70); \
 NTHFUNC10(nth+80); \
 NTHFUNC10(nth+90)
 
+#define NTHFUNC1000(nth) \
+NTHFUNC100(nth); \
+NTHFUNC100(nth+100); \
+NTHFUNC100(nth+200); \
+NTHFUNC100(nth+300); \
+NTHFUNC100(nth+400); \
+NTHFUNC100(nth+500); \
+NTHFUNC100(nth+600); \
+NTHFUNC100(nth+700); \
+NTHFUNC100(nth+800); \
+NTHFUNC100(nth+900)
+
+/** @brief, returns the dimension of the given property from this property set */
+int propGetDimension(int nth,OfxPropertySetHandle handle,const char* property, bool throwOnFailure = true)
+{
+    int dimension;
+    OfxStatus stat = gPropHost[nth]->propGetDimension(handle, property, &dimension);
+    
+    if (throwOnFailure) {
+        OFX::throwPropertyException(stat, property);
+    }
+    return dimension;
+}
+
+void propSetPointer(int nth,OfxPropertySetHandle handle,const char* property, void *value, int idx = 0, bool throwOnFailure = true)
+{
+    OfxStatus stat = gPropHost[nth]->propSetPointer(handle, property, idx, value);
+    if (throwOnFailure) {
+        OFX::throwPropertyException(stat, property);
+    }
+}
+
+void propSetInt(int nth,OfxPropertySetHandle handle,const char* property, int value, int idx, bool throwOnFailure = true)
+{
+    OfxStatus stat = gPropHost[nth]->propSetInt(handle, property, idx, value);
+    if (throwOnFailure) {
+        OFX::throwPropertyException(stat, property);
+    }
+}
+
+void propSetDouble(int nth,OfxPropertySetHandle handle,const char* property, double value, int idx, bool throwOnFailure = true)
+{
+    OfxStatus stat = gPropHost[nth]->propSetDouble(handle, property, idx, value);
+    if (throwOnFailure) {
+        OFX::throwPropertyException(stat, property);
+    }
+}
+
+void propSetString(int nth,OfxPropertySetHandle handle,const char* property, const std::string& value, int idx = 0, bool throwOnFailure = true)
+{
+    OfxStatus stat = gPropHost[nth]->propSetString(handle, property, idx, value.c_str());
+    if (throwOnFailure) {
+        OFX::throwPropertyException(stat, property);
+    }
+}
+
+
+void describePlugin(int nth, OfxPropertySetHandle effectProp)
+{
+    assert(nth < (int)pluginsByRandomAccess.size());
+    Gmic::GmicTreeNode* gmicPlugin = pluginsByRandomAccess[nth];
+    
+    const std::string& pluginLabel = gmicPlugin->getName();
+    propSetString(nth,effectProp,kOfxPropLabel, pluginLabel);
+    propSetString(nth,effectProp,kOfxPropShortLabel, pluginLabel, 0, false);
+    propSetString(nth,effectProp,kOfxPropLongLabel, pluginLabel, 0, false);
+    
+    std::string group;
+    Gmic::GmicTreeNode* parent = gmicPlugin->getParent();
+    while (parent) {
+        std::string toInsert;
+        if (group.empty()) {
+            toInsert = parent->getName();
+        } else {
+            toInsert = parent->getName() + "/";
+        }
+        group.insert(0, toInsert);
+        parent = parent->getParent();
+    }
+    propSetString(nth,effectProp,kOfxImageEffectPluginPropGrouping, group);
+
+    //Safe to assume that gmic plug-ins only support the Filter and General contexts.
+    propSetString(nth,effectProp,kOfxImageEffectPropSupportedContexts, kOfxImageEffectContextFilter, 0);
+    propSetString(nth,effectProp,kOfxImageEffectPropSupportedContexts, kOfxImageEffectContextGeneral, 1);
+    
+    //CImg accepts float only
+    propSetString(nth,effectProp,kOfxImageEffectPropSupportedPixelDepths, kOfxBitDepthFloat  ,0);
+    
+
+    propSetInt(nth,effectProp,kOfxImageEffectPluginPropSingleInstance, 0, 0);
+    propSetInt(nth,effectProp,kOfxImageEffectPluginPropHostFrameThreading, 0, 0);
+    propSetInt(nth,effectProp,kOfxImageEffectPropTemporalClipAccess, 0, 0);
+    propSetInt(nth,effectProp,kOfxImageEffectPluginPropFieldRenderTwiceAlways, true, 0);
+    propSetInt(nth,effectProp,kOfxImageEffectPropSupportsMultipleClipPARs, false, 0);
+    propSetString(nth,effectProp,kOfxImageEffectPluginRenderThreadSafety, kOfxImageEffectRenderFullySafe, 0);
+    propSetInt(nth,effectProp,kOfxImageEffectPropSupportsTiles, kSupportsTiles, 0);
+    propSetInt(nth,effectProp,kOfxImageEffectPropSupportsMultiResolution, kSupportsMultiResolution, 0);
+}
+
+void defineClip(int nth,OfxImageEffectHandle effectHandle,const char* name,bool isMask,bool optional)
+{
+    OfxPropertySetHandle clipPropsHandle;
+    OfxStatus stat = gEffectHost[nth]->clipDefine(effectHandle, name, &clipPropsHandle);
+    (void)stat;
+    
+    propSetString(nth,clipPropsHandle,kOfxImageEffectPropSupportedComponents, kOfxImageComponentAlpha, 0);
+    propSetString(nth,clipPropsHandle,kOfxImageEffectPropSupportedComponents, kOfxImageComponentRGB, 1);
+    propSetString(nth,clipPropsHandle,kOfxImageEffectPropSupportedComponents, kOfxImageComponentRGBA, 2);
+    
+    propSetInt(nth,clipPropsHandle,kOfxImageEffectPropTemporalClipAccess, int(false), 0);
+    propSetInt(nth,clipPropsHandle,kOfxImageEffectPropSupportsTiles, int(kSupportsTiles), 0);
+    propSetInt(nth,clipPropsHandle,kOfxImageClipPropIsMask, int(isMask), 0);
+
+    propSetInt(nth,clipPropsHandle,kOfxImageClipPropOptional, int(optional), 0);
+
+}
+
+
+void describePluginInContext(int nth,OfxImageEffectHandle effectHandle,OfxParamSetHandle paramSetHandle)
+{
+    assert(nth < (int)pluginsByRandomAccess.size());
+    Gmic::GmicTreeNode* gmicPlugin = pluginsByRandomAccess[nth];
+    
+    defineClip(nth, effectHandle, kOfxImageEffectSimpleSourceClipName, false, false);
+    defineClip(nth, effectHandle, kOfxImageEffectOutputClipName, false, false);
+    
+    // can Gmic plug-ins accept a mask ?
+    
+    //Add a global page
+    OfxPropertySetHandle pagePropsHandle;
+    {
+        OfxStatus stat = gParamHost[nth]->paramDefine(paramSetHandle, kOfxParamTypePage, "Controls", &pagePropsHandle);
+        OFX::throwSuiteStatusException(stat);
+    }
+    
+    
+    //Build parameters
+    const std::list<Gmic::ParameterBase*>& gmicParameters = gmicPlugin->getParameters();
+    
+    for (std::list<Gmic::ParameterBase*>::const_iterator it = gmicParameters.begin(); it != gmicParameters.end(); ++it) {
+        
+        const std::string& paramLabel = (*it)->getLabel();
+        const std::string& paramScriptName = (*it)->getScriptName();
+        
+        Gmic::IntParam* isInt = dynamic_cast<Gmic::IntParam*>(*it);
+        Gmic::ButtonParam* isButton = dynamic_cast<Gmic::ButtonParam*>(*it);
+        Gmic::FloatParam* isFloat = dynamic_cast<Gmic::FloatParam*>(*it);
+        Gmic::BooleanParam* isBool = dynamic_cast<Gmic::BooleanParam*>(*it);
+        Gmic::ChoiceParam* isChoice = dynamic_cast<Gmic::ChoiceParam*>(*it);
+        Gmic::StringParam* isString = dynamic_cast<Gmic::StringParam*>(*it);
+        Gmic::ColorParam* isColor = dynamic_cast<Gmic::ColorParam*>(*it);
+        
+        OfxPropertySetHandle paramPropsHandle;
+
+        if (isInt) {
+            OfxStatus stat = gParamHost[nth]->paramDefine(paramSetHandle, kOfxParamTypeInteger, paramScriptName.c_str(), &paramPropsHandle);
+            OFX::throwSuiteStatusException(stat);
+            
+            int rangeMin,rangeMax;
+            isInt->getRange(&rangeMin, &rangeMax);
+            propSetInt(nth,paramPropsHandle,kOfxParamPropMin, rangeMin,0);
+            propSetInt(nth,paramPropsHandle,kOfxParamPropMax, rangeMax,0);
+            propSetInt(nth,paramPropsHandle,kOfxParamPropDefault, isInt->getDefaultValue(0),0);
+            
+        } else if (isBool || isButton) { //< treat buttons as booleans because in Gmic they are assumed to be toggable buttons whereas in OFX they are push buttons
+            OfxStatus stat = gParamHost[nth]->paramDefine(paramSetHandle, kOfxParamTypeBoolean, paramScriptName.c_str(), &paramPropsHandle);
+            OFX::throwSuiteStatusException(stat);
+            
+            if (isBool) {
+                propSetInt(nth,paramPropsHandle,kOfxParamPropDefault, (int)isBool->getDefaultValue(0),0);
+            } else {
+                propSetInt(nth,paramPropsHandle,kOfxParamPropDefault, 0, 0);
+            }
+            
+        } else if (isFloat) {
+            OfxStatus stat = gParamHost[nth]->paramDefine(paramSetHandle, kOfxParamTypeDouble, paramScriptName.c_str(), &paramPropsHandle);
+            OFX::throwSuiteStatusException(stat);
+            
+            double rangeMin,rangeMax;
+            isFloat->getRange(&rangeMin, &rangeMax);
+            propSetDouble(nth,paramPropsHandle,kOfxParamPropMin, rangeMin,0);
+            propSetDouble(nth,paramPropsHandle,kOfxParamPropMax, rangeMax,0);
+            propSetDouble(nth,paramPropsHandle,kOfxParamPropDefault, isFloat->getDefaultValue(0),0);
+            propSetString(nth,paramPropsHandle,kOfxParamPropDoubleType, kOfxParamDoubleTypePlain);
+            propSetString(nth,paramPropsHandle,kOfxParamPropDefaultCoordinateSystem, kOfxParamCoordinatesCanonical);
+            propSetDouble(nth,paramPropsHandle,kOfxParamPropIncrement, 1, 0);
+            propSetInt(nth,paramPropsHandle,kOfxParamPropDigits, 2, 0);
+        } else if (isColor) {
+            
+            int nDims = isColor->getNDim();
+            if (nDims == 3) {
+                OfxStatus stat = gParamHost[nth]->paramDefine(paramSetHandle, kOfxParamTypeRGB, paramScriptName.c_str(), &paramPropsHandle);
+                OFX::throwSuiteStatusException(stat);
+            } else if (nDims == 4) {
+                OfxStatus stat = gParamHost[nth]->paramDefine(paramSetHandle, kOfxParamTypeRGBA, paramScriptName.c_str(), &paramPropsHandle);
+                OFX::throwSuiteStatusException(stat);
+            } else {
+                assert(false);
+            }
+            
+            double defaultColor[4];
+            for (int i = 0; i < 4; ++i) {
+                if (i >= nDims) {
+                    defaultColor[i] = 1.;
+                } else {
+                    defaultColor[i] = isColor->getDefaultValue(i);
+                }
+            }
+            
+            for (int i = 0; i < nDims; ++i) {
+                propSetDouble(nth,paramPropsHandle,kOfxParamPropDefault, defaultColor[i], i);
+            }
+            
+            propSetString(nth,paramPropsHandle,kOfxParamPropDimensionLabel, "r", 0);
+            propSetString(nth,paramPropsHandle,kOfxParamPropDimensionLabel, "g", 1);
+            propSetString(nth,paramPropsHandle,kOfxParamPropDimensionLabel, "b", 2);
+            if (nDims == 4) {
+                propSetString(nth,paramPropsHandle,kOfxParamPropDimensionLabel, "a", 3);
+            }
+            
+        } else if (isChoice) {
+            OfxStatus stat = gParamHost[nth]->paramDefine(paramSetHandle, kOfxParamTypeChoice, paramScriptName.c_str(), &paramPropsHandle);
+            OFX::throwSuiteStatusException(stat);
+        
+            
+            const std::list<std::string>& options = isChoice->getOptions();
+
+            for (std::list<std::string>::const_iterator it = options.begin(); it != options.end(); ++it) {
+                int nCurrentValues = propGetDimension(nth,paramPropsHandle,kOfxParamPropChoiceOption);
+                propSetString(nth,paramPropsHandle,kOfxParamPropChoiceOption, *it, nCurrentValues);
+            }
+            propSetInt(nth,paramPropsHandle,kOfxParamPropDefault, isChoice->getDefaultValue(0),0);
+        } else if (isString) {
+           
+            Gmic::StringParam::StringParamTypeEnum type = isString->getType();
+            
+            OfxStatus stat = gParamHost[nth]->paramDefine(paramSetHandle, kOfxParamTypeString, paramScriptName.c_str(), &paramPropsHandle);
+            OFX::throwSuiteStatusException(stat);
+
+            switch (type) {
+                case Gmic::StringParam::eStringParamTypeFile:
+                    propSetString(nth,paramPropsHandle,kOfxParamPropStringMode,  kOfxParamStringIsFilePath);
+                    
+                    //Assume that the file exists (this will use a "Open" dialog instead of a "Save" dialog). Gmic has no way to differentiate them.
+                    propSetInt(nth,paramPropsHandle,kOfxParamPropStringFilePathExists, int(false),0);
+                    break;
+                case Gmic::StringParam::eStringParamTypeFolder:
+                    propSetString(nth,paramPropsHandle,kOfxParamPropStringMode,  kOfxParamStringIsDirectoryPath);
+                    break;
+                case Gmic::StringParam::eStringParamTypeLabel:
+                case Gmic::StringParam::eStringParamTypeUrl:
+                    propSetString(nth,paramPropsHandle,kOfxParamPropStringMode,  kOfxParamStringIsLabel);
+                    break;
+                case Gmic::StringParam::eStringParamTypeMultiLineText:
+                    propSetString(nth,paramPropsHandle,kOfxParamPropStringMode,  kOfxParamStringIsMultiLine);
+                    break;
+                case Gmic::StringParam::eStringParamTypeText:
+                    propSetString(nth,paramPropsHandle,kOfxParamPropStringMode,  kOfxParamStringIsSingleLine);
+                    break;
+            }
+            
+            propSetString(nth,paramPropsHandle,kOfxParamPropDefault, isString->getDefaultValue(0));
+        } else {
+            //UnSupported param type
+            assert(false);
+        }
+        
+        propSetString(nth,paramPropsHandle,kOfxPropLabel, paramLabel);
+        propSetString(nth,paramPropsHandle,kOfxPropShortLabel, paramLabel, false);
+        propSetString(nth,paramPropsHandle,kOfxPropLongLabel, paramLabel, false);
+        
+        propSetInt(nth,paramPropsHandle,kOfxParamPropEvaluateOnChange, int(!(*it)->isSilent()), 0);
+
+        //Add to the main page
+        int nKids = propGetDimension(nth,pagePropsHandle,kOfxParamPropPageChild);
+        propSetString(nth,pagePropsHandle,kOfxParamPropPageChild, paramScriptName, nKids);
+    }
+    
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // The main function
 static OfxStatus
-pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs)
+pluginMain(int nth, const char *action, const void *rawHandle, OfxPropertySetHandle inArgs, OfxPropertySetHandle outArgs)
 {
     // fetch the host suites and setup proxies
     if (strcmp(action, kOfxActionLoad) == 0) {
@@ -374,28 +783,53 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
             return stat;
     }
     
+    //Cast to the original type
+    OfxImageEffectHandle handle = (OfxImageEffectHandle)rawHandle;
+    
     OfxStatus st = kOfxStatErrUnknown;
     try {
         // pre-hooks on some actions (e.g. print or modify parameters)
         if (strcmp(action, kOfxActionLoad) == 0) {
             // no inArgs
-            
+            st = kOfxStatOK;
         }
         else if (strcmp(action, kOfxActionUnload) == 0) {
             // no inArgs
-            
+            st = kOfxStatOK;
         }
         else if (strcmp(action, kOfxActionDescribe) == 0) {
             // no inArgs
+            OfxPropertySetHandle pluginDescPropsHandle;
+            OfxStatus stat = gEffectHost[nth]->getPropertySet(handle, &pluginDescPropsHandle);
+            OFX::throwSuiteStatusException(stat);
+        
+            describePlugin(nth,pluginDescPropsHandle);
             
+            st = kOfxStatOK;
+        }
+        else if (strcmp(action, kOfxImageEffectActionDescribeInContext) == 0) {
+            // inArgs has the following property...
+            //     kOfxImageEffectPropContext the context being described.
+            
+            // get the context from the inArgs handle
+            char *context;
+            gPropHost[nth]->propGetString(inArgs, kOfxImageEffectPropContext, 0, &context);
+            
+            // fetch the param set handle
+            OfxParamSetHandle paramSetHandle;
+            OfxStatus stat = gEffectHost[nth]->getParamSet(handle, &paramSetHandle);
+            OFX::throwSuiteStatusException(stat);
+            describePluginInContext(nth,handle,paramSetHandle);
+            
+            st = kOfxStatOK;
         }
         else if (strcmp(action, kOfxActionCreateInstance) == 0) {
             // no inArgs
-            
+            st = kOfxStatOK;
         }
         else if (strcmp(action, kOfxActionDestroyInstance) == 0) {
             // no inArgs
-            
+            st = kOfxStatOK;
         }
         else if (strcmp(action, kOfxActionBeginInstanceChanged) == 0 ||
                  strcmp(action, kOfxActionEndInstanceChanged) == 0) {
@@ -405,7 +839,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
             // see why it changed
             char *changeReason;
             gPropHost[nth]->propGetString(inArgs, kOfxPropChangeReason, 0, &changeReason);
-            
+            st = kOfxStatOK;
         }
         else if (strcmp(action, kOfxActionInstanceChanged) == 0) {
             // inArgs has the following properties...
@@ -431,30 +865,21 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
             OfxPointD renderScale;
             gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRenderScale, 2, &renderScale.x);
             
+            st = kOfxStatOK;
          
         }
         else if (strcmp(action, kOfxActionPurgeCaches) == 0) {
             // no inArgs
-            
+            st = kOfxStatOK;
         }
         else if (strcmp(action, kOfxActionSyncPrivateData) == 0) {
             // no inArgs
-            
+            st = kOfxStatOK;
         }
         else if (strcmp(action, kOfxActionBeginInstanceEdit) == 0 ||
                  strcmp(action, kOfxActionEndInstanceEdit) == 0) {
             // no inArgs
-            
-        }
-        else if (strcmp(action, kOfxImageEffectActionDescribeInContext) == 0) {
-            // inArgs has the following property...
-            //     kOfxImageEffectPropContext the context being described.
-            
-            // get the context from the inArgs handle
-            char *context;
-            gPropHost[nth]->propGetString(inArgs, kOfxImageEffectPropContext, 0, &context);
-            
-
+            st = kOfxStatOK;
         }
         else if (strcmp(action, kOfxImageEffectActionGetRegionOfDefinition) == 0) {
             // inArgs has the following properties...
@@ -467,7 +892,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
             // get the render scale
             OfxPointD renderScale;
             gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRenderScale, 2, &renderScale.x);
-            
+            st = kOfxStatOK;
         }
         else if (strcmp(action, kOfxImageEffectActionGetRegionsOfInterest) == 0) {
             // inArgs has the following properties...
@@ -484,7 +909,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
             // get the RoI the effect is interested in from inArgs
             OfxRectD roi;
             gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRegionOfInterest, 4, &roi.x1);
-            
+            st = kOfxStatOK;
         }
         else if (strcmp(action, kOfxImageEffectActionGetFramesNeeded) == 0) {
             // inArgs has the following property...
@@ -493,7 +918,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
             // get the time
             OfxTime time;
             gPropHost[nth]->propGetDouble(inArgs, kOfxPropTime, 0, &time);
-            
+            st = kOfxStatOK;
         }
         else if (strcmp(action, kOfxImageEffectActionIsIdentity) == 0) {
             // inArgs has the following properties...
@@ -514,7 +939,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
             // get the render scale
             OfxPointD renderScale;
             gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRenderScale, 2, &renderScale.x);
-            
+            st = kOfxStatOK;
         }
         else if (strcmp(action, kOfxImageEffectActionRender) == 0) {
             // inArgs has the following properties...
@@ -543,7 +968,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
             // get the interactive render status
             int interactiverenderstatus;
             gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropInteractiveRenderStatus, 0, &interactiverenderstatus);
-
+            st = kOfxStatOK;
         }
         else if (strcmp(action, kOfxImageEffectActionBeginSequenceRender) == 0 ||
                  strcmp(action, kOfxImageEffectActionEndSequenceRender) == 0) {
@@ -570,22 +995,20 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
             // get the interactive render status
             int interactiverenderstatus;
             gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropInteractiveRenderStatus, 0, &interactiverenderstatus);
-
+            st = kOfxStatOK;
         }
         else if (strcmp(action, kOfxImageEffectActionGetClipPreferences) == 0) {
             // no inArgs
-            
+            st = kOfxStatOK;
         }
         else if (strcmp(action, kOfxImageEffectActionGetTimeDomain) == 0) {
             // no inArgs
-            
+            st = kOfxStatOK;
         }
         else {
             // unknown OFX Action
         }
         
-        assert(gPluginsMainEntry[nth]);
-        st =  gPluginsMainEntry[nth](action, handle, inArgs, outArgs);
         
     } catch (std::bad_alloc) {
         // catch memory
@@ -623,9 +1046,7 @@ static OfxPluginEntryPoint*
 pluginMainNthFunc(int nth)
 {
     switch (nth) {
-            NTHFUNC100(0);
-            NTHFUNC100(100);
-            NTHFUNC100(200);
+        NTHFUNC1000(0);
     }
     return 0;
 }
@@ -645,7 +1066,7 @@ const void* fetchSuiteNth(OfxPropertySetHandle host, const char *suiteName, int 
     }
     if (strcmp(suiteName, kOfxImageEffectSuite) == 0 && suiteVersion == 1) {
         assert(nth < gEffectHost.size() && suite == gEffectHost[nth]);
-        return &gEffectProxy[nth];
+        return &gEffectHost[nth];
     }
     return suite;
 }
@@ -656,7 +1077,7 @@ getPropertySetNth(OfxImageEffectHandle imageEffect,
                   OfxPropertySetHandle *propHandle)
 {
     OfxStatus st;
-    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    assert(nth < gHost.size());
     try {
         st = gEffectHost[nth]->getPropertySet(imageEffect, propHandle);
     } catch (...) {
@@ -674,9 +1095,7 @@ static OfxImageEffectSuiteV1getPropertySet
 getPropertySetNthFunc(int nth)
 {
     switch (nth) {
-            NTHFUNC100(0);
-            NTHFUNC100(100);
-            NTHFUNC100(200);
+       NTHFUNC1000(0);
     }
     std::cout << "GmicOFX: Error: cannot create getPropertySet for plugin " << nth << std::endl;
     return 0;
@@ -690,7 +1109,7 @@ getParamSetNth(OfxImageEffectHandle imageEffect,
                OfxParamSetHandle *paramSet)
 {
     OfxStatus st;
-    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    assert(nth < gHost.size());
     try {
         st = gEffectHost[nth]->getParamSet(imageEffect, paramSet);
     } catch (...) {
@@ -708,9 +1127,7 @@ static OfxImageEffectSuiteV1getParamSet
 getParamSetNthFunc(int nth)
 {
     switch (nth) {
-            NTHFUNC100(0);
-            NTHFUNC100(100);
-            NTHFUNC100(200);
+        NTHFUNC1000(0);
     }
     std::cout << "GmicOFX: Error: cannot create getParamSet for plugin " << nth << std::endl;
     return 0;
@@ -725,7 +1142,7 @@ clipDefineNth(OfxImageEffectHandle imageEffect,
               OfxPropertySetHandle *propertySet)
 {
     OfxStatus st;
-    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    assert(nth < gHost.size());
     try {
         st = gEffectHost[nth]->clipDefine(imageEffect, name, propertySet);
     } catch (...) {
@@ -743,9 +1160,7 @@ static OfxImageEffectSuiteV1clipDefine
 clipDefineNthFunc(int nth)
 {
     switch (nth) {
-            NTHFUNC100(0);
-            NTHFUNC100(100);
-            NTHFUNC100(200);
+       NTHFUNC1000(0);
     }
     std::cout << "GmicOFX: Error: cannot create clipDefine for plugin " << nth << std::endl;
     return 0;
@@ -761,7 +1176,7 @@ clipGetHandleNth(OfxImageEffectHandle imageEffect,
                  OfxPropertySetHandle *propertySet)
 {
     OfxStatus st;
-    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    assert(nth < gHost.size());
     try {
         st = gEffectHost[nth]->clipGetHandle(imageEffect, name, clip, propertySet);
     } catch (...) {
@@ -779,9 +1194,7 @@ static OfxImageEffectSuiteV1clipGetHandle
 clipGetHandleNthFunc(int nth)
 {
     switch (nth) {
-            NTHFUNC100(0);
-            NTHFUNC100(100);
-            NTHFUNC100(200);
+          NTHFUNC1000(0);
     }
     std::cout << "GmicOFX: Error: cannot create clipGetHandle for plugin " << nth << std::endl;
     return 0;
@@ -795,7 +1208,7 @@ clipGetPropertySetNth(OfxImageClipHandle clip,
                       OfxPropertySetHandle *propHandle)
 {
     OfxStatus st;
-    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    assert(nth < gHost.size());
     try {
         st = gEffectHost[nth]->clipGetPropertySet(clip, propHandle);
     } catch (...) {
@@ -813,9 +1226,7 @@ static OfxImageEffectSuiteV1clipGetPropertySet
 clipGetPropertySetNthFunc(int nth)
 {
     switch (nth) {
-            NTHFUNC100(0);
-            NTHFUNC100(100);
-            NTHFUNC100(200);
+         NTHFUNC1000(0);
     }
     std::cout << "GmicOFX: Error: cannot create clipGetPropertySet for plugin " << nth << std::endl;
     return 0;
@@ -831,7 +1242,7 @@ clipGetImageNth(OfxImageClipHandle clip,
                 OfxPropertySetHandle   *imageHandle)
 {
     OfxStatus st;
-    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    assert(nth < gHost.size());
     try {
         st = gEffectHost[nth]->clipGetImage(clip, time, region, imageHandle);
     } catch (...) {
@@ -850,9 +1261,7 @@ static OfxImageEffectSuiteV1clipGetImage
 clipGetImageNthFunc(int nth)
 {
     switch (nth) {
-            NTHFUNC100(0);
-            NTHFUNC100(100);
-            NTHFUNC100(200);
+        NTHFUNC1000(0);
     }
     std::cout << "GmicOFX: Error: cannot create clipGetImage for plugin " << nth << std::endl;
     return 0;
@@ -865,7 +1274,7 @@ static OfxStatus
 clipReleaseImageNth(OfxPropertySetHandle imageHandle)
 {
     OfxStatus st;
-    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    assert(nth < gHost.size());
     try {
         st = gEffectHost[nth]->clipReleaseImage(imageHandle);
     } catch (...) {
@@ -883,9 +1292,7 @@ static OfxImageEffectSuiteV1clipReleaseImage
 clipReleaseImageNthFunc(int nth)
 {
     switch (nth) {
-            NTHFUNC100(0);
-            NTHFUNC100(100);
-            NTHFUNC100(200);
+         NTHFUNC1000(0);
     }
     std::cout << "GmicOFX: Error: cannot create clipReleaseImage for plugin " << nth << std::endl;
     return 0;
@@ -900,7 +1307,7 @@ clipGetRegionOfDefinitionNth(OfxImageClipHandle clip,
                              OfxRectD *bounds)
 {
     OfxStatus st;
-    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    assert(nth < gHost.size());
     try {
         st = gEffectHost[nth]->clipGetRegionOfDefinition(clip, time, bounds);
     } catch (...) {
@@ -918,9 +1325,7 @@ static OfxImageEffectSuiteV1clipGetRegionOfDefinition
 clipGetRegionOfDefinitionNthFunc(int nth)
 {
     switch (nth) {
-            NTHFUNC100(0);
-            NTHFUNC100(100);
-            NTHFUNC100(200);
+         NTHFUNC1000(0);
     }
     std::cout << "GmicOFX: Error: cannot create clipGetRegionOfDefinition for plugin " << nth << std::endl;
     return 0;
@@ -933,7 +1338,7 @@ static int
 abortNth(OfxImageEffectHandle imageEffect)
 {
     int st;
-    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    assert(nth < gHost.size());
     try {
         st = gEffectHost[nth]->abort(imageEffect);
     } catch (...) {
@@ -951,9 +1356,7 @@ static OfxImageEffectSuiteV1abort
 abortNthFunc(int nth)
 {
     switch (nth) {
-            NTHFUNC100(0);
-            NTHFUNC100(100);
-            NTHFUNC100(200);
+        NTHFUNC1000(0);
     }
     std::cout << "GmicOFX: Error: cannot create abort for plugin " << nth << std::endl;
     return 0;
@@ -968,7 +1371,7 @@ imageMemoryAllocNth(OfxImageEffectHandle instanceHandle,
                     OfxImageMemoryHandle *memoryHandle)
 {
     OfxStatus st;
-    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    assert(nth < gHost.size());
     try {
         st = gEffectHost[nth]->imageMemoryAlloc(instanceHandle, nBytes, memoryHandle);
     } catch (...) {
@@ -986,9 +1389,7 @@ static OfxImageEffectSuiteV1imageMemoryAlloc
 imageMemoryAllocNthFunc(int nth)
 {
     switch (nth) {
-            NTHFUNC100(0);
-            NTHFUNC100(100);
-            NTHFUNC100(200);
+         NTHFUNC1000(0);
     }
     std::cout << "GmicOFX: Error: cannot create imageMemoryAlloc for plugin " << nth << std::endl;
     return 0;
@@ -1001,7 +1402,7 @@ static OfxStatus
 imageMemoryFreeNth(OfxImageMemoryHandle memoryHandle)
 {
     OfxStatus st;
-    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    assert(nth < gHost.size());
     try {
         st = gEffectHost[nth]->imageMemoryFree(memoryHandle);
     } catch (...) {
@@ -1019,9 +1420,7 @@ static OfxImageEffectSuiteV1imageMemoryFree
 imageMemoryFreeNthFunc(int nth)
 {
     switch (nth) {
-            NTHFUNC100(0);
-            NTHFUNC100(100);
-            NTHFUNC100(200);
+        NTHFUNC1000(0);
     }
     std::cout << "GmicOFX: Error: cannot create imageMemoryFree for plugin " << nth << std::endl;
     return 0;
@@ -1035,7 +1434,7 @@ imageMemoryLockNth(OfxImageMemoryHandle memoryHandle,
                    void **returnedPtr)
 {
     OfxStatus st;
-    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    assert(nth < gHost.size());
     try {
         st = gEffectHost[nth]->imageMemoryLock(memoryHandle, returnedPtr);
     } catch (...) {
@@ -1053,9 +1452,7 @@ static OfxImageEffectSuiteV1imageMemoryLock
 imageMemoryLockNthFunc(int nth)
 {
     switch (nth) {
-            NTHFUNC100(0);
-            NTHFUNC100(100);
-            NTHFUNC100(200);
+        NTHFUNC1000(0);
     }
     std::cout << "GmicOFX: Error: cannot create imageMemoryLock for plugin " << nth << std::endl;
     return 0;
@@ -1068,7 +1465,7 @@ static OfxStatus
 imageMemoryUnlockNth(OfxImageMemoryHandle memoryHandle)
 {
     OfxStatus st;
-    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    assert(nth < gHost.size());
     try {
         st = gEffectHost[nth]->imageMemoryUnlock(memoryHandle);
     } catch (...) {
@@ -1086,9 +1483,7 @@ static OfxImageEffectSuiteV1imageMemoryUnlock
 imageMemoryUnlockNthFunc(int nth)
 {
     switch (nth) {
-            NTHFUNC100(0);
-            NTHFUNC100(100);
-            NTHFUNC100(200);
+         NTHFUNC1000(0);
     }
     std::cout << "GmicOFX: Error: cannot create imageMemoryUnlock for plugin " << nth << std::endl;
     return 0;
@@ -1100,12 +1495,8 @@ template<int nth>
 static void
 setHostNth(OfxHost *hostStruct)
 {
-    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    assert(nth < gHost.size());
     gHost[nth] = hostStruct;
-    gProxy[nth] = *(gHost[nth]);
-    gProxy[nth].fetchSuite = fetchSuiteNth<nth>;
-    assert(gPluginsSetHost[nth]);
-    gPluginsSetHost[nth](&gProxy[nth]);
 }
 
 #define NTHFUNC(nth) \
@@ -1116,39 +1507,73 @@ static OfxSetHost*
 setHostNthFunc(int nth)
 {
     switch (nth) {
-            NTHFUNC100(0);
-            NTHFUNC100(100);
-            NTHFUNC100(200);
+         NTHFUNC1000(0);
     }
     return 0;
 }
 #undef NTHFUNC
 
+static void parseGmicPlugins()
+{
+    if (gmicParser.getNPlugins() == 0) {
+        //The parser has never run, run it for the first time using locally defined plug-ins pointed to by the GMIC_GIMP_PATH
+        //HOME (or APPDATA) env vars.
+        std::string errors;
+        gmicParser.parse(&errors, false);
+        
+        const std::list<Gmic::GmicTreeNode*>& pluginsByDeclarationOrder = gmicParser.getPluginsByDeclarationOrder();
+        
+        assert(gmicParser.getNPlugins() == (int)pluginsByDeclarationOrder.size());
+        
+        pluginsByRandomAccess.resize(std::min(GMIC_OFX_MAX_PLUGINS_COUNT,(int)pluginsByDeclarationOrder.size()));
+        pluginsIds.resize(pluginsByRandomAccess.size());
+        
+        int i = 0;
+        for (std::list<Gmic::GmicTreeNode*>::const_iterator it = pluginsByDeclarationOrder.begin(); it != pluginsByDeclarationOrder.end(); ++it,++i) {
+            
+            //We can't have more plug-ins than that
+            if (i >= (int)pluginsByDeclarationOrder.size()) {
+                break;
+            }
+            pluginsByRandomAccess[i] = *it;
+            std::string id = std::string(kBasePluginIdentifier) + (*it)->getName();
+            pluginsIds[i] = id;
+        }
+        
+        gPluginsNb = gmicParser.getNPlugins();
+
+        gPlugins.resize(gPluginsNb);
+        gHost.resize(gPluginsNb);
+        gHostDescription.resize(gPluginsNb);
+        gEffectHost.resize(gPluginsNb);
+        gPropHost.resize(gPluginsNb);
+        gParamHost.resize(gPluginsNb);
+        gMemoryHost.resize(gPluginsNb);
+        gThreadHost.resize(gPluginsNb);
+        gMessageHost.resize(gPluginsNb);
+        gMessageV2Host.resize(gPluginsNb);
+        gProgressHost.resize(gPluginsNb);
+        gTimeLineHost.resize(gPluginsNb);
+        gInteractHost.resize(gPluginsNb);
+    }
+
+}
+
 // the two mandated functions
 OfxPlugin *
 OfxGetPlugin(int nth)
 {
-    // copy it
-    if (nth+1 > (int)gPlugins.size()) {
-        gPlugins.resize(nth+1);
-        gPluginsMainEntry.resize(nth+1);
-        gPluginsOverlayMain.resize(nth+1);
-        gPluginsSetHost.resize(nth+1);
-        gHost.resize(nth+1);
-        gProxy.resize(nth+1);
-    }
+    //The host might have called dlClose() after the call to OfxGetNumberOfPlugins hence destroying the parser's results.
+    parseGmicPlugins();
     
     gPlugins[nth].pluginApi = kOfxImageEffectPluginApi;
-    gPlugins[nth].apiVersion = plugin->apiVersion;
-    gPlugins[nth].pluginIdentifier = plugin->pluginIdentifier;
-    gPlugins[nth].pluginVersionMajor = plugin->pluginVersionMajor;
-    gPlugins[nth].pluginVersionMinor = plugin->pluginVersionMinor;
-    gPluginsSetHost[nth] = plugin->setHost;
+    gPlugins[nth].apiVersion = 1;
+    gPlugins[nth].pluginIdentifier = pluginsIds[nth].c_str();
+    gPlugins[nth].pluginVersionMajor = kPluginVersionMajor;
+    gPlugins[nth].pluginVersionMinor = kPluginVersionMinor;
     gPlugins[nth].setHost = setHostNthFunc(nth);
     // modify the main entry point
-    gPluginsMainEntry[nth] = plugin->mainEntry;;
     gPlugins[nth].mainEntry = pluginMainNthFunc(nth);
-    gPluginsOverlayMain[nth] = 0;
 
     return &gPlugins[nth];
 }
@@ -1156,28 +1581,9 @@ OfxGetPlugin(int nth)
 int
 OfxGetNumberOfPlugins(void)
 {
-    if (gmicParser.getNPlugins() == 0) {
-        //The parser has never run, run it for the first time using locally defined plug-ins pointed to by the GMIC_GIMP_PATH
-        //HOME (or APPDATA) env vars.
-        std::string errors;
-        gmicParser.parse(&errors, false);
-    }
-    gPluginsNb = gmicParser.getNPlugins();
-    
-    gPlugins.reserve(gPluginsNb);
-    gHost.reserve(gPluginsNb);
-    gProxy.reserve(gPluginsNb);
-    gEffectHost.reserve(gPluginsNb);
-    gPropHost.reserve(gPluginsNb);
-    gParamHost.reserve(gPluginsNb);
-    gMemoryHost.reserve(gPluginsNb);
-    gThreadHost.reserve(gPluginsNb);
-    gMessageHost.reserve(gPluginsNb);
-    gMessageV2Host.reserve(gPluginsNb);
-    gProgressHost.reserve(gPluginsNb);
-    gTimeLineHost.reserve(gPluginsNb);
-    gInteractHost.reserve(gPluginsNb);
-    
+    parseGmicPlugins();
     return gPluginsNb;
 }
+
+
 

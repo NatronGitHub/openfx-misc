@@ -44,7 +44,6 @@ GmicGimpParser plugin.
 #include "CImg.h"
 #include "gmic.h"
 
-
 #undef _gmic_path
 #if cimg_OS==2
 #define _gmic_path "_gmic\\"
@@ -154,8 +153,11 @@ struct GmicGimpParser::GmicGimpParserPrivate
     GmicGimpParser* publicInterface;
     int nPlugins;
     
-    //The root of the plugins tree
+    //The top level entries of the plugins tree
     std::list<GmicTreeNode*> firstLevelEntries;
+    
+    //List of the plug-ins (no menu) in the order in which they were declared
+    std::list<GmicTreeNode*> pluginsByDeclarationOrder;
     
     GmicGimpParserPrivate(GmicGimpParser* publicInterface)
     : publicInterface(publicInterface)
@@ -195,6 +197,12 @@ const std::list<GmicTreeNode*>&
 GmicGimpParser::getFirstLevelEntries() const
 {
     return _imp->firstLevelEntries;
+}
+
+const std::list<GmicTreeNode*>&
+GmicGimpParser::getPluginsByDeclarationOrder() const
+{
+    return _imp->pluginsByDeclarationOrder;
 }
 
 struct GmicTreeNode::GmicTreeNodePrivate
@@ -632,42 +640,33 @@ GmicGimpParser::parse(std::string* errors,bool tryNetUpdate,const char* locale)
         char *_line = line;
         
         // Read new line.
-        while (*data!='\n' && *data && _line<line+sizeof(line)) {
+        while ( *data != '\n' && *data && _line < line + sizeof(line) ) {
             *(_line++) = *(data++);
-            *_line = 0;
         }
-        
-        // Skip next '\n'.
-        while (*data=='\n') {
-            ++data;
+        *_line = 0;
+        while (*data == '\n') {
+            ++data;                 // Skip next '\n'.
         }
-        
-        // Replace non-usual characters by spaces.
         for (_line = line; *_line; ++_line) {
-            if (*_line<' ') {
-                *_line = ' ';
+            if (*_line < ' ') {
+                *_line = ' ';                                             // Replace non-usual characters by spaces.
             }
         }
-        
-        if (line[0]!='#' || line[1]!='@' || line[2]!='g' || // Check for a '#@gimp' line.
-            line[3]!='i' || line[4]!='m' || line[5]!='p') {
+        if ( (line[0] != '#') || (line[1] != '@') || (line[2] != 'g') || // Check for a '#@gimp' line.
+            ( line[3] != 'i') || ( line[4] != 'm') || ( line[5] != 'p') ) {
             continue;
         }
-        
-         // Check for a localized filter.
-        if (line[6]=='_') {
-            
+        if (line[6] == '_') { // Check for a localized filter.
             // Weither the entry match current locale or not.
-            if (line[7] == locale[0] && line[8] == locale[1] && line[9] == ' ') {
+            if ( (line[7] == locale[0]) && (line[8] == locale[1]) && (line[9] == ' ') ) {
                 _line = line + 10;
             } else {
                 continue;
             }
-            
-        } else if (line[6]==' ') { // Check for a non-localized filter.
+        } else if (line[6] == ' ') {
             _line = line + 7;
         } else {
-            continue;
+            continue;   // Check for a non-localized filter.
         }
         
         if (*_line!=':') { // Check for a description of a possible filter or menu folder.
@@ -700,7 +699,7 @@ GmicGimpParser::parse(std::string* errors,bool tryNetUpdate,const char* locale)
                 if (*nentry) {
                     
                     std::string entryName(nentry);
-
+                    
                     if (level) {
                         
                         
@@ -723,13 +722,10 @@ GmicGimpParser::parse(std::string* errors,bool tryNetUpdate,const char* locale)
                                 break;
                             }
                         }
-                       
                         
-                        // Detect if filter is in 'Testing/' (won't be count in number of filters).
-                        //GtkWidget *const markup2ascii = gtk_label_new(0);
-                        //gtk_label_set_markup(GTK_LABEL(markup2ascii),nentry);
-                        //const char *_nentry = gtk_label_get_text(GTK_LABEL(markup2ascii));
-                        //is_testing = !std::strcmp(_nentry,"Testing");
+                        
+                        
+                        is_testing = !std::strcmp(nentry,"Testing");
                         
                         if (!isDuplicate) {
                             
@@ -767,7 +763,7 @@ GmicGimpParser::parse(std::string* errors,bool tryNetUpdate,const char* locale)
                 if (*nentry) {
                     
                     std::string entryName(nentry);
-
+                    
                     GmicTreeNode* node = new GmicTreeNode();
                     node->setName(entryName);
                     if (level) {
@@ -782,6 +778,8 @@ GmicGimpParser::parse(std::string* errors,bool tryNetUpdate,const char* locale)
                     lastProcessedNode = node;
                     
                     ++_imp->nPlugins;
+                    
+                    _imp->pluginsByDeclarationOrder.push_back(node);
                     
                     if (err >= 3) { // Filter has a specified preview command.
                         cimg::strpare(preview_command,' ',false,true);
@@ -799,22 +797,23 @@ GmicGimpParser::parse(std::string* errors,bool tryNetUpdate,const char* locale)
                         node->setGmicPreviewCommand("_none_");
                         node->setPreviewZoomFactor(-1);
                     }
-                
+                    
                     if (!is_testing) {
                         ++nb_available_filters;
                     } // Count only non-testing filters.
                 }
             }
-        } else { // Line is the continuation of an entry.
-
+        } else { // Line is the continuation of an entry. if (*_line!=':') {
+            if (lastProcessedNode && !lastProcessedNode->getGmicArguments().empty()) {
                 cimg::strpare(++_line,' ',false,true);
                 
                 std::string toAppend(_line);
                 assert(lastProcessedNode);
                 
                 lastProcessedNode->appendGmicArguments(toAppend);
+            }
         }
-    }
+    } //for (const char *data = gmic_additional_commands; *data; ) {
     
     
     ///Build parameters recursively for all GmicTreeNode

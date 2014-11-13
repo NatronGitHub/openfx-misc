@@ -380,6 +380,11 @@ public:
      * This returns the first level entries (which don't have parent menus).
      **/
     const std::list<GmicTreeNode*>& getFirstLevelEntries() const;
+    
+    /**
+     * @brief Returns a list of all plug-ins (no menu entries) in the order in which they were defined.
+     **/
+    const std::list<GmicTreeNode*>& getPluginsByDeclarationOrder() const;
 
     /**
      * @brief Get the number of plug-ins that were successfully parsed. It is meant to be called
