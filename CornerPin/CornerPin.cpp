@@ -695,7 +695,8 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
     }
     
     glPushAttrib(GL_ALL_ATTRIB_BITS);
-    
+    glMatrixMode(GL_PROJECTION);
+
     //glDisable(GL_LINE_STIPPLE);
     glEnable(GL_LINE_SMOOTH);
     //glEnable(GL_POINT_SMOOTH);
