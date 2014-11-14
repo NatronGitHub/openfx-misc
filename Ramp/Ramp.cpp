@@ -911,7 +911,8 @@ RampInteract::draw(const DrawArgs &args)
     }
 
     glPushAttrib(GL_ALL_ATTRIB_BITS);
-    
+    glMatrixMode(GL_PROJECTION);
+
     glEnable(GL_LINE_SMOOTH);
     glEnable(GL_BLEND);
     glHint(GL_LINE_SMOOTH_HINT,GL_DONT_CARE);

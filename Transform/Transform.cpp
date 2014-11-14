@@ -839,6 +839,7 @@ TransformInteract::draw(const OFX::DrawArgs &args)
     skewMatrix[12] = 0.; skewMatrix[13] = 0.; skewMatrix[14] = 0.; skewMatrix[15] = 1.;
 
     glPushAttrib(GL_ALL_ATTRIB_BITS);
+    glMatrixMode(GL_PROJECTION);
 
     //glDisable(GL_LINE_STIPPLE);
     glEnable(GL_LINE_SMOOTH);
