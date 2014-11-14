@@ -540,10 +540,6 @@
 		AC60A33C19FE9C7900375A86 /* Ramp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32A19FE995F00375A86 /* Ramp.cpp */; };
 		ACC8477E1A0A3F9300B3FAFE /* net.sf.openfx.Ramp.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC60A32719FE995F00375A86 /* net.sf.openfx.Ramp.png */; };
 		ACC8477F1A0A3F9500B3FAFE /* net.sf.openfx.Ramp.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC60A32819FE995F00375A86 /* net.sf.openfx.Ramp.svg */; };
-		D716FF291A1403FA00BFAFAF /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		D716FF2F1A14043500BFAFAF /* GmicOFX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D716FF231A14008F00BFAFAF /* GmicOFX.cpp */; };
-		D716FF301A14047900BFAFAF /* GmicGimpParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC91D7F21A0ECABD00CAB3C1 /* GmicGimpParser.cpp */; };
-		D716FF311A14047E00BFAFAF /* gmic.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC9D5F121A0F99FB0014F89C /* gmic.cpp */; };
 		D721EC06191120B30069DB1D /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		D721EC07191120B30069DB1D /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		D721EC08191120B30069DB1D /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -1496,7 +1492,6 @@
 		1EFB4E2119461B86005932AF /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EFB4E2219461B86005932AF /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EFB4E2319461B86005932AF /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		AC3908CC1A121A8600D951C0 /* gmic_def.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = gmic_def.h; sourceTree = "<group>"; };
 		AC60A32519FE995F00375A86 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AC60A32619FE995F00375A86 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		AC60A32719FE995F00375A86 /* net.sf.openfx.Ramp.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.Ramp.png; sourceTree = "<group>"; };
@@ -1504,15 +1499,9 @@
 		AC60A32919FE995F00375A86 /* PluginRegistration.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		AC60A32A19FE995F00375A86 /* Ramp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Ramp.cpp; sourceTree = "<group>"; };
 		AC60A32B19FE995F00375A86 /* Ramp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Ramp.h; sourceTree = "<group>"; };
-		AC91D7F21A0ECABD00CAB3C1 /* GmicGimpParser.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = GmicGimpParser.cpp; sourceTree = "<group>"; };
-		AC91D7F31A0ECABD00CAB3C1 /* GmicGimpParser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GmicGimpParser.h; sourceTree = "<group>"; };
-		AC9D5F121A0F99FB0014F89C /* gmic.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = gmic.cpp; sourceTree = "<group>"; };
-		AC9D5F131A0F99FB0014F89C /* gmic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = gmic.h; sourceTree = "<group>"; };
 		ACC8477B1A0A3F6400B3FAFE /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACC8477C1A0A3F6400B3FAFE /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACC8477D1A0A3F6400B3FAFE /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		D716FF231A14008F00BFAFAF /* GmicOFX.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = GmicOFX.cpp; sourceTree = "<group>"; };
-		D716FF2D1A1403FA00BFAFAF /* Gmic.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Gmic.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		D721EBFD1911209B0069DB1D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D721EBFE1911209B0069DB1D /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D721EBFF1911209B0069DB1D /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
@@ -1809,14 +1798,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		D716FF281A1403FA00BFAFAF /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				D716FF291A1403FA00BFAFAF /* OpenGL.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		D721EC0E191120B30069DB1D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -1957,9 +1938,6 @@
 		1E31940919D998450027D0E2 /* CImg */ = {
 			isa = PBXGroup;
 			children = (
-				AC3908CC1A121A8600D951C0 /* gmic_def.h */,
-				AC9D5F121A0F99FB0014F89C /* gmic.cpp */,
-				AC9D5F131A0F99FB0014F89C /* gmic.h */,
 				1E868B7019E6D8CD00B793BA /* CImgBilateral.cpp */,
 				1E868B7119E6D8CD00B793BA /* CImgBilateral.h */,
 				1E868B6D19E6B8C100B793BA /* CImgBlur.cpp */,
@@ -1989,9 +1967,6 @@
 				1E31940C19D9987F0027D0E2 /* Info.plist */,
 				1E31940D19D9987F0027D0E2 /* Makefile */,
 				1E31940E19D9987F0027D0E2 /* PluginRegistration.cpp */,
-				AC91D7F21A0ECABD00CAB3C1 /* GmicGimpParser.cpp */,
-				AC91D7F31A0ECABD00CAB3C1 /* GmicGimpParser.h */,
-				D716FF231A14008F00BFAFAF /* GmicOFX.cpp */,
 			);
 			path = CImg;
 			sourceTree = "<group>";
@@ -2158,7 +2133,6 @@
 				1E92573319EC1DB80018F19A /* Clamp.ofx.bundle */,
 				1ECF2F9E19F51D3400E91A38 /* Keyer.ofx.bundle */,
 				1EAD4AF41A0A691700AF834D /* AdjustRoD.ofx.bundle */,
-				D716FF2D1A1403FA00BFAFAF /* Gmic.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -3123,22 +3097,6 @@
 			productReference = 1EFB4E1B19461B13005932AF /* Difference.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
-		D716FF241A1403FA00BFAFAF /* GmicOFX.ofx */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = D716FF2A1A1403FA00BFAFAF /* Build configuration list for PBXNativeTarget "GmicOFX.ofx" */;
-			buildPhases = (
-				D716FF251A1403FA00BFAFAF /* Sources */,
-				D716FF281A1403FA00BFAFAF /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = GmicOFX.ofx;
-			productName = basic.ofx;
-			productReference = D716FF2D1A1403FA00BFAFAF /* Gmic.ofx.bundle */;
-			productType = "com.apple.product-type.bundle";
-		};
 		D721EC02191120B30069DB1D /* Roto.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D721EC10191120B30069DB1D /* Build configuration list for PBXNativeTarget "Roto.ofx" */;
@@ -3317,7 +3275,6 @@
 				D7BB85B81955C00100A86649 /* TrackerPM.ofx */,
 				D7349E8F18E7767D0097DB1D /* Transform.ofx */,
 				1E8B5D4A18B76A7500C31FDC /* Misc.ofx */,
-				D716FF241A1403FA00BFAFAF /* GmicOFX.ofx */,
 			);
 		};
 /* End PBXProject section */
@@ -3876,16 +3833,6 @@
 				1EFB4E1319461B13005932AF /* ofxsParams.cpp in Sources */,
 				1EFB4E1419461B13005932AF /* ofxsProperty.cpp in Sources */,
 				1EFB4E1519461B13005932AF /* ofxsPropertyValidation.cpp in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		D716FF251A1403FA00BFAFAF /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				D716FF2F1A14043500BFAFAF /* GmicOFX.cpp in Sources */,
-				D716FF311A14047E00BFAFAF /* gmic.cpp in Sources */,
-				D716FF301A14047900BFAFAF /* GmicGimpParser.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4997,62 +4944,6 @@
 			};
 			name = Release;
 		};
-		D716FF2B1A1403FA00BFAFAF /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-					OFX_EXTENSIONS_NUKE,
-					OFX_EXTENSIONS_VEGAS,
-					OFX_EXTENSIONS_TUTTLE,
-					gmic_build,
-					"cimg_display=0",
-					gmic_gimp,
-				);
-				HEADER_SEARCH_PATHS = (
-					"$(OFX_PATH)/include",
-					"$(OFX_PATH)/Support/include",
-					"$(OFX_PATH)/Support/Plugins/include",
-					"$(OFX_PATH)/HostSupport/include",
-					"$(OFX_PATH)/Examples/include",
-				);
-				INFOPLIST_FILE = CImg/GmicInfo.plist;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = Gmic.ofx;
-				WRAPPER_EXTENSION = bundle;
-			};
-			name = Debug;
-		};
-		D716FF2C1A1403FA00BFAFAF /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"NDEBUG=1",
-					"$(inherited)",
-					OFX_EXTENSIONS_NUKE,
-					OFX_EXTENSIONS_VEGAS,
-					OFX_EXTENSIONS_TUTTLE,
-					"cimg_display=0",
-					gmic_build,
-					gmic_gimp,
-				);
-				HEADER_SEARCH_PATHS = (
-					"$(OFX_PATH)/include",
-					"$(OFX_PATH)/Support/include",
-					"$(OFX_PATH)/Support/Plugins/include",
-					"$(OFX_PATH)/HostSupport/include",
-					"$(OFX_PATH)/Examples/include",
-				);
-				INFOPLIST_FILE = CImg/GmicInfo.plist;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = Gmic.ofx;
-				WRAPPER_EXTENSION = bundle;
-			};
-			name = Release;
-		};
 		D721EC11191120B30069DB1D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -5503,15 +5394,6 @@
 			buildConfigurations = (
 				1EFB4E1919461B13005932AF /* Debug */,
 				1EFB4E1A19461B13005932AF /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		D716FF2A1A1403FA00BFAFAF /* Build configuration list for PBXNativeTarget "GmicOFX.ofx" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				D716FF2B1A1403FA00BFAFAF /* Debug */,
-				D716FF2C1A1403FA00BFAFAF /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
