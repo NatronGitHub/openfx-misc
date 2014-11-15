@@ -588,12 +588,14 @@ OFX::ImageEffect* CopyRectanglePluginFactory::createInstance(OfxImageEffectHandl
 }
 
 
-static void defineComponentParam(OFX::ImageEffectDescriptor &desc,PageParamDescriptor* page,const std::string& name,const std::string& label)
+static void defineComponentParam(OFX::ImageEffectDescriptor &desc,PageParamDescriptor* page,const std::string& name,const std::string& label,
+                                 bool newLine)
 {
     BooleanParamDescriptor* param = desc.defineBooleanParam(name);
     param->setLabels(label, label, label);
     param->setDefault(true);
     param->setHint("Copy " + name);
+    param->setLayoutHint(!newLine ? OFX::eLayoutHintNoNewLine : OFX::eLayoutHintNormal);
     page->addChild(*param);
 }
 
@@ -665,10 +667,10 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
         page->addChild(*param);
     }
     
-    defineComponentParam(desc, page, kParamRed, kParamRedLabel);
-    defineComponentParam(desc, page, kParamGreen, kParamGreenLabel);
-    defineComponentParam(desc, page, kParamBlue, kParamBlueLabel);
-    defineComponentParam(desc, page, kParamAlpha, kParamAlphaLabel);
+    defineComponentParam(desc, page, kParamRed, kParamRedLabel,false);
+    defineComponentParam(desc, page, kParamGreen, kParamGreenLabel,false);
+    defineComponentParam(desc, page, kParamBlue, kParamBlueLabel,false);
+    defineComponentParam(desc, page, kParamAlpha, kParamAlphaLabel,true);
     
     // softness
     {
