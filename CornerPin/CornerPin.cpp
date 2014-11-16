@@ -82,7 +82,7 @@
    action. Should the host be doing this instead?
 */
 // Uncomment the following to enable the experimental host transform code.
-//#define ENABLE_HOST_TRANSFORM
+#define ENABLE_HOST_TRANSFORM
 
 #include "CornerPin.h"
 
