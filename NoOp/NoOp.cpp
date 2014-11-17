@@ -46,6 +46,10 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 
+#ifdef OFX_EXTENSIONS_NUKE
+#include "nuke/fnOfxExtensions.h"
+#endif
+
 #define kPluginName "NoOpOFX"
 #define kPluginGrouping "Other"
 #define kPluginDescription "Copies the input to the ouput."
@@ -159,6 +163,11 @@ private:
     void setupAndProcess(CopierBase &, const OFX::RenderArguments &args);
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+
+#ifdef OFX_EXTENSIONS_NUKE
+    /** @brief recover a transform matrix from an effect */
+    virtual bool getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9]);
+#endif
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
@@ -321,6 +330,31 @@ NoOpPlugin::isIdentity(const IsIdentityArguments &/*args*/, Clip * &identityClip
         return false;
     }
 }
+
+#ifdef OFX_EXTENSIONS_NUKE
+// overridden getTransform
+bool
+NoOpPlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9])
+{
+    bool forceCopy;
+    forceCopy_->getValue(forceCopy);
+    if (forceCopy) {
+        return false;
+    }
+    transformClip = srcClip_;
+    transformMatrix[0] = 1.;
+    transformMatrix[1] = 0.;
+    transformMatrix[2] = 0.;
+    transformMatrix[3] = 0.;
+    transformMatrix[4] = 1.;
+    transformMatrix[5] = 0.;
+    transformMatrix[6] = 0.;
+    transformMatrix[7] = 0.;
+    transformMatrix[8] = 1.;
+
+    return true;
+}
+#endif
 
 
 static const char*
@@ -542,6 +576,11 @@ void NoOpPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(true);
     desc.setSupportsMultipleClipPARs(false);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+#ifdef OFX_EXTENSIONS_NUKE
+    // Enable transform by the host.
+    // It is only possible for transforms which can be represented as a 3x3 matrix.
+    desc.setCanTransform(true);
+#endif
 }
 
 void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
