@@ -140,9 +140,13 @@ SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle)
 , which_(0)
 {
     for (int i = 0; i < kClipSourceCount; ++i) {
-        std::stringstream s;
-        s << i;
-        srcClip_[i] = fetchClip(s.str());
+        if (getContext() == OFX::eContextFilter && i == 0) {
+            srcClip_[i] = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        } else {
+            std::stringstream s;
+            s << i;
+            srcClip_[i] = fetchClip(s.str());
+        }
         assert(srcClip_[i]);
     }
     which_  = fetchIntParam(kParamWhich);
@@ -215,9 +219,17 @@ void SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedContext(eContextFilter);
 
     // add supported pixel depths
+    desc.addSupportedBitDepth(eBitDepthNone);
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
+    desc.addSupportedBitDepth(eBitDepthHalf);
     desc.addSupportedBitDepth(eBitDepthFloat);
+    desc.addSupportedBitDepth(eBitDepthCustom);
+#ifdef OFX_EXTENSIONS_VEGAS
+    desc.addSupportedBitDepth(eBitDepthUByteBGRA);
+    desc.addSupportedBitDepth(eBitDepthUShortBGRA);
+    desc.addSupportedBitDepth(eBitDepthFloatBGRA);
+#endif
 
     // set a few flags
     desc.setSingleInstance(false);
@@ -226,7 +238,8 @@ void SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
-    desc.setSupportsMultipleClipPARs(false);
+    desc.setSupportsMultipleClipPARs(true);
+    desc.setSupportsMultipleClipDepths(true);
 #ifdef OFX_EXTENSIONS_NUKE
     // Enable transform by the host.
     // It is only possible for transforms which can be represented as a 3x3 matrix.
@@ -235,30 +248,37 @@ void SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
-void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     for (int i = 0; i < kClipSourceCount; ++i) {
-        std::stringstream s;
-        s << i;
-        ClipDescriptor *srcClip = desc.defineClip(s.str());
+        ClipDescriptor *srcClip;
+        if (context == eContextFilter && i == 0) {
+            srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+        } else {
+            std::stringstream s;
+            s << i;
+            srcClip = desc.defineClip(s.str());
+            srcClip->setOptional(true);
+        }
+        srcClip->addSupportedComponent(ePixelComponentNone);
         srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
+        srcClip->addSupportedComponent(ePixelComponentCustom);
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);
-        if (i >= 2) {
-            srcClip->setOptional(true);
-        }
     }
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
+    dstClip->addSupportedComponent(ePixelComponentNone);
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
+    dstClip->addSupportedComponent(ePixelComponentCustom);
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages and to things in
