@@ -147,28 +147,32 @@ private:
     virtual void trackRange(const OFX::TrackArguments& args);
     
     template <int nComponents>
-    void trackInternal(OfxTime refTime, OfxTime otherTime);
+    void trackInternal(OfxTime refTime, OfxTime otherTime,const OfxPointD& renderScale);
 
     template <class PIX, int nComponents, int maxValue>
     void trackInternalForDepth(OfxTime refTime,
-                               const OfxRectD& refBounds,
-                               const OfxPointD& refCenter,
+                               const OfxRectI& refBounds,
+                               const OfxPointI& refCenter,
                                const OFX::Image* refImg,
                                const OFX::Image* maskImg,
                                OfxTime otherTime,
-                               const OfxRectD& trackSearchBounds,
-                               const OFX::Image* otherImg);
+                               const OfxRectI& trackSearchBounds,
+                               const OFX::Image* otherImg,
+                               double par,
+                               const OfxPointD& renderScale);
 
     /* set up and run a processor */
     void setupAndProcess(TrackerPMProcessorBase &processor,
                          OfxTime refTime,
-                         const OfxRectD& refBounds,
-                         const OfxPointD& refCenter,
+                         const OfxRectI& refBounds,
+                         const OfxPointI& refCenter,
                          const OFX::Image* refImg,
                          const OFX::Image* maskImg,
                          OfxTime otherTime,
-                         const OfxRectD& trackSearchBounds,
-                         const OFX::Image* otherImg);
+                         const OfxRectI& trackSearchBounds,
+                         const OFX::Image* otherImg,
+                         double par,
+                         const OfxPointD& renderScale);
 
     OFX::Clip *maskClip_;
     ChoiceParam* _score;
@@ -181,7 +185,7 @@ protected:
     const OFX::Image *_otherImg;
     OfxRectI _refRectPixel;
     OfxPointI _refCenterI;
-    std::pair<OfxPointD,double> _bestMatch; //< the results for the current processor
+    std::pair<OfxPointD,double> _bestMatch; //< the results for the current processor, OfxPointD but pixel coords!
     OFX::MultiThread::Mutex _bestMatchMutex; //< this is used so we can multi-thread the tracking and protect the shared results
     
 public:
@@ -548,12 +552,12 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
                srcComponents == OFX::ePixelComponentAlpha);
         
         if (srcComponents == OFX::ePixelComponentRGBA) {
-            trackInternal<4>(t,other);
+            trackInternal<4>(t,other,args.renderScale);
         } else if (srcComponents == OFX::ePixelComponentRGB) {
-            trackInternal<3>(t,other);
+            trackInternal<3>(t,other,args.renderScale);
         } else {
             assert(srcComponents == OFX::ePixelComponentAlpha);
-            trackInternal<1>(t,other);
+            trackInternal<1>(t,other,args.renderScale);
         }
         if (args.forward) {
             ++t;
@@ -646,43 +650,21 @@ getOtherBounds(const OfxPointD &refCenter, const OfxRectD& searchRect, OfxRectD 
 void
 TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
                                  OfxTime refTime,
-                                 const OfxRectD& refBounds,
-                                 const OfxPointD& refCenter,
+                                 const OfxRectI& refBounds,
+                                 const OfxPointI& refCenter,
                                  const OFX::Image* refImg,
                                  const OFX::Image* maskImg,
                                  OfxTime otherTime,
-                                 const OfxRectD& trackSearchBounds,
-                                 const OFX::Image* otherImg)
+                                 const OfxRectI& trackSearchBounds,
+                                 const OFX::Image* otherImg,
+                                 double par,
+                                 const OfxPointD& renderScale)
 {
-    OfxRectI trackSearchBoundsPixel;
-    trackSearchBoundsPixel.x1 = std::floor(trackSearchBounds.x1);
-    trackSearchBoundsPixel.y1 = std::floor(trackSearchBounds.y1);
-    trackSearchBoundsPixel.x2 = std::ceil(trackSearchBounds.x2);
-    trackSearchBoundsPixel.y2 = std::ceil(trackSearchBounds.y2);
-
-    // compute the pattern window in pixel coords
-    OfxRectI refRectPixel;
-    refRectPixel.x1 = std::floor(refBounds.x1);
-    refRectPixel.y1 = std::floor(refBounds.y1);
-    refRectPixel.x2 = std::ceil(refBounds.x2);
-    refRectPixel.y2 = std::ceil(refBounds.y2);
-    // round center to nearest pixel center
-    OfxPointI refCenterI;
-    refCenterI.x = std::floor(refCenter.x + 0.5);
-    refCenterI.y = std::floor(refCenter.y + 0.5);
-
-    //Clip the refRectPixel to the bounds of the ref image
-    MergeImages2D::rectIntersection(refRectPixel, refImg->getBounds(), &refRectPixel);
     
-    refRectPixel.x1 -= refCenterI.x;
-    refRectPixel.x2 -= refCenterI.x;
-    refRectPixel.y1 -= refCenterI.y;
-    refRectPixel.y2 -= refCenterI.y;
-
     // set the render window
-    processor.setRenderWindow(trackSearchBoundsPixel);
+    processor.setRenderWindow(trackSearchBounds);
     
-    bool canProcess = processor.setValues(refImg, otherImg, maskImg, refRectPixel, refCenterI);
+    bool canProcess = processor.setValues(refImg, otherImg, maskImg, refBounds, refCenter);
     
     if (!canProcess) {
         // can't track: erase any existing track
@@ -696,17 +678,32 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
         //////////////////////////////////
 
         ///ok the score is now computed, update the center
+        ///At this point newCenter is in PIXEL coordinates
         OfxPointD newCenter;
         if (processor.getBestScore() == std::numeric_limits<double>::infinity()) {
             // can't track: erase any existing track
             _center->deleteKeyAtTime(otherTime);
         } else {
+            //Best match is in pixel coords, convert it to canonical coords
             const OfxPointD& bestMatch = processor.getBestMatch();
-
-            newCenter.x = refCenter.x + bestMatch.x - refCenterI.x;
-            newCenter.y = refCenter.y + bestMatch.y - refCenterI.y;
+    
+            
+            
+            
+            newCenter.x = refCenter.x + bestMatch.x - refCenter.x;
+            newCenter.y = refCenter.y + bestMatch.y - refCenter.y;
+            
+           
+            
+            //convert newCenter to canonical
+            newCenter.x = (newCenter.x + 0.5) * par / renderScale.x;
+            newCenter.y = (newCenter.y + 0.5) / renderScale.y;
+            
+            OfxPointD refCenterCanonical;
+            MergeImages2D::toCanonical(refCenter, renderScale, par, &refCenterCanonical);
+            
             // create a keyframe at starting point
-            _center->setValueAtTime(refTime, refCenter.x, refCenter.y);
+            _center->setValueAtTime(refTime, refCenterCanonical.x, refCenterCanonical.y);
             // create a keyframe at end point
             _center->setValueAtTime(otherTime, newCenter.x, newCenter.y);
         }
@@ -716,13 +713,15 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
 template <class PIX, int nComponents, int maxValue>
 void
 TrackerPMPlugin::trackInternalForDepth(OfxTime refTime,
-                                       const OfxRectD& refBounds,
-                                       const OfxPointD& refCenter,
+                                       const OfxRectI& refBounds,
+                                       const OfxPointI& refCenter,
                                        const OFX::Image* refImg,
                                        const OFX::Image* maskImg,
                                        OfxTime otherTime,
-                                       const OfxRectD& trackSearchBounds,
-                                       const OFX::Image* otherImg)
+                                       const OfxRectI& trackSearchBounds,
+                                       const OFX::Image* otherImg,
+                                       double par,
+                                       const OfxPointD& renderScale)
 {
     int scoreI;
     _score->getValueAtTime(refTime, scoreI);
@@ -731,19 +730,19 @@ TrackerPMPlugin::trackInternalForDepth(OfxTime refTime,
     switch (typeE) {
         case eTrackerSSD: {
             TrackerPMProcessor<PIX, nComponents, maxValue, eTrackerSSD> fred(*this);
-            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, maskImg, otherTime, trackSearchBounds, otherImg);
+            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, maskImg, otherTime, trackSearchBounds, otherImg,par,renderScale);
         }   break;
         case eTrackerSAD: {
             TrackerPMProcessor<PIX, nComponents, maxValue, eTrackerSAD> fred(*this);
-            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, maskImg, otherTime, trackSearchBounds, otherImg);
+            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, maskImg, otherTime, trackSearchBounds, otherImg,par,renderScale);
         }   break;
         case eTrackerNCC: {
             TrackerPMProcessor<PIX, nComponents, maxValue, eTrackerNCC> fred(*this);
-            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, maskImg, otherTime, trackSearchBounds, otherImg);
+            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, maskImg, otherTime, trackSearchBounds, otherImg,par,renderScale);
         }   break;
         case eTrackerZNCC: {
             TrackerPMProcessor<PIX, nComponents, maxValue, eTrackerZNCC> fred(*this);
-            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, maskImg, otherTime, trackSearchBounds, otherImg);
+            setupAndProcess(fred, refTime, refBounds, refCenter, refImg, maskImg, otherTime, trackSearchBounds, otherImg,par,renderScale);
         }   break;
     }
 }
@@ -752,7 +751,7 @@ TrackerPMPlugin::trackInternalForDepth(OfxTime refTime,
 // the internal render function
 template <int nComponents>
 void
-TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime)
+TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime,const OfxPointD& renderScale)
 {
     OfxRectD refRect;
     _innerBtmLeft->getValueAtTime(refTime, refRect.x1, refRect.y1);
@@ -789,19 +788,38 @@ TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime)
 
     OfxRectD trackSearchBounds;
     getTrackSearchBounds(refRect, refCenter, searchRect, &trackSearchBounds);
+    
+    const double par = srcClip_->getPixelAspectRatio();
+    
+    OfxRectI refBoundsPixel,trackSearchBoundsPixel;
+    OfxPointI refCenterPixel;
+    
+    MergeImages2D::toPixel(refCenter, renderScale, par, &refCenterPixel);
+    MergeImages2D::toPixelEnclosing(refBounds, renderScale, par, &refBoundsPixel);
+    MergeImages2D::toPixelEnclosing(trackSearchBounds, renderScale, par, &trackSearchBoundsPixel);
+
+    //Clip the refRectPixel to the bounds of the ref image
+    MergeImages2D::rectIntersection(refBoundsPixel, srcRef->getBounds(), &refBoundsPixel);
+
+
+    refBoundsPixel.x1 -= refCenterPixel.x;
+    refBoundsPixel.x2 -= refCenterPixel.x;
+    refBoundsPixel.y1 -= refCenterPixel.y;
+    refBoundsPixel.y2 -= refCenterPixel.y;
+
 
     switch (srcBitDepth) {
         case OFX::eBitDepthUByte :
         {
-            trackInternalForDepth<unsigned char, nComponents, 255>(refTime, refBounds, refCenter, srcRef.get(), mask.get(), otherTime, trackSearchBounds, srcOther.get());
+            trackInternalForDepth<unsigned char, nComponents, 255>(refTime, refBoundsPixel, refCenterPixel, srcRef.get(), mask.get(), otherTime, trackSearchBoundsPixel, srcOther.get(),par,renderScale);
         }   break;
         case OFX::eBitDepthUShort :
         {
-            trackInternalForDepth<unsigned short, nComponents, 65535>(refTime, refBounds, refCenter, srcRef.get(), mask.get(), otherTime, trackSearchBounds, srcOther.get());
+            trackInternalForDepth<unsigned short, nComponents, 65535>(refTime, refBoundsPixel, refCenterPixel, srcRef.get(), mask.get(), otherTime, trackSearchBoundsPixel, srcOther.get(),par,renderScale);
         }   break;
         case OFX::eBitDepthFloat :
         {
-            trackInternalForDepth<float, nComponents, 1>(refTime, refBounds, refCenter, srcRef.get(), mask.get(), otherTime, trackSearchBounds, srcOther.get());
+            trackInternalForDepth<float, nComponents, 1>(refTime, refBoundsPixel, refCenterPixel, srcRef.get(), mask.get(), otherTime, trackSearchBoundsPixel, srcOther.get(),par,renderScale);
         }   break;
         default :
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
