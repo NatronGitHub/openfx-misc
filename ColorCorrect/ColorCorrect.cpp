@@ -1004,11 +1004,11 @@ defineColorGroup(const std::string& groupName,
     groupDesc->setHint(hint);
     groupDesc->setOpen(open);
     
-    defineRGBAScaleParam(desc, groupName + '.' + kParamSaturation, kParamSaturation, hint, groupDesc, page, 1, 0, 4);
-    defineRGBAScaleParam(desc, groupName + '.' + kParamContrast, kParamContrast, hint, groupDesc, page, 1, 0, 4);
-    defineRGBAScaleParam(desc, groupName + '.' + kParamGamma, kParamGamma, hint, groupDesc, page, 1, 0.2, 5);
-    defineRGBAScaleParam(desc, groupName + '.' + kParamGain, kParamGain, hint, groupDesc, page, 1, 0, 4);
-    defineRGBAScaleParam(desc, groupName + '.' + kParamOffset, kParamOffset, hint, groupDesc, page, 0, -1, 1);
+    defineRGBAScaleParam(desc, groupName + kParamSaturation, kParamSaturation, hint, groupDesc, page, 1, 0, 4);
+    defineRGBAScaleParam(desc, groupName + kParamContrast, kParamContrast, hint, groupDesc, page, 1, 0, 4);
+    defineRGBAScaleParam(desc, groupName + kParamGamma, kParamGamma, hint, groupDesc, page, 1, 0.2, 5);
+    defineRGBAScaleParam(desc, groupName + kParamGain, kParamGain, hint, groupDesc, page, 1, 0, 4);
+    defineRGBAScaleParam(desc, groupName + kParamOffset, kParamOffset, hint, groupDesc, page, 0, -1, 1);
      page->addChild(*groupDesc);
 }
 
