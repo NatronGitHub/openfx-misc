@@ -826,7 +826,7 @@ GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
         param->setLabels(kParamClampBlackLabel, kParamClampBlackLabel, kParamClampBlackLabel);
         param->setHint(kParamClampBlackHint);
-        param->setDefault(true);
+        param->setDefault(false);
         param->setAnimates(true);
         page->addChild(*param);
     }
