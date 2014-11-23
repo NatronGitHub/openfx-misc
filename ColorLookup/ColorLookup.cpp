@@ -850,7 +850,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
         param->setLabels(kParamClampBlackLabel, kParamClampBlackLabel, kParamClampBlackLabel);
         param->setHint(kParamClampBlackHint);
-        param->setDefault(true);
+        param->setDefault(false);
         param->setAnimates(true);
         page->addChild(*param);
     }
