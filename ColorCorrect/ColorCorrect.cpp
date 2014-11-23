@@ -657,11 +657,11 @@ private:
 
     void fetchColorControlGroup(const std::string& groupName, ColorControlParamGroup* group) {
         assert(group);
-        group->saturation = fetchRGBAParam(groupName + '.' + kParamSaturation);
-        group->contrast = fetchRGBAParam(groupName + '.' + kParamContrast);
-        group->gamma = fetchRGBAParam(groupName + '.' + kParamGamma);
-        group->gain = fetchRGBAParam(groupName + '.' + kParamGain);
-        group->offset = fetchRGBAParam(groupName + '.' + kParamOffset);
+        group->saturation = fetchRGBAParam(groupName  + kParamSaturation);
+        group->contrast = fetchRGBAParam(groupName +  kParamContrast);
+        group->gamma = fetchRGBAParam(groupName  + kParamGamma);
+        group->gain = fetchRGBAParam(groupName + kParamGain);
+        group->offset = fetchRGBAParam(groupName + kParamOffset);
         assert(group->saturation && group->contrast && group->gamma && group->gain && group->offset);
     }
     
