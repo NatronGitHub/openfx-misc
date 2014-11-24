@@ -15,6 +15,7 @@ Deinterlace \
 Difference \
 Dissolve \
 Grade \
+HSV \
 Invert \
 JoinViews \
 Keyer \

@@ -12,6 +12,7 @@
 #include "Difference.h"
 #include "Dissolve.h"
 #include "Grade.h"
+#include "HSV.h"
 #include "Invert.h"
 #include "JoinViews.h"
 #include "Keyer.h"
@@ -56,6 +57,7 @@ namespace OFX
             getDifferencePluginID(ids);
             getDissolvePluginID(ids);
             getGradePluginID(ids);
+            getHSVPluginIDs(ids);
             getInvertPluginID(ids);
             getJoinViewsPluginID(ids);
             getKeyerPluginID(ids);

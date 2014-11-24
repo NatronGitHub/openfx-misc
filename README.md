@@ -47,6 +47,7 @@ grouping).
 * InvertOFX: Inverse the selected channels.
 * ColorLookupOFX: Apply a parametric lookup curve to each channel  
   separately.
+* RGVToHSV and HSVToRGB: convert to/from HSV color representation.
 
 ### Keyer
 

@@ -13,6 +13,7 @@ Deinterlace.o \
 Difference.o \
 Dissolve.o \
 Grade.o \
+HSV.o \
 Invert.o \
 JoinViews.o \
 Keyer.o \
@@ -34,6 +35,7 @@ TestRender.o \
 TimeOffset.o \
 TrackerPM.o \
 Transform.o \
+ofxsLut.o \
 ofxsOGLTextRenderer.o \
 ofxsOGLFontData.o  \
 ofxsTracking.o \
@@ -108,6 +110,7 @@ VPATH += \
 ../Difference \
 ../Dissolve \
 ../Grade \
+../HSV \
 ../Invert \
 ../JoinViews \
 ../Keyer \
@@ -149,6 +152,7 @@ CXXFLAGS += \
 -I../Difference \
 -I../Dissolve \
 -I../Grade \
+-I../HSV \
 -I../Invert \
 -I../JoinViews \
 -I../Keyer \
