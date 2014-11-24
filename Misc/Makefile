@@ -35,6 +35,7 @@ TestRender.o \
 TimeOffset.o \
 TrackerPM.o \
 Transform.o \
+VectorToColor.o \
 ofxsLut.o \
 ofxsOGLTextRenderer.o \
 ofxsOGLFontData.o  \
@@ -131,7 +132,8 @@ VPATH += \
 ../Test \
 ../TimeOffset \
 ../TrackerPM \
-../Transform
+../Transform \
+../VectorToColor
 
 include ../Makefile.master
 
@@ -172,5 +174,6 @@ CXXFLAGS += \
 -I../Test \
 -I../TimeOffset \
 -I../TrackerPM \
--I../Transform
+-I../Transform \
+-I../VectorToColor
 

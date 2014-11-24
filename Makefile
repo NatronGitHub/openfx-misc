@@ -32,7 +32,8 @@ Switch \
 Test \
 TimeOffset \
 TrackerPM \
-Transform
+Transform \
+VectorToColor
 
 ifneq ($(DEBUGFLAG),-O3)
   # DebugProxy is only useful to debug the communication between a host and a plugin

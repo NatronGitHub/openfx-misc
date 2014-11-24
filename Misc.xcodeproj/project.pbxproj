@@ -50,6 +50,7 @@
 				1E0E4ED0194CB2C30072248F /* PBXTargetDependency */,
 				D733F7031959803600028B57 /* PBXTargetDependency */,
 				1E0E4ED2194CB2C30072248F /* PBXTargetDependency */,
+				1EFBC99E1A23A25A00086E7A /* PBXTargetDependency */,
 			);
 			name = "all (no multibundle)";
 			productName = all;
@@ -550,6 +551,20 @@
 		1EFB4E1F19461B76005932AF /* Difference.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFB4E1D19461B76005932AF /* Difference.cpp */; };
 		1EFB4E2019461B76005932AF /* Difference.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFB4E1D19461B76005932AF /* Difference.cpp */; };
 		1EFB4E2519461B86005932AF /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFB4E2319461B86005932AF /* PluginRegistration.cpp */; };
+		1EFBC9831A23A1EB00086E7A /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1EFBC9841A23A1EB00086E7A /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1EFBC9851A23A1EB00086E7A /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1EFBC9861A23A1EB00086E7A /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1EFBC9871A23A1EB00086E7A /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1EFBC9881A23A1EB00086E7A /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1EFBC9891A23A1EB00086E7A /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1EFBC98A1A23A1EB00086E7A /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1EFBC98C1A23A1EB00086E7A /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1EFBC98E1A23A1EB00086E7A /* net.sf.openfx.GradePlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A88519C6EDDA00E6E3AE /* net.sf.openfx.GradePlugin.png */; };
+		1EFBC98F1A23A1EB00086E7A /* net.sf.openfx.GradePlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CA419C9821700C2C668 /* net.sf.openfx.GradePlugin.svg */; };
+		1EFBC9971A23A22D00086E7A /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFBC9951A23A22D00086E7A /* PluginRegistration.cpp */; };
+		1EFBC9981A23A22D00086E7A /* VectorToColor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFBC9961A23A22D00086E7A /* VectorToColor.cpp */; };
+		1EFBC9991A23A23C00086E7A /* VectorToColor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFBC9961A23A22D00086E7A /* VectorToColor.cpp */; };
 		1EFC1700180DCE6500AD7B86 /* ColorLookup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0C41E180DCAB500C25D1E /* ColorLookup.cpp */; };
 		AC60A33C19FE9C7900375A86 /* Ramp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32A19FE995F00375A86 /* Ramp.cpp */; };
 		ACC8477E1A0A3F9300B3FAFE /* net.sf.openfx.Ramp.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC60A32719FE995F00375A86 /* net.sf.openfx.Ramp.png */; };
@@ -915,6 +930,13 @@
 			remoteGlobalIDString = 1E92571F19EC1DB80018F19A;
 			remoteInfo = Clamp.ofx;
 		};
+		1EFBC99D1A23A25A00086E7A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1EFBC97F1A23A1EB00086E7A;
+			remoteInfo = VectorToColor.ofx;
+		};
 		D733F7021959803600028B57 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
@@ -1203,6 +1225,17 @@
 				1E814CD419C983EA00C2C668 /* net.sf.openfx.TransformPlugin.svg in CopyFiles */,
 				1EE4A8C719C6EF9200E6E3AE /* net.sf.openfx.TransformMaskedPlugin.png in CopyFiles */,
 				1E814CD619C983F700C2C668 /* net.sf.openfx.TransformMaskedPlugin.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EFBC98D1A23A1EB00086E7A /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1EFBC98E1A23A1EB00086E7A /* net.sf.openfx.GradePlugin.png in CopyFiles */,
+				1EFBC98F1A23A1EB00086E7A /* net.sf.openfx.GradePlugin.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1519,6 +1552,12 @@
 		1EFB4E2119461B86005932AF /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EFB4E2219461B86005932AF /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EFB4E2319461B86005932AF /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		1EFBC9931A23A1EB00086E7A /* VectorToColor.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VectorToColor.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EFBC9951A23A22D00086E7A /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		1EFBC9961A23A22D00086E7A /* VectorToColor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VectorToColor.cpp; sourceTree = "<group>"; };
+		1EFBC99A1A23A24600086E7A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1EFBC99B1A23A24600086E7A /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EFBC99C1A23A24600086E7A /* VectorToColor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VectorToColor.h; sourceTree = "<group>"; };
 		AC60A32519FE995F00375A86 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AC60A32619FE995F00375A86 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		AC60A32719FE995F00375A86 /* net.sf.openfx.Ramp.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.Ramp.png; sourceTree = "<group>"; };
@@ -1830,6 +1869,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				1EFB4E1719461B13005932AF /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EFBC98B1A23A1EB00086E7A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EFBC98C1A23A1EB00086E7A /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2169,6 +2216,7 @@
 				1ECF2F9E19F51D3400E91A38 /* Keyer.ofx.bundle */,
 				1EAD4AF41A0A691700AF834D /* AdjustRoD.ofx.bundle */,
 				1ED5372E1A234CDF007966D5 /* HSV.ofx.bundle */,
+				1EFBC9931A23A1EB00086E7A /* VectorToColor.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -2218,6 +2266,7 @@
 				1E235FF318369E2B0019C45F /* TimeOffset */,
 				D7704C74195B5E4F002E163E /* TrackerPM */,
 				D7349E8818E7766F0097DB1D /* Transform */,
+				1EFBC97E1A23A1CC00086E7A /* VectorToColor */,
 				1E8B5D4618B769B400C31FDC /* Misc */,
 				1E9B5F46198A51590095C8AA /* SupportExt */,
 				1E3E3CB417995D15005F2132 /* Library */,
@@ -2495,6 +2544,18 @@
 				1EFB4E2319461B86005932AF /* PluginRegistration.cpp */,
 			);
 			path = Difference;
+			sourceTree = "<group>";
+		};
+		1EFBC97E1A23A1CC00086E7A /* VectorToColor */ = {
+			isa = PBXGroup;
+			children = (
+				1EFBC9961A23A22D00086E7A /* VectorToColor.cpp */,
+				1EFBC99C1A23A24600086E7A /* VectorToColor.h */,
+				1EFBC9951A23A22D00086E7A /* PluginRegistration.cpp */,
+				1EFBC99A1A23A24600086E7A /* Info.plist */,
+				1EFBC99B1A23A24600086E7A /* Makefile */,
+			);
+			path = VectorToColor;
 			sourceTree = "<group>";
 		};
 		AC60A32419FE995F00375A86 /* Ramp */ = {
@@ -3165,6 +3226,23 @@
 			productReference = 1EFB4E1B19461B13005932AF /* Difference.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
+		1EFBC97F1A23A1EB00086E7A /* VectorToColor.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1EFBC9901A23A1EB00086E7A /* Build configuration list for PBXNativeTarget "VectorToColor.ofx" */;
+			buildPhases = (
+				1EFBC9801A23A1EB00086E7A /* Sources */,
+				1EFBC98B1A23A1EB00086E7A /* Frameworks */,
+				1EFBC98D1A23A1EB00086E7A /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = VectorToColor.ofx;
+			productName = basic.ofx;
+			productReference = 1EFBC9931A23A1EB00086E7A /* VectorToColor.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 		D721EC02191120B30069DB1D /* Roto.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D721EC10191120B30069DB1D /* Build configuration list for PBXNativeTarget "Roto.ofx" */;
@@ -3343,6 +3421,7 @@
 				1E235FF418369E4C0019C45F /* TimeOffset.ofx */,
 				D7BB85B81955C00100A86649 /* TrackerPM.ofx */,
 				D7349E8F18E7767D0097DB1D /* Transform.ofx */,
+				1EFBC97F1A23A1EB00086E7A /* VectorToColor.ofx */,
 				1E8B5D4A18B76A7500C31FDC /* Misc.ofx */,
 			);
 		};
@@ -3639,6 +3718,7 @@
 				1E8B5D6D18B77F1600C31FDC /* SideBySide.cpp in Sources */,
 				1E8B5D4E18B76A7500C31FDC /* Switch.cpp in Sources */,
 				1E8B5D6718B76F8700C31FDC /* TimeOffset.cpp in Sources */,
+				1EFBC9991A23A23C00086E7A /* VectorToColor.cpp in Sources */,
 				D780C414198938AD002470C9 /* TrackerPM.cpp in Sources */,
 				D7349E8E18E776780097DB1D /* Transform.cpp in Sources */,
 				1E8B5D5D18B76AB300C31FDC /* PluginRegistrationCombined.cpp in Sources */,
@@ -3923,6 +4003,23 @@
 				1EFB4E1319461B13005932AF /* ofxsParams.cpp in Sources */,
 				1EFB4E1419461B13005932AF /* ofxsProperty.cpp in Sources */,
 				1EFB4E1519461B13005932AF /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EFBC9801A23A1EB00086E7A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EFBC9981A23A22D00086E7A /* VectorToColor.cpp in Sources */,
+				1EFBC9971A23A22D00086E7A /* PluginRegistration.cpp in Sources */,
+				1EFBC9831A23A1EB00086E7A /* ofxsCore.cpp in Sources */,
+				1EFBC9841A23A1EB00086E7A /* ofxsImageEffect.cpp in Sources */,
+				1EFBC9851A23A1EB00086E7A /* ofxsInteract.cpp in Sources */,
+				1EFBC9861A23A1EB00086E7A /* ofxsLog.cpp in Sources */,
+				1EFBC9871A23A1EB00086E7A /* ofxsMultiThread.cpp in Sources */,
+				1EFBC9881A23A1EB00086E7A /* ofxsParams.cpp in Sources */,
+				1EFBC9891A23A1EB00086E7A /* ofxsProperty.cpp in Sources */,
+				1EFBC98A1A23A1EB00086E7A /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4251,6 +4348,11 @@
 			isa = PBXTargetDependency;
 			target = 1E92571F19EC1DB80018F19A /* Clamp.ofx */;
 			targetProxy = 1ED537401A237203007966D5 /* PBXContainerItemProxy */;
+		};
+		1EFBC99E1A23A25A00086E7A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1EFBC97F1A23A1EB00086E7A /* VectorToColor.ofx */;
+			targetProxy = 1EFBC99D1A23A25A00086E7A /* PBXContainerItemProxy */;
 		};
 		D733F7031959803600028B57 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -5065,6 +5167,28 @@
 			};
 			name = Release;
 		};
+		1EFBC9911A23A1EB00086E7A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = VectorToColor/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = VectorToColor.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1EFBC9921A23A1EB00086E7A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = VectorToColor/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = VectorToColor.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
 		D721EC11191120B30069DB1D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -5524,6 +5648,15 @@
 			buildConfigurations = (
 				1EFB4E1919461B13005932AF /* Debug */,
 				1EFB4E1A19461B13005932AF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1EFBC9901A23A1EB00086E7A /* Build configuration list for PBXNativeTarget "VectorToColor.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1EFBC9911A23A1EB00086E7A /* Debug */,
+				1EFBC9921A23A1EB00086E7A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
