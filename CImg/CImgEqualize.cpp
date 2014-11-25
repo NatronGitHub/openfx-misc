@@ -91,6 +91,7 @@
 #define kPluginGrouping      "Color"
 #define kPluginDescription \
 "Equalize histogram of pixel values.\n" \
+"To equalize image brightness only, use the HistEQCImg plugin.\n" \
 "Uses the 'equalize' function from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
