@@ -87,7 +87,11 @@
 
 #define kPluginName "VectorToColorOFX"
 #define kPluginGrouping "Color"
-#define kPluginDescription "Convert x and y vector components to acolor representation. H (hue) gives the direction, and V (value) gives the amplitude/norm. S (saturation) can be set arbitrarily. Output can be RGB or HSV, with H in degrees."
+#define kPluginDescription \
+"Convert x and y vector components to acolor representation.\n" \
+"H (hue) gives the direction, S (saturation) is set to the amplitude/norm, and V is 1." \
+"The role of S and V can be switched." \
+"Output can be RGB or HSV, with H in degrees."
 #define kPluginIdentifier "net.sf.openfx.VectorToColorPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -121,6 +125,18 @@ enum InputChannelEnum {
     eInputChannelA,
 };
 
+#define kParamOpposite "opposite"
+#define kParamOppositeLabel "Opposite"
+#define kParamOppositeHint "If checked, opposite of X and Y are used."
+
+#define kParamModulateV "modulateV"
+#define kParamModulateVLabel "Modulate V"
+#define kParamModulateVHint "If checked, modulate V using the vector amplitude, instead of S."
+
+#define kParamHSVOutput "hsvOutput"
+#define kParamHSVOutputLabel "HSV Output"
+#define kParamHSVOutputHint "If checked, output is in the HSV color model."
+
 using namespace OFX;
 
 
@@ -130,6 +146,9 @@ protected:
     const OFX::Image *_srcImg;
     InputChannelEnum _xChannel;
     InputChannelEnum _yChannel;
+    bool _opposite;
+    bool _modulateV;
+    bool _hsvOutput;
 
  public:
     
@@ -142,10 +161,16 @@ protected:
     void setSrcImg(const OFX::Image *v) {_srcImg = v;}
     
     void setValues(InputChannelEnum xChannel,
-                   InputChannelEnum yChannel)
+                   InputChannelEnum yChannel,
+                   bool opposite,
+                   bool modulateV,
+                   bool hsvOutput)
     {
         _xChannel = xChannel;
         _yChannel = yChannel;
+        _opposite = opposite;
+        _modulateV = modulateV;
+        _hsvOutput = hsvOutput;
     }
 
 private:
@@ -205,8 +230,7 @@ public:
         assert(nComponents == 3 || nComponents == 4);
         assert(_dstImg);
         float vec[2];
-        float h;
-        float v;
+        float h, s = 1., v = 1.;
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -218,8 +242,21 @@ public:
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 pixToVector<PIX, nComponents>(srcPix, vec, _xChannel, _yChannel);
                 h = std::atan2f(vec[0], vec[1]) * 180. / M_PI;
-                v = std::hypot(vec[0], vec[1]);
-                OFX::Color::hsv_to_rgb(h, 1., v, &dstPix[0], &dstPix[1], &dstPix[2]);
+                if (_opposite) {
+                    h += 180;
+                }
+                if (_modulateV) {
+                    v = std::hypot(vec[0], vec[1]);
+                } else {
+                    s = std::hypot(vec[0], vec[1]);
+                }
+                if (_hsvOutput) {
+                    dstPix[0] = h;
+                    dstPix[1] = s;
+                    dstPix[2] = v;
+                } else {
+                    OFX::Color::hsv_to_rgb(h, s, v, &dstPix[0], &dstPix[1], &dstPix[2]);
+                }
                 if (nComponents == 4) {
                     dstPix[3] = 1.;
                 }
@@ -258,7 +295,10 @@ public:
 
         _xChannel = fetchChoiceParam(kParamXChannel);
         _yChannel = fetchChoiceParam(kParamYChannel);
-        assert(_xChannel && _yChannel);
+        _opposite = fetchBooleanParam(kParamOpposite);
+        _modulateV = fetchBooleanParam(kParamModulateV);
+        _hsvOutput = fetchBooleanParam(kParamHSVOutput);
+        assert(_xChannel && _yChannel && _opposite && _modulateV && _hsvOutput);
     }
     
 private:
@@ -274,6 +314,9 @@ private:
     OFX::Clip *srcClip_;
     OFX::ChoiceParam* _xChannel;
     OFX::ChoiceParam* _yChannel;
+    OFX::BooleanParam* _opposite;
+    OFX::BooleanParam* _modulateV;
+    OFX::BooleanParam* _hsvOutput;
 };
 
 
@@ -317,8 +360,13 @@ VectorToColorPlugin::setupAndProcess(VectorToColorProcessorBase &processor, cons
     _yChannel->getValueAtTime(args.time, yChannel_i);
     InputChannelEnum xChannel = (InputChannelEnum)xChannel_i;
     InputChannelEnum yChannel = (InputChannelEnum)yChannel_i;
-    
-    processor.setValues(xChannel, yChannel);
+    bool opposite;
+    _opposite->getValueAtTime(args.time, opposite);
+    bool modulateV;
+    _modulateV->getValueAtTime(args.time, modulateV);
+    bool hsvOutput;
+    _hsvOutput->getValueAtTime(args.time, hsvOutput);
+    processor.setValues(xChannel, yChannel, opposite, modulateV, hsvOutput);
     processor.process();
 }
 
@@ -431,6 +479,30 @@ VectorToColorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabels(kParamYChannelLabel, kParamYChannelLabel, kParamYChannelLabel);
         param->setHint(kParamYChannelHint);
         addInputChannelOtions(param, eInputChannelG, context);
+        page->addChild(*param);
+    }
+
+    // opposite
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpposite);
+        param->setLabels(kParamOppositeLabel, kParamOppositeLabel, kParamOppositeLabel);
+        param->setHint(kParamOppositeHint);
+        page->addChild(*param);
+    }
+
+    // modulateV
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamModulateV);
+        param->setLabels(kParamModulateVLabel, kParamModulateVLabel, kParamModulateVLabel);
+        param->setHint(kParamModulateVHint);
+        page->addChild(*param);
+    }
+
+    // hsvOutput
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamHSVOutput);
+        param->setLabels(kParamHSVOutputLabel, kParamHSVOutputLabel, kParamHSVOutputLabel);
+        param->setHint(kParamHSVOutputHint);
         page->addChild(*param);
     }
 }
