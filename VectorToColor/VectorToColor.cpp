@@ -217,8 +217,8 @@ public:
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 pixToVector<PIX, nComponents>(srcPix, vec, _xChannel, _yChannel);
-                h = std::atan2f(vec[0], vec[1]) * 180. / M_PI;
-                v = std::hypot(vec[0], vec[1]);
+                h = std::atan2(vec[0], vec[1]) * 180. / M_PI;
+                v = hypot(vec[0], vec[1]);
                 OFX::Color::hsv_to_rgb(h, 1., v, &dstPix[0], &dstPix[1], &dstPix[2]);
                 if (nComponents == 4) {
                     dstPix[3] = 1.;
