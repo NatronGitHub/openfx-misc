@@ -36,8 +36,9 @@
 #include "TimeOffset.h"
 #include "TrackerPM.h"
 #include "Transform.h"
+#ifdef DEBUG
 #include "VectorToColor.h"
-
+#endif
 namespace OFX
 {
     namespace Plugin
@@ -84,7 +85,9 @@ namespace OFX
             getTimeOffsetPluginID(ids);
             getTrackerPMPluginID(ids);
             getTransformPluginIDs(ids);
+#ifdef DEBUG
             getVectorToColorPluginID(ids);
+#endif
         }
     }
 }
