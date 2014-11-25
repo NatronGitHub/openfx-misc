@@ -539,6 +539,8 @@
 		1EF46F47194A39C800825BDF /* Shuffle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF46F45194A39C800825BDF /* Shuffle.cpp */; };
 		1EF46F48194A39C800825BDF /* Shuffle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF46F45194A39C800825BDF /* Shuffle.cpp */; };
 		1EF46F4B194A39DB00825BDF /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF46F4A194A39DB00825BDF /* PluginRegistration.cpp */; };
+		1EFA77161A24DCFA00212DB0 /* CImgHistEQ.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFA77141A24DCFA00212DB0 /* CImgHistEQ.cpp */; };
+		1EFA77171A24E05F00212DB0 /* ofxsLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED537381A234F12007966D5 /* ofxsLut.cpp */; };
 		1EFB4E0E19461B13005932AF /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EFB4E0F19461B13005932AF /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1EFB4E1019461B13005932AF /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -1546,6 +1548,8 @@
 		1EF46F49194A39DB00825BDF /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EF46F4A194A39DB00825BDF /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1EF46F4C194A39E800825BDF /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EFA77141A24DCFA00212DB0 /* CImgHistEQ.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgHistEQ.cpp; sourceTree = "<group>"; };
+		1EFA77151A24DCFA00212DB0 /* CImgHistEQ.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgHistEQ.h; sourceTree = "<group>"; };
 		1EFB4E1B19461B13005932AF /* Difference.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Difference.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EFB4E1D19461B76005932AF /* Difference.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Difference.cpp; sourceTree = "<group>"; };
 		1EFB4E1E19461B76005932AF /* Difference.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Difference.h; sourceTree = "<group>"; };
@@ -2036,6 +2040,8 @@
 				1ECF2F5219F2CB9F00E91A38 /* CImgErodeSmooth.h */,
 				1E1DDFEA1A04E432007F45B2 /* CImgGuided.cpp */,
 				1E1DDFEB1A04E432007F45B2 /* CImgGuided.h */,
+				1EFA77141A24DCFA00212DB0 /* CImgHistEQ.cpp */,
+				1EFA77151A24DCFA00212DB0 /* CImgHistEQ.h */,
 				1E868B7919E6E72B00B793BA /* CImgNoise.cpp */,
 				1E868B7A19E6E72B00B793BA /* CImgNoise.h */,
 				1EA330A819E83A33002EFA5B /* CImgPlasma.cpp */,
@@ -3556,13 +3562,16 @@
 				1E868B7E19E6F6B500B793BA /* CImgDenoise.cpp in Sources */,
 				1E868B7519E6E10100B793BA /* CImgDilate.cpp in Sources */,
 				1EA330AD19E846F7002EFA5B /* CImgEqualize.cpp in Sources */,
+				1ECF2F5319F2CB9F00E91A38 /* CImgErodeSmooth.cpp in Sources */,
 				1E868B7819E6E28E00B793BA /* CImgErode.cpp in Sources */,
 				1E1DDFEC1A04E432007F45B2 /* CImgGuided.cpp in Sources */,
+				1EFA77161A24DCFA00212DB0 /* CImgHistEQ.cpp in Sources */,
 				1E868B7B19E6E72B00B793BA /* CImgNoise.cpp in Sources */,
 				1EA330AA19E83A33002EFA5B /* CImgPlasma.cpp in Sources */,
 				1E92575119ECF38A0018F19A /* CImgRollingGuidance.cpp in Sources */,
 				1E31942219D9B2560027D0E2 /* CImgSmooth.cpp in Sources */,
 				1E31942319D9B2560027D0E2 /* PluginRegistration.cpp in Sources */,
+				1EFA77171A24E05F00212DB0 /* ofxsLut.cpp in Sources */,
 				1E31941319D9B2270027D0E2 /* ofxsCore.cpp in Sources */,
 				1E31941419D9B2270027D0E2 /* ofxsImageEffect.cpp in Sources */,
 				1E31941519D9B2270027D0E2 /* ofxsInteract.cpp in Sources */,
@@ -3570,7 +3579,6 @@
 				1E31941719D9B2270027D0E2 /* ofxsMultiThread.cpp in Sources */,
 				1E31941819D9B2270027D0E2 /* ofxsParams.cpp in Sources */,
 				1E31941919D9B2270027D0E2 /* ofxsProperty.cpp in Sources */,
-				1ECF2F5319F2CB9F00E91A38 /* CImgErodeSmooth.cpp in Sources */,
 				1E31941A19D9B2270027D0E2 /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

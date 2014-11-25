@@ -146,7 +146,10 @@ public:
                            bool supportsRGBA,
                            bool supportsRGB,
                            bool supportsAlpha,
-                           bool supportsTiles)
+                           bool supportsTiles,
+                           bool processRGB = true,
+                           bool processAlpha = false,
+                           bool processIsSecret = false)
     {
         OFX::ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
         if (supportsRGBA) {
@@ -195,7 +198,8 @@ public:
             OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
             param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
             param->setHint(kParamProcessRHint);
-            param->setDefault(true);
+            param->setDefault(processRGB);
+            param->setIsSecret(processIsSecret);
             param->setLayoutHint(OFX::eLayoutHintNoNewLine);
             page->addChild(*param);
         }
@@ -203,7 +207,8 @@ public:
             OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
             param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
             param->setHint(kParamProcessGHint);
-            param->setDefault(true);
+            param->setDefault(processRGB);
+            param->setIsSecret(processIsSecret);
             param->setLayoutHint(OFX::eLayoutHintNoNewLine);
             page->addChild(*param);
         }
@@ -211,7 +216,8 @@ public:
             OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
             param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
             param->setHint(kParamProcessBHint);
-            param->setDefault(true);
+            param->setDefault(processRGB);
+            param->setIsSecret(processIsSecret);
             param->setLayoutHint(OFX::eLayoutHintNoNewLine);
             page->addChild(*param);
         }
@@ -219,7 +225,8 @@ public:
             OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
             param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
             param->setHint(kParamProcessAHint);
-            param->setDefault(false);
+            param->setDefault(processAlpha);
+            param->setIsSecret(processIsSecret);
             page->addChild(*param);
         }
 
