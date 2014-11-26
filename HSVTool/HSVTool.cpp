@@ -94,7 +94,54 @@
 #define kRenderThreadSafety eRenderFullySafe
 
 
-#pragma message WARN("TODO")
+#define kGroupColorReplacement "colorReplacement"
+#define kGroupColorReplacementLabel "Color Replacement"
+#define kGroupColorReplacementHint "Easily replace a given color by another color by setting srcColor and dstColor. Set Src Color first, then Dst Color."
+#define kParamSrcColor "srcColor"
+#define kParamSrcColorLabel "Src Color"
+#define kParamSrcColorHint "Source color for replacement. Changing this parameter sets the hue, saturation and brightness ranges for this color, and sets the fallofs to default values."
+#define kParamDstColor "dstColor"
+#define kParamDstColorLabel "Dst Color"
+#define kParamDstColorHint "Destination color for replacement. Changing this parameter sets the hue rotation, and saturation and brightness adjustments. Should be set after Src Color."
+
+#define kGroupHue "hue"
+#define kGroupHueLabel "Hue"
+#define kGroupHueHint "Hue modification settings."
+#define kParamHueRange "hueRange"
+#define kParamHueRangeLabel "Hue Range"
+#define kParamHueRangeHint "Range of color hues that are modified (in degrees). Red is 0, green is 120, blue is 240. The affected hue range is the smallest interval. For example, if the range is (12, 348), then the selected range is red plus or minus 12 degrees."
+#define kParamHueRotation "hueRotation"
+#define kParamHueRotationLabel "Hue Rotation"
+#define kParamHueRotationHint "Rotation of color hues (in degrees) within the range."
+#define kParamHueRangeFalloff "hueRangeFalloff"
+#define kParamHueRangeFalloffLabel "Hue Range Falloff"
+#define kParamHueRangeFalloffHint "Interval (in degrees) around Hue Range, where hue rotation decreases progressively to zero."
+
+#define kGroupSaturation "saturation"
+#define kGroupSaturationLabel "Saturation"
+#define kGroupSaturationHint "Saturation modification settings."
+#define kParamSaturationRange "saturationRange"
+#define kParamSaturationRangeLabel "Saturation Range"
+#define kParamSaturationRangeHint "Range of color saturations that are modified."
+#define kParamSaturationAdjustment "saturationAdjustment"
+#define kParamSaturationAdjustmentLabel "Saturation Adjustment"
+#define kParamSaturationAdjustmentHint "Adjustment of color saturations within the range."
+#define kParamSaturationRangeFalloff "saturationRangeFalloff"
+#define kParamSaturationRangeFalloffLabel "Saturation Range Falloff"
+#define kParamSaturationRangeFalloffHint "Interval (in degrees) around Saturation Range, where saturation rotation decreases progressively to zero."
+
+#define kGroupBrightness "brightness"
+#define kGroupBrightnessLabel "Brightness"
+#define kGroupBrightnessHint "Brightness modification settings."
+#define kParamBrightnessRange "brightnessRange"
+#define kParamBrightnessRangeLabel "Brightness Range"
+#define kParamBrightnessRangeHint "Range of color brightnesss that are modified."
+#define kParamBrightnessAdjustment "brightnessAdjustment"
+#define kParamBrightnessAdjustmentLabel "Brightness Adjustment"
+#define kParamBrightnessAdjustmentHint "Adjustment of color brightnesss within the range."
+#define kParamBrightnessRangeFalloff "brightnessRangeFalloff"
+#define kParamBrightnessRangeFalloffLabel "Brightness Range Falloff"
+#define kParamBrightnessRangeFalloffHint "Interval (in degrees) around Brightness Range, where brightness rotation decreases progressively to zero."
 
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"
@@ -506,10 +553,136 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
+    {
+        GroupParamDescriptor *group = desc.defineGroupParam(kGroupColorReplacement);
+        group->setLabels(kGroupColorReplacementLabel, kGroupColorReplacementLabel, kGroupColorReplacementLabel);
+        group->setHint(kGroupColorReplacementHint);
+        group->setEnabled(true);
+        {
+            RGBParamDescriptor *param = desc.defineRGBParam(kParamSrcColor);
+            param->setLabels(kParamSrcColorLabel, kParamSrcColorLabel, kParamSrcColorLabel);
+            param->setHint(kParamSrcColorHint);
+            page->addChild(*param);
+            param->setParent(*group);
+        }
+        {
+            RGBParamDescriptor *param = desc.defineRGBParam(kParamDstColor);
+            param->setLabels(kParamDstColorLabel, kParamDstColorLabel, kParamDstColorLabel);
+            param->setHint(kParamDstColorHint);
+            page->addChild(*param);
+            param->setParent(*group);
+            param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
+        }
+        page->addChild(*group);
+    }
 
-    
-#pragma message WARN("TODO")
+    {
+        GroupParamDescriptor *group = desc.defineGroupParam(kGroupHue);
+        group->setLabels(kGroupHueLabel, kGroupHueLabel, kGroupHueLabel);
+        group->setHint(kGroupHueHint);
+        group->setEnabled(true);
+        {
+            Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamHueRange);
+            param->setLabels(kParamHueRangeLabel, kParamHueRangeLabel, kParamHueRangeLabel);
+            param->setHint(kParamHueRangeHint);
+            param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
+            param->setDisplayRange(0., 0., 360., 360.);
+            param->setDoubleType(eDoubleTypeAngle);
+            page->addChild(*param);
+            param->setParent(*group);
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamHueRotation);
+            param->setLabels(kParamHueRotationLabel, kParamHueRotationLabel, kParamHueRotationLabel);
+            param->setHint(kParamHueRotationHint);
+            param->setDisplayRange(-180., 180.);
+            param->setDoubleType(eDoubleTypeAngle);
+            page->addChild(*param);
+            param->setParent(*group);
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamHueRangeFalloff);
+            param->setLabels(kParamHueRangeFalloffLabel, kParamHueRangeFalloffLabel, kParamHueRangeFalloffLabel);
+            param->setHint(kParamHueRangeFalloffHint);
+            param->setDisplayRange(0., 180.);
+            param->setDoubleType(eDoubleTypeAngle);
+            page->addChild(*param);
+            param->setParent(*group);
+            param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
+        }
 
+        page->addChild(*group);
+    }
+
+    {
+        GroupParamDescriptor *group = desc.defineGroupParam(kGroupSaturation);
+        group->setLabels(kGroupSaturationLabel, kGroupSaturationLabel, kGroupSaturationLabel);
+        group->setHint(kGroupSaturationHint);
+        group->setEnabled(true);
+        {
+            Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSaturationRange);
+            param->setLabels(kParamSaturationRangeLabel, kParamSaturationRangeLabel, kParamSaturationRangeLabel);
+            param->setHint(kParamSaturationRangeHint);
+            param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
+            param->setDisplayRange(0., 0., 1, 1);
+            page->addChild(*param);
+            param->setParent(*group);
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSaturationAdjustment);
+            param->setLabels(kParamSaturationAdjustmentLabel, kParamSaturationAdjustmentLabel, kParamSaturationAdjustmentLabel);
+            param->setHint(kParamSaturationAdjustmentHint);
+            param->setDisplayRange(0., 1.);
+            page->addChild(*param);
+            param->setParent(*group);
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSaturationRangeFalloff);
+            param->setLabels(kParamSaturationRangeFalloffLabel, kParamSaturationRangeFalloffLabel, kParamSaturationRangeFalloffLabel);
+            param->setHint(kParamSaturationRangeFalloffHint);
+            param->setDisplayRange(0., 1.);
+            page->addChild(*param);
+            param->setParent(*group);
+            param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
+        }
+
+        page->addChild(*group);
+    }
+
+    {
+        GroupParamDescriptor *group = desc.defineGroupParam(kGroupBrightness);
+        group->setLabels(kGroupBrightnessLabel, kGroupBrightnessLabel, kGroupBrightnessLabel);
+        group->setHint(kGroupBrightnessHint);
+        group->setEnabled(true);
+        {
+            Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamBrightnessRange);
+            param->setLabels(kParamBrightnessRangeLabel, kParamBrightnessRangeLabel, kParamBrightnessRangeLabel);
+            param->setHint(kParamBrightnessRangeHint);
+            param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
+            param->setDisplayRange(0., 0., 1, 1);
+            page->addChild(*param);
+            param->setParent(*group);
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBrightnessAdjustment);
+            param->setLabels(kParamBrightnessAdjustmentLabel, kParamBrightnessAdjustmentLabel, kParamBrightnessAdjustmentLabel);
+            param->setHint(kParamBrightnessAdjustmentHint);
+            param->setDisplayRange(0., 1.);
+            page->addChild(*param);
+            param->setParent(*group);
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBrightnessRangeFalloff);
+            param->setLabels(kParamBrightnessRangeFalloffLabel, kParamBrightnessRangeFalloffLabel, kParamBrightnessRangeFalloffLabel);
+            param->setHint(kParamBrightnessRangeFalloffHint);
+            param->setDisplayRange(0., 1.);
+            page->addChild(*param);
+            param->setParent(*group);
+            param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
+        }
+
+        page->addChild(*group);
+    }
 
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
