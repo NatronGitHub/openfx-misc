@@ -1,6 +1,9 @@
 PLUGINOBJECTS = CImgBilateral.o CImgBlur.o CImgDenoise.o CImgDilate.o CImgEqualize.o CImgErode.o CImgErodeSmooth.o CImgGuided.o CImgNoise.o CImgPlasma.o CImgSmooth.o CImgRollingGuidance.o ofxsLut.o PluginRegistration.o
 PLUGINNAME = CImg
-#RESOURCES = net.sf.cimg.CImg.png net.sf.cimg.CImg.svg
+RESOURCES = net.sf.cimg.CImgBlur.png \
+net.sf.cimg.CImgDenoise.png \
+net.sf.cimg.CImgDilate.png \
+net.sf.cimg.CImgErode.png
 
 include ../Makefile.master
 
