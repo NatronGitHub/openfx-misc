@@ -152,6 +152,36 @@
 #define kParamClampWhiteLabel "Clamp White"
 #define kParamClampWhiteHint "All colors above 1 on output are set to 1."
 
+#define kParamOutputAlpha "outputAlpha"
+#define kParamOutputAlphaLabel "Output Alpha"
+#define kParamOutputAlphaHint "Output alpha channel. This can either be the source alpha, one of the coefficients for hue, saturation, brightness, or a combination of those. If it is not source alpha, the image on output are unpremultiplied, even if input is premultiplied."
+#define kParamOutputAlphaOptionSource "Source"
+#define kParamOutputAlphaOptionSourceHint "Alpha channel is kept unmodified"
+#define kParamOutputAlphaOptionHue "Hue"
+#define kParamOutputAlphaOptionHueHint "Set Alpha to the Hue modification mask"
+#define kParamOutputAlphaOptionSaturation "Saturation"
+#define kParamOutputAlphaOptionSaturationHint "Set Alpha to the Saturation modification mask"
+#define kParamOutputAlphaOptionBrightness "Brightness"
+#define kParamOutputAlphaOptionBrightnessHint "Alpha is set to the Brighness mask"
+#define kParamOutputAlphaOptionHueSaturation "min(Hue,Saturation)"
+#define kParamOutputAlphaOptionHueSaturationHint "Alpha is set to min(Hue mask,Saturation mask)"
+#define kParamOutputAlphaOptionHueBrightness "min(Hue,Brightness)"
+#define kParamOutputAlphaOptionHueBrightnessHint "Alpha is set to min(Hue mask,Brightness mask)"
+#define kParamOutputAlphaOptionSaturationBrightness "min(Saturation)"
+#define kParamOutputAlphaOptionSaturationBrightnessHint "Alpha is set to min(Hue mask,Saturation mask)"
+#define kParamOutputAlphaOptionAll "min(all)"
+#define kParamOutputAlphaOptionAllHint "Alpha is set to min(Hue mask,Saturation mask,Brightness mask)"
+
+enum OutputAlphaEnum {
+    eOutputAlphaSource,
+    eOutputAlphaHue,
+    eOutputAlphaSaturation,
+    eOutputAlphaBrightness,
+    eOutputAlphaHueSaturation,
+    eOutputAlphaHueBrightness,
+    eOutputAlphaSaturationBrightness,
+    eOutputAlphaAll,
+};
 
 using namespace OFX;
 
@@ -256,6 +286,7 @@ class HSVToolProcessorBase : public OFX::ImageProcessor
 protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
+    OutputAlphaEnum _outputAlpha;
     bool _premult;
     int _premultChannel;
     bool   _doMasking;
@@ -275,6 +306,7 @@ public:
     , _maskInvert(false)
     , _clampBlack(true)
     , _clampWhite(true)
+    , _outputAlpha(eOutputAlphaSource)
     {
         assert(angleWithinRange(0, 350, 10));
         assert(angleWithinRange(0, 0, 10));
@@ -299,6 +331,7 @@ public:
     void setValues(const HSVToolValues& values,
                    bool clampBlack,
                    bool clampWhite,
+                   OutputAlphaEnum outputAlpha,
                    bool premult,
                    int premultChannel,
                    double mix)
@@ -340,6 +373,7 @@ public:
         }
         _clampBlack = clampBlack;
         _clampWhite = clampWhite;
+        _outputAlpha = outputAlpha;
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
@@ -409,6 +443,16 @@ public:
             v += coeff * _values.valAdjust;
             OFX::Color::hsv_to_rgb(h, s, v, rout, gout, bout);
         }
+        if (_clampBlack) {
+            *rout = std::max(0.f, *rout);
+            *gout = std::max(0.f, *gout);
+            *bout = std::max(0.f, *bout);
+        }
+        if (_clampWhite) {
+            *rout = std::min(1.f, *rout);
+            *gout = std::min(1.f, *gout);
+            *bout = std::min(1.f, *bout);
+        }
     }
 
 private:
@@ -434,6 +478,8 @@ public:
         assert(_dstImg);
         float unpPix[4];
         float tmpPix[4];
+        // only premultiply output if keeping the source alpha
+        const bool premultOut = _premult && (_outputAlpha == eOutputAlphaSource);
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -446,10 +492,54 @@ public:
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
                 float hcoeff, scoeff, vcoeff;
                 hsvtool(unpPix[0], unpPix[1], unpPix[2], &hcoeff, &scoeff, &vcoeff, &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                tmpPix[3] = unpPix[3];
-                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, premultOut, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                // if output alpha is not source alpha, set it to the right value
+                if (nComponents == 4 && _outputAlpha != eOutputAlphaSource) {
+                    float a = 0.f;
+                    switch (_outputAlpha) {
+                        case eOutputAlphaSource:
+                            break;
+                        case eOutputAlphaHue:
+                            a = hcoeff;
+                            break;
+                        case eOutputAlphaSaturation:
+                            a = scoeff;
+                            break;
+                        case eOutputAlphaBrightness:
+                            a = vcoeff;
+                            break;
+                        case eOutputAlphaHueSaturation:
+                            a = std::min(hcoeff, scoeff);
+                            break;
+                        case eOutputAlphaHueBrightness:
+                            a = std::min(hcoeff, vcoeff);
+                            break;
+                        case eOutputAlphaSaturationBrightness:
+                            a = std::min(scoeff, vcoeff);
+                            break;
+                        case eOutputAlphaAll:
+                            a = std::min(std::min(hcoeff, scoeff), vcoeff);
+                            break;
+                    }
+                    if (_doMasking) {
+                        // we do, get the pixel from the mask
+                        const PIX* maskPix = _maskImg ? (const PIX *)_maskImg->getPixelAddress(x, y) : 0;
+                        float maskScale;
+                        // figure the scale factor from that pixel
+                        if (maskPix == 0) {
+                            maskScale = _maskInvert ? 1. : 0.;
+                        } else {
+                            maskScale = *maskPix/float(maxValue);
+                            if (_maskInvert) {
+                                maskScale = 1. - maskScale;
+                            }
+                        }
+                        a = std::min(a, maskScale);
+                    }
+                    dstPix[3] = maxValue * a;
+                }
+
                 // increment the dst pixel
-                // TODO: set output alpha to a combination of hcoeff, scoeff, vcoeff
                 dstPix += nComponents;
             }
         }
@@ -481,6 +571,7 @@ public:
     , _brightnessRangeRolloff(0)
     , _clampBlack(0)
     , _clampWhite(0)
+    , _outputAlpha(0)
     , _premult(0)
     , _premultChannel(0)
     , _mix(0)
@@ -511,6 +602,8 @@ public:
         _clampBlack = fetchBooleanParam(kParamClampBlack);
         _clampWhite = fetchBooleanParam(kParamClampWhite);
         assert(_clampBlack && _clampWhite);
+        _outputAlpha = fetchChoiceParam(kParamOutputAlpha);
+        assert(_outputAlpha);
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
@@ -533,6 +626,8 @@ private:
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *dstClip_;
@@ -551,6 +646,7 @@ private:
     OFX::DoubleParam *_brightnessRangeRolloff;
     OFX::BooleanParam *_clampBlack;
     OFX::BooleanParam *_clampWhite;
+    OFX::ChoiceParam *_outputAlpha;
     OFX::BooleanParam *_premult;
     OFX::ChoiceParam *_premultChannel;
     OFX::DoubleParam *_mix;
@@ -615,6 +711,9 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
     bool clampBlack,clampWhite;
     _clampBlack->getValueAtTime(args.time, clampBlack);
     _clampWhite->getValueAtTime(args.time, clampWhite);
+    int outputAlpha_i;
+    _outputAlpha->getValueAtTime(args.time, outputAlpha_i);
+    OutputAlphaEnum outputAlpha = (OutputAlphaEnum)outputAlpha_i;
     bool premult;
     int premultChannel;
     _premult->getValueAtTime(args.time, premult);
@@ -622,7 +721,7 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
     double mix;
     _mix->getValueAtTime(args.time, mix);
     
-    processor.setValues(values, clampBlack, clampWhite, premult, premultChannel, mix);
+    processor.setValues(values, clampBlack, clampWhite, outputAlpha, premult, premultChannel, mix);
     processor.process();
 }
 
@@ -766,6 +865,22 @@ HSVToolPlugin::changedClip(const InstanceChangedArgs &args, const std::string &c
                 _premult->setValue(false);
                 break;
         }
+    }
+}
+
+
+/* Override the clip preferences */
+void
+HSVToolPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    // set the components of dstClip_
+    int outputAlpha_i;
+    _outputAlpha->getValue(outputAlpha_i);
+    OutputAlphaEnum outputAlpha = (OutputAlphaEnum)outputAlpha_i;
+    if (outputAlpha_i != eOutputAlphaSource) {
+        // output must be RGBA, output image is unpremult
+        clipPreferences.setClipComponents(*dstClip_, ePixelComponentRGBA);
+        clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }
 }
 
@@ -977,7 +1092,31 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
         param->setAnimates(true);
         page->addChild(*param);
     }
-    
+
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputAlpha);
+        param->setLabels(kParamOutputAlphaLabel, kParamOutputAlphaLabel, kParamOutputAlphaLabel);
+        param->setHint(kParamOutputAlphaHint);
+        assert(param->getNOptions() == (int)eOutputAlphaSource);
+        param->appendOption(kParamOutputAlphaOptionSource, kParamOutputAlphaOptionSourceHint);
+        assert(param->getNOptions() == (int)eOutputAlphaHue);
+        param->appendOption(kParamOutputAlphaOptionHue, kParamOutputAlphaOptionHueHint);
+        assert(param->getNOptions() == (int)eOutputAlphaSaturation);
+        param->appendOption(kParamOutputAlphaOptionSaturation, kParamOutputAlphaOptionSaturationHint);
+        assert(param->getNOptions() == (int)eOutputAlphaBrightness);
+        param->appendOption(kParamOutputAlphaOptionBrightness, kParamOutputAlphaOptionBrightnessHint);
+        assert(param->getNOptions() == (int)eOutputAlphaHueSaturation);
+        param->appendOption(kParamOutputAlphaOptionHueSaturation, kParamOutputAlphaOptionHueSaturationHint);
+        assert(param->getNOptions() == (int)eOutputAlphaHueBrightness);
+        param->appendOption(kParamOutputAlphaOptionHueBrightness, kParamOutputAlphaOptionHueBrightnessHint);
+        assert(param->getNOptions() == (int)eOutputAlphaSaturationBrightness);
+        param->appendOption(kParamOutputAlphaOptionSaturationBrightness, kParamOutputAlphaOptionSaturationBrightnessHint);
+        assert(param->getNOptions() == (int)eOutputAlphaAll);
+        param->appendOption(kParamOutputAlphaOptionAll, kParamOutputAlphaOptionAllHint);
+        param->setDefault((int)eOutputAlphaHue);
+        page->addChild(*param);
+    }
+
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
 }
