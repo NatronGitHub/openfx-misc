@@ -579,7 +579,9 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     _processB->getValue(doB);
     _processA->getValue(doA);
     
-    processor.setValues(blackPoint, whitePoint, black, white, multiply, offset, gamma, clampBlack, clampWhite, premult, premultChannel, mix,doR,doG,doB,doA);
+    processor.setValues(blackPoint, whitePoint, black, white, multiply, offset, gamma,
+                        clampBlack, clampWhite, premult, premultChannel, mix,
+                        doR, doG, doB, doA);
     processor.process();
 }
 
@@ -685,6 +687,7 @@ GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
         multiply.r == 1. && multiply.g == 1. && multiply.b == 1. && multiply.a == 1. &&
         offset.r == 0. && offset.g == 0. && offset.b == 0. && offset.a == 0. &&
         gamma.r == 1. && gamma.g == 1. && gamma.b == 1. && gamma.a == 1) {
+        identityClip = srcClip_;
         return true;
     }
     return false;

@@ -454,6 +454,7 @@ ColorMatrixPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityC
         g.r == 0. && g.g == 1. && g.b == 0. && g.a == 0. &&
         b.r == 0. && b.g == 0. && b.b == 1. && b.a == 0. &&
         a.r == 0. && a.g == 0. && a.b == 0. && a.a == 1.) {
+        identityClip = srcClip_;
         return true;
     }
     return false;
