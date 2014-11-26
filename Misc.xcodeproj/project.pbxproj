@@ -568,6 +568,11 @@
 		1EFBC9981A23A22D00086E7A /* VectorToColor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFBC9961A23A22D00086E7A /* VectorToColor.cpp */; };
 		1EFBC9991A23A23C00086E7A /* VectorToColor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFBC9961A23A22D00086E7A /* VectorToColor.cpp */; };
 		1EFC1700180DCE6500AD7B86 /* ColorLookup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0C41E180DCAB500C25D1E /* ColorLookup.cpp */; };
+		AC4774E51A25B8E9008A2B57 /* net.sf.openfx.Deinterlace.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774E41A25B8E7008A2B57 /* net.sf.openfx.Deinterlace.png */; };
+		AC4774E71A25B8FE008A2B57 /* net.sf.cimg.CImgBlur.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774DC1A25B811008A2B57 /* net.sf.cimg.CImgBlur.png */; };
+		AC4774E81A25B8FF008A2B57 /* net.sf.cimg.CImgDenoise.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774DD1A25B811008A2B57 /* net.sf.cimg.CImgDenoise.png */; };
+		AC4774E91A25B900008A2B57 /* net.sf.cimg.CImgDilate.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774DE1A25B811008A2B57 /* net.sf.cimg.CImgDilate.png */; };
+		AC4774EA1A25B902008A2B57 /* net.sf.cimg.CImgErode.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774DF1A25B811008A2B57 /* net.sf.cimg.CImgErode.png */; };
 		AC60A33C19FE9C7900375A86 /* Ramp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32A19FE995F00375A86 /* Ramp.cpp */; };
 		ACC8477E1A0A3F9300B3FAFE /* net.sf.openfx.Ramp.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC60A32719FE995F00375A86 /* net.sf.openfx.Ramp.png */; };
 		ACC8477F1A0A3F9500B3FAFE /* net.sf.openfx.Ramp.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC60A32819FE995F00375A86 /* net.sf.openfx.Ramp.svg */; };
@@ -1193,6 +1198,7 @@
 				1E814CC419C9838600C2C668 /* net.sf.openfx.CornerPinMaskedPlugin.svg in CopyFiles */,
 				1EE4A8B619C6EF4F00E6E3AE /* net.sf.openfx.CropPlugin.png in CopyFiles */,
 				1E814CC519C9838A00C2C668 /* net.sf.openfx.CropPlugin.svg in CopyFiles */,
+				AC4774E51A25B8E9008A2B57 /* net.sf.openfx.Deinterlace.png in CopyFiles */,
 				1EE4A8B719C6EF5200E6E3AE /* net.sf.openfx.DifferencePlugin.png in CopyFiles */,
 				1E814CC619C9838F00C2C668 /* net.sf.openfx.DifferencePlugin.svg in CopyFiles */,
 				1EE4A8B819C6EF5600E6E3AE /* net.sf.openfx.DissolvePlugin.png in CopyFiles */,
@@ -1238,6 +1244,19 @@
 			files = (
 				1EFBC98E1A23A1EB00086E7A /* net.sf.openfx.GradePlugin.png in CopyFiles */,
 				1EFBC98F1A23A1EB00086E7A /* net.sf.openfx.GradePlugin.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC4774E61A25B8F3008A2B57 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				AC4774E81A25B8FF008A2B57 /* net.sf.cimg.CImgDenoise.png in CopyFiles */,
+				AC4774E71A25B8FE008A2B57 /* net.sf.cimg.CImgBlur.png in CopyFiles */,
+				AC4774EA1A25B902008A2B57 /* net.sf.cimg.CImgErode.png in CopyFiles */,
+				AC4774E91A25B900008A2B57 /* net.sf.cimg.CImgDilate.png in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1562,6 +1581,11 @@
 		1EFBC99A1A23A24600086E7A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EFBC99B1A23A24600086E7A /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EFBC99C1A23A24600086E7A /* VectorToColor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VectorToColor.h; sourceTree = "<group>"; };
+		AC4774DC1A25B811008A2B57 /* net.sf.cimg.CImgBlur.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgBlur.png; sourceTree = "<group>"; };
+		AC4774DD1A25B811008A2B57 /* net.sf.cimg.CImgDenoise.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgDenoise.png; sourceTree = "<group>"; };
+		AC4774DE1A25B811008A2B57 /* net.sf.cimg.CImgDilate.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgDilate.png; sourceTree = "<group>"; };
+		AC4774DF1A25B811008A2B57 /* net.sf.cimg.CImgErode.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgErode.png; sourceTree = "<group>"; };
+		AC4774E41A25B8E7008A2B57 /* net.sf.openfx.Deinterlace.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.Deinterlace.png; sourceTree = "<group>"; };
 		AC60A32519FE995F00375A86 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AC60A32619FE995F00375A86 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		AC60A32719FE995F00375A86 /* net.sf.openfx.Ramp.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.Ramp.png; sourceTree = "<group>"; };
@@ -1948,6 +1972,7 @@
 			children = (
 				1E083207199FEB6F00A819A5 /* Deinterlace.cpp */,
 				1E083208199FEB6F00A819A5 /* Deinterlace.h */,
+				AC4774E41A25B8E7008A2B57 /* net.sf.openfx.Deinterlace.png */,
 				1E083209199FEB6F00A819A5 /* Info.plist */,
 				1E08320A199FEB6F00A819A5 /* Makefile */,
 				1E08320B199FEB6F00A819A5 /* PluginRegistration.cpp */,
@@ -2054,6 +2079,10 @@
 				1E55FCE619F104C70093F33B /* CImg.h */,
 				1E31940C19D9987F0027D0E2 /* Info.plist */,
 				1E31940D19D9987F0027D0E2 /* Makefile */,
+				AC4774DC1A25B811008A2B57 /* net.sf.cimg.CImgBlur.png */,
+				AC4774DD1A25B811008A2B57 /* net.sf.cimg.CImgDenoise.png */,
+				AC4774DE1A25B811008A2B57 /* net.sf.cimg.CImgDilate.png */,
+				AC4774DF1A25B811008A2B57 /* net.sf.cimg.CImgErode.png */,
 				1E31940E19D9987F0027D0E2 /* PluginRegistration.cpp */,
 			);
 			path = CImg;
@@ -2843,6 +2872,7 @@
 			buildPhases = (
 				1E31941019D9B2270027D0E2 /* Sources */,
 				1E31941B19D9B2270027D0E2 /* Frameworks */,
+				AC4774E61A25B8F3008A2B57 /* CopyFiles */,
 			);
 			buildRules = (
 			);
