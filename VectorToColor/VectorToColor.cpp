@@ -241,14 +241,15 @@ public:
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 pixToVector<PIX, nComponents>(srcPix, vec, _xChannel, _yChannel);
-                h = std::atan2f(vec[0], vec[1]) * 180. / M_PI;
+                h = std::atan2(vec[0], vec[1]) * 180. / M_PI;
                 if (_opposite) {
                     h += 180;
                 }
+                double norm = std::sqrt(vec[0] * vec[0] + vec[1] *  vec[1]);
                 if (_modulateV) {
-                    v = std::hypot(vec[0], vec[1]);
+                    v = norm;
                 } else {
-                    s = std::hypot(vec[0], vec[1]);
+                    s = norm;
                 }
                 if (_hsvOutput) {
                     dstPix[0] = h;
