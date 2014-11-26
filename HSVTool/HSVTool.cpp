@@ -80,6 +80,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
+#include "ofxsLut.h"
 
 #define kPluginName "HSVToolOFX"
 #define kPluginGrouping "Color"
@@ -113,9 +114,9 @@
 #define kParamHueRotation "hueRotation"
 #define kParamHueRotationLabel "Hue Rotation"
 #define kParamHueRotationHint "Rotation of color hues (in degrees) within the range."
-#define kParamHueRangeFalloff "hueRangeFalloff"
-#define kParamHueRangeFalloffLabel "Hue Range Falloff"
-#define kParamHueRangeFalloffHint "Interval (in degrees) around Hue Range, where hue rotation decreases progressively to zero."
+#define kParamHueRangeRolloff "hueRangeRolloff"
+#define kParamHueRangeRolloffLabel "Hue Range Rolloff"
+#define kParamHueRangeRolloffHint "Interval (in degrees) around Hue Range, where hue rotation decreases progressively to zero."
 
 #define kGroupSaturation "saturation"
 #define kGroupSaturationLabel "Saturation"
@@ -126,9 +127,9 @@
 #define kParamSaturationAdjustment "saturationAdjustment"
 #define kParamSaturationAdjustmentLabel "Saturation Adjustment"
 #define kParamSaturationAdjustmentHint "Adjustment of color saturations within the range."
-#define kParamSaturationRangeFalloff "saturationRangeFalloff"
-#define kParamSaturationRangeFalloffLabel "Saturation Range Falloff"
-#define kParamSaturationRangeFalloffHint "Interval (in degrees) around Saturation Range, where saturation rotation decreases progressively to zero."
+#define kParamSaturationRangeRolloff "saturationRangeRolloff"
+#define kParamSaturationRangeRolloffLabel "Saturation Range Rolloff"
+#define kParamSaturationRangeRolloffHint "Interval (in degrees) around Saturation Range, where saturation rotation decreases progressively to zero."
 
 #define kGroupBrightness "brightness"
 #define kGroupBrightnessLabel "Brightness"
@@ -139,9 +140,9 @@
 #define kParamBrightnessAdjustment "brightnessAdjustment"
 #define kParamBrightnessAdjustmentLabel "Brightness Adjustment"
 #define kParamBrightnessAdjustmentHint "Adjustment of color brightnesss within the range."
-#define kParamBrightnessRangeFalloff "brightnessRangeFalloff"
-#define kParamBrightnessRangeFalloffLabel "Brightness Range Falloff"
-#define kParamBrightnessRangeFalloffHint "Interval (in degrees) around Brightness Range, where brightness rotation decreases progressively to zero."
+#define kParamBrightnessRangeRolloff "brightnessRangeRolloff"
+#define kParamBrightnessRangeRolloffLabel "Brightness Range Rolloff"
+#define kParamBrightnessRangeRolloffHint "Interval (in degrees) around Brightness Range, where brightness rotation decreases progressively to zero."
 
 #define kParamClampBlack "clampBlack"
 #define kParamClampBlackLabel "Clamp Black"
@@ -157,7 +158,7 @@ using namespace OFX;
 /* algorithm:
  - convert to HSV
  - compute H, S, and V coefficients: 1 within range, dropping to 0 at range+-rolloff
- - multiply the three coeffs. coeff = hcoeff*scoeff*vcoeff
+ - compute min of the three coeffs. coeff = min(hcoeff,scoeff,vcoeff)
  - if global coeff is 0, don't change anything.
  - else, adjust hue by hueRotation*coeff, etc.
  - convert back to RGB
@@ -166,9 +167,8 @@ using namespace OFX;
  - when setting dstColor: compute hueRotation, satAdjust and valAdjust
  */
 struct HSVToolValues {
-    double srcColor[3];
-    double dstColor[3];
     double hueRange[2];
+    double hueRangeWithRolloff[2];
     double hueRotation;
     double hueRolloff;
     double satRange[2];
@@ -178,6 +178,52 @@ struct HSVToolValues {
     double valAdjust;
     double valRolloff;
 };
+
+//
+static inline
+double
+normalizeAngle(double a)
+{
+    int c = std::floor(a / 360);
+    a -= c * 360;
+    assert(a >= 0 && a <= 360);
+    return a;
+}
+
+static inline
+bool
+angleWithinRange(double h, double h0, double h1)
+{
+    assert(0 <= h && h <= 360 && 0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360);
+    return ((h1 < h0 && (h <= h1 || h0 <= h)) ||
+            (h0 <= h && h <= h1));
+}
+
+// returns:
+// - 0 if outside of [h0, h1]
+// - 0 at h0
+// - 1 at h1
+// - linear from h0 to h1
+static inline
+double
+angleCoeff(double h, double h0, double h1)
+{
+    assert(0 <= h && h <= 360 && 0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360);
+    if (!angleWithinRange(h, h0, h1)) {
+        return 0.;
+    }
+    if (h1 == h0) {
+        return 1.;
+    }
+    if (h1 < h0) {
+        h1 += 360;
+        if (h < h0) {
+            h += 360;
+        }
+    }
+    assert(h0 <= h && h <= h1);
+    return (h-h0)/(h1-h0);
+}
 
 class HSVToolProcessorBase : public OFX::ImageProcessor
 {
@@ -204,8 +250,20 @@ public:
     , _clampBlack(true)
     , _clampWhite(true)
     {
+        assert(angleWithinRange(0, 350, 10));
+        assert(angleWithinRange(0, 0, 10));
+        assert(!angleWithinRange(0, 5, 10));
+        assert(!angleWithinRange(0, 10, 350));
+        assert(angleWithinRange(0, 10, 0));
+        assert(angleWithinRange(0, 10, 5));
+        assert(normalizeAngle(-10) == 350);
+        assert(normalizeAngle(-370) == 350);
+        assert(normalizeAngle(-730) == 350);
+        assert(normalizeAngle(370) == 10);
+        assert(normalizeAngle(10) == 10);
+        assert(normalizeAngle(730) == 10);
     }
-    
+
     void setSrcImg(const OFX::Image *v) {_srcImg = v;}
     
     void setMaskImg(const OFX::Image *v, bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
@@ -220,6 +278,26 @@ public:
                    double mix)
     {
         _values = values;
+        // set the intervals
+        // the hue interval is from the right of h0 to the left of h1
+        double h0 = normalizeAngle(_values.hueRange[0]);
+        double h1 = normalizeAngle(_values.hueRange[1]);
+        if (h1 < h0) {
+            std::swap(h0, h1);
+        }
+        // take the smallest of both angles
+        if ((h1 - h0) > 180.) {
+            std::swap(h0, h1);
+        }
+        assert (0 <= h0 && h0 <= 360 && h0 <= h1 && h1 <= 440);
+        _values.hueRangeWithRolloff[0] = normalizeAngle(h0 - _values.hueRolloff);
+        _values.hueRangeWithRolloff[1] = normalizeAngle(h1 + _values.hueRolloff);
+        if (_values.satRange[1] < _values.satRange[0]) {
+            std::swap(_values.satRange[0], _values.satRange[1]);
+        }
+        if (_values.valRange[1] < _values.valRange[0]) {
+            std::swap(_values.valRange[0], _values.valRange[1]);
+        }
         _clampBlack = clampBlack;
         _clampWhite = clampWhite;
         _premult = premult;
@@ -227,10 +305,65 @@ public:
         _mix = mix;
     }
 
-    void hsvtool(float r, float g, float b, float *rout, double *gout, double *bout)
+    void hsvtool(float r, float g, float b, float *hcoeff, float *scoeff, float *vcoeff, float *rout, float *gout, float *bout)
     {
-#pragma message WARN("TODO")
-
+        float h, s, v;
+        OFX::Color::rgb_to_hsv(r, g, b, &h, &s, &v);
+        const double h0 = _values.hueRange[0];
+        const double h1 = _values.hueRange[1];
+        const double h0mrolloff = _values.hueRangeWithRolloff[0];
+        const double h1prolloff = _values.hueRangeWithRolloff[1];
+        // the affected
+        if (angleWithinRange(h, h0, h1)) {
+            *hcoeff = 1.;
+        } else if (!angleWithinRange(h, h0mrolloff, h1prolloff)) {
+            *hcoeff = 0.;
+        } else {
+            // check if we are in the rolloff area
+            double c0 = angleCoeff(h, h0mrolloff, h0);
+            double c1 = angleCoeff(h, h1, h1prolloff);
+            if (c1 != 0.) {
+                c1 = 1. - c1;
+            }
+            *hcoeff = std::max(c0, c1);
+        }
+        const double s0 = _values.satRange[0];
+        const double s1 = _values.satRange[1];
+        const double s0mrolloff = s0 - _values.satRolloff;
+        const double s1prolloff = s1 + _values.satRolloff;
+        if (s0 <= s && s <= s1) {
+            *scoeff = 1.;
+        } else if (s0mrolloff <= s && s <= s0) {
+            *scoeff = (s - s0mrolloff) / _values.satRolloff;
+        } else if (s1 <= s && s <= s1prolloff) {
+            *scoeff = (s1prolloff - 1) / _values.satRolloff;
+        } else {
+            *scoeff = 0.;
+        }
+        const double v0 = _values.valRange[0];
+        const double v1 = _values.valRange[1];
+        const double v0mrolloff = v0 - _values.valRolloff;
+        const double v1prolloff = v1 + _values.valRolloff;
+        if (v0 <= v && v <= v1) {
+            *vcoeff = 1.;
+        } else if (v0mrolloff <= v && v <= v0) {
+            *vcoeff = (v - v0mrolloff) / _values.valRolloff;
+        } else if (v1 <= v && v <= v1prolloff) {
+            *vcoeff = (v1prolloff - 1) / _values.valRolloff;
+        } else {
+            *vcoeff = 0.;
+        }
+        double coeff = std::min(std::min(*hcoeff, *scoeff), *vcoeff);
+        if (coeff <= 0.) {
+            *rout = r;
+            *gout = g;
+            *bout = b;
+        } else {
+            h += coeff * _values.hueRotation;
+            s += coeff * _values.satAdjust;
+            v += coeff * _values.valAdjust;
+            OFX::Color::hsv_to_rgb(h, s, v, rout, gout, bout);
+        }
     }
 
 private:
@@ -266,13 +399,12 @@ public:
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
-#pragma message WARN("TODO")
-                tmpPix[0] = unpPix[0];
-                tmpPix[1] = unpPix[1];
-                tmpPix[2] = unpPix[2];
+                float hcoeff, scoeff, vcoeff;
+                hsvtool(unpPix[0], unpPix[1], unpPix[2], &hcoeff, &scoeff, &vcoeff, &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                 tmpPix[3] = unpPix[3];
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 // increment the dst pixel
+                // TODO: set output alpha to a combination of hcoeff, scoeff, vcoeff
                 dstPix += nComponents;
             }
         }
@@ -291,6 +423,23 @@ public:
     , dstClip_(0)
     , srcClip_(0)
     , maskClip_(0)
+    , _srcColor(0)
+    , _dstColor(0)
+    , _hueRange(0)
+    , _hueRotation(0)
+    , _hueRangeRolloff(0)
+    , _saturationRange(0)
+    , _saturationAdjustment(0)
+    , _saturationRangeRolloff(0)
+    , _brightnessRange(0)
+    , _brightnessAdjustment(0)
+    , _brightnessRangeRolloff(0)
+    , _clampBlack(0)
+    , _clampWhite(0)
+    , _premult(0)
+    , _premultChannel(0)
+    , _mix(0)
+    , _maskInvert(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
@@ -299,8 +448,21 @@ public:
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
 
-#pragma message WARN("TODO")
-
+        _srcColor = fetchRGBParam(kParamSrcColor);
+        _dstColor = fetchRGBParam(kParamDstColor);
+        _hueRange = fetchDouble2DParam(kParamHueRange);
+        _hueRotation = fetchDoubleParam(kParamHueRotation);
+        _hueRangeRolloff = fetchDoubleParam(kParamHueRangeRolloff);
+        _saturationRange = fetchDouble2DParam(kParamSaturationRange);
+        _saturationAdjustment = fetchDoubleParam(kParamSaturationAdjustment);
+        _saturationRangeRolloff = fetchDoubleParam(kParamSaturationRangeRolloff);
+        _brightnessRange = fetchDouble2DParam(kParamBrightnessRange);
+        _brightnessAdjustment = fetchDoubleParam(kParamBrightnessAdjustment);
+        _brightnessRangeRolloff = fetchDoubleParam(kParamBrightnessRangeRolloff);
+        assert(_srcColor && _dstColor &&
+               _hueRange && _hueRotation && _hueRangeRolloff &&
+               _saturationRange && _saturationAdjustment && _saturationRangeRolloff &&
+               _brightnessRange && _brightnessAdjustment && _brightnessRangeRolloff);
         _clampBlack = fetchBooleanParam(kParamClampBlack);
         _clampWhite = fetchBooleanParam(kParamClampWhite);
         assert(_clampBlack && _clampWhite);
@@ -321,6 +483,8 @@ private:
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
@@ -329,13 +493,23 @@ private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::Clip *maskClip_;
-#pragma message WARN("TODO")
-    OFX::BooleanParam* _clampBlack;
-    OFX::BooleanParam* _clampWhite;
-    OFX::BooleanParam* _premult;
-    OFX::ChoiceParam* _premultChannel;
-    OFX::DoubleParam* _mix;
-    OFX::BooleanParam* _maskInvert;
+    OFX::RGBParam *_srcColor;
+    OFX::RGBParam *_dstColor;
+    OFX::Double2DParam *_hueRange;
+    OFX::DoubleParam *_hueRotation;
+    OFX::DoubleParam *_hueRangeRolloff;
+    OFX::Double2DParam *_saturationRange;
+    OFX::DoubleParam *_saturationAdjustment;
+    OFX::DoubleParam *_saturationRangeRolloff;
+    OFX::Double2DParam *_brightnessRange;
+    OFX::DoubleParam *_brightnessAdjustment;
+    OFX::DoubleParam *_brightnessRangeRolloff;
+    OFX::BooleanParam *_clampBlack;
+    OFX::BooleanParam *_clampWhite;
+    OFX::BooleanParam *_premult;
+    OFX::ChoiceParam *_premultChannel;
+    OFX::DoubleParam *_mix;
+    OFX::BooleanParam *_maskInvert;
 };
 
 
@@ -381,8 +555,17 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
     processor.setSrcImg(src.get());
     processor.setRenderWindow(args.renderWindow);
 
+    const double time = args.time;
     HSVToolValues values;
-#pragma message WARN("TODO")
+    _hueRange->getValueAtTime(time, values.hueRange[0], values.hueRange[1]);
+    _hueRotation->getValueAtTime(time, values.hueRotation);
+    _hueRangeRolloff->getValueAtTime(time, values.hueRolloff);
+    _saturationRange->getValueAtTime(time, values.satRange[0], values.satRange[1]);
+    _saturationAdjustment->getValueAtTime(time, values.satAdjust);
+    _saturationRangeRolloff->getValueAtTime(time, values.satRolloff);
+    _brightnessRange->getValueAtTime(time, values.valRange[0], values.valRange[1]);
+    _brightnessAdjustment->getValueAtTime(time, values.valAdjust);
+    _brightnessRangeRolloff->getValueAtTime(time, values.valRolloff);
 
     bool clampBlack,clampWhite;
     _clampBlack->getValueAtTime(args.time, clampBlack);
@@ -469,10 +652,58 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip,
         return true;
     }
 
-#pragma message WARN("TODO")
     // isIdentity=true if hueRotation, satAdjust and valAdjust = 0.
+    double hueRotation;
+    _hueRotation->getValueAtTime(args.time, hueRotation);
+    double saturationAdjustment;
+    _saturationAdjustment->getValueAtTime(args.time, saturationAdjustment);
+    double brightnessAdjustment;
+    _brightnessAdjustment->getValueAtTime(args.time, brightnessAdjustment);
+    if (hueRotation == 0. && saturationAdjustment == 0. && brightnessAdjustment == 0.) {
+        identityClip = srcClip_;
+        return true;
+    }
 
     return false;
+}
+
+void
+HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kParamSrcColor && args.reason == OFX::eChangeUserEdit) {
+        // - when setting srcColor: compute hueRange, satRange, valRange (as empty ranges), set rolloffs to (50,0.3,0.3)
+        double r, g, b;
+        _srcColor->getValueAtTime(args.time, r, g, b);
+        float h, s, v;
+        OFX::Color::rgb_to_hsv(r, g, b, &h, &s, &v);
+        _hueRange->setValue(h, h);
+        _hueRangeRolloff->setValue(50.);
+        _saturationRange->setValue(s, s);
+        _saturationRangeRolloff->setValue(0.3);
+        _brightnessRange->setValue(v, v);
+        _brightnessRangeRolloff->setValue(0.3);
+    }
+    if (paramName == kParamDstColor && args.reason == OFX::eChangeUserEdit) {
+        // - when setting dstColor: compute hueRotation, satAdjust and valAdjust
+        double r, g, b;
+        _srcColor->getValueAtTime(args.time, r, g, b);
+        float h, s, v;
+        OFX::Color::rgb_to_hsv(r, g, b, &h, &s, &v);
+        double tor, tog, tob;
+        _dstColor->getValueAtTime(args.time, tor, tog, tob);
+        float toh, tos, tov;
+        OFX::Color::rgb_to_hsv(tor, tog, tob, &toh, &tos, &tov);
+        double dh = toh - h;
+        while (dh <= -180.) {
+            dh += 360;
+        }
+        while (dh > 180.) {
+            dh -= 360;
+        }
+        _hueRotation->setValue(dh);
+        _saturationAdjustment->setValue(tos - s);
+        _brightnessAdjustment->setValue(tov - v);
+    }
 }
 
 void
@@ -601,9 +832,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setParent(*group);
         }
         {
-            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamHueRangeFalloff);
-            param->setLabels(kParamHueRangeFalloffLabel, kParamHueRangeFalloffLabel, kParamHueRangeFalloffLabel);
-            param->setHint(kParamHueRangeFalloffHint);
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamHueRangeRolloff);
+            param->setLabels(kParamHueRangeRolloffLabel, kParamHueRangeRolloffLabel, kParamHueRangeRolloffLabel);
+            param->setHint(kParamHueRangeRolloffHint);
             param->setDisplayRange(0., 180.);
             param->setDoubleType(eDoubleTypeAngle);
             page->addChild(*param);
@@ -637,9 +868,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setParent(*group);
         }
         {
-            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSaturationRangeFalloff);
-            param->setLabels(kParamSaturationRangeFalloffLabel, kParamSaturationRangeFalloffLabel, kParamSaturationRangeFalloffLabel);
-            param->setHint(kParamSaturationRangeFalloffHint);
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSaturationRangeRolloff);
+            param->setLabels(kParamSaturationRangeRolloffLabel, kParamSaturationRangeRolloffLabel, kParamSaturationRangeRolloffLabel);
+            param->setHint(kParamSaturationRangeRolloffHint);
             param->setDisplayRange(0., 1.);
             page->addChild(*param);
             param->setParent(*group);
@@ -672,9 +903,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setParent(*group);
         }
         {
-            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBrightnessRangeFalloff);
-            param->setLabels(kParamBrightnessRangeFalloffLabel, kParamBrightnessRangeFalloffLabel, kParamBrightnessRangeFalloffLabel);
-            param->setHint(kParamBrightnessRangeFalloffHint);
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBrightnessRangeRolloff);
+            param->setLabels(kParamBrightnessRangeRolloffLabel, kParamBrightnessRangeRolloffLabel, kParamBrightnessRangeRolloffLabel);
+            param->setHint(kParamBrightnessRangeRolloffHint);
             param->setDisplayRange(0., 1.);
             page->addChild(*param);
             param->setParent(*group);
