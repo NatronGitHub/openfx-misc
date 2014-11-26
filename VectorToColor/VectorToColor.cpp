@@ -129,6 +129,10 @@ enum InputChannelEnum {
 #define kParamOppositeLabel "Opposite"
 #define kParamOppositeHint "If checked, opposite of X and Y are used."
 
+#define kParamInverseY "inverseY"
+#define kParamInverseYLabel "Inverse Y"
+#define kParamInverseYHint "If checked, opposite of Y is used (on by default, because most optical flow results are shown using a downward Y axis)."
+
 #define kParamModulateV "modulateV"
 #define kParamModulateVLabel "Modulate V"
 #define kParamModulateVHint "If checked, modulate V using the vector amplitude, instead of S."
@@ -147,6 +151,7 @@ protected:
     InputChannelEnum _xChannel;
     InputChannelEnum _yChannel;
     bool _opposite;
+    bool _inverseY;
     bool _modulateV;
     bool _hsvOutput;
 
@@ -163,12 +168,14 @@ protected:
     void setValues(InputChannelEnum xChannel,
                    InputChannelEnum yChannel,
                    bool opposite,
+                   bool inverseY,
                    bool modulateV,
                    bool hsvOutput)
     {
         _xChannel = xChannel;
         _yChannel = yChannel;
         _opposite = opposite;
+        _inverseY = inverseY;
         _modulateV = modulateV;
         _hsvOutput = hsvOutput;
     }
@@ -241,7 +248,7 @@ public:
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 pixToVector<PIX, nComponents>(srcPix, vec, _xChannel, _yChannel);
-                h = std::atan2(vec[0], vec[1]) * 180. / M_PI;
+                h = std::atan2(_inverseY?-vec[1]:vec[1], vec[0]) * 180. / M_PI;
                 if (_opposite) {
                     h += 180;
                 }
@@ -297,6 +304,7 @@ public:
         _xChannel = fetchChoiceParam(kParamXChannel);
         _yChannel = fetchChoiceParam(kParamYChannel);
         _opposite = fetchBooleanParam(kParamOpposite);
+        _inverseY = fetchBooleanParam(kParamInverseY);
         _modulateV = fetchBooleanParam(kParamModulateV);
         _hsvOutput = fetchBooleanParam(kParamHSVOutput);
         assert(_xChannel && _yChannel && _opposite && _modulateV && _hsvOutput);
@@ -316,6 +324,7 @@ private:
     OFX::ChoiceParam* _xChannel;
     OFX::ChoiceParam* _yChannel;
     OFX::BooleanParam* _opposite;
+    OFX::BooleanParam* _inverseY;
     OFX::BooleanParam* _modulateV;
     OFX::BooleanParam* _hsvOutput;
 };
@@ -363,11 +372,13 @@ VectorToColorPlugin::setupAndProcess(VectorToColorProcessorBase &processor, cons
     InputChannelEnum yChannel = (InputChannelEnum)yChannel_i;
     bool opposite;
     _opposite->getValueAtTime(args.time, opposite);
+    bool inverseY;
+    _inverseY->getValueAtTime(args.time, inverseY);
     bool modulateV;
     _modulateV->getValueAtTime(args.time, modulateV);
     bool hsvOutput;
     _hsvOutput->getValueAtTime(args.time, hsvOutput);
-    processor.setValues(xChannel, yChannel, opposite, modulateV, hsvOutput);
+    processor.setValues(xChannel, yChannel, opposite, inverseY, modulateV, hsvOutput);
     processor.process();
 }
 
@@ -488,6 +499,15 @@ VectorToColorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpposite);
         param->setLabels(kParamOppositeLabel, kParamOppositeLabel, kParamOppositeLabel);
         param->setHint(kParamOppositeHint);
+        page->addChild(*param);
+    }
+
+    // inverseY
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamInverseY);
+        param->setLabels(kParamInverseYLabel, kParamInverseYLabel, kParamInverseYLabel);
+        param->setHint(kParamInverseYHint);
+        param->setDefault(true);
         page->addChild(*param);
     }
 
