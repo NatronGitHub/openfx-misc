@@ -31,6 +31,7 @@
 				1EA0C21E19BA12A0006AB602 /* PBXTargetDependency */,
 				1E0E4EBA194CB2C30072248F /* PBXTargetDependency */,
 				1ED5373F1A2371EB007966D5 /* PBXTargetDependency */,
+				1EFA774C1A25D63100212DB0 /* PBXTargetDependency */,
 				1E52FFD81955D3130000FB79 /* PBXTargetDependency */,
 				1E0E4EBC194CB2C30072248F /* PBXTargetDependency */,
 				1EAD4AFB1A0A698E00AF834D /* PBXTargetDependency */,
@@ -541,6 +542,21 @@
 		1EF46F4B194A39DB00825BDF /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF46F4A194A39DB00825BDF /* PluginRegistration.cpp */; };
 		1EFA77161A24DCFA00212DB0 /* CImgHistEQ.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFA77141A24DCFA00212DB0 /* CImgHistEQ.cpp */; };
 		1EFA77171A24E05F00212DB0 /* ofxsLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED537381A234F12007966D5 /* ofxsLut.cpp */; };
+		1EFA771C1A24F0BA00212DB0 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1EFA771D1A24F0BA00212DB0 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1EFA771E1A24F0BA00212DB0 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1EFA771F1A24F0BA00212DB0 /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1EFA77201A24F0BA00212DB0 /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1EFA77211A24F0BA00212DB0 /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1EFA77221A24F0BA00212DB0 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1EFA77231A24F0BA00212DB0 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1EFA77251A24F0BA00212DB0 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1EFA77271A24F0BA00212DB0 /* net.sf.openfx.GradePlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A88519C6EDDA00E6E3AE /* net.sf.openfx.GradePlugin.png */; };
+		1EFA77281A24F0BA00212DB0 /* net.sf.openfx.GradePlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CA419C9821700C2C668 /* net.sf.openfx.GradePlugin.svg */; };
+		1EFA77351A24F13300212DB0 /* HSVTool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFA77331A24F13300212DB0 /* HSVTool.cpp */; };
+		1EFA77371A24F13B00212DB0 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFA77361A24F13B00212DB0 /* PluginRegistration.cpp */; };
+		1EFA773A1A24F5F500212DB0 /* ofxsLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED537381A234F12007966D5 /* ofxsLut.cpp */; };
+		1EFA774D1A25D6BD00212DB0 /* HSVTool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFA77331A24F13300212DB0 /* HSVTool.cpp */; };
 		1EFB4E0E19461B13005932AF /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EFB4E0F19461B13005932AF /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1EFB4E1019461B13005932AF /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -937,6 +953,13 @@
 			remoteGlobalIDString = 1E92571F19EC1DB80018F19A;
 			remoteInfo = Clamp.ofx;
 		};
+		1EFA774B1A25D63100212DB0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1EFA77181A24F0BA00212DB0;
+			remoteInfo = HSVTool.ofx;
+		};
 		1EFBC99D1A23A25A00086E7A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
@@ -1233,6 +1256,17 @@
 				1E814CD419C983EA00C2C668 /* net.sf.openfx.TransformPlugin.svg in CopyFiles */,
 				1EE4A8C719C6EF9200E6E3AE /* net.sf.openfx.TransformMaskedPlugin.png in CopyFiles */,
 				1E814CD619C983F700C2C668 /* net.sf.openfx.TransformMaskedPlugin.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EFA77261A24F0BA00212DB0 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1EFA77271A24F0BA00212DB0 /* net.sf.openfx.GradePlugin.png in CopyFiles */,
+				1EFA77281A24F0BA00212DB0 /* net.sf.openfx.GradePlugin.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1569,6 +1603,12 @@
 		1EF46F4C194A39E800825BDF /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EFA77141A24DCFA00212DB0 /* CImgHistEQ.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgHistEQ.cpp; sourceTree = "<group>"; };
 		1EFA77151A24DCFA00212DB0 /* CImgHistEQ.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgHistEQ.h; sourceTree = "<group>"; };
+		1EFA772C1A24F0BA00212DB0 /* HSVTool.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HSVTool.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EFA77331A24F13300212DB0 /* HSVTool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HSVTool.cpp; sourceTree = "<group>"; };
+		1EFA77341A24F13300212DB0 /* HSVTool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HSVTool.h; sourceTree = "<group>"; };
+		1EFA77361A24F13B00212DB0 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		1EFA77381A24F14600212DB0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1EFA77391A24F14600212DB0 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EFB4E1B19461B13005932AF /* Difference.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Difference.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EFB4E1D19461B76005932AF /* Difference.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Difference.cpp; sourceTree = "<group>"; };
 		1EFB4E1E19461B76005932AF /* Difference.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Difference.h; sourceTree = "<group>"; };
@@ -1889,6 +1929,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				1EF46F3F194A394E00825BDF /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EFA77241A24F0BA00212DB0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EFA77251A24F0BA00212DB0 /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2252,6 +2300,7 @@
 				1EAD4AF41A0A691700AF834D /* AdjustRoD.ofx.bundle */,
 				1ED5372E1A234CDF007966D5 /* HSV.ofx.bundle */,
 				1EFBC9931A23A1EB00086E7A /* VectorToColor.ofx.bundle */,
+				1EFA772C1A24F0BA00212DB0 /* HSVTool.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -2281,6 +2330,7 @@
 				1EA0C1FE19BA1053006AB602 /* Dissolve */,
 				D725A2C818E0D308001A1E3E /* Grade */,
 				1ED537191A234CB8007966D5 /* HSV */,
+				1EFA772E1A24F0EE00212DB0 /* HSVTool */,
 				1E181AE919518BF900FAB9A9 /* Invert */,
 				1EDE1BAF182D39DA002392CB /* JoinViews */,
 				1ECF2FA019F51D6700E91A38 /* Keyer */,
@@ -2565,6 +2615,18 @@
 				1EF46F4A194A39DB00825BDF /* PluginRegistration.cpp */,
 			);
 			path = Shuffle;
+			sourceTree = "<group>";
+		};
+		1EFA772E1A24F0EE00212DB0 /* HSVTool */ = {
+			isa = PBXGroup;
+			children = (
+				1EFA77331A24F13300212DB0 /* HSVTool.cpp */,
+				1EFA77341A24F13300212DB0 /* HSVTool.h */,
+				1EFA77381A24F14600212DB0 /* Info.plist */,
+				1EFA77391A24F14600212DB0 /* Makefile */,
+				1EFA77361A24F13B00212DB0 /* PluginRegistration.cpp */,
+			);
+			path = HSVTool;
 			sourceTree = "<group>";
 		};
 		1EFB4E0919461AE7005932AF /* Difference */ = {
@@ -3245,6 +3307,23 @@
 			productReference = 1EF46F43194A394E00825BDF /* Shuffle.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
+		1EFA77181A24F0BA00212DB0 /* HSVTool.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1EFA77291A24F0BA00212DB0 /* Build configuration list for PBXNativeTarget "HSVTool.ofx" */;
+			buildPhases = (
+				1EFA77191A24F0BA00212DB0 /* Sources */,
+				1EFA77241A24F0BA00212DB0 /* Frameworks */,
+				1EFA77261A24F0BA00212DB0 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = HSVTool.ofx;
+			productName = basic.ofx;
+			productReference = 1EFA772C1A24F0BA00212DB0 /* HSVTool.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 		1EFB4E0A19461B13005932AF /* Difference.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1EFB4E1819461B13005932AF /* Build configuration list for PBXNativeTarget "Difference.ofx" */;
@@ -3438,6 +3517,7 @@
 				1EA0C20419BA1243006AB602 /* Dissolve.ofx */,
 				1E1FB8E3190696F200F5515D /* Grade.ofx */,
 				1ED5371A1A234CDF007966D5 /* HSV.ofx */,
+				1EFA77181A24F0BA00212DB0 /* HSVTool.ofx */,
 				1E181AEA19518CCF00FAB9A9 /* Invert.ofx */,
 				1EDE1B9D182D3985002392CB /* JoinViews.ofx */,
 				1ECF2F8A19F51D3400E91A38 /* Keyer.ofx */,
@@ -3730,12 +3810,13 @@
 				D7B4C97818D9DBE70004137D /* ColorCorrect.cpp in Sources */,
 				D74A80C719405A14007C3E1C /* Crop.cpp in Sources */,
 				1E92573819EC1E140018F19A /* Clamp.cpp in Sources */,
-				1ED537371A234D3C007966D5 /* HSV.cpp in Sources */,
 				1E08320D199FEB7800A819A5 /* Deinterlace.cpp in Sources */,
 				1EFB4E2019461B76005932AF /* Difference.cpp in Sources */,
 				1EA0C22719BA12D3006AB602 /* Dissolve.cpp in Sources */,
 				1E10A70B1997C03100EE87A1 /* ColorMatrix.cpp in Sources */,
 				D725A2E318E0D54E001A1E3E /* Grade.cpp in Sources */,
+				1ED537371A234D3C007966D5 /* HSV.cpp in Sources */,
+				1EFA774D1A25D6BD00212DB0 /* HSVTool.cpp in Sources */,
 				1E52FFD01955CE720000FB79 /* Premult.cpp in Sources */,
 				1E181B0219518E0000FAB9A9 /* Invert.cpp in Sources */,
 				1EB9C085196DD697003C1849 /* NoOp.cpp in Sources */,
@@ -4027,6 +4108,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1EFA77191A24F0BA00212DB0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EFA77351A24F13300212DB0 /* HSVTool.cpp in Sources */,
+				1EFA77371A24F13B00212DB0 /* PluginRegistration.cpp in Sources */,
+				1EFA771C1A24F0BA00212DB0 /* ofxsCore.cpp in Sources */,
+				1EFA771D1A24F0BA00212DB0 /* ofxsImageEffect.cpp in Sources */,
+				1EFA771E1A24F0BA00212DB0 /* ofxsInteract.cpp in Sources */,
+				1EFA771F1A24F0BA00212DB0 /* ofxsLog.cpp in Sources */,
+				1EFA77201A24F0BA00212DB0 /* ofxsMultiThread.cpp in Sources */,
+				1EFA77211A24F0BA00212DB0 /* ofxsParams.cpp in Sources */,
+				1EFA77221A24F0BA00212DB0 /* ofxsProperty.cpp in Sources */,
+				1EFA77231A24F0BA00212DB0 /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1EFB4E0B19461B13005932AF /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -4050,6 +4148,7 @@
 			files = (
 				1EFBC9981A23A22D00086E7A /* VectorToColor.cpp in Sources */,
 				1EFBC9971A23A22D00086E7A /* PluginRegistration.cpp in Sources */,
+				1EFA773A1A24F5F500212DB0 /* ofxsLut.cpp in Sources */,
 				1EFBC9831A23A1EB00086E7A /* ofxsCore.cpp in Sources */,
 				1EFBC9841A23A1EB00086E7A /* ofxsImageEffect.cpp in Sources */,
 				1EFBC9851A23A1EB00086E7A /* ofxsInteract.cpp in Sources */,
@@ -4386,6 +4485,11 @@
 			isa = PBXTargetDependency;
 			target = 1E92571F19EC1DB80018F19A /* Clamp.ofx */;
 			targetProxy = 1ED537401A237203007966D5 /* PBXContainerItemProxy */;
+		};
+		1EFA774C1A25D63100212DB0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1EFA77181A24F0BA00212DB0 /* HSVTool.ofx */;
+			targetProxy = 1EFA774B1A25D63100212DB0 /* PBXContainerItemProxy */;
 		};
 		1EFBC99E1A23A25A00086E7A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -5183,6 +5287,28 @@
 			};
 			name = Release;
 		};
+		1EFA772A1A24F0BA00212DB0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = HSVTool/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = HSVTool.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1EFA772B1A24F0BA00212DB0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = HSVTool/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = HSVTool.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
 		1EFB4E1919461B13005932AF /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -5677,6 +5803,15 @@
 			buildConfigurations = (
 				1EF46F41194A394E00825BDF /* Debug */,
 				1EF46F42194A394E00825BDF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1EFA77291A24F0BA00212DB0 /* Build configuration list for PBXNativeTarget "HSVTool.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1EFA772A1A24F0BA00212DB0 /* Debug */,
+				1EFA772B1A24F0BA00212DB0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -16,6 +16,7 @@ Difference \
 Dissolve \
 Grade \
 HSV \
+HSVTool \
 Invert \
 JoinViews \
 Keyer \

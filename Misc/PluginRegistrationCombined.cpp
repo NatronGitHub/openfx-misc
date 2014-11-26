@@ -13,6 +13,7 @@
 #include "Dissolve.h"
 #include "Grade.h"
 #include "HSV.h"
+#include "HSVTool.h"
 #include "Invert.h"
 #include "JoinViews.h"
 #include "Keyer.h"
@@ -23,9 +24,7 @@
 #include "OneView.h"
 #include "Premult.h"
 #include "Ramp.h"
-#ifdef DEBUG
 #include "ReConverge.h"
-#endif
 #include "Retime.h"
 #include "ColorLookup.h"
 #include "Roto.h"
@@ -59,6 +58,9 @@ namespace OFX
             getDissolvePluginID(ids);
             getGradePluginID(ids);
             getHSVPluginIDs(ids);
+#ifdef DEBUG
+            getHSVToolPluginID(ids);
+#endif
             getInvertPluginID(ids);
             getJoinViewsPluginID(ids);
             getKeyerPluginID(ids);

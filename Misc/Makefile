@@ -14,6 +14,7 @@ Difference.o \
 Dissolve.o \
 Grade.o \
 HSV.o \
+HSVTool.o \
 Invert.o \
 JoinViews.o \
 Keyer.o \
@@ -112,6 +113,7 @@ VPATH += \
 ../Dissolve \
 ../Grade \
 ../HSV \
+../HSVTool \
 ../Invert \
 ../JoinViews \
 ../Keyer \
@@ -155,6 +157,7 @@ CXXFLAGS += \
 -I../Dissolve \
 -I../Grade \
 -I../HSV \
+-I../HSVTool \
 -I../Invert \
 -I../JoinViews \
 -I../Keyer \
