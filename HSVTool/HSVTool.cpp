@@ -206,7 +206,7 @@ angleWithinRange(double h, double h0, double h1)
 // - linear from h0 to h1
 static inline
 double
-angleCoeff(double h, double h0, double h1)
+angleCoeff01(double h, double h0, double h1)
 {
     assert(0 <= h && h <= 360 && 0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360);
     if (!angleWithinRange(h, h0, h1)) {
@@ -223,6 +223,32 @@ angleCoeff(double h, double h0, double h1)
     }
     assert(h0 <= h && h <= h1);
     return (h-h0)/(h1-h0);
+}
+
+// returns:
+// - 0 if outside of [h0, h1]
+// - 1 at h0
+// - 0 at h1
+// - linear from h0 to h1
+static inline
+double
+angleCoeff10(double h, double h0, double h1)
+{
+    assert(0 <= h && h <= 360 && 0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360);
+    if (!angleWithinRange(h, h0, h1)) {
+        return 0.;
+    }
+    if (h1 == h0) {
+        return 1.;
+    }
+    if (h1 < h0) {
+        h1 += 360;
+        if (h < h0) {
+            h += 360;
+        }
+    }
+    assert(h0 <= h && h <= h1);
+    return (h1-h)/(h1-h0);
 }
 
 class HSVToolProcessorBase : public OFX::ImageProcessor
@@ -289,14 +315,28 @@ public:
         if ((h1 - h0) > 180.) {
             std::swap(h0, h1);
         }
-        assert (0 <= h0 && h0 <= 360 && h0 <= h1 && h1 <= 440);
+        assert (0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360);
+        _values.hueRange[0] = h0;
+        _values.hueRange[1] = h1;
+        // set strict bounds on rolloff
+        if (_values.hueRolloff < 0.) {
+            _values.hueRolloff = 0.;
+        } else if (_values.hueRolloff >= 180.) {
+            _values.hueRolloff = 180.;
+        }
         _values.hueRangeWithRolloff[0] = normalizeAngle(h0 - _values.hueRolloff);
         _values.hueRangeWithRolloff[1] = normalizeAngle(h1 + _values.hueRolloff);
         if (_values.satRange[1] < _values.satRange[0]) {
             std::swap(_values.satRange[0], _values.satRange[1]);
         }
+        if (_values.satRolloff < 0.) {
+            _values.satRolloff = 0.;
+        }
         if (_values.valRange[1] < _values.valRange[0]) {
             std::swap(_values.valRange[0], _values.valRange[1]);
+        }
+        if (_values.valRolloff < 0.) {
+            _values.valRolloff = 0.;
         }
         _clampBlack = clampBlack;
         _clampWhite = clampWhite;
@@ -316,17 +356,19 @@ public:
         // the affected
         if (angleWithinRange(h, h0, h1)) {
             *hcoeff = 1.;
-        } else if (!angleWithinRange(h, h0mrolloff, h1prolloff)) {
-            *hcoeff = 0.;
         } else {
+            double c0 = 0.;
+            double c1 = 0.;
             // check if we are in the rolloff area
-            double c0 = angleCoeff(h, h0mrolloff, h0);
-            double c1 = angleCoeff(h, h1, h1prolloff);
-            if (c1 != 0.) {
-                c1 = 1. - c1;
+            if (angleWithinRange(h, h0mrolloff, h0)) {
+                c0 = angleCoeff01(h, h0mrolloff, h0);
+            }
+            if (angleWithinRange(h, h1, h1prolloff)) {
+                c1 = angleCoeff10(h, h1, h1prolloff);
             }
             *hcoeff = std::max(c0, c1);
         }
+        assert(0 <= hcoeff <= 1.);
         const double s0 = _values.satRange[0];
         const double s1 = _values.satRange[1];
         const double s0mrolloff = s0 - _values.satRolloff;
@@ -336,10 +378,11 @@ public:
         } else if (s0mrolloff <= s && s <= s0) {
             *scoeff = (s - s0mrolloff) / _values.satRolloff;
         } else if (s1 <= s && s <= s1prolloff) {
-            *scoeff = (s1prolloff - 1) / _values.satRolloff;
+            *scoeff = (s1prolloff - s) / _values.satRolloff;
         } else {
             *scoeff = 0.;
         }
+        assert(0 <= scoeff <= 1.);
         const double v0 = _values.valRange[0];
         const double v1 = _values.valRange[1];
         const double v0mrolloff = v0 - _values.valRolloff;
@@ -349,11 +392,13 @@ public:
         } else if (v0mrolloff <= v && v <= v0) {
             *vcoeff = (v - v0mrolloff) / _values.valRolloff;
         } else if (v1 <= v && v <= v1prolloff) {
-            *vcoeff = (v1prolloff - 1) / _values.valRolloff;
+            *vcoeff = (v1prolloff - v) / _values.valRolloff;
         } else {
             *vcoeff = 0.;
         }
+        assert(0 <= vcoeff <= 1.);
         double coeff = std::min(std::min(*hcoeff, *scoeff), *vcoeff);
+        assert(0 <= coeff <= 1.);
         if (coeff <= 0.) {
             *rout = r;
             *gout = g;
@@ -835,6 +880,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamHueRangeRolloff);
             param->setLabels(kParamHueRangeRolloffLabel, kParamHueRangeRolloffLabel, kParamHueRangeRolloffLabel);
             param->setHint(kParamHueRangeRolloffHint);
+            param->setRange(0., 180.);
             param->setDisplayRange(0., 180.);
             param->setDoubleType(eDoubleTypeAngle);
             page->addChild(*param);
