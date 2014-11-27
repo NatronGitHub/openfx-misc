@@ -760,28 +760,31 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     OfxRectI srcRoI;
     getRoI(processWindow, renderScale, params, &srcRoI);
 
-    // The following checks are wrong, because the srcRoI may be outside of the region of definition of src.
+    // The following checks may be wrong, because the srcRoI may be outside of the region of definition of src.
     // It is not an error: areas outside of srcRoD should be considered black and transparent.
+    // IF THE FOLLOWING CODE HAS TO BE DISACTIVATED, PLEASE COMMENT WHY.
+    // This was disactivated by commit c47d07669b78a71960b204989d9c36f746d14a4c, then reactivated.
+#if 1 //def CIMGFILTER_INSTERSECT_ROI
+    OfxRectI srcRoD = src->getRegionOfDefinition();
+    OFX::MergeImages2D::rectIntersection(srcRoI, srcRoD, &srcRoI);
+    // the resulting ROI should be within the src bounds, or it means that the host didn't take into account the region of interest (see getRegionsOfInterest() )
+    assert(srcBounds.x1 <= srcRoI.x1 && srcRoI.x2 <= srcBounds.x2 &&
+           srcBounds.y1 <= srcRoI.y1 && srcRoI.y2 <= srcBounds.y2);
+    if (srcBounds.x1 > srcRoI.x1 || srcRoI.x2 > srcBounds.x2 ||
+        srcBounds.y1 > srcRoI.y1 || srcRoI.y2 > srcBounds.y2) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
 
-    //    OfxRectI srcRoD = src->getRegionOfDefinition();
-    //    OFX::MergeImages2D::rectIntersection(srcRoI, srcRoD, &srcRoI);
-    //    // the resulting ROI should be within the src bounds, or it means that the host didn't take into account the region of interest (see getRegionsOfInterest() )
-    //    assert(srcBounds.x1 <= srcRoI.x1 && srcRoI.x2 <= srcBounds.x2 &&
-    //           srcBounds.y1 <= srcRoI.y1 && srcRoI.y2 <= srcBounds.y2);
-    //    if (srcBounds.x1 > srcRoI.x1 || srcRoI.x2 > srcBounds.x2 ||
-    //        srcBounds.y1 > srcRoI.y1 || srcRoI.y2 > srcBounds.y2) {
-    //        OFX::throwSuiteStatusException(kOfxStatFailed);
-    //    }
-    //
-    //    if (doMasking && mix != 1.) {
-    //        // the renderWindow should also be contained within srcBounds, since we are mixing
-    //        assert(srcBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= srcBounds.x2 &&
-    //               srcBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= srcBounds.y2);
-    //        if (srcBounds.x1 > renderWindow.x1 || renderWindow.x2 > srcBounds.x2 ||
-    //            srcBounds.y1 > renderWindow.y1 || renderWindow.y2 > srcBounds.y2) {
-    //            OFX::throwSuiteStatusException(kOfxStatFailed);
-    //        }
-    //    }
+    if (doMasking && mix != 1.) {
+        // the renderWindow should also be contained within srcBounds, since we are mixing
+        assert(srcBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= srcBounds.x2 &&
+               srcBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= srcBounds.y2);
+        if (srcBounds.x1 > renderWindow.x1 || renderWindow.x2 > srcBounds.x2 ||
+            srcBounds.y1 > renderWindow.y1 || renderWindow.y2 > srcBounds.y2) {
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+    }
+#endif
 
     int srcNComponents = ((srcPixelComponents == OFX::ePixelComponentAlpha) ? 1 :
                           ((srcPixelComponents == OFX::ePixelComponentRGB) ? 3 : 4));
