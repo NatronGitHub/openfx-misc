@@ -58,9 +58,7 @@ namespace OFX
             getDissolvePluginID(ids);
             getGradePluginID(ids);
             getHSVPluginIDs(ids);
-#ifdef DEBUG
             getHSVToolPluginID(ids);
-#endif
             getInvertPluginID(ids);
             getJoinViewsPluginID(ids);
             getKeyerPluginID(ids);
