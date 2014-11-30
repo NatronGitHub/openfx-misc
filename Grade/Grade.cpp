@@ -740,6 +740,7 @@ GradePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     
 }
 
+static
 void defineRGBAScaleParam(OFX::ImageEffectDescriptor &desc,
                           const std::string &name, const std::string &label, const std::string &hint,
                           PageParamDescriptor* page,double def , double min,double max)
