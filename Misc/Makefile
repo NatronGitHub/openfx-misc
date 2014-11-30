@@ -29,6 +29,7 @@ ReConverge.o \
 Retime.o \
 ColorLookup.o \
 Roto.o \
+Saturation.o \
 Shuffle.o \
 SideBySide.o \
 Switch.o \
@@ -128,6 +129,7 @@ VPATH += \
 ../Retime \
 ../ColorLookup \
 ../Roto \
+../Saturation \
 ../Shuffle \
 ../SideBySide \
 ../Switch \
@@ -171,6 +173,7 @@ CXXFLAGS += \
 -I../Ramp \
 -I../Retime \
 -I../Roto \
+-I../Saturation \
 -I../Shuffle \
 -I../SideBySide \
 -I../Switch \

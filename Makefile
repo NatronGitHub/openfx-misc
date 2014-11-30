@@ -27,6 +27,7 @@ NoOp \
 OneView \
 Premult \
 Roto \
+Saturation \
 Shuffle \
 SideBySide \
 Switch \

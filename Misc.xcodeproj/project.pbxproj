@@ -230,6 +230,20 @@
 		1E593381194A0CF400804448 /* Constant.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E59337F194A0CF400804448 /* Constant.cpp */; };
 		1E593382194A0CF400804448 /* Constant.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E59337F194A0CF400804448 /* Constant.cpp */; };
 		1E593387194A0D0500804448 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E593385194A0D0500804448 /* PluginRegistration.cpp */; };
+		1E69C9F11A2B2EDD0099D609 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1E69C9F21A2B2EDD0099D609 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1E69C9F31A2B2EDD0099D609 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1E69C9F41A2B2EDD0099D609 /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1E69C9F51A2B2EDD0099D609 /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1E69C9F61A2B2EDD0099D609 /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1E69C9F71A2B2EDD0099D609 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1E69C9F81A2B2EDD0099D609 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1E69C9FA1A2B2EDD0099D609 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1E69C9FC1A2B2EDD0099D609 /* net.sf.openfx.GradePlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A88519C6EDDA00E6E3AE /* net.sf.openfx.GradePlugin.png */; };
+		1E69C9FD1A2B2EDD0099D609 /* net.sf.openfx.GradePlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CA419C9821700C2C668 /* net.sf.openfx.GradePlugin.svg */; };
+		1E69CA051A2B2F350099D609 /* Saturation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E69CA031A2B2F350099D609 /* Saturation.cpp */; };
+		1E69CA061A2B2F350099D609 /* Saturation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E69CA031A2B2F350099D609 /* Saturation.cpp */; };
+		1E69CA081A2B2F3E0099D609 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E69CA071A2B2F3E0099D609 /* PluginRegistration.cpp */; };
 		1E77A3BC1906988C00286856 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7349E8B18E7766F0097DB1D /* PluginRegistration.cpp */; };
 		1E814C9419C9817A00C2C668 /* net.sf.openfx.ChromaKeyerPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9319C9816E00C2C668 /* net.sf.openfx.ChromaKeyerPlugin.svg */; };
 		1E814C9619C9818800C2C668 /* net.sf.openfx.ColorCorrectPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9519C9818200C2C668 /* net.sf.openfx.ColorCorrectPlugin.svg */; };
@@ -977,6 +991,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		1E69C9FB1A2B2EDD0099D609 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1E69C9FC1A2B2EDD0099D609 /* net.sf.openfx.GradePlugin.png in CopyFiles */,
+				1E69C9FD1A2B2EDD0099D609 /* net.sf.openfx.GradePlugin.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E92572D19EC1DB80018F19A /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1395,6 +1420,12 @@
 		1E593383194A0D0500804448 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E593384194A0D0500804448 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E593385194A0D0500804448 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		1E69CA011A2B2EDD0099D609 /* Saturation.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Saturation.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E69CA031A2B2F350099D609 /* Saturation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Saturation.cpp; sourceTree = "<group>"; };
+		1E69CA041A2B2F350099D609 /* Saturation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Saturation.h; sourceTree = "<group>"; };
+		1E69CA071A2B2F3E0099D609 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		1E69CA091A2B2F4B0099D609 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1E69CA0A1A2B2F4B0099D609 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E814C9319C9816E00C2C668 /* net.sf.openfx.ChromaKeyerPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.ChromaKeyerPlugin.svg; sourceTree = "<group>"; };
 		1E814C9519C9818200C2C668 /* net.sf.openfx.ColorCorrectPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.ColorCorrectPlugin.svg; sourceTree = "<group>"; };
 		1E814C9719C9819400C2C668 /* net.sf.openfx.ConstantPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.ConstantPlugin.svg; sourceTree = "<group>"; };
@@ -1801,6 +1832,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E593379194A0C6300804448 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E69C9F91A2B2EDD0099D609 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E69C9FA1A2B2EDD0099D609 /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2301,6 +2340,7 @@
 				1ED5372E1A234CDF007966D5 /* HSV.ofx.bundle */,
 				1EFBC9931A23A1EB00086E7A /* VectorToColor.ofx.bundle */,
 				1EFA772C1A24F0BA00212DB0 /* HSVTool.ofx.bundle */,
+				1E69CA011A2B2EDD0099D609 /* Saturation.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -2344,6 +2384,7 @@
 				1ECE544E185F23BD001ED442 /* ReConverge */,
 				1E2A93461990EE320061B1F1 /* Retime */,
 				D721EBFC1911209B0069DB1D /* Roto */,
+				1E69C9EC1A2B2EC10099D609 /* Saturation */,
 				1EF46F44194A399D00825BDF /* Shuffle */,
 				1E235FEC18363CCA0019C45F /* SideBySide */,
 				1E3AC8D818B6211800F228A6 /* Switch */,
@@ -2379,6 +2420,18 @@
 				1E593385194A0D0500804448 /* PluginRegistration.cpp */,
 			);
 			path = Constant;
+			sourceTree = "<group>";
+		};
+		1E69C9EC1A2B2EC10099D609 /* Saturation */ = {
+			isa = PBXGroup;
+			children = (
+				1E69CA031A2B2F350099D609 /* Saturation.cpp */,
+				1E69CA041A2B2F350099D609 /* Saturation.h */,
+				1E69CA091A2B2F4B0099D609 /* Info.plist */,
+				1E69CA0A1A2B2F4B0099D609 /* Makefile */,
+				1E69CA071A2B2F3E0099D609 /* PluginRegistration.cpp */,
+			);
+			path = Saturation;
 			sourceTree = "<group>";
 		};
 		1E8B5D4618B769B400C31FDC /* Misc */ = {
@@ -3047,6 +3100,23 @@
 			productReference = 1E59337D194A0C6300804448 /* Constant.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
+		1E69C9ED1A2B2EDD0099D609 /* Saturation.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1E69C9FE1A2B2EDD0099D609 /* Build configuration list for PBXNativeTarget "Saturation.ofx" */;
+			buildPhases = (
+				1E69C9EE1A2B2EDD0099D609 /* Sources */,
+				1E69C9F91A2B2EDD0099D609 /* Frameworks */,
+				1E69C9FB1A2B2EDD0099D609 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Saturation.ofx;
+			productName = basic.ofx;
+			productReference = 1E69CA011A2B2EDD0099D609 /* Saturation.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 		1E8B5D4A18B76A7500C31FDC /* Misc.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1E8B5D5818B76A7500C31FDC /* Build configuration list for PBXNativeTarget "Misc.ofx" */;
@@ -3530,6 +3600,7 @@
 				1ECE543C185F2374001ED442 /* ReConverge.ofx */,
 				1E2A93471990EE690061B1F1 /* Retime.ofx */,
 				D721EC02191120B30069DB1D /* Roto.ofx */,
+				1E69C9ED1A2B2EDD0099D609 /* Saturation.ofx */,
 				1EF46F32194A394E00825BDF /* Shuffle.ofx */,
 				1E235FD918363C850019C45F /* SideBySide.ofx */,
 				1E3AC8C618B6207600F228A6 /* Switch.ofx */,
@@ -3796,6 +3867,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1E69C9EE1A2B2EDD0099D609 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E69C9F11A2B2EDD0099D609 /* ofxsCore.cpp in Sources */,
+				1E69C9F21A2B2EDD0099D609 /* ofxsImageEffect.cpp in Sources */,
+				1E69C9F31A2B2EDD0099D609 /* ofxsInteract.cpp in Sources */,
+				1E69C9F41A2B2EDD0099D609 /* ofxsLog.cpp in Sources */,
+				1E69C9F51A2B2EDD0099D609 /* ofxsMultiThread.cpp in Sources */,
+				1E69C9F61A2B2EDD0099D609 /* ofxsParams.cpp in Sources */,
+				1E69CA051A2B2F350099D609 /* Saturation.cpp in Sources */,
+				1E69CA081A2B2F3E0099D609 /* PluginRegistration.cpp in Sources */,
+				1E69C9F71A2B2EDD0099D609 /* ofxsProperty.cpp in Sources */,
+				1E69C9F81A2B2EDD0099D609 /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E8B5D4B18B76A7500C31FDC /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -3807,6 +3895,7 @@
 				D730310419518B560024BCA4 /* CopyRectangle.cpp in Sources */,
 				1ED5373D1A2370D3007966D5 /* ofxsLut.cpp in Sources */,
 				D7257D5F192E91510040CD9C /* CornerPin.cpp in Sources */,
+				1E69CA061A2B2F350099D609 /* Saturation.cpp in Sources */,
 				D7B4C97818D9DBE70004137D /* ColorCorrect.cpp in Sources */,
 				D74A80C719405A14007C3E1C /* Crop.cpp in Sources */,
 				1E92573819EC1E140018F19A /* Clamp.cpp in Sources */,
@@ -4921,6 +5010,28 @@
 			};
 			name = Release;
 		};
+		1E69C9FF1A2B2EDD0099D609 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Saturation/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = Saturation.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1E69CA001A2B2EDD0099D609 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Saturation/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = Saturation.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
 		1E8B5D5918B76A7500C31FDC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -5659,6 +5770,15 @@
 			buildConfigurations = (
 				1E59337B194A0C6300804448 /* Debug */,
 				1E59337C194A0C6300804448 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1E69C9FE1A2B2EDD0099D609 /* Build configuration list for PBXNativeTarget "Saturation.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E69C9FF1A2B2EDD0099D609 /* Debug */,
+				1E69CA001A2B2EDD0099D609 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

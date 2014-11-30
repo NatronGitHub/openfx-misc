@@ -28,6 +28,7 @@
 #include "Retime.h"
 #include "ColorLookup.h"
 #include "Roto.h"
+#include "Saturation.h"
 #include "Shuffle.h"
 #include "SideBySide.h"
 #include "Switch.h"
@@ -75,6 +76,7 @@ namespace OFX
             getRetimePluginID(ids);
             getColorLookupPluginID(ids);
             getRotoPluginID(ids);
+            getSaturationPluginID(ids);
             getShufflePluginID(ids);
             getSideBySidePluginID(ids);
             getSwitchPluginID(ids);
