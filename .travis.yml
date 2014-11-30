@@ -1,8 +1,18 @@
+os:
+  - linux
+  - osx
+
 language: cpp
 
 compiler:
   - gcc
   - clang
+
+matrix:
+  exclude:
+    - os: osx
+      compiler: gcc
+  fast_finish: true
 
 # Travis CI has 1.5 cores per VM, take advantage of it
 # But first, the makefiles have to be fixed: all plugins are using the same .o's
@@ -13,12 +23,12 @@ before_install:
   - git submodule update --init --recursive
   - sudo apt-get update
 
-install:
-  - sudo apt-get install cimg-dev
+# CImg is now downloaded by CImg/Makefile, no need to install it
+#install:
+#  - sudo apt-get install cimg-dev
 
-# The CImg.h on ubuntu precise 12.04 is too old to compile with clang
 script:
-  - if [ "$CC" = "gcc" ]; then make CONFIG=debug HAVE_CIMG=1 CIMG_INCLUDE=/usr/include; else make CONFIG=debug; fi
-  - if [ "$CC" = "gcc" ]; then make nomulti CONFIG=debug HAVE_CIMG=1 CIMG_INCLUDE=/usr/include; else make nomulti CONFIG=debug; fi
+  - make CONFIG=debug
+  - make nomulti CONFIG=debug
 
 
