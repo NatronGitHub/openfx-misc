@@ -21,7 +21,6 @@ matrix:
 
 before_install:
   - git submodule update --init --recursive
-  - sudo apt-get update
 
 # CImg is now downloaded by CImg/Makefile, no need to install it
 #install:
