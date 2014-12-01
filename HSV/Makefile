@@ -1,5 +1,5 @@
 PLUGINOBJECTS = HSV.o PluginRegistration.o
 PLUGINNAME = HSV
-#RESOURCES = net.sf.openfx.HSVPlugin.png net.sf.openfx.HSVPlugin.png
+RESOURCES = net.sf.openfx.RGBToHSVPlugin.png net.sf.openfx.HSVToRGBPlugin.png
 
 include ../Makefile.master

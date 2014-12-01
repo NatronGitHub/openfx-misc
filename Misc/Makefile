@@ -83,6 +83,9 @@ RESOURCES = \
 ../Difference/net.sf.openfx.DifferencePlugin.svg \
 ../Dissolve/net.sf.openfx.DissolvePlugin.svg \
 ../Grade/net.sf.openfx.GradePlugin.svg \
+../HSV/net.sf.openfx.RGBToHSVPlugin.png \
+../HSV/net.sf.openfx.HSVToRGBPlugin.png \
+../HSVTool/net.sf.openfx.HSVToolPlugin.png \
 ../Invert/net.sf.openfx.Invert.svg \
 ../Merge/net.sf.openfx.MergePlugin.svg \
 ../Premult/net.sf.openfx.Premult.svg \

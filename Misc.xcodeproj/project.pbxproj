@@ -604,6 +604,9 @@
 		AC4774E91A25B900008A2B57 /* net.sf.cimg.CImgDilate.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774DE1A25B811008A2B57 /* net.sf.cimg.CImgDilate.png */; };
 		AC4774EA1A25B902008A2B57 /* net.sf.cimg.CImgErode.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774DF1A25B811008A2B57 /* net.sf.cimg.CImgErode.png */; };
 		AC60A33C19FE9C7900375A86 /* Ramp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32A19FE995F00375A86 /* Ramp.cpp */; };
+		ACC5D25E1A2C714600DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25C1A2C713700DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png */; };
+		ACC5D25F1A2C714900DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25D1A2C713700DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png */; };
+		ACC5D2601A2C714C00DE1AAA /* net.sf.openfx.HSVToolPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25B1A2C712E00DE1AAA /* net.sf.openfx.HSVToolPlugin.png */; };
 		ACC8477E1A0A3F9300B3FAFE /* net.sf.openfx.Ramp.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC60A32719FE995F00375A86 /* net.sf.openfx.Ramp.png */; };
 		ACC8477F1A0A3F9500B3FAFE /* net.sf.openfx.Ramp.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC60A32819FE995F00375A86 /* net.sf.openfx.Ramp.svg */; };
 		D721EC06191120B30069DB1D /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
@@ -1253,6 +1256,9 @@
 				1E814CC719C9839200C2C668 /* net.sf.openfx.DissolvePlugin.svg in CopyFiles */,
 				1EE4A8B919C6EF5A00E6E3AE /* net.sf.openfx.GradePlugin.png in CopyFiles */,
 				1E814CC819C9839500C2C668 /* net.sf.openfx.GradePlugin.svg in CopyFiles */,
+				ACC5D25E1A2C714600DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png in CopyFiles */,
+				ACC5D25F1A2C714900DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png in CopyFiles */,
+				ACC5D2601A2C714C00DE1AAA /* net.sf.openfx.HSVToolPlugin.png in CopyFiles */,
 				1EE4A8BA19C6EF5E00E6E3AE /* net.sf.openfx.Invert.png in CopyFiles */,
 				1E814CC919C9839A00C2C668 /* net.sf.openfx.Invert.svg in CopyFiles */,
 				1EE4A8BB19C6EF6300E6E3AE /* net.sf.openfx.MergePlugin.png in CopyFiles */,
@@ -1664,6 +1670,9 @@
 		AC60A32919FE995F00375A86 /* PluginRegistration.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		AC60A32A19FE995F00375A86 /* Ramp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Ramp.cpp; sourceTree = "<group>"; };
 		AC60A32B19FE995F00375A86 /* Ramp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Ramp.h; sourceTree = "<group>"; };
+		ACC5D25B1A2C712E00DE1AAA /* net.sf.openfx.HSVToolPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.HSVToolPlugin.png; sourceTree = "<group>"; };
+		ACC5D25C1A2C713700DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.HSVToRGBPlugin.png; sourceTree = "<group>"; };
+		ACC5D25D1A2C713700DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.RGBToHSVPlugin.png; sourceTree = "<group>"; };
 		ACC8477B1A0A3F6400B3FAFE /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACC8477C1A0A3F6400B3FAFE /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		ACC8477D1A0A3F6400B3FAFE /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
@@ -2601,6 +2610,8 @@
 			children = (
 				1ED537351A234D35007966D5 /* Info.plist */,
 				1ED537361A234D35007966D5 /* Makefile */,
+				ACC5D25C1A2C713700DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png */,
+				ACC5D25D1A2C713700DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png */,
 				1ED537301A234D21007966D5 /* HSV.cpp */,
 				1ED537311A234D21007966D5 /* HSV.h */,
 				1ED537321A234D21007966D5 /* PluginRegistration.cpp */,
@@ -2674,6 +2685,7 @@
 			isa = PBXGroup;
 			children = (
 				1EFA77331A24F13300212DB0 /* HSVTool.cpp */,
+				ACC5D25B1A2C712E00DE1AAA /* net.sf.openfx.HSVToolPlugin.png */,
 				1EFA77341A24F13300212DB0 /* HSVTool.h */,
 				1EFA77381A24F14600212DB0 /* Info.plist */,
 				1EFA77391A24F14600212DB0 /* Makefile */,
