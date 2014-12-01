@@ -1,4 +1,4 @@
-PLUGINOBJECTS = HSV.o PluginRegistration.o
+PLUGINOBJECTS = HSV.o ofxsLut.o PluginRegistration.o
 PLUGINNAME = HSV
 RESOURCES = net.sf.openfx.RGBToHSVPlugin.png net.sf.openfx.HSVToRGBPlugin.png
 

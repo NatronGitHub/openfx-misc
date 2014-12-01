@@ -127,7 +127,7 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;            /**< @brief Mandated output clips */
+    //OFX::Clip *dstClip_;            /**< @brief Mandated output clips */
     OFX::Clip *srcClip_;            /**< @brief Mandated input clips */
 
     OFX::IntParam  *time_offset_;      /**< @brief only used in the filter context. */
@@ -154,20 +154,6 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
 
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
-
-// make sure components are sane
-static void
-checkComponents(const OFX::Image &src,
-                OFX::BitDepthEnum dstBitDepth,
-                OFX::PixelComponentEnum dstComponents)
-{
-    OFX::BitDepthEnum      srcBitDepth     = src.getPixelDepth();
-    OFX::PixelComponentEnum srcComponents  = src.getPixelComponents();
-
-    // see if they have the same depths and bytes and all
-    if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
-        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-}
 
 // figure the frame we should be retiming from
 double

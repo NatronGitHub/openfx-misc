@@ -406,7 +406,7 @@ HSVPluginFactory<toHSV>::describe(OFX::ImageEffectDescriptor &desc)
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
-    desc.addSupportedContext(eContextPaint);
+    //desc.addSupportedContext(eContextPaint);
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
@@ -426,7 +426,7 @@ HSVPluginFactory<toHSV>::describe(OFX::ImageEffectDescriptor &desc)
 template <bool toHSV>
 void
 HSVPluginFactory<toHSV>::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                    OFX::ContextEnum context)
+                                           OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip

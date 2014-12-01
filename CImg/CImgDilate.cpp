@@ -222,7 +222,7 @@ void CImgDilatePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
     CImgDilatePlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgDilatePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CImgDilatePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new CImgDilatePlugin(handle);
 }

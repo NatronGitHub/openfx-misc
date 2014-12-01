@@ -593,7 +593,6 @@ public:
     , _dragging(-1)
     , _hovering(-1)
     , _lastMousePos()
-    , _lastPenDownPos()
     {
         for (int i = 0; i < 4; ++i) {
             _to[i] = effect->fetchDouble2DParam(kParamTo[i]);
@@ -640,8 +639,7 @@ private:
     int _dragging; // -1: idle, else dragging point number
     int _hovering; // -1: idle, else hovering point number
     OfxPointD _lastMousePos;
-    OfxPointD _lastPenDownPos;
-    
+
     OfxPointD _draggedPos[4];
 };
 

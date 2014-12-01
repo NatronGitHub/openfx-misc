@@ -166,17 +166,17 @@ public:
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args, const CImgEqualizeParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &/*args*/, const CImgEqualizeParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
         cimg.equalize(params.nb_levels, params.min_value, params.max_value);
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgEqualizeParams& params) OVERRIDE FINAL
-    {
-        return false;
-    };
+    //virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgEqualizeParams& /*params*/) OVERRIDE FINAL
+    //{
+    //    return false;
+    //};
 
 private:
 

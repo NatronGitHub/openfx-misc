@@ -334,7 +334,7 @@ NoOpPlugin::isIdentity(const IsIdentityArguments &/*args*/, Clip * &identityClip
 #ifdef OFX_EXTENSIONS_NUKE
 // overridden getTransform
 bool
-NoOpPlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9])
+NoOpPlugin::getTransform(const OFX::TransformArguments &/*args*/, OFX::Clip * &transformClip, double transformMatrix[9])
 {
     bool forceCopy;
     forceCopy_->getValue(forceCopy);

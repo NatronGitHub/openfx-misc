@@ -196,7 +196,7 @@ public:
         cimg.blur_patch(params.sigma_s * args.renderScale.x, params.sigma_r, std::ceil(params.psize * args.renderScale.x), std::ceil(params.lsize * args.renderScale.x), params.smoothness * args.renderScale.x, params.fast_approx);
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgDenoiseParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgDenoiseParams& params) OVERRIDE FINAL
     {
         return (params.sigma_s == 0. && params.sigma_r == 0.);
     };
@@ -309,7 +309,7 @@ void CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
     CImgDenoisePlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgDenoisePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CImgDenoisePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new CImgDenoisePlugin(handle);
 }

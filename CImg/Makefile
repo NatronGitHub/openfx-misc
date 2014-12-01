@@ -1,6 +1,7 @@
-PLUGINOBJECTS = CImgBilateral.o CImgBlur.o CImgDenoise.o CImgDilate.o CImgEqualize.o CImgErode.o CImgErodeSmooth.o CImgGuided.o CImgHistEQ.o CImgNoise.o CImgPlasma.o CImgSmooth.o CImgRollingGuidance.o ofxsLut.o PluginRegistration.o
+PLUGINOBJECTS = CImgBilateral.o CImgBlur.o CImgDenoise.o CImgDilate.o CImgEqualize.o CImgErode.o CImgErodeSmooth.o CImgGuided.o CImgHistEQ.o CImgNoise.o CImgPlasma.o CImgRollingGuidance.o CImgSmooth.o ofxsLut.o PluginRegistration.o
 PLUGINNAME = CImg
-RESOURCES = net.sf.cimg.CImgBlur.png \
+RESOURCES = \
+net.sf.cimg.CImgBlur.png \
 net.sf.cimg.CImgDenoise.png \
 net.sf.cimg.CImgDilate.png \
 net.sf.cimg.CImgErode.png
@@ -39,6 +40,6 @@ $(OBJECTPATH)/CImgNoise.o: CImgNoise.cpp CImg.h
 
 $(OBJECTPATH)/CImgPlasma.o: CImgPlasma.cpp CImg.h
 
-$(OBJECTPATH)/CImgSmooth.o: CImgGuided.cpp CImg.h
-
 $(OBJECTPATH)/CImgRollingGuidance.o: CImgRollingGuidance.cpp CImg.h
+
+$(OBJECTPATH)/CImgSmooth.o: CImgGuided.cpp CImg.h

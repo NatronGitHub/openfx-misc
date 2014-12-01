@@ -244,7 +244,7 @@ void CImgGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
     CImgGuidedPlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgGuidedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CImgGuidedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new CImgGuidedPlugin(handle);
 }

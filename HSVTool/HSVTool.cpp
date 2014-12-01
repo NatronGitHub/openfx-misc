@@ -299,6 +299,7 @@ public:
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
+    , _outputAlpha(eOutputAlphaSource)
     , _premult(false)
     , _premultChannel(3)
     , _doMasking(false)
@@ -306,7 +307,6 @@ public:
     , _maskInvert(false)
     , _clampBlack(true)
     , _clampWhite(true)
-    , _outputAlpha(eOutputAlphaSource)
     {
         assert(angleWithinRange(0, 350, 10));
         assert(angleWithinRange(0, 0, 10));
@@ -877,7 +877,7 @@ HSVToolPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     int outputAlpha_i;
     _outputAlpha->getValue(outputAlpha_i);
     OutputAlphaEnum outputAlpha = (OutputAlphaEnum)outputAlpha_i;
-    if (outputAlpha_i != eOutputAlphaSource) {
+    if (outputAlpha != eOutputAlphaSource) {
         // output must be RGBA, output image is unpremult
         clipPreferences.setClipComponents(*dstClip_, ePixelComponentRGBA);
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);

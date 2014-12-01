@@ -150,7 +150,7 @@ public:
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args, const CImgHistEQParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &/*args*/, const CImgHistEQParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
@@ -176,17 +176,15 @@ public:
         }
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgHistEQParams& params) OVERRIDE FINAL
-    {
-        return false;
-    };
+    //virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgHistEQParams& params) OVERRIDE FINAL
+    //{
+    //    return false;
+    //};
 
 private:
 
     // params
     OFX::IntParam *_nb_levels;
-    OFX::DoubleParam *_min_value;
-    OFX::DoubleParam *_max_value;
 };
 
 
@@ -242,7 +240,7 @@ void CImgHistEQPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
     CImgHistEQPlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgHistEQPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CImgHistEQPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new CImgHistEQPlugin(handle);
 }

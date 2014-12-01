@@ -222,7 +222,7 @@ void CImgErodePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
     CImgErodePlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgErodePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CImgErodePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new CImgErodePlugin(handle);
 }

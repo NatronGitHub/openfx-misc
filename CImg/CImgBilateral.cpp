@@ -249,7 +249,7 @@ void CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& d
     CImgBilateralPlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgBilateralPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CImgBilateralPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new CImgBilateralPlugin(handle);
 }
