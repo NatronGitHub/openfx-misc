@@ -275,7 +275,7 @@ void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
     CImgPlasmaPlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgPlasmaPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CImgPlasmaPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new CImgPlasmaPlugin(handle);
 }

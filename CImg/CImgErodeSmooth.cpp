@@ -268,7 +268,7 @@ public:
         cimg_rof(cimg,ptrd,float) *ptrd = (*ptrd-ERODESMOOTH_OFFSET)*(rmax-rmin)+rmin;
 }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgErodeSmoothParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgErodeSmoothParams& params) OVERRIDE FINAL
     {
         return (params.sigma == 0. || params.exponent <= 0);
     };
@@ -395,7 +395,7 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     CImgErodeSmoothPlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgErodeSmoothPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CImgErodeSmoothPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new CImgErodeSmoothPlugin(handle);
 }

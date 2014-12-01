@@ -254,7 +254,7 @@ public:
 
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgSmoothParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgSmoothParams& params) OVERRIDE FINAL
     {
         return (params.amplitude <= 0. || params.dl < 0.);
     };
@@ -415,7 +415,7 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
     CImgSmoothPlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgSmoothPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CImgSmoothPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new CImgSmoothPlugin(handle);
 }

@@ -207,7 +207,7 @@ public:
 #endif
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgBlurParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgBlurParams& params) OVERRIDE FINAL
     {
         return (params.sigma == 0.);
     };
@@ -301,7 +301,7 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
     CImgBlurPlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgBlurPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CImgBlurPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new CImgBlurPlugin(handle);
 }

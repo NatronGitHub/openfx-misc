@@ -168,7 +168,7 @@ public:
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgNoiseParams& params, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI& rect, const OfxPointD& /*renderScale*/, const CImgNoiseParams& /*params*/, OfxRectI* roi) OVERRIDE FINAL
     {
         roi->x1 = rect.x1;
         roi->x2 = rect.x2;
@@ -190,7 +190,7 @@ public:
         }
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgNoiseParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgNoiseParams& params) OVERRIDE FINAL
     {
         return (params.sigma == 0.);
     };
@@ -279,7 +279,7 @@ void CImgNoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
     CImgNoisePlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgNoisePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CImgNoisePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new CImgNoisePlugin(handle);
 }

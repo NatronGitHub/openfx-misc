@@ -282,7 +282,7 @@ void CImgRollingGuidancePluginFactory::describeInContext(OFX::ImageEffectDescrip
     CImgRollingGuidancePlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgRollingGuidancePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CImgRollingGuidancePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new CImgRollingGuidancePlugin(handle);
 }
