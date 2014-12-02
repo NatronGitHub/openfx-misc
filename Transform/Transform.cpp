@@ -412,9 +412,19 @@ protected:
         eDraggingSkewYBar
     };
     
+    enum OrientationEnum
+    {
+        eOrientationAllDirections = 0,
+        eOrientationHorizontal,
+        eOrientationVertical
+    };
+    
     DrawStateEnum _drawState;
     MouseStateEnum _mouseState;
     int _modifierStateCtrl;
+    int _modifierStateShift;
+    bool _mustSetOrientationOnNextMotion;
+    OrientationEnum _orientation;
     TransformPlugin* _plugin;
     OfxPointD _lastMousePos;
     
@@ -424,6 +434,9 @@ public:
     , _drawState(eInActive)
     , _mouseState(eReleased)
     , _modifierStateCtrl(0)
+    , _modifierStateShift(0)
+    , _mustSetOrientationOnNextMotion(false)
+    , _orientation(eOrientationAllDirections)
     , _plugin(dynamic_cast<TransformPlugin*>(effect))
     , _lastMousePos()
     {
@@ -1075,6 +1088,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     }
     
     
+    
     bool ret = true;
     if (_mouseState == eReleased) {
         // we are not axis-aligned
@@ -1149,6 +1163,14 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         
         double dx = args.penPosition.x - _lastMousePos.x;
         double dy = args.penPosition.y - _lastMousePos.y;
+        
+        if (_mustSetOrientationOnNextMotion) {
+            _orientation = std::abs(dx) > std::abs(dy) ? eOrientationHorizontal : eOrientationVertical;
+            _mustSetOrientationOnNextMotion = false;
+        }
+        
+        dx = _orientation == eOrientationVertical ? 0 : dx;
+        dy = _orientation == eOrientationHorizontal ? 0 : dy;
         double newx = currentTranslation.x + dx;
         double newy = currentTranslation.y + dy;
         // round newx/y to the closest int, 1/10 int, etc
@@ -1165,6 +1187,15 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
 
         double dx = args.penPosition.x - _lastMousePos.x;
         double dy = args.penPosition.y - _lastMousePos.y;
+        
+        if (_mustSetOrientationOnNextMotion) {
+            _orientation = std::abs(dx) > std::abs(dy) ? eOrientationHorizontal : eOrientationVertical;
+            _mustSetOrientationOnNextMotion = false;
+        }
+        
+        dx = _orientation == eOrientationVertical ? 0 : dx;
+        dy = _orientation == eOrientationHorizontal ? 0 : dy;
+        
         OFX::Point3D dRot;
         dRot.x = dx;
         dRot.y = dy;
@@ -1294,11 +1325,15 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
         transformedPos.y /= transformedPos.z;
     }
     
+    
     double pressToleranceX = 5 * pscale.x;
     double pressToleranceY = 5 * pscale.y;
     bool ret = true;
     if (squareContains(transformedPos, centerPoint,pressToleranceX,pressToleranceY)) {
         _mouseState = _modifierStateCtrl ? eDraggingCenter : eDraggingTranslation;
+        if (_modifierStateShift > 0) {
+            _mustSetOrientationOnNextMotion = true;
+        }
     } else if (squareContains(transformedPos, leftPoint,pressToleranceX,pressToleranceY)) {
         _mouseState = eDraggingLeftPoint;
     } else if (squareContains(transformedPos, rightPoint,pressToleranceX,pressToleranceY)) {
@@ -1348,6 +1383,12 @@ bool TransformInteract::keyDown(const OFX::KeyArgs &args)
         ++_modifierStateCtrl;
         _effect->redrawOverlays();
     }
+    if (args.keySymbol == kOfxKey_Shift_L || args.keySymbol == kOfxKey_Shift_R) {
+        if (_modifierStateShift == 0) {
+            _mustSetOrientationOnNextMotion = true;
+        }
+        ++_modifierStateShift;
+    }
     //std::cout << std::hex << args.keySymbol << std::endl;
     // modifiers are not "caught"
     return false;
@@ -1365,7 +1406,14 @@ bool TransformInteract::keyUp(const OFX::KeyArgs &args)
             _effect->redrawOverlays();
        }
     }
-
+    if (args.keySymbol == kOfxKey_Shift_L || args.keySymbol == kOfxKey_Shift_R) {
+        if (_modifierStateShift > 0) {
+            --_modifierStateShift;
+        }
+        if (_modifierStateShift == 0) {
+            _orientation = eOrientationAllDirections;
+        }
+    }
     // modifiers are not "caught"
     return false;
 }
