@@ -135,7 +135,7 @@ public:
     void setSrcRightImg(OFX::Image *v) {_srcRightImg = v;}
 
     /** @brief set the amount of colour */
-    void setAmtColour(float v) {_amtcolour = v;}
+    void setAmtColour(double v) {_amtcolour = v;}
 
     /** @brief set view swap */
     void setSwap(bool v) {_swap = v;}
