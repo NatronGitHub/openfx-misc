@@ -619,7 +619,7 @@ private:
     /* set up and run a processor */
     void setupAndProcess(HSVToolProcessorBase &, const OFX::RenderArguments &args);
 
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    //virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
@@ -784,7 +784,7 @@ HSVToolPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
-
+#if 0
 bool
 HSVToolPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
@@ -794,6 +794,64 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip,
     if (mix == 0.) {
         identityClip = srcClip_;
         return true;
+    }
+
+
+    if (srcClip_->getPixelComponents() == ePixelComponentRGBA) {
+        // check cases where alpha is affected, even if colors don't change
+        int outputAlpha_i;
+        _outputAlpha->getValueAtTime(args.time, outputAlpha_i);
+        OutputAlphaEnum outputAlpha = (OutputAlphaEnum)outputAlpha_i;
+        if (outputAlpha != eOutputAlphaSource) {
+            double hueMin, hueMax;
+            _hueRange->getValueAtTime(args.time, hueMin, hueMax);
+            bool alphaHue = (hueMin != 0. || hueMax != 360.);
+            double satMin, satMax;
+            _saturationRange->getValueAtTime(args.time, satMin, satMax);
+            bool alphaSat = (satMin != 0. || satMax != 1.);
+            double valMin, valMax;
+            _brightnessRange->getValueAtTime(args.time, valMin, valMax);
+            bool alphaVal = (valMin != 0. || valMax != 1.);
+            switch(outputAlpha) {
+                case eOutputAlphaSource:
+                    break;
+                case eOutputAlphaHue:
+                    if (alphaHue) {
+                        return false;
+                    }
+                    break;
+                case eOutputAlphaSaturation:
+                    if (alphaSat) {
+                        return false;
+                    }
+                    break;
+                case eOutputAlphaBrightness:
+                    if (alphaVal) {
+                        return false;
+                    }
+                    break;
+                case eOutputAlphaHueSaturation:
+                    if (alphaHue || alphaSat) {
+                        return false;
+                    }
+                    break;
+                case eOutputAlphaHueBrightness:
+                    if (alphaHue || alphaVal) {
+                        return false;
+                    }
+                    break;
+                case eOutputAlphaSaturationBrightness:
+                    if (alphaSat || alphaVal) {
+                        return false;
+                    }
+                    break;
+                case eOutputAlphaAll:
+                    if (alphaHue || alphaSat || alphaVal) {
+                        return false;
+                    }
+                    break;
+            }
+        }
     }
 
     // isIdentity=true if hueRotation, satAdjust and valAdjust = 0.
@@ -810,6 +868,7 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip,
 
     return false;
 }
+#endif
 
 void
 HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &paramName)
@@ -977,6 +1036,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setLabels(kParamHueRangeLabel, kParamHueRangeLabel, kParamHueRangeLabel);
             param->setHint(kParamHueRangeHint);
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
+            param->setDefault(0., 360.);
             param->setDisplayRange(0., 0., 360., 360.);
             param->setDoubleType(eDoubleTypeAngle);
             page->addChild(*param);
@@ -1016,6 +1076,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setLabels(kParamSaturationRangeLabel, kParamSaturationRangeLabel, kParamSaturationRangeLabel);
             param->setHint(kParamSaturationRangeHint);
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
+            param->setDefault(0., 1.);
             param->setDisplayRange(0., 0., 1, 1);
             page->addChild(*param);
             param->setParent(*group);
@@ -1051,6 +1112,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setLabels(kParamBrightnessRangeLabel, kParamBrightnessRangeLabel, kParamBrightnessRangeLabel);
             param->setHint(kParamBrightnessRangeHint);
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
+            param->setDefault(0., 1.);
             param->setDisplayRange(0., 0., 1, 1);
             page->addChild(*param);
             param->setParent(*group);
