@@ -415,6 +415,7 @@ protected:
     enum OrientationEnum
     {
         eOrientationAllDirections = 0,
+        eOrientationNotSet,
         eOrientationHorizontal,
         eOrientationVertical
     };
@@ -423,7 +424,6 @@ protected:
     MouseStateEnum _mouseState;
     int _modifierStateCtrl;
     int _modifierStateShift;
-    bool _mustSetOrientationOnNextMotion;
     OrientationEnum _orientation;
     TransformPlugin* _plugin;
     OfxPointD _lastMousePos;
@@ -435,7 +435,6 @@ public:
     , _mouseState(eReleased)
     , _modifierStateCtrl(0)
     , _modifierStateShift(0)
-    , _mustSetOrientationOnNextMotion(false)
     , _orientation(eOrientationAllDirections)
     , _plugin(dynamic_cast<TransformPlugin*>(effect))
     , _lastMousePos()
@@ -1164,9 +1163,8 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         double dx = args.penPosition.x - _lastMousePos.x;
         double dy = args.penPosition.y - _lastMousePos.y;
         
-        if (_mustSetOrientationOnNextMotion) {
+        if (_orientation == eOrientationNotSet && _modifierStateShift > 0) {
             _orientation = std::abs(dx) > std::abs(dy) ? eOrientationHorizontal : eOrientationVertical;
-            _mustSetOrientationOnNextMotion = false;
         }
         
         dx = _orientation == eOrientationVertical ? 0 : dx;
@@ -1188,9 +1186,8 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         double dx = args.penPosition.x - _lastMousePos.x;
         double dy = args.penPosition.y - _lastMousePos.y;
         
-        if (_mustSetOrientationOnNextMotion) {
+        if (_orientation == eOrientationNotSet && _modifierStateShift > 0) {
             _orientation = std::abs(dx) > std::abs(dy) ? eOrientationHorizontal : eOrientationVertical;
-            _mustSetOrientationOnNextMotion = false;
         }
         
         dx = _orientation == eOrientationVertical ? 0 : dx;
@@ -1325,6 +1322,7 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
         transformedPos.y /= transformedPos.z;
     }
     
+    _orientation = eOrientationAllDirections;
     
     double pressToleranceX = 5 * pscale.x;
     double pressToleranceY = 5 * pscale.y;
@@ -1332,7 +1330,7 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     if (squareContains(transformedPos, centerPoint,pressToleranceX,pressToleranceY)) {
         _mouseState = _modifierStateCtrl ? eDraggingCenter : eDraggingTranslation;
         if (_modifierStateShift > 0) {
-            _mustSetOrientationOnNextMotion = true;
+            _orientation = eOrientationNotSet;
         }
     } else if (squareContains(transformedPos, leftPoint,pressToleranceX,pressToleranceY)) {
         _mouseState = eDraggingLeftPoint;
@@ -1384,10 +1382,10 @@ bool TransformInteract::keyDown(const OFX::KeyArgs &args)
         _effect->redrawOverlays();
     }
     if (args.keySymbol == kOfxKey_Shift_L || args.keySymbol == kOfxKey_Shift_R) {
-        if (_modifierStateShift == 0) {
-            _mustSetOrientationOnNextMotion = true;
-        }
         ++_modifierStateShift;
+        if (_modifierStateShift > 0) {
+            _orientation = eOrientationNotSet;
+        }
     }
     //std::cout << std::hex << args.keySymbol << std::endl;
     // modifiers are not "caught"
