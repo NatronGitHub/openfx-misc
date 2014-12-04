@@ -120,7 +120,7 @@
 #define kParamSuppressionAngle "suppressionAngle"
 #define kParamSuppressionAngleLabel "Suppression Angle"
 #define kParamSuppressionAngleHint \
-"The chrominance of foreground colors inside the suppression angle (beta) is set to zero on output, to deal with noise. Use no more than one third of acceptance angle."
+"The chrominance of foreground colors inside the suppression angle (beta) is set to zero on output, to deal with noise. Use no more than one third of acceptance angle. This has no effect on the alpha channel, or if the output is in Intermediate mode."
 
 #define kParamKeyLift "keyLift"
 #define kParamKeyLiftLabel "Key Lift"
