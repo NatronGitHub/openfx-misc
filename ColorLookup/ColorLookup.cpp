@@ -73,6 +73,8 @@
 
 #include "ColorLookup.h"
 
+#include <cmath>
+
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -309,6 +311,8 @@ private:
                     // normalize/denormalize properly
                     for (int c = 0; c < nComponents; ++c) {
                         tmpPix[c] = interpolate(c, srcPix[c] / (double)maxValue) * maxValue;
+                        assert(!std::isnan(srcPix[c]) && !std::isnan(srcPix[c]) &&
+                               !std::isnan(tmpPix[c]) && !std::isnan(tmpPix[c]));
                     }
                     // ofxsMaskMix expects denormalized input
                     ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
@@ -319,6 +323,9 @@ private:
                     // ofxsUnPremult outputs normalized data
                     for (int c = 0; c < nComponents; ++c) {
                         tmpPix[c] = interpolate(c, unpPix[c]);
+                        assert(!std::isnan(unpPix[c]) && !std::isnan(unpPix[c]) &&
+                               !std::isnan(srcPix[c]) && !std::isnan(srcPix[c]) &&
+                               !std::isnan(tmpPix[c]) && !std::isnan(tmpPix[c]));
                     }
                     // ofxsPremultMaskMixPix expects normalized input
                     ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
@@ -345,7 +352,11 @@ private:
             int i = (int)(x * nbValues);
             assert(0 <= i && i <= nbValues);
             float alpha = std::max(0.,std::min(x * nbValues - i, 1.));
-            return _lookupTable[component][i] * (1.-alpha) + _lookupTable[component][i+1] * alpha;
+            if (i + 1 <= nbValues) {
+                return _lookupTable[component][i] * (1.-alpha) + _lookupTable[component][i+1] * alpha;
+            } else {
+                return _lookupTable[component][i];
+            }
         }
     }
 
