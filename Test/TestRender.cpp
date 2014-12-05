@@ -281,7 +281,7 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
     // fetch main input image
-    std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
 
     // make sure bit depths are sane
     if (src.get()) {
@@ -292,10 +292,10 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
         if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-        OfxRectI srcRod = src->getRegionOfDefinition();
-        OfxRectI srcBounds = src->getBounds();
-        OfxRectI dstRod = dst->getRegionOfDefinition();
-        OfxRectI dstBounds = dst->getBounds();
+        const OfxRectI& srcRod = src->getRegionOfDefinition();
+        const OfxRectI& srcBounds = src->getBounds();
+        const OfxRectI& dstRod = dst->getRegionOfDefinition();
+        const OfxRectI& dstBounds = dst->getBounds();
 
         if (!supportsTiles) {
             // http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#kOfxImageEffectPropSupportsTiles

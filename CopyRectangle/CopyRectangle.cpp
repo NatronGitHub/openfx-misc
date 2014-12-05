@@ -360,7 +360,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<OFX::Image> srcA(srcClipA_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> srcA(srcClipA_->fetchImage(args.time));
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if (srcA.get()) {
@@ -376,7 +376,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<OFX::Image> srcB(srcClipB_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> srcB(srcClipB_->fetchImage(args.time));
     if (srcB.get()) {
         OFX::BitDepthEnum    srcBitDepth      = srcB->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcB->getPixelComponents();
@@ -423,7 +423,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     _softness->getValueAtTime(args.time, softness);
     softness *= args.renderScale.x;
     
-    OfxRectD dstRoD = dstClip_->getRegionOfDefinition(args.time);
+    const OfxRectD& dstRoD = dstClip_->getRegionOfDefinition(args.time);
     OfxRectI dstRoDPix;
     MergeImages2D::toPixelEnclosing(dstRoD, args.renderScale, par, &dstRoDPix);
    
@@ -476,7 +476,7 @@ CopyRectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgument
 {
     OfxRectD rect;
     getRectanglecanonical(args.time, rect);
-    OfxRectD srcB_rod = srcClipB_->getRegionOfDefinition(args.time);
+    const OfxRectD& srcB_rod = srcClipB_->getRegionOfDefinition(args.time);
     MergeImages2D::rectBoundingBox(rect, srcB_rod, &rod);
     return true;
 }

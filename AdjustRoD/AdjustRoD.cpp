@@ -168,7 +168,7 @@ AdjustRoDPlugin::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
     if (src.get() && dst.get())
     {
         OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
@@ -200,7 +200,7 @@ AdjustRoDPlugin::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
 void
 AdjustRoDPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
-    OfxRectD srcRod = srcClip_->getRegionOfDefinition(args.time);
+    const OfxRectD& srcRod = srcClip_->getRegionOfDefinition(args.time);
     double w,h;
     _size->getValueAtTime(args.time, w, h);
     
@@ -219,7 +219,7 @@ AdjustRoDPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
 bool
 AdjustRoDPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
-    OfxRectD srcRod = srcClip_->getRegionOfDefinition(args.time);
+    const OfxRectD& srcRod = srcClip_->getRegionOfDefinition(args.time);
     double w,h;
     _size->getValueAtTime(args.time, w, h);
     

@@ -528,8 +528,8 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     }
     //OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<OFX::Image> srcA(srcClipA_ ? srcClipA_->fetchImage(args.time) : 0);
-    std::auto_ptr<OFX::Image> srcB(srcClipB_ ? srcClipB_->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> srcA(srcClipA_ ? srcClipA_->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> srcB(srcClipB_ ? srcClipB_->fetchImage(args.time) : 0);
     OFX::BitDepthEnum    srcBitDepth = eBitDepthNone;
     OFX::PixelComponentEnum srcComponents = ePixelComponentNone;
     if (srcA.get()) {

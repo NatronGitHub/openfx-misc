@@ -224,7 +224,7 @@ JoinViewsPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArgumen
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
     // fetch main input image
-    std::auto_ptr<OFX::Image> src(args.renderView == 0
+    std::auto_ptr<const OFX::Image> src(args.renderView == 0
                                   ? srcLeftClip_->fetchStereoscopicImage(args.time,0)
                                   : srcRightClip_->fetchStereoscopicImage(args.time,0));
 

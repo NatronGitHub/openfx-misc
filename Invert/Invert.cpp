@@ -384,7 +384,7 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
     // fetch main input image
-    std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
 
     // make sure bit depths are sane
     if (src.get()) {
