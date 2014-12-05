@@ -352,11 +352,9 @@ private:
             int i = (int)(x * nbValues);
             assert(0 <= i && i <= nbValues);
             float alpha = std::max(0.,std::min(x * nbValues - i, 1.));
-            if (i + 1 <= nbValues) {
-                return _lookupTable[component][i] * (1.-alpha) + _lookupTable[component][i+1] * alpha;
-            } else {
-                return _lookupTable[component][i];
-            }
+            float a = _lookupTable[component][i];
+            float b = (i  < nbValues) ? _lookupTable[component][i+1] : 0.;
+            return a * (1. - alpha) + b * alpha;
         }
     }
 
