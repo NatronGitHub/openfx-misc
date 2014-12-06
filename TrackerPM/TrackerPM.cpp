@@ -684,16 +684,11 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
             // can't track: erase any existing track
             _center->deleteKeyAtTime(otherTime);
         } else {
-            //Best match is in pixel coords, convert it to canonical coords
+            //Best match is in pixel coords
             const OfxPointD& bestMatch = processor.getBestMatch();
     
-            
-            
-            
-            newCenter.x = refCenter.x + bestMatch.x - refCenter.x;
-            newCenter.y = refCenter.y + bestMatch.y - refCenter.y;
-            
-           
+            newCenter.x = bestMatch.x;
+            newCenter.y = bestMatch.y;
             
             //convert newCenter to canonical
             newCenter.x = (newCenter.x + 0.5) * par / renderScale.x;
