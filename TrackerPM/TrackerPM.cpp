@@ -470,7 +470,8 @@ private:
             // compute subpixel position.
             double scorepc = computeScore<scoreTypeE>(scoreComps, point.x - 1, point.y, refMean);
             double scorenc = computeScore<scoreTypeE>(scoreComps, point.x + 1, point.y, refMean);
-            if (bestScore < scorepc && bestScore <= scorenc) {
+            if (scorepc != std::numeric_limits<double>::infinity() && scorenc != std::numeric_limits<double>::infinity() &&
+                bestScore < scorepc && bestScore <= scorenc) {
                 // don't simplify the denominator in the following expression,
                 // 2*bestScore - scorenc - scorepc may cause an underflow.
                 dx = 0.5 * (scorenc - scorepc) /((bestScore - scorenc) + (bestScore - scorepc));
@@ -478,7 +479,8 @@ private:
             }
             double scorecp = computeScore<scoreTypeE>(scoreComps, point.x, point.y - 1, refMean);
             double scorecn = computeScore<scoreTypeE>(scoreComps, point.x, point.y + 1, refMean);
-            if (bestScore < scorecp && bestScore <= scorecn) {
+            if (scorecp != std::numeric_limits<double>::infinity() && scorecn != std::numeric_limits<double>::infinity() &&
+                bestScore < scorecp && bestScore <= scorecn) {
                 // don't simplify the denominator in the following expression,
                 // 2*bestScore - scorenc - scorepc may cause an underflow.
                 dy = 0.5 * (scorecn - scorecp) /((bestScore - scorecn) + (bestScore - scorecp));
