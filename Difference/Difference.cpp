@@ -253,8 +253,8 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor, const OFX::RenderA
     }
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<OFX::Image> srcA(srcClipA_->fetchImage(args.time));
-    std::auto_ptr<OFX::Image> srcB(srcClipB_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> srcA(srcClipA_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> srcB(srcClipB_->fetchImage(args.time));
     if (srcA.get())
     {
         OFX::BitDepthEnum    srcBitDepth      = srcA->getPixelDepth();

@@ -110,8 +110,8 @@
 // Base class for the RGBA and the Alpha processor
 class AnaglyphBase : public OFX::ImageProcessor {
 protected:
-    OFX::Image *_srcLeftImg;
-    OFX::Image *_srcRightImg;
+    const OFX::Image *_srcLeftImg;
+    const OFX::Image *_srcRightImg;
     double _amtcolour;
     bool _swap;
     int _offset;
@@ -129,10 +129,10 @@ public:
     }
 
     /** @brief set the left src image */
-    void setSrcLeftImg(OFX::Image *v) {_srcLeftImg = v;}
+    void setSrcLeftImg(const OFX::Image *v) {_srcLeftImg = v;}
 
     /** @brief set the right src image */
-    void setSrcRightImg(OFX::Image *v) {_srcRightImg = v;}
+    void setSrcRightImg(const OFX::Image *v) {_srcRightImg = v;}
 
     /** @brief set the amount of colour */
     void setAmtColour(double v) {_amtcolour = v;}
@@ -158,13 +158,13 @@ private:
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        OFX::Image *srcRedImg = _srcLeftImg;
-        OFX::Image *srcCyanImg = _srcRightImg;
+        const OFX::Image *srcRedImg = _srcLeftImg;
+        const OFX::Image *srcCyanImg = _srcRightImg;
         if (_swap) {
             std::swap(srcRedImg, srcCyanImg);
         }
-        OfxRectI srcRedBounds = srcRedImg->getBounds();
-        OfxRectI srcCyanBounds = srcCyanImg->getBounds();
+        const OfxRectI& srcRedBounds = srcRedImg->getBounds();
+        const OfxRectI& srcCyanBounds = srcCyanImg->getBounds();
 
 
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
@@ -287,7 +287,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor, const OFX::RenderArgume
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
     // fetch main input image
-    std::auto_ptr<OFX::Image> srcLeft(srcClip_->fetchStereoscopicImage(args.time,0));
+    std::auto_ptr<const OFX::Image> srcLeft(srcClip_->fetchStereoscopicImage(args.time,0));
     if (srcLeft.get()) {
         if (srcLeft->getRenderScale().x != args.renderScale.x ||
             srcLeft->getRenderScale().y != args.renderScale.y ||
@@ -296,7 +296,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor, const OFX::RenderArgume
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<OFX::Image> srcRight(srcClip_->fetchStereoscopicImage(args.time,1));
+    std::auto_ptr<const OFX::Image> srcRight(srcClip_->fetchStereoscopicImage(args.time,1));
     if (srcRight.get()) {
         if (srcRight->getRenderScale().x != args.renderScale.x ||
             srcRight->getRenderScale().y != args.renderScale.y ||

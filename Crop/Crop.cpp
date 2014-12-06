@@ -314,7 +314,7 @@ CropPlugin::getCropRectangle_canonical(OfxTime time,bool useReformat,bool forceI
     }
     
     if (intersect) {
-        OfxRectD srcRoD = srcClip_->getRegionOfDefinition(time);
+        const OfxRectD& srcRoD = srcClip_->getRegionOfDefinition(time);
         MergeImages2D::rectIntersection(cropRect, srcRoD, &cropRect);
     }
     
@@ -341,7 +341,7 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
     if (src.get() && dst.get())
     {
         OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
@@ -376,7 +376,7 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
     _softness->getValueAtTime(args.time, softness);
     softness *= args.renderScale.x;
     
-    OfxRectD dstRoD = dstClip_->getRegionOfDefinition(args.time);
+    const OfxRectD& dstRoD = dstClip_->getRegionOfDefinition(args.time);
     OfxRectI dstRoDPix;
     MergeImages2D::toPixelEnclosing(dstRoD, args.renderScale, par, &dstRoDPix);
 

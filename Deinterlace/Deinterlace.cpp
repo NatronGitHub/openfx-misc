@@ -434,7 +434,7 @@ void DeinterlacePlugin::render(const OFX::RenderArguments &args)
 
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
 
-    std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time)),
+    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time)),
                               srcp(srcClip_->fetchImage(args.time-1.0)),
                               srcn(srcClip_->fetchImage(args.time+1.0));
     if (!src.get() || !dst.get() || !srcp.get() || !srcn.get()) {

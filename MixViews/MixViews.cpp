@@ -101,8 +101,8 @@
 class MixViewsBase : public OFX::ImageProcessor
 {
 protected:
-    OFX::Image *_srcLeftImg;
-    OFX::Image *_srcRightImg;
+    const OFX::Image *_srcLeftImg;
+    const OFX::Image *_srcRightImg;
     double _mix;
 
 public:
@@ -115,10 +115,10 @@ public:
     }
 
     /** @brief set the left src image */
-    void setSrcLeftImg(OFX::Image *v) {_srcLeftImg = v;}
+    void setSrcLeftImg(const OFX::Image *v) {_srcLeftImg = v;}
 
     /** @brief set the right src image */
-    void setSrcRightImg(OFX::Image *v) {_srcRightImg = v;}
+    void setSrcRightImg(const OFX::Image *v) {_srcRightImg = v;}
 
     /** @brief set the mix factor of right view */
     void setMix(float v) {_mix = v;}
@@ -224,8 +224,8 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor, const OFX::RenderArgume
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
     // fetch main input image
-    std::auto_ptr<OFX::Image> srcLeft(srcClip_->fetchStereoscopicImage(args.time,0));
-    std::auto_ptr<OFX::Image> srcRight(srcClip_->fetchStereoscopicImage(args.time,1));
+    std::auto_ptr<const OFX::Image> srcLeft(srcClip_->fetchStereoscopicImage(args.time,0));
+    std::auto_ptr<const OFX::Image> srcRight(srcClip_->fetchStereoscopicImage(args.time,1));
 
     // make sure bit depths are sane
     if (srcLeft.get()) {

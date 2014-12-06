@@ -326,7 +326,7 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
     if (src.get() && dst.get()) {
         OFX::BitDepthEnum dstBitDepth = dst->getPixelDepth();
         OFX::BitDepthEnum srcBitDepth = src->getPixelDepth();

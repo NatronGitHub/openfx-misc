@@ -517,7 +517,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     const OFX::PixelComponentEnum dstPixelComponents  = dst->getPixelComponents();
     assert(dstBitDepth == OFX::eBitDepthFloat); // only float is supported for now (others are untested)
 
-    std::auto_ptr<OFX::Image> src(srcClip_->fetchImage(time));
+    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(time));
     if (src.get()) {
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcPixelComponents = src->getPixelComponents();
@@ -580,8 +580,8 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     }
 
     void *dstPixelData = dst->getPixelData();
-    const OfxRectI dstBounds = dst->getBounds();
-    const OfxRectI dstRod = dst->getRegionOfDefinition();
+    const OfxRectI& dstBounds = dst->getBounds();
+    const OfxRectI& dstRod = dst->getRegionOfDefinition();
     //const OFX::PixelComponentEnum dstPixelComponents = dst->getPixelComponents();
     //const OFX::BitDepthEnum dstBitDepth = dst->getPixelDepth();
     //dstPixelBytes = getPixelBytes(dstPixelComponents, dstBitDepth);
@@ -765,7 +765,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     // IF THE FOLLOWING CODE HAS TO BE DISACTIVATED, PLEASE COMMENT WHY.
     // This was disactivated by commit c47d07669b78a71960b204989d9c36f746d14a4c, then reactivated.
 #if 1 //def CIMGFILTER_INSTERSECT_ROI
-    OfxRectI srcRoD = src->getRegionOfDefinition();
+    const OfxRectI& srcRoD = src->getRegionOfDefinition();
     OFX::MergeImages2D::rectIntersection(srcRoI, srcRoD, &srcRoI);
     // the resulting ROI should be within the src bounds, or it means that the host didn't take into account the region of interest (see getRegionsOfInterest() )
     assert(srcBounds.x1 <= srcRoI.x1 && srcRoI.x2 <= srcBounds.x2 &&
