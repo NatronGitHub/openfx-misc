@@ -543,9 +543,6 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
         progressStart(name);
     }
 
-    OfxPointD refCenter;
-    _center->getValueAtTime(t, refCenter.x, refCenter.y);
-
     while (args.forward ? (t <= args.last) : (t >= args.last)) {
         OfxTime other = args.forward ? (t + 1) : (t - 1);
         
@@ -660,22 +657,20 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
                                  const OfxRectD& trackSearchBounds,
                                  const OFX::Image* otherImg)
 {
+    const double par = srcClip_->getPixelAspectRatio();
+    const OfxPointD rsOne = {1., 1.};
     OfxRectI trackSearchBoundsPixel;
-    trackSearchBoundsPixel.x1 = std::floor(trackSearchBounds.x1);
-    trackSearchBoundsPixel.y1 = std::floor(trackSearchBounds.y1);
-    trackSearchBoundsPixel.x2 = std::ceil(trackSearchBounds.x2);
-    trackSearchBoundsPixel.y2 = std::ceil(trackSearchBounds.y2);
+    OFX::MergeImages2D::toPixelEnclosing(trackSearchBounds, rsOne, par, &trackSearchBoundsPixel);
 
     // compute the pattern window in pixel coords
     OfxRectI refRectPixel;
-    refRectPixel.x1 = std::floor(refBounds.x1);
-    refRectPixel.y1 = std::floor(refBounds.y1);
-    refRectPixel.x2 = std::ceil(refBounds.x2);
-    refRectPixel.y2 = std::ceil(refBounds.y2);
+    OFX::MergeImages2D::toPixelEnclosing(refBounds, rsOne, par, &refRectPixel);
+
     // round center to nearest pixel center
     OfxPointI refCenterI;
-    refCenterI.x = std::floor(refCenter.x + 0.5);
-    refCenterI.y = std::floor(refCenter.y + 0.5);
+    OfxPointD refCenterPixelSub;
+    OFX::MergeImages2D::toPixel(refCenter, rsOne, par, &refCenterI);
+    OFX::MergeImages2D::toPixelSub(refCenter, rsOne, par, &refCenterPixelSub);
 
     //Clip the refRectPixel to the bounds of the ref image
     MergeImages2D::rectIntersection(refRectPixel, refImg->getBounds(), &refRectPixel);
@@ -702,15 +697,17 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
         //////////////////////////////////
 
         ///ok the score is now computed, update the center
-        OfxPointD newCenter;
         if (processor.getBestScore() == std::numeric_limits<double>::infinity()) {
             // can't track: erase any existing track
             _center->deleteKeyAtTime(otherTime);
         } else {
+            OfxPointD newCenterPixelSub;
+            OfxPointD newCenter;
             const OfxPointD& bestMatch = processor.getBestMatch();
 
-            newCenter.x = refCenter.x + bestMatch.x - refCenterI.x;
-            newCenter.y = refCenter.y + bestMatch.y - refCenterI.y;
+            newCenterPixelSub.x = refCenterPixelSub.x + bestMatch.x - refCenterI.x;
+            newCenterPixelSub.y = refCenterPixelSub.y + bestMatch.y - refCenterI.y;
+            OFX::MergeImages2D::toCanonicalSub(newCenterPixelSub, rsOne, par, &newCenter);
             // create a keyframe at starting point
             _center->setValueAtTime(refTime, refCenter.x, refCenter.y);
             // create a keyframe at end point
