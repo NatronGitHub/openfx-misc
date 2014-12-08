@@ -598,6 +598,8 @@
 		1EFBC9981A23A22D00086E7A /* VectorToColor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFBC9961A23A22D00086E7A /* VectorToColor.cpp */; };
 		1EFBC9991A23A23C00086E7A /* VectorToColor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFBC9961A23A22D00086E7A /* VectorToColor.cpp */; };
 		1EFC1700180DCE6500AD7B86 /* ColorLookup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0C41E180DCAB500C25D1E /* ColorLookup.cpp */; };
+		AC0EAC3D1A358A2000449A77 /* net.sf.openfx.SaturationPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0EAC3C1A358A0C00449A77 /* net.sf.openfx.SaturationPlugin.png */; };
+		AC0EAC3F1A358B7E00449A77 /* net.sf.openfx.KeyerPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0EAC3E1A358B6E00449A77 /* net.sf.openfx.KeyerPlugin.png */; };
 		AC4774E51A25B8E9008A2B57 /* net.sf.openfx.Deinterlace.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774E41A25B8E7008A2B57 /* net.sf.openfx.Deinterlace.png */; };
 		AC4774E71A25B8FE008A2B57 /* net.sf.cimg.CImgBlur.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774DC1A25B811008A2B57 /* net.sf.cimg.CImgBlur.png */; };
 		AC4774E81A25B8FF008A2B57 /* net.sf.cimg.CImgDenoise.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774DD1A25B811008A2B57 /* net.sf.cimg.CImgDenoise.png */; };
@@ -1261,6 +1263,7 @@
 				ACC5D2601A2C714C00DE1AAA /* net.sf.openfx.HSVToolPlugin.png in CopyFiles */,
 				1EE4A8BA19C6EF5E00E6E3AE /* net.sf.openfx.Invert.png in CopyFiles */,
 				1E814CC919C9839A00C2C668 /* net.sf.openfx.Invert.svg in CopyFiles */,
+				AC0EAC3F1A358B7E00449A77 /* net.sf.openfx.KeyerPlugin.png in CopyFiles */,
 				1EE4A8BB19C6EF6300E6E3AE /* net.sf.openfx.MergePlugin.png in CopyFiles */,
 				1E814CCA19C9839E00C2C668 /* net.sf.openfx.MergePlugin.svg in CopyFiles */,
 				1EE4A8BC19C6EF6900E6E3AE /* net.sf.openfx.Premult.png in CopyFiles */,
@@ -1275,6 +1278,7 @@
 				ACC8477F1A0A3F9500B3FAFE /* net.sf.openfx.Ramp.svg in CopyFiles */,
 				1EE4A8C119C6EF7D00E6E3AE /* net.sf.openfx.RotoPlugin.png in CopyFiles */,
 				1E814CCF19C983C200C2C668 /* net.sf.openfx.RotoPlugin.svg in CopyFiles */,
+				AC0EAC3D1A358A2000449A77 /* net.sf.openfx.SaturationPlugin.png in CopyFiles */,
 				1EE4A8C219C6EF8000E6E3AE /* net.sf.openfx.ShufflePlugin.png in CopyFiles */,
 				1E814CD019C983C600C2C668 /* net.sf.openfx.ShufflePlugin.svg in CopyFiles */,
 				1EE4A8C319C6EF8400E6E3AE /* net.sf.openfx.switchPlugin.png in CopyFiles */,
@@ -1658,6 +1662,8 @@
 		1EFBC99A1A23A24600086E7A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EFBC99B1A23A24600086E7A /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EFBC99C1A23A24600086E7A /* VectorToColor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VectorToColor.h; sourceTree = "<group>"; };
+		AC0EAC3C1A358A0C00449A77 /* net.sf.openfx.SaturationPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.SaturationPlugin.png; sourceTree = "<group>"; };
+		AC0EAC3E1A358B6E00449A77 /* net.sf.openfx.KeyerPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.KeyerPlugin.png; sourceTree = "<group>"; };
 		AC4774DC1A25B811008A2B57 /* net.sf.cimg.CImgBlur.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgBlur.png; sourceTree = "<group>"; };
 		AC4774DD1A25B811008A2B57 /* net.sf.cimg.CImgDenoise.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgDenoise.png; sourceTree = "<group>"; };
 		AC4774DE1A25B811008A2B57 /* net.sf.cimg.CImgDilate.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgDilate.png; sourceTree = "<group>"; };
@@ -2434,6 +2440,7 @@
 		1E69C9EC1A2B2EC10099D609 /* Saturation */ = {
 			isa = PBXGroup;
 			children = (
+				AC0EAC3C1A358A0C00449A77 /* net.sf.openfx.SaturationPlugin.png */,
 				1E69CA031A2B2F350099D609 /* Saturation.cpp */,
 				1E69CA041A2B2F350099D609 /* Saturation.h */,
 				1E69CA091A2B2F4B0099D609 /* Info.plist */,
@@ -2584,6 +2591,7 @@
 		1ECF2FA019F51D6700E91A38 /* Keyer */ = {
 			isa = PBXGroup;
 			children = (
+				AC0EAC3E1A358B6E00449A77 /* net.sf.openfx.KeyerPlugin.png */,
 				1ECF2FA119F51DA000E91A38 /* Keyer.cpp */,
 				1ECF2FA819F51DB800E91A38 /* Makefile */,
 				1ECF2FA619F51DB800E91A38 /* Info.plist */,

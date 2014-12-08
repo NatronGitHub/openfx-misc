@@ -1,5 +1,5 @@
 PLUGINOBJECTS = Keyer.o PluginRegistration.o
 PLUGINNAME = Keyer
-#RESOURCES = net.sf.openfx.KeyerPlugin.png net.sf.openfx.KeyerPlugin.svg
+RESOURCES = net.sf.openfx.KeyerPlugin.png
 
 include ../Makefile.master

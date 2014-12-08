@@ -87,6 +87,7 @@ RESOURCES = \
 ../HSV/net.sf.openfx.HSVToRGBPlugin.png \
 ../HSVTool/net.sf.openfx.HSVToolPlugin.png \
 ../Invert/net.sf.openfx.Invert.svg \
+../Keyer/net.sf.openfx.KeyerPlugin.png \
 ../Merge/net.sf.openfx.MergePlugin.svg \
 ../Premult/net.sf.openfx.Premult.svg \
 ../Premult/net.sf.openfx.Unpremult.svg \
@@ -94,6 +95,7 @@ RESOURCES = \
 ../Ramp/net.sf.openfx.Ramp.svg \
 ../Retime/net.sf.openfx.Retime.svg \
 ../Roto/net.sf.openfx.RotoPlugin.svg \
+../Saturation/net.sf.openfx.SaturationPlugin.png \
 ../Shuffle/net.sf.openfx.ShufflePlugin.svg \
 ../Switch/net.sf.openfx.switchPlugin.svg \
 ../TimeOffset/net.sf.openfx.timeOffset.svg \
