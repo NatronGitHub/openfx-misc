@@ -97,6 +97,20 @@
       <AdditionalDependencies>opengl32.lib;$(SolutionDir)$(Platform)\$(Configuration)\Support.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(ProjectName).ofx.bundle/Contents/Win64/$(ProjectName).ofx</OutputFile>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgBlur.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDenoise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDilate.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErode.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -139,6 +153,20 @@
     <Lib>
       <TargetMachine>MachineX64</TargetMachine>
     </Lib>
+    <PostBuildEvent>
+      <Command>xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgBlur.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDenoise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDilate.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErode.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\CImg\CImgBilateral.cpp" />
@@ -149,6 +177,7 @@
     <ClCompile Include="..\CImg\CImgErode.cpp" />
     <ClCompile Include="..\CImg\CImgErodeSmooth.cpp" />
     <ClCompile Include="..\CImg\CImgGuided.cpp" />
+    <ClCompile Include="..\CImg\CImgHistEQ.cpp" />
     <ClCompile Include="..\CImg\CImgNoise.cpp" />
     <ClCompile Include="..\CImg\CImgPlasma.cpp" />
     <ClCompile Include="..\CImg\CImgRollingGuidance.cpp" />
@@ -165,6 +194,7 @@
     <ClInclude Include="..\CImg\CImgErodeSmooth.h" />
     <ClInclude Include="..\CImg\CImgFilter.h" />
     <ClInclude Include="..\CImg\CImgGuided.h" />
+    <ClInclude Include="..\CImg\CImgHistEQ.h" />
     <ClInclude Include="..\CImg\CImgNoise.h" />
     <ClInclude Include="..\CImg\CImgPlasma.h" />
     <ClInclude Include="..\CImg\CImgRollingGuidance.h" />
