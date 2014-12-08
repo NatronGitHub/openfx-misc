@@ -399,7 +399,7 @@ private:
     template<enum TrackerScoreEnum scoreTypeE>
     void multiThreadProcessImagesForScore(const OfxRectI& procWindow)
     {
-        assert(_patternImg.get() && _patternData && _weightImg.get() && _weightData && _otherImg);
+        assert(_patternImg.get() && _patternData && _weightImg.get() && _weightData && _otherImg && _weightTotal > 0.);
         assert(scoreType == scoreTypeE);
         double bestScore = std::numeric_limits<double>::infinity();
         OfxPointI point;
@@ -469,16 +469,22 @@ private:
             if (bestScore < scorepc && bestScore <= scorenc) {
                 // don't simplify the denominator in the following expression,
                 // 2*bestScore - scorenc - scorepc may cause an underflow.
-                dx = 0.5 * (scorenc - scorepc) /((bestScore - scorenc) + (bestScore - scorepc));
-                assert(-0.5 < dx && dx <= 0.5);
+                double factor = 1./((bestScore - scorenc) + (bestScore - scorepc));
+                if (factor != 0.) {
+                    dx = 0.5 * (scorenc - scorepc) * factor;
+                    assert(-0.5 < dx && dx <= 0.5);
+                }
             }
             double scorecp = computeScore<scoreTypeE>(scoreComps, point.x, point.y - 1, refMean);
             double scorecn = computeScore<scoreTypeE>(scoreComps, point.x, point.y + 1, refMean);
             if (bestScore < scorecp && bestScore <= scorecn) {
                 // don't simplify the denominator in the following expression,
                 // 2*bestScore - scorenc - scorepc may cause an underflow.
-                dy = 0.5 * (scorecn - scorecp) /((bestScore - scorecn) + (bestScore - scorecp));
-                assert(-0.5 < dy && dy <= 0.5);
+                double factor = 1./((bestScore - scorecn) + (bestScore - scorecp));
+                if (factor != 0.) {
+                    dy = 0.5 * (scorecn - scorecp) /((bestScore - scorecn) + (bestScore - scorecp));
+                    assert(-0.5 < dy && dy <= 0.5);
+                }
             }
             // check again...
             {
