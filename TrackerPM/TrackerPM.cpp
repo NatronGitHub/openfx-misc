@@ -708,10 +708,12 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
             newCenterPixelSub.x = refCenterPixelSub.x + bestMatch.x - refCenterI.x;
             newCenterPixelSub.y = refCenterPixelSub.y + bestMatch.y - refCenterI.y;
             OFX::MergeImages2D::toCanonicalSub(newCenterPixelSub, rsOne, par, &newCenter);
+            beginEdit();
             // create a keyframe at starting point
             _center->setValueAtTime(refTime, refCenter.x, refCenter.y);
             // create a keyframe at end point
             _center->setValueAtTime(otherTime, newCenter.x, newCenter.y);
+            endEdit();
         }
     }
 }
