@@ -324,7 +324,6 @@ private:
                     for (int c = 0; c < nComponents; ++c) {
                         tmpPix[c] = interpolate(c, unpPix[c]);
                         assert(!std::isnan(unpPix[c]) && !std::isnan(unpPix[c]) &&
-                               !std::isnan(srcPix[c]) && !std::isnan(srcPix[c]) &&
                                !std::isnan(tmpPix[c]) && !std::isnan(tmpPix[c]));
                     }
                     // ofxsPremultMaskMixPix expects normalized input
