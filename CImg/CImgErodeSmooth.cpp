@@ -128,12 +128,12 @@
 #define kParamExponentDefault 5
 
 #define kParamBoundary "boundary"
-#define kParamBoundaryLabel "Boundary Conditions"
-#define kParamBoundaryHint "Specifies how pixel values are computed out of the image domain. This mostly affects values at the boundary of the image. If the image represents intensities, Neumann conditions should be used. If the image represents gradients or derivatives, Dirichlet boundary conditions should be used."
-#define kParamBoundaryOptionDirichlet "Dirichlet"
+#define kParamBoundaryLabel "Border Conditions" //"Boundary Conditions"
+#define kParamBoundaryHint "Specifies how pixel values are computed out of the image domain. This mostly affects values at the boundary of the image. If the image represents intensities, Nearest (Neumann) conditions should be used. If the image represents gradients or derivatives, Black (Dirichlet) boundary conditions should be used."
+#define kParamBoundaryOptionDirichlet "Black"
 #define kParamBoundaryOptionDirichletHint "Dirichlet boundary condition: pixel values out of the image domain are zero."
-#define kParamBoundaryOptionNeumann "Neumann"
-#define kParamBoundaryOptionNeumannHint "Neumann boundary condition: pixel values out of the image domain are those of the closest pixel location in the domain."
+#define kParamBoundaryOptionNeumann "Nearest"
+#define kParamBoundaryOptionNeumannHint "Neumann boundary condition: pixel values out of the image domain are those of the closest pixel location in the image domain."
 #define kParamBoundaryOptionPeriodic "Periodic"
 #define kParamBoundaryOptionPeriodicHint "Image is considered to be periodic out of the image domain."
 #define kParamBoundaryDefault eBoundaryNeumann
