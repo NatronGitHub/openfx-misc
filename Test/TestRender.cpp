@@ -292,9 +292,11 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
         if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
-        const OfxRectI& srcRod = src->getRegionOfDefinition();
+        OfxRectI srcRod; // = src->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
+        OFX::MergeImages2D::toPixelEnclosing(srcClip_->getRegionOfDefinition(args.time), args.renderScale, srcClip_->getPixelAspectRatio(), &srcRod);
         const OfxRectI& srcBounds = src->getBounds();
-        const OfxRectI& dstRod = dst->getRegionOfDefinition();
+        OfxRectI dstRod; // = dst->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
+        OFX::MergeImages2D::toPixelEnclosing(dstClip_->getRegionOfDefinition(args.time), args.renderScale, dstClip_->getPixelAspectRatio(), &dstRod);
         const OfxRectI& dstBounds = dst->getBounds();
 
         if (!supportsTiles) {
