@@ -70,6 +70,9 @@
 
  */
 
+// TODO: fix Gaussian filter in CImg when Border= nearest and no expand RoD
+// TODO: pass the border conditions to the copy processors in CImgFilter
+
 #include "CImgBlur.h"
 
 #include <memory>
@@ -109,21 +112,21 @@
 #define kSupportsRGB true
 #define kSupportsAlpha true
 
-#define kParamSigma "sigma"
-#define kParamSigmaLabel "Sigma"
-#define kParamSigmaHint "Standard deviation, in pixel units (>=0). The kernel size or diameter is approximately twice this value."
-#define kParamSigmaDefault 5.0
+#define kParamSize "size"
+#define kParamSizeLabel "Size"
+#define kParamSizeHint "Size (diameter) of the filter kernel, in pixel units (>=0). The standard deviation of the corresponding Gaussian is size/2.4."
+#define kParamSizeDefault 0.
 
 #define kParamBoundary "boundary"
-#define kParamBoundaryLabel "Boundary Conditions"
-#define kParamBoundaryHint "Specifies how pixel values are computed out of the image domain. This mostly affects values at the boundary of the image. If the image represents intensities, Neumann conditions should be used. If the image represents gradients or derivatives, Dirichlet boundary conditions should be used."
-#define kParamBoundaryOptionDirichlet "Dirichlet"
+#define kParamBoundaryLabel "Border Conditions" //"Boundary Conditions"
+#define kParamBoundaryHint "Specifies how pixel values are computed out of the image domain. This mostly affects values at the boundary of the image. If the image represents intensities, Nearest (Neumann) conditions should be used. If the image represents gradients or derivatives, Black (Dirichlet) boundary conditions should be used."
+#define kParamBoundaryOptionDirichlet "Black"
 #define kParamBoundaryOptionDirichletHint "Dirichlet boundary condition: pixel values out of the image domain are zero."
-#define kParamBoundaryOptionNeumann "Neumann"
+#define kParamBoundaryOptionNeumann "Nearest"
 #define kParamBoundaryOptionNeumannHint "Neumann boundary condition: pixel values out of the image domain are those of the closest pixel location in the image domain."
 #define kParamBoundaryOptionPeriodic "Periodic"
 #define kParamBoundaryOptionPeriodicHint "Image is considered to be periodic out of the image domain."
-#define kParamBoundaryDefault eBoundaryNeumann
+#define kParamBoundaryDefault eBoundaryDirichlet
 enum BoundaryEnum
 {
     eBoundaryDirichlet = 0,
@@ -147,16 +150,21 @@ enum FilterEnum
 };
 #endif
 
+#define kParamExpandRoD "expandRoD"
+#define kParamExpandRoDLabel "Expand RoD"
+#define kParamExpandRoDHint "Expand the source region of definition by 1.5*size (3.6*sigma)."
+
 using namespace OFX;
 
 /// Blur plugin
 struct CImgBlurParams
 {
-    double sigma;
+    double size;
     int boundary_i;
 #if cimg_version >= 153
     int filter_i;
 #endif
+    bool expandRoD;
 };
 
 class CImgBlurPlugin : public CImgFilterPluginHelper<CImgBlurParams,false>
@@ -166,30 +174,32 @@ public:
     CImgBlurPlugin(OfxImageEffectHandle handle)
     : CImgFilterPluginHelper<CImgBlurParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
-        _sigma  = fetchDoubleParam(kParamSigma);
+        _size  = fetchDoubleParam(kParamSize);
         _boundary  = fetchChoiceParam(kParamBoundary);
+        assert(_size && _boundary);
 #if cimg_version >= 153
         _filter = fetchChoiceParam(kParamFilter);
-        assert(_sigma && _boundary && _filter);
-#else
-        assert(_sigma && _boundary);
+        assert(_filter);
 #endif
+        _expandRoD = fetchBooleanParam(kParamExpandRoD);
+        assert(_expandRoD);
     }
 
     virtual void getValuesAtTime(double time, CImgBlurParams& params) OVERRIDE FINAL
     {
-        _sigma->getValueAtTime(time, params.sigma);
+        _size->getValueAtTime(time, params.size);
         _boundary->getValueAtTime(time, params.boundary_i);
 #if cimg_version >= 153
         _filter->getValueAtTime(time, params.filter_i);
 #endif
+        _expandRoD->getValueAtTime(time, params.expandRoD);
     }
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = std::ceil((params.sigma * 4.) * renderScale.x);
+        int delta_pix = std::ceil((params.size * 1.5) * renderScale.x);
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
@@ -201,26 +211,45 @@ public:
         // PROCESSING.
         // This is the only place where the actual processing takes place
 #if cimg_version >= 153
-        cimg.blur(params.sigma * args.renderScale.x, (bool)params.boundary_i, (bool)params.filter_i);
+        cimg.blur(args.renderScale.x * params.size / 2.4, (bool)params.boundary_i, (bool)params.filter_i);
 #else
-        cimg.blur(params.sigma * args.renderScale.x, (bool)params.boundary_i);
+        cimg.blur(args.renderScale.x * params.size / 2.4, (bool)params.boundary_i);
 #endif
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgBlurParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgBlurParams& params) OVERRIDE FINAL
     {
-        return (params.sigma == 0.);
+        return (args.renderScale.x * params.size / 2.4 < 0.1);
     };
+
+    virtual bool getRoD(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* dstRoD) OVERRIDE FINAL;
 
 private:
 
     // params
-    OFX::DoubleParam *_sigma;
+    OFX::DoubleParam *_size;
     OFX::ChoiceParam *_boundary;
 #if cimg_version >= 153
     OFX::ChoiceParam *_filter;
 #endif
+    OFX::BooleanParam *_expandRoD;
 };
+
+bool
+CImgBlurPlugin::getRoD(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* dstRoD)
+{
+    if (params.expandRoD && !isEmpty(srcRoD)) {
+        int delta_pix = std::ceil((params.size * 1.5) * renderScale.x);
+        dstRoD->x1 = srcRoD.x1 - delta_pix;
+        dstRoD->x2 = srcRoD.x2 + delta_pix;
+        dstRoD->y1 = srcRoD.y1 - delta_pix;
+        dstRoD->y2 = srcRoD.y2 + delta_pix;
+
+        return true;
+    }
+
+    return false;
+}
 
 
 mDeclarePluginFactory(CImgBlurPluginFactory, {}, {});
@@ -262,12 +291,11 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
                                                                               kSupportsTiles);
 
     {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigma);
-        param->setLabels(kParamSigmaLabel, kParamSigmaLabel, kParamSigmaLabel);
-        param->setHint(kParamSigmaHint);
-        param->setRange(0, 1000);
-        param->setDisplayRange(0, 25);
-        param->setDefault(kParamSigmaDefault);
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSize);
+        param->setLabels(kParamSizeLabel, kParamSizeLabel, kParamSizeLabel);
+        param->setHint(kParamSizeHint);
+        param->setDisplayRange(0, 100);
+        param->setDefault(kParamSizeDefault);
         param->setIncrement(0.1);
         page->addChild(*param);
     }
@@ -297,6 +325,13 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
         page->addChild(*param);
     }
 #endif
+    {
+        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
+        param->setLabels(kParamExpandRoDLabel, kParamExpandRoDLabel, kParamExpandRoDLabel);
+        param->setHint(kParamExpandRoDHint);
+        param->setDefault(true);
+        page->addChild(*param);
+    }
 
     CImgBlurPlugin::describeInContextEnd(desc, context, page);
 }
