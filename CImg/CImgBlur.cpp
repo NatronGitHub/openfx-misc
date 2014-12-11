@@ -114,7 +114,7 @@
 
 #define kParamSize "size"
 #define kParamSizeLabel "Size"
-#define kParamSizeHint "Size (diameter) of the filter kernel, in pixel units (>=0). The standard deviation of the corresponding Gaussian is size/2.4."
+#define kParamSizeHint "Size (diameter) of the filter kernel, in pixel units (>=0). The standard deviation of the corresponding Gaussian is size/2.4. No filter is applied if size < 1.2."
 #define kParamSizeDefault 0.
 
 #define kParamBoundary "boundary"
@@ -219,10 +219,13 @@ public:
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgBlurParams& params) OVERRIDE FINAL
     {
-        return (args.renderScale.x * params.size / 2.4 < 0.1);
+        return (args.renderScale.x * params.size / 2.4 < 0.5);
     };
 
     virtual bool getRoD(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* dstRoD) OVERRIDE FINAL;
+
+    // 0: Black/Dirichlet, 1: Nearest/Neumann, 2: Repeat/Periodic
+    virtual int getBoundary(const CImgBlurParams& params)  OVERRIDE FINAL { return params.boundary_i; }
 
 private:
 
