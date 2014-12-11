@@ -78,6 +78,7 @@
 #include <memory>
 #include <cmath>
 #include <cstring>
+#include <climits>
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -93,8 +94,8 @@
 #define kPluginName          "BlurCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-"Blur input stream by a quasi-gaussian or gaussian filter (recursive implementation).\n" \
-"Uses the 'blur' function from the CImg library.\n" \
+"Blur input stream by a quasi-Gaussian or Gaussian filter (recursive implementation), or compute derivatives.\n" \
+"Uses the 'blur', 'vanvliet' and 'deriche' functions from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.sourceforge.net)."
@@ -116,6 +117,14 @@
 #define kParamSizeLabel "Size"
 #define kParamSizeHint "Size (diameter) of the filter kernel, in pixel units (>=0). The standard deviation of the corresponding Gaussian is size/2.4. No filter is applied if size < 1.2."
 #define kParamSizeDefault 0.
+
+#define kParamOrderX "orderX"
+#define kParamOrderXLabel "X derivation order"
+#define kParamOrderXHint "Derivation order in the X direction. (orderX=0,orderY=0) does smoothing, (orderX=1,orderY=0) computes the X component of the image gradient."
+
+#define kParamOrderY "orderY"
+#define kParamOrderYLabel "Y derivation order"
+#define kParamOrderYHint "Derivation order in the Y direction. (orderX=0,orderY=0) does smoothing, (orderX=0,orderY=1) computes the X component of the image gradient."
 
 #define kParamBoundary "boundary"
 #define kParamBoundaryLabel "Border Conditions" //"Boundary Conditions"
@@ -160,6 +169,8 @@ using namespace OFX;
 struct CImgBlurParams
 {
     double size;
+    int orderX;
+    int orderY;
     int boundary_i;
 #if cimg_version >= 153
     int filter_i;
@@ -175,8 +186,10 @@ public:
     : CImgFilterPluginHelper<CImgBlurParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _size  = fetchDoubleParam(kParamSize);
+        _orderX = fetchIntParam(kParamOrderX);
+        _orderY = fetchIntParam(kParamOrderY);
         _boundary  = fetchChoiceParam(kParamBoundary);
-        assert(_size && _boundary);
+        assert(_size && _orderX && _orderY && _boundary);
 #if cimg_version >= 153
         _filter = fetchChoiceParam(kParamFilter);
         assert(_filter);
@@ -188,6 +201,8 @@ public:
     virtual void getValuesAtTime(double time, CImgBlurParams& params) OVERRIDE FINAL
     {
         _size->getValueAtTime(time, params.size);
+        _orderX->getValueAtTime(time, params.orderX);
+        _orderY->getValueAtTime(time, params.orderY);
         _boundary->getValueAtTime(time, params.boundary_i);
 #if cimg_version >= 153
         _filter->getValueAtTime(time, params.filter_i);
@@ -210,16 +225,36 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
+        float sigma = args.renderScale.x * params.size / 2.4;
+        if (sigma <= 0.5 && params.orderX == 0 && params.orderY == 0) {
+            return;
+        }
 #if cimg_version >= 153
-        cimg.blur(args.renderScale.x * params.size / 2.4, (bool)params.boundary_i, (bool)params.filter_i);
+        if (params.orderX == 0 && params.orderY == 0) {
+            cimg.blur(sigma, (bool)params.boundary_i, (bool)params.filter_i);
+        } else {
+            if ((bool)params.filter_i) {
+                cimg.vanvliet(sigma, params.orderX, 'x', (bool)params.boundary_i);
+                cimg.vanvliet(sigma, params.orderY, 'y', (bool)params.boundary_i);
+            } else {
+                cimg.deriche(sigma, params.orderX, 'x', (bool)params.boundary_i);
+                cimg.deriche(sigma, params.orderY, 'y', (bool)params.boundary_i);
+            }
+        }
 #else
-        cimg.blur(args.renderScale.x * params.size / 2.4, (bool)params.boundary_i);
+        if (params.orderX == 0 && params.orderY == 0) {
+            cimg.blur(sigma, (bool)params.boundary_i);
+        } else {
+            cimg.deriche(sigma, params.orderX, 'x', (bool)params.boundary_i);
+            cimg.deriche(sigma, params.orderY, 'y', (bool)params.boundary_i);
+        }
 #endif
     }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgBlurParams& params) OVERRIDE FINAL
     {
-        return (args.renderScale.x * params.size / 2.4 < 0.5);
+        float sigma = args.renderScale.x * params.size / 2.4;
+        return (sigma < 0.1 && params.orderX == 0 && params.orderY == 0);
     };
 
     virtual bool getRoD(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* dstRoD) OVERRIDE FINAL;
@@ -231,6 +266,8 @@ private:
 
     // params
     OFX::DoubleParam *_size;
+    OFX::IntParam *_orderX;
+    OFX::IntParam *_orderY;
     OFX::ChoiceParam *_boundary;
 #if cimg_version >= 153
     OFX::ChoiceParam *_filter;
@@ -297,9 +334,26 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSize);
         param->setLabels(kParamSizeLabel, kParamSizeLabel, kParamSizeLabel);
         param->setHint(kParamSizeHint);
+        param->setRange(0, INT_MAX);
         param->setDisplayRange(0, 100);
         param->setDefault(kParamSizeDefault);
         param->setIncrement(0.1);
+        page->addChild(*param);
+    }
+    {
+        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamOrderX);
+        param->setLabels(kParamOrderXLabel, kParamOrderXLabel, kParamOrderXLabel);
+        param->setHint(kParamOrderXHint);
+        param->setRange(0, 2);
+        param->setDisplayRange(0, 2);
+        page->addChild(*param);
+    }
+    {
+        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamOrderY);
+        param->setLabels(kParamOrderYLabel, kParamOrderYLabel, kParamOrderYLabel);
+        param->setHint(kParamOrderYHint);
+        param->setRange(0, 2);
+        param->setDisplayRange(0, 2);
         page->addChild(*param);
     }
     {
