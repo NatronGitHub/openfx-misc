@@ -141,6 +141,8 @@ public:
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const Params& /*params*/) { return false; };
 
+    // 0: Black/Dirichlet, 1: Nearest/Neumann, 2: Repeat/Periodic
+    virtual int getBoundary(const Params& params) { return 0; }
 
     //static void describe(OFX::ImageEffectDescriptor &desc, bool supportsTiles);
 
@@ -282,6 +284,7 @@ private:
                  OFX::PixelComponentEnum srcPixelComponents,
                  OFX::BitDepthEnum srcBitDepth,
                  int srcRowBytes,
+                 int srcBoundary,
                  void *dstPixelData,
                  const OfxRectI& dstBounds,
                  OFX::PixelComponentEnum dstPixelComponents,
@@ -457,6 +460,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::setupAndCopy(OFX::PixelProcesso
                                                               OFX::PixelComponentEnum srcPixelComponents,
                                                               OFX::BitDepthEnum srcBitDepth,
                                                               int srcRowBytes,
+                                                              int srcBoundary,
                                                               void *dstPixelData,
                                                               const OfxRectI& dstBounds,
                                                               OFX::PixelComponentEnum dstPixelComponents,
@@ -492,7 +496,8 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::setupAndCopy(OFX::PixelProcesso
     assert(dstPixelData);
     processor.setOrigImg(orig);
     processor.setDstImg(dstPixelData, dstBounds, dstPixelComponents, dstPixelDepth, dstRowBytes);
-    processor.setSrcImg(srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes);
+    assert(0 <= srcBoundary && srcBoundary <= 2);
+    processor.setSrcImg(srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes, srcBoundary);
 
     // set the render window
     processor.setRenderWindow(renderWindow);
@@ -684,6 +689,11 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         }
     }
 
+    Params params;
+    getValuesAtTime(time, params);
+    int srcBoundary = getBoundary(params);
+    assert(0 <= srcBoundary && srcBoundary <= 2);
+
     // copy areas of renderWindow that are not within processWindow to dst
 
     OfxRectI copyWindowN, copyWindowS, copyWindowE, copyWindowW;
@@ -717,19 +727,19 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
             fred.reset(new OFX::PixelCopier<float, 1, 1>(*this));
         }
         setupAndCopy(*fred, time, copyWindowN, src.get(), mask.get(),
-                     srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
+                     srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes, srcBoundary,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
         setupAndCopy(*fred, time, copyWindowS, src.get(), mask.get(),
-                     srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
+                     srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes, srcBoundary,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
         setupAndCopy(*fred, time, copyWindowW, src.get(), mask.get(),
-                     srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
+                     srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes, srcBoundary,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
         setupAndCopy(*fred, time, copyWindowE, src.get(), mask.get(),
-                     srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
+                     srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes, srcBoundary,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
     }
@@ -748,9 +758,6 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     assert(mix != 0.); // mix == 0. should give an empty processWindow
 
     const bool doMasking = getContext() != OFX::eContextFilter && maskClip_->isConnected();
-
-    Params params;
-    getValuesAtTime(time, params);
 
     // compute the src ROI (should be consistent with getRegionsOfInterest())
     OfxRectI srcRoI;
@@ -833,7 +840,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
             }
         }
         setupAndCopy(*fred, time, srcRoI, src.get(), mask.get(),
-                     srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
+                     srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes, srcBoundary,
                      tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
                      premult, premultChannel, mix, maskInvert);
     }
@@ -939,7 +946,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
             }
         }
         setupAndCopy(*fred, time, processWindow, src.get(), mask.get(),
-                     tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
+                     tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes, 0,
                      dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
                      premult, premultChannel, mix, maskInvert);
     }
