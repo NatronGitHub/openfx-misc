@@ -151,7 +151,7 @@ enum BoundaryEnum
 #define kParamFilterOptionQuasiGaussianHint "Quasi-Gaussian filter (0-order recursive Deriche filter, faster)."
 #define kParamFilterOptionGaussian "Gaussian"
 #define kParamFilterOptionGaussianHint "Gaussian filter (Van Vliet recursive Gaussian filter, more isotropic, slower)."
-#define kParamFilterDefault eFilterQuasiGaussian
+#define kParamFilterDefault eFilterGaussian
 enum FilterEnum
 {
     eFilterQuasiGaussian = 0,
