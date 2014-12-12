@@ -54,7 +54,9 @@ public:
     CImgFilterPluginHelper(OfxImageEffectHandle handle,
                            bool supportsTiles,
                            bool supportsMultiResolution,
-                           bool supportsRenderScale)
+                           bool supportsRenderScale,
+                           bool defaultUnpremult = true,
+                           bool defaultProcessAlphaOnRGBA = false)
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClip_(0)
@@ -62,6 +64,8 @@ public:
     , _supportsTiles(supportsTiles)
     , _supportsMultiResolution(supportsMultiResolution)
     , _supportsRenderScale(supportsRenderScale)
+    , _defaultUnpremult(defaultUnpremult)
+    , _defaultProcessAlphaOnRGBA(defaultProcessAlphaOnRGBA)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGB || dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA));
@@ -96,16 +100,18 @@ public:
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL
     {
         if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
-            switch (srcClip_->getPreMultiplication()) {
-                case OFX::eImageOpaque:
-                    _premult->setValue(false);
-                    break;
-                case OFX::eImagePreMultiplied:
-                    _premult->setValue(true);
-                    break;
-                case OFX::eImageUnPreMultiplied:
-                    _premult->setValue(false);
-                    break;
+            if (_defaultUnpremult) {
+                switch (srcClip_->getPreMultiplication()) {
+                    case OFX::eImageOpaque:
+                        _premult->setValue(false);
+                        break;
+                    case OFX::eImagePreMultiplied:
+                        _premult->setValue(true);
+                        break;
+                    case OFX::eImageUnPreMultiplied:
+                        _premult->setValue(false);
+                        break;
+                }
             }
             switch (srcClip_->getPixelComponents()) {
                 case OFX::ePixelComponentAlpha:
@@ -120,7 +126,7 @@ public:
                     _processR->setValue(true);
                     _processG->setValue(true);
                     _processB->setValue(true);
-                    _processA->setValue(false);
+                    _processA->setValue(_defaultProcessAlphaOnRGBA);
                     break;
                 default:
                     break;
@@ -419,6 +425,8 @@ private:
     bool _supportsTiles;
     bool _supportsMultiResolution;
     bool _supportsRenderScale;
+    bool _defaultUnpremult; //!< unpremult by default
+    bool _defaultProcessAlphaOnRGBA; //!< process alpha by default on RGBA images
 };
 
 

@@ -113,6 +113,9 @@
 #define kSupportsRGB true
 #define kSupportsAlpha true
 
+#define kDefaultUnpremult false // Blur works on premultiplied RGBA by default
+#define kDefaultProcessAlphaOnRGBA true // Alpha is processed as other channels
+
 #define kParamSize "size"
 #define kParamSizeLabel "Size"
 #define kParamSizeHint "Size (diameter) of the filter kernel, in pixel units (>=0). The standard deviation of the corresponding Gaussian is size/2.4. No filter is applied if size < 1.2."
@@ -430,7 +433,7 @@ class CImgBlurPlugin : public CImgFilterPluginHelper<CImgBlurParams,false>
 public:
 
     CImgBlurPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgBlurParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgBlurParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, kDefaultUnpremult, kDefaultProcessAlphaOnRGBA)
     {
         _size  = fetchDoubleParam(kParamSize);
         _orderX = fetchIntParam(kParamOrderX);
