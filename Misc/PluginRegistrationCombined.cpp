@@ -69,7 +69,9 @@ namespace OFX
             getNoisePluginID(ids);
             getNoOpPluginID(ids);
             getOneViewPluginID(ids);
+#ifdef DEBUG
             getRadialPluginID(ids);
+#endif
             getRampPluginID(ids);
             getPremultPluginIDs(ids);
 #ifdef DEBUG
