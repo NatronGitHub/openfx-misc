@@ -23,6 +23,7 @@
 #include "NoOp.h"
 #include "OneView.h"
 #include "Premult.h"
+#include "Radial.h"
 #include "Ramp.h"
 #include "ReConverge.h"
 #include "Retime.h"
@@ -68,6 +69,7 @@ namespace OFX
             getNoisePluginID(ids);
             getNoOpPluginID(ids);
             getOneViewPluginID(ids);
+            getRadialPluginID(ids);
             getRampPluginID(ids);
             getPremultPluginIDs(ids);
 #ifdef DEBUG

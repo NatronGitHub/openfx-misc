@@ -9,6 +9,7 @@ ColorCorrect \
 ColorLookup \
 ColorMatrix \
 Constant \
+CopyRectangle \
 CornerPin \
 Crop \
 Deinterlace \
@@ -26,6 +27,10 @@ Noise \
 NoOp \
 OneView \
 Premult \
+Radial \
+Ramp \
+Reconverge \
+Retime \
 Roto \
 Saturation \
 Shuffle \
