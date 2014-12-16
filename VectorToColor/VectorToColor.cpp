@@ -88,7 +88,7 @@
 #define kPluginName "VectorToColorOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription \
-"Convert x and y vector components to acolor representation.\n" \
+"Convert x and y vector components to a color representation.\n" \
 "H (hue) gives the direction, S (saturation) is set to the amplitude/norm, and V is 1." \
 "The role of S and V can be switched." \
 "Output can be RGB or HSV, with H in degrees."

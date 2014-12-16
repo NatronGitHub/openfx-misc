@@ -81,7 +81,7 @@
 
 #define kPluginName "AdjustRoD"
 #define kPluginGrouping "Transform"
-#define kPluginDescription "Enlarges the input image by a given amount of black and transparant pixels."
+#define kPluginDescription "Enlarges the input image by a given amount of black and transparent pixels."
 #define kPluginIdentifier "net.sf.openfx.AdjustRoDPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.

@@ -24,9 +24,15 @@ grouping).
 
 ### Draw
 
+* NoiseOFX: Generate simple noise.
+* NoiseCImg: Generate different kinds of noise.
+* PlasmaCImg: Generate plasma noise.
+* RadialOFX: Radial ramp.
+* RampOFX: Draw a ramp between 2 edges.
+* RectangleOFX: Draw a rectangle.
 * RotoOFX: Create masks and shapes. Requires a host with mask editing
   capabilities (such as Natron).
-* NoiseOFX: Generate noise.
+  
 
 ### Time
 
@@ -41,34 +47,46 @@ grouping).
 
 ### Color
 
-* ColorCorrectOFX: Adjusts the saturation, constrast, gamma, gain and offset of an image.
-* ColorMatrixOFX: Multiply the RGBA channels by an arbitrary 4x4 matrix.
-* GradeOFX: Modify the tonal spread of an image from the white and black points.
+* ClampOFX: Clamp values to a given interval.
+* ColorCorrectOFX: Adjusts the saturation, constrast, gamma, gain and
+offset of an image.
+* ColorLookupOFX: Apply a parametric lookup curve to each channel 
+separately. 
+* ColorMatrixOFX: Multiply the RGBA channels by an arbitrary 4x4
+matrix.
+* EqualizeCImg: Equalize the histogram.
+* GradeOFX: Modify the tonal spread of an image from the white and
+black points.
+* HistEqCImg: Equalize the luminance histogram. 
+* HSVToolOFX: Adjust hue, saturation and brightnes, or perform color replacement.
 * InvertOFX: Inverse the selected channels.
-* ColorLookupOFX: Apply a parametric lookup curve to each channel  
-  separately.
-* RGVToHSV and HSVToRGB: convert to/from HSV color representation.
+* SaturationOFX: Modify the color saturation of an image.
+* RGVToHSV and HSVToRGB: Convert to/from HSV color representation.
+* VectorToColor: Convert x and y vector components to a color representation.
 
 ### Keyer
 
 * ChromaKeyerOFX: Apply chroma keying, as described in "Video Demystified" by Keith Jack.  
 * DifferenceOFX: Produce a rough matte from the difference of two
   images.
-  
+* KeyerOFX: A collection of simple keyers. 
+
 ### Merge
 
 * MergeOFX: Pixel-by-pixel merge operation between the two inputs.
-* PreMultOFX/UnpremultOFX: Multiply/divide the selected channels by alpha (or another channel).
+* PreMultOFX/UnpremultOFX: Multiply/divide the selected channels by
+alpha (or another channel).
 * SwitchOFX: Lets you switch between any number of inputs.
 
 ### Transform
 
-* TransformOFX and TransformMaskedOFX: Translate / Rotate / Scale a 2D
-  image.
+* AdjustRoD: Enlarges the input image by a given amount of black and transparent pixels.
 * CornerPinOFX and CornerPinMaskedOFX: Fit an image to another in
   translation, rotation, scale, and shear
 * CropOFX: Remove everything outside from the image of a rectangle.
 * TrackerPM: Point tracker based on pattern matching using an exhaustive search within an image region.
+* TransformOFX and TransformMaskedOFX: Translate / Rotate / Scale a 2D 
+  image. 
 
 ### Views
 
@@ -96,7 +114,7 @@ Notes & Caveats
 
 If you use the Roto plugin in any other host than [Natron](http://natron.inria.fr), you will notice that it doesn't do much. It's role is just to provide an entry point for a host-based rotoscoping tool, which provides a roto mask to this plugin.
 
-### ColorLookup and ColorCorrect don't work on Nuke 8
+### ColorLookup and ColorCorrect do not work on Nuke 8
 
 The plugins using parametric parameters (ColorLookup, ColorCorrect) don't work in Nuke 8 on OS X, and maybe on other platforms. The plugins cannot be instanciated, nothing seems to happen, and the following message appears on the console:
 
@@ -171,8 +189,8 @@ Credits
 The stereoscopic plugins Anaglyph, JoinViews, MixViews, OneView,
 ReConverge, SideBySide are by Frederic Devernay.
 
-ColorLookup, Switch, TimeOffset, ChromaKeyer, Difference, Constant, Shuffle
-are by Frederic Devernay.
+ColorLookup, Switch, TimeOffset, ChromaKeyer, Difference, Constant,
+Shuffle, Rectangle, Radial are by Frederic Devernay.
 
 Merge, ColorCorrect, Grade, Roto, Crop, CopyRectangle  are by
 Alexandre Gauthier.
