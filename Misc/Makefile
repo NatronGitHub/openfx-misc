@@ -130,6 +130,7 @@ VPATH += \
 ../OneView \
 ../Premult \
 ../ReConverge \
+../Radial \
 ../Ramp \
 ../Retime \
 ../ColorLookup \
@@ -175,6 +176,7 @@ CXXFLAGS += \
 -I../OneView \
 -I../Premult \
 -I../ReConverge \
+-I../Radial \
 -I../Ramp \
 -I../Retime \
 -I../Roto \

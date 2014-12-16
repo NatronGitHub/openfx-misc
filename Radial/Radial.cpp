@@ -1,5 +1,5 @@
 /*
- OFX Ramp plugin.
+ OFX Radial plugin.
  
  Copyright (C) 2014 INRIA
  
@@ -69,7 +69,7 @@
  England
  
  */
-#include "Ramp.h"
+#include "Radial.h"
 
 #include <cmath>
 #include <algorithm>
@@ -77,8 +77,8 @@
 #include "ofxsProcessing.H"
 #include "ofxsMerging.h"
 #include "ofxsMaskMix.h"
+#include "ofxsRectangleInteract.h"
 #include "ofxsMacros.h"
-#include "ofxsOGLTextRenderer.h"
 
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
@@ -89,12 +89,12 @@
 #define POINT_SIZE 5
 
 
-#define kPluginName "RampOFX"
+#define kPluginName "RadialOFX"
 #define kPluginGrouping "Draw"
 #define kPluginDescription \
-"Draw a ramp between 2 edges.\n" \
+"Radial ramp.\n" \
 "The ramp is composited with the source image using the 'over' operator."
-#define kPluginIdentifier "net.sf.openfx.Ramp"
+#define kPluginIdentifier "net.sf.openfx.Radial"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -117,28 +117,20 @@
 #define kParamProcessALabel "A"
 #define kParamProcessAHint  "Process alpha component"
 
-#define kParamPoint0 "point0"
-#define kParamPoint0Label "Point 0"
+#define kParamSoftness "softness"
+#define kParamSoftnessLabel "Softness"
+#define kParamSoftnessHint "Softness of the radial ramp. 0 is a hard edge."
+
+#define kParamPLinear "plinear"
+#define kParamPLinearLabel "Perceptually Linear"
+#define kParamPLinearHint "Make the radial ramp look more linear to the eye."
 
 #define kParamColor0 "color0"
 #define kParamColor0Label "Color 0"
 
-#define kParamPoint1 "point1"
-#define kParamPoint1Label "Point 1"
-
 #define kParamColor1 "color1"
 #define kParamColor1Label "Color 1"
 
-#define kParamType "type"
-#define kParamTypeLabel "Type"
-
-enum RampTypeEnum
-{
-    eRampTypeLinear = 0,
-    eRampTypeEaseIn,
-    eRampTypeEaseOut,
-    eRampTypeSmooth
-};
 
 namespace {
     struct RGBAValues {
@@ -158,7 +150,7 @@ static double fround(double val, double pscale)
 
 using namespace OFX;
 
-class RampProcessorBase : public OFX::ImageProcessor
+class RadialProcessorBase : public OFX::ImageProcessor
 {
    
     
@@ -170,21 +162,26 @@ protected:
     bool _maskInvert;
     bool _red, _green, _blue, _alpha;
 
-    RampTypeEnum _type;
+    OfxPointD _btmLeft, _size;
+    double _softness;
+    bool _plinear;
     RGBAValues _color0, _color1;
-    OfxPointD _point0, _point1;
 
 public:
-    RampProcessorBase(OFX::ImageEffect &instance)
+    RadialProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
     , _doMasking(false)
     , _mix(1.)
     , _maskInvert(false)
-    , _type(eRampTypeLinear)
+    , _red(false)
+    , _green(false)
+    , _blue(false)
+    , _softness(1.)
+    , _plinear(false)
     {
-        _point0.x = _point0.y = _point1.x = _point1.y = 0.;
+        _btmLeft.x = _btmLeft.y = _size.x = _size.y = 0.;
         _color0.r = _color0.g = _color0.b = _color0.a = 0.;
         _color1.r = _color1.g = _color1.b = _color1.a = 0.;
     }
@@ -205,22 +202,24 @@ public:
         _doMasking = v;
     }
 
-    void setValues(RampTypeEnum type,
+    void setValues(const OfxPointD& btmLeft,
+                   const OfxPointD& size,
+                   double softness,
+                   bool plinear,
                    const RGBAValues& color0,
                    const RGBAValues& color1,
-                   const OfxPointD& point0,
-                   const OfxPointD& point1,
                    double mix,
                    bool red,
                    bool green,
                    bool blue,
                    bool alpha)
     {
-        _type = type;
+        _btmLeft = btmLeft;
+        _size = size;
+        _softness = std::max(0.,std::min(softness,1.));
+        _plinear = plinear;
         _color0 = color0;
         _color1 = color1;
-        _point0 = point0;
-        _point1 = point1;
         _mix = mix;
         _red = red;
         _green = green;
@@ -231,11 +230,11 @@ public:
 
 
 template <class PIX, int nComponents, int maxValue>
-class RampProcessor : public RampProcessorBase
+class RadialProcessor : public RadialProcessorBase
 {
 public:
-    RampProcessor(OFX::ImageEffect &instance)
-    : RampProcessorBase(instance)
+    RadialProcessor(OFX::ImageEffect &instance)
+    : RadialProcessorBase(instance)
     {
     }
 
@@ -338,31 +337,8 @@ private:
     {
         assert((!dored && !dogreen && !doblue) || (nComponents == 3 || nComponents == 4));
         assert(!doalpha || (nComponents == 1 || nComponents == 4));
-        switch (_type) {
-            case eRampTypeLinear:
-                processForType<dored,dogreen,doblue,doalpha,eRampTypeLinear>(procWindow);
-                break;
-            case eRampTypeEaseIn:
-                processForType<dored,dogreen,doblue,doalpha,eRampTypeEaseIn>(procWindow);
-                break;
-            case eRampTypeEaseOut:
-                processForType<dored,dogreen,doblue,doalpha,eRampTypeEaseOut>(procWindow);
-                break;
-            case eRampTypeSmooth:
-                processForType<dored,dogreen,doblue,doalpha,eRampTypeSmooth>(procWindow);
-                break;
-        }
-    }
-    
-    
-    template<bool dored, bool dogreen, bool doblue, bool doalpha, RampTypeEnum type>
-    void processForType(const OfxRectI& procWindow)
-    {
-        float tmpPix[4];
 
-        const double norm2 = (_point1.x - _point0.x)*(_point1.x - _point0.x) + (_point1.y - _point0.y)*(_point1.y - _point0.y);
-        const double nx = norm2 == 0. ? 0. : (_point1.x - _point0.x)/ norm2;
-        const double ny = norm2 == 0. ? 0. : (_point1.y - _point0.y)/ norm2;
+        float tmpPix[4];
 
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if (_effect.abort()) {
@@ -378,44 +354,48 @@ private:
                 p_pixel.x = x;
                 p_pixel.y = y;
                 OFX::MergeImages2D::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
-                double t = (p.x - _point0.x) * nx + (p.y - _point0.y) * ny;
 
-                if (t <= 0) {
+                double dx = (p.x - (_btmLeft.x + (_btmLeft.x + _size.x)) / 2) / (_size.x/2);
+                double dy = (p.y - (_btmLeft.y + (_btmLeft.y + _size.y)) / 2) / (_size.y/2);
+                double dsq = dx*dx + dy*dy;
+
+                if (dsq >= 1) {
                     tmpPix[0] = _color0.r;
                     tmpPix[1] = _color0.g;
                     tmpPix[2] = _color0.b;
                     tmpPix[3] = _color0.a;
 
-                } else if (t >= 1.) {
+                } else if (dsq <= 0 || _softness == 0) {
                     tmpPix[0] = _color1.r;
                     tmpPix[1] = _color1.g;
                     tmpPix[2] = _color1.b;
                     tmpPix[3] = _color1.a;
-
                 } else {
-                    switch (type) {
-                        case eRampTypeEaseIn:
-                            t *= t;
-                            break;
-                        case eRampTypeEaseOut:
-                            t = - t * (t - 2);
-                            break;
-                        case eRampTypeSmooth:
-                            t *= 2.;
-                            if (t < 1) {
-                                t = t * t / (2.);
-                            } else {
-                                --t;
-                                t =  -0.5 * (t * (t - 2) - 1);
-                            }
-                        default:
-                            break;
+                    double t = (1. - std::sqrt(dsq)) / _softness;
+                    if (t >= 1) {
+                        tmpPix[0] = _color1.r;
+                        tmpPix[1] = _color1.g;
+                        tmpPix[2] = _color1.b;
+                        tmpPix[3] = _color1.a;
+                    } else {
+                        // apply eRampTypeSmooth
+                        t *= 2.;
+                        if (t < 1) {
+                            t = t * t / (2.);
+                        } else {
+                            --t;
+                            t =  -0.5 * (t * (t - 2) - 1);
+                        }
+
+                        if (_plinear) {
+                            // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
+                            t = t*t*t;
+                        }
+                        tmpPix[0] = _color0.r * (1 - t) + _color1.r * t;
+                        tmpPix[1] = _color0.g * (1 - t) + _color1.g * t;
+                        tmpPix[2] = _color0.b * (1 - t) + _color1.b * t;
+                        tmpPix[3] = _color0.a * (1 - t) + _color1.a * t;
                     }
-                    
-                    tmpPix[0] = _color0.r * (1 - t) + _color1.r * t;
-                    tmpPix[1] = _color0.g * (1 - t) + _color1.g * t;
-                    tmpPix[2] = _color0.b * (1 - t) + _color1.b * t;
-                    tmpPix[3] = _color0.a * (1 - t) + _color1.a * t;
                 }
                 double a = tmpPix[3];
 
@@ -468,11 +448,11 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class RampPlugin : public OFX::ImageEffect
+class RadialPlugin : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
-    RampPlugin(OfxImageEffectHandle handle)
+    RadialPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClip_(0)
@@ -480,9 +460,9 @@ public:
     , _processG(0)
     , _processB(0)
     , _processA(0)
-    , _point0(0)
+    , _btmLeft(0)
+    , _size(0)
     , _color0(0)
-    , _point1(0)
     , _color1(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
@@ -498,23 +478,19 @@ public:
         _processA = fetchBooleanParam(kParamProcessA);
 
         assert(_processR && _processG && _processB && _processA);
-        _point0 = fetchDouble2DParam(kParamPoint0);
-        _point1 = fetchDouble2DParam(kParamPoint1);
+        _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
+        _size = fetchDouble2DParam(kParamRectangleInteractSize);
+        _softness = fetchDoubleParam(kParamSoftness);
+        _plinear = fetchBooleanParam(kParamPLinear);
         _color0 = fetchRGBAParam(kParamColor0);
         _color1 = fetchRGBAParam(kParamColor1);
-        _type = fetchChoiceParam(kParamType);
-        assert(_point0 && _point1 && _color0 && _color1 && _type);
+        assert(_btmLeft && _size && _softness && _plinear && _color0 && _color1);
 
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
     }
 
-    OfxRectD getRegionOfDefinitionForInteract(OfxTime time) const
-    {
-        return dstClip_->getRegionOfDefinition(time);
-    }
-    
     /* override is identity */
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE;
 
@@ -530,7 +506,7 @@ private:
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
-    void setupAndProcess(RampProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(RadialProcessorBase &, const OFX::RenderArguments &args);
     
 private:
     
@@ -543,11 +519,12 @@ private:
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
-    Double2DParam* _point0;
+    Double2DParam* _btmLeft;
+    Double2DParam* _size;
+    DoubleParam* _softness;
+    BooleanParam* _plinear;
     RGBAParam* _color0;
-    Double2DParam* _point1;
     RGBAParam* _color1;
-    ChoiceParam* _type;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
 };
@@ -560,7 +537,7 @@ private:
 
 /* set up and run a processor */
 void
-RampPlugin::setupAndProcess(RampProcessorBase &processor, const OFX::RenderArguments &args)
+RadialPlugin::setupAndProcess(RadialProcessorBase &processor, const OFX::RenderArguments &args)
 {
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
     if (!dst.get()) {
@@ -609,13 +586,15 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor, const OFX::RenderArgum
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
-    int type_i;
-    _type->getValue(type_i);
-    
-    OfxPointD point0,point1;
-    _point0->getValueAtTime(args.time, point0.x, point0.y);
-    _point1->getValueAtTime(args.time, point1.x, point1.y);
-    
+    OfxPointD btmLeft, size;
+    _btmLeft->getValueAtTime(args.time, btmLeft.x, btmLeft.y);
+    _size->getValueAtTime(args.time, size.x, size.y);
+
+    double softness;
+    _softness->getValueAtTime(args.time, softness);
+    bool plinear;
+    _plinear->getValueAtTime(args.time, plinear);
+
     RGBAValues color0,color1;
     _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
     _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
@@ -629,9 +608,9 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor, const OFX::RenderArgum
     double mix;
     _mix->getValueAtTime(args.time, mix);
 
-    processor.setValues((RampTypeEnum)type_i,
+    processor.setValues(btmLeft, size,
+                        softness, plinear,
                         color0, color1,
-                        point0, point1,
                         mix,
                         doR, doG, doB, doA);
     // Call the base class process member, this will call the derived templated process code
@@ -642,23 +621,23 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor, const OFX::RenderArgum
 // the internal render function
 template <int nComponents>
 void
-RampPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+RadialPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth)
     {
         case OFX::eBitDepthUByte :
         {
-            RampProcessor<unsigned char, nComponents, 255> fred(*this);
+            RadialProcessor<unsigned char, nComponents, 255> fred(*this);
             setupAndProcess(fred, args);
         }   break;
         case OFX::eBitDepthUShort :
         {
-            RampProcessor<unsigned short, nComponents, 65535> fred(*this);
+            RadialProcessor<unsigned short, nComponents, 65535> fred(*this);
             setupAndProcess(fred, args);
         }   break;
         case OFX::eBitDepthFloat :
         {
-            RampProcessor<float, nComponents, 1> fred(*this);
+            RadialProcessor<float, nComponents, 1> fred(*this);
             setupAndProcess(fred, args);
         }   break;
         default :
@@ -668,7 +647,7 @@ RampPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum d
 
 // the overridden render function
 void
-RampPlugin::render(const OFX::RenderArguments &args)
+RadialPlugin::render(const OFX::RenderArguments &args)
 {
     
     // instantiate the render code based on the pixel depth of the dst clip
@@ -687,7 +666,7 @@ RampPlugin::render(const OFX::RenderArguments &args)
 }
 
 bool
-RampPlugin::isIdentity(const OFX::IsIdentityArguments &args,
+RadialPlugin::isIdentity(const OFX::IsIdentityArguments &args,
                        OFX::Clip * &identityClip,
                        double &/*identityTime*/)
 {
@@ -722,7 +701,7 @@ RampPlugin::isIdentity(const OFX::IsIdentityArguments &args,
 
 /* Override the clip preferences */
 void
-RampPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+RadialPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     // set the premultiplication of dstClip_ if alpha is affected and source is Opaque
     bool alpha;
@@ -732,340 +711,9 @@ RampPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     }
 }
 
-class RampInteract : public OFX::OverlayInteract
-{
-    enum InteractState
-    {
-        eInteractStateIdle = 0,
-        eInteractStateDraggingPoint0,
-        eInteractStateDraggingPoint1
-    };
-    
-    Double2DParam* _point0;
-    Double2DParam* _point1;
-    OfxPointD _point0DragPos,_point1DragPos;
-    OfxPointD _lastMousePos;
-    InteractState _state;
-    RampPlugin* _effect;
-    
-public:
-    RampInteract(OfxInteractHandle handle, OFX::ImageEffect* effect)
-    : OFX::OverlayInteract(handle)
-    , _point0(0)
-    , _point1(0)
-    , _point0DragPos()
-    , _point1DragPos()
-    , _lastMousePos()
-    , _state(eInteractStateIdle)
-    , _effect(0)
-    {
-        _point0 = effect->fetchDouble2DParam(kParamPoint0);
-        _point1 = effect->fetchDouble2DParam(kParamPoint1);
-        _effect = dynamic_cast<RampPlugin*>(effect);
-        assert(_effect);
-    }
-    
-    /** @brief the function called to draw in the interact */
-    virtual bool draw(const DrawArgs &args) OVERRIDE FINAL;
-    
-    /** @brief the function called to handle pen motion in the interact
-     
-     returns true if the interact trapped the action in some sense. This will block the action being passed to
-     any other interact that may share the viewer.
-     */
-    virtual bool penMotion(const PenArgs &args) OVERRIDE FINAL;
-    
-    /** @brief the function called to handle pen down events in the interact
-     
-     returns true if the interact trapped the action in some sense. This will block the action being passed to
-     any other interact that may share the viewer.
-     */
-    virtual bool penDown(const PenArgs &args) OVERRIDE FINAL;
-    
-    /** @brief the function called to handle pen up events in the interact
-     
-     returns true if the interact trapped the action in some sense. This will block the action being passed to
-     any other interact that may share the viewer.
-     */
-    virtual bool penUp(const PenArgs &args) OVERRIDE FINAL;
-  
-};
+mDeclarePluginFactory(RadialPluginFactory, {}, {});
 
-//static void intersectToRoD(const OfxRectD& rod,const OfxPointD& p0)
-
-static inline
-void
-crossProd(const Ofx3DPointD& u,
-          const Ofx3DPointD& v,
-          Ofx3DPointD* w)
-{
-    w->x = u.y*v.z - u.z*v.y;
-    w->y = u.z*v.x - u.x*v.z;
-    w->z = u.x*v.y - u.y*v.x;
-}
-
-bool
-RampInteract::draw(const DrawArgs &args)
-{
-    OfxPointD pscale;
-    pscale.x = args.pixelScale.x / args.renderScale.x;
-    pscale.y = args.pixelScale.y / args.renderScale.y;
-    
-    OfxPointD p[2];
-    if (_state == eInteractStateDraggingPoint0) {
-        p[0] = _point0DragPos;
-    } else {
-        _point0->getValueAtTime(args.time, p[0].x, p[0].y);
-    }
-    if (_state == eInteractStateDraggingPoint1) {
-        p[1] = _point1DragPos;
-    } else {
-        _point1->getValueAtTime(args.time, p[1].x, p[1].y);
-    }
-    
-    ///Clamp points to the rod
-    OfxRectD rod = _effect->getRegionOfDefinitionForInteract(args.time);
-
-    // A line is represented by a 3-vector (a,b,c), and its equation is (a,b,c).(x,y,1)=0
-    // The intersection of two lines is given by their cross-product: (wx,wy,w) = (a,b,c)x(a',b',c').
-    // The line passing through 2 points is obtained by their cross-product: (a,b,c) = (x,y,1)x(x',y',1)
-    // The two lines passing through p0 and p1 and orthogonal to p0p1 are:
-    // (p1.x - p0.x, p1.y - p0.y, -p0.x*(p1.x-p0.x) - p0.y*(p1.y-p0.y)) passing through p0
-    // (p1.x - p0.x, p1.y - p0.y, -p1.x*(p1.x-p0.x) - p1.y*(p1.y-p0.y)) passing through p1
-    // the four lines defining the RoD are:
-    // (1,0,-x1) [x=x1]
-    // (1,0,-x2) [x=x2]
-    // (0,1,-y1) [x=y1]
-    // (0,1,-y2) [y=y2]
-    const Ofx3DPointD linex1 = {1, 0, -rod.x1};
-    const Ofx3DPointD linex2 = {1, 0, -rod.x2};
-    const Ofx3DPointD liney1 = {0, 1, -rod.y1};
-    const Ofx3DPointD liney2 = {0, 1, -rod.y2};
-
-    Ofx3DPointD line[2];
-    OfxPointD pline1[2];
-    OfxPointD pline2[2];
-
-    // line passing through p0
-    line[0].x = p[1].x - p[0].x;
-    line[0].y = p[1].y - p[0].y;
-    line[0].z = -p[0].x*(p[1].x-p[0].x) - p[0].y*(p[1].y-p[0].y);
-    // line passing through p1
-    line[1].x = p[1].x - p[0].x;
-    line[1].y = p[1].y - p[0].y;
-    line[1].z = -p[1].x*(p[1].x-p[0].x) - p[1].y*(p[1].y-p[0].y);
-    // for each line...
-    for (int i = 0; i < 2; ++i) {
-        // compute the intersection with the four lines
-        Ofx3DPointD interx1, interx2, intery1, intery2;
-
-        crossProd(line[i], linex1, &interx1);
-        crossProd(line[i], linex2, &interx2);
-        crossProd(line[i], liney1, &intery1);
-        crossProd(line[i], liney2, &intery2);
-        if (interx1.z != 0. && interx2.z != 0.) {
-            // initialize pline1 to the intersection with x=x1, pline2 with x=x2
-            pline1[i].x = interx1.x/interx1.z;
-            pline1[i].y = interx1.y/interx1.z;
-            pline2[i].x = interx2.x/interx2.z;
-            pline2[i].y = interx2.y/interx2.z;
-            if ((pline1[i].y > rod.y2 && pline2[i].y > rod.y2) ||
-                (pline1[i].y < rod.y1 && pline2[i].y < rod.y1)) {
-                // line doesn't intersect rectangle, don't draw it.
-                pline1[i].x = p[i].x;
-                pline1[i].y = p[i].y;
-                pline2[i].x = p[i].x;
-                pline2[i].y = p[i].y;
-            } else if (pline1[i].y < pline2[i].y) {
-                // y is an increasing function of x, test the two other endpoints
-                if (intery1.z != 0. && intery1.x/intery1.z > pline1[i].x) {
-                    pline1[i].x = intery1.x/intery1.z;
-                    pline1[i].y = intery1.y/intery1.z;
-                }
-                if (intery2.z != 0. && intery2.x/intery2.z < pline2[i].x) {
-                    pline2[i].x = intery2.x/intery2.z;
-                    pline2[i].y = intery2.y/intery2.z;
-                }
-            } else {
-                // y is an decreasing function of x, test the two other endpoints
-                if (intery2.z != 0. && intery2.x/intery2.z > pline1[i].x) {
-                    pline1[i].x = intery2.x/intery2.z;
-                    pline1[i].y = intery2.y/intery2.z;
-                }
-                if (intery1.z != 0. && intery1.x/intery1.z < pline2[i].x) {
-                    pline2[i].x = intery1.x/intery1.z;
-                    pline2[i].y = intery1.y/intery1.z;
-                }
-            }
-        } else {
-            // initialize pline1 to the intersection with y=y1, pline2 with y=y2
-            pline1[i].x = intery1.x/intery1.z;
-            pline1[i].y = intery1.y/intery1.z;
-            pline2[i].x = intery2.x/intery2.z;
-            pline2[i].y = intery2.y/intery2.z;
-            if ((pline1[i].x > rod.x2 && pline2[i].x > rod.x2) ||
-                (pline1[i].x < rod.x1 && pline2[i].x < rod.x1)) {
-                // line doesn't intersect rectangle, don't draw it.
-                pline1[i].x = p[i].x;
-                pline1[i].y = p[i].y;
-                pline2[i].x = p[i].x;
-                pline2[i].y = p[i].y;
-            }
-        }
-    }
-
-    glPushAttrib(GL_ALL_ATTRIB_BITS);
-    glMatrixMode(GL_PROJECTION);
-
-    glEnable(GL_LINE_SMOOTH);
-    glEnable(GL_BLEND);
-    glHint(GL_LINE_SMOOTH_HINT,GL_DONT_CARE);
-    glLineWidth(1.5);
-    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-
-    glPointSize(POINT_SIZE);
-    
-    // Draw everything twice
-    // l = 0: shadow
-    // l = 1: drawing
-    for (int l = 0; l < 2; ++l) {
-        if (l == 0) {
-            // translate (1,-1) pixels
-            glTranslated(pscale.x, -pscale.y, 0);
-        }
-
-        for (int i = 0; i < 2; ++i) {
-            bool dragging = _state == (i == 0 ? eInteractStateDraggingPoint0 : eInteractStateDraggingPoint1);
-            glBegin(GL_POINTS);
-            if (dragging) {
-                glColor3f(0.*l, 1.*l, 0.*l);
-            } else {
-                glColor3f(0.8*l, 0.8*l, 0.8*l);
-            }
-            glVertex2d(p[i].x, p[i].y);
-            glEnd();
-
-            glLineStipple(2, 0xAAAA);
-            glEnable(GL_LINE_STIPPLE);
-            glBegin(GL_LINES);
-            glColor3f(0.8*l, 0.8*l, 0.8*l);
-            glVertex2d(pline1[i].x, pline1[i].y);
-            glVertex2d(pline2[i].x, pline2[i].y);
-            glEnd();
-
-            double xoffset = 5 * pscale.x;
-            double yoffset = 5 * pscale.y;
-            TextRenderer::bitmapString(p[i].x + xoffset, p[i].y + yoffset, i == 0 ? kParamPoint0Label : kParamPoint1Label);
-        }
-        if (l == 0) {
-            // translate (-1,1) pixels
-            glTranslated(-pscale.x, pscale.y, 0);
-        }
-    }
-
-    glPopAttrib();
-
-    return true;
-}
-
-static bool isNearby(const OfxPointD& p, double x, double y, double tolerance, const OfxPointD& pscale)
-{
-    return std::fabs(p.x-x) <= tolerance*pscale.x &&  std::fabs(p.y-y) <= tolerance*pscale.y;
-}
-
-
-bool
-RampInteract::penMotion(const PenArgs &args)
-{
-    OfxPointD pscale;
-    pscale.x = args.pixelScale.x / args.renderScale.x;
-    pscale.y = args.pixelScale.y / args.renderScale.y;
-    
-    OfxPointD p0,p1;
-    _point0->getValueAtTime(args.time, p0.x, p0.y);
-    _point1->getValueAtTime(args.time, p1.x, p1.y);
-
-    bool didSomething = false;
-    
-    OfxPointD delta;
-    delta.x = args.penPosition.x - _lastMousePos.x;
-    delta.y = args.penPosition.y - _lastMousePos.y;
-    
-    if (_state == eInteractStateDraggingPoint0) {
-        _point0DragPos.x += delta.x;
-        _point0DragPos.y += delta.y;
-        didSomething = true;
-
-    } else if (_state == eInteractStateDraggingPoint1) {
-        _point1DragPos.x += delta.x;
-        _point1DragPos.y += delta.y;
-        didSomething = true;
-    }
-    
-    _lastMousePos = args.penPosition;
-
-    return didSomething;
-}
-
-bool
-RampInteract::penDown(const PenArgs &args)
-{
-    OfxPointD pscale;
-    pscale.x = args.pixelScale.x / args.renderScale.x;
-    pscale.y = args.pixelScale.y / args.renderScale.y;
-
-    OfxPointD p0,p1;
-    _point0->getValueAtTime(args.time, p0.x, p0.y);
-    _point1->getValueAtTime(args.time, p1.x, p1.y);
-    
-    bool didSomething = false;
-    
-    if (isNearby(args.penPosition, p0.x, p0.y, POINT_TOLERANCE, pscale)) {
-        _state = eInteractStateDraggingPoint0;
-        didSomething = true;
-    } else if (isNearby(args.penPosition, p1.x, p1.y, POINT_TOLERANCE, pscale)) {
-        _state = eInteractStateDraggingPoint1;
-        didSomething = true;
-    } else {
-        _state = eInteractStateIdle;
-    }
-    
-    _point0DragPos = p0;
-    _point1DragPos = p1;
-    _lastMousePos = args.penPosition;
-
-    return didSomething;
-}
-
-bool
-RampInteract::penUp(const PenArgs &args)
-{
-    bool didSmthing = false;
-    OfxPointD pscale;
-    pscale.x = args.pixelScale.x / args.renderScale.x;
-    pscale.y = args.pixelScale.y / args.renderScale.y;
-    if (_state == eInteractStateDraggingPoint0) {
-        // round newx/y to the closest int, 1/10 int, etc
-        // this make parameter editing easier
-      
-        _point0->setValue(fround(_point0DragPos.x, pscale.x), fround(_point0DragPos.y, pscale.y));
-        didSmthing = true;
-    } else if (_state == eInteractStateDraggingPoint1) {
-        _point1->setValue(fround(_point1DragPos.x, pscale.x), fround(_point1DragPos.y, pscale.y));
-        didSmthing = true;
-    }
-    _state = eInteractStateIdle;
-
-    return didSmthing;
-}
-
-class RampOverlayDescriptor : public DefaultEffectOverlayDescriptor<RampOverlayDescriptor, RampInteract> {};
-
-
-
-mDeclarePluginFactory(RampPluginFactory, {}, {});
-
-void RampPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void RadialPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabels(kPluginName, kPluginName, kPluginName);
@@ -1093,21 +741,20 @@ void RampPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // and scale the transform appropriately.
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
-    desc.setOverlayInteractDescriptor(new RampOverlayDescriptor);
-
+    desc.setOverlayInteractDescriptor(new RectangleOverlayDescriptor);
 }
 
 
 
-OFX::ImageEffect* RampPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect* RadialPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
-    return new RampPlugin(handle);
+    return new RadialPlugin(handle);
 }
 
 
 
 
-void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -1175,32 +822,60 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         page->addChild(*param);
     }
     
-    // point0
+    // btmLeft
     {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamPoint0);
-        param->setLabels(kParamPoint0Label,kParamPoint0Label,kParamPoint0Label);
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
+        param->setLabels(kParamRectangleInteractBtmLeftLabel,kParamRectangleInteractBtmLeftLabel,kParamRectangleInteractBtmLeftLabel);
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(OFX::eCoordinatesCanonical);
-        param->setDefault(100., 100.);
+        param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+        param->setDefault(0.25, 0.25);
+        param->setIncrement(1.);
+        param->setHint("Coordinates of the bottom left corner of the effect rectangle");
+        param->setDigits(0);
         page->addChild(*param);
     }
-    
-    
+
+    // size
+    {
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
+        param->setLabels(kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel);
+        param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+        param->setDefault(0.5, 0.5);
+        param->setIncrement(1.);
+        param->setDimensionLabels("width", "height");
+        param->setHint("Width and height of the effect rectangle");
+        param->setDigits(0);
+        page->addChild(*param);
+    }
+
+    // softness
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSoftness);
+        param->setLabels(kParamSoftnessLabel, kParamSoftnessLabel, kParamSoftnessLabel);
+        param->setHint(kParamSoftnessHint);
+        param->setDefault(1.);
+        param->setIncrement(0.01);
+        param->setRange(0., 1.);
+        param->setDisplayRange(0., 1.);
+        param->setDigits(2);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+
+    // plinear
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPLinear);
+        param->setLabels(kParamPLinearLabel, kParamPLinearLabel, kParamPLinearLabel);
+        param->setHint(kParamPLinearHint);
+        page->addChild(*param);
+    }
+
     // color0
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor0);
         param->setLabels(kParamColor0Label, kParamColor0Label, kParamColor0Label);
         param->setDefault(0, 0, 0, 0);
-        page->addChild(*param);
-    }
-
-    // point1
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamPoint1);
-        param->setLabels(kParamPoint1Label,kParamPoint1Label,kParamPoint1Label);
-        param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(OFX::eCoordinatesCanonical);
-        param->setDefault(100., 200.);
         page->addChild(*param);
     }
 
@@ -1212,26 +887,12 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         page->addChild(*param);
     }
     
-    // type
-    {
-        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamType);
-        param->setLabels(kParamTypeLabel, kParamTypeLabel, kParamTypeLabel);
-        param->setHint("The type of interpolation used to generate the ramp");
-        param->appendOption("Linear");
-        param->appendOption("Ease-in");
-        param->appendOption("Ease-out");
-        param->appendOption("Smooth");
-        param->setDefault(eRampTypeLinear);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-
     ofxsMaskMixDescribeParams(desc, page);
 }
 
-void getRampPluginID(OFX::PluginFactoryArray &ids)
+void getRadialPluginID(OFX::PluginFactoryArray &ids)
 {
-    static RampPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static RadialPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
 

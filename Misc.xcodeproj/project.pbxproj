@@ -405,6 +405,37 @@
 		1EBAEFE3199A820B0037B3E6 /* TestRender.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EBAEFCE199A81AA0037B3E6 /* TestRender.cpp */; };
 		1EBAEFE4199A820D0037B3E6 /* TestRender.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EBAEFCE199A81AA0037B3E6 /* TestRender.cpp */; };
 		1EBAEFE5199A82110037B3E6 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EBAEFCD199A81AA0037B3E6 /* PluginRegistration.cpp */; };
+		1ECA4DE41A3F3A6500C5128B /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1ECA4DE51A3F3A6500C5128B /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1ECA4DE61A3F3A6500C5128B /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1ECA4DE71A3F3A6500C5128B /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
+		1ECA4DE81A3F3A6500C5128B /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1ECA4DE91A3F3A6500C5128B /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1ECA4DEA1A3F3A6500C5128B /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1ECA4DEB1A3F3A6500C5128B /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1ECA4DEC1A3F3A6500C5128B /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1ECA4DEE1A3F3A6500C5128B /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1ECA4DF01A3F3A6500C5128B /* net.sf.openfx.CropPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A87C19C6ED8000E6E3AE /* net.sf.openfx.CropPlugin.png */; };
+		1ECA4DF11A3F3A6500C5128B /* net.sf.openfx.CropPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9E19C981DD00C2C668 /* net.sf.openfx.CropPlugin.svg */; };
+		1ECA4DF71A3F3AC900C5128B /* Ramp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32A19FE995F00375A86 /* Ramp.cpp */; };
+		1ECA4DF81A3F3AC900C5128B /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32919FE995F00375A86 /* PluginRegistration.cpp */; };
+		1ECA4DFB1A3F3ACD00C5128B /* Ramp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32A19FE995F00375A86 /* Ramp.cpp */; };
+		1ECA4DFC1A3F3ACD00C5128B /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32919FE995F00375A86 /* PluginRegistration.cpp */; };
+		1ECA4DFD1A3F3ACD00C5128B /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1ECA4DFE1A3F3ACD00C5128B /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1ECA4DFF1A3F3ACD00C5128B /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1ECA4E001A3F3ACD00C5128B /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
+		1ECA4E011A3F3ACD00C5128B /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1ECA4E021A3F3ACD00C5128B /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1ECA4E031A3F3ACD00C5128B /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1ECA4E041A3F3ACD00C5128B /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1ECA4E051A3F3ACD00C5128B /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1ECA4E071A3F3ACD00C5128B /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1ECA4E091A3F3ACD00C5128B /* net.sf.openfx.CropPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A87C19C6ED8000E6E3AE /* net.sf.openfx.CropPlugin.png */; };
+		1ECA4E0A1A3F3ACD00C5128B /* net.sf.openfx.CropPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9E19C981DD00C2C668 /* net.sf.openfx.CropPlugin.svg */; };
+		1ECA4E151A3F3B0C00C5128B /* Radial.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ECA4E131A3F3AFB00C5128B /* Radial.cpp */; };
+		1ECA4E161A3F3B0C00C5128B /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ECA4E121A3F3AFB00C5128B /* PluginRegistration.cpp */; };
+		1ECA4E171A3F3E5D00C5128B /* Radial.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ECA4E131A3F3AFB00C5128B /* Radial.cpp */; };
 		1ECE543E185F2374001ED442 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1ECE543F185F2374001ED442 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1ECE5440185F2374001ED442 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -1018,6 +1049,28 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1ECA4DEF1A3F3A6500C5128B /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1ECA4DF01A3F3A6500C5128B /* net.sf.openfx.CropPlugin.png in CopyFiles */,
+				1ECA4DF11A3F3A6500C5128B /* net.sf.openfx.CropPlugin.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1ECA4E081A3F3ACD00C5128B /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1ECA4E091A3F3ACD00C5128B /* net.sf.openfx.CropPlugin.png in CopyFiles */,
+				1ECA4E0A1A3F3ACD00C5128B /* net.sf.openfx.CropPlugin.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1EE4A86F19C6EC6700E6E3AE /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1556,6 +1609,14 @@
 		1EC7C7F818BF4F4C002A246F /* ofxReadWrite.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxReadWrite.h; sourceTree = "<group>"; };
 		1EC7C7F918BF4F85002A246F /* ofxDialog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxDialog.h; path = openfx/include/ofxDialog.h; sourceTree = SOURCE_ROOT; };
 		1EC7C7FA18BF4F85002A246F /* ofxSonyVegas.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxSonyVegas.h; path = openfx/include/ofxSonyVegas.h; sourceTree = SOURCE_ROOT; };
+		1ECA4DF51A3F3A6500C5128B /* Ramp.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Ramp.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1ECA4E0E1A3F3ACD00C5128B /* Radial.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Radial.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1ECA4E0F1A3F3ACD00C5128B /* Ramp.ofx copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Ramp.ofx copy-Info.plist"; path = "/Users/devernay/Development/openfx-misc/Ramp.ofx copy-Info.plist"; sourceTree = "<absolute>"; };
+		1ECA4E101A3F3AFB00C5128B /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Radial/Info.plist; sourceTree = "<group>"; };
+		1ECA4E111A3F3AFB00C5128B /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; name = Makefile; path = Radial/Makefile; sourceTree = "<group>"; };
+		1ECA4E121A3F3AFB00C5128B /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PluginRegistration.cpp; path = Radial/PluginRegistration.cpp; sourceTree = "<group>"; };
+		1ECA4E131A3F3AFB00C5128B /* Radial.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Radial.cpp; path = Radial/Radial.cpp; sourceTree = "<group>"; };
+		1ECA4E141A3F3AFB00C5128B /* Radial.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Radial.h; path = Radial/Radial.h; sourceTree = "<group>"; };
 		1ECE544C185F2374001ED442 /* ReConverge.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ReConverge.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ECE544F185F23E3001ED442 /* ReConverge.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReConverge.cpp; sourceTree = "<group>"; };
 		1ECE5451185F23ED001ED442 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -1903,6 +1964,22 @@
 			buildActionMask = 2147483647;
 			files = (
 				1EBAEFDD199A81DB0037B3E6 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1ECA4DED1A3F3A6500C5128B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1ECA4DEE1A3F3A6500C5128B /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1ECA4E061A3F3ACD00C5128B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1ECA4E071A3F3ACD00C5128B /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2309,6 +2386,7 @@
 				1E551ED217994DEF00A4135C /* Sources */,
 				1E551EDA17994E8100A4135C /* Frameworks */,
 				1E551EC217994D4000A4135C /* Products */,
+				1ECA4E0F1A3F3ACD00C5128B /* Ramp.ofx copy-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -2356,6 +2434,8 @@
 				1EFBC9931A23A1EB00086E7A /* VectorToColor.ofx.bundle */,
 				1EFA772C1A24F0BA00212DB0 /* HSVTool.ofx.bundle */,
 				1E69CA011A2B2EDD0099D609 /* Saturation.ofx.bundle */,
+				1ECA4DF51A3F3A6500C5128B /* Ramp.ofx.bundle */,
+				1ECA4E0E1A3F3ACD00C5128B /* Radial.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -2395,6 +2475,7 @@
 				1EB9C06E196DD61B003C1849 /* NoOp */,
 				1EDE1BC8182D3F73002392CB /* OneView */,
 				1E52FFB91955CDDA0000FB79 /* Premult */,
+				1ECA4DDF1A3F3A2C00C5128B /* Radial */,
 				AC60A32419FE995F00375A86 /* Ramp */,
 				1ECE544E185F23BD001ED442 /* ReConverge */,
 				1E2A93461990EE320061B1F1 /* Retime */,
@@ -2566,6 +2647,18 @@
 			path = ../../include/tuttle;
 			sourceTree = "<group>";
 		};
+		1ECA4DDF1A3F3A2C00C5128B /* Radial */ = {
+			isa = PBXGroup;
+			children = (
+				1ECA4E131A3F3AFB00C5128B /* Radial.cpp */,
+				1ECA4E141A3F3AFB00C5128B /* Radial.h */,
+				1ECA4E101A3F3AFB00C5128B /* Info.plist */,
+				1ECA4E111A3F3AFB00C5128B /* Makefile */,
+				1ECA4E121A3F3AFB00C5128B /* PluginRegistration.cpp */,
+			);
+			name = Radial;
+			sourceTree = "<group>";
+		};
 		1ECE544E185F23BD001ED442 /* ReConverge */ = {
 			isa = PBXGroup;
 			children = (
@@ -2731,13 +2824,13 @@
 		AC60A32419FE995F00375A86 /* Ramp */ = {
 			isa = PBXGroup;
 			children = (
+				AC60A32A19FE995F00375A86 /* Ramp.cpp */,
+				AC60A32B19FE995F00375A86 /* Ramp.h */,
 				AC60A32519FE995F00375A86 /* Info.plist */,
 				AC60A32619FE995F00375A86 /* Makefile */,
 				AC60A32719FE995F00375A86 /* net.sf.openfx.Ramp.png */,
 				AC60A32819FE995F00375A86 /* net.sf.openfx.Ramp.svg */,
 				AC60A32919FE995F00375A86 /* PluginRegistration.cpp */,
-				AC60A32A19FE995F00375A86 /* Ramp.cpp */,
-				AC60A32B19FE995F00375A86 /* Ramp.h */,
 			);
 			path = Ramp;
 			sourceTree = "<group>";
@@ -3236,6 +3329,40 @@
 			productReference = 1EBAEFE1199A81DB0037B3E6 /* Test.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
+		1ECA4DE01A3F3A6500C5128B /* Ramp.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1ECA4DF21A3F3A6500C5128B /* Build configuration list for PBXNativeTarget "Ramp.ofx" */;
+			buildPhases = (
+				1ECA4DE11A3F3A6500C5128B /* Sources */,
+				1ECA4DED1A3F3A6500C5128B /* Frameworks */,
+				1ECA4DEF1A3F3A6500C5128B /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Ramp.ofx;
+			productName = basic.ofx;
+			productReference = 1ECA4DF51A3F3A6500C5128B /* Ramp.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
+		1ECA4DF91A3F3ACD00C5128B /* Radial.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1ECA4E0B1A3F3ACD00C5128B /* Build configuration list for PBXNativeTarget "Radial.ofx" */;
+			buildPhases = (
+				1ECA4DFA1A3F3ACD00C5128B /* Sources */,
+				1ECA4E061A3F3ACD00C5128B /* Frameworks */,
+				1ECA4E081A3F3ACD00C5128B /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Radial.ofx;
+			productName = basic.ofx;
+			productReference = 1ECA4E0E1A3F3ACD00C5128B /* Radial.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 		1ECE543C185F2374001ED442 /* ReConverge.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1ECE5449185F2374001ED442 /* Build configuration list for PBXNativeTarget "ReConverge.ofx" */;
@@ -3617,6 +3744,8 @@
 				1EB9C06F196DD64E003C1849 /* NoOp.ofx */,
 				1EDE1BB6182D3F38002392CB /* OneView.ofx */,
 				1E52FFBA1955CE120000FB79 /* Premult.ofx */,
+				1ECA4DF91A3F3ACD00C5128B /* Radial.ofx */,
+				1ECA4DE01A3F3A6500C5128B /* Ramp.ofx */,
 				1ECE543C185F2374001ED442 /* ReConverge.ofx */,
 				1E2A93471990EE690061B1F1 /* Retime.ofx */,
 				D721EC02191120B30069DB1D /* Roto.ofx */,
@@ -3935,8 +4064,9 @@
 				1E8B5D7218B7800800C31FDC /* MixViews.cpp in Sources */,
 				1ED4AEAC1973DD4800EE64C8 /* Noise.cpp in Sources */,
 				1E8B5D7718B7811500C31FDC /* OneView.cpp in Sources */,
-				1E0E4EA2194CAF9E0072248F /* ReConverge.cpp in Sources */,
+				1ECA4E171A3F3E5D00C5128B /* Radial.cpp in Sources */,
 				AC60A33C19FE9C7900375A86 /* Ramp.cpp in Sources */,
+				1E0E4EA2194CAF9E0072248F /* ReConverge.cpp in Sources */,
 				1E2A935C1990EEB60061B1F1 /* Retime.cpp in Sources */,
 				1E8B5D6818B76F8700C31FDC /* ColorLookup.cpp in Sources */,
 				D721EC17191120F30069DB1D /* Roto.cpp in Sources */,
@@ -4048,6 +4178,44 @@
 				1EBAEFD9199A81DB0037B3E6 /* ofxsParams.cpp in Sources */,
 				1EBAEFDA199A81DB0037B3E6 /* ofxsProperty.cpp in Sources */,
 				1EBAEFDB199A81DB0037B3E6 /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1ECA4DE11A3F3A6500C5128B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1ECA4DF71A3F3AC900C5128B /* Ramp.cpp in Sources */,
+				1ECA4DF81A3F3AC900C5128B /* PluginRegistration.cpp in Sources */,
+				1ECA4DE41A3F3A6500C5128B /* ofxsCore.cpp in Sources */,
+				1ECA4DE51A3F3A6500C5128B /* ofxsImageEffect.cpp in Sources */,
+				1ECA4DE61A3F3A6500C5128B /* ofxsInteract.cpp in Sources */,
+				1ECA4DE71A3F3A6500C5128B /* ofxsRectangleInteract.cpp in Sources */,
+				1ECA4DE81A3F3A6500C5128B /* ofxsLog.cpp in Sources */,
+				1ECA4DE91A3F3A6500C5128B /* ofxsMultiThread.cpp in Sources */,
+				1ECA4DEA1A3F3A6500C5128B /* ofxsParams.cpp in Sources */,
+				1ECA4DEB1A3F3A6500C5128B /* ofxsProperty.cpp in Sources */,
+				1ECA4DEC1A3F3A6500C5128B /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1ECA4DFA1A3F3ACD00C5128B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1ECA4E161A3F3B0C00C5128B /* PluginRegistration.cpp in Sources */,
+				1ECA4E151A3F3B0C00C5128B /* Radial.cpp in Sources */,
+				1ECA4DFB1A3F3ACD00C5128B /* Ramp.cpp in Sources */,
+				1ECA4DFC1A3F3ACD00C5128B /* PluginRegistration.cpp in Sources */,
+				1ECA4DFD1A3F3ACD00C5128B /* ofxsCore.cpp in Sources */,
+				1ECA4DFE1A3F3ACD00C5128B /* ofxsImageEffect.cpp in Sources */,
+				1ECA4DFF1A3F3ACD00C5128B /* ofxsInteract.cpp in Sources */,
+				1ECA4E001A3F3ACD00C5128B /* ofxsRectangleInteract.cpp in Sources */,
+				1ECA4E011A3F3ACD00C5128B /* ofxsLog.cpp in Sources */,
+				1ECA4E021A3F3ACD00C5128B /* ofxsMultiThread.cpp in Sources */,
+				1ECA4E031A3F3ACD00C5128B /* ofxsParams.cpp in Sources */,
+				1ECA4E041A3F3ACD00C5128B /* ofxsProperty.cpp in Sources */,
+				1ECA4E051A3F3ACD00C5128B /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5184,6 +5352,50 @@
 			};
 			name = Release;
 		};
+		1ECA4DF31A3F3A6500C5128B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Ramp/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = Ramp.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1ECA4DF41A3F3A6500C5128B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Ramp/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = Ramp.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+		1ECA4E0C1A3F3ACD00C5128B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Radial/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = Radial.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1ECA4E0D1A3F3ACD00C5128B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Radial/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = Radial.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
 		1ECE544A185F2374001ED442 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -5853,6 +6065,24 @@
 			buildConfigurations = (
 				1EBAEFDF199A81DB0037B3E6 /* Debug */,
 				1EBAEFE0199A81DB0037B3E6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1ECA4DF21A3F3A6500C5128B /* Build configuration list for PBXNativeTarget "Ramp.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1ECA4DF31A3F3A6500C5128B /* Debug */,
+				1ECA4DF41A3F3A6500C5128B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1ECA4E0B1A3F3ACD00C5128B /* Build configuration list for PBXNativeTarget "Radial.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1ECA4E0C1A3F3ACD00C5128B /* Debug */,
+				1ECA4E0D1A3F3ACD00C5128B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
