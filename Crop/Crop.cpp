@@ -100,6 +100,19 @@
 #define kParamSoftness "softness"
 #define kParamSoftnessLabel "Softness"
 
+static inline
+double
+rampSmooth(double t)
+{
+    t *= 2.;
+    if (t < 1) {
+        return t * t / (2.);
+    } else {
+        t -= 1.;
+        return -0.5 * (t * (t - 2) - 1);
+    }
+}
+
 using namespace OFX;
 
 class CropProcessorBase : public OFX::ImageProcessor
@@ -109,6 +122,7 @@ class CropProcessorBase : public OFX::ImageProcessor
 protected:
     const OFX::Image *_srcImg;
     
+    OfxPointD _btmLeft, _size;
     double _softness;
     bool _blackOutside;
     OfxPointI _translation;
@@ -128,10 +142,18 @@ public:
     }
 
     
-    void setValues(const OfxRectI& cropRect,const OfxRectI& dstRoDPix,bool bo,bool reformat,double softness)
+    void setValues(const OfxPointD& btmLeft,
+                   const OfxPointD& size,
+                   const OfxRectI& cropRect,
+                   const OfxRectI& dstRoDPix,
+                   bool blackOutside,
+                   bool reformat,
+                   double softness)
     {
+        _btmLeft = btmLeft;
+        _size = size;
         _softness = softness;
-        _blackOutside = bo;
+        _blackOutside = blackOutside;
         _dstRoDPix = dstRoDPix;
         if (reformat) {
             _translation.x = cropRect.x1;
@@ -168,11 +190,6 @@ private:
             
             bool yblack = _blackOutside && (y == _dstRoDPix.y1 || y == (_dstRoDPix.y2 - 1));
 
-            // distance to the nearest crop area horizontal edge
-            int yDistance = _blackOutside + std::min(y - _dstRoDPix.y1, _dstRoDPix.y2 - 1 - y);
-            // handle softness
-            double yMultiplier = yDistance < _softness ? (double)yDistance / _softness : 1.;
-
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
                 bool xblack = _blackOutside && (x == _dstRoDPix.x1 || x == (_dstRoDPix.x2 - 1));
                 // treat the black case separately
@@ -181,23 +198,57 @@ private:
                         dstPix[k] =  0.;
                     }
                 } else {
-                    // distance to the nearest crop area vertical edge
-                    int xDistance = _blackOutside + std::min(x - _dstRoDPix.x1, _dstRoDPix.x2 - 1 - x);
-                    // handle softness
-                    double xMultiplier = xDistance < _softness ? (double)xDistance / _softness : 1.;
+                    OfxPointI p_pixel;
+                    OfxPointD p;
+                    p_pixel.x = x + _translation.x;
+                    p_pixel.y = y + _translation.y;
+                    OFX::MergeImages2D::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
 
-                    const PIX *srcPix = (const PIX*)_srcImg->getPixelAddress(x + _translation.x, y + _translation.y);
-                    if (!srcPix) {
+                    double dx = std::min(p.x - _btmLeft.x, _btmLeft.x + _size.x - p.x);
+                    double dy = std::min(p.y - _btmLeft.y, _btmLeft.y + _size.y - p.y);
+
+                    if (dx <=0 || dy <= 0) {
+                        // outside of the rectangle
                         for (int k = 0; k < nComponents; ++k) {
                             dstPix[k] =  0.;
                         }
-                    } else if (xMultiplier != 1. || yMultiplier != 1.) {
-                        for (int k = 0; k < nComponents; ++k) {
-                            dstPix[k] =  srcPix[k] * xMultiplier * yMultiplier;
-                        }
                     } else {
-                        for (int k = 0; k < nComponents; ++k) {
-                            dstPix[k] =  srcPix[k];
+                        const PIX *srcPix = (const PIX*)_srcImg->getPixelAddress(p_pixel.x, p_pixel.y);
+                        if (!srcPix) {
+                            for (int k = 0; k < nComponents; ++k) {
+                                dstPix[k] =  0.;
+                            }
+                        } else if (_softness == 0 || (dx >= _softness && dy >= _softness)) {
+                            // inside of the rectangle
+                            for (int k = 0; k < nComponents; ++k) {
+                                dstPix[k] =  srcPix[k];
+                            }
+                        } else {
+                            double tx, ty;
+                            if (dx >= _softness) {
+                                tx = 1.;
+                            } else {
+                                tx = rampSmooth(dx / _softness);
+                            }
+                            if (dy >= _softness) {
+                                ty = 1.;
+                            } else {
+                                ty = rampSmooth(dy / _softness);
+                            }
+                            double t = tx * ty;
+                            if (t >= 1) {
+                                for (int k = 0; k < nComponents; ++k) {
+                                    dstPix[k] =  srcPix[k];
+                                }
+                            } else {
+                                //if (_plinear) {
+                                //    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
+                                //    t = t*t*t;
+                                //}
+                                for (int k = 0; k < nComponents; ++k) {
+                                    dstPix[k] =  srcPix[k] * t;
+                                }
+                            }
                         }
                     }
                 }
@@ -361,6 +412,10 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
     // set the render window
     processor.setRenderWindow(args.renderWindow);
     
+    OfxPointD btmLeft, size;
+    _btmLeft->getValueAtTime(args.time, btmLeft.x, btmLeft.y);
+    _size->getValueAtTime(args.time, size.x, size.y);
+
     bool reformat;
     _reformat->getValueAtTime(args.time, reformat);
     bool blackOutside;
@@ -380,7 +435,7 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
     OfxRectI dstRoDPix;
     MergeImages2D::toPixelEnclosing(dstRoD, args.renderScale, par, &dstRoDPix);
 
-    processor.setValues(cropRectPixel, dstRoDPix, blackOutside, reformat, softness);
+    processor.setValues(btmLeft, size, cropRectPixel, dstRoDPix, blackOutside, reformat, softness);
     
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -636,7 +691,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSoftness);
         param->setLabels(kParamSoftnessLabel, kParamSoftnessLabel, kParamSoftnessLabel);
         param->setDefault(0);
-        param->setRange(0., 100.);
+        param->setRange(0., 1000.);
         param->setDisplayRange(0., 100.);
         param->setIncrement(1.);
         param->setHint("Size of the fade to black around edges to apply");
