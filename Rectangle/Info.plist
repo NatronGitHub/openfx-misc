@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>Ramp.ofx</string>
+	<string>Rectangle.ofx</string>
 	<key>LSApplicationCategoryType</key>
 	<string></string>
 	<key>CFBundleIdentifier</key>

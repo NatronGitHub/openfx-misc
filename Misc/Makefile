@@ -24,8 +24,10 @@ Noise.o \
 NoOp.o \
 OneView.o \
 Premult.o \
+Radial.o \
 Ramp.o \
 ReConverge.o \
+Rectangle.o \
 Retime.o \
 ColorLookup.o \
 Roto.o \
@@ -129,9 +131,10 @@ VPATH += \
 ../NoOp \
 ../OneView \
 ../Premult \
-../ReConverge \
 ../Radial \
 ../Ramp \
+../ReConverge \
+../Rectangle \
 ../Retime \
 ../ColorLookup \
 ../Roto \
@@ -175,9 +178,10 @@ CXXFLAGS += \
 -I../NoOp \
 -I../OneView \
 -I../Premult \
--I../ReConverge \
 -I../Radial \
 -I../Ramp \
+-I../ReConverge \
+-I../Rectangle \
 -I../Retime \
 -I../Roto \
 -I../Saturation \

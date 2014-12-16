@@ -72,6 +72,24 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		1E0072D51A40417F00E77042 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1E0072D61A40417F00E77042 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1E0072D71A40417F00E77042 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1E0072D81A40417F00E77042 /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
+		1E0072D91A40417F00E77042 /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1E0072DA1A40417F00E77042 /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1E0072DB1A40417F00E77042 /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1E0072DC1A40417F00E77042 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1E0072DD1A40417F00E77042 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1E0072DF1A40417F00E77042 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1E0072E11A40417F00E77042 /* net.sf.openfx.CropPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A87C19C6ED8000E6E3AE /* net.sf.openfx.CropPlugin.png */; };
+		1E0072E21A40417F00E77042 /* net.sf.openfx.CropPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9E19C981DD00C2C668 /* net.sf.openfx.CropPlugin.svg */; };
+		1E0072EE1A4041DF00E77042 /* Radial.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E0072EC1A4041D200E77042 /* Radial.cpp */; };
+		1E0072EF1A4041E100E77042 /* Radial.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E0072EC1A4041D200E77042 /* Radial.cpp */; };
+		1E0072F01A4041E500E77042 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E0072EB1A4041D200E77042 /* PluginRegistration.cpp */; };
+		1E0072F61A40420F00E77042 /* Rectangle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E0072F41A40420500E77042 /* Rectangle.cpp */; };
+		1E0072F71A40421100E77042 /* Rectangle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E0072F41A40420500E77042 /* Rectangle.cpp */; };
+		1E0072F81A40421500E77042 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E0072F31A40420500E77042 /* PluginRegistration.cpp */; };
 		1E0831F8199FEB1F00A819A5 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E0831F9199FEB1F00A819A5 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E0831FA199FEB1F00A819A5 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -419,8 +437,6 @@
 		1ECA4DF11A3F3A6500C5128B /* net.sf.openfx.CropPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9E19C981DD00C2C668 /* net.sf.openfx.CropPlugin.svg */; };
 		1ECA4DF71A3F3AC900C5128B /* Ramp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32A19FE995F00375A86 /* Ramp.cpp */; };
 		1ECA4DF81A3F3AC900C5128B /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32919FE995F00375A86 /* PluginRegistration.cpp */; };
-		1ECA4DFB1A3F3ACD00C5128B /* Ramp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32A19FE995F00375A86 /* Ramp.cpp */; };
-		1ECA4DFC1A3F3ACD00C5128B /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32919FE995F00375A86 /* PluginRegistration.cpp */; };
 		1ECA4DFD1A3F3ACD00C5128B /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1ECA4DFE1A3F3ACD00C5128B /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1ECA4DFF1A3F3ACD00C5128B /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -433,9 +449,6 @@
 		1ECA4E071A3F3ACD00C5128B /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1ECA4E091A3F3ACD00C5128B /* net.sf.openfx.CropPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A87C19C6ED8000E6E3AE /* net.sf.openfx.CropPlugin.png */; };
 		1ECA4E0A1A3F3ACD00C5128B /* net.sf.openfx.CropPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9E19C981DD00C2C668 /* net.sf.openfx.CropPlugin.svg */; };
-		1ECA4E151A3F3B0C00C5128B /* Radial.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ECA4E131A3F3AFB00C5128B /* Radial.cpp */; };
-		1ECA4E161A3F3B0C00C5128B /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ECA4E121A3F3AFB00C5128B /* PluginRegistration.cpp */; };
-		1ECA4E171A3F3E5D00C5128B /* Radial.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ECA4E131A3F3AFB00C5128B /* Radial.cpp */; };
 		1ECE543E185F2374001ED442 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1ECE543F185F2374001ED442 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1ECE5440185F2374001ED442 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -1027,6 +1040,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		1E0072E01A40417F00E77042 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1E0072E11A40417F00E77042 /* net.sf.openfx.CropPlugin.png in CopyFiles */,
+				1E0072E21A40417F00E77042 /* net.sf.openfx.CropPlugin.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E69C9FB1A2B2EDD0099D609 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1385,6 +1409,17 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1E0072E61A40417F00E77042 /* Rectangle.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Rectangle.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E0072E91A4041D200E77042 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1E0072EA1A4041D200E77042 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1E0072EB1A4041D200E77042 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		1E0072EC1A4041D200E77042 /* Radial.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Radial.cpp; sourceTree = "<group>"; };
+		1E0072ED1A4041D200E77042 /* Radial.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Radial.h; sourceTree = "<group>"; };
+		1E0072F11A40420500E77042 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1E0072F21A40420500E77042 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1E0072F31A40420500E77042 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		1E0072F41A40420500E77042 /* Rectangle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Rectangle.cpp; sourceTree = "<group>"; };
+		1E0072F51A40420500E77042 /* Rectangle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Rectangle.h; sourceTree = "<group>"; };
 		1E009D5E17F44D5C003071CC /* ofxsHWNDInteract.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsHWNDInteract.h; sourceTree = "<group>"; };
 		1E009D5F17F44D70003071CC /* ofxCore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ofxCore.h; path = ../../include/ofxCore.h; sourceTree = "<group>"; };
 		1E009D6017F44D70003071CC /* ofxImageEffect.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ofxImageEffect.h; path = ../../include/ofxImageEffect.h; sourceTree = "<group>"; };
@@ -1611,12 +1646,6 @@
 		1EC7C7FA18BF4F85002A246F /* ofxSonyVegas.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxSonyVegas.h; path = openfx/include/ofxSonyVegas.h; sourceTree = SOURCE_ROOT; };
 		1ECA4DF51A3F3A6500C5128B /* Ramp.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Ramp.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ECA4E0E1A3F3ACD00C5128B /* Radial.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Radial.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		1ECA4E0F1A3F3ACD00C5128B /* Ramp.ofx copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Ramp.ofx copy-Info.plist"; path = "/Users/devernay/Development/openfx-misc/Ramp.ofx copy-Info.plist"; sourceTree = "<absolute>"; };
-		1ECA4E101A3F3AFB00C5128B /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Radial/Info.plist; sourceTree = "<group>"; };
-		1ECA4E111A3F3AFB00C5128B /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; name = Makefile; path = Radial/Makefile; sourceTree = "<group>"; };
-		1ECA4E121A3F3AFB00C5128B /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PluginRegistration.cpp; path = Radial/PluginRegistration.cpp; sourceTree = "<group>"; };
-		1ECA4E131A3F3AFB00C5128B /* Radial.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Radial.cpp; path = Radial/Radial.cpp; sourceTree = "<group>"; };
-		1ECA4E141A3F3AFB00C5128B /* Radial.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Radial.h; path = Radial/Radial.h; sourceTree = "<group>"; };
 		1ECE544C185F2374001ED442 /* ReConverge.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ReConverge.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ECE544F185F23E3001ED442 /* ReConverge.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReConverge.cpp; sourceTree = "<group>"; };
 		1ECE5451185F23ED001ED442 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -1799,6 +1828,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		1E0072DE1A40417F00E77042 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E0072DF1A40417F00E77042 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E083200199FEB1F00A819A5 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -2146,6 +2183,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1E0072E81A4041AE00E77042 /* Rectangle */ = {
+			isa = PBXGroup;
+			children = (
+				1E0072F41A40420500E77042 /* Rectangle.cpp */,
+				1E0072F51A40420500E77042 /* Rectangle.h */,
+				1E0072F11A40420500E77042 /* Info.plist */,
+				1E0072F21A40420500E77042 /* Makefile */,
+				1E0072F31A40420500E77042 /* PluginRegistration.cpp */,
+			);
+			path = Rectangle;
+			sourceTree = "<group>";
+		};
 		1E0831F3199FEB0600A819A5 /* Deinterlace */ = {
 			isa = PBXGroup;
 			children = (
@@ -2386,7 +2435,6 @@
 				1E551ED217994DEF00A4135C /* Sources */,
 				1E551EDA17994E8100A4135C /* Frameworks */,
 				1E551EC217994D4000A4135C /* Products */,
-				1ECA4E0F1A3F3ACD00C5128B /* Ramp.ofx copy-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -2436,6 +2484,7 @@
 				1E69CA011A2B2EDD0099D609 /* Saturation.ofx.bundle */,
 				1ECA4DF51A3F3A6500C5128B /* Ramp.ofx.bundle */,
 				1ECA4E0E1A3F3ACD00C5128B /* Radial.ofx.bundle */,
+				1E0072E61A40417F00E77042 /* Rectangle.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -2478,6 +2527,7 @@
 				1ECA4DDF1A3F3A2C00C5128B /* Radial */,
 				AC60A32419FE995F00375A86 /* Ramp */,
 				1ECE544E185F23BD001ED442 /* ReConverge */,
+				1E0072E81A4041AE00E77042 /* Rectangle */,
 				1E2A93461990EE320061B1F1 /* Retime */,
 				D721EBFC1911209B0069DB1D /* Roto */,
 				1E69C9EC1A2B2EC10099D609 /* Saturation */,
@@ -2650,13 +2700,13 @@
 		1ECA4DDF1A3F3A2C00C5128B /* Radial */ = {
 			isa = PBXGroup;
 			children = (
-				1ECA4E131A3F3AFB00C5128B /* Radial.cpp */,
-				1ECA4E141A3F3AFB00C5128B /* Radial.h */,
-				1ECA4E101A3F3AFB00C5128B /* Info.plist */,
-				1ECA4E111A3F3AFB00C5128B /* Makefile */,
-				1ECA4E121A3F3AFB00C5128B /* PluginRegistration.cpp */,
+				1E0072EC1A4041D200E77042 /* Radial.cpp */,
+				1E0072ED1A4041D200E77042 /* Radial.h */,
+				1E0072E91A4041D200E77042 /* Info.plist */,
+				1E0072EA1A4041D200E77042 /* Makefile */,
+				1E0072EB1A4041D200E77042 /* PluginRegistration.cpp */,
 			);
-			name = Radial;
+			path = Radial;
 			sourceTree = "<group>";
 		};
 		1ECE544E185F23BD001ED442 /* ReConverge */ = {
@@ -2978,6 +3028,23 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		1E0072D11A40417F00E77042 /* Rectangle.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1E0072E31A40417F00E77042 /* Build configuration list for PBXNativeTarget "Rectangle.ofx" */;
+			buildPhases = (
+				1E0072D21A40417F00E77042 /* Sources */,
+				1E0072DE1A40417F00E77042 /* Frameworks */,
+				1E0072E01A40417F00E77042 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Rectangle.ofx;
+			productName = basic.ofx;
+			productReference = 1E0072E61A40417F00E77042 /* Rectangle.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 		1E0831F4199FEB1F00A819A5 /* Deinterlace.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1E083202199FEB1F00A819A5 /* Build configuration list for PBXNativeTarget "Deinterlace.ofx" */;
@@ -3747,6 +3814,7 @@
 				1ECA4DF91A3F3ACD00C5128B /* Radial.ofx */,
 				1ECA4DE01A3F3A6500C5128B /* Ramp.ofx */,
 				1ECE543C185F2374001ED442 /* ReConverge.ofx */,
+				1E0072D11A40417F00E77042 /* Rectangle.ofx */,
 				1E2A93471990EE690061B1F1 /* Retime.ofx */,
 				D721EC02191120B30069DB1D /* Roto.ofx */,
 				1E69C9ED1A2B2EDD0099D609 /* Saturation.ofx */,
@@ -3764,6 +3832,24 @@
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		1E0072D21A40417F00E77042 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E0072D51A40417F00E77042 /* ofxsCore.cpp in Sources */,
+				1E0072D61A40417F00E77042 /* ofxsImageEffect.cpp in Sources */,
+				1E0072D71A40417F00E77042 /* ofxsInteract.cpp in Sources */,
+				1E0072F61A40420F00E77042 /* Rectangle.cpp in Sources */,
+				1E0072F81A40421500E77042 /* PluginRegistration.cpp in Sources */,
+				1E0072D81A40417F00E77042 /* ofxsRectangleInteract.cpp in Sources */,
+				1E0072D91A40417F00E77042 /* ofxsLog.cpp in Sources */,
+				1E0072DA1A40417F00E77042 /* ofxsMultiThread.cpp in Sources */,
+				1E0072DB1A40417F00E77042 /* ofxsParams.cpp in Sources */,
+				1E0072DC1A40417F00E77042 /* ofxsProperty.cpp in Sources */,
+				1E0072DD1A40417F00E77042 /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E0831F5199FEB1F00A819A5 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -4048,6 +4134,7 @@
 				D7B4C97818D9DBE70004137D /* ColorCorrect.cpp in Sources */,
 				D74A80C719405A14007C3E1C /* Crop.cpp in Sources */,
 				1E92573819EC1E140018F19A /* Clamp.cpp in Sources */,
+				1E0072F71A40421100E77042 /* Rectangle.cpp in Sources */,
 				1E08320D199FEB7800A819A5 /* Deinterlace.cpp in Sources */,
 				1EFB4E2019461B76005932AF /* Difference.cpp in Sources */,
 				1EA0C22719BA12D3006AB602 /* Dissolve.cpp in Sources */,
@@ -4064,12 +4151,12 @@
 				1E8B5D7218B7800800C31FDC /* MixViews.cpp in Sources */,
 				1ED4AEAC1973DD4800EE64C8 /* Noise.cpp in Sources */,
 				1E8B5D7718B7811500C31FDC /* OneView.cpp in Sources */,
-				1ECA4E171A3F3E5D00C5128B /* Radial.cpp in Sources */,
 				AC60A33C19FE9C7900375A86 /* Ramp.cpp in Sources */,
 				1E0E4EA2194CAF9E0072248F /* ReConverge.cpp in Sources */,
 				1E2A935C1990EEB60061B1F1 /* Retime.cpp in Sources */,
 				1E8B5D6818B76F8700C31FDC /* ColorLookup.cpp in Sources */,
 				D721EC17191120F30069DB1D /* Roto.cpp in Sources */,
+				1E0072EE1A4041DF00E77042 /* Radial.cpp in Sources */,
 				1ECF2FA519F51DA600E91A38 /* Keyer.cpp in Sources */,
 				1EF46F48194A39C800825BDF /* Shuffle.cpp in Sources */,
 				1ED4AEB81973DE1200EE64C8 /* randomGenerator.cpp in Sources */,
@@ -4203,14 +4290,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1ECA4E161A3F3B0C00C5128B /* PluginRegistration.cpp in Sources */,
-				1ECA4E151A3F3B0C00C5128B /* Radial.cpp in Sources */,
-				1ECA4DFB1A3F3ACD00C5128B /* Ramp.cpp in Sources */,
-				1ECA4DFC1A3F3ACD00C5128B /* PluginRegistration.cpp in Sources */,
 				1ECA4DFD1A3F3ACD00C5128B /* ofxsCore.cpp in Sources */,
 				1ECA4DFE1A3F3ACD00C5128B /* ofxsImageEffect.cpp in Sources */,
 				1ECA4DFF1A3F3ACD00C5128B /* ofxsInteract.cpp in Sources */,
 				1ECA4E001A3F3ACD00C5128B /* ofxsRectangleInteract.cpp in Sources */,
+				1E0072F01A4041E500E77042 /* PluginRegistration.cpp in Sources */,
+				1E0072EF1A4041E100E77042 /* Radial.cpp in Sources */,
 				1ECA4E011A3F3ACD00C5128B /* ofxsLog.cpp in Sources */,
 				1ECA4E021A3F3ACD00C5128B /* ofxsMultiThread.cpp in Sources */,
 				1ECA4E031A3F3ACD00C5128B /* ofxsParams.cpp in Sources */,
@@ -4781,6 +4866,28 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		1E0072E41A40417F00E77042 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Rectangle/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = Rectangle.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1E0072E51A40417F00E77042 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Rectangle/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = Rectangle.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
 		1E083203199FEB1F00A819A5 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -5853,6 +5960,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		1E0072E31A40417F00E77042 /* Build configuration list for PBXNativeTarget "Rectangle.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E0072E41A40417F00E77042 /* Debug */,
+				1E0072E51A40417F00E77042 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		1E083202199FEB1F00A819A5 /* Build configuration list for PBXNativeTarget "Deinterlace.ofx" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

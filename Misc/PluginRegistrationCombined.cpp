@@ -26,6 +26,7 @@
 #include "Radial.h"
 #include "Ramp.h"
 #include "ReConverge.h"
+#include "Rectangle.h"
 #include "Retime.h"
 #include "ColorLookup.h"
 #include "Roto.h"
@@ -69,14 +70,13 @@ namespace OFX
             getNoisePluginID(ids);
             getNoOpPluginID(ids);
             getOneViewPluginID(ids);
-#ifdef DEBUG
             getRadialPluginID(ids);
-#endif
             getRampPluginID(ids);
             getPremultPluginIDs(ids);
 #ifdef DEBUG
             getReConvergePluginID(ids);
 #endif
+            getRectanglePluginID(ids);
             getRetimePluginID(ids);
             getColorLookupPluginID(ids);
             getRotoPluginID(ids);

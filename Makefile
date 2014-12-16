@@ -29,7 +29,8 @@ OneView \
 Premult \
 Radial \
 Ramp \
-Reconverge \
+ReConverge \
+Rectangle \
 Retime \
 Roto \
 Saturation \
