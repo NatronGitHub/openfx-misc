@@ -90,6 +90,7 @@
 		1E0072F61A40420F00E77042 /* Rectangle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E0072F41A40420500E77042 /* Rectangle.cpp */; };
 		1E0072F71A40421100E77042 /* Rectangle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E0072F41A40420500E77042 /* Rectangle.cpp */; };
 		1E0072F81A40421500E77042 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E0072F31A40420500E77042 /* PluginRegistration.cpp */; };
+		1E0072F91A407A3600E77042 /* ofxsOGLTextRenderer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F4F198A51840095C8AA /* ofxsOGLTextRenderer.cpp */; };
 		1E0831F8199FEB1F00A819A5 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E0831F9199FEB1F00A819A5 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E0831FA199FEB1F00A819A5 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -3836,11 +3837,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E0072F61A40420F00E77042 /* Rectangle.cpp in Sources */,
+				1E0072F81A40421500E77042 /* PluginRegistration.cpp in Sources */,
 				1E0072D51A40417F00E77042 /* ofxsCore.cpp in Sources */,
 				1E0072D61A40417F00E77042 /* ofxsImageEffect.cpp in Sources */,
 				1E0072D71A40417F00E77042 /* ofxsInteract.cpp in Sources */,
-				1E0072F61A40420F00E77042 /* Rectangle.cpp in Sources */,
-				1E0072F81A40421500E77042 /* PluginRegistration.cpp in Sources */,
 				1E0072D81A40417F00E77042 /* ofxsRectangleInteract.cpp in Sources */,
 				1E0072D91A40417F00E77042 /* ofxsLog.cpp in Sources */,
 				1E0072DA1A40417F00E77042 /* ofxsMultiThread.cpp in Sources */,
@@ -4274,6 +4275,7 @@
 			files = (
 				1ECA4DF71A3F3AC900C5128B /* Ramp.cpp in Sources */,
 				1ECA4DF81A3F3AC900C5128B /* PluginRegistration.cpp in Sources */,
+				1E0072F91A407A3600E77042 /* ofxsOGLTextRenderer.cpp in Sources */,
 				1ECA4DE41A3F3A6500C5128B /* ofxsCore.cpp in Sources */,
 				1ECA4DE51A3F3A6500C5128B /* ofxsImageEffect.cpp in Sources */,
 				1ECA4DE61A3F3A6500C5128B /* ofxsInteract.cpp in Sources */,
@@ -4290,12 +4292,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E0072EF1A4041E100E77042 /* Radial.cpp in Sources */,
+				1E0072F01A4041E500E77042 /* PluginRegistration.cpp in Sources */,
 				1ECA4DFD1A3F3ACD00C5128B /* ofxsCore.cpp in Sources */,
 				1ECA4DFE1A3F3ACD00C5128B /* ofxsImageEffect.cpp in Sources */,
 				1ECA4DFF1A3F3ACD00C5128B /* ofxsInteract.cpp in Sources */,
 				1ECA4E001A3F3ACD00C5128B /* ofxsRectangleInteract.cpp in Sources */,
-				1E0072F01A4041E500E77042 /* PluginRegistration.cpp in Sources */,
-				1E0072EF1A4041E100E77042 /* Radial.cpp in Sources */,
 				1ECA4E011A3F3ACD00C5128B /* ofxsLog.cpp in Sources */,
 				1ECA4E021A3F3ACD00C5128B /* ofxsMultiThread.cpp in Sources */,
 				1ECA4E031A3F3ACD00C5128B /* ofxsParams.cpp in Sources */,
