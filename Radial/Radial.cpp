@@ -138,14 +138,17 @@ namespace {
     };
 }
 
-// round to the closest int, 1/10 int, etc
-// this make parameter editing easier
-// pscale is args.pixelScale.x / args.renderScale.x;
-// pscale10 is the power of 10 below pscale
-static double fround(double val, double pscale)
+static inline
+double
+rampSmooth(double t)
 {
-    double pscale10 = std::pow(10.,std::floor(std::log10(pscale)));
-    return pscale10 * std::floor(val/pscale10 + 0.5);
+    t *= 2.;
+    if (t < 1) {
+        return t * t / (2.);
+    } else {
+        t -= 1.;
+        return -0.5 * (t * (t - 2) - 1);
+    }
 }
 
 using namespace OFX;
@@ -357,44 +360,44 @@ private:
 
                 double dx = (p.x - (_btmLeft.x + (_btmLeft.x + _size.x)) / 2) / (_size.x/2);
                 double dy = (p.y - (_btmLeft.y + (_btmLeft.y + _size.y)) / 2) / (_size.y/2);
-                double dsq = dx*dx + dy*dy;
 
-                if (dsq >= 1) {
+                if (dx >= 1 || dy >= 1) {
                     tmpPix[0] = _color0.r;
                     tmpPix[1] = _color0.g;
                     tmpPix[2] = _color0.b;
                     tmpPix[3] = _color0.a;
-
-                } else if (dsq <= 0 || _softness == 0) {
-                    tmpPix[0] = _color1.r;
-                    tmpPix[1] = _color1.g;
-                    tmpPix[2] = _color1.b;
-                    tmpPix[3] = _color1.a;
                 } else {
-                    double t = (1. - std::sqrt(dsq)) / _softness;
-                    if (t >= 1) {
+                    double dsq = dx*dx + dy*dy;
+
+                    if (dsq >= 1) {
+                        tmpPix[0] = _color0.r;
+                        tmpPix[1] = _color0.g;
+                        tmpPix[2] = _color0.b;
+                        tmpPix[3] = _color0.a;
+                    } else if (dsq <= 0 || _softness == 0) {
                         tmpPix[0] = _color1.r;
                         tmpPix[1] = _color1.g;
                         tmpPix[2] = _color1.b;
                         tmpPix[3] = _color1.a;
                     } else {
-                        // apply eRampTypeSmooth
-                        t *= 2.;
-                        if (t < 1) {
-                            t = t * t / (2.);
+                        double t = (1. - std::sqrt(dsq)) / _softness;
+                        if (t >= 1) {
+                            tmpPix[0] = _color1.r;
+                            tmpPix[1] = _color1.g;
+                            tmpPix[2] = _color1.b;
+                            tmpPix[3] = _color1.a;
                         } else {
-                            --t;
-                            t =  -0.5 * (t * (t - 2) - 1);
-                        }
+                            t = rampSmooth(t);
 
-                        if (_plinear) {
-                            // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
-                            t = t*t*t;
+                            if (_plinear) {
+                                // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
+                                t = t*t*t;
+                            }
+                            tmpPix[0] = _color0.r * (1 - t) + _color1.r * t;
+                            tmpPix[1] = _color0.g * (1 - t) + _color1.g * t;
+                            tmpPix[2] = _color0.b * (1 - t) + _color1.b * t;
+                            tmpPix[3] = _color0.a * (1 - t) + _color1.a * t;
                         }
-                        tmpPix[0] = _color0.r * (1 - t) + _color1.r * t;
-                        tmpPix[1] = _color0.g * (1 - t) + _color1.g * t;
-                        tmpPix[2] = _color0.b * (1 - t) + _color1.b * t;
-                        tmpPix[3] = _color0.a * (1 - t) + _color1.a * t;
                     }
                 }
                 double a = tmpPix[3];
@@ -491,14 +494,15 @@ public:
         assert(_mix && _maskInvert);
     }
 
+private:
     /* override is identity */
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE;
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     /* Override the clip preferences */
     void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
-private:
-    
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     
@@ -595,11 +599,11 @@ RadialPlugin::setupAndProcess(RadialProcessorBase &processor, const OFX::RenderA
     bool plinear;
     _plinear->getValueAtTime(args.time, plinear);
 
-    RGBAValues color0,color1;
+    RGBAValues color0, color1;
     _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
     _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
 
-    bool doR,doG,doB,doA;
+    bool doR, doG, doB, doA;
     _processR->getValue(doR);
     _processG->getValue(doG);
     _processB->getValue(doB);
@@ -688,7 +692,7 @@ RadialPlugin::isIdentity(const OFX::IsIdentityArguments &args,
         return true;
     }
 
-    RGBAValues color0,color1;
+    RGBAValues color0, color1;
     _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
     _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
     if (color0.a == 0. && color1.a == 0.) {
@@ -709,6 +713,33 @@ RadialPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     if (alpha && srcClip_->getPreMultiplication() == eImageOpaque) {
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }
+}
+
+bool
+RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    double mix;
+    _mix->getValueAtTime(args.time, mix);
+    if (mix != 1.) {
+        // default region of definition
+        return false;
+    }
+    RGBAValues color0;
+    _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
+    if (color0.a != 0.) {
+        // default region of definition
+        return false;
+    }
+    OfxPointD btmLeft, size;
+    _btmLeft->getValueAtTime(args.time, btmLeft.x, btmLeft.y);
+    _size->getValueAtTime(args.time, size.x, size.y);
+
+    rod.x1 = btmLeft.x;
+    rod.y1 = btmLeft.y;
+    rod.x2 = rod.x1 + size.x;
+    rod.y2 = rod.y1 + size.y;
+
+    return true;
 }
 
 mDeclarePluginFactory(RadialPluginFactory, {}, {});
