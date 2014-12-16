@@ -699,6 +699,7 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
     const double time = args.time;
     HSVToolValues values;
     _hueRange->getValueAtTime(time, values.hueRange[0], values.hueRange[1]);
+    values.hueRangeWithRolloff[0] = values.hueRangeWithRolloff[1] = 0; // set in setValues()
     _hueRotation->getValueAtTime(time, values.hueRotation);
     _hueRangeRolloff->getValueAtTime(time, values.hueRolloff);
     _saturationRange->getValueAtTime(time, values.satRange[0], values.satRange[1]);

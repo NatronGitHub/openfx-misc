@@ -455,116 +455,116 @@ fetchHostDescription(int nth)
     ImageEffectHostDescription &hostDesc = gHostDescription[nth];
     OfxStatus st;
     // and get some properties
-    char *name;
+    char *name = 0;
     st = gPropHost[nth]->propGetString(host, kOfxPropName, 0, &name);
     assert(st == kOfxStatOK);
     hostDesc.hostName                   = name;
 
     {
-        int hostIsBackground;
+        int hostIsBackground = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxImageEffectHostPropIsBackground, 0, &hostIsBackground);
         hostDesc.hostIsBackground = (st == kOfxStatOK) && hostIsBackground != 0;
     }
     {
-        int supportsOverlays;
+        int supportsOverlays = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxImageEffectPropSupportsOverlays, 0, &supportsOverlays);
         hostDesc.supportsOverlays = (st == kOfxStatOK) && supportsOverlays != 0;
     }
     {
-        int supportsMultiResolution;
+        int supportsMultiResolution = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxImageEffectPropSupportsMultiResolution, 0, &supportsMultiResolution);
         hostDesc.supportsMultiResolution = (st == kOfxStatOK) && supportsMultiResolution != 0;
     }
     {
-        int supportsTiles;
+        int supportsTiles = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxImageEffectPropSupportsTiles, 0, &supportsTiles);
         hostDesc.supportsTiles = (st == kOfxStatOK) && supportsTiles != 0;
     }
     {
-        int temporalClipAccess;
+        int temporalClipAccess = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxImageEffectPropTemporalClipAccess, 0, &temporalClipAccess);
         hostDesc.temporalClipAccess = (st == kOfxStatOK) && temporalClipAccess != 0;
     }
-    int numComponents;
+    int numComponents = 0;
     st = gPropHost[nth]->propGetDimension(host, kOfxImageEffectPropSupportedComponents, &numComponents);
     assert (st == kOfxStatOK);
     for (int i=0; i<numComponents; ++i) {
-        char *comp;
+        char *comp = 0;
         st = gPropHost[nth]->propGetString(host, kOfxImageEffectPropSupportedComponents, i, &comp);
         assert (st == kOfxStatOK);
         hostDesc._supportedComponents.push_back(comp);
     }
-    int numContexts;
+    int numContexts = 0;
     st = gPropHost[nth]->propGetDimension(host, kOfxImageEffectPropSupportedContexts, &numContexts);
     assert (st == kOfxStatOK);
     for (int i=0; i<numContexts; ++i) {
-        char* cont;
+        char* cont = 0;
         st = gPropHost[nth]->propGetString(host, kOfxImageEffectPropSupportedContexts, i, &cont);
         assert (st == kOfxStatOK);
         hostDesc._supportedContexts.push_back(cont);
     }
-	int numPixelDepths;
+	int numPixelDepths = 0;
     st = gPropHost[nth]->propGetDimension(host, kOfxImageEffectPropSupportedPixelDepths, &numPixelDepths);
     assert (st == kOfxStatOK);
     for (int i=0; i<numPixelDepths; ++i) {
-        char *depth;
+        char *depth = 0;
         st = gPropHost[nth]->propGetString(host, kOfxImageEffectPropSupportedPixelDepths, i, &depth);
         assert (st == kOfxStatOK);
         hostDesc._supportedPixelDepths.push_back(depth);
     }
     {
-        int supportsMultipleClipDepths;
+        int supportsMultipleClipDepths = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxImageEffectHostPropIsBackground, 0, &supportsMultipleClipDepths);
         hostDesc.supportsMultipleClipDepths = (st == kOfxStatOK) && supportsMultipleClipDepths != 0;
     }
     {
-        int supportsMultipleClipPARs;
+        int supportsMultipleClipPARs = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxImageEffectPropSupportsMultipleClipPARs, 0, &supportsMultipleClipPARs);
         hostDesc.supportsMultipleClipPARs = (st == kOfxStatOK) && supportsMultipleClipPARs != 0;
     }
     {
-        int supportsSetableFrameRate;
+        int supportsSetableFrameRate = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxImageEffectPropSetableFrameRate, 0, &supportsSetableFrameRate);
         hostDesc.supportsSetableFrameRate = (st == kOfxStatOK) && supportsSetableFrameRate != 0;
     }
     {
-        int supportsSetableFielding;
+        int supportsSetableFielding = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxImageEffectPropSetableFielding, 0, &supportsSetableFielding);
         hostDesc.supportsSetableFielding = (st == kOfxStatOK) && supportsSetableFielding != 0;
     }
     {
-        int supportsStringAnimation;
+        int supportsStringAnimation = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxParamHostPropSupportsStringAnimation, 0, &supportsStringAnimation);
         hostDesc.supportsStringAnimation = (st == kOfxStatOK) && supportsStringAnimation != 0;
     }
     {
-        int supportsCustomInteract;
+        int supportsCustomInteract = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxParamHostPropSupportsCustomInteract, 0, &supportsCustomInteract);
         hostDesc.supportsCustomInteract = (st == kOfxStatOK) && supportsCustomInteract != 0;
     }
     {
-        int supportsChoiceAnimation;
+        int supportsChoiceAnimation = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxParamHostPropSupportsChoiceAnimation, 0, &supportsChoiceAnimation);
         hostDesc.supportsChoiceAnimation = (st == kOfxStatOK) && supportsChoiceAnimation != 0;
     }
     {
-        int supportsBooleanAnimation;
+        int supportsBooleanAnimation = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxParamHostPropSupportsBooleanAnimation, 0, &supportsBooleanAnimation);
         hostDesc.supportsBooleanAnimation = (st == kOfxStatOK) && supportsBooleanAnimation != 0;
     }
     {
-        int supportsCustomAnimation;
+        int supportsCustomAnimation = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxParamHostPropSupportsCustomAnimation, 0, &supportsCustomAnimation);
         hostDesc.supportsCustomAnimation = (st == kOfxStatOK) && supportsCustomAnimation != 0;
     }
     {
-        int supportsParametricAnimation;
+        int supportsParametricAnimation = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxParamHostPropSupportsParametricAnimation, 0, &supportsParametricAnimation);
         hostDesc.supportsParametricAnimation = (st == kOfxStatOK) && supportsParametricAnimation != 0;
     }
 #ifdef OFX_EXTENSIONS_NUKE
     {
-        int canTransform;
+        int canTransform = 0;
         st = gPropHost[nth]->propGetInt(host, kFnOfxImageEffectCanTransform, 0, &canTransform);
         hostDesc.canTransform = (st == kOfxStatOK) && canTransform != 0;
     }
@@ -894,7 +894,7 @@ static std::string getContext(int nth, OfxImageEffectHandle handle)
     OfxStatus st = gEffectHost[nth]->getPropertySet((OfxImageEffectHandle)handle, &propHandle);
     assert(st == kOfxStatOK);
     // get context
-    char *context;
+    char *context = 0;
     st = gPropHost[nth]->propGetString(propHandle, kOfxImageEffectPropContext, 0, &context);
     assert(st == kOfxStatOK);
     return context;
@@ -954,7 +954,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       //     kOfxPropChangeReason - what triggered the change, which will be one of...
 
       // see why it changed
-      char *changeReason;
+      char *changeReason = 0;
       gPropHost[nth]->propGetString(inArgs, kOfxPropChangeReason, 0, &changeReason);
 
       ss << "(" << handle << "," << changeReason << ")";
@@ -968,22 +968,22 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       //     kOfxImageEffectPropRenderScale - the render scale currently being applied to any image fetched from a clip (for Image Effect Plugins only)
 
       // fetch the type of the object that changed
-      char *typeChanged;
+      char *typeChanged = 0;
       gPropHost[nth]->propGetString(inArgs, kOfxPropType, 0, &typeChanged);
       // get the name of the thing that changed
-      char *objChanged;
+      char *objChanged = 0;
       gPropHost[nth]->propGetString(inArgs, kOfxPropName, 0, &objChanged);
       // see why it changed
-      char *changeReason;
+      char *changeReason = 0;
       gPropHost[nth]->propGetString(inArgs, kOfxPropChangeReason, 0, &changeReason);
       // get the time
-      OfxTime time;
+      OfxTime time = 0.;
       gPropHost[nth]->propGetDouble(inArgs, kOfxPropTime, 0, &time);
       // get the render scale
-      OfxPointD renderScale;
-      gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRenderScale, 2, &renderScale.x);
+      double renderScale[2] = {0., 0.};
+      gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRenderScale, 2, renderScale);
 
-      ss << "(" << handle << "," << typeChanged << "," << objChanged << "," << changeReason << "," << time << ",(" << renderScale.x << "," << renderScale.y << "))";
+      ss << "(" << handle << "," << typeChanged << "," << objChanged << "," << changeReason << "," << time << ",(" << renderScale[0] << "," << renderScale[1] << "))";
     }  
     else if (strcmp(action, kOfxActionPurgeCaches) == 0) {
       // no inArgs
@@ -1006,7 +1006,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       //     kOfxImageEffectPropContext the context being described.
 
       // get the context from the inArgs handle
-      char *context;
+      char *context = 0;
       gPropHost[nth]->propGetString(inArgs, kOfxImageEffectPropContext, 0, &context);
 
       ss << "(" << handle << "," << context << ")";
@@ -1020,13 +1020,13 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       //    kOfxImageEffectPropRenderScale the render scale that should be used in any calculations in this action,
 
       // get the time
-      OfxTime time;
+      OfxTime time = 0;
       gPropHost[nth]->propGetDouble(inArgs, kOfxPropTime, 0, &time);
       // get the render scale
-      OfxPointD renderScale;
-      gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRenderScale, 2, &renderScale.x);
+      double renderScale[2] = {0., 0.};
+      gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRenderScale, 2, renderScale);
 
-      ss << "(" << handle << "," << time << ",(" << renderScale.x << "," << renderScale.y << "))";
+      ss << "(" << handle << "," << time << ",(" << renderScale[0] << "," << renderScale[1] << "))";
     }  
     else if (strcmp(action, kOfxImageEffectActionGetRegionsOfInterest) == 0) {
       // inArgs has the following properties...
@@ -1035,24 +1035,24 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       //     kOfxImageEffectPropRegionOfInterest the region to be rendered in the output image, in Canonical Coordinates.
 
       // get the time
-      OfxTime time;
+      OfxTime time = 0;
       gPropHost[nth]->propGetDouble(inArgs, kOfxPropTime, 0, &time);
       // get the render scale
-      OfxPointD renderScale;
-      gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRenderScale, 2, &renderScale.x);
-      ss << "(" << handle << "," << time << ",(" << renderScale.x << "," << renderScale.y << "))";
+      double renderScale[2] = {0., 0.};
+      gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRenderScale, 2, renderScale);
+      ss << "(" << handle << "," << time << ",(" << renderScale[0] << "," << renderScale[1] << "))";
       // get the RoI the effect is interested in from inArgs
-      OfxRectD roi;
-      gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRegionOfInterest, 4, &roi.x1);
+      double roi[4] = {0., 0., 0., 0.};
+      gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRegionOfInterest, 4, roi);
 
-      ss << "(" << handle << "," << time << ",(" << renderScale.x << "," << renderScale.y << "),(" << roi.x1 << "," << roi.y1 << "," << roi.x2 << "," << roi.y2 << "))";
+      ss << "(" << handle << "," << time << ",(" << renderScale[0] << "," << renderScale[1] << "),(" << roi[0] << "," << roi[1] << "," << roi[2] << "," << roi[3] << "))";
     }  
     else if (strcmp(action, kOfxImageEffectActionGetFramesNeeded) == 0) {
       // inArgs has the following property...
       //     kOfxPropTime the effect time for which we need to calculate the frames needed on input
 
       // get the time
-      OfxTime time;
+      OfxTime time = 0;
       gPropHost[nth]->propGetDouble(inArgs, kOfxPropTime, 0, &time);
 
       ss << "(" << handle << "," << time << ")";
@@ -1065,19 +1065,19 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       //     kOfxImageEffectPropRenderScale - the scale factor being applied to the images being renderred
 
       // get the time from the inArgs
-      OfxTime time;
+      OfxTime time = 0;
       gPropHost[nth]->propGetDouble(inArgs, kOfxPropTime, 0, &time);
       // get the field from the inArgs handle
-      char *field;
+      char *field = 0;
       gPropHost[nth]->propGetString(inArgs, kOfxImageEffectPropFieldToRender, 0, &field);
       // get the render window
-      OfxRectI renderWindow;
-      gPropHost[nth]->propGetIntN(inArgs, kOfxImageEffectPropRenderWindow, 4, &renderWindow.x1);
+      int renderWindow[4] = {0, 0, 0, 0};
+      gPropHost[nth]->propGetIntN(inArgs, kOfxImageEffectPropRenderWindow, 4, renderWindow);
       // get the render scale
-      OfxPointD renderScale;
-      gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRenderScale, 2, &renderScale.x);
+      double renderScale[2] = {0., 0.};
+      gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRenderScale, 2, renderScale);
 
-      ss << "(" << handle << "," << time << "," << field << ",(" << renderWindow.x1 << "," << renderWindow.y1 << "," << renderWindow.x2 << "," << renderWindow.y2 << "),(" << renderScale.x << "," << renderScale.y << "))";
+      ss << "(" << handle << "," << time << "," << field << ",(" << renderWindow[0] << "," << renderWindow[1 ]<< "," << renderWindow[2] << "," << renderWindow[3] << "),(" << renderScale[0] << "," << renderScale[1] << "))";
     }    
     else if (strcmp(action, kOfxImageEffectActionRender) == 0) {
       // inArgs has the following properties...
@@ -1089,22 +1089,22 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       //     kOfxImageEffectPropInteractiveRenderStatus - if the render is in response to a user modifying the effect in an interactive session
 
       // get the time from the inArgs
-      OfxTime time;
+      OfxTime time = 0;
       gPropHost[nth]->propGetDouble(inArgs, kOfxPropTime, 0, &time);
       // get the field from the inArgs handle
-      char *field;
+      char *field = 0;
       gPropHost[nth]->propGetString(inArgs, kOfxImageEffectPropFieldToRender, 0, &field);
       // get the render window
-      OfxRectI renderWindow;
-      gPropHost[nth]->propGetIntN(inArgs, kOfxImageEffectPropRenderWindow, 4, &renderWindow.x1);
+      int renderWindow[4] = {0, 0, 0, 0};
+      gPropHost[nth]->propGetIntN(inArgs, kOfxImageEffectPropRenderWindow, 4, renderWindow);
       // get the render scale
-      OfxPointD renderScale;
-      gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRenderScale, 2, &renderScale.x);
+      double renderScale[2] = {0., 0.};
+      gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRenderScale, 2, renderScale);
       // get the sequential render status
-      int sequentialrenderstatus;
+      int sequentialrenderstatus = 0;
       gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropSequentialRenderStatus, 0, &sequentialrenderstatus);
       // get the interactive render status
-      int interactiverenderstatus;
+      int interactiverenderstatus = 0;
       gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropInteractiveRenderStatus, 0, &interactiverenderstatus);
       // get the view number
 #   if defined(OFX_EXTENSIONS_VEGAS) || defined(OFX_EXTENSIONS_NUKE)
@@ -1121,7 +1121,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       gPropHost[nth]->propGetInt(inArgs, kFnOfxImageEffectPropView, 0, &view);
 #   endif
 
-      ss << "(" << handle << "," << time << "," << field << ",(" << renderWindow.x1 << "," << renderWindow.y1 << "," << renderWindow.x2 << "," << renderWindow.y2 << "),(" << renderScale.x << "," << renderScale.y << ")," << sequentialrenderstatus << "," << interactiverenderstatus
+      ss << "(" << handle << "," << time << "," << field << ",(" << renderWindow[0] << "," << renderWindow[1 ]<< "," << renderWindow[2] << "," << renderWindow[3] << "),(" << renderScale[0] << "," << renderScale[1] << ")," << sequentialrenderstatus << "," << interactiverenderstatus
 #     if defined(OFX_EXTENSIONS_VEGAS) || defined(OFX_EXTENSIONS_NUKE)
         <<","<<view
 #     endif
@@ -1140,20 +1140,20 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       //     kOfxImageEffectPropSequentialRenderStatus - whether the effect is currently being rendered in strict frame order on a single instance
       //     kOfxImageEffectPropInteractiveRenderStatus - if the render is in response to a user modifying the effect in an interactive session
 
-      double range[2];
+      double range[2] = {0., 0.};
       gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropFrameRange, 2, range);
-      double step;
+      double step = 0.;
       gPropHost[nth]->propGetDouble(inArgs, kOfxImageEffectPropFrameStep, 0, &step);
-      int isinteractive;
+      int isinteractive = 0;
       gPropHost[nth]->propGetInt(inArgs, kOfxPropIsInteractive, 0, &isinteractive);
       // get the render scale
-      OfxPointD renderScale;
-      gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRenderScale, 2, &renderScale.x);
+      double renderScale[2] = {0., 0.};
+      gPropHost[nth]->propGetDoubleN(inArgs, kOfxImageEffectPropRenderScale, 2, renderScale);
       // get the sequential render status
-      int sequentialrenderstatus;
+      int sequentialrenderstatus = 0;
       gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropSequentialRenderStatus, 0, &sequentialrenderstatus);
       // get the interactive render status
-      int interactiverenderstatus;
+      int interactiverenderstatus = 0;
       gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropInteractiveRenderStatus, 0, &interactiverenderstatus);
 #   ifdef OFX_EXTENSIONS_NUKE
       // get the view number
@@ -1161,7 +1161,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       gPropHost[nth]->propGetInt(inArgs, kFnOfxImageEffectPropView, 0, &view);
 #   endif
 
-      ss << "(" << handle << ",[" << range[0] << "," << range[1] << "]," << step << "," << isinteractive << ",(" << renderScale.x << "," << renderScale.y << ")," << sequentialrenderstatus << "," << interactiverenderstatus
+      ss << "(" << handle << ",[" << range[0] << "," << range[1] << "]," << step << "," << isinteractive << ",(" << renderScale[0] << "," << renderScale[1] << ")," << sequentialrenderstatus << "," << interactiverenderstatus
 #     ifdef OFX_EXTENSIONS_NUKE
         <<","<<view
 #     endif
@@ -1200,7 +1200,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       // no outArgs
         
       // see if the host supports overlays, in which case check if the plugin set kOfxImageEffectPluginPropOverlayInteractV1
-      //int supportsOverlays;
+      //int supportsOverlays = 0;
       //gPropHost[nth]->propGetInt(inArgs, kOfxImageEffectPropSupportsOverlays, 0, &supportsOverlays);
       ImageEffectHostDescription &hostDesc = gHostDescription[nth];
       if (hostDesc.supportsOverlays) {
@@ -1247,9 +1247,9 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       // kOfxImageEffectPropRegionOfDefinitiong, the calculated region of definition, initially set by the host to the default RoD (see below), in Canonical Coordinates.
       if (st == kOfxStatOK) {
         // get the RoD of the effect from outArgs
-        OfxRectD rod;
-        gPropHost[nth]->propGetDoubleN(outArgs, kOfxImageEffectPropRegionOfDefinition, 4, &rod.x1);
-        ssr << "((" << rod.x1 << "," << rod.y1 << "," << rod.x2 << "," << rod.y2 << "))";
+        double rod[4] = {0., 0., 0., 0.};
+        gPropHost[nth]->propGetDoubleN(outArgs, kOfxImageEffectPropRegionOfDefinition, 4, rod);
+        ssr << "((" << rod[0] << "," << rod[1] << "," << rod[2] << "," << rod[3] << "))";
       }
     }  
     else if (strcmp(action, kOfxImageEffectActionGetRegionsOfInterest) == 0) {
@@ -1262,14 +1262,14 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
         for (std::list<std::string>::const_iterator it = clips.begin(); it != clips.end(); ++it) {
           const char* name = it->c_str();
           std::string clipROIPropName = std::string("OfxImageClipPropRoI_") + name;
-          OfxRectD roi;
-          OfxStatus pst = gPropHost[nth]->propGetDoubleN(outArgs, clipROIPropName.c_str(), 4, &roi.x1);
+          double roi[4] = {0., 0., 0., 0.};
+          OfxStatus pst = gPropHost[nth]->propGetDoubleN(outArgs, clipROIPropName.c_str(), 4, roi);
           if (pst == kOfxStatOK) {
             if (!first) {
               ssr << ',';
             }
             first = false;
-            ssr << name << ":(" << roi.x1 << "," << roi.y1 << "," << roi.x2 << "," << roi.y2 << ")";
+            ssr << name << ":(" << roi[0] << "," << roi[1] << "," << roi[2] << "," << roi[3] << ")";
           }
         }
         ssr << ')';
@@ -1287,9 +1287,9 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
         bool firstclip = true;
         for (std::list<std::string>::const_iterator it = clips.begin(); it != clips.end(); ++it) {
           const char* name = it->c_str();
-          double range[2];
+          double range[2] = {0., 0.};
           std::string clipFrameRangePropName = std::string("OfxImageClipPropFrameRange_") + name;
-          int dim;
+          int dim = 0;
           OfxStatus pst = gPropHost[nth]->propGetDimension(outArgs, clipFrameRangePropName.c_str(), &dim);
           if (pst == kOfxStatOK) {
             if (!firstclip) {
@@ -1320,9 +1320,9 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       //    kOfxPropName this to the name of the clip that should be used if the effect is an identity transform, defaults to the empty string
       //    kOfxPropTime the time to use from the indicated source clip as an identity image (allowing time slips to happen), defaults to the value in kOfxPropTime in inArgs
       if (st == kOfxStatOK) {
-        char *name;
+        char *name = 0;
         gPropHost[nth]->propGetString(outArgs, kOfxPropName, 0, &name);
-        OfxTime time;
+        OfxTime time = 0;
         gPropHost[nth]->propGetDouble(outArgs, kOfxPropTime, 0, &time);
         ssr << "(" << name << "," << time << ")";
       }
@@ -1355,7 +1355,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
           const char* name = it ->c_str();
           bool firstpref = true;
 
-          char* components;
+          char* components = 0;
           std::string clipComponentsPropName = std::string("OfxImageClipPropComponents_") + name;
           pst = gPropHost[nth]->propGetString(outArgs, clipComponentsPropName.c_str(), 0, &components);
           if (pst == kOfxStatOK) {
@@ -1372,7 +1372,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
             ssr << "components=" << components;
           }
 
-          char *depth;
+          char *depth = 0;
           std::string clipDepthPropName = std::string("OfxImageClipPropDepth_") + name;
           pst = gPropHost[nth]->propGetString(outArgs, clipDepthPropName.c_str(), 0, &depth);
           if (pst == kOfxStatOK) {
@@ -1389,7 +1389,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
             ssr << "depth=" << depth;
           }
 
-          double par;
+          double par = 0.;
           std::string clipPARPropName = std::string("OfxImageClipPropPAR_") + name;
           pst = gPropHost[nth]->propGetDouble(outArgs, clipPARPropName.c_str(), 0, &par);
           if (pst == kOfxStatOK) {
@@ -1420,7 +1420,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
       // outArgs has the following property
       //  kOfxImageEffectPropFrameRange - the frame range an effect can produce images for
       if (st == kOfxStatOK) {
-        double range[2];
+          double range[2] = { 0., 0. };
         gPropHost[nth]->propGetDoubleN(outArgs, kOfxImageEffectPropFrameRange, 2, range);
 
         ssr << "([" << range[0] << "," << range[1] << "])";

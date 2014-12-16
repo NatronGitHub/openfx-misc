@@ -311,13 +311,14 @@ private:
     }
 
     template<enum TrackerScoreEnum scoreTypeE>
-    double computeScore(int scoreComps, int x, int y, const double refMean[3])
+    double computeScore(int x, int y, const double refMean[3])
     {
         double score = 0;
         double otherSsq = 0.;
         double otherMean[3];
+        const int scoreComps = std::min(nComponents, 3);
         if (scoreTypeE == eTrackerZNCC) {
-            for (int c = 0; c < scoreComps; ++c) {
+            for (int c = 0; c < 3; ++c) {
                 otherMean[c] = 0;
             }
             // sliding pointers
@@ -413,7 +414,7 @@ private:
         const int scoreComps = std::min(nComponents,3);
         double refMean[3];
         if (scoreTypeE == eTrackerZNCC) {
-            for (int c = 0; c < scoreComps; ++c) {
+            for (int c = 0; c < 3; ++c) {
                 refMean[c] = 0;
             }
         }
@@ -443,7 +444,7 @@ private:
             }
             
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                double score = computeScore<scoreTypeE>(scoreComps, x, y, refMean);
+                double score = computeScore<scoreTypeE>(x, y, refMean);
                 if (score < bestScore) {
                     bestScore = score;
                     point.x = x;
@@ -464,8 +465,8 @@ private:
             // don't block other threads
             _bestMatchMutex.unlock();
             // compute subpixel position.
-            double scorepc = computeScore<scoreTypeE>(scoreComps, point.x - 1, point.y, refMean);
-            double scorenc = computeScore<scoreTypeE>(scoreComps, point.x + 1, point.y, refMean);
+            double scorepc = computeScore<scoreTypeE>(point.x - 1, point.y, refMean);
+            double scorenc = computeScore<scoreTypeE>(point.x + 1, point.y, refMean);
             if (bestScore < scorepc && bestScore <= scorenc) {
                 // don't simplify the denominator in the following expression,
                 // 2*bestScore - scorenc - scorepc may cause an underflow.
@@ -475,8 +476,8 @@ private:
                     assert(-0.5 < dx && dx <= 0.5);
                 }
             }
-            double scorecp = computeScore<scoreTypeE>(scoreComps, point.x, point.y - 1, refMean);
-            double scorecn = computeScore<scoreTypeE>(scoreComps, point.x, point.y + 1, refMean);
+            double scorecp = computeScore<scoreTypeE>(point.x, point.y - 1, refMean);
+            double scorecn = computeScore<scoreTypeE>(point.x, point.y + 1, refMean);
             if (bestScore < scorecp && bestScore <= scorecn) {
                 // don't simplify the denominator in the following expression,
                 // 2*bestScore - scorenc - scorepc may cause an underflow.
