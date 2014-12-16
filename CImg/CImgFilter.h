@@ -262,12 +262,14 @@ public:
     }
 
 private:
+#ifdef CIMG_DEBUG
     static void
     printRectI(const char*name, const OfxRectI& rect) {
-#ifdef CIMG_DEBUG
         printf("%s= (%d, %d)-(%d, %d)\n", name, rect.x1, rect.y1, rect.x2, rect.y2);
-#endif
     }
+#else
+    static void printRectI(const char*, const OfxRectI&) {}
+#endif
 
 
     void
