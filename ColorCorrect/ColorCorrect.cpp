@@ -151,6 +151,8 @@ namespace {
         double b;
         double a;
 
+        ColorControlValues() : r(0.), g(0.), b(0.),a(0.) {}
+
         void getValueFrom(double time, OFX::RGBAParam* p)
         {
             p->getValueAtTime(time, r, g, b, a);

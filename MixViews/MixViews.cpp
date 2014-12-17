@@ -111,6 +111,7 @@ public:
     : OFX::ImageProcessor(instance)
     , _srcLeftImg(0)
     , _srcRightImg(0)
+    , _mix(0)
     {
     }
 

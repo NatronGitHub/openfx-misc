@@ -117,6 +117,7 @@ public:
     NoiseGeneratorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _noiseLevel(0.5f)
+    , _mean(0.5f)
     , _seed(0)
     {
     }

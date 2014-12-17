@@ -162,6 +162,12 @@ public:
     , _doMasking(false)
     , _mix(1.)
     , _maskInvert(false)
+    , _red(false)
+    , _green(false)
+    , _blue(false)
+    , _alpha(false)
+    , _saturation(0.)
+    , _luminanceMath(eLuminanceMathRec709)
     , _clampBlack(true)
     , _clampWhite(true)
     {

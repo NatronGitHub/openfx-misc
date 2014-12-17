@@ -207,6 +207,18 @@ struct HSVToolValues {
     double valRange[2];
     double valAdjust;
     double valRolloff;
+    HSVToolValues() {
+        hueRange[0] = hueRange[1] = 0.;
+        hueRangeWithRolloff[0] = hueRangeWithRolloff[1] = 0.;
+        hueRotation = 0.;
+        hueRolloff = 0.;
+        satRange[0] = satRange[1] = 0.;
+        satAdjust = 0.;
+        satRolloff = 0.;
+        valRange[0] = valRange[1] = 0.;
+        valAdjust = 0.;
+        valRolloff = 0.;
+    }
 };
 
 //

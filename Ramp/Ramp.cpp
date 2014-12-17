@@ -143,6 +143,8 @@ enum RampTypeEnum
 namespace {
     struct RGBAValues {
         double r,g,b,a;
+        RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+        RGBAValues() : r(0), g(0), b(0), a(0) {}
     };
 }
 
@@ -182,6 +184,10 @@ public:
     , _doMasking(false)
     , _mix(1.)
     , _maskInvert(false)
+    , _red(false)
+    , _green(false)
+    , _blue(false)
+    , _alpha(false)
     , _type(eRampTypeLinear)
     {
         _point0.x = _point0.y = _point1.x = _point1.y = 0.;

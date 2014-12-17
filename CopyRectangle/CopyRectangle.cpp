@@ -130,10 +130,13 @@ public:
     , _srcImgA(0)
     , _srcImgB(0)
     , _maskImg(0)
+    , _softness(0)
     , _doMasking(false)
     , _mix(1.)
     , _maskInvert(false)
     {
+        _enabled[0] = _enabled[1] = _enabled[2] = _enabled[3] = false;
+        _rectangle.x1 = _rectangle.y1 = _rectangle.x2 = _rectangle.y2 = 0.;
     }
 
     /** @brief set the src image */

@@ -170,10 +170,12 @@ private:
 
                 if (srcPixA && srcPixB) {
                     double diff = 0.;
-                    for (int c = 0; c < nComponents - 1; ++c) {
-                        dstPix[c] = srcPixB[c];
-                        double d = srcPixB[c] - srcPixA[c];
-                        diff += d*d;
+                    if (nComponents > 1) {
+                        for (int c = 0; c < nComponents - 1; ++c) {
+                            dstPix[c] = srcPixB[c];
+                            double d = srcPixB[c] - srcPixA[c];
+                            diff += d*d;
+                        }
                     }
                     diff = _gain*diff - _offset; // this seems to be the formula used in Nuke
                     dstPix[nComponents-1] = (PIX)std::max(0.,std::min(diff, (double)maxValue));

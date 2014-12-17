@@ -130,6 +130,11 @@ public:
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _roto(0)
+    , _srcComponents(ePixelComponentNone)
+    , _red(false)
+    , _green(false)
+    , _blue(false)
+    , _alpha(false)
     {
     }
 
@@ -178,7 +183,8 @@ private:
         }
 
         // roto and dst should have the same number of components
-        assert((_roto->getPixelComponents() == ePixelComponentAlpha && dstNComponents == 1) ||
+        assert(!_roto ||
+               (_roto->getPixelComponents() == ePixelComponentAlpha && dstNComponents == 1) ||
                (_roto->getPixelComponents() == ePixelComponentRGBA && dstNComponents == 4));
         //assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
