@@ -665,6 +665,10 @@
 		AC6486E71A41B7860088844F /* net.sf.cimg.CImgNoise.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D01A41A4A90088844F /* net.sf.cimg.CImgNoise.png */; };
 		AC6486E81A41B9B70088844F /* net.sf.cimg.CImgPlasma.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D11A41A4A90088844F /* net.sf.cimg.CImgPlasma.png */; };
 		AC6486E91A41B9B90088844F /* net.sf.cimg.CImgSmooth.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D21A41A4A90088844F /* net.sf.cimg.CImgSmooth.png */; };
+		AC64870C1A41BEC40088844F /* net.sf.cimg.CImgErodeSmooth.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC64870A1A41BE9D0088844F /* net.sf.cimg.CImgErodeSmooth.png */; };
+		AC64870E1A41BF6C0088844F /* net.sf.cimg.CImgBilateral.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC64870D1A41BF670088844F /* net.sf.cimg.CImgBilateral.png */; };
+		AC6487111A41C06B0088844F /* net.sf.cimg.CImgRollingGuidance.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC64870F1A41C0640088844F /* net.sf.cimg.CImgRollingGuidance.png */; };
+		AC6487141A41C0F50088844F /* net.sf.cimg.CImgGuided.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6487121A41C0F00088844F /* net.sf.cimg.CImgGuided.png */; };
 		ACC5D25E1A2C714600DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25C1A2C713700DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png */; };
 		ACC5D25F1A2C714900DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25D1A2C713700DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png */; };
 		ACC5D2601A2C714C00DE1AAA /* net.sf.openfx.HSVToolPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25B1A2C712E00DE1AAA /* net.sf.openfx.HSVToolPlugin.png */; };
@@ -1425,6 +1429,10 @@
 			dstSubfolderSpec = 7;
 			files = (
 				AC6486E71A41B7860088844F /* net.sf.cimg.CImgNoise.png in CopyFiles */,
+				AC6487141A41C0F50088844F /* net.sf.cimg.CImgGuided.png in CopyFiles */,
+				AC64870C1A41BEC40088844F /* net.sf.cimg.CImgErodeSmooth.png in CopyFiles */,
+				AC6487111A41C06B0088844F /* net.sf.cimg.CImgRollingGuidance.png in CopyFiles */,
+				AC64870E1A41BF6C0088844F /* net.sf.cimg.CImgBilateral.png in CopyFiles */,
 				AC4774E81A25B8FF008A2B57 /* net.sf.cimg.CImgDenoise.png in CopyFiles */,
 				AC6486E81A41B9B70088844F /* net.sf.cimg.CImgPlasma.png in CopyFiles */,
 				AC4774E71A25B8FE008A2B57 /* net.sf.cimg.CImgBlur.png in CopyFiles */,
@@ -1807,6 +1815,13 @@
 		AC6486D91A41A5490088844F /* net.sf.openfx.Rectangle.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.Rectangle.png; sourceTree = "<group>"; };
 		AC6486DA1A41A5540088844F /* net.sf.openfx.sideBySidePlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.sideBySidePlugin.png; sourceTree = "<group>"; };
 		AC6486DB1A41A5620088844F /* net.sf.openfx.VectorToColorPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.VectorToColorPlugin.png; sourceTree = "<group>"; };
+		AC64870A1A41BE9D0088844F /* net.sf.cimg.CImgErodeSmooth.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgErodeSmooth.png; sourceTree = "<group>"; };
+		AC64870B1A41BE9D0088844F /* net.sf.cimg.CImgErodeSmooth.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = net.sf.cimg.CImgErodeSmooth.svg; sourceTree = "<group>"; };
+		AC64870D1A41BF670088844F /* net.sf.cimg.CImgBilateral.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgBilateral.png; sourceTree = "<group>"; };
+		AC64870F1A41C0640088844F /* net.sf.cimg.CImgRollingGuidance.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgRollingGuidance.png; sourceTree = "<group>"; };
+		AC6487101A41C0650088844F /* net.sf.cimg.CImgRollingGuidance.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgRollingGuidance.svg; sourceTree = "<group>"; };
+		AC6487121A41C0F00088844F /* net.sf.cimg.CImgGuided.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgGuided.png; sourceTree = "<group>"; };
+		AC6487131A41C0F00088844F /* net.sf.cimg.CImgGuided.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgGuided.svg; sourceTree = "<group>"; };
 		ACC5D25B1A2C712E00DE1AAA /* net.sf.openfx.HSVToolPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.HSVToolPlugin.png; sourceTree = "<group>"; };
 		ACC5D25C1A2C713700DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.HSVToRGBPlugin.png; sourceTree = "<group>"; };
 		ACC5D25D1A2C713700DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.RGBToHSVPlugin.png; sourceTree = "<group>"; };
@@ -2320,6 +2335,11 @@
 		1E31940919D998450027D0E2 /* CImg */ = {
 			isa = PBXGroup;
 			children = (
+				AC6487121A41C0F00088844F /* net.sf.cimg.CImgGuided.png */,
+				AC6487131A41C0F00088844F /* net.sf.cimg.CImgGuided.svg */,
+				AC64870F1A41C0640088844F /* net.sf.cimg.CImgRollingGuidance.png */,
+				AC6487101A41C0650088844F /* net.sf.cimg.CImgRollingGuidance.svg */,
+				AC64870D1A41BF670088844F /* net.sf.cimg.CImgBilateral.png */,
 				AC6486D01A41A4A90088844F /* net.sf.cimg.CImgNoise.png */,
 				AC6486D11A41A4A90088844F /* net.sf.cimg.CImgPlasma.png */,
 				AC6486D21A41A4A90088844F /* net.sf.cimg.CImgSmooth.png */,
@@ -2353,6 +2373,8 @@
 				1E55FCE619F104C70093F33B /* CImg.h */,
 				1E31940C19D9987F0027D0E2 /* Info.plist */,
 				1E31940D19D9987F0027D0E2 /* Makefile */,
+				AC64870A1A41BE9D0088844F /* net.sf.cimg.CImgErodeSmooth.png */,
+				AC64870B1A41BE9D0088844F /* net.sf.cimg.CImgErodeSmooth.svg */,
 				AC4774DC1A25B811008A2B57 /* net.sf.cimg.CImgBlur.png */,
 				AC4774DD1A25B811008A2B57 /* net.sf.cimg.CImgDenoise.png */,
 				AC4774DE1A25B811008A2B57 /* net.sf.cimg.CImgDilate.png */,
