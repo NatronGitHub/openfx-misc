@@ -132,6 +132,8 @@ public:
     /* override is identity */
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+
     /* set up and run a processor */
     void setupAndProcess(OFX::ImageBlenderMaskedBase &, const OFX::RenderArguments &args);
 
@@ -337,6 +339,39 @@ DissolvePlugin::isIdentity(const OFX::IsIdentityArguments &args,
     }
 
     // nope, identity we isnt
+    return false;
+}
+
+bool
+DissolvePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    // get the transition value
+    float blend = (float)_transition->getValueAtTime(args.time);
+    // at the start?
+    if (blend <= 0.0 && fromClip_ && fromClip_->isConnected()) {
+        rod = fromClip_->getRegionOfDefinition(args.time);
+
+        return true;
+    }
+
+    // at the end?
+    if (blend >= 1.0 && toClip_ && toClip_->isConnected() &&
+        (!maskClip_ || !maskClip_->isConnected())) {
+        rod = toClip_->getRegionOfDefinition(args.time);
+
+        return true;
+    }
+
+    if (fromClip_ && fromClip_->isConnected() && toClip_ && toClip_->isConnected()) {
+        OfxRectD fromRoD = fromClip_->getRegionOfDefinition(args.time);
+        OfxRectD toRoD = toClip_->getRegionOfDefinition(args.time);
+        rod.x1 = std::min(fromRoD.x1, toRoD.x1);
+        rod.y1 = std::min(fromRoD.y1, toRoD.y1);
+        rod.x2 = std::max(fromRoD.x2, toRoD.x2);
+        rod.y2 = std::max(fromRoD.y2, toRoD.y2);
+
+        return true;
+    }
     return false;
 }
 
