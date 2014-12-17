@@ -274,14 +274,13 @@ public:
         for (int component = 0; component < nComponents; ++component) {
             _lookupTable[component].resize(nbValues+1);
             int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
-            bool applyMaster = lutIndex != kCurveAlpha;
             for (int position = 0; position <= nbValues; ++position) {
                 // position to evaluate the param at
                 float parametricPos = _rangeMin + (_rangeMax - _rangeMin) * float(position)/nbValues;
 
                 // evaluate the parametric param
                 double value = _lookupTableParam->getValue(lutIndex, _time, parametricPos);
-                if (applyMaster) {
+                if (nComponents != 1 && lutIndex != kCurveAlpha) {
                     value += _lookupTableParam->getValue(kCurveMaster, _time, parametricPos) - parametricPos;
                 }
                 // set that in the lut
@@ -310,7 +309,7 @@ private:
                     // RGB and Alpha: don't premult/unpremult, just apply curves
                     // normalize/denormalize properly
                     for (int c = 0; c < nComponents; ++c) {
-                        tmpPix[c] = interpolate(c, srcPix[c] / (double)maxValue) * maxValue;
+                        tmpPix[c] = interpolate(c, srcPix ? (srcPix[c] / (double)maxValue) : 0.) * maxValue;
                         assert(!std::isnan(srcPix[c]) && !std::isnan(srcPix[c]) &&
                                !std::isnan(tmpPix[c]) && !std::isnan(tmpPix[c]));
                     }
@@ -340,9 +339,8 @@ private:
         if (value < _rangeMin || _rangeMax < value) {
             // slow version
             int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
-            bool applyMaster = lutIndex != kCurveAlpha;
             double ret = _lookupTableParam->getValue(lutIndex, _time, value);
-            if (applyMaster) {
+            if (nComponents != 1 && lutIndex != kCurveAlpha) {
                 ret += _lookupTableParam->getValue(kCurveMaster, _time, value) - value;
             }
             return clamp<PIX>(ret, maxValue);;

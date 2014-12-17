@@ -132,7 +132,13 @@ public:
     CropProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
+    , _softness(0)
+    , _blackOutside(false)
     {
+        _btmLeft.x = _btmLeft.y = 0.;
+        _size.x = _size.y = 0.;
+        _translation.x = _translation.y = 0;
+        _dstRoDPix.x1 = _dstRoDPix.y1 = _dstRoDPix.x2 = _dstRoDPix.y2 = 0;
     }
 
     /** @brief set the src image */

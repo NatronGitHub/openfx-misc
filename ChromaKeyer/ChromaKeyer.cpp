@@ -214,7 +214,7 @@ public:
     , _xKey(0)
     , _ys(0)
     {
-        
+        _keyColor.r = _keyColor.g = _keyColor.b = 0.;
     }
     
     void setSrcImgs(const OFX::Image *srcImg, const OFX::Image *bgImg, const OFX::Image *inMaskImg, const OFX::Image *outMaskImg)

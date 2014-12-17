@@ -211,6 +211,9 @@ protected:
     , _outputBitDepth(eBitDepthNone)
     , _nComponentsDst(0)
     {
+        for (int c = 0; c < 4; ++c) {
+            _channelMap[c] = eInputChannel0;
+        }
     }
 
     void setSrcImg(const OFX::Image *A, const OFX::Image *B) {_srcImgA = A; _srcImgB = B;}
@@ -758,7 +761,7 @@ imageFormatString(PixelComponentEnum components, BitDepthEnum bitDepth)
         case OFX::eBitDepthCustom:
             s += "x";
             break;
-        case OFX::ePixelComponentNone:
+        case OFX::eBitDepthNone:
             s += "0";
             break;
         default:

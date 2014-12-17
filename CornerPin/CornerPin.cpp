@@ -602,6 +602,7 @@ public:
             addParamToSlaveTo(_to[i]);
             addParamToSlaveTo(_from[i]);
             addParamToSlaveTo(_enable[i]);
+            _draggedPos[i].x = _draggedPos[i].y = 0;
         }
         _invert = effect->fetchBooleanParam(kParamTransform3x3Invert);
         addParamToSlaveTo(_invert);

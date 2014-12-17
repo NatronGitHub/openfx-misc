@@ -128,6 +128,7 @@ public:
     , _srcImg(0)
     , _premult(false)
     , _premultChannel(3)
+    , _mix(1.)
     {
     }
     

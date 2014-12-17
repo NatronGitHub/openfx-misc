@@ -360,7 +360,7 @@ private:
     bool
     maskColumnIsZero(const OFX::Image* mask, int x, int y1, int y2, bool maskInvert)
     {
-        assert(mask->getPixelComponents() == OFX::ePixelComponentAlpha && mask->getPixelDepth() == OFX::eBitDepthFloat);
+        assert(!mask || (mask->getPixelComponents() == OFX::ePixelComponentAlpha && mask->getPixelDepth() == OFX::eBitDepthFloat));
         const int rowElems = mask->getRowBytes() / sizeof(float);
 
         if (maskInvert) {
@@ -1025,7 +1025,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionOfDefinition(const OFX
     Params params;
     getValuesAtTime(args.time, params);
 
-    double pixelaspectratio = srcClip_->getPixelAspectRatio();
+    double pixelaspectratio = srcClip_ ? srcClip_->getPixelAspectRatio() : 1.;
 
     OfxRectI srcRoDPixel = {0, 0, 0, 0};
     if (srcClip_) {

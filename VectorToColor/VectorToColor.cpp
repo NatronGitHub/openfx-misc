@@ -160,6 +160,12 @@ protected:
     VectorToColorProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
+    , _xChannel(eInputChannelR)
+    , _yChannel(eInputChannelG)
+    , _opposite(false)
+    , _inverseY(false)
+    , _modulateV(false)
+    , _hsvOutput(false)
     {
     }
     
