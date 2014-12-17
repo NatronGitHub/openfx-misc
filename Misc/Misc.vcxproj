@@ -77,7 +77,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Clamp;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\Test;$(SolutionDir)..\HSV;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\Keyer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Radial;$(SolutionDir)..\Rectangle;$(SolutionDir)..\Clamp;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\Test;$(SolutionDir)..\HSV;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\Keyer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>OFX_EXTENSIONS_VEGAS;OFX_EXTENSIONS_TUTTLE;OFX_EXTENSIONS_NUKE;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;WIN32;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -86,40 +86,52 @@
       <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(SolutionDir)..\Ramp\net.sf.openfx.Ramp.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+      <Command>xcopy $(SolutionDir)..\Anaglyph\net.sf.openfx.anaglyphPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\ChromaKeyer\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
-
 xcopy $(SolutionDir)..\ColorCorrect\net.sf.openfx.ColorCorrectPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
-xcopy $(SolutionDir)..\Constant\net.sf.openfx.ConstantPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\ColorLookup\net.sf.openfx.ColorLookupPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Constant\net.sf.openfx.ConstantPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\CornerPin\net.sf.openfx.CornerPinPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\CornerPin\net.sf.openfx.CornerPinMaskedPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
-
 xcopy $(SolutionDir)..\Crop\net.sf.openfx.CropPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\Deinterlace\net.sf.openfx.Deinterlace.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Difference\net.sf.openfx.DifferencePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\Dissolve\net.sf.openfx.DissolvePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
-
 xcopy $(SolutionDir)..\Grade\net.sf.openfx.GradePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\HSVTool\net.sf.openfx.HSVToolPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\HSV\net.sf.openfx.HSVToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\HSV\net.sf.openfx.RGBToHSVPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Invert\net.sf.openfx.Invert.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+xcopy $(SolutionDir)..\JoinViews\net.sf.openfx.joinViewsPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Merge\net.sf.openfx.MergePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\MixViews\net.sf.openfx.mixViewsPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\Noise\net.sf.openfx.Noise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\NoOp\net.sf.openfx.NoOpPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\OneView\net.sf.openfx.oneViewPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\Premult\net.sf.openfx.Premult.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -128,16 +140,21 @@ xcopy $(SolutionDir)..\Premult\net.sf.openfx.Premult.png $(OutDir)$(ProjectName)
 xcopy $(SolutionDir)..\Premult\net.sf.openfx.Unpremult.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
+xcopy $(SolutionDir)..\Radial\net.sf.openfx.Radial.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Ramp\net.sf.openfx.Ramp.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\Rectangle\net.sf.openfx.Rectangle.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
 xcopy $(SolutionDir)..\Retime\net.sf.openfx.Retime.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
-xcopy $(SolutionDir)..\RGBLut\net.sf.openfx.RGBLutPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
 
 xcopy $(SolutionDir)..\Roto\net.sf.openfx.RotoPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+xcopy $(SolutionDir)..\Saturation\net.sf.openfx.SaturationPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Shuffle\net.sf.openfx.ShufflePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\SideBySide\net.sf.openfx.sideBySidePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\Switch\net.sf.openfx.switchPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -153,19 +170,18 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformPlugin.png $(OutDir)$(Pr
 
 
 xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\HSVTool\net.sf.openfx.HSVToolPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\HSVTool\net.sf.openfx.HSVToolPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\HSV\net.sf.openfx.HSVToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\HSV\net.sf.openfx.RGBToHSVPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\Saturation\net.sf.openfx.SaturationPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y</Command>
+
+xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Clamp;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\Test;$(SolutionDir)..\HSV;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\Keyer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Radial;$(SolutionDir)..\Rectangle;$(SolutionDir)..\Clamp;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\Test;$(SolutionDir)..\HSV;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\Keyer;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>OFX_EXTENSIONS_VEGAS;OFX_EXTENSIONS_TUTTLE;OFX_EXTENSIONS_NUKE;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;WIN64;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
@@ -175,40 +191,52 @@ xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectNam
       <OutputFile>$(OutDir)$(ProjectName).ofx.bundle/Contents/Win64/$(ProjectName).ofx</OutputFile>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(SolutionDir)..\Ramp\net.sf.openfx.Ramp.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+      <Command>xcopy $(SolutionDir)..\Anaglyph\net.sf.openfx.anaglyphPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\ChromaKeyer\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
-
 xcopy $(SolutionDir)..\ColorCorrect\net.sf.openfx.ColorCorrectPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
-xcopy $(SolutionDir)..\Constant\net.sf.openfx.ConstantPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\ColorLookup\net.sf.openfx.ColorLookupPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Constant\net.sf.openfx.ConstantPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\CornerPin\net.sf.openfx.CornerPinPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\CornerPin\net.sf.openfx.CornerPinMaskedPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
-
 xcopy $(SolutionDir)..\Crop\net.sf.openfx.CropPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\Deinterlace\net.sf.openfx.Deinterlace.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Difference\net.sf.openfx.DifferencePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\Dissolve\net.sf.openfx.DissolvePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
-
 xcopy $(SolutionDir)..\Grade\net.sf.openfx.GradePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\HSVTool\net.sf.openfx.HSVToolPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\HSV\net.sf.openfx.HSVToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\HSV\net.sf.openfx.RGBToHSVPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Invert\net.sf.openfx.Invert.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+xcopy $(SolutionDir)..\JoinViews\net.sf.openfx.joinViewsPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Merge\net.sf.openfx.MergePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\MixViews\net.sf.openfx.mixViewsPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\Noise\net.sf.openfx.Noise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\NoOp\net.sf.openfx.NoOpPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\OneView\net.sf.openfx.oneViewPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\Premult\net.sf.openfx.Premult.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -217,16 +245,21 @@ xcopy $(SolutionDir)..\Premult\net.sf.openfx.Premult.png $(OutDir)$(ProjectName)
 xcopy $(SolutionDir)..\Premult\net.sf.openfx.Unpremult.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
+xcopy $(SolutionDir)..\Radial\net.sf.openfx.Radial.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Ramp\net.sf.openfx.Ramp.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\Rectangle\net.sf.openfx.Rectangle.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
 xcopy $(SolutionDir)..\Retime\net.sf.openfx.Retime.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
-xcopy $(SolutionDir)..\RGBLut\net.sf.openfx.RGBLutPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
 
 xcopy $(SolutionDir)..\Roto\net.sf.openfx.RotoPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+xcopy $(SolutionDir)..\Saturation\net.sf.openfx.SaturationPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Shuffle\net.sf.openfx.ShufflePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\SideBySide\net.sf.openfx.sideBySidePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\Switch\net.sf.openfx.switchPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -242,12 +275,11 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformPlugin.png $(OutDir)$(Pr
 
 
 xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\HSVTool\net.sf.openfx.HSVToolPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\HSVTool\net.sf.openfx.HSVToolPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\HSV\net.sf.openfx.HSVToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\HSV\net.sf.openfx.RGBToHSVPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\Saturation\net.sf.openfx.SaturationPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y</Command>
+
+xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -257,7 +289,7 @@ xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectNam
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OFX_EXTENSIONS_VEGAS;OFX_EXTENSIONS_TUTTLE;OFX_EXTENSIONS_NUKE;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;WIN32;NOMINMAX;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Clamp;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\Test;$(SolutionDir)..\HSV;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\Keyer;$(SolutionDir)..\AdjustRoD;$(SolutionDir)..\Ramp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Radial;$(SolutionDir)..\Rectangle;$(SolutionDir)..\Clamp;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\Test;$(SolutionDir)..\HSV;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\Keyer;$(SolutionDir)..\AdjustRoD;$(SolutionDir)..\Ramp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -269,40 +301,52 @@ xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectNam
       <AdditionalDependencies>opengl32.lib;$(SolutionDir)$(Platform)\$(Configuration)\Support.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(SolutionDir)..\Ramp\net.sf.openfx.Ramp.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+      <Command>xcopy $(SolutionDir)..\Anaglyph\net.sf.openfx.anaglyphPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\ChromaKeyer\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
-
 xcopy $(SolutionDir)..\ColorCorrect\net.sf.openfx.ColorCorrectPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
-xcopy $(SolutionDir)..\Constant\net.sf.openfx.ConstantPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\ColorLookup\net.sf.openfx.ColorLookupPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Constant\net.sf.openfx.ConstantPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\CornerPin\net.sf.openfx.CornerPinPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\CornerPin\net.sf.openfx.CornerPinMaskedPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
-
 xcopy $(SolutionDir)..\Crop\net.sf.openfx.CropPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\Deinterlace\net.sf.openfx.Deinterlace.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Difference\net.sf.openfx.DifferencePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\Dissolve\net.sf.openfx.DissolvePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
-
 xcopy $(SolutionDir)..\Grade\net.sf.openfx.GradePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\HSVTool\net.sf.openfx.HSVToolPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\HSV\net.sf.openfx.HSVToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\HSV\net.sf.openfx.RGBToHSVPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Invert\net.sf.openfx.Invert.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+xcopy $(SolutionDir)..\JoinViews\net.sf.openfx.joinViewsPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Merge\net.sf.openfx.MergePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\MixViews\net.sf.openfx.mixViewsPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\Noise\net.sf.openfx.Noise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\NoOp\net.sf.openfx.NoOpPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\OneView\net.sf.openfx.oneViewPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\Premult\net.sf.openfx.Premult.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -311,16 +355,21 @@ xcopy $(SolutionDir)..\Premult\net.sf.openfx.Premult.png $(OutDir)$(ProjectName)
 xcopy $(SolutionDir)..\Premult\net.sf.openfx.Unpremult.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
+xcopy $(SolutionDir)..\Radial\net.sf.openfx.Radial.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Ramp\net.sf.openfx.Ramp.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\Rectangle\net.sf.openfx.Rectangle.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
 xcopy $(SolutionDir)..\Retime\net.sf.openfx.Retime.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
-xcopy $(SolutionDir)..\RGBLut\net.sf.openfx.RGBLutPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
 
 xcopy $(SolutionDir)..\Roto\net.sf.openfx.RotoPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+xcopy $(SolutionDir)..\Saturation\net.sf.openfx.SaturationPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Shuffle\net.sf.openfx.ShufflePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\SideBySide\net.sf.openfx.sideBySidePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\Switch\net.sf.openfx.switchPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -336,12 +385,11 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformPlugin.png $(OutDir)$(Pr
 
 
 xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\HSVTool\net.sf.openfx.HSVToolPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\HSVTool\net.sf.openfx.HSVToolPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\HSV\net.sf.openfx.HSVToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\HSV\net.sf.openfx.RGBToHSVPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\Saturation\net.sf.openfx.SaturationPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y</Command>
+
+xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -351,7 +399,7 @@ xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectNam
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OFX_EXTENSIONS_VEGAS;OFX_EXTENSIONS_TUTTLE;OFX_EXTENSIONS_NUKE;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;WIN64;NOMINMAX;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Clamp;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\Test;$(SolutionDir)..\HSV;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\Keyer;$(SolutionDir)..\AdjustRoD;$(SolutionDir)..\Ramp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Radial;$(SolutionDir)..\Rectangle;$(SolutionDir)..\Clamp;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\Test;$(SolutionDir)..\HSV;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\Keyer;$(SolutionDir)..\AdjustRoD;$(SolutionDir)..\Ramp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -363,40 +411,52 @@ xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectNam
       <AdditionalDependencies>opengl32.lib;$(SolutionDir)$(Platform)\$(Configuration)\Support.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(SolutionDir)..\Ramp\net.sf.openfx.Ramp.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+      <Command>xcopy $(SolutionDir)..\Anaglyph\net.sf.openfx.anaglyphPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\ChromaKeyer\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
-
 xcopy $(SolutionDir)..\ColorCorrect\net.sf.openfx.ColorCorrectPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
-xcopy $(SolutionDir)..\Constant\net.sf.openfx.ConstantPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\ColorLookup\net.sf.openfx.ColorLookupPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Constant\net.sf.openfx.ConstantPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\CornerPin\net.sf.openfx.CornerPinPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\CornerPin\net.sf.openfx.CornerPinMaskedPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
-
 xcopy $(SolutionDir)..\Crop\net.sf.openfx.CropPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\Deinterlace\net.sf.openfx.Deinterlace.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Difference\net.sf.openfx.DifferencePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\Dissolve\net.sf.openfx.DissolvePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
-
 xcopy $(SolutionDir)..\Grade\net.sf.openfx.GradePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\HSVTool\net.sf.openfx.HSVToolPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\HSV\net.sf.openfx.HSVToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\HSV\net.sf.openfx.RGBToHSVPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Invert\net.sf.openfx.Invert.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+xcopy $(SolutionDir)..\JoinViews\net.sf.openfx.joinViewsPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Merge\net.sf.openfx.MergePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\MixViews\net.sf.openfx.mixViewsPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\Noise\net.sf.openfx.Noise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+xcopy $(SolutionDir)..\NoOp\net.sf.openfx.NoOpPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\OneView\net.sf.openfx.oneViewPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\Premult\net.sf.openfx.Premult.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -405,16 +465,21 @@ xcopy $(SolutionDir)..\Premult\net.sf.openfx.Premult.png $(OutDir)$(ProjectName)
 xcopy $(SolutionDir)..\Premult\net.sf.openfx.Unpremult.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
+xcopy $(SolutionDir)..\Radial\net.sf.openfx.Radial.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Ramp\net.sf.openfx.Ramp.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\Rectangle\net.sf.openfx.Rectangle.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
 xcopy $(SolutionDir)..\Retime\net.sf.openfx.Retime.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
-xcopy $(SolutionDir)..\RGBLut\net.sf.openfx.RGBLutPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
 
 xcopy $(SolutionDir)..\Roto\net.sf.openfx.RotoPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+xcopy $(SolutionDir)..\Saturation\net.sf.openfx.SaturationPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Shuffle\net.sf.openfx.ShufflePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\SideBySide\net.sf.openfx.sideBySidePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\Switch\net.sf.openfx.switchPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -430,12 +495,11 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformPlugin.png $(OutDir)$(Pr
 
 
 xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\HSVTool\net.sf.openfx.HSVToolPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\HSVTool\net.sf.openfx.HSVToolPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\HSV\net.sf.openfx.HSVToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\HSV\net.sf.openfx.RGBToHSVPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\Saturation\net.sf.openfx.SaturationPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y</Command>
+
+xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -465,8 +529,10 @@ xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectNam
     <ClCompile Include="..\NoOp\NoOp.cpp" />
     <ClCompile Include="..\OneView\OneView.cpp" />
     <ClCompile Include="..\Premult\Premult.cpp" />
+    <ClCompile Include="..\Radial\Radial.cpp" />
     <ClCompile Include="..\Ramp\Ramp.cpp" />
     <ClCompile Include="..\ReConverge\ReConverge.cpp" />
+    <ClCompile Include="..\Rectangle\Rectangle.cpp" />
     <ClCompile Include="..\Retime\Retime.cpp" />
     <ClCompile Include="..\Roto\Roto.cpp" />
     <ClCompile Include="..\Saturation\Saturation.cpp" />
@@ -507,8 +573,10 @@ xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectNam
     <ClInclude Include="..\NoOp\NoOp.h" />
     <ClInclude Include="..\OneView\OneView.h" />
     <ClInclude Include="..\Premult\Premult.h" />
+    <ClInclude Include="..\Radial\Radial.h" />
     <ClInclude Include="..\Ramp\Ramp.h" />
     <ClInclude Include="..\ReConverge\ReConverge.h" />
+    <ClInclude Include="..\Rectangle\Rectangle.h" />
     <ClInclude Include="..\Retime\Retime.h" />
     <ClInclude Include="..\Roto\Roto.h" />
     <ClInclude Include="..\Saturation\Saturation.h" />

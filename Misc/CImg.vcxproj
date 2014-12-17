@@ -83,6 +83,26 @@
       <AdditionalDependencies>opengl32.lib;$(SolutionDir)$(Platform)\$(Configuration)\Support.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OutputFile>$(OutDir)$(ProjectName).ofx.bundle/Contents/Win32/$(ProjectName).ofx</OutputFile>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgBlur.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgBilateral.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDenoise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDilate.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErode.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErodeSmooth.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgGuided.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgNoise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgPlasma.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgRollingGuidance.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgSmooth.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -99,15 +119,21 @@
     </Link>
     <PostBuildEvent>
       <Command>xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgBlur.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
-
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgBilateral.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDenoise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
-
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDilate.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
-
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErode.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErodeSmooth.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgGuided.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgNoise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgPlasma.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgRollingGuidance.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgSmooth.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 </Command>
     </PostBuildEvent>
@@ -132,6 +158,26 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErode.png $(OutDir)$(ProjectName).of
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>
     </Lib>
+    <PostBuildEvent>
+      <Command>xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgBlur.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgBilateral.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDenoise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDilate.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErode.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErodeSmooth.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgGuided.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgNoise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgPlasma.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgRollingGuidance.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgSmooth.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -155,15 +201,21 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErode.png $(OutDir)$(ProjectName).of
     </Lib>
     <PostBuildEvent>
       <Command>xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgBlur.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
-
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgBilateral.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDenoise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
-
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDilate.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
-
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErode.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErodeSmooth.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgGuided.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgNoise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgPlasma.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgRollingGuidance.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
+xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgSmooth.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 </Command>
     </PostBuildEvent>
