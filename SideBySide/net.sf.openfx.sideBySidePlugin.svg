@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- Generator: Adobe Illustrator 16.0.3, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="128px"
+	 height="122.141px" viewBox="0 0 128 122.141" style="enable-background:new 0 0 128 122.141;" xml:space="preserve">
+<g id="Vi_SideBySide">
+	<circle style="fill:#993D3D;" cx="57.4" cy="19" r="19.14"/>
+	<circle style="fill:#3D9999;" cx="70.6" cy="19" r="19.14"/>
+	<polygon style="fill:#E6E6E6;stroke:#000000;stroke-width:3.96;stroke-miterlimit:10;" points="86.545,41.964 64.56,72.982 
+		42.482,41.832 	"/>
+	<g>
+		<path style="fill:#999999;" d="M57,81.141v35H5v-35H57 M63,75.141H-1v47h64V75.141L63,75.141z"/>
+	</g>
+	<g>
+		<path style="fill:#999999;" d="M122,81.141v35H70v-35H122 M128,75.141H64v47h64V75.141L128,75.141z"/>
+	</g>
+	<circle style="fill:#993D3D;" cx="31.4" cy="99" r="19.14"/>
+	<circle style="fill:#3D9999;" cx="96.6" cy="98.75" r="19.14"/>
+</g>
+<g id="Layer_1">
+</g>
+</svg>

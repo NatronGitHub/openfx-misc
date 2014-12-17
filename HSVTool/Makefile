@@ -1,5 +1,5 @@
 PLUGINOBJECTS = HSVTool.o ofxsLut.o PluginRegistration.o
 PLUGINNAME = HSVTool
-RESOURCES = net.sf.openfx.HSVToolPlugin.png
+RESOURCES = net.sf.openfx.HSVToolPlugin.png net.sf.openfx.HSVToolPlugin.svg
 
 include ../Makefile.master

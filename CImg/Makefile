@@ -2,9 +2,19 @@ PLUGINOBJECTS = CImgBilateral.o CImgBlur.o CImgDenoise.o CImgDilate.o CImgEquali
 PLUGINNAME = CImg
 RESOURCES = \
 net.sf.cimg.CImgBlur.png \
+net.sf.cimg.CImgBlur.svg \
 net.sf.cimg.CImgDenoise.png \
+net.sf.cimg.CImgDenoise.svg \
 net.sf.cimg.CImgDilate.png \
-net.sf.cimg.CImgErode.png
+net.sf.cimg.CImgDilate.svg \
+net.sf.cimg.CImgErode.png \
+net.sf.cimg.CImgErode.svg \
+net.sf.cimg.CImgSmooth.png \
+net.sf.cimg.CImgSmooth.svg \
+net.sf.cimg.CImgPlasma.png \
+net.sf.cimg.CImgPlasma.svg \
+net.sf.cimg.CImgNoise.png \
+net.sf.cimg.CImgNoise.svg
 
 include ../Makefile.master
 

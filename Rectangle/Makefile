@@ -1,5 +1,5 @@
 PLUGINOBJECTS = Rectangle.o PluginRegistration.o ofxsRectangleInteract.o
 PLUGINNAME = Rectangle.o
-#RESOURCES = net.sf.openfx.RectanglePlugin.png net.sf.openfx.RectanglePlugin.svg
+RESOURCES = net.sf.openfx.RectanglePlugin.png net.sf.openfx.RectanglePlugin.svg
 
 include ../Makefile.master
