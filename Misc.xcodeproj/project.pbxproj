@@ -662,6 +662,9 @@
 		AC6486E41A41A5D10088844F /* net.sf.openfx.Rectangle.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D91A41A5490088844F /* net.sf.openfx.Rectangle.png */; };
 		AC6486E51A41A5DD0088844F /* net.sf.openfx.sideBySidePlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486DA1A41A5540088844F /* net.sf.openfx.sideBySidePlugin.png */; };
 		AC6486E61A41A5E40088844F /* net.sf.openfx.VectorToColorPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486DB1A41A5620088844F /* net.sf.openfx.VectorToColorPlugin.png */; };
+		AC6486E71A41B7860088844F /* net.sf.cimg.CImgNoise.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D01A41A4A90088844F /* net.sf.cimg.CImgNoise.png */; };
+		AC6486E81A41B9B70088844F /* net.sf.cimg.CImgPlasma.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D11A41A4A90088844F /* net.sf.cimg.CImgPlasma.png */; };
+		AC6486E91A41B9B90088844F /* net.sf.cimg.CImgSmooth.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D21A41A4A90088844F /* net.sf.cimg.CImgSmooth.png */; };
 		ACC5D25E1A2C714600DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25C1A2C713700DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png */; };
 		ACC5D25F1A2C714900DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25D1A2C713700DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png */; };
 		ACC5D2601A2C714C00DE1AAA /* net.sf.openfx.HSVToolPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25B1A2C712E00DE1AAA /* net.sf.openfx.HSVToolPlugin.png */; };
@@ -1421,9 +1424,12 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				AC6486E71A41B7860088844F /* net.sf.cimg.CImgNoise.png in CopyFiles */,
 				AC4774E81A25B8FF008A2B57 /* net.sf.cimg.CImgDenoise.png in CopyFiles */,
+				AC6486E81A41B9B70088844F /* net.sf.cimg.CImgPlasma.png in CopyFiles */,
 				AC4774E71A25B8FE008A2B57 /* net.sf.cimg.CImgBlur.png in CopyFiles */,
 				AC4774EA1A25B902008A2B57 /* net.sf.cimg.CImgErode.png in CopyFiles */,
+				AC6486E91A41B9B90088844F /* net.sf.cimg.CImgSmooth.png in CopyFiles */,
 				AC4774E91A25B900008A2B57 /* net.sf.cimg.CImgDilate.png in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
