@@ -76,6 +76,7 @@
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
+#include <climits>
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
@@ -485,6 +486,8 @@ void ConstantPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabels(kParamColorLabel, kParamColorLabel, kParamColorLabel);
         param->setHint(kParamColorHint);
         param->setDefault(0.0, 0.0, 0.0, 1.0);
+        param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
+        param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
         page->addChild(*param);
     }
