@@ -120,6 +120,8 @@ private:
     /* override is identity */
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+
 #ifdef OFX_EXTENSIONS_NUKE
     /** @brief recover a transform matrix from an effect */
     virtual bool getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9]);
@@ -169,9 +171,25 @@ SwitchPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &iden
     return true;
 }
 
+bool
+SwitchPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    int input;
+    which_->getValueAtTime(args.time, input);
+
+    if (srcClip_[input] && srcClip_[input]->isConnected()) {
+        rod = srcClip_[input]->getRegionOfDefinition(args.time);
+
+        return true;
+    }
+    return false;
+}
+
+
 #ifdef OFX_EXTENSIONS_NUKE
 // overridden getTransform
-bool SwitchPlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9])
+bool
+SwitchPlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9])
 {
     int input;
     which_->getValueAtTime(args.time, input);
