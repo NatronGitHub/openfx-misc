@@ -458,10 +458,8 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isI
     if (mix == 0.) {
         identityClip = srcClip_;
         return true;
-    } else {
-        return false;
     }
-
+#if 0
     bool identityEven, identityOdd;
     _identityEven->getValueAtTime(args.time, identityEven);
     _identityOdd->getValueAtTime(args.time, identityOdd);
@@ -487,7 +485,7 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isI
         identityClip = srcClip_;
         return true;
     }
-
+#endif
     return false;
 }
 

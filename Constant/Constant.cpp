@@ -117,6 +117,7 @@ public:
     ConstantGeneratorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     {
+        _color.r = _color.g = _color.b = _color.a = 0.;
     }
 
     /** @brief set the color */

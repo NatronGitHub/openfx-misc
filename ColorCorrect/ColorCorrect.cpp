@@ -324,6 +324,10 @@ public:
     , _doMasking(false)
     , _mix(1.)
     , _maskInvert(false)
+    , _red(false)
+    , _green(false)
+    , _blue(false)
+    , _alpha(false)
     , _clampBlack(true)
     , _clampWhite(true)
     {

@@ -360,13 +360,14 @@ private:
     bool
     maskColumnIsZero(const OFX::Image* mask, int x, int y1, int y2, bool maskInvert)
     {
-        assert(!mask || (mask->getPixelComponents() == OFX::ePixelComponentAlpha && mask->getPixelDepth() == OFX::eBitDepthFloat));
+        if (!mask) {
+            return (!maskInvert);
+        }
+
+        assert(mask->getPixelComponents() == OFX::ePixelComponentAlpha && mask->getPixelDepth() == OFX::eBitDepthFloat);
         const int rowElems = mask->getRowBytes() / sizeof(float);
 
         if (maskInvert) {
-            if (!mask) {
-                return false;
-            }
             const OfxRectI& maskBounds = mask->getBounds();
             // if part of the column is out of maskbounds, then mask is 1 at these places
             if (x < maskBounds.x1 || maskBounds.x2 <= x || y1 < maskBounds.y1 || maskBounds.y2 <= y2) {
@@ -382,9 +383,6 @@ private:
                 }
             }
         } else {
-            if (!mask) {
-                return true;
-            }
             const OfxRectI& maskBounds = mask->getBounds();
             // if the column is completely out of the mask, it is 0
             if (x < maskBounds.x1 || maskBounds.x2 <= x) {
