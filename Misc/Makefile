@@ -103,8 +103,8 @@ RESOURCES = \
 ../Premult/net.sf.openfx.Premult.svg \
 ../Premult/net.sf.openfx.Unpremult.png \
 ../Premult/net.sf.openfx.Unpremult.svg \
-../Radial/net.sf.openfx.RadialPlugin.png \
-../Radial/net.sf.openfx.RadialPlugin.svg \
+../Radial/net.sf.openfx.Radial.png \
+../Radial/net.sf.openfx.Radial.svg \
 ../Ramp/net.sf.openfx.Ramp.png \
 ../Ramp/net.sf.openfx.Ramp.svg \
 ../Rectangle/net.sf.openfx.Rectangle.png \
