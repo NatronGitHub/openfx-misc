@@ -427,8 +427,8 @@ private:
 
                 for (int x = procWindow.x1; x < procWindow.x2; x++) {
                     PIXSRC *srcPix = (PIXSRC *)  (srcImg ? srcImg->getPixelAddress(x, y) : 0);
-
-                    dstPix[c] = srcPix ? convertPixelDepth<PIXSRC,PIXDST>(srcPix[srcComp]) : convertPixelDepth<float,PIXDST>(srcComp);
+                    // if there is a srcImg but we are outside of its RoD, it should be considered black and transparent
+                    dstPix[c] = srcImg ? convertPixelDepth<PIXSRC,PIXDST>(srcPix ? srcPix[srcComp] : 0) : convertPixelDepth<float,PIXDST>(srcComp);
                     dstPix += nComponentsDst;
                 }
             }
@@ -476,6 +476,11 @@ public:
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+
+    /* override is identity */
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
@@ -703,6 +708,74 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
         assert(dstComponents == OFX::ePixelComponentAlpha);
             renderInternal<1>(args, srcBitDepth, dstBitDepth);
     }
+}
+
+bool
+ShufflePlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &/*identityTime*/)
+{
+    int r_i;
+    _r->getValue(r_i);
+    InputChannelEnum r = InputChannelEnum(r_i);
+    int g_i;
+    _g->getValue(g_i);
+    InputChannelEnum g = InputChannelEnum(g_i);
+    int b_i;
+    _b->getValue(b_i);
+    InputChannelEnum b = InputChannelEnum(b_i);
+    int a_i;
+    _a->getValue(a_i);
+    InputChannelEnum a = InputChannelEnum(a_i);
+
+    if (r == eInputChannelAR && g == eInputChannelBG && b == eInputChannelAB && a == eInputChannelAA && srcClipA_) {
+        identityClip = srcClipA_;
+
+        return true;
+    }
+    if (r == eInputChannelBR && g == eInputChannelBG && b == eInputChannelBB && a == eInputChannelBA && srcClipB_) {
+        identityClip = srcClipB_;
+
+        return true;
+    }
+    return false;
+}
+
+bool
+ShufflePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    int r_i;
+    _r->getValue(r_i);
+    InputChannelEnum r = InputChannelEnum(r_i);
+    int g_i;
+    _g->getValue(g_i);
+    InputChannelEnum g = InputChannelEnum(g_i);
+    int b_i;
+    _b->getValue(b_i);
+    InputChannelEnum b = InputChannelEnum(b_i);
+    int a_i;
+    _a->getValue(a_i);
+    InputChannelEnum a = InputChannelEnum(a_i);
+
+    if (r == eInputChannelAR && g == eInputChannelBG && b == eInputChannelAB && a == eInputChannelAA && srcClipA_) {
+        rod = srcClipA_->getRegionOfDefinition(args.time);
+
+        return true;
+    }
+    if (r == eInputChannelBR && g == eInputChannelBG && b == eInputChannelBB && a == eInputChannelBA && srcClipB_) {
+        rod = srcClipB_->getRegionOfDefinition(args.time);
+
+        return true;
+    }
+    if (srcClipA_ && srcClipA_->isConnected() && srcClipB_ && srcClipB_->isConnected()) {
+        OfxRectD rodA = srcClipA_->getRegionOfDefinition(args.time);
+        OfxRectD rodB = srcClipB_->getRegionOfDefinition(args.time);
+        rod.x1 = std::min(rodA.x1, rodB.x1);
+        rod.y1 = std::min(rodA.y1, rodB.y1);
+        rod.x2 = std::max(rodA.x2, rodB.x2);
+        rod.y2 = std::max(rodA.y2, rodB.y2);
+
+        return true;
+    }
+    return false;
 }
 
 /* Override the clip preferences */
