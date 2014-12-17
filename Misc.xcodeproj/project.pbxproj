@@ -82,8 +82,6 @@
 		1E0072DC1A40417F00E77042 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1E0072DD1A40417F00E77042 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E0072DF1A40417F00E77042 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		1E0072E11A40417F00E77042 /* net.sf.openfx.CropPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A87C19C6ED8000E6E3AE /* net.sf.openfx.CropPlugin.png */; };
-		1E0072E21A40417F00E77042 /* net.sf.openfx.CropPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9E19C981DD00C2C668 /* net.sf.openfx.CropPlugin.svg */; };
 		1E0072EE1A4041DF00E77042 /* Radial.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E0072EC1A4041D200E77042 /* Radial.cpp */; };
 		1E0072EF1A4041E100E77042 /* Radial.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E0072EC1A4041D200E77042 /* Radial.cpp */; };
 		1E0072F01A4041E500E77042 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E0072EB1A4041D200E77042 /* PluginRegistration.cpp */; };
@@ -184,6 +182,63 @@
 		1E31941C19D9B2270027D0E2 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1E31942219D9B2560027D0E2 /* CImgSmooth.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E31940A19D9987F0027D0E2 /* CImgSmooth.cpp */; };
 		1E31942319D9B2560027D0E2 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E31940E19D9987F0027D0E2 /* PluginRegistration.cpp */; };
+		1E3284611A41C0C900C9A4E4 /* net.sf.openfx.anaglyphPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32845F1A41C09E00C9A4E4 /* net.sf.openfx.anaglyphPlugin.svg */; };
+		1E3284621A41C0C900C9A4E4 /* net.sf.openfx.anaglyphPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486CF1A41A4960088844F /* net.sf.openfx.anaglyphPlugin.png */; };
+		1E32846A1A41C0FC00C9A4E4 /* net.sf.cimg.CImgBlur.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284631A41C0E500C9A4E4 /* net.sf.cimg.CImgBlur.svg */; };
+		1E32846B1A41C0FC00C9A4E4 /* net.sf.cimg.CImgDenoise.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284641A41C0E500C9A4E4 /* net.sf.cimg.CImgDenoise.svg */; };
+		1E32846C1A41C0FC00C9A4E4 /* net.sf.cimg.CImgDilate.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284651A41C0E500C9A4E4 /* net.sf.cimg.CImgDilate.svg */; };
+		1E32846D1A41C0FC00C9A4E4 /* net.sf.cimg.CImgErode.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284661A41C0E500C9A4E4 /* net.sf.cimg.CImgErode.svg */; };
+		1E32846E1A41C0FC00C9A4E4 /* net.sf.cimg.CImgNoise.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284671A41C0E500C9A4E4 /* net.sf.cimg.CImgNoise.svg */; };
+		1E32846F1A41C0FC00C9A4E4 /* net.sf.cimg.CImgPlasma.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284681A41C0E500C9A4E4 /* net.sf.cimg.CImgPlasma.svg */; };
+		1E3284701A41C0FC00C9A4E4 /* net.sf.cimg.CImgSmooth.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284691A41C0E500C9A4E4 /* net.sf.cimg.CImgSmooth.svg */; };
+		1E3284731A41C17500C9A4E4 /* net.sf.openfx.Deinterlace.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774E41A25B8E7008A2B57 /* net.sf.openfx.Deinterlace.png */; };
+		1E3284741A41C17500C9A4E4 /* net.sf.openfx.Deinterlace.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284711A41C16500C9A4E4 /* net.sf.openfx.Deinterlace.svg */; };
+		1E3284781A41C1A700C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25C1A2C713700DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png */; };
+		1E3284791A41C1A700C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284751A41C19A00C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg */; };
+		1E32847A1A41C1A700C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25D1A2C713700DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png */; };
+		1E32847B1A41C1A700C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284761A41C19A00C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg */; };
+		1E32847D1A41C1BD00C9A4E4 /* net.sf.openfx.HSVToolPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25B1A2C712E00DE1AAA /* net.sf.openfx.HSVToolPlugin.png */; };
+		1E32847E1A41C1BD00C9A4E4 /* net.sf.openfx.HSVToolPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32847C1A41C1B200C9A4E4 /* net.sf.openfx.HSVToolPlugin.svg */; };
+		1E3284811A41C1D800C9A4E4 /* net.sf.openfx.joinViewsPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D31A41A4D00088844F /* net.sf.openfx.joinViewsPlugin.png */; };
+		1E3284821A41C1D800C9A4E4 /* net.sf.openfx.joinViewsPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32847F1A41C1CD00C9A4E4 /* net.sf.openfx.joinViewsPlugin.svg */; };
+		1E3284851A41C1F000C9A4E4 /* net.sf.openfx.KeyerPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0EAC3E1A358B6E00449A77 /* net.sf.openfx.KeyerPlugin.png */; };
+		1E3284861A41C1F000C9A4E4 /* net.sf.openfx.KeyerPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284831A41C1E400C9A4E4 /* net.sf.openfx.KeyerPlugin.svg */; };
+		1E3284891A41C20800C9A4E4 /* net.sf.openfx.mixViewsPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D41A41A4D90088844F /* net.sf.openfx.mixViewsPlugin.png */; };
+		1E32848A1A41C20800C9A4E4 /* net.sf.openfx.mixViewsPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284871A41C1FF00C9A4E4 /* net.sf.openfx.mixViewsPlugin.svg */; };
+		1E32848D1A41C22500C9A4E4 /* net.sf.openfx.Noise.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D51A41A5210088844F /* net.sf.openfx.Noise.png */; };
+		1E32848E1A41C22500C9A4E4 /* net.sf.openfx.Noise.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32848B1A41C21400C9A4E4 /* net.sf.openfx.Noise.svg */; };
+		1E3284911A41C23D00C9A4E4 /* net.sf.openfx.NoOpPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D61A41A5270088844F /* net.sf.openfx.NoOpPlugin.png */; };
+		1E3284921A41C23D00C9A4E4 /* net.sf.openfx.NoOpPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32848F1A41C23300C9A4E4 /* net.sf.openfx.NoOpPlugin.svg */; };
+		1E3284951A41C25300C9A4E4 /* net.sf.openfx.oneViewPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D71A41A52F0088844F /* net.sf.openfx.oneViewPlugin.png */; };
+		1E3284961A41C25300C9A4E4 /* net.sf.openfx.oneViewPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284931A41C24600C9A4E4 /* net.sf.openfx.oneViewPlugin.svg */; };
+		1E3284981A41C27100C9A4E4 /* net.sf.openfx.Radial.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D81A41A5350088844F /* net.sf.openfx.Radial.png */; };
+		1E3284991A41C27100C9A4E4 /* net.sf.openfx.Radial.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284971A41C26300C9A4E4 /* net.sf.openfx.Radial.svg */; };
+		1E32849A1A41C28300C9A4E4 /* net.sf.openfx.Ramp.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC60A32719FE995F00375A86 /* net.sf.openfx.Ramp.png */; };
+		1E32849B1A41C28300C9A4E4 /* net.sf.openfx.Ramp.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC60A32819FE995F00375A86 /* net.sf.openfx.Ramp.svg */; };
+		1E32849C1A41C3C200C9A4E4 /* net.sf.openfx.Rectangle.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D91A41A5490088844F /* net.sf.openfx.Rectangle.png */; };
+		1E32849D1A41C3C200C9A4E4 /* net.sf.openfx.Rectangle.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32845E1A41C06400C9A4E4 /* net.sf.openfx.Rectangle.svg */; };
+		1E32849F1A41C3EE00C9A4E4 /* net.sf.openfx.SaturationPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0EAC3C1A358A0C00449A77 /* net.sf.openfx.SaturationPlugin.png */; };
+		1E3284A01A41C3EE00C9A4E4 /* net.sf.openfx.SaturationPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32849E1A41C3DF00C9A4E4 /* net.sf.openfx.SaturationPlugin.svg */; };
+		1E3284A31A41C40C00C9A4E4 /* net.sf.openfx.sideBySidePlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486DA1A41A5540088844F /* net.sf.openfx.sideBySidePlugin.png */; };
+		1E3284A41A41C40C00C9A4E4 /* net.sf.openfx.sideBySidePlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284A11A41C3FE00C9A4E4 /* net.sf.openfx.sideBySidePlugin.svg */; };
+		1E3284A61A41C47F00C9A4E4 /* net.sf.openfx.VectorToColorPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486DB1A41A5620088844F /* net.sf.openfx.VectorToColorPlugin.png */; };
+		1E3284A71A41C47F00C9A4E4 /* net.sf.openfx.VectorToColorPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284A51A41C46D00C9A4E4 /* net.sf.openfx.VectorToColorPlugin.svg */; };
+		1E3284A81A41C49E00C9A4E4 /* net.sf.openfx.VectorToColorPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284A51A41C46D00C9A4E4 /* net.sf.openfx.VectorToColorPlugin.svg */; };
+		1E3284AA1A41C4BE00C9A4E4 /* net.sf.openfx.SaturationPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32849E1A41C3DF00C9A4E4 /* net.sf.openfx.SaturationPlugin.svg */; };
+		1E3284AB1A41C4C700C9A4E4 /* net.sf.openfx.Rectangle.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32845E1A41C06400C9A4E4 /* net.sf.openfx.Rectangle.svg */; };
+		1E3284AC1A41C4CC00C9A4E4 /* net.sf.openfx.Radial.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284971A41C26300C9A4E4 /* net.sf.openfx.Radial.svg */; };
+		1E3284AD1A41C4D200C9A4E4 /* net.sf.openfx.oneViewPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284931A41C24600C9A4E4 /* net.sf.openfx.oneViewPlugin.svg */; };
+		1E3284AF1A41C4DF00C9A4E4 /* net.sf.openfx.NoOpPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32848F1A41C23300C9A4E4 /* net.sf.openfx.NoOpPlugin.svg */; };
+		1E3284B01A41C4E300C9A4E4 /* net.sf.openfx.Noise.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32848B1A41C21400C9A4E4 /* net.sf.openfx.Noise.svg */; };
+		1E3284B11A41C4E900C9A4E4 /* net.sf.openfx.mixViewsPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284871A41C1FF00C9A4E4 /* net.sf.openfx.mixViewsPlugin.svg */; };
+		1E3284B21A41C4F000C9A4E4 /* net.sf.openfx.KeyerPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284831A41C1E400C9A4E4 /* net.sf.openfx.KeyerPlugin.svg */; };
+		1E3284B31A41C4F400C9A4E4 /* net.sf.openfx.joinViewsPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32847F1A41C1CD00C9A4E4 /* net.sf.openfx.joinViewsPlugin.svg */; };
+		1E3284B41A41C4F800C9A4E4 /* net.sf.openfx.HSVToolPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32847C1A41C1B200C9A4E4 /* net.sf.openfx.HSVToolPlugin.svg */; };
+		1E3284B51A41C4FF00C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284751A41C19A00C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg */; };
+		1E3284B61A41C50500C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284761A41C19A00C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg */; };
+		1E3284B71A41C50D00C9A4E4 /* net.sf.openfx.Deinterlace.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284711A41C16500C9A4E4 /* net.sf.openfx.Deinterlace.svg */; };
+		1E3284B81A41C52F00C9A4E4 /* net.sf.openfx.ColorLookupPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CAE19C9829C00C2C668 /* net.sf.openfx.ColorLookupPlugin.svg */; };
+		1E3284B91A41C54200C9A4E4 /* net.sf.openfx.anaglyphPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32845F1A41C09E00C9A4E4 /* net.sf.openfx.anaglyphPlugin.svg */; };
 		1E3451E31906952D0080D699 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E3451E41906952D0080D699 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E3451E61906952D0080D699 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -259,8 +314,6 @@
 		1E69C9F71A2B2EDD0099D609 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1E69C9F81A2B2EDD0099D609 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E69C9FA1A2B2EDD0099D609 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		1E69C9FC1A2B2EDD0099D609 /* net.sf.openfx.GradePlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A88519C6EDDA00E6E3AE /* net.sf.openfx.GradePlugin.png */; };
-		1E69C9FD1A2B2EDD0099D609 /* net.sf.openfx.GradePlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CA419C9821700C2C668 /* net.sf.openfx.GradePlugin.svg */; };
 		1E69CA051A2B2F350099D609 /* Saturation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E69CA031A2B2F350099D609 /* Saturation.cpp */; };
 		1E69CA061A2B2F350099D609 /* Saturation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E69CA031A2B2F350099D609 /* Saturation.cpp */; };
 		1E69CA081A2B2F3E0099D609 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E69CA071A2B2F3E0099D609 /* PluginRegistration.cpp */; };
@@ -301,7 +354,6 @@
 		1E814CCA19C9839E00C2C668 /* net.sf.openfx.MergePlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CB319C982D700C2C668 /* net.sf.openfx.MergePlugin.svg */; };
 		1E814CCB19C983A500C2C668 /* net.sf.openfx.Premult.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CA819C9825E00C2C668 /* net.sf.openfx.Premult.svg */; };
 		1E814CCC19C983A700C2C668 /* net.sf.openfx.Unpremult.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CA919C9825E00C2C668 /* net.sf.openfx.Unpremult.svg */; };
-		1E814CCE19C983BE00C2C668 /* net.sf.openfx.ColorLookupPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CAE19C9829C00C2C668 /* net.sf.openfx.ColorLookupPlugin.svg */; };
 		1E814CCF19C983C200C2C668 /* net.sf.openfx.RotoPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CB019C982AC00C2C668 /* net.sf.openfx.RotoPlugin.svg */; };
 		1E814CD019C983C600C2C668 /* net.sf.openfx.ShufflePlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CB219C982BB00C2C668 /* net.sf.openfx.ShufflePlugin.svg */; };
 		1E814CD119C983DC00C2C668 /* net.sf.openfx.switchPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CB619C9830600C2C668 /* net.sf.openfx.switchPlugin.svg */; };
@@ -353,8 +405,6 @@
 		1E92572919EC1DB80018F19A /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1E92572A19EC1DB80018F19A /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E92572C19EC1DB80018F19A /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		1E92572E19EC1DB80018F19A /* net.sf.openfx.Invert.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A88A19C6EDF100E6E3AE /* net.sf.openfx.Invert.png */; };
-		1E92572F19EC1DB80018F19A /* net.sf.openfx.Invert.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CA619C9822400C2C668 /* net.sf.openfx.Invert.svg */; };
 		1E92573719EC1E140018F19A /* Clamp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E92573519EC1E140018F19A /* Clamp.cpp */; };
 		1E92573819EC1E140018F19A /* Clamp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E92573519EC1E140018F19A /* Clamp.cpp */; };
 		1E92573A19EC1E1F0018F19A /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E92573919EC1E1F0018F19A /* PluginRegistration.cpp */; };
@@ -435,8 +485,6 @@
 		1ECA4DEB1A3F3A6500C5128B /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1ECA4DEC1A3F3A6500C5128B /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1ECA4DEE1A3F3A6500C5128B /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		1ECA4DF01A3F3A6500C5128B /* net.sf.openfx.CropPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A87C19C6ED8000E6E3AE /* net.sf.openfx.CropPlugin.png */; };
-		1ECA4DF11A3F3A6500C5128B /* net.sf.openfx.CropPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9E19C981DD00C2C668 /* net.sf.openfx.CropPlugin.svg */; };
 		1ECA4DF71A3F3AC900C5128B /* Ramp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32A19FE995F00375A86 /* Ramp.cpp */; };
 		1ECA4DF81A3F3AC900C5128B /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32919FE995F00375A86 /* PluginRegistration.cpp */; };
 		1ECA4DFD1A3F3ACD00C5128B /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
@@ -449,8 +497,6 @@
 		1ECA4E041A3F3ACD00C5128B /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1ECA4E051A3F3ACD00C5128B /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1ECA4E071A3F3ACD00C5128B /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		1ECA4E091A3F3ACD00C5128B /* net.sf.openfx.CropPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A87C19C6ED8000E6E3AE /* net.sf.openfx.CropPlugin.png */; };
-		1ECA4E0A1A3F3ACD00C5128B /* net.sf.openfx.CropPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9E19C981DD00C2C668 /* net.sf.openfx.CropPlugin.svg */; };
 		1ECE543E185F2374001ED442 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1ECE543F185F2374001ED442 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1ECE5440185F2374001ED442 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -611,8 +657,6 @@
 		1EFA77221A24F0BA00212DB0 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1EFA77231A24F0BA00212DB0 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1EFA77251A24F0BA00212DB0 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		1EFA77271A24F0BA00212DB0 /* net.sf.openfx.GradePlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A88519C6EDDA00E6E3AE /* net.sf.openfx.GradePlugin.png */; };
-		1EFA77281A24F0BA00212DB0 /* net.sf.openfx.GradePlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CA419C9821700C2C668 /* net.sf.openfx.GradePlugin.svg */; };
 		1EFA77351A24F13300212DB0 /* HSVTool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFA77331A24F13300212DB0 /* HSVTool.cpp */; };
 		1EFA77371A24F13B00212DB0 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFA77361A24F13B00212DB0 /* PluginRegistration.cpp */; };
 		1EFA773A1A24F5F500212DB0 /* ofxsLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED537381A234F12007966D5 /* ofxsLut.cpp */; };
@@ -638,8 +682,6 @@
 		1EFBC9891A23A1EB00086E7A /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1EFBC98A1A23A1EB00086E7A /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1EFBC98C1A23A1EB00086E7A /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		1EFBC98E1A23A1EB00086E7A /* net.sf.openfx.GradePlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A88519C6EDDA00E6E3AE /* net.sf.openfx.GradePlugin.png */; };
-		1EFBC98F1A23A1EB00086E7A /* net.sf.openfx.GradePlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CA419C9821700C2C668 /* net.sf.openfx.GradePlugin.svg */; };
 		1EFBC9971A23A22D00086E7A /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFBC9951A23A22D00086E7A /* PluginRegistration.cpp */; };
 		1EFBC9981A23A22D00086E7A /* VectorToColor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFBC9961A23A22D00086E7A /* VectorToColor.cpp */; };
 		1EFBC9991A23A23C00086E7A /* VectorToColor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFBC9961A23A22D00086E7A /* VectorToColor.cpp */; };
@@ -1061,8 +1103,120 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
-				1E0072E11A40417F00E77042 /* net.sf.openfx.CropPlugin.png in CopyFiles */,
-				1E0072E21A40417F00E77042 /* net.sf.openfx.CropPlugin.svg in CopyFiles */,
+				1E32849C1A41C3C200C9A4E4 /* net.sf.openfx.Rectangle.png in CopyFiles */,
+				1E32849D1A41C3C200C9A4E4 /* net.sf.openfx.Rectangle.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E3284601A41C0B700C9A4E4 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1E3284611A41C0C900C9A4E4 /* net.sf.openfx.anaglyphPlugin.svg in CopyFiles */,
+				1E3284621A41C0C900C9A4E4 /* net.sf.openfx.anaglyphPlugin.png in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E3284721A41C16F00C9A4E4 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1E3284731A41C17500C9A4E4 /* net.sf.openfx.Deinterlace.png in CopyFiles */,
+				1E3284741A41C17500C9A4E4 /* net.sf.openfx.Deinterlace.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E3284771A41C1A100C9A4E4 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1E3284781A41C1A700C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.png in CopyFiles */,
+				1E3284791A41C1A700C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg in CopyFiles */,
+				1E32847A1A41C1A700C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.png in CopyFiles */,
+				1E32847B1A41C1A700C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E3284801A41C1D300C9A4E4 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1E3284811A41C1D800C9A4E4 /* net.sf.openfx.joinViewsPlugin.png in CopyFiles */,
+				1E3284821A41C1D800C9A4E4 /* net.sf.openfx.joinViewsPlugin.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E3284841A41C1E800C9A4E4 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1E3284851A41C1F000C9A4E4 /* net.sf.openfx.KeyerPlugin.png in CopyFiles */,
+				1E3284861A41C1F000C9A4E4 /* net.sf.openfx.KeyerPlugin.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E3284881A41C20400C9A4E4 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1E3284891A41C20800C9A4E4 /* net.sf.openfx.mixViewsPlugin.png in CopyFiles */,
+				1E32848A1A41C20800C9A4E4 /* net.sf.openfx.mixViewsPlugin.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E32848C1A41C22000C9A4E4 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1E32848D1A41C22500C9A4E4 /* net.sf.openfx.Noise.png in CopyFiles */,
+				1E32848E1A41C22500C9A4E4 /* net.sf.openfx.Noise.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E3284901A41C23800C9A4E4 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1E3284911A41C23D00C9A4E4 /* net.sf.openfx.NoOpPlugin.png in CopyFiles */,
+				1E3284921A41C23D00C9A4E4 /* net.sf.openfx.NoOpPlugin.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E3284941A41C24E00C9A4E4 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1E3284951A41C25300C9A4E4 /* net.sf.openfx.oneViewPlugin.png in CopyFiles */,
+				1E3284961A41C25300C9A4E4 /* net.sf.openfx.oneViewPlugin.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E3284A21A41C40700C9A4E4 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1E3284A31A41C40C00C9A4E4 /* net.sf.openfx.sideBySidePlugin.png in CopyFiles */,
+				1E3284A41A41C40C00C9A4E4 /* net.sf.openfx.sideBySidePlugin.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1072,8 +1226,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
-				1E69C9FC1A2B2EDD0099D609 /* net.sf.openfx.GradePlugin.png in CopyFiles */,
-				1E69C9FD1A2B2EDD0099D609 /* net.sf.openfx.GradePlugin.svg in CopyFiles */,
+				1E32849F1A41C3EE00C9A4E4 /* net.sf.openfx.SaturationPlugin.png in CopyFiles */,
+				1E3284A01A41C3EE00C9A4E4 /* net.sf.openfx.SaturationPlugin.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1083,8 +1237,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
-				1E92572E19EC1DB80018F19A /* net.sf.openfx.Invert.png in CopyFiles */,
-				1E92572F19EC1DB80018F19A /* net.sf.openfx.Invert.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1094,8 +1246,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
-				1ECA4DF01A3F3A6500C5128B /* net.sf.openfx.CropPlugin.png in CopyFiles */,
-				1ECA4DF11A3F3A6500C5128B /* net.sf.openfx.CropPlugin.svg in CopyFiles */,
+				1E32849A1A41C28300C9A4E4 /* net.sf.openfx.Ramp.png in CopyFiles */,
+				1E32849B1A41C28300C9A4E4 /* net.sf.openfx.Ramp.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1105,8 +1257,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
-				1ECA4E091A3F3ACD00C5128B /* net.sf.openfx.CropPlugin.png in CopyFiles */,
-				1ECA4E0A1A3F3ACD00C5128B /* net.sf.openfx.CropPlugin.svg in CopyFiles */,
+				1E3284981A41C27100C9A4E4 /* net.sf.openfx.Radial.png in CopyFiles */,
+				1E3284991A41C27100C9A4E4 /* net.sf.openfx.Radial.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1332,10 +1484,13 @@
 			dstSubfolderSpec = 7;
 			files = (
 				AC6486DC1A41A57B0088844F /* net.sf.openfx.anaglyphPlugin.png in CopyFiles */,
+				1E3284B91A41C54200C9A4E4 /* net.sf.openfx.anaglyphPlugin.svg in CopyFiles */,
 				1EE4A8B019C6EF3300E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png in CopyFiles */,
 				1E814CC019C9837600C2C668 /* net.sf.openfx.ChromaKeyerPlugin.svg in CopyFiles */,
 				1EE4A8B119C6EF3500E6E3AE /* net.sf.openfx.ColorCorrectPlugin.png in CopyFiles */,
 				1E814CC119C9837A00C2C668 /* net.sf.openfx.ColorCorrectPlugin.svg in CopyFiles */,
+				1EE4A8BF19C6EF7400E6E3AE /* net.sf.openfx.ColorLookupPlugin.png in CopyFiles */,
+				1E3284B81A41C52F00C9A4E4 /* net.sf.openfx.ColorLookupPlugin.svg in CopyFiles */,
 				1EE4A8B219C6EF3900E6E3AE /* net.sf.openfx.ConstantPlugin.png in CopyFiles */,
 				1E814CC219C9837E00C2C668 /* net.sf.openfx.ConstantPlugin.svg in CopyFiles */,
 				1EE4A8B319C6EF3E00E6E3AE /* net.sf.openfx.CornerPinPlugin.png in CopyFiles */,
@@ -1345,6 +1500,7 @@
 				1EE4A8B619C6EF4F00E6E3AE /* net.sf.openfx.CropPlugin.png in CopyFiles */,
 				1E814CC519C9838A00C2C668 /* net.sf.openfx.CropPlugin.svg in CopyFiles */,
 				AC4774E51A25B8E9008A2B57 /* net.sf.openfx.Deinterlace.png in CopyFiles */,
+				1E3284B71A41C50D00C9A4E4 /* net.sf.openfx.Deinterlace.svg in CopyFiles */,
 				1EE4A8B719C6EF5200E6E3AE /* net.sf.openfx.DifferencePlugin.png in CopyFiles */,
 				1E814CC619C9838F00C2C668 /* net.sf.openfx.DifferencePlugin.svg in CopyFiles */,
 				1EE4A8B819C6EF5600E6E3AE /* net.sf.openfx.DissolvePlugin.png in CopyFiles */,
@@ -1352,26 +1508,35 @@
 				1EE4A8B919C6EF5A00E6E3AE /* net.sf.openfx.GradePlugin.png in CopyFiles */,
 				1E814CC819C9839500C2C668 /* net.sf.openfx.GradePlugin.svg in CopyFiles */,
 				ACC5D25E1A2C714600DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png in CopyFiles */,
+				1E3284B51A41C4FF00C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg in CopyFiles */,
 				ACC5D25F1A2C714900DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png in CopyFiles */,
+				1E3284B61A41C50500C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg in CopyFiles */,
 				ACC5D2601A2C714C00DE1AAA /* net.sf.openfx.HSVToolPlugin.png in CopyFiles */,
+				1E3284B41A41C4F800C9A4E4 /* net.sf.openfx.HSVToolPlugin.svg in CopyFiles */,
 				1EE4A8BA19C6EF5E00E6E3AE /* net.sf.openfx.Invert.png in CopyFiles */,
 				1E814CC919C9839A00C2C668 /* net.sf.openfx.Invert.svg in CopyFiles */,
 				AC6486DE1A41A5B10088844F /* net.sf.openfx.joinViewsPlugin.png in CopyFiles */,
+				1E3284B31A41C4F400C9A4E4 /* net.sf.openfx.joinViewsPlugin.svg in CopyFiles */,
 				AC0EAC3F1A358B7E00449A77 /* net.sf.openfx.KeyerPlugin.png in CopyFiles */,
+				1E3284B21A41C4F000C9A4E4 /* net.sf.openfx.KeyerPlugin.svg in CopyFiles */,
 				1EE4A8BB19C6EF6300E6E3AE /* net.sf.openfx.MergePlugin.png in CopyFiles */,
 				1E814CCA19C9839E00C2C668 /* net.sf.openfx.MergePlugin.svg in CopyFiles */,
 				AC6486DF1A41A5BA0088844F /* net.sf.openfx.mixViewsPlugin.png in CopyFiles */,
+				1E3284B11A41C4E900C9A4E4 /* net.sf.openfx.mixViewsPlugin.svg in CopyFiles */,
 				AC6486E01A41A5BF0088844F /* net.sf.openfx.Noise.png in CopyFiles */,
+				1E3284B01A41C4E300C9A4E4 /* net.sf.openfx.Noise.svg in CopyFiles */,
 				AC6486E11A41A5C40088844F /* net.sf.openfx.NoOpPlugin.png in CopyFiles */,
+				1E3284AF1A41C4DF00C9A4E4 /* net.sf.openfx.NoOpPlugin.svg in CopyFiles */,
 				AC6486E21A41A5C90088844F /* net.sf.openfx.oneViewPlugin.png in CopyFiles */,
+				1E3284AD1A41C4D200C9A4E4 /* net.sf.openfx.oneViewPlugin.svg in CopyFiles */,
 				1EE4A8BC19C6EF6900E6E3AE /* net.sf.openfx.Premult.png in CopyFiles */,
 				1E814CCB19C983A500C2C668 /* net.sf.openfx.Premult.svg in CopyFiles */,
 				AC6486E31A41A5CC0088844F /* net.sf.openfx.Radial.png in CopyFiles */,
+				1E3284AC1A41C4CC00C9A4E4 /* net.sf.openfx.Radial.svg in CopyFiles */,
 				AC6486E41A41A5D10088844F /* net.sf.openfx.Rectangle.png in CopyFiles */,
+				1E3284AB1A41C4C700C9A4E4 /* net.sf.openfx.Rectangle.svg in CopyFiles */,
 				1EE4A8BD19C6EF6C00E6E3AE /* net.sf.openfx.Unpremult.png in CopyFiles */,
 				1E814CCC19C983A700C2C668 /* net.sf.openfx.Unpremult.svg in CopyFiles */,
-				1EE4A8BF19C6EF7400E6E3AE /* net.sf.openfx.ColorLookupPlugin.png in CopyFiles */,
-				1E814CCE19C983BE00C2C668 /* net.sf.openfx.ColorLookupPlugin.svg in CopyFiles */,
 				1E814CD719C9849C00C2C668 /* net.sf.openfx.Retime.png in CopyFiles */,
 				1E814CD819C9849F00C2C668 /* net.sf.openfx.Retime.svg in CopyFiles */,
 				ACC8477E1A0A3F9300B3FAFE /* net.sf.openfx.Ramp.png in CopyFiles */,
@@ -1379,6 +1544,7 @@
 				1EE4A8C119C6EF7D00E6E3AE /* net.sf.openfx.RotoPlugin.png in CopyFiles */,
 				1E814CCF19C983C200C2C668 /* net.sf.openfx.RotoPlugin.svg in CopyFiles */,
 				AC0EAC3D1A358A2000449A77 /* net.sf.openfx.SaturationPlugin.png in CopyFiles */,
+				1E3284AA1A41C4BE00C9A4E4 /* net.sf.openfx.SaturationPlugin.svg in CopyFiles */,
 				1EE4A8C219C6EF8000E6E3AE /* net.sf.openfx.ShufflePlugin.png in CopyFiles */,
 				1E814CD019C983C600C2C668 /* net.sf.openfx.ShufflePlugin.svg in CopyFiles */,
 				1EE4A8C319C6EF8400E6E3AE /* net.sf.openfx.switchPlugin.png in CopyFiles */,
@@ -1393,6 +1559,7 @@
 				1EE4A8C719C6EF9200E6E3AE /* net.sf.openfx.TransformMaskedPlugin.png in CopyFiles */,
 				1E814CD619C983F700C2C668 /* net.sf.openfx.TransformMaskedPlugin.svg in CopyFiles */,
 				AC6486E61A41A5E40088844F /* net.sf.openfx.VectorToColorPlugin.png in CopyFiles */,
+				1E3284A81A41C49E00C9A4E4 /* net.sf.openfx.VectorToColorPlugin.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1402,8 +1569,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
-				1EFA77271A24F0BA00212DB0 /* net.sf.openfx.GradePlugin.png in CopyFiles */,
-				1EFA77281A24F0BA00212DB0 /* net.sf.openfx.GradePlugin.svg in CopyFiles */,
+				1E32847D1A41C1BD00C9A4E4 /* net.sf.openfx.HSVToolPlugin.png in CopyFiles */,
+				1E32847E1A41C1BD00C9A4E4 /* net.sf.openfx.HSVToolPlugin.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1413,8 +1580,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
-				1EFBC98E1A23A1EB00086E7A /* net.sf.openfx.GradePlugin.png in CopyFiles */,
-				1EFBC98F1A23A1EB00086E7A /* net.sf.openfx.GradePlugin.svg in CopyFiles */,
+				1E3284A61A41C47F00C9A4E4 /* net.sf.openfx.VectorToColorPlugin.png in CopyFiles */,
+				1E3284A71A41C47F00C9A4E4 /* net.sf.openfx.VectorToColorPlugin.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1424,13 +1591,20 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
-				AC6486E71A41B7860088844F /* net.sf.cimg.CImgNoise.png in CopyFiles */,
-				AC4774E81A25B8FF008A2B57 /* net.sf.cimg.CImgDenoise.png in CopyFiles */,
-				AC6486E81A41B9B70088844F /* net.sf.cimg.CImgPlasma.png in CopyFiles */,
 				AC4774E71A25B8FE008A2B57 /* net.sf.cimg.CImgBlur.png in CopyFiles */,
-				AC4774EA1A25B902008A2B57 /* net.sf.cimg.CImgErode.png in CopyFiles */,
-				AC6486E91A41B9B90088844F /* net.sf.cimg.CImgSmooth.png in CopyFiles */,
+				1E32846A1A41C0FC00C9A4E4 /* net.sf.cimg.CImgBlur.svg in CopyFiles */,
+				AC4774E81A25B8FF008A2B57 /* net.sf.cimg.CImgDenoise.png in CopyFiles */,
+				1E32846B1A41C0FC00C9A4E4 /* net.sf.cimg.CImgDenoise.svg in CopyFiles */,
 				AC4774E91A25B900008A2B57 /* net.sf.cimg.CImgDilate.png in CopyFiles */,
+				1E32846C1A41C0FC00C9A4E4 /* net.sf.cimg.CImgDilate.svg in CopyFiles */,
+				AC4774EA1A25B902008A2B57 /* net.sf.cimg.CImgErode.png in CopyFiles */,
+				1E32846D1A41C0FC00C9A4E4 /* net.sf.cimg.CImgErode.svg in CopyFiles */,
+				AC6486E71A41B7860088844F /* net.sf.cimg.CImgNoise.png in CopyFiles */,
+				1E32846E1A41C0FC00C9A4E4 /* net.sf.cimg.CImgNoise.svg in CopyFiles */,
+				AC6486E81A41B9B70088844F /* net.sf.cimg.CImgPlasma.png in CopyFiles */,
+				1E32846F1A41C0FC00C9A4E4 /* net.sf.cimg.CImgPlasma.svg in CopyFiles */,
+				AC6486E91A41B9B90088844F /* net.sf.cimg.CImgSmooth.png in CopyFiles */,
+				1E3284701A41C0FC00C9A4E4 /* net.sf.cimg.CImgSmooth.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1503,6 +1677,29 @@
 		1E31940D19D9987F0027D0E2 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E31940E19D9987F0027D0E2 /* PluginRegistration.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1E31942019D9B2270027D0E2 /* CImg.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CImg.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E32845E1A41C06400C9A4E4 /* net.sf.openfx.Rectangle.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.Rectangle.svg; sourceTree = "<group>"; };
+		1E32845F1A41C09E00C9A4E4 /* net.sf.openfx.anaglyphPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.anaglyphPlugin.svg; sourceTree = "<group>"; };
+		1E3284631A41C0E500C9A4E4 /* net.sf.cimg.CImgBlur.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgBlur.svg; sourceTree = "<group>"; };
+		1E3284641A41C0E500C9A4E4 /* net.sf.cimg.CImgDenoise.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgDenoise.svg; sourceTree = "<group>"; };
+		1E3284651A41C0E500C9A4E4 /* net.sf.cimg.CImgDilate.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgDilate.svg; sourceTree = "<group>"; };
+		1E3284661A41C0E500C9A4E4 /* net.sf.cimg.CImgErode.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgErode.svg; sourceTree = "<group>"; };
+		1E3284671A41C0E500C9A4E4 /* net.sf.cimg.CImgNoise.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgNoise.svg; sourceTree = "<group>"; };
+		1E3284681A41C0E500C9A4E4 /* net.sf.cimg.CImgPlasma.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgPlasma.svg; sourceTree = "<group>"; };
+		1E3284691A41C0E500C9A4E4 /* net.sf.cimg.CImgSmooth.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgSmooth.svg; sourceTree = "<group>"; };
+		1E3284711A41C16500C9A4E4 /* net.sf.openfx.Deinterlace.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.Deinterlace.svg; sourceTree = "<group>"; };
+		1E3284751A41C19A00C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.HSVToRGBPlugin.svg; sourceTree = "<group>"; };
+		1E3284761A41C19A00C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.RGBToHSVPlugin.svg; sourceTree = "<group>"; };
+		1E32847C1A41C1B200C9A4E4 /* net.sf.openfx.HSVToolPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.HSVToolPlugin.svg; sourceTree = "<group>"; };
+		1E32847F1A41C1CD00C9A4E4 /* net.sf.openfx.joinViewsPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.joinViewsPlugin.svg; sourceTree = "<group>"; };
+		1E3284831A41C1E400C9A4E4 /* net.sf.openfx.KeyerPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.KeyerPlugin.svg; sourceTree = "<group>"; };
+		1E3284871A41C1FF00C9A4E4 /* net.sf.openfx.mixViewsPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.mixViewsPlugin.svg; sourceTree = "<group>"; };
+		1E32848B1A41C21400C9A4E4 /* net.sf.openfx.Noise.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.Noise.svg; sourceTree = "<group>"; };
+		1E32848F1A41C23300C9A4E4 /* net.sf.openfx.NoOpPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.NoOpPlugin.svg; sourceTree = "<group>"; };
+		1E3284931A41C24600C9A4E4 /* net.sf.openfx.oneViewPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.oneViewPlugin.svg; sourceTree = "<group>"; };
+		1E3284971A41C26300C9A4E4 /* net.sf.openfx.Radial.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.Radial.svg; sourceTree = "<group>"; };
+		1E32849E1A41C3DF00C9A4E4 /* net.sf.openfx.SaturationPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.SaturationPlugin.svg; sourceTree = "<group>"; };
+		1E3284A11A41C3FE00C9A4E4 /* net.sf.openfx.sideBySidePlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.sideBySidePlugin.svg; sourceTree = "<group>"; };
+		1E3284A51A41C46D00C9A4E4 /* net.sf.openfx.VectorToColorPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.VectorToColorPlugin.svg; sourceTree = "<group>"; };
 		1E3451F21906952D0080D699 /* ChromaKeyer.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChromaKeyer.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E3451F3190695850080D699 /* ChromaKeyer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ChromaKeyer.cpp; sourceTree = "<group>"; };
 		1E3451F4190695850080D699 /* ChromaKeyer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ChromaKeyer.h; sourceTree = "<group>"; };
@@ -2227,11 +2424,12 @@
 		1E0072E81A4041AE00E77042 /* Rectangle */ = {
 			isa = PBXGroup;
 			children = (
-				AC6486D91A41A5490088844F /* net.sf.openfx.Rectangle.png */,
 				1E0072F41A40420500E77042 /* Rectangle.cpp */,
 				1E0072F51A40420500E77042 /* Rectangle.h */,
 				1E0072F11A40420500E77042 /* Info.plist */,
 				1E0072F21A40420500E77042 /* Makefile */,
+				AC6486D91A41A5490088844F /* net.sf.openfx.Rectangle.png */,
+				1E32845E1A41C06400C9A4E4 /* net.sf.openfx.Rectangle.svg */,
 				1E0072F31A40420500E77042 /* PluginRegistration.cpp */,
 			);
 			path = Rectangle;
@@ -2242,9 +2440,10 @@
 			children = (
 				1E083207199FEB6F00A819A5 /* Deinterlace.cpp */,
 				1E083208199FEB6F00A819A5 /* Deinterlace.h */,
-				AC4774E41A25B8E7008A2B57 /* net.sf.openfx.Deinterlace.png */,
 				1E083209199FEB6F00A819A5 /* Info.plist */,
 				1E08320A199FEB6F00A819A5 /* Makefile */,
+				AC4774E41A25B8E7008A2B57 /* net.sf.openfx.Deinterlace.png */,
+				1E3284711A41C16500C9A4E4 /* net.sf.openfx.Deinterlace.svg */,
 				1E08320B199FEB6F00A819A5 /* PluginRegistration.cpp */,
 			);
 			path = Deinterlace;
@@ -2279,11 +2478,12 @@
 		1E235FEC18363CCA0019C45F /* SideBySide */ = {
 			isa = PBXGroup;
 			children = (
-				AC6486DA1A41A5540088844F /* net.sf.openfx.sideBySidePlugin.png */,
 				1E235FED18363CE70019C45F /* SideBySide.cpp */,
 				1E8B5D6C18B77E7A00C31FDC /* SideBySide.h */,
 				1E235FEF18363CF10019C45F /* Info.plist */,
 				1E235FF018363CF10019C45F /* Makefile */,
+				AC6486DA1A41A5540088844F /* net.sf.openfx.sideBySidePlugin.png */,
+				1E3284A11A41C3FE00C9A4E4 /* net.sf.openfx.sideBySidePlugin.svg */,
 				1E8B5D6918B77E4400C31FDC /* PluginRegistration.cpp */,
 			);
 			path = SideBySide;
@@ -2320,9 +2520,7 @@
 		1E31940919D998450027D0E2 /* CImg */ = {
 			isa = PBXGroup;
 			children = (
-				AC6486D01A41A4A90088844F /* net.sf.cimg.CImgNoise.png */,
-				AC6486D11A41A4A90088844F /* net.sf.cimg.CImgPlasma.png */,
-				AC6486D21A41A4A90088844F /* net.sf.cimg.CImgSmooth.png */,
+				1E55FCE619F104C70093F33B /* CImg.h */,
 				1E868B7019E6D8CD00B793BA /* CImgBilateral.cpp */,
 				1E868B7119E6D8CD00B793BA /* CImgBilateral.h */,
 				1E868B6D19E6B8C100B793BA /* CImgBlur.cpp */,
@@ -2337,6 +2535,7 @@
 				1E868B7719E6E28E00B793BA /* CImgErode.h */,
 				1ECF2F5119F2CB9F00E91A38 /* CImgErodeSmooth.cpp */,
 				1ECF2F5219F2CB9F00E91A38 /* CImgErodeSmooth.h */,
+				1ED8BB4319E677BC005F450E /* CImgFilter.h */,
 				1E1DDFEA1A04E432007F45B2 /* CImgGuided.cpp */,
 				1E1DDFEB1A04E432007F45B2 /* CImgGuided.h */,
 				1EFA77141A24DCFA00212DB0 /* CImgHistEQ.cpp */,
@@ -2349,14 +2548,22 @@
 				1E92575019ECF38A0018F19A /* CImgRollingGuidance.h */,
 				1E31940A19D9987F0027D0E2 /* CImgSmooth.cpp */,
 				1E31940B19D9987F0027D0E2 /* CImgSmooth.h */,
-				1ED8BB4319E677BC005F450E /* CImgFilter.h */,
-				1E55FCE619F104C70093F33B /* CImg.h */,
 				1E31940C19D9987F0027D0E2 /* Info.plist */,
 				1E31940D19D9987F0027D0E2 /* Makefile */,
 				AC4774DC1A25B811008A2B57 /* net.sf.cimg.CImgBlur.png */,
+				1E3284631A41C0E500C9A4E4 /* net.sf.cimg.CImgBlur.svg */,
 				AC4774DD1A25B811008A2B57 /* net.sf.cimg.CImgDenoise.png */,
+				1E3284641A41C0E500C9A4E4 /* net.sf.cimg.CImgDenoise.svg */,
 				AC4774DE1A25B811008A2B57 /* net.sf.cimg.CImgDilate.png */,
+				1E3284651A41C0E500C9A4E4 /* net.sf.cimg.CImgDilate.svg */,
 				AC4774DF1A25B811008A2B57 /* net.sf.cimg.CImgErode.png */,
+				1E3284661A41C0E500C9A4E4 /* net.sf.cimg.CImgErode.svg */,
+				AC6486D01A41A4A90088844F /* net.sf.cimg.CImgNoise.png */,
+				1E3284671A41C0E500C9A4E4 /* net.sf.cimg.CImgNoise.svg */,
+				AC6486D11A41A4A90088844F /* net.sf.cimg.CImgPlasma.png */,
+				1E3284681A41C0E500C9A4E4 /* net.sf.cimg.CImgPlasma.svg */,
+				AC6486D21A41A4A90088844F /* net.sf.cimg.CImgSmooth.png */,
+				1E3284691A41C0E500C9A4E4 /* net.sf.cimg.CImgSmooth.svg */,
 				1E31940E19D9987F0027D0E2 /* PluginRegistration.cpp */,
 			);
 			path = CImg;
@@ -2617,11 +2824,12 @@
 		1E69C9EC1A2B2EC10099D609 /* Saturation */ = {
 			isa = PBXGroup;
 			children = (
-				AC0EAC3C1A358A0C00449A77 /* net.sf.openfx.SaturationPlugin.png */,
 				1E69CA031A2B2F350099D609 /* Saturation.cpp */,
 				1E69CA041A2B2F350099D609 /* Saturation.h */,
 				1E69CA091A2B2F4B0099D609 /* Info.plist */,
 				1E69CA0A1A2B2F4B0099D609 /* Makefile */,
+				AC0EAC3C1A358A0C00449A77 /* net.sf.openfx.SaturationPlugin.png */,
+				1E32849E1A41C3DF00C9A4E4 /* net.sf.openfx.SaturationPlugin.svg */,
 				1E69CA071A2B2F3E0099D609 /* PluginRegistration.cpp */,
 			);
 			path = Saturation;
@@ -2713,11 +2921,12 @@
 		1EB9C06E196DD61B003C1849 /* NoOp */ = {
 			isa = PBXGroup;
 			children = (
-				AC6486D61A41A5270088844F /* net.sf.openfx.NoOpPlugin.png */,
-				1EB9C082196DD697003C1849 /* NoOp.cpp */,
-				1EB9C083196DD697003C1849 /* NoOp.h */,
 				1EB9C088196DD6AD003C1849 /* Info.plist */,
 				1EB9C089196DD6AD003C1849 /* Makefile */,
+				AC6486D61A41A5270088844F /* net.sf.openfx.NoOpPlugin.png */,
+				1E32848F1A41C23300C9A4E4 /* net.sf.openfx.NoOpPlugin.svg */,
+				1EB9C082196DD697003C1849 /* NoOp.cpp */,
+				1EB9C083196DD697003C1849 /* NoOp.h */,
 				1EB9C086196DD6A2003C1849 /* PluginRegistration.cpp */,
 			);
 			path = NoOp;
@@ -2747,12 +2956,13 @@
 		1ECA4DDF1A3F3A2C00C5128B /* Radial */ = {
 			isa = PBXGroup;
 			children = (
-				AC6486D81A41A5350088844F /* net.sf.openfx.Radial.png */,
-				1E0072EC1A4041D200E77042 /* Radial.cpp */,
-				1E0072ED1A4041D200E77042 /* Radial.h */,
 				1E0072E91A4041D200E77042 /* Info.plist */,
 				1E0072EA1A4041D200E77042 /* Makefile */,
+				AC6486D81A41A5350088844F /* net.sf.openfx.Radial.png */,
+				1E3284971A41C26300C9A4E4 /* net.sf.openfx.Radial.svg */,
 				1E0072EB1A4041D200E77042 /* PluginRegistration.cpp */,
+				1E0072EC1A4041D200E77042 /* Radial.cpp */,
+				1E0072ED1A4041D200E77042 /* Radial.h */,
 			);
 			path = Radial;
 			sourceTree = "<group>";
@@ -2782,11 +2992,12 @@
 		1ECF2FA019F51D6700E91A38 /* Keyer */ = {
 			isa = PBXGroup;
 			children = (
-				AC0EAC3E1A358B6E00449A77 /* net.sf.openfx.KeyerPlugin.png */,
-				1ECF2FA119F51DA000E91A38 /* Keyer.cpp */,
-				1ECF2FA819F51DB800E91A38 /* Makefile */,
 				1ECF2FA619F51DB800E91A38 /* Info.plist */,
+				1ECF2FA119F51DA000E91A38 /* Keyer.cpp */,
 				1ECF2FA719F51DB800E91A38 /* Keyer.h */,
+				1ECF2FA819F51DB800E91A38 /* Makefile */,
+				AC0EAC3E1A358B6E00449A77 /* net.sf.openfx.KeyerPlugin.png */,
+				1E3284831A41C1E400C9A4E4 /* net.sf.openfx.KeyerPlugin.svg */,
 				1ECF2FA219F51DA000E91A38 /* PluginRegistration.cpp */,
 			);
 			path = Keyer;
@@ -2795,11 +3006,12 @@
 		1ED4AEA81973DD0B00EE64C8 /* Noise */ = {
 			isa = PBXGroup;
 			children = (
-				AC6486D51A41A5210088844F /* net.sf.openfx.Noise.png */,
-				1ED4AEA91973DD4800EE64C8 /* Noise.cpp */,
-				1ED4AEB31973DD6D00EE64C8 /* Noise.h */,
 				1ED4AEB11973DD6D00EE64C8 /* Info.plist */,
 				1ED4AEB21973DD6D00EE64C8 /* Makefile */,
+				AC6486D51A41A5210088844F /* net.sf.openfx.Noise.png */,
+				1E32848B1A41C21400C9A4E4 /* net.sf.openfx.Noise.svg */,
+				1ED4AEA91973DD4800EE64C8 /* Noise.cpp */,
+				1ED4AEB31973DD6D00EE64C8 /* Noise.h */,
 				1ED4AEAF1973DD5700EE64C8 /* PluginRegistration.cpp */,
 			);
 			path = Noise;
@@ -2808,12 +3020,14 @@
 		1ED537191A234CB8007966D5 /* HSV */ = {
 			isa = PBXGroup;
 			children = (
+				1ED537301A234D21007966D5 /* HSV.cpp */,
+				1ED537311A234D21007966D5 /* HSV.h */,
 				1ED537351A234D35007966D5 /* Info.plist */,
 				1ED537361A234D35007966D5 /* Makefile */,
 				ACC5D25C1A2C713700DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png */,
+				1E3284751A41C19A00C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg */,
 				ACC5D25D1A2C713700DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png */,
-				1ED537301A234D21007966D5 /* HSV.cpp */,
-				1ED537311A234D21007966D5 /* HSV.h */,
+				1E3284761A41C19A00C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg */,
 				1ED537321A234D21007966D5 /* PluginRegistration.cpp */,
 			);
 			path = HSV;
@@ -2822,11 +3036,12 @@
 		1EDE1B8E182D0511002392CB /* Anaglyph */ = {
 			isa = PBXGroup;
 			children = (
-				AC6486CF1A41A4960088844F /* net.sf.openfx.anaglyphPlugin.png */,
 				1EDE1B8F182D0552002392CB /* Anaglyph.cpp */,
 				1E8B5D7D18B7820900C31FDC /* Anaglyph.h */,
 				1EDE1B90182D0552002392CB /* Info.plist */,
 				1EDE1B91182D0552002392CB /* Makefile */,
+				AC6486CF1A41A4960088844F /* net.sf.openfx.anaglyphPlugin.png */,
+				1E32845F1A41C09E00C9A4E4 /* net.sf.openfx.anaglyphPlugin.svg */,
 				1E8B5D7B18B781FE00C31FDC /* PluginRegistration.cpp */,
 			);
 			path = Anaglyph;
@@ -2835,11 +3050,12 @@
 		1EDE1BAF182D39DA002392CB /* JoinViews */ = {
 			isa = PBXGroup;
 			children = (
-				AC6486D31A41A4D00088844F /* net.sf.openfx.joinViewsPlugin.png */,
+				1EDE1BB2182D3A03002392CB /* Info.plist */,
 				1EDE1BB0182D39FA002392CB /* JoinViews.cpp */,
 				1E8B5D7A18B7816500C31FDC /* JoinViews.h */,
-				1EDE1BB2182D3A03002392CB /* Info.plist */,
 				1EDE1BB3182D3A03002392CB /* Makefile */,
+				AC6486D31A41A4D00088844F /* net.sf.openfx.joinViewsPlugin.png */,
+				1E32847F1A41C1CD00C9A4E4 /* net.sf.openfx.joinViewsPlugin.svg */,
 				1E8B5D7818B7815800C31FDC /* PluginRegistration.cpp */,
 			);
 			path = JoinViews;
@@ -2848,11 +3064,12 @@
 		1EDE1BC8182D3F73002392CB /* OneView */ = {
 			isa = PBXGroup;
 			children = (
-				AC6486D71A41A52F0088844F /* net.sf.openfx.oneViewPlugin.png */,
-				1EDE1BC9182D3F90002392CB /* OneView.cpp */,
-				1E8B5D7318B7803F00C31FDC /* OneView.h */,
 				1EDE1BCB182D3F98002392CB /* Info.plist */,
 				1EDE1BCC182D3F98002392CB /* Makefile */,
+				AC6486D71A41A52F0088844F /* net.sf.openfx.oneViewPlugin.png */,
+				1E3284931A41C24600C9A4E4 /* net.sf.openfx.oneViewPlugin.svg */,
+				1EDE1BC9182D3F90002392CB /* OneView.cpp */,
+				1E8B5D7318B7803F00C31FDC /* OneView.h */,
 				1E8B5D7418B7805D00C31FDC /* PluginRegistration.cpp */,
 			);
 			path = OneView;
@@ -2861,11 +3078,12 @@
 		1EDE1BE1182D8961002392CB /* MixViews */ = {
 			isa = PBXGroup;
 			children = (
-				AC6486D41A41A4D90088844F /* net.sf.openfx.mixViewsPlugin.png */,
-				1EDE1BE2182D8977002392CB /* MixViews.cpp */,
-				1E8B5D7018B77F7B00C31FDC /* MixViews.h */,
 				1EDE1BE4182D8983002392CB /* Info.plist */,
 				1EDE1BE5182D8983002392CB /* Makefile */,
+				1EDE1BE2182D8977002392CB /* MixViews.cpp */,
+				1E8B5D7018B77F7B00C31FDC /* MixViews.h */,
+				AC6486D41A41A4D90088844F /* net.sf.openfx.mixViewsPlugin.png */,
+				1E3284871A41C1FF00C9A4E4 /* net.sf.openfx.mixViewsPlugin.svg */,
 				1E8B5D6E18B77F5900C31FDC /* PluginRegistration.cpp */,
 			);
 			path = MixViews;
@@ -2889,10 +3107,11 @@
 			isa = PBXGroup;
 			children = (
 				1EFA77331A24F13300212DB0 /* HSVTool.cpp */,
-				ACC5D25B1A2C712E00DE1AAA /* net.sf.openfx.HSVToolPlugin.png */,
 				1EFA77341A24F13300212DB0 /* HSVTool.h */,
 				1EFA77381A24F14600212DB0 /* Info.plist */,
 				1EFA77391A24F14600212DB0 /* Makefile */,
+				ACC5D25B1A2C712E00DE1AAA /* net.sf.openfx.HSVToolPlugin.png */,
+				1E32847C1A41C1B200C9A4E4 /* net.sf.openfx.HSVToolPlugin.svg */,
 				1EFA77361A24F13B00212DB0 /* PluginRegistration.cpp */,
 			);
 			path = HSVTool;
@@ -2915,12 +3134,13 @@
 		1EFBC97E1A23A1CC00086E7A /* VectorToColor */ = {
 			isa = PBXGroup;
 			children = (
-				AC6486DB1A41A5620088844F /* net.sf.openfx.VectorToColorPlugin.png */,
 				1EFBC9961A23A22D00086E7A /* VectorToColor.cpp */,
 				1EFBC99C1A23A24600086E7A /* VectorToColor.h */,
-				1EFBC9951A23A22D00086E7A /* PluginRegistration.cpp */,
 				1EFBC99A1A23A24600086E7A /* Info.plist */,
 				1EFBC99B1A23A24600086E7A /* Makefile */,
+				AC6486DB1A41A5620088844F /* net.sf.openfx.VectorToColorPlugin.png */,
+				1E3284A51A41C46D00C9A4E4 /* net.sf.openfx.VectorToColorPlugin.svg */,
+				1EFBC9951A23A22D00086E7A /* PluginRegistration.cpp */,
 			);
 			path = VectorToColor;
 			sourceTree = "<group>";
@@ -2928,13 +3148,13 @@
 		AC60A32419FE995F00375A86 /* Ramp */ = {
 			isa = PBXGroup;
 			children = (
-				AC60A32A19FE995F00375A86 /* Ramp.cpp */,
-				AC60A32B19FE995F00375A86 /* Ramp.h */,
 				AC60A32519FE995F00375A86 /* Info.plist */,
 				AC60A32619FE995F00375A86 /* Makefile */,
 				AC60A32719FE995F00375A86 /* net.sf.openfx.Ramp.png */,
 				AC60A32819FE995F00375A86 /* net.sf.openfx.Ramp.svg */,
 				AC60A32919FE995F00375A86 /* PluginRegistration.cpp */,
+				AC60A32A19FE995F00375A86 /* Ramp.cpp */,
+				AC60A32B19FE995F00375A86 /* Ramp.h */,
 			);
 			path = Ramp;
 			sourceTree = "<group>";
@@ -3105,6 +3325,7 @@
 			buildPhases = (
 				1E0831F5199FEB1F00A819A5 /* Sources */,
 				1E083200199FEB1F00A819A5 /* Frameworks */,
+				1E3284721A41C16F00C9A4E4 /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -3171,6 +3392,7 @@
 			buildPhases = (
 				1E235FDA18363C850019C45F /* Sources */,
 				1E235FE518363C850019C45F /* Frameworks */,
+				1E3284A21A41C40700C9A4E4 /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -3424,6 +3646,7 @@
 			buildPhases = (
 				1EB9C070196DD64E003C1849 /* Sources */,
 				1EB9C07B196DD64E003C1849 /* Frameworks */,
+				1E3284901A41C23800C9A4E4 /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -3522,6 +3745,7 @@
 			buildPhases = (
 				1ECF2F8B19F51D3400E91A38 /* Sources */,
 				1ECF2F9619F51D3400E91A38 /* Frameworks */,
+				1E3284841A41C1E800C9A4E4 /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -3538,6 +3762,7 @@
 			buildPhases = (
 				1ED4AE961973DCAD00EE64C8 /* Sources */,
 				1ED4AEA11973DCAD00EE64C8 /* Frameworks */,
+				1E32848C1A41C22000C9A4E4 /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -3554,6 +3779,7 @@
 			buildPhases = (
 				1ED5371B1A234CDF007966D5 /* Sources */,
 				1ED537261A234CDF007966D5 /* Frameworks */,
+				1E3284771A41C1A100C9A4E4 /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -3570,6 +3796,7 @@
 			buildPhases = (
 				1EDE1B7C182D04D9002392CB /* Sources */,
 				1EDE1B86182D04D9002392CB /* Frameworks */,
+				1E3284601A41C0B700C9A4E4 /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -3586,6 +3813,7 @@
 			buildPhases = (
 				1EDE1B9E182D3985002392CB /* Sources */,
 				1EDE1BA8182D3985002392CB /* Frameworks */,
+				1E3284801A41C1D300C9A4E4 /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -3602,6 +3830,7 @@
 			buildPhases = (
 				1EDE1BB7182D3F38002392CB /* Sources */,
 				1EDE1BC1182D3F38002392CB /* Frameworks */,
+				1E3284941A41C24E00C9A4E4 /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -3618,6 +3847,7 @@
 			buildPhases = (
 				1EDE1BD0182D8941002392CB /* Sources */,
 				1EDE1BDA182D8941002392CB /* Frameworks */,
+				1E3284881A41C20400C9A4E4 /* CopyFiles */,
 			);
 			buildRules = (
 			);

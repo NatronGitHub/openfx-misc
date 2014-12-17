@@ -51,7 +51,7 @@ PluginRegistrationCombined.o
 
 PLUGINNAME = Misc
 
-# ls */*png|sed -e 's!^!../!' -e 's!$! \\!'
+# ls */*.png */*.svg|sort|sed -e 's!^!../!' -e 's!$! \\!'
 RESOURCES = \
 ../Anaglyph/net.sf.openfx.anaglyphPlugin.png \
 ../Anaglyph/net.sf.openfx.anaglyphPlugin.svg \
@@ -64,8 +64,8 @@ RESOURCES = \
 ../Constant/net.sf.openfx.ConstantPlugin.png \
 ../Constant/net.sf.openfx.ConstantPlugin.svg \
 ../CornerPin/net.sf.openfx.CornerPinMaskedPlugin.png \
-../CornerPin/net.sf.openfx.CornerPinPlugin.png \
 ../CornerPin/net.sf.openfx.CornerPinMaskedPlugin.svg \
+../CornerPin/net.sf.openfx.CornerPinPlugin.png \
 ../CornerPin/net.sf.openfx.CornerPinPlugin.svg \
 ../Crop/net.sf.openfx.CropPlugin.png \
 ../Crop/net.sf.openfx.CropPlugin.svg \
@@ -77,10 +77,10 @@ RESOURCES = \
 ../Dissolve/net.sf.openfx.DissolvePlugin.svg \
 ../Grade/net.sf.openfx.GradePlugin.png \
 ../Grade/net.sf.openfx.GradePlugin.svg \
-../HSV/net.sf.openfx.RGBToHSVPlugin.png \
-../HSV/net.sf.openfx.RGBToHSVPlugin.svg \
 ../HSV/net.sf.openfx.HSVToRGBPlugin.png \
 ../HSV/net.sf.openfx.HSVToRGBPlugin.svg \
+../HSV/net.sf.openfx.RGBToHSVPlugin.png \
+../HSV/net.sf.openfx.RGBToHSVPlugin.svg \
 ../HSVTool/net.sf.openfx.HSVToolPlugin.png \
 ../HSVTool/net.sf.openfx.HSVToolPlugin.svg \
 ../Invert/net.sf.openfx.Invert.png \
@@ -93,10 +93,10 @@ RESOURCES = \
 ../Merge/net.sf.openfx.MergePlugin.svg \
 ../MixViews/net.sf.openfx.mixViewsPlugin.png \
 ../MixViews/net.sf.openfx.mixViewsPlugin.svg \
-../Noise/net.sf.openfx.Noise.png \
-../Noise/net.sf.openfx.Noise.svg \
 ../NoOp/net.sf.openfx.NoOpPlugin.png \
 ../NoOp/net.sf.openfx.NoOpPlugin.svg \
+../Noise/net.sf.openfx.Noise.png \
+../Noise/net.sf.openfx.Noise.svg \
 ../OneView/net.sf.openfx.oneViewPlugin.png \
 ../OneView/net.sf.openfx.oneViewPlugin.svg \
 ../Premult/net.sf.openfx.Premult.png \
@@ -115,10 +115,10 @@ RESOURCES = \
 ../Roto/net.sf.openfx.RotoPlugin.svg \
 ../Saturation/net.sf.openfx.SaturationPlugin.png \
 ../Saturation/net.sf.openfx.SaturationPlugin.svg \
-../SideBySide/net.sf.openfx.sideBySidePlugin.png \
-../SideBySide/net.sf.openfx.sideBySidePlugin.svg \
 ../Shuffle/net.sf.openfx.ShufflePlugin.png \
 ../Shuffle/net.sf.openfx.ShufflePlugin.svg \
+../SideBySide/net.sf.openfx.sideBySidePlugin.png \
+../SideBySide/net.sf.openfx.sideBySidePlugin.svg \
 ../Switch/net.sf.openfx.switchPlugin.png \
 ../Switch/net.sf.openfx.switchPlugin.svg \
 ../TimeOffset/net.sf.openfx.timeOffset.png \
