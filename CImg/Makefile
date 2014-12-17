@@ -14,7 +14,11 @@ net.sf.cimg.CImgSmooth.svg \
 net.sf.cimg.CImgPlasma.png \
 net.sf.cimg.CImgPlasma.svg \
 net.sf.cimg.CImgNoise.png \
-net.sf.cimg.CImgNoise.svg
+net.sf.cimg.CImgNoise.svg \
+net.sf.cimg.CImgErodeSmooth.png \net.sf.cimg.CImgErodeSmooth.svg \
+net.sf.cimg.CImgBilateral.png \net.sf.cimg.CImgBilateral.svg \
+net.sf.cimg.CImgRollingGuidance.png \net.sf.cimg.CImgRollingGuidance.svg \
+net.sf.cimg.CImgGuided.png \net.sf.cimg.CImgGuided.svg
 
 include ../Makefile.master
 
