@@ -274,7 +274,7 @@ class ImageInverter : public InvertBase
     }
 
   private:
-    template<bool dored, bool dogreen, bool doblue, bool doalpha>
+    template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow)
     {
         float unpPix[4];
@@ -292,10 +292,10 @@ class ImageInverter : public InvertBase
 
                 // do we have a source image to scale up
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
-                tmpPix[0] = dored   ? (1. - unpPix[0]) : unpPix[0];
-                tmpPix[1] = dogreen ? (1. - unpPix[1]) : unpPix[1];
-                tmpPix[2] = doblue  ? (1. - unpPix[2]) : unpPix[2];
-                tmpPix[3] = doalpha ? (1. - unpPix[3]) : unpPix[3];
+                tmpPix[0] = processR   ? (1. - unpPix[0]) : unpPix[0];
+                tmpPix[1] = processG ? (1. - unpPix[1]) : unpPix[1];
+                tmpPix[2] = processB  ? (1. - unpPix[2]) : unpPix[2];
+                tmpPix[3] = processA ? (1. - unpPix[3]) : unpPix[3];
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
 
                 // increment the dst pixel

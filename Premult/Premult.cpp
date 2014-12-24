@@ -155,20 +155,20 @@ class PremultBase : public OFX::ImageProcessor
 {
   protected:
     const OFX::Image *_srcImg;
-    bool _red;
-    bool _green;
-    bool _blue;
-    bool _alpha;
+    bool _processR;
+    bool _processG;
+    bool _processB;
+    bool _processA;
     int _p;
   public:
     /** @brief no arg ctor */
     PremultBase(OFX::ImageEffect &instance)
             : OFX::ImageProcessor(instance)
             , _srcImg(0)
-            , _red(true)
-            , _green(true)
-            , _blue(true)
-            , _alpha(false)
+            , _processR(true)
+            , _processG(true)
+            , _processB(true)
+            , _processA(false)
             , _p(3)
     {
     }
@@ -176,12 +176,12 @@ class PremultBase : public OFX::ImageProcessor
     /** @brief set the src image */
     void setSrcImg(const OFX::Image *v) {_srcImg = v;}
 
-    void setValues(bool red, bool green, bool blue, bool alpha, InputChannelEnum premultChannel)
+    void setValues(bool processR, bool processG, bool processB, bool processA, InputChannelEnum premultChannel)
     {
-        _red = red;
-        _green = green;
-        _blue = blue;
-        _alpha = alpha;
+        _processR = processR;
+        _processG = processG;
+        _processB = processB;
+        _processA = processA;
         switch (premultChannel) {
             case eInputChannelNone:
                 _p = -1;
@@ -229,7 +229,7 @@ class ImagePremulter : public PremultBase
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        int todo = ((_red ? 0xf000 : 0) | (_green ? 0x0f00 : 0) | (_blue ? 0x00f0 : 0) | (_alpha ? 0x000f : 0));
+        int todo = ((_processR ? 0xf000 : 0) | (_processG ? 0x0f00 : 0) | (_processB ? 0x00f0 : 0) | (_processA ? 0x000f : 0));
         switch (todo) {
             case 0x0000:
                 return process<false,false,false,false>(procWindow);
@@ -267,14 +267,14 @@ class ImagePremulter : public PremultBase
     }
 
   private:
-    template<bool dored, bool dogreen, bool doblue, bool doalpha>
+    template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow)
     {
         bool doc[4];
-        doc[0] = dored;
-        doc[1] = dogreen;
-        doc[2] = doblue;
-        doc[3] = doalpha;
+        doc[0] = processR;
+        doc[1] = processG;
+        doc[2] = processB;
+        doc[3] = processA;
         const float fltmin = std::numeric_limits<float>::min();
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
@@ -289,7 +289,7 @@ class ImagePremulter : public PremultBase
 
                 // do we have a source image to scale up
                 if (srcPix) {
-                    if (_p >= 0 && (dored || dogreen || doblue || doalpha)) {
+                    if (_p >= 0 && (processR || processG || processB || processA)) {
                         PIX alpha = srcPix[_p];
                         for (int c = 0; c < nComponents; c++) {
                             if (isPremult) {
@@ -410,15 +410,15 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor, const OFX::Ren
         }
     }
 
-    bool red, green, blue, alpha;
+    bool processR, processG, processB, processA;
     int premult_i;
-    _processR->getValueAtTime(args.time, red);
-    _processG->getValueAtTime(args.time, green);
-    _processB->getValueAtTime(args.time, blue);
-    _processA->getValueAtTime(args.time, alpha);
+    _processR->getValueAtTime(args.time, processR);
+    _processG->getValueAtTime(args.time, processG);
+    _processB->getValueAtTime(args.time, processB);
+    _processA->getValueAtTime(args.time, processA);
     _premult->getValue(premult_i);
     InputChannelEnum premult = InputChannelEnum(premult_i);
-    processor.setValues(red, green, blue, alpha, premult);
+    processor.setValues(processR, processG, processB, processA, premult);
 
     // set the images
     processor.setDstImg(dst.get());
@@ -478,16 +478,16 @@ PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args, Clip * &id
             return false;
         }
     }
-    bool red, green, blue, alpha;
+    bool processR, processG, processB, processA;
     int premult_i;
-    _processR->getValueAtTime(args.time, red);
-    _processG->getValueAtTime(args.time, green);
-    _processB->getValueAtTime(args.time, blue);
-    _processA->getValueAtTime(args.time, alpha);
+    _processR->getValueAtTime(args.time, processR);
+    _processG->getValueAtTime(args.time, processG);
+    _processB->getValueAtTime(args.time, processB);
+    _processA->getValueAtTime(args.time, processA);
     _premult->getValueAtTime(args.time, premult_i);
     InputChannelEnum premult = InputChannelEnum(premult_i);
 
-    if (premult == eInputChannelNone || (!red && !green && !blue && !alpha)) {
+    if (premult == eInputChannelNone || (!processR && !processG && !processB && !processA)) {
         // no processing: identity
         identityClip = srcClip_;
         return true;
@@ -505,16 +505,16 @@ PremultPlugin<isPremult>::getClipPreferences(OFX::ClipPreferencesSetter &clipPre
 {
 #if 0
     // set the premultiplication of dstClip_
-    bool red, green, blue, alpha;
+    bool processR, processG, processB, processA;
     int premult_i;
-    _processR->getValue(red);
-    _processG->getValue(green);
-    _processB->getValue(blue);
-    _processA->getValue(alpha);
+    _processR->getValue(processR);
+    _processG->getValue(processG);
+    _processB->getValue(processB);
+    _processA->getValue(processA);
     _premult->getValue(premult_i);
     InputChannelEnum premult = InputChannelEnum(premult_i);
 
-    if (premult == eInputChannelA && red && green && blue && !alpha) {
+    if (premult == eInputChannelA && processR && processG && processB && !processA) {
         clipPreferences.setOutputPremultiplication(isPremult ? eImagePreMultiplied : eImageUnPreMultiplied);
     }
 #else

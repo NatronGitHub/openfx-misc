@@ -120,10 +120,10 @@ protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_roto;
     PixelComponentEnum _srcComponents;
-    bool _red;
-    bool _green;
-    bool _blue;
-    bool _alpha;
+    bool _processR;
+    bool _processG;
+    bool _processB;
+    bool _processA;
 
 public:
     RotoProcessorBase(OFX::ImageEffect &instance)
@@ -131,10 +131,10 @@ public:
     , _srcImg(0)
     , _roto(0)
     , _srcComponents(ePixelComponentNone)
-    , _red(false)
-    , _green(false)
-    , _blue(false)
-    , _alpha(false)
+    , _processR(false)
+    , _processG(false)
+    , _processB(false)
+    , _processA(false)
     {
     }
 
@@ -148,12 +148,12 @@ public:
     /** @brief set the optional mask image */
     void setRotoImg(const OFX::Image *v) {_roto = v;}
 
-    void setValues(bool red, bool green, bool blue, bool alpha)
+    void setValues(bool processR, bool processG, bool processB, bool processA)
     {
-        _red = red;
-        _green = green;
-        _blue = blue;
-        _alpha = alpha;
+        _processR = processR;
+        _processG = processG;
+        _processB = processB;
+        _processA = processA;
     }
 };
 
@@ -174,12 +174,12 @@ private:
     {
         bool proc[dstNComponents];
         if (dstNComponents == 1) {
-            proc[0] = _alpha;
+            proc[0] = _processA;
         } else if (dstNComponents == 4) {
-            proc[0] = _red;
-            proc[1] = _green;
-            proc[2] = _blue;
-            proc[3] = _alpha;
+            proc[0] = _processR;
+            proc[1] = _processG;
+            proc[2] = _processB;
+            proc[3] = _processA;
         }
 
         // roto and dst should have the same number of components
@@ -358,12 +358,12 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
         processor.setRotoImg(mask.get());
     }
 
-    bool red, green, blue, alpha;
-    _processR->getValue(red);
-    _processG->getValue(green);
-    _processB->getValue(blue);
-    _processA->getValue(alpha);
-    processor.setValues(red, green, blue, alpha);
+    bool processR, processG, processB, processA;
+    _processR->getValue(processR);
+    _processG->getValue(processG);
+    _processB->getValue(processB);
+    _processA->getValue(processA);
+    processor.setValues(processR, processG, processB, processA);
 
     // set the images
     processor.setDstImg(dst.get());
@@ -503,9 +503,9 @@ RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     clipPreferences.setClipComponents(*dstClip_, outputComponents);
 
     PreMultiplicationEnum srcPremult = srcClip_->getPreMultiplication();
-    bool alpha;
-    _processA->getValue(alpha);
-    if (srcPremult == eImageOpaque && alpha) {
+    bool processA;
+    _processA->getValue(processA);
+    if (srcPremult == eImageOpaque && processA) {
         // we're changing alpha, the image becomes UnPremultiplied
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }
@@ -520,18 +520,18 @@ RotoPlugin::isIdentity(const IsIdentityArguments &/*args*/, Clip * &identityClip
         return false;
     }
 
-    bool alpha;
-    _processA->getValue(alpha);
+    bool processA;
+    _processA->getValue(processA);
 
-    if (srcComponents == ePixelComponentAlpha && !alpha) {
+    if (srcComponents == ePixelComponentAlpha && !processA) {
         identityClip = srcClip_;
         return true;
     }
-    bool red, green, blue;
-    _processR->getValue(red);
-    _processG->getValue(green);
-    _processB->getValue(blue);
-    if (srcComponents == ePixelComponentRGBA && !red && !green && !blue && !alpha) {
+    bool processR, processG, processB;
+    _processR->getValue(processR);
+    _processG->getValue(processG);
+    _processB->getValue(processB);
+    if (srcComponents == ePixelComponentRGBA && !processR && !processG && !processB && !processA) {
         identityClip = srcClip_;
         return true;
     }

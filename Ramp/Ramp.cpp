@@ -339,29 +339,29 @@ private:
     
 private:
     
-    template<bool dored, bool dogreen, bool doblue, bool doalpha>
+    template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow)
     {
-        assert((!dored && !dogreen && !doblue) || (nComponents == 3 || nComponents == 4));
-        assert(!doalpha || (nComponents == 1 || nComponents == 4));
+        assert((!processR && !processG && !processB) || (nComponents == 3 || nComponents == 4));
+        assert(!processA || (nComponents == 1 || nComponents == 4));
         switch (_type) {
             case eRampTypeLinear:
-                processForType<dored,dogreen,doblue,doalpha,eRampTypeLinear>(procWindow);
+                processForType<processR,processG,processB,processA,eRampTypeLinear>(procWindow);
                 break;
             case eRampTypeEaseIn:
-                processForType<dored,dogreen,doblue,doalpha,eRampTypeEaseIn>(procWindow);
+                processForType<processR,processG,processB,processA,eRampTypeEaseIn>(procWindow);
                 break;
             case eRampTypeEaseOut:
-                processForType<dored,dogreen,doblue,doalpha,eRampTypeEaseOut>(procWindow);
+                processForType<processR,processG,processB,processA,eRampTypeEaseOut>(procWindow);
                 break;
             case eRampTypeSmooth:
-                processForType<dored,dogreen,doblue,doalpha,eRampTypeSmooth>(procWindow);
+                processForType<processR,processG,processB,processA,eRampTypeSmooth>(procWindow);
                 break;
         }
     }
     
     
-    template<bool dored, bool dogreen, bool doblue, bool doalpha, RampTypeEnum type>
+    template<bool processR, bool processG, bool processB, bool processA, RampTypeEnum type>
     void processForType(const OfxRectI& procWindow)
     {
         float tmpPix[4];
@@ -441,22 +441,22 @@ private:
                         srcPixRGBA[3] = srcPix[nComponents-1];
                     }
                 }
-                if (dored) {
+                if (processR) {
                     tmpPix[0] = tmpPix[0] + srcPixRGBA[0]*(1.-a);
                 } else {
                     tmpPix[0] = srcPixRGBA[0];
                 }
-                if (dogreen) {
+                if (processG) {
                     tmpPix[1] = tmpPix[1] + srcPixRGBA[1]*(1.-a);
                 } else {
                     tmpPix[1] = srcPixRGBA[1];
                 }
-                if (doblue) {
+                if (processB) {
                     tmpPix[2] = tmpPix[2] + srcPixRGBA[2]*(1.-a);
                 } else {
                     tmpPix[2] = srcPixRGBA[2];
                 }
-                if (doalpha) {
+                if (processA) {
                     tmpPix[3] = tmpPix[3] + srcPixRGBA[3]*(1.-a);
                 } else {
                     tmpPix[3] = srcPixRGBA[3];

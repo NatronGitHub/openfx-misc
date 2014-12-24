@@ -280,14 +280,6 @@ public:
             }
         }
     }
-    
-
-private:
-    
-    template<bool dored, bool dogreen, bool doblue, bool doalpha>
-    void process(OfxRectI procWindow)
-    {
-    }
 };
 
 

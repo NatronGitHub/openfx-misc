@@ -158,10 +158,10 @@ class ClampBase : public OFX::ImageProcessor
 protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
-    bool _red;
-    bool _green;
-    bool _blue;
-    bool _alpha;
+    bool _processR;
+    bool _processG;
+    bool _processB;
+    bool _processA;
     RGBAValues _minimum;
     bool _minimumEnable;
     RGBAValues _maximum;
@@ -182,10 +182,10 @@ public:
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
-    , _red(true)
-    , _green(true)
-    , _blue(true)
-    , _alpha(false)
+    , _processR(true)
+    , _processG(true)
+    , _processB(true)
+    , _processA(false)
     , _minimum(0.)
     , _minimumEnable(true)
     , _maximum(1.)
@@ -209,10 +209,10 @@ public:
 
     void doMasking(bool v) {_doMasking = v;}
 
-    void setValues(bool red,
-                   bool green,
-                   bool blue,
-                   bool alpha,
+    void setValues(bool processR,
+                   bool processG,
+                   bool processB,
+                   bool processA,
                    const RGBAValues& minimum,
                    bool minimumEnable,
                    const RGBAValues& maximum,
@@ -225,6 +225,10 @@ public:
                    int premultChannel,
                    double mix)
     {
+        _processR = processR;
+        _processG = processG;
+        _processB = processB;
+        _processA = processA;
         _minimum = minimum;
         _minimumEnable = minimumEnable;
         _maximum = maximum;
@@ -233,10 +237,6 @@ public:
         _minClampToEnable = minClampToEnable;
         _maxClampTo = maxClampTo;
         _maxClampToEnable = maxClampToEnable;
-        _red = red;
-        _green = green;
-        _blue = blue;
-        _alpha = alpha;
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
@@ -258,7 +258,7 @@ class ImageClamper : public ClampBase
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        int todo = ((_red ? 0xf000 : 0) | (_green ? 0x0f00 : 0) | (_blue ? 0x00f0 : 0) | (_alpha ? 0x000f : 0));
+        int todo = ((_processR ? 0xf000 : 0) | (_processG ? 0x0f00 : 0) | (_processB ? 0x00f0 : 0) | (_processA ? 0x000f : 0));
         if (nComponents == 1) {
             switch (todo) {
                 case 0x0000:
@@ -346,44 +346,44 @@ class ImageClamper : public ClampBase
     }
 
   private:
-    template<bool dored, bool dogreen, bool doblue, bool doalpha>
+    template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow)
     {
         if (_minimumEnable) {
             if (_maximumEnable) {
-                processClamp<dored, dogreen, doblue, doalpha, true, true>(procWindow);
+                processClamp<processR, processG, processB, processA, true, true>(procWindow);
             } else {
-                processClamp<dored, dogreen, doblue, doalpha, true, false>(procWindow);
+                processClamp<processR, processG, processB, processA, true, false>(procWindow);
             }
         } else {
             if (_maximumEnable) {
-                processClamp<dored, dogreen, doblue, doalpha, false, true>(procWindow);
+                processClamp<processR, processG, processB, processA, false, true>(procWindow);
             } else {
-                processClamp<dored, dogreen, doblue, doalpha, false, false>(procWindow);
+                processClamp<processR, processG, processB, processA, false, false>(procWindow);
             }
         }
     }
 
-    template<bool dored, bool dogreen, bool doblue, bool doalpha, bool minimumEnable, bool maximumEnable>
+    template<bool processR, bool processG, bool processB, bool processA, bool minimumEnable, bool maximumEnable>
     void processClamp(const OfxRectI& procWindow)
     {
         if (minimumEnable && _minClampToEnable) {
             if (maximumEnable && _maxClampToEnable) {
-                processClampTo<dored, dogreen, doblue, doalpha, minimumEnable, maximumEnable, true, true>(procWindow);
+                processClampTo<processR, processG, processB, processA, minimumEnable, maximumEnable, true, true>(procWindow);
             } else {
-                processClampTo<dored, dogreen, doblue, doalpha, minimumEnable, maximumEnable, true, false>(procWindow);
+                processClampTo<processR, processG, processB, processA, minimumEnable, maximumEnable, true, false>(procWindow);
             }
         } else {
             if (maximumEnable && _maxClampToEnable) {
-                processClampTo<dored, dogreen, doblue, doalpha, minimumEnable, maximumEnable, false, true>(procWindow);
+                processClampTo<processR, processG, processB, processA, minimumEnable, maximumEnable, false, true>(procWindow);
             } else {
-                processClampTo<dored, dogreen, doblue, doalpha, minimumEnable, maximumEnable, false, false>(procWindow);
+                processClampTo<processR, processG, processB, processA, minimumEnable, maximumEnable, false, false>(procWindow);
             }
         }
 
     }
 
-    template<bool dored, bool dogreen, bool doblue, bool doalpha, bool minimumEnable, bool maximumEnable, bool minClampToEnable, bool maxClampToEnable>
+    template<bool processR, bool processG, bool processB, bool processA, bool minimumEnable, bool maximumEnable, bool minClampToEnable, bool maxClampToEnable>
     void processClampTo(const OfxRectI& procWindow)
     {
         float unpPix[4];
@@ -401,28 +401,28 @@ class ImageClamper : public ClampBase
 
                 // do we have a source image to scale up
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
-                if (!dored) {
+                if (!processR) {
                     tmpPix[0] = unpPix[0];
                 } else {
                     tmpPix[0] = clamp<minimumEnable, maximumEnable, minClampToEnable, maxClampToEnable>(unpPix[0],
                                                                                                         _minimum.r, _maximum.r,
                                                                                                         _minClampTo.r, _maxClampTo.r);
                 }
-                if (!dogreen) {
+                if (!processG) {
                     tmpPix[1] = unpPix[1];
                 } else {
                     tmpPix[1] = clamp<minimumEnable, maximumEnable, minClampToEnable, maxClampToEnable>(unpPix[1],
                                                                                                         _minimum.g, _maximum.g,
                                                                                                         _minClampTo.g, _maxClampTo.g);
                 }
-                if (!doblue) {
+                if (!processB) {
                     tmpPix[2] = unpPix[2];
                 } else {
                     tmpPix[2] = clamp<minimumEnable, maximumEnable, minClampToEnable, maxClampToEnable>(unpPix[2],
                                                                                                         _minimum.b, _maximum.b,
                                                                                                         _minClampTo.b, _maxClampTo.b);
                 }
-                if (!doalpha) {
+                if (!processA) {
                     tmpPix[3] = unpPix[3];
                 } else {
                     tmpPix[3] = clamp<minimumEnable, maximumEnable, minClampToEnable, maxClampToEnable>(unpPix[3],
@@ -577,11 +577,11 @@ ClampPlugin::setupAndProcess(ClampBase &processor, const OFX::RenderArguments &a
         processor.setMaskImg(mask.get(), maskInvert);
     }
 
-    bool red, green, blue, alpha;
-    _processR->getValueAtTime(args.time, red);
-    _processG->getValueAtTime(args.time, green);
-    _processB->getValueAtTime(args.time, blue);
-    _processA->getValueAtTime(args.time, alpha);
+    bool processR, processG, processB, processA;
+    _processR->getValueAtTime(args.time, processR);
+    _processG->getValueAtTime(args.time, processG);
+    _processB->getValueAtTime(args.time, processB);
+    _processA->getValueAtTime(args.time, processA);
     RGBAValues minimum(0.);
     _minimum->getValueAtTime(args.time, minimum.r, minimum.g, minimum.b, minimum.a);
     bool minimumEnable;
@@ -604,7 +604,7 @@ ClampPlugin::setupAndProcess(ClampBase &processor, const OFX::RenderArguments &a
     _premultChannel->getValueAtTime(args.time, premultChannel);
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    processor.setValues(red, green, blue, alpha,
+    processor.setValues(processR, processG, processB, processA,
                         minimum, minimumEnable, maximum, maximumEnable,
                         minClampTo, minClampToEnable, maxClampTo, maxClampToEnable,
                         premult, premultChannel, mix);

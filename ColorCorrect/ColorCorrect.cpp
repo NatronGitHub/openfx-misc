@@ -167,7 +167,7 @@ namespace {
         ColorControlValues offset;
     };
     
-    template<bool dored, bool dogreen, bool doblue, bool doalpha>
+    template<bool processR, bool processG, bool processB, bool processA>
     struct RGBAPixel {
         double r, g, b,a;
 
@@ -194,16 +194,16 @@ namespace {
             m.applyGroup(mValues);
             h.applyGroup(hValues);
             
-            if (dored) {
+            if (processR) {
                 r = s.r * s_scale + m.r * m_scale + h.r * h_scale;
             }
-            if (dogreen) {
+            if (processG) {
                 g = s.g * s_scale + m.g * m_scale + h.g * h_scale;
             }
-            if (doblue) {
+            if (processB) {
                 b = s.b * s_scale + m.b * m_scale + h.b * h_scale;
             }
-            if (doalpha) {
+            if (processA) {
                 a = s.a * s_scale + m.a * m_scale + h.a * h_scale;
             }
             applyGroup(masterValues);
@@ -213,15 +213,15 @@ namespace {
         void applySaturation(const ColorControlValues &c)
         {
             double tmp_r ,tmp_g,tmp_b ;
-            if (dored) {
+            if (processR) {
                 tmp_r = r *((1.f - c.r) * s_rLum + c.r) + g *((1.f-c.r) * s_gLum) + b *((1.f-c.r) * s_bLum);
                 r = tmp_r;
             }
-            if (dogreen) {
+            if (processG) {
                 tmp_g = g *((1.f - c.g) * s_gLum + c.g) + r *((1.f-c.g) * s_rLum) + b *((1.f-c.g) * s_bLum);
                 g = tmp_g;
             }
-            if (doblue) {
+            if (processB) {
                 tmp_b = b *((1.f - c.b) * s_bLum + c.b) + g *((1.f-c.b) * s_gLum) + r *((1.f-c.b) * s_rLum);
                 b = tmp_b;
             }
@@ -229,64 +229,64 @@ namespace {
 
         void applyContrast(const ColorControlValues &c)
         {
-            if (dored) {
+            if (processR) {
                 r = (r - 0.5f) * c.r  + 0.5f;
             }
-            if (dogreen) {
+            if (processG) {
                 g = (g - 0.5f) * c.g  + 0.5f;
             }
-            if (doblue) {
+            if (processB) {
                 b = (b - 0.5f) * c.b  + 0.5f;
             }
-            if (doalpha) {
+            if (processA) {
                 a = (a - 0.5f) * c.a  + 0.5f;
             }
         }
 
         void applyGain(const ColorControlValues &c)
         {
-            if (dored) {
+            if (processR) {
                 r = r * c.r;
             }
-            if (dogreen) {
+            if (processG) {
                 g = g * c.g;
             }
-            if (doblue) {
+            if (processB) {
                 b = b * c.b;
             }
-            if (doalpha) {
+            if (processA) {
                 a = a * c.a;
             }
         }
 
         void applyGamma(const ColorControlValues &c)
         {
-            if (dored && r > 0) {
+            if (processR && r > 0) {
                 r = std::pow(r ,1. / c.r);
             }
-            if (dogreen && g > 0) {
+            if (processG && g > 0) {
                 g = std::pow(g ,1. / c.g);
             }
-            if (doblue && b > 0) {
+            if (processB && b > 0) {
                 b = std::pow(b ,1. / c.b);
             }
-            if (doalpha && a > 0) {
+            if (processA && a > 0) {
                 a = std::pow(a ,1. / c.a);
             }
         }
 
         void applyOffset(const ColorControlValues &c)
         {
-            if (dored) {
+            if (processR) {
                 r = r + c.r;
             }
-            if (dogreen) {
+            if (processG) {
                 g = g + c.g;
             }
-            if (doblue) {
+            if (processB) {
                 b = b + c.b;
             }
-            if (doalpha) {
+            if (processA) {
                 a = a + c.a;
             }
         }
@@ -384,7 +384,7 @@ public:
         _alpha = doA;
     }
 
-    template<bool dored, bool dogreen, bool doblue, bool doalpha>
+    template<bool processR, bool processG, bool processB, bool processA>
     void colorTransform(double *r, double *g, double *b,double *a)
     {
         double luminance = *r * s_rLum + *g * s_gLum + *b * s_bLum;
@@ -392,21 +392,21 @@ public:
         double h_scale = interpolate(1, luminance);
         double m_scale = 1.f - s_scale - h_scale;
 
-        RGBAPixel<dored,dogreen,doblue,doalpha> p(*r, *g, *b, *a);
+        RGBAPixel<processR,processG,processB,processA> p(*r, *g, *b, *a);
         p.applySMH(_shadowValues, s_scale,
                    _midtoneValues, m_scale,
                    _highlightsValues, h_scale,
                    _masterValues);
-        if (dored) {
+        if (processR) {
             *r = clamp(p.r);
         }
-        if (dogreen) {
+        if (processG) {
             *g = clamp(p.g);
         }
-        if (doblue) {
+        if (processB) {
             *b = clamp(p.b);
         }
-        if (doalpha) {
+        if (processA) {
             *a = clamp(p.a);
         }
     }
@@ -556,11 +556,11 @@ public:
 private:
     
     
-    template<bool dored, bool dogreen, bool doblue, bool doalpha>
+    template<bool processR, bool processG, bool processB, bool processA>
     void process(OfxRectI procWindow)
     {
-        assert((!dored && !dogreen && !doblue) || (nComponents == 3 || nComponents == 4));
-        assert(!doalpha || (nComponents == 1 || nComponents == 4));
+        assert((!processR && !processG && !processB) || (nComponents == 3 || nComponents == 4));
+        assert(!processA || (nComponents == 1 || nComponents == 4));
         assert(nComponents == 3 || nComponents == 4);
         float unpPix[4];
         float tmpPix[4];
@@ -577,7 +577,7 @@ private:
                 double t_g = unpPix[1];
                 double t_b = unpPix[2];
                 double t_a = unpPix[3];
-                colorTransform<dored,dogreen,doblue,doalpha>(&t_r, &t_g, &t_b,&t_a);
+                colorTransform<processR,processG,processB,processA>(&t_r, &t_g, &t_b,&t_a);
                 tmpPix[0] = t_r;
                 tmpPix[1] = t_g;
                 tmpPix[2] = t_b;

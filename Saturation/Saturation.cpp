@@ -204,7 +204,7 @@ public:
         _alpha = doA;
     }
 
-    template<bool dored, bool dogreen, bool doblue, bool doalpha>
+    template<bool processR, bool processG, bool processB, bool processA>
     void grade(double *r, double *g, double *b, double *a)
     {
         double l;
@@ -222,43 +222,43 @@ public:
                 l = std::max(std::max(*r, *g), *b);
                 break;
         }
-        if (dored) {
+        if (processR) {
             *r = (1. - _saturation) * l + _saturation * *r;
         }
-        if (dogreen) {
+        if (processG) {
             *g = (1. - _saturation) * l + _saturation * *g;
         }
-        if (doblue) {
+        if (processB) {
             *b = (1. - _saturation) * l + _saturation * *b;
         }
-        if (doalpha) {
+        if (processA) {
             // nothing to do
         }
         if (_clampBlack) {
-            if (dored) {
+            if (processR) {
                 *r = std::max(0.,*r);
             }
-            if (dogreen) {
+            if (processG) {
                 *g = std::max(0.,*g);
             }
-            if (doblue) {
+            if (processB) {
                 *b = std::max(0.,*b);
             }
-            if (doalpha) {
+            if (processA) {
                 *a = std::max(0.,*a);
             }
         }
         if (_clampWhite) {
-            if (dored) {
+            if (processR) {
                 *r = std::min(1.,*r);
             }
-            if (dogreen) {
+            if (processG) {
                 *g = std::min(1.,*g);
             }
-            if (doblue) {
+            if (processB) {
                 *b = std::min(1.,*b);
             }
-            if (doalpha) {
+            if (processA) {
                 *a = std::min(1.,*a);
             }
         }
@@ -375,11 +375,11 @@ public:
 
 private:
     
-    template<bool dored, bool dogreen, bool doblue, bool doalpha>
+    template<bool processR, bool processG, bool processB, bool processA>
     void process(OfxRectI procWindow)
     {
-        assert((!dored && !dogreen && !doblue) || (nComponents == 3 || nComponents == 4));
-        assert(!doalpha || (nComponents == 1 || nComponents == 4));
+        assert((!processR && !processG && !processB) || (nComponents == 3 || nComponents == 4));
+        assert(!processA || (nComponents == 1 || nComponents == 4));
         assert(nComponents == 3 || nComponents == 4);
         assert(_dstImg);
         float unpPix[4];
@@ -398,7 +398,7 @@ private:
                 double t_g = unpPix[1];
                 double t_b = unpPix[2];
                 double t_a = unpPix[3];
-                grade<dored,dogreen,doblue,doalpha>(&t_r,&t_g,&t_b,&t_a);
+                grade<processR,processG,processB,processA>(&t_r,&t_g,&t_b,&t_a);
                 tmpPix[0] = t_r;
                 tmpPix[1] = t_g;
                 tmpPix[2] = t_b;
