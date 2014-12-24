@@ -1,8 +1,10 @@
 PLUGINOBJECTS = \
+Add.o \
 AdjustRoD.o \
 Anaglyph.o \
 ChromaKeyer.o \
 Clamp.o \
+ClipTest.o \
 ColorCorrect.o \
 ColorMatrix.o \
 Constant.o \
@@ -12,6 +14,7 @@ Crop.o \
 Deinterlace.o \
 Difference.o \
 Dissolve.o \
+Gamma.o \
 Grade.o \
 HSV.o \
 HSVTool.o \
@@ -20,6 +23,7 @@ JoinViews.o \
 Keyer.o \
 Merge.o \
 MixViews.o \
+Multiply.o \
 Noise.o \
 NoOp.o \
 OneView.o \
@@ -133,10 +137,12 @@ RESOURCES = \
 ../VectorToColor/net.sf.openfx.VectorToColorPlugin.svg \
 
 VPATH += \
+../Add \
 ../AdjustRoD \
 ../Anaglyph \
 ../ChromaKeyer \
 ../Clamp \
+../ClipTest \
 ../ColorCorrect \
 ../ColorMatrix \
 ../Constant \
@@ -146,6 +152,7 @@ VPATH += \
 ../Deinterlace \
 ../Difference \
 ../Dissolve \
+../Gamma \
 ../Grade \
 ../HSV \
 ../HSVTool \
@@ -154,6 +161,7 @@ VPATH += \
 ../Keyer \
 ../Merge \
 ../MixViews \
+../Multiply \
 ../Noise \
 ../NoOp \
 ../OneView \
@@ -179,10 +187,12 @@ include ../Makefile.master
 
 CXXFLAGS += \
 -I. \
+-I../Add \
 -I../AdjustRoD \
 -I../Anaglyph \
 -I../ChromaKeyer \
 -I../Clamp \
+-I../ClipTest \
 -I../ColorCorrect \
 -I../ColorLookup \
 -I../ColorMatrix \
@@ -193,6 +203,7 @@ CXXFLAGS += \
 -I../Deinterlace \
 -I../Difference \
 -I../Dissolve \
+-I../Gamma \
 -I../Grade \
 -I../HSV \
 -I../HSVTool \
@@ -200,6 +211,7 @@ CXXFLAGS += \
 -I../JoinViews \
 -I../Keyer \
 -I../Merge \
+-I../Multiply \
 -I../MixViews \
 -I../Noise \
 -I../NoOp \

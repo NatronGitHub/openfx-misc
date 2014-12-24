@@ -1,10 +1,12 @@
 SUBDIRS = Misc
 
 SUBDIRS_NOMULTI = \
+Add \
 AdjustRoD \
 Anaglyph \
 ChromaKeyer \
 Clamp \
+ClipTest \
 ColorCorrect \
 ColorLookup \
 ColorMatrix \
@@ -15,6 +17,7 @@ Crop \
 Deinterlace \
 Difference \
 Dissolve \
+Gamma \
 Grade \
 HSV \
 HSVTool \
@@ -22,6 +25,7 @@ Invert \
 JoinViews \
 Keyer \
 Merge \
+Multiply \
 MixViews \
 Noise \
 NoOp \

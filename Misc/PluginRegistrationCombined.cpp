@@ -1,7 +1,9 @@
+#include "Add.h"
 #include "AdjustRoD.h"
 #include "Anaglyph.h"
 #include "ChromaKeyer.h"
 #include "Clamp.h"
+#include "ClipTest.h"
 #include "ColorCorrect.h"
 #include "ColorMatrix.h"
 #include "Constant.h"
@@ -11,6 +13,7 @@
 #include "Deinterlace.h"
 #include "Difference.h"
 #include "Dissolve.h"
+#include "Gamma.h"
 #include "Grade.h"
 #include "HSV.h"
 #include "HSVTool.h"
@@ -19,6 +22,7 @@
 #include "Keyer.h"
 #include "Merge.h"
 #include "MixViews.h"
+#include "Multiply.h"
 #include "Noise.h"
 #include "NoOp.h"
 #include "OneView.h"
@@ -46,10 +50,12 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
+            getAddPluginID(ids);
             getAdjustRoDPluginID(ids);
             getAnaglyphPluginID(ids);
             getChromaKeyerPluginID(ids);
             getClampPluginID(ids);
+            getClipTestPluginID(ids);
             getColorCorrectPluginID(ids);
             getColorMatrixPluginID(ids);
             getConstantPluginID(ids);
@@ -59,6 +65,7 @@ namespace OFX
             getDeinterlacePluginID(ids);
             getDifferencePluginID(ids);
             getDissolvePluginID(ids);
+            getGammaPluginID(ids);
             getGradePluginID(ids);
             getHSVPluginIDs(ids);
             getHSVToolPluginID(ids);
@@ -67,6 +74,7 @@ namespace OFX
             getKeyerPluginID(ids);
             getMergePluginID(ids);
             getMixViewsPluginID(ids);
+            getMultiplyPluginID(ids);
             getNoisePluginID(ids);
             getNoOpPluginID(ids);
             getOneViewPluginID(ids);
