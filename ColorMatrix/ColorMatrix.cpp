@@ -83,7 +83,7 @@
 #include "ofxsMacros.h"
 
 #define kPluginName "ColorMatrixOFX"
-#define kPluginGrouping "Color"
+#define kPluginGrouping "Color/Math"
 #define kPluginDescription "Multiply the RGBA channels by an arbitrary 4x4 matrix."
 #define kPluginIdentifier "net.sf.openfx.ColorMatrixPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -93,6 +93,19 @@
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderFullySafe
+
+#define kParamProcessR      "r"
+#define kParamProcessRLabel "R"
+#define kParamProcessRHint  "Process red component"
+#define kParamProcessG      "g"
+#define kParamProcessGLabel "G"
+#define kParamProcessGHint  "Process green component"
+#define kParamProcessB      "b"
+#define kParamProcessBLabel "B"
+#define kParamProcessBHint  "Process blue component"
+#define kParamProcessA      "a"
+#define kParamProcessALabel "A"
+#define kParamProcessAHint  "Process alpha component"
 
 #define kParamOutputRedName  "outputRed"
 #define kParamOutputRedLabel "Output Red"
@@ -135,6 +148,10 @@ class ColorMatrixProcessorBase : public OFX::ImageProcessor
 protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
+    bool _processR;
+    bool _processG;
+    bool _processB;
+    bool _processA;
     RGBAValues _matrix[4];
     bool _clampBlack;
     bool _clampWhite;
@@ -150,6 +167,10 @@ public:
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
+    , _processR(true)
+    , _processG(true)
+    , _processB(true)
+    , _processA(false)
     , _clampBlack(true)
     , _clampWhite(true)
     , _premult(false)
@@ -166,7 +187,11 @@ public:
     
     void doMasking(bool v) {_doMasking = v;}
     
-    void setValues(const RGBAValues& outputRed,
+    void setValues(bool processR,
+                   bool processG,
+                   bool processB,
+                   bool processA,
+                   const RGBAValues& outputRed,
                    const RGBAValues& outputGreen,
                    const RGBAValues& outputBlue,
                    const RGBAValues& outputAlpha,
@@ -176,6 +201,10 @@ public:
                    int premultChannel,
                    double mix)
     {
+        _processR = processR;
+        _processG = processG;
+        _processB = processB;
+        _processA = processA;
         _matrix[0] = outputRed;
         _matrix[1] = outputGreen;
         _matrix[2] = outputBlue;
@@ -231,7 +260,14 @@ private:
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
                 for (int c = 0; c < 4; ++c) {
-                    tmpPix[c] = apply(c, unpPix[0], unpPix[1], unpPix[2], unpPix[3]);
+                    if ((_processR && c == 0) ||
+                        (_processG && c == 1) ||
+                        (_processB && c == 2) ||
+                        (_processA && c == 3)) {
+                        tmpPix[c] = apply(c, unpPix[0], unpPix[1], unpPix[2], unpPix[3]);
+                    } else {
+                        tmpPix[c] = unpPix[c];
+                    }
                 }
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
                 // increment the dst pixel
@@ -260,6 +296,11 @@ public:
         assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
+        _processR = fetchBooleanParam(kParamProcessR);
+        _processG = fetchBooleanParam(kParamProcessG);
+        _processB = fetchBooleanParam(kParamProcessB);
+        _processA = fetchBooleanParam(kParamProcessA);
+        assert(_processR && _processG && _processB && _processA);
         _outputRed = fetchRGBAParam(kParamOutputRedName);
         _outputGreen = fetchRGBAParam(kParamOutputGreenName);
         _outputBlue = fetchRGBAParam(kParamOutputBlueName);
@@ -292,6 +333,10 @@ private:
     OFX::Clip *dstClip_;
     OFX::Clip *srcClip_;
     OFX::Clip *maskClip_;
+    OFX::BooleanParam* _processR;
+    OFX::BooleanParam* _processG;
+    OFX::BooleanParam* _processB;
+    OFX::BooleanParam* _processA;
     OFX::RGBAParam *_outputRed;
     OFX::RGBAParam *_outputGreen;
     OFX::RGBAParam *_outputBlue;
@@ -336,6 +381,7 @@ ColorMatrixPlugin::setupAndProcess(ColorMatrixProcessorBase &processor, const OF
         }
     }
     std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
+    // do we do masking
     if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
@@ -349,6 +395,11 @@ ColorMatrixPlugin::setupAndProcess(ColorMatrixProcessorBase &processor, const OF
     // set the render window
     processor.setRenderWindow(args.renderWindow);
     
+    bool processR, processG, processB, processA;
+    _processR->getValueAtTime(args.time, processR);
+    _processG->getValueAtTime(args.time, processG);
+    _processB->getValueAtTime(args.time, processB);
+    _processA->getValueAtTime(args.time, processA);
     RGBAValues r, g, b, a;
     _outputRed->getValueAtTime(args.time, r.r, r.g, r.b, r.a);
     _outputGreen->getValueAtTime(args.time, g.r, g.g, g.b, g.a);
@@ -363,7 +414,8 @@ ColorMatrixPlugin::setupAndProcess(ColorMatrixProcessorBase &processor, const OF
     _premultChannel->getValueAtTime(args.time, premultChannel);
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    processor.setValues(r, g, b, a, clampBlack, clampWhite, premult, premultChannel, mix);
+    processor.setValues(processR, processG, processB, processA,
+                        r, g, b, a, clampBlack, clampWhite, premult, premultChannel, mix);
  
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -447,15 +499,20 @@ ColorMatrixPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityC
     if (clampBlack || clampWhite) {
         return false;
     }
+    bool processR, processG, processB, processA;
+    _processR->getValueAtTime(args.time, processR);
+    _processG->getValueAtTime(args.time, processG);
+    _processB->getValueAtTime(args.time, processB);
+    _processA->getValueAtTime(args.time, processA);
     RGBAValues r, g, b, a;
     _outputRed->getValueAtTime(args.time, r.r, r.g, r.b, r.a);
     _outputGreen->getValueAtTime(args.time, g.r, g.g, g.b, g.a);
     _outputBlue->getValueAtTime(args.time, b.r, b.g, b.b, b.a);
     _outputAlpha->getValueAtTime(args.time, a.r, a.g, a.b, a.a);
-    if (r.r == 1. && r.g == 0. && r.b == 0. && r.a == 0. &&
-        g.r == 0. && g.g == 1. && g.b == 0. && g.a == 0. &&
-        b.r == 0. && b.g == 0. && b.b == 1. && b.a == 0. &&
-        a.r == 0. && a.g == 0. && a.b == 0. && a.a == 1.) {
+    if ((!processR || (r.r == 1. && r.g == 0. && r.b == 0. && r.a == 0.)) &&
+        (!processG || (g.r == 0. && g.g == 1. && g.b == 0. && g.a == 0.)) &&
+        (!processB || (b.r == 0. && b.g == 0. && b.b == 1. && b.a == 0.)) &&
+        (!processA || (a.r == 0. && a.g == 0. && a.b == 0. && a.a == 1.))) {
         identityClip = srcClip_;
         return true;
     }
@@ -536,6 +593,39 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
+    
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+        param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+        param->setHint(kParamProcessRHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+        param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+        param->setHint(kParamProcessGHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+        param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+        param->setHint(kParamProcessBHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+        param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+        param->setHint(kParamProcessAHint);
+        param->setDefault(true);
+        page->addChild(*param);
+    }
+
     {
         RGBAParamDescriptor *param = desc.defineRGBAParam(kParamOutputRedName);
         param->setLabels(kParamOutputRedLabel, kParamOutputRedLabel, kParamOutputRedLabel);
