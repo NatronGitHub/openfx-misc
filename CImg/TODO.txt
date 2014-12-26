@@ -1,4 +1,7 @@
-- bilateral with guide 
+- generic CImgFilter.h with two inputs
+- bilateral with guide (using the CImgFilter with two inputs)
+- get_displacement
+- foreground extraction <http://opensource.graphics/how-to-code-a-nice-user-guided-foreground-extraction-algorithm-addendum/> <http://opensource.graphics/how-to-code-a-nice-user-guided-foreground-extraction-algorithm/>
 - hsi2rgb
 - hsl2rgb
 - hsv2rgb

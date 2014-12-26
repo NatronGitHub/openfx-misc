@@ -146,7 +146,6 @@ enum BoundaryEnum
     //eBoundaryPeriodic,
 };
 
-#if cimg_version >= 153
 #define kParamFilter "filter"
 #define kParamFilterLabel "Filter"
 #define kParamFilterHint "Bluring filter. The quasi-Gaussian filter should be appropriate in most cases. The Gaussian filter is more isotropic (its impulse response has rotational symmetry), but slower."
@@ -160,7 +159,6 @@ enum FilterEnum
     eFilterQuasiGaussian = 0,
     eFilterGaussian,
 };
-#endif
 
 #define kParamExpandRoD "expandRoD"
 #define kParamExpandRoDLabel "Expand RoD"
@@ -169,6 +167,7 @@ enum FilterEnum
 typedef float T;
 using namespace cimg_library;
 
+#if cimg_version < 160
 // [internal] Apply a recursive filter (used by CImg<T>::vanvliet()).
 /**
  \param ptr the pointer of the data
@@ -412,6 +411,7 @@ vanvliet(CImg<T>& img, const float sigma, const int order, const char axis='x', 
     }
     return/* *this*/;
 }
+#endif // cimg_version < 160
 
 using namespace OFX;
 
@@ -422,9 +422,7 @@ struct CImgBlurParams
     int orderX;
     int orderY;
     int boundary_i;
-#if cimg_version >= 153
     int filter_i;
-#endif
     bool expandRoD;
 };
 
@@ -440,10 +438,8 @@ public:
         _orderY = fetchIntParam(kParamOrderY);
         _boundary  = fetchChoiceParam(kParamBoundary);
         assert(_size && _orderX && _orderY && _boundary);
-#if cimg_version >= 153
         _filter = fetchChoiceParam(kParamFilter);
         assert(_filter);
-#endif
         _expandRoD = fetchBooleanParam(kParamExpandRoD);
         assert(_expandRoD);
     }
@@ -454,9 +450,7 @@ public:
         _orderX->getValueAtTime(time, params.orderX);
         _orderY->getValueAtTime(time, params.orderY);
         _boundary->getValueAtTime(time, params.boundary_i);
-#if cimg_version >= 153
         _filter->getValueAtTime(time, params.filter_i);
-#endif
         _expandRoD->getValueAtTime(time, params.expandRoD);
     }
 
@@ -479,21 +473,24 @@ public:
         if (sigma <= 0.5 && params.orderX == 0 && params.orderY == 0) {
             return;
         }
-#if cimg_version >= 153
-        //if (params.orderX == 0 && params.orderY == 0) {
-        //    cimg.blur(sigma, (bool)params.boundary_i, (bool)params.filter_i);
-        //} else {
+#if cimg_version >= 160
+        if (params.orderX == 0 && params.orderY == 0) {
+            cimg.blur(sigma, (bool)params.boundary_i, (bool)params.filter_i);
+        } else {
             if ((bool)params.filter_i) {
-                vanvliet(cimg,/*cimg.vanvliet(*/sigma, params.orderX, 'x', (bool)params.boundary_i);
-                vanvliet(cimg,/*cimg.vanvliet(*/sigma, params.orderY, 'y', (bool)params.boundary_i);
+                cimg.vanvliet(sigma, params.orderX, 'x', (bool)params.boundary_i);
+                cimg.vanvliet(sigma, params.orderY, 'y', (bool)params.boundary_i);
             } else {
                 cimg.deriche(sigma, params.orderX, 'x', (bool)params.boundary_i);
                 cimg.deriche(sigma, params.orderY, 'y', (bool)params.boundary_i);
             }
-        //}
+        }
 #else
-        if (params.orderX == 0 && params.orderY == 0) {
-            cimg.blur(sigma, (bool)params.boundary_i);
+        // VanVliet filter was inexistent before 1.53, and buggy before CImg.h from
+        // 57ffb8393314e5102c00e5f9f8fa3dcace179608 Thu Dec 11 10:57:13 2014 +0100
+        if ((bool)params.filter_i) {
+            vanvliet(cimg,/*cimg.vanvliet(*/sigma, params.orderX, 'x', (bool)params.boundary_i);
+            vanvliet(cimg,/*cimg.vanvliet(*/sigma, params.orderY, 'y', (bool)params.boundary_i);
         } else {
             cimg.deriche(sigma, params.orderX, 'x', (bool)params.boundary_i);
             cimg.deriche(sigma, params.orderY, 'y', (bool)params.boundary_i);
@@ -519,9 +516,7 @@ private:
     OFX::IntParam *_orderX;
     OFX::IntParam *_orderY;
     OFX::ChoiceParam *_boundary;
-#if cimg_version >= 153
     OFX::ChoiceParam *_filter;
-#endif
     OFX::BooleanParam *_expandRoD;
 };
 
@@ -619,7 +614,6 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
         param->setDefault((int)kParamBoundaryDefault);
         page->addChild(*param);
     }
-#if cimg_version >= 153
     {
         OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFilter);
         param->setLabels(kParamFilterLabel, kParamFilterLabel, kParamFilterLabel);
@@ -631,7 +625,6 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
         param->setDefault((int)kParamFilterDefault);
         page->addChild(*param);
     }
-#endif
     {
         OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
         param->setLabels(kParamExpandRoDLabel, kParamExpandRoDLabel, kParamExpandRoDLabel);
