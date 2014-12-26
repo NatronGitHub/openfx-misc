@@ -12,6 +12,8 @@
 #include "CImgRollingGuidance.h"
 #include "CImgSmooth.h"
 
+#include "ofxsImageEffect.h"
+
 namespace OFX
 {
     namespace Plugin

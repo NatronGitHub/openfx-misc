@@ -70,6 +70,8 @@
 
  */
 
+#include "Noise.h"
+
 #include <limits>
 #include <cmath>
 #include "ofxsImageEffect.h"

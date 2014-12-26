@@ -70,6 +70,8 @@
  
  */
 
+#include "Deinterlace.h"
+
 #include <cstring>
 #include <cmath>
 #include <algorithm>

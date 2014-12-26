@@ -70,6 +70,8 @@
 
  */
 
+#include "Dissolve.h"
+
 #include "ofxsImageEffect.h"
 #include "ofxsMultiThread.h"
 

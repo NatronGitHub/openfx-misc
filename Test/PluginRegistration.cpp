@@ -1,5 +1,7 @@
 #include "TestRender.h"
 
+#include "ofxsImageEffect.h"
+
 namespace OFX
 {
     namespace Plugin
