@@ -1,5 +1,5 @@
 /*
- OFX HSV plugin.
+ OFX ColorTransform plugin.
  
  Copyright (C) 2014 INRIA
  
@@ -70,7 +70,7 @@
  
  */
 
-#include "HSV.h"
+#include "ColorTransform.h"
 
 #include <cmath>
 #ifdef _WINDOWS
@@ -90,7 +90,32 @@
 #define kPluginHSVToRGBDescription "Convert from HSV color model (as defined by A. R. Smith in 1978) to RGB. H is in degrees, S and V are in the same units as RGB."
 #define kPluginHSVToRGBIdentifier "net.sf.openfx.HSVToRGBPlugin"
 
-#define kPluginGrouping "Color"
+#define kPluginRGBToHSLName "RGBToHSLOFX"
+#define kPluginRGBToHSLDescription "Convert from RGB to HSL color model (as defined by Joblove and Greenberg in 1978). H is in degrees, S and L are in the same units as RGB."
+#define kPluginRGBToHSLIdentifier "net.sf.openfx.RGBToHSLPlugin"
+
+#define kPluginHSLToRGBName "HSLToRGBOFX"
+#define kPluginHSLToRGBDescription "Convert from HSL color model (as defined by Joblove and Greenberg in 1978) to RGB. H is in degrees, S and L are in the same units as RGB."
+#define kPluginHSLToRGBIdentifier "net.sf.openfx.HSLToRGBPlugin"
+
+
+#define kPluginRGBToXYZName "RGBToXYZOFX"
+#define kPluginRGBToXYZDescription "Convert from RGB to XYZ color model (Rec.709 with D65 illuminant). X, Y and Z are in the same units as RGB."
+#define kPluginRGBToXYZIdentifier "net.sf.openfx.RGBToXYZPlugin"
+
+#define kPluginXYZToRGBName "XYZToRGBOFX"
+#define kPluginXYZToRGBDescription "Convert from XYZ color model (Rec.709 with D65 illuminant) to RGB. X, Y and Z are in the same units as RGB."
+#define kPluginXYZToRGBIdentifier "net.sf.openfx.XYZToRGBPlugin"
+
+#define kPluginRGBToLabName "RGBToLabOFX"
+#define kPluginRGBToLabDescription "Convert from RGB to Lab color model (Rec.709 with D65 illuminant)."
+#define kPluginRGBToLabIdentifier "net.sf.openfx.RGBToLabPlugin"
+
+#define kPluginLabToRGBName "LabToRGBOFX"
+#define kPluginLabToRGBDescription "Convert from Lab color model (Rec.709 with D65 illuminant) to RGB.$"
+#define kPluginLabToRGBIdentifier "net.sf.openfx.LabToRGBPlugin"
+
+#define kPluginGrouping "Color/Transform"
 
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -100,20 +125,37 @@
 #define kSupportsRenderScale 1
 #define kRenderThreadSafety eRenderFullySafe
 
-#define kParamPremultRGBToHSVLabel "Unpremult"
-#define kParamPremultRGBToHSVHint \
+#define kParamPremultRGBToXXXLabel "Unpremult"
+#define kParamPremultRGBToXXXHint \
 "Divide the image by the alpha channel before processing. " \
 "Use if the input images are premultiplied."
 
-#define kParamPremultHSVToRGBLabel "Premult"
-#define kParamPremultHSVToRGBHint \
+#define kParamPremultXXXToRGBLabel "Premult"
+#define kParamPremultXXXToRGBHint \
 "Multiply the image by the alpha channel after processing. " \
 "Use to get premultiplied output images."
 
 using namespace OFX;
 
+enum ColorTransformEnum {
+    eColorTransformRGBToHSV,
+    eColorTransformHSVToRGB,
+    eColorTransformRGBToHSL,
+    eColorTransformHSLToRGB,
+    eColorTransformRGBToXYZ,
+    eColorTransformXYZToRGB,
+    eColorTransformRGBToLab,
+    eColorTransformLabToRGB
+};
 
-class HSVProcessorBase : public OFX::ImageProcessor
+#define toRGB(e)   ((e) == eColorTransformHSVToRGB || \
+                    (e) == eColorTransformHSLToRGB || \
+                    (e) == eColorTransformXYZToRGB || \
+                    (e) == eColorTransformLabToRGB)
+
+#define fromRGB(e) (!toRGB(e))
+
+class ColorTransformProcessorBase : public OFX::ImageProcessor
 {
 protected:
     const OFX::Image *_srcImg;
@@ -123,7 +165,7 @@ protected:
 
 public:
     
-    HSVProcessorBase(OFX::ImageEffect &instance)
+    ColorTransformProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _premult(false)
@@ -147,12 +189,12 @@ private:
 
 
 
-template <class PIX, int nComponents, int maxValue, bool toHSV>
-class HSVProcessor : public HSVProcessorBase
+template <class PIX, int nComponents, int maxValue, ColorTransformEnum transform>
+class ColorTransformProcessor : public ColorTransformProcessorBase
 {
 public:
-    HSVProcessor(OFX::ImageEffect &instance)
-    : HSVProcessorBase(instance)
+    ColorTransformProcessor(OFX::ImageEffect &instance)
+    : ColorTransformProcessorBase(instance)
     {
     }
     
@@ -162,8 +204,8 @@ public:
         assert(_dstImg);
         float unpPix[4];
         float tmpPix[4];
-        const bool dounpremult = _premult && toHSV;
-        const bool dopremult = _premult && !toHSV;
+        const bool dounpremult = _premult && fromRGB(transform);
+        const bool dopremult = _premult && toRGB(transform);
         
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
@@ -175,10 +217,39 @@ public:
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, dounpremult, _premultChannel);
-                if (toHSV) {
-                    OFX::Color::rgb_to_hsv(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                } else {
-                    OFX::Color::hsv_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                switch (transform) {
+                    case eColorTransformRGBToHSV:
+                        OFX::Color::rgb_to_hsv(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+
+                    case eColorTransformHSVToRGB:
+                        OFX::Color::hsv_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+
+                    case eColorTransformRGBToHSL:
+                        OFX::Color::rgb_to_hsl(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+
+                    case eColorTransformHSLToRGB:
+                        OFX::Color::hsl_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+
+                    case eColorTransformRGBToXYZ:
+                        OFX::Color::rgb_to_xyz_rec709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+
+                    case eColorTransformXYZToRGB:
+                        OFX::Color::xyz_rec709_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+
+                    case eColorTransformRGBToLab:
+                        OFX::Color::rgb_to_lab(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+
+                    case eColorTransformLabToRGB:
+                        OFX::Color::lab_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+
                 }
                 tmpPix[3] = unpPix[3];
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, dopremult, _premultChannel, x, y, srcPix, /*doMasking=*/false, /*maskImg=*/NULL, /*mix=*/1., /*maskInvert=*/false, dstPix);
@@ -193,12 +264,12 @@ public:
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-template <bool toHSV>
-class HSVPlugin : public OFX::ImageEffect
+template <ColorTransformEnum transform>
+class ColorTransformPlugin : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
-    HSVPlugin(OfxImageEffectHandle handle)
+    ColorTransformPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
     , dstClip_(0)
     , srcClip_(0)
@@ -217,7 +288,7 @@ private:
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     
     /* set up and run a processor */
-    void setupAndProcess(HSVProcessorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(ColorTransformProcessorBase &, const OFX::RenderArguments &args);
 
     /** @brief get the clip preferences */
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
@@ -241,9 +312,9 @@ private:
 // basic plugin render function, just a skelington to instantiate templates from
 
 /* set up and run a processor */
-template <bool toHSV>
+template <ColorTransformEnum transform>
 void
-HSVPlugin<toHSV>::setupAndProcess(HSVProcessorBase &processor, const OFX::RenderArguments &args)
+ColorTransformPlugin<transform>::setupAndProcess(ColorTransformProcessorBase &processor, const OFX::RenderArguments &args)
 {
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
     if (!dst.get()) {
@@ -280,9 +351,9 @@ HSVPlugin<toHSV>::setupAndProcess(HSVProcessorBase &processor, const OFX::Render
 }
 
 // the overridden render function
-template <bool toHSV>
+template <ColorTransformEnum transform>
 void
-HSVPlugin<toHSV>::render(const OFX::RenderArguments &args)
+ColorTransformPlugin<transform>::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
@@ -293,19 +364,19 @@ HSVPlugin<toHSV>::render(const OFX::RenderArguments &args)
         switch (dstBitDepth) {
             case OFX::eBitDepthUByte :
             {
-                HSVProcessor<unsigned char, 4, 255, toHSV> fred(*this);
+                ColorTransformProcessor<unsigned char, 4, 255, transform> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
             case OFX::eBitDepthUShort :
             {
-                HSVProcessor<unsigned short, 4, 65535, toHSV> fred(*this);
+                ColorTransformProcessor<unsigned short, 4, 65535, transform> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
             case OFX::eBitDepthFloat :
             {
-                HSVProcessor<float, 4, 1, toHSV> fred(*this);
+                ColorTransformProcessor<float, 4, 1, transform> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -317,19 +388,19 @@ HSVPlugin<toHSV>::render(const OFX::RenderArguments &args)
         switch (dstBitDepth) {
             case OFX::eBitDepthUByte :
             {
-                HSVProcessor<unsigned char, 3, 255, toHSV> fred(*this);
+                ColorTransformProcessor<unsigned char, 3, 255, transform> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
             case OFX::eBitDepthUShort :
             {
-                HSVProcessor<unsigned short, 3, 65535, toHSV> fred(*this);
+                ColorTransformProcessor<unsigned short, 3, 65535, transform> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
             case OFX::eBitDepthFloat :
             {
-                HSVProcessor<float, 3, 1, toHSV> fred(*this);
+                ColorTransformProcessor<float, 3, 1, transform> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -340,16 +411,16 @@ HSVPlugin<toHSV>::render(const OFX::RenderArguments &args)
 }
 
 /* Override the clip preferences */
-template <bool toHSV>
+template <ColorTransformEnum transform>
 void
-HSVPlugin<toHSV>::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+ColorTransformPlugin<transform>::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
 
     if (srcClip_->getPixelComponents() == ePixelComponentRGBA) {
         bool premult;
         _premult->getValue(premult);
         // set the premultiplication of dstClip_
-        if (toHSV) {
+        if (fromRGB(transform)) {
             // HSV is always unpremultiplied
             clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         } else {
@@ -359,9 +430,9 @@ HSVPlugin<toHSV>::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences
     }
 }
 
-template <bool toHSV>
+template <ColorTransformEnum transform>
 void
-HSVPlugin<toHSV>::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+ColorTransformPlugin<transform>::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
     if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
         switch (srcClip_->getPreMultiplication()) {
@@ -378,11 +449,11 @@ HSVPlugin<toHSV>::changedClip(const InstanceChangedArgs &args, const std::string
     }
 }
 
-template <bool toHSV>
-class HSVPluginFactory : public OFX::PluginFactoryHelper<HSVPluginFactory<toHSV> >
+template <ColorTransformEnum transform>
+class ColorTransformPluginFactory : public OFX::PluginFactoryHelper<ColorTransformPluginFactory<transform> >
 {
 public:
-    HSVPluginFactory(const std::string& id, unsigned int verMaj, unsigned int verMin):OFX::PluginFactoryHelper<HSVPluginFactory<toHSV> >(id, verMaj, verMin){}
+    ColorTransformPluginFactory(const std::string& id, unsigned int verMaj, unsigned int verMin):OFX::PluginFactoryHelper<ColorTransformPluginFactory<transform> >(id, verMaj, verMin){}
 
     //virtual void load() OVERRIDE FINAL {};
     //virtual void unload() OVERRIDE FINAL {};
@@ -391,17 +462,51 @@ public:
     virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context);
 };
 
-template <bool toHSV>
+template <ColorTransformEnum transform>
 void
-HSVPluginFactory<toHSV>::describe(OFX::ImageEffectDescriptor &desc)
+ColorTransformPluginFactory<transform>::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    if (toHSV) {
-        desc.setLabels(kPluginRGBToHSVName, kPluginRGBToHSVName, kPluginRGBToHSVName);
-        desc.setPluginDescription(kPluginRGBToHSVDescription);
-    } else {
-        desc.setLabels(kPluginHSVToRGBName, kPluginHSVToRGBName, kPluginHSVToRGBName);
-        desc.setPluginDescription(kPluginHSVToRGBDescription);
+    switch (transform) {
+        case eColorTransformRGBToHSV:
+            desc.setLabels(kPluginRGBToHSVName, kPluginRGBToHSVName, kPluginRGBToHSVName);
+            desc.setPluginDescription(kPluginRGBToHSVDescription);
+            break;
+
+        case eColorTransformHSVToRGB:
+            desc.setLabels(kPluginHSVToRGBName, kPluginHSVToRGBName, kPluginHSVToRGBName);
+            desc.setPluginDescription(kPluginHSVToRGBDescription);
+            break;
+
+        case eColorTransformRGBToHSL:
+            desc.setLabels(kPluginRGBToHSLName, kPluginRGBToHSLName, kPluginRGBToHSLName);
+            desc.setPluginDescription(kPluginRGBToHSLDescription);
+            break;
+
+        case eColorTransformHSLToRGB:
+            desc.setLabels(kPluginHSLToRGBName, kPluginHSLToRGBName, kPluginHSLToRGBName);
+            desc.setPluginDescription(kPluginHSLToRGBDescription);
+            break;
+
+        case eColorTransformRGBToXYZ:
+            desc.setLabels(kPluginRGBToXYZName, kPluginRGBToXYZName, kPluginRGBToXYZName);
+            desc.setPluginDescription(kPluginRGBToXYZDescription);
+            break;
+
+        case eColorTransformXYZToRGB:
+            desc.setLabels(kPluginXYZToRGBName, kPluginXYZToRGBName, kPluginXYZToRGBName);
+            desc.setPluginDescription(kPluginXYZToRGBDescription);
+            break;
+
+        case eColorTransformRGBToLab:
+            desc.setLabels(kPluginRGBToLabName, kPluginRGBToLabName, kPluginRGBToLabName);
+            desc.setPluginDescription(kPluginRGBToLabDescription);
+            break;
+
+        case eColorTransformLabToRGB:
+            desc.setLabels(kPluginLabToRGBName, kPluginLabToRGBName, kPluginLabToRGBName);
+            desc.setPluginDescription(kPluginLabToRGBDescription);
+            break;
     }
     desc.setPluginGrouping(kPluginGrouping);
 
@@ -424,9 +529,9 @@ HSVPluginFactory<toHSV>::describe(OFX::ImageEffectDescriptor &desc)
 
 }
 
-template <bool toHSV>
+template <ColorTransformEnum transform>
 void
-HSVPluginFactory<toHSV>::describeInContext(OFX::ImageEffectDescriptor &desc,
+ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescriptor &desc,
                                            OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
@@ -448,12 +553,12 @@ HSVPluginFactory<toHSV>::describeInContext(OFX::ImageEffectDescriptor &desc,
     PageParamDescriptor *page = desc.definePageParam("Controls");
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremult);
-        if (toHSV) {
-            param->setLabels(kParamPremultRGBToHSVLabel, kParamPremultRGBToHSVLabel, kParamPremultRGBToHSVLabel);
-            param->setHint(kParamPremultRGBToHSVHint);
+        if (fromRGB(transform)) {
+            param->setLabels(kParamPremultRGBToXXXLabel, kParamPremultRGBToXXXLabel, kParamPremultRGBToXXXLabel);
+            param->setHint(kParamPremultRGBToXXXHint);
         } else {
-            param->setLabels(kParamPremultHSVToRGBLabel, kParamPremultHSVToRGBLabel, kParamPremultHSVToRGBLabel);
-            param->setHint(kParamPremultHSVToRGBHint);
+            param->setLabels(kParamPremultXXXToRGBLabel, kParamPremultXXXToRGBLabel, kParamPremultXXXToRGBLabel);
+            param->setHint(kParamPremultXXXToRGBHint);
         }
         param->setLayoutHint(eLayoutHintNoNewLine);
         desc.addClipPreferencesSlaveParam(*param);
@@ -474,23 +579,53 @@ HSVPluginFactory<toHSV>::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 }
 
-template <bool toHSV>
+template <ColorTransformEnum transform>
 OFX::ImageEffect*
-HSVPluginFactory<toHSV>::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+ColorTransformPluginFactory<transform>::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
-    return new HSVPlugin<toHSV>(handle);
+    return new ColorTransformPlugin<transform>(handle);
 }
 
-void getHSVPluginIDs(OFX::PluginFactoryArray &ids)
+void getColorTransformPluginIDs(OFX::PluginFactoryArray &ids)
 {
     {
         // RGBtoHSV
-        static HSVPluginFactory<true> p(kPluginRGBToHSVIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        static ColorTransformPluginFactory<eColorTransformRGBToHSV> p(kPluginRGBToHSVIdentifier, kPluginVersionMajor, kPluginVersionMinor);
         ids.push_back(&p);
     }
     {
         // HSVtoRGB
-        static HSVPluginFactory<false> p(kPluginHSVToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        static ColorTransformPluginFactory<eColorTransformHSVToRGB> p(kPluginHSVToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        // RGBtoHSL
+        static ColorTransformPluginFactory<eColorTransformRGBToHSL> p(kPluginRGBToHSLIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        // HSLtoRGB
+        static ColorTransformPluginFactory<eColorTransformHSLToRGB> p(kPluginHSLToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        // RGBtoXYZ
+        static ColorTransformPluginFactory<eColorTransformRGBToXYZ> p(kPluginRGBToXYZIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        // XYZtoRGB
+        static ColorTransformPluginFactory<eColorTransformXYZToRGB> p(kPluginXYZToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        // RGBtoLab
+        static ColorTransformPluginFactory<eColorTransformRGBToLab> p(kPluginRGBToLabIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        // LabtoRGB
+        static ColorTransformPluginFactory<eColorTransformLabToRGB> p(kPluginLabToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
         ids.push_back(&p);
     }
 }

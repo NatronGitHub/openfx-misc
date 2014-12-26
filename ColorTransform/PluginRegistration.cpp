@@ -1,4 +1,4 @@
-#include "HSV.h"
+#include "ColorTransform.h"
 
 namespace OFX
 {
@@ -6,7 +6,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            getHSVPluginIDs(ids);
+            getColorTransformPluginIDs(ids);
         }
     }
 }

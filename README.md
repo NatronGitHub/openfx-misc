@@ -61,7 +61,10 @@ black points.
 * HSVToolOFX: Adjust hue, saturation and brightnes, or perform color replacement.
 * InvertOFX: Inverse the selected channels.
 * SaturationOFX: Modify the color saturation of an image.
-* RGVToHSV and HSVToRGB: Convert to/from HSV color representation.
+* Transform/RGVToHSV and HSVToRGB: Convert to/from HSV color representation.
+* Transform/RGVToHSL and HSLToRGB: Convert to/from HSL color representation.
+* Transform/RGVToLab and LabToRGB: Convert to/from Lab color representation.
+* Transform/RGVToXYZ and XYZToRGB: Convert to/from XYZ color representation.
 * VectorToColor: Convert x and y vector components to a color representation.
 
 ### Keyer

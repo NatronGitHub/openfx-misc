@@ -6,6 +6,7 @@
 #include "ClipTest.h"
 #include "ColorCorrect.h"
 #include "ColorMatrix.h"
+#include "ColorTransform.h"
 #include "Constant.h"
 #include "CopyRectangle.h"
 #include "CornerPin.h"
@@ -15,7 +16,6 @@
 #include "Dissolve.h"
 #include "Gamma.h"
 #include "Grade.h"
-#include "HSV.h"
 #include "HSVTool.h"
 #include "Invert.h"
 #include "JoinViews.h"
@@ -58,6 +58,7 @@ namespace OFX
             getClipTestPluginID(ids);
             getColorCorrectPluginID(ids);
             getColorMatrixPluginID(ids);
+            getColorTransformPluginIDs(ids);
             getConstantPluginID(ids);
             getCopyRectanglePluginID(ids);
             getCornerPinPluginIDs(ids);
@@ -67,7 +68,6 @@ namespace OFX
             getDissolvePluginID(ids);
             getGammaPluginID(ids);
             getGradePluginID(ids);
-            getHSVPluginIDs(ids);
             getHSVToolPluginID(ids);
             getInvertPluginID(ids);
             getJoinViewsPluginID(ids);

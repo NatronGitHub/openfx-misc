@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- Generator: Adobe Illustrator 16.0.3, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="127px"
+	 height="127px" viewBox="0 0 127 127" style="enable-background:new 0 0 127 127;" xml:space="preserve">
+<g id="Co_RGB_to_HSV">
+	
+		<linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="515.5" y1="86.5" x2="642.5" y2="86.5" gradientTransform="matrix(1 0 0 1 -515.5 -3.5)">
+		<stop  offset="0" style="stop-color:#993D3D"/>
+		<stop  offset="0.2482" style="stop-color:#99993D"/>
+		<stop  offset="0.3789" style="stop-color:#3D993D"/>
+		<stop  offset="0.526" style="stop-color:#3D9999"/>
+		<stop  offset="0.6796" style="stop-color:#3D3D99"/>
+		<stop  offset="0.8573" style="stop-color:#993D99"/>
+		<stop  offset="1" style="stop-color:#993D3D"/>
+	</linearGradient>
+	<rect y="74" style="fill:url(#SVGID_1_);" width="127" height="18"/>
+	
+		<linearGradient id="SVGID_2_" gradientUnits="userSpaceOnUse" x1="515.5" y1="104.5" x2="642.5" y2="104.5" gradientTransform="matrix(1 0 0 1 -515.5 -3.5)">
+		<stop  offset="0" style="stop-color:#B3B3B3"/>
+		<stop  offset="1" style="stop-color:#993D3D"/>
+	</linearGradient>
+	<rect y="92" style="fill:url(#SVGID_2_);" width="127" height="18"/>
+	
+		<linearGradient id="SVGID_3_" gradientUnits="userSpaceOnUse" x1="642.5" y1="122.5" x2="515.499" y2="122.5" gradientTransform="matrix(1 0 0 1 -515.5 -3.5)">
+		<stop  offset="0" style="stop-color:#B3B3B3"/>
+		<stop  offset="1" style="stop-color:#000000"/>
+	</linearGradient>
+	<rect y="110" style="fill:url(#SVGID_3_);" width="127" height="18"/>
+	<rect style="fill:#993D3D;" width="127" height="18"/>
+	<rect y="18" style="fill:#3D993D;" width="127" height="18"/>
+	<rect y="36" style="fill:#3D3D99;" width="127" height="18"/>
+	<polygon style="fill:#E6E6E6;stroke:#000000;stroke-width:3.96;stroke-miterlimit:10;" points="86.545,52.964 64.561,83.982 
+		42.482,52.832 	"/>
+</g>
+<g id="Layer_1">
+</g>
+</svg>

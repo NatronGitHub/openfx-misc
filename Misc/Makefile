@@ -16,7 +16,7 @@ Difference.o \
 Dissolve.o \
 Gamma.o \
 Grade.o \
-HSV.o \
+ColorTransform.o \
 HSVTool.o \
 Invert.o \
 JoinViews.o \
@@ -81,10 +81,10 @@ RESOURCES = \
 ../Dissolve/net.sf.openfx.DissolvePlugin.svg \
 ../Grade/net.sf.openfx.GradePlugin.png \
 ../Grade/net.sf.openfx.GradePlugin.svg \
-../HSV/net.sf.openfx.HSVToRGBPlugin.png \
-../HSV/net.sf.openfx.HSVToRGBPlugin.svg \
-../HSV/net.sf.openfx.RGBToHSVPlugin.png \
-../HSV/net.sf.openfx.RGBToHSVPlugin.svg \
+../ColorTransform/net.sf.openfx.HSVToRGBPlugin.png \
+../ColorTransform/net.sf.openfx.HSVToRGBPlugin.svg \
+../ColorTransform/net.sf.openfx.RGBToHSVPlugin.png \
+../ColorTransform/net.sf.openfx.RGBToHSVPlugin.svg \
 ../HSVTool/net.sf.openfx.HSVToolPlugin.png \
 ../HSVTool/net.sf.openfx.HSVToolPlugin.svg \
 ../Invert/net.sf.openfx.Invert.png \
@@ -154,7 +154,7 @@ VPATH += \
 ../Dissolve \
 ../Gamma \
 ../Grade \
-../HSV \
+../ColorTransform \
 ../HSVTool \
 ../Invert \
 ../JoinViews \
@@ -205,7 +205,7 @@ CXXFLAGS += \
 -I../Dissolve \
 -I../Gamma \
 -I../Grade \
--I../HSV \
+-I../ColorTransform \
 -I../HSVTool \
 -I../Invert \
 -I../JoinViews \

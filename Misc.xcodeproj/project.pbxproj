@@ -595,9 +595,9 @@
 		1ED537241A234CDF007966D5 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1ED537251A234CDF007966D5 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1ED537271A234CDF007966D5 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		1ED537331A234D21007966D5 /* HSV.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED537301A234D21007966D5 /* HSV.cpp */; };
+		1ED537331A234D21007966D5 /* ColorTransform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED537301A234D21007966D5 /* ColorTransform.cpp */; };
 		1ED537341A234D21007966D5 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED537321A234D21007966D5 /* PluginRegistration.cpp */; };
-		1ED537371A234D3C007966D5 /* HSV.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED537301A234D21007966D5 /* HSV.cpp */; };
+		1ED537371A234D3C007966D5 /* ColorTransform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED537301A234D21007966D5 /* ColorTransform.cpp */; };
 		1ED5373C1A2370D1007966D5 /* ofxsLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED537381A234F12007966D5 /* ofxsLut.cpp */; };
 		1ED5373D1A2370D3007966D5 /* ofxsLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED537381A234F12007966D5 /* ofxsLut.cpp */; };
 		1ED537421A2372A5007966D5 /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
@@ -2064,9 +2064,9 @@
 		1ED4AEB31973DD6D00EE64C8 /* Noise.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Noise.h; sourceTree = "<group>"; };
 		1ED4AEB51973DE1100EE64C8 /* randomGenerator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = randomGenerator.cpp; sourceTree = "<group>"; };
 		1ED4AEB61973DE1200EE64C8 /* randomGenerator.H */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = randomGenerator.H; sourceTree = "<group>"; };
-		1ED5372E1A234CDF007966D5 /* HSV.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HSV.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		1ED537301A234D21007966D5 /* HSV.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HSV.cpp; sourceTree = "<group>"; };
-		1ED537311A234D21007966D5 /* HSV.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HSV.h; sourceTree = "<group>"; };
+		1ED5372E1A234CDF007966D5 /* ColorTransform.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorTransform.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1ED537301A234D21007966D5 /* ColorTransform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ColorTransform.cpp; sourceTree = "<group>"; };
+		1ED537311A234D21007966D5 /* ColorTransform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorTransform.h; sourceTree = "<group>"; };
 		1ED537321A234D21007966D5 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1ED537351A234D35007966D5 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1ED537361A234D35007966D5 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -2956,7 +2956,7 @@
 				1E92573319EC1DB80018F19A /* Clamp.ofx.bundle */,
 				1ECF2F9E19F51D3400E91A38 /* Keyer.ofx.bundle */,
 				1EAD4AF41A0A691700AF834D /* AdjustRoD.ofx.bundle */,
-				1ED5372E1A234CDF007966D5 /* HSV.ofx.bundle */,
+				1ED5372E1A234CDF007966D5 /* ColorTransform.ofx.bundle */,
 				1EFBC9931A23A1EB00086E7A /* VectorToColor.ofx.bundle */,
 				1EFA772C1A24F0BA00212DB0 /* HSVTool.ofx.bundle */,
 				1E69CA011A2B2EDD0099D609 /* Saturation.ofx.bundle */,
@@ -2988,6 +2988,7 @@
 				D7B4C95D18D9DA410004137D /* ColorCorrect */,
 				1E3E3CB117995CB1005F2132 /* ColorLookup */,
 				1E10A6F51997BFD000EE87A1 /* ColorMatrix */,
+				1ED537191A234CB8007966D5 /* ColorTransform */,
 				1E59336B194A0C3F00804448 /* Constant */,
 				D73030FE19518ACE0024BCA4 /* CopyRectangle */,
 				D7257D45192E910C0040CD9C /* CornerPin */,
@@ -2998,7 +2999,6 @@
 				1EA0C1FE19BA1053006AB602 /* Dissolve */,
 				1EE9B0911A4B2FEF00869861 /* Gamma */,
 				D725A2C818E0D308001A1E3E /* Grade */,
-				1ED537191A234CB8007966D5 /* HSV */,
 				1EFA772E1A24F0EE00212DB0 /* HSVTool */,
 				1E181AE919518BF900FAB9A9 /* Invert */,
 				1EDE1BAF182D39DA002392CB /* JoinViews */,
@@ -3250,11 +3250,11 @@
 			path = Noise;
 			sourceTree = "<group>";
 		};
-		1ED537191A234CB8007966D5 /* HSV */ = {
+		1ED537191A234CB8007966D5 /* ColorTransform */ = {
 			isa = PBXGroup;
 			children = (
-				1ED537301A234D21007966D5 /* HSV.cpp */,
-				1ED537311A234D21007966D5 /* HSV.h */,
+				1ED537301A234D21007966D5 /* ColorTransform.cpp */,
+				1ED537311A234D21007966D5 /* ColorTransform.h */,
 				1ED537351A234D35007966D5 /* Info.plist */,
 				1ED537361A234D35007966D5 /* Makefile */,
 				ACC5D25C1A2C713700DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png */,
@@ -3263,7 +3263,7 @@
 				1E3284761A41C19A00C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg */,
 				1ED537321A234D21007966D5 /* PluginRegistration.cpp */,
 			);
-			path = HSV;
+			path = ColorTransform;
 			sourceTree = "<group>";
 		};
 		1EDE1B8E182D0511002392CB /* Anaglyph */ = {
@@ -4089,9 +4089,9 @@
 			productReference = 1ED4AEA61973DCAD00EE64C8 /* Noise.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
-		1ED5371A1A234CDF007966D5 /* HSV.ofx */ = {
+		1ED5371A1A234CDF007966D5 /* ColorTransform.ofx */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 1ED5372B1A234CDF007966D5 /* Build configuration list for PBXNativeTarget "HSV.ofx" */;
+			buildConfigurationList = 1ED5372B1A234CDF007966D5 /* Build configuration list for PBXNativeTarget "ColorTransform.ofx" */;
 			buildPhases = (
 				1ED5371B1A234CDF007966D5 /* Sources */,
 				1ED537261A234CDF007966D5 /* Frameworks */,
@@ -4101,9 +4101,9 @@
 			);
 			dependencies = (
 			);
-			name = HSV.ofx;
+			name = ColorTransform.ofx;
 			productName = basic.ofx;
-			productReference = 1ED5372E1A234CDF007966D5 /* HSV.ofx.bundle */;
+			productReference = 1ED5372E1A234CDF007966D5 /* ColorTransform.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
 		1EDE1B7B182D04D9002392CB /* Anaglyph.ofx */ = {
@@ -4437,7 +4437,7 @@
 				1EA0C20419BA1243006AB602 /* Dissolve.ofx */,
 				1ED12E1D1A4B30AB00ABA348 /* Gamma.ofx */,
 				1E1FB8E3190696F200F5515D /* Grade.ofx */,
-				1ED5371A1A234CDF007966D5 /* HSV.ofx */,
+				1ED5371A1A234CDF007966D5 /* ColorTransform.ofx */,
 				1EFA77181A24F0BA00212DB0 /* HSVTool.ofx */,
 				1E181AEA19518CCF00FAB9A9 /* Invert.ofx */,
 				1EDE1B9D182D3985002392CB /* JoinViews.ofx */,
@@ -4779,7 +4779,7 @@
 				1EA0C22719BA12D3006AB602 /* Dissolve.cpp in Sources */,
 				1ED12E621A4B31AC00ABA348 /* Gamma.cpp in Sources */,
 				D725A2E318E0D54E001A1E3E /* Grade.cpp in Sources */,
-				1ED537371A234D3C007966D5 /* HSV.cpp in Sources */,
+				1ED537371A234D3C007966D5 /* ColorTransform.cpp in Sources */,
 				1EFA774D1A25D6BD00212DB0 /* HSVTool.cpp in Sources */,
 				1E52FFD01955CE720000FB79 /* Premult.cpp in Sources */,
 				1E181B0219518E0000FAB9A9 /* Invert.cpp in Sources */,
@@ -5048,7 +5048,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1ED537331A234D21007966D5 /* HSV.cpp in Sources */,
+				1ED537331A234D21007966D5 /* ColorTransform.cpp in Sources */,
 				1ED537341A234D21007966D5 /* PluginRegistration.cpp in Sources */,
 				1ED5373C1A2370D1007966D5 /* ofxsLut.cpp in Sources */,
 				1ED5371E1A234CDF007966D5 /* ofxsCore.cpp in Sources */,
@@ -5572,7 +5572,7 @@
 		};
 		1ED5373F1A2371EB007966D5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 1ED5371A1A234CDF007966D5 /* HSV.ofx */;
+			target = 1ED5371A1A234CDF007966D5 /* ColorTransform.ofx */;
 			targetProxy = 1ED5373E1A2371EB007966D5 /* PBXContainerItemProxy */;
 		};
 		1ED537411A237203007966D5 /* PBXTargetDependency */ = {
@@ -5954,6 +5954,7 @@
 				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
@@ -5988,6 +5989,7 @@
 					OFX_EXTENSIONS_TUTTLE,
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
@@ -6385,9 +6387,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = HSV/Info.plist;
+				INFOPLIST_FILE = ColorTransform/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = HSV.ofx;
+				PRODUCT_NAME = ColorTransform.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Debug;
@@ -6396,9 +6398,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = HSV/Info.plist;
+				INFOPLIST_FILE = ColorTransform/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
-				PRODUCT_NAME = HSV.ofx;
+				PRODUCT_NAME = ColorTransform.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
@@ -7077,7 +7079,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		1ED5372B1A234CDF007966D5 /* Build configuration list for PBXNativeTarget "HSV.ofx" */ = {
+		1ED5372B1A234CDF007966D5 /* Build configuration list for PBXNativeTarget "ColorTransform.ofx" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				1ED5372C1A234CDF007966D5 /* Debug */,

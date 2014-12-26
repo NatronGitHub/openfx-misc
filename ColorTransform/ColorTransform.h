@@ -1,5 +1,5 @@
 /*
- OFX HSV plugin.
+ OFX ColorTransform plugin.
  
  Copyright (C) 2014 INRIA
  
@@ -34,11 +34,11 @@
  78153 Le Chesnay Cedex - France
  */
 
-#ifndef Misc_HSV_h
-#define Misc_HSV_h
+#ifndef Misc_ColorTransform_h
+#define Misc_ColorTransform_h
 
 #include "ofxsImageEffect.h"
 
-void getHSVPluginIDs(OFX::PluginFactoryArray &ids);
+void getColorTransformPluginIDs(OFX::PluginFactoryArray &ids);
 
-#endif // Misc_HSV_h
+#endif // Misc_ColorTransform_h

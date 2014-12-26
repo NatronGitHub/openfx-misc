@@ -19,7 +19,7 @@ Difference \
 Dissolve \
 Gamma \
 Grade \
-HSV \
+ColorTransform \
 HSVTool \
 Invert \
 JoinViews \
