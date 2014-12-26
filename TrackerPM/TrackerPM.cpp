@@ -606,7 +606,7 @@ getRefBounds(const OfxRectD& refRect, const OfxPointD &refCenter, OfxRectD *boun
     }
 }
 
-void
+static void
 getTrackSearchBounds(const OfxRectD& refRect, const OfxPointD &refCenter, const OfxRectD& searchRect, OfxRectD *bounds)
 {
     // subtract the pattern window so that we don't check for pixels out of the search window
@@ -626,7 +626,7 @@ getTrackSearchBounds(const OfxRectD& refRect, const OfxPointD &refCenter, const 
     }
 }
 
-void
+static void
 getOtherBounds(const OfxPointD &refCenter, const OfxRectD& searchRect, OfxRectD *bounds)
 {
     // subtract the pattern window so that we don't check for pixels out of the search window
