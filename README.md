@@ -52,19 +52,23 @@ grouping).
 offset of an image.
 * ColorLookupOFX: Apply a parametric lookup curve to each channel 
 separately. 
-* ColorMatrixOFX: Multiply the RGBA channels by an arbitrary 4x4
-matrix.
 * EqualizeCImg: Equalize the histogram.
 * GradeOFX: Modify the tonal spread of an image from the white and
 black points.
 * HistEqCImg: Equalize the luminance histogram. 
 * HSVToolOFX: Adjust hue, saturation and brightnes, or perform color replacement.
 * InvertOFX: Inverse the selected channels.
+* Math/AddOFX: Add a constant to the selected channels.
+* Math/ClipTestOFX: Draw zebra stripes on all pixels outside of the specified range.
+* Math/ColorMatrixOFX: Multiply the RGBA channels by an arbitrary 4x4
+matrix.
+* Math/GammaOFX: Apply gamma function to the selected channels.
+* Math/MultiplyOFX: Multiply the selected channels by a constant.
 * SaturationOFX: Modify the color saturation of an image.
-* Transform/RGVToHSV and HSVToRGB: Convert to/from HSV color representation.
-* Transform/RGVToHSL and HSLToRGB: Convert to/from HSL color representation.
-* Transform/RGVToLab and LabToRGB: Convert to/from Lab color representation.
-* Transform/RGVToXYZ and XYZToRGB: Convert to/from XYZ color representation.
+* Transform/RGBToHSV and HSVToRGB: Convert to/from HSV color representation.
+* Transform/RGBToHSL and HSLToRGB: Convert to/from HSL color representation.
+* Transform/RGBToLab and LabToRGB: Convert to/from Lab color representation.
+* Transform/RGBToXYZ and XYZToRGB: Convert to/from XYZ color representation.
 * VectorToColor: Convert x and y vector components to a color representation.
 
 ### Keyer
