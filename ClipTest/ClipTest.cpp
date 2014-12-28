@@ -208,7 +208,97 @@ private:
 
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        assert(nComponents == 3 || nComponents == 4);
+        int todo = ((_processR ? 0xf000 : 0) | (_processG ? 0x0f00 : 0) | (_processB ? 0x00f0 : 0) | (_processA ? 0x000f : 0));
+        if (nComponents == 1) {
+            switch (todo) {
+                case 0x0000:
+                case 0x00f0:
+                case 0x0f00:
+                case 0x0ff0:
+                case 0xf000:
+                case 0xf0f0:
+                case 0xff00:
+                case 0xfff0:
+                    return process<false,false,false,false>(procWindow);
+                case 0x000f:
+                case 0x00ff:
+                case 0x0f0f:
+                case 0x0fff:
+                case 0xf00f:
+                case 0xf0ff:
+                case 0xff0f:
+                case 0xffff:
+                    return process<false,false,false,true >(procWindow);
+            }
+        } else if (nComponents == 3) {
+            switch (todo) {
+                case 0x0000:
+                case 0x000f:
+                    return process<false,false,false,false>(procWindow);
+                case 0x00f0:
+                case 0x00ff:
+                    return process<false,false,true ,false>(procWindow);
+                case 0x0f00:
+                case 0x0f0f:
+                    return process<false,true ,false,false>(procWindow);
+                case 0x0ff0:
+                case 0x0fff:
+                    return process<false,true ,true ,false>(procWindow);
+                case 0xf000:
+                case 0xf00f:
+                    return process<true ,false,false,false>(procWindow);
+                case 0xf0f0:
+                case 0xf0ff:
+                    return process<true ,false,true ,false>(procWindow);
+                case 0xff00:
+                case 0xff0f:
+                    return process<true ,true ,false,false>(procWindow);
+                case 0xfff0:
+                case 0xffff:
+                    return process<true ,true ,true ,false>(procWindow);
+            }
+        } else if (nComponents == 4) {
+            switch (todo) {
+                case 0x0000:
+                    return process<false,false,false,false>(procWindow);
+                case 0x000f:
+                    return process<false,false,false,true >(procWindow);
+                case 0x00f0:
+                    return process<false,false,true ,false>(procWindow);
+                case 0x00ff:
+                    return process<false,false,true, true >(procWindow);
+                case 0x0f00:
+                    return process<false,true ,false,false>(procWindow);
+                case 0x0f0f:
+                    return process<false,true ,false,true >(procWindow);
+                case 0x0ff0:
+                    return process<false,true ,true ,false>(procWindow);
+                case 0x0fff:
+                    return process<false,true ,true ,true >(procWindow);
+                case 0xf000:
+                    return process<true ,false,false,false>(procWindow);
+                case 0xf00f:
+                    return process<true ,false,false,true >(procWindow);
+                case 0xf0f0:
+                    return process<true ,false,true ,false>(procWindow);
+                case 0xf0ff:
+                    return process<true ,false,true, true >(procWindow);
+                case 0xff00:
+                    return process<true ,true ,false,false>(procWindow);
+                case 0xff0f:
+                    return process<true ,true ,false,true >(procWindow);
+                case 0xfff0:
+                    return process<true ,true ,true ,false>(procWindow);
+                case 0xffff:
+                    return process<true ,true ,true ,true >(procWindow);
+            }
+        }
+    }
+
+    template<bool processR, bool processG, bool processB, bool processA>
+    void process(const OfxRectI& procWindow)
+    {
+        assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         assert(_dstImg);
         float unpPix[4];
         float tmpPix[4];
@@ -234,10 +324,10 @@ private:
                     if (!zebralow && !zebrahigh) {
                         tmpPix[c] = unpPix[c];
                     } else {
-                        if ((_processR && c == 0) ||
-                            (_processG && c == 1) ||
-                            (_processB && c == 2) ||
-                            (_processA && c == 3)) {
+                        if ((processR && c == 0) ||
+                            (processG && c == 1) ||
+                            (processB && c == 2) ||
+                            (processA && c == 3)) {
                             int z = ((x + y) & 4) >> 2;
                             tmpPix[c] = zebralow ? (0.8 + 0.2 * z) : 0.1 * z;
                         } else {
@@ -246,6 +336,25 @@ private:
                     }
                 }
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                // copy back original values from unprocessed channels
+                if (nComponents == 1) {
+                    if (!processA) {
+                        dstPix[0] = srcPix[0];
+                    }
+                } else if (nComponents == 3 || nComponents == 4) {
+                    if (!processR) {
+                        dstPix[0] = srcPix[0];
+                    }
+                    if (!processG) {
+                        dstPix[1] = srcPix[1];
+                    }
+                    if (!processB) {
+                        dstPix[2] = srcPix[2];
+                    }
+                    if (!processA && nComponents == 4) {
+                        dstPix[3] = srcPix[3];
+                    }
+                }
                 // increment the dst pixel
                 dstPix += nComponents;
             }
@@ -267,9 +376,9 @@ public:
     , maskClip_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
+        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
         srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
+        assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
         maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
         _processR = fetchBooleanParam(kParamProcessR);
@@ -393,24 +502,41 @@ ClipTestPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
     
-    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
+    if (dstComponents == OFX::ePixelComponentAlpha) {
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte:
-            {
+            case OFX::eBitDepthUByte: {
+                ClipTestProcessor<unsigned char, 1, 255> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+            case OFX::eBitDepthUShort: {
+                ClipTestProcessor<unsigned short, 1, 65535> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+            case OFX::eBitDepthFloat: {
+                ClipTestProcessor<float, 1, 1> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+            default:
+                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
+    } else if (dstComponents == OFX::ePixelComponentRGBA) {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
                 ClipTestProcessor<unsigned char, 4, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort:
-            {
+            case OFX::eBitDepthUShort: {
                 ClipTestProcessor<unsigned short, 4, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat:
-            {
-                ClipTestProcessor<float,4,1> fred(*this);
+            case OFX::eBitDepthFloat: {
+                ClipTestProcessor<float, 4, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -420,21 +546,18 @@ ClipTestPlugin::render(const OFX::RenderArguments &args)
     } else {
         assert(dstComponents == OFX::ePixelComponentRGB);
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte:
-            {
+            case OFX::eBitDepthUByte: {
                 ClipTestProcessor<unsigned char, 3, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort:
-            {
+            case OFX::eBitDepthUShort: {
                 ClipTestProcessor<unsigned short, 3, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat:
-            {
-                ClipTestProcessor<float,3,1> fred(*this);
+            case OFX::eBitDepthFloat: {
+                ClipTestProcessor<float, 3, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -451,7 +574,7 @@ ClipTestPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip
     double mix;
     _mix->getValueAtTime(args.time, mix);
 
-    if (mix == 0. /*|| (!red && !green && !blue && !alpha)*/) {
+    if (mix == 0. /*|| (!processR && !processG && !processB && !processA)*/) {
         identityClip = srcClip_;
         return true;
     }
@@ -524,6 +647,7 @@ void ClipTestPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
@@ -531,6 +655,8 @@ void ClipTestPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
     
     if (context == eContextGeneral || context == eContextPaint) {
