@@ -641,6 +641,8 @@
 		1EDE1BD9182D8941002392CB /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1EDE1BDB182D8941002392CB /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1EDE1BE3182D8977002392CB /* MixViews.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDE1BE2182D8977002392CB /* MixViews.cpp */; };
+		1EE1F7811A506181002BE24B /* CImgSharpenInvDiff.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE1F77F1A506181002BE24B /* CImgSharpenInvDiff.cpp */; };
+		1EE1F7841A506E14002BE24B /* CImgSharpenShock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE1F7821A506E14002BE24B /* CImgSharpenShock.cpp */; };
 		1EE4A87019C6EC7300E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A86E19C6EC4200E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png */; };
 		1EE4A87319C6EC9000E6E3AE /* net.sf.openfx.ColorCorrectPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A87119C6EC8500E6E3AE /* net.sf.openfx.ColorCorrectPlugin.png */; };
 		1EE4A87619C6ECE800E6E3AE /* net.sf.openfx.ConstantPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A87419C6ECDA00E6E3AE /* net.sf.openfx.ConstantPlugin.png */; };
@@ -2094,6 +2096,10 @@
 		1EDE1BE4182D8983002392CB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EDE1BE5182D8983002392CB /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EDE1BE8182D8B18002392CB /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EE1F77F1A506181002BE24B /* CImgSharpenInvDiff.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgSharpenInvDiff.cpp; sourceTree = "<group>"; };
+		1EE1F7801A506181002BE24B /* CImgSharpenInvDiff.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgSharpenInvDiff.h; sourceTree = "<group>"; };
+		1EE1F7821A506E14002BE24B /* CImgSharpenShock.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgSharpenShock.cpp; sourceTree = "<group>"; };
+		1EE1F7831A506E14002BE24B /* CImgSharpenShock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgSharpenShock.h; sourceTree = "<group>"; };
 		1EE4A86E19C6EC4200E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ChromaKeyerPlugin.png; sourceTree = "<group>"; };
 		1EE4A87119C6EC8500E6E3AE /* net.sf.openfx.ColorCorrectPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ColorCorrectPlugin.png; sourceTree = "<group>"; };
 		1EE4A87419C6ECDA00E6E3AE /* net.sf.openfx.ConstantPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ConstantPlugin.png; sourceTree = "<group>"; };
@@ -2757,6 +2763,10 @@
 				1EA330A919E83A33002EFA5B /* CImgPlasma.h */,
 				1E92574F19ECF38A0018F19A /* CImgRollingGuidance.cpp */,
 				1E92575019ECF38A0018F19A /* CImgRollingGuidance.h */,
+				1EE1F77F1A506181002BE24B /* CImgSharpenInvDiff.cpp */,
+				1EE1F7801A506181002BE24B /* CImgSharpenInvDiff.h */,
+				1EE1F7821A506E14002BE24B /* CImgSharpenShock.cpp */,
+				1EE1F7831A506E14002BE24B /* CImgSharpenShock.h */,
 				1E31940A19D9987F0027D0E2 /* CImgSmooth.cpp */,
 				1E31940B19D9987F0027D0E2 /* CImgSmooth.h */,
 				1E31940C19D9987F0027D0E2 /* Info.plist */,
@@ -4612,6 +4622,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E868B7219E6D8CD00B793BA /* CImgBilateral.cpp in Sources */,
+				1EE1F7811A506181002BE24B /* CImgSharpenInvDiff.cpp in Sources */,
 				1E868B6F19E6B8C100B793BA /* CImgBlur.cpp in Sources */,
 				1E868B7E19E6F6B500B793BA /* CImgDenoise.cpp in Sources */,
 				1E868B7519E6E10100B793BA /* CImgDilate.cpp in Sources */,
@@ -4624,6 +4635,7 @@
 				1EA330AA19E83A33002EFA5B /* CImgPlasma.cpp in Sources */,
 				1E92575119ECF38A0018F19A /* CImgRollingGuidance.cpp in Sources */,
 				1E31942219D9B2560027D0E2 /* CImgSmooth.cpp in Sources */,
+				1EE1F7841A506E14002BE24B /* CImgSharpenShock.cpp in Sources */,
 				1E31942319D9B2560027D0E2 /* PluginRegistration.cpp in Sources */,
 				1EFA77171A24E05F00212DB0 /* ofxsLut.cpp in Sources */,
 				1E31941319D9B2270027D0E2 /* ofxsCore.cpp in Sources */,

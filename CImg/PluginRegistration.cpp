@@ -10,6 +10,8 @@
 #include "CImgNoise.h"
 #include "CImgPlasma.h"
 #include "CImgRollingGuidance.h"
+#include "CImgSharpenInvDiff.h"
+#include "CImgSharpenShock.h"
 #include "CImgSmooth.h"
 
 #include "ofxsImageEffect.h"
@@ -32,6 +34,8 @@ namespace OFX
             getCImgNoisePluginID(ids);
             getCImgPlasmaPluginID(ids);
             getCImgRollingGuidancePluginID(ids);
+            getCImgSharpenInvDiffPluginID(ids);
+            getCImgSharpenShockPluginID(ids);
             getCImgSmoothPluginID(ids);
         }
     }

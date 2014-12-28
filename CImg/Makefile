@@ -1,4 +1,4 @@
-PLUGINOBJECTS = CImgBilateral.o CImgBlur.o CImgDenoise.o CImgDilate.o CImgEqualize.o CImgErode.o CImgErodeSmooth.o CImgGuided.o CImgHistEQ.o CImgNoise.o CImgPlasma.o CImgRollingGuidance.o CImgSmooth.o ofxsLut.o PluginRegistration.o
+PLUGINOBJECTS = CImgBilateral.o CImgBlur.o CImgDenoise.o CImgDilate.o CImgEqualize.o CImgErode.o CImgErodeSmooth.o CImgGuided.o CImgHistEQ.o CImgNoise.o CImgPlasma.o CImgRollingGuidance.o CImgSharpenInvDiff.o CImgSharpenShock.o CImgSmooth.o ofxsLut.o PluginRegistration.o
 PLUGINNAME = CImg
 
 # ls *png *.svg|sort |sed -e 's!$! \\!'
@@ -64,4 +64,8 @@ $(OBJECTPATH)/CImgPlasma.o: CImgPlasma.cpp CImg.h
 
 $(OBJECTPATH)/CImgRollingGuidance.o: CImgRollingGuidance.cpp CImg.h
 
-$(OBJECTPATH)/CImgSmooth.o: CImgGuided.cpp CImg.h
+$(OBJECTPATH)/CImgSharpenInvDiff.o: CImgSharpenInvDiff.cpp CImg.h
+
+$(OBJECTPATH)/CImgSharpenShock.o: CImgSharpenShock.cpp CImg.h
+
+$(OBJECTPATH)/CImgSmooth.o: CImgSmooth.cpp CImg.h
