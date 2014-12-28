@@ -171,7 +171,7 @@ protected:
     bool   _doMasking;
     double _mix;
     bool _maskInvert;
-    bool _red,_green,_blue,_alpha;
+    bool _processR, _processG, _processB, _processA;
 
 public:
     
@@ -184,10 +184,10 @@ public:
     , _doMasking(false)
     , _mix(1.)
     , _maskInvert(false)
-    , _red(false)
-    , _green(false)
-    , _blue(false)
-    , _alpha(false)
+    , _processR(false)
+    , _processG(false)
+    , _processB(false)
+    , _processA(false)
     , _clampBlack(true)
     , _clampWhite(true)
     {
@@ -211,10 +211,10 @@ public:
                    bool premult,
                    int premultChannel,
                    double mix,
-                   bool doR,
-                   bool doG,
-                   bool doB,
-                   bool doA)
+                   bool processR,
+                   bool processG,
+                   bool processB,
+                   bool processA)
     {
         _blackPoint = blackPoint;
         _whitePoint = whitePoint;
@@ -228,10 +228,10 @@ public:
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
-        _red = doR;
-        _green = doG;
-        _blue = doB;
-        _alpha = doA;
+        _processR = processR;
+        _processG = processG;
+        _processB = processB;
+        _processA = processA;
     }
 
     void grade(double* v, double wp, double bp, double white, double black, double mutiply, double offset, double gamma)
@@ -312,7 +312,7 @@ public:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         
-        int todo = ((_red ? 0xf000 : 0) | (_green ? 0x0f00 : 0) | (_blue ? 0x00f0 : 0) | (_alpha ? 0x000f : 0));
+        int todo = ((_processR ? 0xf000 : 0) | (_processG ? 0x0f00 : 0) | (_processB ? 0x00f0 : 0) | (_processA ? 0x000f : 0));
         if (nComponents == 1) {
             switch (todo) {
                 case 0x0000:
@@ -579,15 +579,15 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     double mix;
     _mix->getValueAtTime(args.time, mix);
     
-    bool doR,doG,doB,doA;
-    _processR->getValue(doR);
-    _processG->getValue(doG);
-    _processB->getValue(doB);
-    _processA->getValue(doA);
+    bool processR, processG, processB, processA;
+    _processR->getValue(processR);
+    _processG->getValue(processG);
+    _processB->getValue(processB);
+    _processA->getValue(processA);
     
     processor.setValues(blackPoint, whitePoint, black, white, multiply, offset, gamma,
                         clampBlack, clampWhite, premult, premultChannel, mix,
-                        doR, doG, doB, doA);
+                        processR, processG, processB, processA);
     processor.process();
 }
 
@@ -602,49 +602,43 @@ GradePlugin::render(const OFX::RenderArguments &args)
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte :
-            {
+            case OFX::eBitDepthUByte: {
                 GradeProcessor<unsigned char, 4, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 GradeProcessor<unsigned short, 4, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
-                GradeProcessor<float,4,1> fred(*this);
+            case OFX::eBitDepthFloat: {
+                GradeProcessor<float, 4, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     } else {
         assert(dstComponents == OFX::ePixelComponentRGB);
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte :
-            {
+            case OFX::eBitDepthUByte: {
                 GradeProcessor<unsigned char, 3, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 GradeProcessor<unsigned short, 3, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
-                GradeProcessor<float,3,1> fred(*this);
+            case OFX::eBitDepthFloat: {
+                GradeProcessor<float, 3, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
@@ -662,12 +656,15 @@ GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
         return true;
     }
 
-    bool red, green, blue, alpha;
-    _processR->getValueAtTime(args.time, red);
-    _processG->getValueAtTime(args.time, green);
-    _processB->getValueAtTime(args.time, blue);
-    _processA->getValueAtTime(args.time, alpha);
-    if (!red && !green && !blue && !alpha) {
+    bool processR;
+    bool processG;
+    bool processB;
+    bool processA;
+    _processR->getValueAtTime(args.time, processR);
+    _processG->getValueAtTime(args.time, processG);
+    _processB->getValueAtTime(args.time, processB);
+    _processA->getValueAtTime(args.time, processA);
+    if (!processR && !processG && !processB && !processA) {
         identityClip = srcClip_;
         return true;
     }

@@ -797,19 +797,16 @@ TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime)
     getTrackSearchBounds(refRect, refCenter, searchRect, &trackSearchBounds);
 
     switch (srcBitDepth) {
-        case OFX::eBitDepthUByte :
-        {
+        case OFX::eBitDepthUByte: {
             trackInternalForDepth<unsigned char, nComponents, 255>(refTime, refBounds, refCenter, srcRef.get(), mask.get(), otherTime, trackSearchBounds, srcOther.get());
         }   break;
-        case OFX::eBitDepthUShort :
-        {
+        case OFX::eBitDepthUShort: {
             trackInternalForDepth<unsigned short, nComponents, 65535>(refTime, refBounds, refCenter, srcRef.get(), mask.get(), otherTime, trackSearchBounds, srcOther.get());
         }   break;
-        case OFX::eBitDepthFloat :
-        {
+        case OFX::eBitDepthFloat: {
             trackInternalForDepth<float, nComponents, 1>(refTime, refBounds, refCenter, srcRef.get(), mask.get(), otherTime, trackSearchBounds, srcOther.get());
         }   break;
-        default :
+        default:
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }

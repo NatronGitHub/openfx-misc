@@ -392,7 +392,7 @@ VectorToColorPlugin::render(const OFX::RenderArguments &args)
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
             case OFX::eBitDepthFloat: {
-                VectorToColorProcessor<float,4,1> fred(*this);
+                VectorToColorProcessor<float, 4, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -403,7 +403,7 @@ VectorToColorPlugin::render(const OFX::RenderArguments &args)
         assert(dstComponents == OFX::ePixelComponentRGB);
         switch (dstBitDepth) {
             case OFX::eBitDepthFloat: {
-                VectorToColorProcessor<float,3,1> fred(*this);
+                VectorToColorProcessor<float, 3, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }

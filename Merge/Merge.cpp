@@ -415,82 +415,65 @@ MergePlugin::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
     
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentAlpha);
-    if (dstComponents == OFX::ePixelComponentRGBA)
-    {
-        switch (dstBitDepth)
-        {
-            case OFX::eBitDepthUByte :
-            {
+    if (dstComponents == OFX::ePixelComponentRGBA) {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
                 MergeProcessor<unsigned char, 4, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 MergeProcessor<unsigned short, 4, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
-                MergeProcessor<float,4,1> fred(*this);
+            case OFX::eBitDepthFloat: {
+                MergeProcessor<float, 4, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
-    }
-    else if (dstComponents == OFX::ePixelComponentRGB)
-    {
-        switch (dstBitDepth)
-        {
-            case OFX::eBitDepthUByte :
-            {
+    } else if (dstComponents == OFX::ePixelComponentRGB) {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
                 MergeProcessor<unsigned char, 3, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 MergeProcessor<unsigned short, 3, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
-                MergeProcessor<float,3,1> fred(*this);
+            case OFX::eBitDepthFloat: {
+                MergeProcessor<float, 3, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
-    }
-    else
-    {
+    } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        switch (dstBitDepth)
-        {
-            case OFX::eBitDepthUByte :
-            {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
                 MergeProcessor<unsigned char, 1, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 MergeProcessor<unsigned short, 1, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
-                MergeProcessor<float,1,1> fred(*this);
+            case OFX::eBitDepthFloat: {
+                MergeProcessor<float, 1, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }

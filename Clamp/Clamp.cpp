@@ -702,15 +702,18 @@ ClampPlugin::render(const OFX::RenderArguments &args)
 bool
 ClampPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
-    bool red, green, blue, alpha;
+    bool processR;
+    bool processG;
+    bool processB;
+    bool processA;
     double mix;
-    _processR->getValueAtTime(args.time, red);
-    _processG->getValueAtTime(args.time, green);
-    _processB->getValueAtTime(args.time, blue);
-    _processA->getValueAtTime(args.time, alpha);
+    _processR->getValueAtTime(args.time, processR);
+    _processG->getValueAtTime(args.time, processG);
+    _processB->getValueAtTime(args.time, processB);
+    _processA->getValueAtTime(args.time, processA);
     _mix->getValueAtTime(args.time, mix);
 
-    if (mix == 0. || (!red && !green && !blue && !alpha)) {
+    if (mix == 0. || (!processR && !processG && !processB && !processA)) {
         identityClip = srcClip_;
         return true;
     }

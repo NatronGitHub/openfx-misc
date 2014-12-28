@@ -749,49 +749,43 @@ HSVToolPlugin::render(const OFX::RenderArguments &args)
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte :
-            {
+            case OFX::eBitDepthUByte: {
                 HSVToolProcessor<unsigned char, 4, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 HSVToolProcessor<unsigned short, 4, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
-                HSVToolProcessor<float,4,1> fred(*this);
+            case OFX::eBitDepthFloat: {
+                HSVToolProcessor<float, 4, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     } else {
         assert(dstComponents == OFX::ePixelComponentRGB);
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte :
-            {
+            case OFX::eBitDepthUByte: {
                 HSVToolProcessor<unsigned char, 3, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 HSVToolProcessor<unsigned short, 3, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
-                HSVToolProcessor<float,3,1> fred(*this);
+            case OFX::eBitDepthFloat: {
+                HSVToolProcessor<float, 3, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }

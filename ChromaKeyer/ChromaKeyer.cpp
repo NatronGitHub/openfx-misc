@@ -749,7 +749,7 @@ ChromaKeyerPlugin::render(const OFX::RenderArguments &args)
                 break;
             }
             case OFX::eBitDepthFloat: {
-                ChromaKeyerProcessor<float,4,1> fred(*this);
+                ChromaKeyerProcessor<float, 4, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -770,7 +770,7 @@ ChromaKeyerPlugin::render(const OFX::RenderArguments &args)
                 break;
             }
             case OFX::eBitDepthFloat: {
-                ChromaKeyerProcessor<float,3,1> fred(*this);
+                ChromaKeyerProcessor<float, 3, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }

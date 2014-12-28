@@ -313,7 +313,7 @@ protected:
     bool   _doMasking;
     double _mix;
     bool _maskInvert;
-    bool _red,_green,_blue,_alpha;
+    bool _processR, _processG, _processB, _processA;
 public:
     ColorCorrecterBase(OFX::ImageEffect &instance,const OFX::RenderArguments &args)
     : OFX::ImageProcessor(instance)
@@ -324,10 +324,10 @@ public:
     , _doMasking(false)
     , _mix(1.)
     , _maskInvert(false)
-    , _red(false)
-    , _green(false)
-    , _blue(false)
-    , _alpha(false)
+    , _processR(false)
+    , _processG(false)
+    , _processB(false)
+    , _processA(false)
     , _clampBlack(true)
     , _clampWhite(true)
     {
@@ -364,10 +364,10 @@ public:
                                bool premult,
                                int premultChannel,
                                double mix,
-                               bool doR,
-                               bool doG,
-                               bool doB,
-                               bool doA)
+                               bool processR,
+                               bool processG,
+                               bool processB,
+                               bool processA)
     {
         _masterValues = master;
         _shadowValues = shadow;
@@ -378,10 +378,10 @@ public:
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
-        _red = doR;
-        _green = doG;
-        _blue = doB;
-        _alpha = doA;
+        _processR = processR;
+        _processG = processG;
+        _processB = processB;
+        _processA = processA;
     }
 
     template<bool processR, bool processG, bool processB, bool processA>
@@ -465,7 +465,7 @@ public:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         
-        int todo = ((_red ? 0xf000 : 0) | (_green ? 0x0f00 : 0) | (_blue ? 0x00f0 : 0) | (_alpha ? 0x000f : 0));
+        int todo = ((_processR ? 0xf000 : 0) | (_processG ? 0x0f00 : 0) | (_processB ? 0x00f0 : 0) | (_processA ? 0x000f : 0));
         if (nComponents == 1) {
             switch (todo) {
                 case 0x0000:
@@ -794,14 +794,14 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
     double mix;
     _mix->getValueAtTime(args.time, mix);
     
-    bool doR,doG,doB,doA;
-    _processR->getValue(doR);
-    _processG->getValue(doG);
-    _processB->getValue(doB);
-    _processA->getValue(doA);
+    bool processR, processG, processB, processA;
+    _processR->getValue(processR);
+    _processG->getValue(processG);
+    _processB->getValue(processB);
+    _processA->getValue(processA);
 
     processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, clampBlack, clampWhite, premult, premultChannel, mix,
-                                    doR,doG,doB,doA);
+                                    processR,processG,processB,processA);
     processor.process();
 }
 
@@ -828,7 +828,7 @@ ColorCorrectPlugin::render(const OFX::RenderArguments &args)
                 break;
             }
             case OFX::eBitDepthFloat: {
-                ColorCorrecter<float,4,1> fred(*this,args);
+                ColorCorrecter<float, 4, 1> fred(*this,args);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -849,7 +849,7 @@ ColorCorrectPlugin::render(const OFX::RenderArguments &args)
                 break;
             }
             case OFX::eBitDepthFloat: {
-                ColorCorrecter<float,3,1> fred(*this,args);
+                ColorCorrecter<float, 3, 1> fred(*this,args);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -891,17 +891,20 @@ ColorCorrectPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identity
     double mix;
     _mix->getValueAtTime(args.time, mix);
 
-    if (mix == 0. /*|| (!red && !green && !blue && !alpha)*/) {
+    if (mix == 0. /*|| (!processR && !processG && !processB && !processA)*/) {
         identityClip = srcClip_;
         return true;
     }
 
-    bool red, green, blue, alpha;
-    _processR->getValueAtTime(args.time, red);
-    _processG->getValueAtTime(args.time, green);
-    _processB->getValueAtTime(args.time, blue);
-    _processA->getValueAtTime(args.time, alpha);
-    if (!red && !green && !blue && !alpha) {
+    bool processR;
+    bool processG;
+    bool processB;
+    bool processA;
+    _processR->getValueAtTime(args.time, processR);
+    _processG->getValueAtTime(args.time, processG);
+    _processB->getValueAtTime(args.time, processB);
+    _processA->getValueAtTime(args.time, processA);
+    if (!processR && !processG && !processB && !processA) {
         identityClip = srcClip_;
         return true;
     }

@@ -420,22 +420,22 @@ void
 RotoPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-        case OFX::eBitDepthUByte :
-        {
+        case OFX::eBitDepthUByte: {
             RotoProcessor<unsigned char, srcNComponents, dstNComponents, 255> fred(*this);
             setupAndProcess(fred, args);
-        }   break;
-        case OFX::eBitDepthUShort :
-        {
+            break;
+        }
+        case OFX::eBitDepthUShort: {
             RotoProcessor<unsigned short, srcNComponents, dstNComponents, 65535> fred(*this);
             setupAndProcess(fred, args);
-        }   break;
-        case OFX::eBitDepthFloat :
-        {
+            break;
+        }
+        case OFX::eBitDepthFloat: {
             RotoProcessor<float, srcNComponents, dstNComponents, 1> fred(*this);
             setupAndProcess(fred, args);
-        }   break;
-        default :
+            break;
+        }
+        default:
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
@@ -472,9 +472,11 @@ RotoPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
 
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentAlpha);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderInternalNComponents<4>(args, dstBitDepth);
+    } else if (dstComponents == OFX::ePixelComponentRGB) {
+        renderInternalNComponents<3>(args, dstBitDepth);
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderInternalNComponents<1>(args, dstBitDepth);
@@ -617,6 +619,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 

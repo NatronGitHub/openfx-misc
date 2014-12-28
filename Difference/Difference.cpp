@@ -208,7 +208,7 @@ public:
     , srcClipB_(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
+        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha));
         srcClipA_ = fetchClip(kClipA);
         assert(srcClipA_ && (srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA || srcClipA_->getPixelComponents() == ePixelComponentAlpha));
         srcClipB_ = fetchClip(kClipB);
@@ -257,8 +257,7 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor, const OFX::RenderA
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     std::auto_ptr<const OFX::Image> srcA(srcClipA_->fetchImage(args.time));
     std::auto_ptr<const OFX::Image> srcB(srcClipB_->fetchImage(args.time));
-    if (srcA.get())
-    {
+    if (srcA.get()) {
         OFX::BitDepthEnum    srcBitDepth      = srcA->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcA->getPixelComponents();
         if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
@@ -266,8 +265,7 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor, const OFX::RenderA
         }
     }
 
-    if (srcB.get())
-    {
+    if (srcB.get()) {
         OFX::BitDepthEnum    srcBitDepth      = srcB->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcB->getPixelComponents();
         if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
@@ -297,82 +295,65 @@ DifferencePlugin::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
     
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
-    if (dstComponents == OFX::ePixelComponentRGBA)
-    {
-        switch (dstBitDepth)
-        {
-            case OFX::eBitDepthUByte :
-            {
+    if (dstComponents == OFX::ePixelComponentRGBA) {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
                 Differencer<unsigned char, 4, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 Differencer<unsigned short, 4, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
-                Differencer<float,4,1> fred(*this);
+            case OFX::eBitDepthFloat: {
+                Differencer<float, 4, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
-    }
-    else if (dstComponents == OFX::ePixelComponentRGB)
-    {
-        switch (dstBitDepth)
-        {
-            case OFX::eBitDepthUByte :
-            {
+    } else if (dstComponents == OFX::ePixelComponentRGB) {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
                 Differencer<unsigned char, 3, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 Differencer<unsigned short, 3, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
-                Differencer<float,3,1> fred(*this);
+            case OFX::eBitDepthFloat: {
+                Differencer<float, 3, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
-    }
-    else
-    {
+    } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        switch (dstBitDepth)
-        {
-            case OFX::eBitDepthUByte :
-            {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
                 Differencer<unsigned char, 1, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 Differencer<unsigned short, 1, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
-                Differencer<float,1,1> fred(*this);
+            case OFX::eBitDepthFloat: {
+                Differencer<float, 1, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
@@ -427,6 +408,7 @@ void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages and to things in

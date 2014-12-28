@@ -362,49 +362,43 @@ ColorTransformPlugin<transform>::render(const OFX::RenderArguments &args)
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte :
-            {
+            case OFX::eBitDepthUByte: {
                 ColorTransformProcessor<unsigned char, 4, 255, transform> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 ColorTransformProcessor<unsigned short, 4, 65535, transform> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
+            case OFX::eBitDepthFloat: {
                 ColorTransformProcessor<float, 4, 1, transform> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     } else {
         assert(dstComponents == OFX::ePixelComponentRGB);
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte :
-            {
+            case OFX::eBitDepthUByte: {
                 ColorTransformProcessor<unsigned char, 3, 255, transform> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 ColorTransformProcessor<unsigned short, 3, 65535, transform> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
+            case OFX::eBitDepthFloat: {
                 ColorTransformProcessor<float, 3, 1, transform> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }

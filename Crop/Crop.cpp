@@ -493,22 +493,22 @@ CropPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum d
 {
     switch (dstBitDepth)
     {
-        case OFX::eBitDepthUByte :
-        {
+        case OFX::eBitDepthUByte: {
             CropProcessor<unsigned char, nComponents, 255> fred(*this);
             setupAndProcess(fred, args);
-        }   break;
-        case OFX::eBitDepthUShort :
-        {
+            break;
+        }
+        case OFX::eBitDepthUShort: {
             CropProcessor<unsigned short, nComponents, 65535> fred(*this);
             setupAndProcess(fred, args);
-        }   break;
-        case OFX::eBitDepthFloat :
-        {
+            break;
+        }
+        case OFX::eBitDepthFloat: {
             CropProcessor<float, nComponents, 1> fred(*this);
             setupAndProcess(fred, args);
-        }   break;
-        default :
+            break;
+        }
+        default:
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }

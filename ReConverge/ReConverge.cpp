@@ -475,6 +475,7 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 

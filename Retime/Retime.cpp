@@ -326,7 +326,7 @@ RetimePlugin::render(const OFX::RenderArguments &args)
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
-
+    
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
@@ -347,7 +347,27 @@ RetimePlugin::render(const OFX::RenderArguments &args)
             default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
+    } else if (dstComponents == OFX::ePixelComponentRGB) {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
+                OFX::ImageBlender<unsigned char, 3> fred(*this);
+                setupAndProcess(fred, args);
+            }   break;
+
+            case OFX::eBitDepthUShort: {
+                OFX::ImageBlender<unsigned short, 3> fred(*this);
+                setupAndProcess(fred, args);
+            }   break;
+
+            case OFX::eBitDepthFloat: {
+                OFX::ImageBlender<float, 3> fred(*this);
+                setupAndProcess(fred, args);
+            }   break;
+            default:
+                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
     } else {
+        assert(dstComponents == OFX::ePixelComponentAlpha);
         switch(dstBitDepth) {
             case OFX::eBitDepthUByte: {
                 OFX::ImageBlender<unsigned char, 1> fred(*this);
@@ -420,6 +440,7 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
     // we are a transition, so define the sourceTo input clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(true); // say we will be doing random time access on this clip
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -428,6 +449,7 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setFieldExtraction(eFieldExtractDoubled); // which is the default anyway
     dstClip->setSupportsTiles(kSupportsTiles);

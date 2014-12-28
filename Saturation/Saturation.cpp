@@ -186,10 +186,10 @@ public:
                    bool premult,
                    int premultChannel,
                    double mix,
-                   bool doR,
-                   bool doG,
-                   bool doB,
-                   bool doA)
+                   bool processR,
+                   bool processG,
+                   bool processB,
+                   bool processA)
     {
         _saturation = saturation;
         _luminanceMath = luminanceMath;
@@ -198,10 +198,10 @@ public:
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
-        _red = doR;
-        _green = doG;
-        _blue = doB;
-        _alpha = doA;
+        _red = processR;
+        _green = processG;
+        _blue = processB;
+        _alpha = processA;
     }
 
     template<bool processR, bool processG, bool processB, bool processA>
@@ -539,15 +539,15 @@ SaturationPlugin::setupAndProcess(SaturationProcessorBase &processor, const OFX:
     double mix;
     _mix->getValueAtTime(args.time, mix);
     
-    bool doR,doG,doB,doA;
-    _processR->getValue(doR);
-    _processG->getValue(doG);
-    _processB->getValue(doB);
-    _processA->getValue(doA);
+    bool processR, processG, processB, processA;
+    _processR->getValue(processR);
+    _processG->getValue(processG);
+    _processB->getValue(processB);
+    _processA->getValue(processA);
     
     processor.setValues(saturation, luminanceMath,
                         clampBlack, clampWhite, premult, premultChannel, mix,
-                        doR, doG, doB, doA);
+                        processR, processG, processB, processA);
     processor.process();
 }
 
@@ -562,45 +562,39 @@ SaturationPlugin::render(const OFX::RenderArguments &args)
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte :
-            {
+            case OFX::eBitDepthUByte: {
                 SaturationProcessor<unsigned char, 4, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 SaturationProcessor<unsigned short, 4, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
-                SaturationProcessor<float,4,1> fred(*this);
+            case OFX::eBitDepthFloat: {
+                SaturationProcessor<float, 4, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            default :
+            default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     } else {
         assert(dstComponents == OFX::ePixelComponentRGB);
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte :
-            {
+            case OFX::eBitDepthUByte: {
                 SaturationProcessor<unsigned char, 3, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort :
-            {
+            case OFX::eBitDepthUShort: {
                 SaturationProcessor<unsigned short, 3, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat :
-            {
-                SaturationProcessor<float,3,1> fred(*this);
+            case OFX::eBitDepthFloat: {
+                SaturationProcessor<float, 3, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -622,12 +616,15 @@ SaturationPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
         return true;
     }
 
-    bool red, green, blue, alpha;
-    _processR->getValueAtTime(args.time, red);
-    _processG->getValueAtTime(args.time, green);
-    _processB->getValueAtTime(args.time, blue);
-    _processA->getValueAtTime(args.time, alpha);
-    if (!red && !green && !blue && !alpha) {
+    bool processR;
+    bool processG;
+    bool processB;
+    bool processA;
+    _processR->getValueAtTime(args.time, processR);
+    _processG->getValueAtTime(args.time, processG);
+    _processB->getValueAtTime(args.time, processB);
+    _processA->getValueAtTime(args.time, processA);
+    if (!processR && !processG && !processB && !processA) {
         identityClip = srcClip_;
         return true;
     }

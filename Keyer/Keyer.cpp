@@ -708,7 +708,7 @@ KeyerPlugin::render(const OFX::RenderArguments &args)
                 break;
             }
             case OFX::eBitDepthFloat: {
-                KeyerProcessor<float,4,1> fred(*this);
+                KeyerProcessor<float, 4, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -729,7 +729,7 @@ KeyerPlugin::render(const OFX::RenderArguments &args)
                 break;
             }
             case OFX::eBitDepthFloat: {
-                KeyerProcessor<float,3,1> fred(*this);
+                KeyerProcessor<float, 3, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }

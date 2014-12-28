@@ -1059,12 +1059,15 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::isIdentity(const OFX::IsIdentit
         return true;
     }
 
-    bool red, green, blue, alpha;
-    _processR->getValueAtTime(args.time, red);
-    _processG->getValueAtTime(args.time, green);
-    _processB->getValueAtTime(args.time, blue);
-    _processA->getValueAtTime(args.time, alpha);
-    if (!red && !green && !blue && !alpha) {
+    bool processR;
+    bool processG;
+    bool processB;
+    bool processA;
+    _processR->getValueAtTime(args.time, processR);
+    _processG->getValueAtTime(args.time, processG);
+    _processB->getValueAtTime(args.time, processB);
+    _processA->getValueAtTime(args.time, processA);
+    if (!processR && !processG && !processB && !processA) {
         identityClip = srcClip_;
         return true;
     }

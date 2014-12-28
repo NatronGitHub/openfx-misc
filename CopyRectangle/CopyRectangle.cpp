@@ -118,7 +118,7 @@ protected:
     const OFX::Image *_srcImgB;
     const OFX::Image *_maskImg;
     double _softness;
-    bool _enabled[4];
+    bool _process[4];
     OfxRectI _rectangle;
     bool   _doMasking;
     double _mix;
@@ -135,7 +135,7 @@ public:
     , _mix(1.)
     , _maskInvert(false)
     {
-        _enabled[0] = _enabled[1] = _enabled[2] = _enabled[3] = false;
+        _process[0] = _process[1] = _process[2] = _process[3] = false;
         _rectangle.x1 = _rectangle.y1 = _rectangle.x2 = _rectangle.y2 = 0.;
     }
 
@@ -152,18 +152,18 @@ public:
 
     void setValues(const OfxRectI& rectangle,
                    double softness,
-                   bool red,
-                   bool green,
-                   bool blue,
-                   bool alpha,
+                   bool processR,
+                   bool processG,
+                   bool processB,
+                   bool processA,
                    double mix)
     {
         _rectangle = rectangle;
         _softness = softness;
-        _enabled[0] = red;
-        _enabled[1] = green;
-        _enabled[2] = blue;
-        _enabled[3] = alpha;
+        _process[0] = processR;
+        _process[1] = processG;
+        _process[2] = processB;
+        _process[3] = processA;
         _mix = mix;
     }
 
@@ -230,7 +230,7 @@ private:
                     double multiplier = xMultiplier * yMultiplier;
 
                     for (int k = 0; k < nComponents; ++k) {
-                        if (!_enabled[(nComponents) == 1 ? 3 : k]) {
+                        if (!_process[(nComponents) == 1 ? 3 : k]) {
                             tmpPix[k] = srcPixB ? srcPixB[k] : 0.;
                         } else {
                             PIX A = srcPixA ? srcPixA[k] : 0.;
@@ -268,10 +268,10 @@ public:
     , _btmLeft(0)
     , _size(0)
     , _softness(0)
-    , _red(0)
-    , _green(0)
-    , _blue(0)
-    , _alpha(0)
+    , _processR(0)
+    , _processG(0)
+    , _processB(0)
+    , _processA(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
@@ -285,11 +285,11 @@ public:
         _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
         _size = fetchDouble2DParam(kParamRectangleInteractSize);
         _softness = fetchDoubleParam(kParamSoftness);
-        _red = fetchBooleanParam(kParamRed);
-        _green = fetchBooleanParam(kParamGreen);
-        _blue = fetchBooleanParam(kParamBlue);
-        _alpha = fetchBooleanParam(kParamAlpha);
-        assert(_btmLeft && _size && _softness && _red && _green && _blue && _alpha);
+        _processR = fetchBooleanParam(kParamRed);
+        _processG = fetchBooleanParam(kParamGreen);
+        _processB = fetchBooleanParam(kParamBlue);
+        _processA = fetchBooleanParam(kParamAlpha);
+        assert(_btmLeft && _size && _softness && _processR && _processG && _processB && _processA);
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
@@ -324,10 +324,10 @@ private:
     OFX::Double2DParam* _btmLeft;
     OFX::Double2DParam* _size;
     OFX::DoubleParam* _softness;
-    OFX::BooleanParam* _red;
-    OFX::BooleanParam* _green;
-    OFX::BooleanParam* _blue;
-    OFX::BooleanParam* _alpha;
+    OFX::BooleanParam* _processR;
+    OFX::BooleanParam* _processG;
+    OFX::BooleanParam* _processB;
+    OFX::BooleanParam* _processA;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
 };
@@ -430,15 +430,18 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     OfxRectI dstRoDPix;
     MergeImages2D::toPixelEnclosing(dstRoD, args.renderScale, par, &dstRoDPix);
    
-    bool red,green,blue,alpha;
-    _red->getValueAtTime(args.time,red);
-    _green->getValueAtTime(args.time,green);
-    _blue->getValueAtTime(args.time,blue);
-    _alpha->getValueAtTime(args.time,alpha);
+    bool processR;
+    bool processG;
+    bool processB;
+    bool processA;
+    _processR->getValueAtTime(args.time, processR);
+    _processG->getValueAtTime(args.time, processG);
+    _processB->getValueAtTime(args.time, processB);
+    _processA->getValueAtTime(args.time, processA);
     
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    processor.setValues(rectanglePixel, softness, red, green, blue, alpha, mix);
+    processor.setValues(rectanglePixel, softness, processR, processG, processB, processA, mix);
     
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -490,22 +493,22 @@ void
 CopyRectanglePlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
     switch(dstBitDepth) {
-        case OFX::eBitDepthUByte :
-        {
+        case OFX::eBitDepthUByte: {
             CopyRectangleProcessor<unsigned char, nComponents, 255> fred(*this);
             setupAndProcess(fred, args);
-        }   break;
-        case OFX::eBitDepthUShort :
-        {
+            break;
+        }
+        case OFX::eBitDepthUShort: {
             CopyRectangleProcessor<unsigned short, nComponents, 65535> fred(*this);
             setupAndProcess(fred, args);
-        }   break;
-        case OFX::eBitDepthFloat :
-        {
+            break;
+        }
+        case OFX::eBitDepthFloat: {
             CopyRectangleProcessor<float, nComponents, 1> fred(*this);
             setupAndProcess(fred, args);
-        }   break;
-        default :
+            break;
+        }
+        default:
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }

@@ -162,7 +162,10 @@ protected:
     bool   _doMasking;
     double _mix;
     bool _maskInvert;
-    bool _red, _green, _blue, _alpha;
+    bool _processR;
+    bool _processG;
+    bool _processB;
+    bool _processA;
 
     OfxPointD _btmLeft, _size;
     double _softness;
@@ -176,10 +179,10 @@ public:
     , _doMasking(false)
     , _mix(1.)
     , _maskInvert(false)
-    , _red(false)
-    , _green(false)
-    , _blue(false)
-    , _alpha(false)
+    , _processR(false)
+    , _processG(false)
+    , _processB(false)
+    , _processA(false)
     , _softness(0.)
     {
         _btmLeft.x = _btmLeft.y = _size.x = _size.y = 0.;
@@ -209,10 +212,10 @@ public:
                    const RGBAValues& color0,
                    const RGBAValues& color1,
                    double mix,
-                   bool red,
-                   bool green,
-                   bool blue,
-                   bool alpha)
+                   bool processR,
+                   bool processG,
+                   bool processB,
+                   bool processA)
     {
         _btmLeft = btmLeft;
         _size = size;
@@ -220,10 +223,10 @@ public:
         _color0 = color0;
         _color1 = color1;
         _mix = mix;
-        _red = red;
-        _green = green;
-        _blue = blue;
-        _alpha = alpha;
+        _processR = processR;
+        _processG = processG;
+        _processB = processB;
+        _processA = processA;
     }
  };
 
@@ -241,7 +244,7 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         
-        int todo = ((_red ? 0xf000 : 0) | (_green ? 0x0f00 : 0) | (_blue ? 0x00f0 : 0) | (_alpha ? 0x000f : 0));
+        int todo = ((_processR ? 0xf000 : 0) | (_processG ? 0x0f00 : 0) | (_processB ? 0x00f0 : 0) | (_processA ? 0x000f : 0));
         if (nComponents == 1) {
             switch (todo) {
                 case 0x0000:
@@ -597,11 +600,11 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor, const OFX::R
     _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
     _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
 
-    bool doR, doG, doB, doA;
-    _processR->getValue(doR);
-    _processG->getValue(doG);
-    _processB->getValue(doB);
-    _processA->getValue(doA);
+    bool processR, processG, processB, processA;
+    _processR->getValue(processR);
+    _processG->getValue(processG);
+    _processB->getValue(processB);
+    _processA->getValue(processA);
 
     double mix;
     _mix->getValueAtTime(args.time, mix);
@@ -610,7 +613,7 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor, const OFX::R
                         softness,
                         color0, color1,
                         mix,
-                        doR, doG, doB, doA);
+                        processR, processG, processB, processA);
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 }
@@ -621,24 +624,20 @@ template <int nComponents>
 void
 RectanglePlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
-    switch (dstBitDepth)
-    {
-        case OFX::eBitDepthUByte :
-        {
+    switch (dstBitDepth) {
+        case OFX::eBitDepthUByte: {
             RectangleProcessor<unsigned char, nComponents, 255> fred(*this);
             setupAndProcess(fred, args);
         }   break;
-        case OFX::eBitDepthUShort :
-        {
+        case OFX::eBitDepthUShort: {
             RectangleProcessor<unsigned short, nComponents, 65535> fred(*this);
             setupAndProcess(fred, args);
         }   break;
-        case OFX::eBitDepthFloat :
-        {
+        case OFX::eBitDepthFloat: {
             RectangleProcessor<float, nComponents, 1> fred(*this);
             setupAndProcess(fred, args);
         }   break;
-        default :
+        default:
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
@@ -671,17 +670,20 @@ RectanglePlugin::isIdentity(const OFX::IsIdentityArguments &args,
     double mix;
     _mix->getValueAtTime(args.time, mix);
 
-    if (mix == 0. /*|| (!red && !green && !blue && !alpha)*/) {
+    if (mix == 0. /*|| (!processR && !processG && !processB && !processA)*/) {
         identityClip = srcClip_;
         return true;
     }
 
-    bool red, green, blue, alpha;
-    _processR->getValueAtTime(args.time, red);
-    _processG->getValueAtTime(args.time, green);
-    _processB->getValueAtTime(args.time, blue);
-    _processA->getValueAtTime(args.time, alpha);
-    if (!red && !green && !blue && !alpha) {
+    bool processR;
+    bool processG;
+    bool processB;
+    bool processA;
+    _processR->getValueAtTime(args.time, processR);
+    _processG->getValueAtTime(args.time, processG);
+    _processB->getValueAtTime(args.time, processB);
+    _processA->getValueAtTime(args.time, processA);
+    if (!processR && !processG && !processB && !processA) {
         identityClip = srcClip_;
         return true;
     }

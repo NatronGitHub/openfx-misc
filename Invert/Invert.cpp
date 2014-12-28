@@ -119,10 +119,10 @@ protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
     bool   _doMasking;
-    bool _red;
-    bool _green;
-    bool _blue;
-    bool _alpha;
+    bool _processR;
+    bool _processG;
+    bool _processB;
+    bool _processA;
     bool _premult;
     int _premultChannel;
     double _mix;
@@ -135,10 +135,10 @@ public:
     , _srcImg(0)
     , _maskImg(0)
     , _doMasking(false)
-    , _red(true)
-    , _green(true)
-    , _blue(true)
-    , _alpha(false)
+    , _processR(true)
+    , _processG(true)
+    , _processB(true)
+    , _processA(false)
     , _premult(false)
     , _premultChannel(3)
     , _mix(1.)
@@ -153,18 +153,18 @@ public:
 
     void doMasking(bool v) {_doMasking = v;}
 
-    void setValues(bool red,
-                   bool green,
-                   bool blue,
-                   bool alpha,
+    void setValues(bool processR,
+                   bool processG,
+                   bool processB,
+                   bool processA,
                    bool premult,
                    int premultChannel,
                    double mix)
     {
-        _red = red;
-        _green = green;
-        _blue = blue;
-        _alpha = alpha;
+        _processR = processR;
+        _processG = processG;
+        _processB = processB;
+        _processA = processA;
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
@@ -186,7 +186,7 @@ class ImageInverter : public InvertBase
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        int todo = ((_red ? 0xf000 : 0) | (_green ? 0x0f00 : 0) | (_blue ? 0x00f0 : 0) | (_alpha ? 0x000f : 0));
+        int todo = ((_processR ? 0xf000 : 0) | (_processG ? 0x0f00 : 0) | (_processB ? 0x00f0 : 0) | (_processA ? 0x000f : 0));
         if (nComponents == 1) {
             switch (todo) {
                 case 0x0000:
@@ -292,9 +292,9 @@ class ImageInverter : public InvertBase
 
                 // do we have a source image to scale up
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
-                tmpPix[0] = processR   ? (1. - unpPix[0]) : unpPix[0];
+                tmpPix[0] = processR ? (1. - unpPix[0]) : unpPix[0];
                 tmpPix[1] = processG ? (1. - unpPix[1]) : unpPix[1];
-                tmpPix[2] = processB  ? (1. - unpPix[2]) : unpPix[2];
+                tmpPix[2] = processB ? (1. - unpPix[2]) : unpPix[2];
                 tmpPix[3] = processA ? (1. - unpPix[3]) : unpPix[3];
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
 
@@ -412,18 +412,21 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
         processor.setMaskImg(mask.get(), maskInvert);
     }
 
-    bool red, green, blue, alpha;
-    _processR->getValueAtTime(args.time, red);
-    _processG->getValueAtTime(args.time, green);
-    _processB->getValueAtTime(args.time, blue);
-    _processA->getValueAtTime(args.time, alpha);
+    bool processR;
+    bool processG;
+    bool processB;
+    bool processA;
+    _processR->getValueAtTime(args.time, processR);
+    _processG->getValueAtTime(args.time, processG);
+    _processB->getValueAtTime(args.time, processB);
+    _processA->getValueAtTime(args.time, processA);
     bool premult;
     int premultChannel;
     _premult->getValueAtTime(args.time, premult);
     _premultChannel->getValueAtTime(args.time, premultChannel);
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    processor.setValues(red, green, blue, alpha, premult, premultChannel, mix);
+    processor.setValues(processR, processG, processB, processA, premult, premultChannel, mix);
 
     // set the images
     processor.setDstImg(dst.get());
@@ -518,15 +521,18 @@ InvertPlugin::render(const OFX::RenderArguments &args)
 bool
 InvertPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
-    bool red, green, blue, alpha;
+    bool processR;
+    bool processG;
+    bool processB;
+    bool processA;
+    _processR->getValueAtTime(args.time, processR);
+    _processG->getValueAtTime(args.time, processG);
+    _processB->getValueAtTime(args.time, processB);
+    _processA->getValueAtTime(args.time, processA);
     double mix;
-    _processR->getValueAtTime(args.time, red);
-    _processG->getValueAtTime(args.time, green);
-    _processB->getValueAtTime(args.time, blue);
-    _processA->getValueAtTime(args.time, alpha);
     _mix->getValueAtTime(args.time, mix);
 
-    if (mix == 0. || (!red && !green && !blue && !alpha)) {
+    if (mix == 0. || (!processR && !processG && !processB && !processA)) {
         identityClip = srcClip_;
         return true;
     } else {
