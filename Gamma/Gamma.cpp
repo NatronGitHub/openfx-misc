@@ -84,7 +84,7 @@
 
 #define kPluginName "GammaOFX"
 #define kPluginGrouping "Color/Math"
-#define kPluginDescription "Gamma the selected channels by a constant. The actual function is pow(x,1/max(1e-8,value))."
+#define kPluginDescription "Apply gamma function to the selected channels. The actual function is pow(x,1/max(1e-8,value))."
 #define kPluginIdentifier "net.sf.openfx.GammaPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -204,7 +204,97 @@ private:
 
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        assert(nComponents == 3 || nComponents == 4);
+        int todo = ((_processR ? 0xf000 : 0) | (_processG ? 0x0f00 : 0) | (_processB ? 0x00f0 : 0) | (_processA ? 0x000f : 0));
+        if (nComponents == 1) {
+            switch (todo) {
+                case 0x0000:
+                case 0x00f0:
+                case 0x0f00:
+                case 0x0ff0:
+                case 0xf000:
+                case 0xf0f0:
+                case 0xff00:
+                case 0xfff0:
+                    return process<false,false,false,false>(procWindow);
+                case 0x000f:
+                case 0x00ff:
+                case 0x0f0f:
+                case 0x0fff:
+                case 0xf00f:
+                case 0xf0ff:
+                case 0xff0f:
+                case 0xffff:
+                    return process<false,false,false,true >(procWindow);
+            }
+        } else if (nComponents == 3) {
+            switch (todo) {
+                case 0x0000:
+                case 0x000f:
+                    return process<false,false,false,false>(procWindow);
+                case 0x00f0:
+                case 0x00ff:
+                    return process<false,false,true ,false>(procWindow);
+                case 0x0f00:
+                case 0x0f0f:
+                    return process<false,true ,false,false>(procWindow);
+                case 0x0ff0:
+                case 0x0fff:
+                    return process<false,true ,true ,false>(procWindow);
+                case 0xf000:
+                case 0xf00f:
+                    return process<true ,false,false,false>(procWindow);
+                case 0xf0f0:
+                case 0xf0ff:
+                    return process<true ,false,true ,false>(procWindow);
+                case 0xff00:
+                case 0xff0f:
+                    return process<true ,true ,false,false>(procWindow);
+                case 0xfff0:
+                case 0xffff:
+                    return process<true ,true ,true ,false>(procWindow);
+            }
+        } else if (nComponents == 4) {
+            switch (todo) {
+                case 0x0000:
+                    return process<false,false,false,false>(procWindow);
+                case 0x000f:
+                    return process<false,false,false,true >(procWindow);
+                case 0x00f0:
+                    return process<false,false,true ,false>(procWindow);
+                case 0x00ff:
+                    return process<false,false,true, true >(procWindow);
+                case 0x0f00:
+                    return process<false,true ,false,false>(procWindow);
+                case 0x0f0f:
+                    return process<false,true ,false,true >(procWindow);
+                case 0x0ff0:
+                    return process<false,true ,true ,false>(procWindow);
+                case 0x0fff:
+                    return process<false,true ,true ,true >(procWindow);
+                case 0xf000:
+                    return process<true ,false,false,false>(procWindow);
+                case 0xf00f:
+                    return process<true ,false,false,true >(procWindow);
+                case 0xf0f0:
+                    return process<true ,false,true ,false>(procWindow);
+                case 0xf0ff:
+                    return process<true ,false,true, true >(procWindow);
+                case 0xff00:
+                    return process<true ,true ,false,false>(procWindow);
+                case 0xff0f:
+                    return process<true ,true ,false,true >(procWindow);
+                case 0xfff0:
+                    return process<true ,true ,true ,false>(procWindow);
+                case 0xffff:
+                    return process<true ,true ,true ,true >(procWindow);
+            }
+        }
+    }
+
+    template<bool processR, bool processG, bool processB, bool processA>
+    void process(const OfxRectI& procWindow)
+    {
+        assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         assert(_dstImg);
         float unpPix[4];
         float tmpPix[4];
@@ -222,19 +312,38 @@ private:
                     if (unpPix[c] <= 0.) {
                         // gamma function is not defined for negative values
                         tmpPix[c] = unpPix[c];
-                    } else if (_processR && c == 0) {
+                    } else if (processR && c == 0) {
                         tmpPix[0] = std::pow(unpPix[0], _value.r);
-                    } else if (_processG && c == 1) {
+                    } else if (processG && c == 1) {
                         tmpPix[1] = std::pow(unpPix[1], _value.g);
-                    } else if (_processB && c == 2) {
+                    } else if (processB && c == 2) {
                         tmpPix[2] = std::pow(unpPix[2], _value.b);
-                    } else if (_processA && c == 3) {
+                    } else if (processA && c == 3) {
                         tmpPix[3] = std::pow(unpPix[3], _value.a);
                     } else {
                         tmpPix[c] = unpPix[c];
                     }
                 }
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                // copy back original values from unprocessed channels
+                if (nComponents == 1) {
+                    if (!processA) {
+                        dstPix[0] = srcPix[0];
+                    }
+                } else if (nComponents == 3 || nComponents == 4) {
+                    if (!processR) {
+                        dstPix[0] = srcPix[0];
+                    }
+                    if (!processG) {
+                        dstPix[1] = srcPix[1];
+                    }
+                    if (!processB) {
+                        dstPix[2] = srcPix[2];
+                    }
+                    if (!processA && nComponents == 4) {
+                        dstPix[3] = srcPix[3];
+                    }
+                }
                 // increment the dst pixel
                 dstPix += nComponents;
             }
@@ -379,24 +488,41 @@ GammaPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
     
-    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
+    assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte:
-            {
+            case OFX::eBitDepthUByte: {
                 GammaProcessor<unsigned char, 4, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort:
-            {
+            case OFX::eBitDepthUShort: {
                 GammaProcessor<unsigned short, 4, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat:
-            {
-                GammaProcessor<float,4,1> fred(*this);
+            case OFX::eBitDepthFloat: {
+                GammaProcessor<float, 4, 1> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+            default:
+                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
+    } else if (dstComponents == OFX::ePixelComponentAlpha) {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
+                GammaProcessor<unsigned char, 1, 255> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+            case OFX::eBitDepthUShort: {
+                GammaProcessor<unsigned short, 1, 65535> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+            case OFX::eBitDepthFloat: {
+                GammaProcessor<float, 1, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -406,21 +532,18 @@ GammaPlugin::render(const OFX::RenderArguments &args)
     } else {
         assert(dstComponents == OFX::ePixelComponentRGB);
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte:
-            {
+            case OFX::eBitDepthUByte: {
                 GammaProcessor<unsigned char, 3, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthUShort:
-            {
+            case OFX::eBitDepthUShort: {
                 GammaProcessor<unsigned short, 3, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
-            case OFX::eBitDepthFloat:
-            {
-                GammaProcessor<float,3,1> fred(*this);
+            case OFX::eBitDepthFloat: {
+                GammaProcessor<float, 3, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -437,7 +560,7 @@ GammaPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
     double mix;
     _mix->getValueAtTime(args.time, mix);
 
-    if (mix == 0. /*|| (!red && !green && !blue && !alpha)*/) {
+    if (mix == 0. /*|| (!processR && !processG && !processB && !processA)*/) {
         identityClip = srcClip_;
         return true;
     }
@@ -512,6 +635,7 @@ void GammaPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
@@ -519,6 +643,8 @@ void GammaPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
     
     if (context == eContextGeneral || context == eContextPaint) {
