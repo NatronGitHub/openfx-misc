@@ -35,8 +35,8 @@ CXXFLAGS += -I$(CIMG_INCLUDE)
 # commit ca9df234b937aba77e4d820b70e128e5d60230eb from Thu Oct 30 11:47:06 2014 +0100 adds blur_guided
 # commit 57ffb8393314e5102c00e5f9f8fa3dcace179608 from Thu Dec 11 10:57:13 2014 +0100 fixes vanvliet
 # commit c52e49eee959b4c59881a0c7a960c4592f1a03a9 from Fri Dec 12 09:47:13 2014 +0100 enhances get_displacement
-# commit eb793982c096e68da067c18d94b1675d0678be88 from Tue Dec 23 09:27:55 2014 +0100
-CIMGVERSION=eb793982c096e68da067c18d94b1675d0678be88
+# commit cc874bf2c6c9940d75dd40becc234b5369f3fb30 from Sun Dec 28 12:01:19 2014 +0100 fixes LabToXYZ
+CIMGVERSION=cc874bf2c6c9940d75dd40becc234b5369f3fb30
 CImg.h:
 	git archive --remote=git://git.code.sf.net/p/gmic/source $(CIMGVERSION):src CImg.h | tar xf -
 
