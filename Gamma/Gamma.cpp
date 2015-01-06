@@ -313,13 +313,13 @@ private:
                         // gamma function is not defined for negative values
                         tmpPix[c] = unpPix[c];
                     } else if (processR && c == 0) {
-                        tmpPix[0] = std::pow(unpPix[0], _value.r);
+                        tmpPix[0] = std::pow(unpPix[0], (float)_value.r);
                     } else if (processG && c == 1) {
-                        tmpPix[1] = std::pow(unpPix[1], _value.g);
+                        tmpPix[1] = std::pow(unpPix[1], (float)_value.g);
                     } else if (processB && c == 2) {
-                        tmpPix[2] = std::pow(unpPix[2], _value.b);
+                        tmpPix[2] = std::pow(unpPix[2], (float)_value.b);
                     } else if (processA && c == 3) {
-                        tmpPix[3] = std::pow(unpPix[3], _value.a);
+                        tmpPix[3] = std::pow(unpPix[3], (float)_value.a);
                     } else {
                         tmpPix[c] = unpPix[c];
                     }
