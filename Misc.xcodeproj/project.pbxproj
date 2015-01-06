@@ -2034,9 +2034,7 @@
 		1ECF2FA719F51DB800E91A38 /* Keyer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Keyer.h; sourceTree = "<group>"; };
 		1ECF2FA819F51DB800E91A38 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1ED12E2F1A4B30AB00ABA348 /* Gamma.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Gamma.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		1ED12E301A4B30AE00ABA348 /* ClipTest.ofx copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "ClipTest.ofx copy-Info.plist"; path = "/Users/devernay/Development/openfx-misc/ClipTest.ofx copy-Info.plist"; sourceTree = "<absolute>"; };
 		1ED12E431A4B30B600ABA348 /* Multiply.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Multiply.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		1ED12E441A4B30B700ABA348 /* Gamma.ofx copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Gamma.ofx copy-Info.plist"; path = "/Users/devernay/Development/openfx-misc/Gamma.ofx copy-Info.plist"; sourceTree = "<absolute>"; };
 		1ED12E451A4B316900ABA348 /* Add.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Add.cpp; sourceTree = "<group>"; };
 		1ED12E461A4B316900ABA348 /* Add.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Add.h; sourceTree = "<group>"; };
 		1ED12E471A4B316900ABA348 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -2125,10 +2123,7 @@
 		1EE4A8AA19C6EF0300E6E3AE /* net.sf.openfx.TransformMaskedPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.TransformMaskedPlugin.png; sourceTree = "<group>"; };
 		1EE4A8AB19C6EF0300E6E3AE /* net.sf.openfx.TransformPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.TransformPlugin.png; sourceTree = "<group>"; };
 		1EE9B0A51A4B300700869861 /* Add.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Add.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		1EE9B0A61A4B300800869861 /* ColorMatrix.ofx copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "ColorMatrix.ofx copy-Info.plist"; path = "/Users/devernay/Development/openfx-misc/ColorMatrix.ofx copy-Info.plist"; sourceTree = "<absolute>"; };
-		1EE9B0BC1A4B300F00869861 /* ColorLookup.ofx copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "ColorLookup.ofx copy-Info.plist"; path = "/Users/devernay/Development/openfx-misc/ColorLookup.ofx copy-Info.plist"; sourceTree = "<absolute>"; };
 		1EE9B0CF1A4B301500869861 /* ClipTest.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClipTest.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		1EE9B0D01A4B301500869861 /* ColorMatrix.ofx copy 2-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "ColorMatrix.ofx copy 2-Info.plist"; path = "/Users/devernay/Development/openfx-misc/ColorMatrix.ofx copy 2-Info.plist"; sourceTree = "<absolute>"; };
 		1EF46F43194A394E00825BDF /* Shuffle.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Shuffle.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EF46F45194A39C800825BDF /* Shuffle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Shuffle.cpp; sourceTree = "<group>"; };
 		1EF46F46194A39C800825BDF /* Shuffle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Shuffle.h; sourceTree = "<group>"; };
@@ -2918,11 +2913,6 @@
 				1E551ED217994DEF00A4135C /* Sources */,
 				1E551EDA17994E8100A4135C /* Frameworks */,
 				1E551EC217994D4000A4135C /* Products */,
-				1EE9B0A61A4B300800869861 /* ColorMatrix.ofx copy-Info.plist */,
-				1EE9B0BC1A4B300F00869861 /* ColorLookup.ofx copy-Info.plist */,
-				1EE9B0D01A4B301500869861 /* ColorMatrix.ofx copy 2-Info.plist */,
-				1ED12E301A4B30AE00ABA348 /* ClipTest.ofx copy-Info.plist */,
-				1ED12E441A4B30B700ABA348 /* Gamma.ofx copy-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
