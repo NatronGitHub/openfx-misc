@@ -252,7 +252,7 @@ void CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& de
     CImgEqualizePlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgEqualizePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context)
+OFX::ImageEffect* CImgEqualizePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new CImgEqualizePlugin(handle);
 }

@@ -414,7 +414,7 @@ public:
             }
             *hcoeff = std::max(c0, c1);
         }
-        assert(0 <= hcoeff <= 1.);
+        assert(0 <= *hcoeff && *hcoeff <= 1.);
         const double s0 = _values.satRange[0];
         const double s1 = _values.satRange[1];
         const double s0mrolloff = s0 - _values.satRolloff;
@@ -428,7 +428,7 @@ public:
         } else {
             *scoeff = 0.;
         }
-        assert(0 <= scoeff <= 1.);
+        assert(0 <= *scoeff && *scoeff <= 1.);
         const double v0 = _values.valRange[0];
         const double v1 = _values.valRange[1];
         const double v0mrolloff = v0 - _values.valRolloff;
@@ -442,9 +442,9 @@ public:
         } else {
             *vcoeff = 0.;
         }
-        assert(0 <= vcoeff <= 1.);
+        assert(0 <= *vcoeff && *vcoeff <= 1.);
         double coeff = std::min(std::min(*hcoeff, *scoeff), *vcoeff);
-        assert(0 <= coeff <= 1.);
+        assert(0 <= coeff && coeff <= 1.);
         if (coeff <= 0.) {
             *rout = r;
             *gout = g;
