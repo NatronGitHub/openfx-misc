@@ -175,6 +175,10 @@ private:
         bool proc[dstNComponents];
         if (dstNComponents == 1) {
             proc[0] = _processA;
+        } else if (dstNComponents == 3) {
+            proc[0] = _processR;
+            proc[1] = _processG;
+            proc[2] = _processB;
         } else if (dstNComponents == 4) {
             proc[0] = _processR;
             proc[1] = _processG;
@@ -185,6 +189,7 @@ private:
         // roto and dst should have the same number of components
         assert(!_roto ||
                (_roto->getPixelComponents() == ePixelComponentAlpha && dstNComponents == 1) ||
+               (_roto->getPixelComponents() == ePixelComponentRGB && dstNComponents == 3) ||
                (_roto->getPixelComponents() == ePixelComponentRGBA && dstNComponents == 4));
         //assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
@@ -219,14 +224,25 @@ private:
                     }
                 } else if (dstNComponents == 1) {
                     srcVal[0] = srcAlpha;
+                } else if (dstNComponents == 3) {
+                    if (srcNComponents == 1) {
+                        for (int c = 0; c < dstNComponents; ++c) {
+                            srcVal[c] = 0;
+                        }
+                    } else {
+                        assert(srcNComponents == 3 || srcNComponents == 4);
+                        for (int c = 0; c < dstNComponents; ++c) {
+                            srcVal[c] = srcPix[c];
+                        }
+                    }
                 } else if (dstNComponents == 4) {
                     if (srcNComponents == 3) {
-                        for (int c = 0; c < srcNComponents; ++c) {
+                        for (int c = 0; c < dstNComponents-1; ++c) {
                             srcVal[c] = srcPix[c];
                         }
                         srcVal[dstNComponents-1] = 0.;
                     } else if (srcNComponents == 4) {
-                        for (int c = 0; c < srcNComponents; ++c) {
+                        for (int c = 0; c < dstNComponents; ++c) {
                             srcVal[c] = srcPix[c];
                         }
                     } else {
