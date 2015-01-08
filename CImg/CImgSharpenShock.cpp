@@ -195,7 +195,7 @@ public:
             if (abort()) {
                 return;
             }
-            cimg.sharpen(params.amplitude, params.edge, alpha, sigma);
+            cimg.sharpen(params.amplitude, true, params.edge, alpha, sigma);
         }
     }
 
