@@ -1127,14 +1127,17 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         param->setHint(kParamOutputBitDepthHint);
         // the following must be in the same order as in describe(), so that the map works
         if (gSupportsFloats) {
+            // coverity[check_return]
             assert(0 <= param->getNOptions() && param->getNOptions() < 4 && gOutputBitDepthMap[param->getNOptions()] == eBitDepthFloat);
             param->appendOption(kParamOutputBitDepthOptionFloat);
         }
         if (gSupportsShorts) {
+            // coverity[check_return]
             assert(0 <= param->getNOptions() && param->getNOptions() < 4 && gOutputBitDepthMap[param->getNOptions()] == eBitDepthUShort);
             param->appendOption(kParamOutputBitDepthOptionShort);
         }
         if (gSupportsBytes) {
+            // coverity[check_return]
             assert(0 <= param->getNOptions() && param->getNOptions() < 4 && gOutputBitDepthMap[param->getNOptions()] == eBitDepthUByte);
             param->appendOption(kParamOutputBitDepthOptionByte);
         }
