@@ -994,7 +994,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionsOfInterest(const OFX:
     Params params;
     getValuesAtTime(args.time, params);
 
-    double pixelaspectratio = srcClip_->getPixelAspectRatio();
+    double pixelaspectratio = srcClip_ ? srcClip_->getPixelAspectRatio() : 1.;
 
     OfxRectI rectPixel;
     OFX::MergeImages2D::toPixelEnclosing(regionOfInterest, args.renderScale, pixelaspectratio, &rectPixel);
@@ -1023,17 +1023,18 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionOfDefinition(const OFX
     Params params;
     getValuesAtTime(args.time, params);
 
-    double pixelaspectratio = srcClip_ ? srcClip_->getPixelAspectRatio() : 1.;
-
     OfxRectI srcRoDPixel = {0, 0, 0, 0};
-    if (srcClip_) {
-        OFX::MergeImages2D::toPixelEnclosing(srcClip_->getRegionOfDefinition(args.time), args.renderScale, pixelaspectratio, &srcRoDPixel);
+    {
+        double pixelaspectratio = srcClip_ ? srcClip_->getPixelAspectRatio() : 1.;
+        if (srcClip_) {
+            OFX::MergeImages2D::toPixelEnclosing(srcClip_->getRegionOfDefinition(args.time), args.renderScale, pixelaspectratio, &srcRoDPixel);
+        }
     }
-
     OfxRectI rodPixel;
 
     bool ret = getRoD(srcRoDPixel, args.renderScale, params, &rodPixel);
     if (ret) {
+        double pixelaspectratio = dstClip_ ? dstClip_->getPixelAspectRatio() : 1.;
         OFX::MergeImages2D::toCanonical(rodPixel, args.renderScale, pixelaspectratio, &rod);
         return true;
     }

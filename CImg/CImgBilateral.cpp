@@ -86,6 +86,7 @@
 #include "ofxsCopier.h"
 
 #include "CImgFilter.h"
+#include "CImgOperator.h"
 
 #define kPluginName          "BilateralCImg"
 #define kPluginGrouping      "Filter"
@@ -99,6 +100,15 @@
 #define kPluginIdentifier    "net.sf.cimg.CImgBilateral"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
+#define kPluginGuidedName          "BilateralGuidedCImg"
+#define kPluginGuidedIdentifier    "net.sf.cimg.CImgBilateralGuided"
+#define kPluginGuidedDescription \
+"Apply joint/cross bilateral filtering on image A, guided by the intensity differences of image B. " \
+"Uses the 'blur_bilateral' function from the CImg library.\n" \
+"CImg is a free, open-source library distributed under the CeCILL-C " \
+"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+"It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
@@ -186,6 +196,62 @@ private:
     OFX::DoubleParam *_sigma_r;
 };
 
+class CImgBilateralGuidedPlugin : public CImgOperatorPluginHelper<CImgBilateralParams>
+{
+public:
+
+    CImgBilateralGuidedPlugin(OfxImageEffectHandle handle)
+    : CImgOperatorPluginHelper<CImgBilateralParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    {
+        _sigma_s  = fetchDoubleParam(kParamSigmaS);
+        _sigma_r  = fetchDoubleParam(kParamSigmaR);
+        assert(_sigma_s && _sigma_r);
+    }
+
+    virtual void getValuesAtTime(double time, CImgBilateralParams& params) OVERRIDE FINAL
+    {
+        _sigma_s->getValueAtTime(time, params.sigma_s);
+        _sigma_r->getValueAtTime(time, params.sigma_r);
+    }
+
+    // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
+    // only called if mix != 0.
+    virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgBilateralParams& params, OfxRectI* roi) OVERRIDE FINAL
+    {
+        int delta_pix = std::ceil((params.sigma_s * 4.) * renderScale.x);
+        roi->x1 = rect.x1 - delta_pix;
+        roi->x2 = rect.x2 + delta_pix;
+        roi->y1 = rect.y1 - delta_pix;
+        roi->y2 = rect.y2 + delta_pix;
+    }
+
+    virtual void render(const cimg_library::CImg<float>& srcA, const cimg_library::CImg<float>& srcB, const OFX::RenderArguments &args, const CImgBilateralParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<float>& dst) OVERRIDE FINAL
+    {
+        // PROCESSING.
+        // This is the only place where the actual processing takes place
+        if (params.sigma_s == 0.) {
+            return;
+        }
+#if cimg_version < 160
+#pragma message WARN("The bilateral filter before CImg 1.6.0 produces incorrect results, please upgrade CImg.")
+#endif
+#if cimg_version < 157
+#error "BilateralGuided requires CImg >= 1.57"
+#endif
+        dst = srcA.get_blur_bilateral(srcB, params.sigma_s * args.renderScale.x, params.sigma_r);
+    }
+
+    virtual int isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgBilateralParams& params) OVERRIDE FINAL
+    {
+        return (params.sigma_s == 0.);
+    };
+
+private:
+
+    // params
+    OFX::DoubleParam *_sigma_s;
+    OFX::DoubleParam *_sigma_r;
+};
 
 mDeclarePluginFactory(CImgBilateralPluginFactory, {}, {});
 
@@ -254,9 +320,81 @@ OFX::ImageEffect* CImgBilateralPluginFactory::createInstance(OfxImageEffectHandl
     return new CImgBilateralPlugin(handle);
 }
 
+mDeclarePluginFactory(CImgBilateralGuidedPluginFactory, {}, {});
+
+void CImgBilateralGuidedPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+{
+    // basic labels
+    desc.setLabels(kPluginGuidedName, kPluginGuidedName, kPluginGuidedName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginGuidedDescription);
+
+    // add supported context
+    //desc.addSupportedContext(eContextFilter);
+    desc.addSupportedContext(eContextGeneral);
+
+    // add supported pixel depths
+    //desc.addSupportedBitDepth(eBitDepthUByte);
+    //desc.addSupportedBitDepth(eBitDepthUShort);
+    desc.addSupportedBitDepth(eBitDepthFloat);
+
+    // set a few flags
+    desc.setSingleInstance(false);
+    desc.setHostFrameThreading(kHostFrameThreading);
+    desc.setSupportsMultiResolution(kSupportsMultiResolution);
+    desc.setSupportsTiles(kSupportsTiles);
+    desc.setTemporalClipAccess(false);
+    desc.setRenderTwiceAlways(true);
+    desc.setSupportsMultipleClipPARs(false);
+    desc.setRenderThreadSafety(kRenderThreadSafety);
+}
+
+void CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+{
+    // create the clips and params
+    OFX::PageParamDescriptor *page = CImgBilateralGuidedPlugin::describeInContextBegin(desc, context,
+                                                                                 kSupportsRGBA,
+                                                                                 kSupportsRGB,
+                                                                                 kSupportsAlpha,
+                                                                                 kSupportsTiles);
+
+    {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
+        param->setLabels(kParamSigmaSLabel, kParamSigmaSLabel, kParamSigmaSLabel);
+        param->setHint(kParamSigmaSHint);
+        param->setRange(0, 100000.);
+        param->setDisplayRange(0.01, 10.);
+        param->setDefault(kParamSigmaSDefault);
+        param->setIncrement(0.1);
+        page->addChild(*param);
+    }
+    {
+        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
+        param->setLabels(kParamSigmaRLabel, kParamSigmaRLabel, kParamSigmaRLabel);
+        param->setHint(kParamSigmaRHint);
+        param->setRange(0, 100000.);
+        param->setDisplayRange(0.01, 10.);
+        param->setDefault(kParamSigmaRDefault);
+        param->setIncrement(0.005);
+        page->addChild(*param);
+    }
+
+    CImgBilateralGuidedPlugin::describeInContextEnd(desc, context, page);
+}
+
+OFX::ImageEffect* CImgBilateralGuidedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+{
+    return new CImgBilateralGuidedPlugin(handle);
+}
 
 void getCImgBilateralPluginID(OFX::PluginFactoryArray &ids)
 {
-    static CImgBilateralPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
+    {
+        static CImgBilateralPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static CImgBilateralGuidedPluginFactory p(kPluginGuidedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
 }

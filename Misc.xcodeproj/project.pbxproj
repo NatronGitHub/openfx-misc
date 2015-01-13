@@ -2130,6 +2130,7 @@
 		1EF46F49194A39DB00825BDF /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EF46F4A194A39DB00825BDF /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1EF46F4C194A39E800825BDF /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EF5C7101A6553E000DEF59A /* CImgOperator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgOperator.h; sourceTree = "<group>"; };
 		1EFA77141A24DCFA00212DB0 /* CImgHistEQ.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgHistEQ.cpp; sourceTree = "<group>"; };
 		1EFA77151A24DCFA00212DB0 /* CImgHistEQ.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgHistEQ.h; sourceTree = "<group>"; };
 		1EFA772C1A24F0BA00212DB0 /* HSVTool.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HSVTool.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -2754,6 +2755,7 @@
 				1EFA77151A24DCFA00212DB0 /* CImgHistEQ.h */,
 				1E868B7919E6E72B00B793BA /* CImgNoise.cpp */,
 				1E868B7A19E6E72B00B793BA /* CImgNoise.h */,
+				1EF5C7101A6553E000DEF59A /* CImgOperator.h */,
 				1EA330A819E83A33002EFA5B /* CImgPlasma.cpp */,
 				1EA330A919E83A33002EFA5B /* CImgPlasma.h */,
 				1E92574F19ECF38A0018F19A /* CImgRollingGuidance.cpp */,
