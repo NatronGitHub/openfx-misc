@@ -583,7 +583,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // operationString
     {
         StringParamDescriptor* param = desc.defineStringParam(kOfxParamStringSublabelName);
-        param->setIsSecret(true);
+        param->setIsSecret(true); // always secret
         param->setEnabled(false);
         param->setIsPersistant(true);
         param->setEvaluateOnChange(false);

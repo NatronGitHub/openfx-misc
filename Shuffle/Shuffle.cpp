@@ -1146,7 +1146,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
 #ifndef DEBUG
         // Shuffle only does linear conversion, which is useless for 8-bits and 16-bits formats.
         // Disable it for now (in the future, there may be colorspace conversion options)
-        param->setIsSecret(true);
+        param->setIsSecret(true); // always secret
 #endif
         desc.addClipPreferencesSlaveParam(*param);
         page->addChild(*param);
