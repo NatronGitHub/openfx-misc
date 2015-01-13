@@ -296,7 +296,7 @@ void CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& d
         param->setLabels(kParamSigmaSLabel, kParamSigmaSLabel, kParamSigmaSLabel);
         param->setHint(kParamSigmaSHint);
         param->setRange(0, 100000.);
-        param->setDisplayRange(0.01, 10.);
+        param->setDisplayRange(0.0, 10.);
         param->setDefault(kParamSigmaSDefault);
         param->setIncrement(0.1);
         page->addChild(*param);
@@ -306,7 +306,7 @@ void CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& d
         param->setLabels(kParamSigmaRLabel, kParamSigmaRLabel, kParamSigmaRLabel);
         param->setHint(kParamSigmaRHint);
         param->setRange(0, 100000.);
-        param->setDisplayRange(0.01, 10.);
+        param->setDisplayRange(0., 1.);
         param->setDefault(kParamSigmaRDefault);
         param->setIncrement(0.005);
         page->addChild(*param);
@@ -363,7 +363,7 @@ void CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescrip
         param->setLabels(kParamSigmaSLabel, kParamSigmaSLabel, kParamSigmaSLabel);
         param->setHint(kParamSigmaSHint);
         param->setRange(0, 100000.);
-        param->setDisplayRange(0.01, 10.);
+        param->setDisplayRange(0.0, 10.);
         param->setDefault(kParamSigmaSDefault);
         param->setIncrement(0.1);
         page->addChild(*param);
@@ -373,7 +373,7 @@ void CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescrip
         param->setLabels(kParamSigmaRLabel, kParamSigmaRLabel, kParamSigmaRLabel);
         param->setHint(kParamSigmaRHint);
         param->setRange(0, 100000.);
-        param->setDisplayRange(0.01, 10.);
+        param->setDisplayRange(0., 1.);
         param->setDefault(kParamSigmaRDefault);
         param->setIncrement(0.005);
         page->addChild(*param);
