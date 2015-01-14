@@ -215,14 +215,20 @@ namespace {
             double tmp_r ,tmp_g,tmp_b ;
             if (processR) {
                 tmp_r = r *((1.f - c.r) * s_rLum + c.r) + g *((1.f-c.r) * s_gLum) + b *((1.f-c.r) * s_bLum);
-                r = tmp_r;
             }
             if (processG) {
                 tmp_g = g *((1.f - c.g) * s_gLum + c.g) + r *((1.f-c.g) * s_rLum) + b *((1.f-c.g) * s_bLum);
-                g = tmp_g;
             }
             if (processB) {
                 tmp_b = b *((1.f - c.b) * s_bLum + c.b) + g *((1.f-c.b) * s_gLum) + r *((1.f-c.b) * s_rLum);
+            }
+            if (processR) {
+                r = tmp_r;
+            }
+            if (processG) {
+                g = tmp_g;
+            }
+            if (processB) {
                 b = tmp_b;
             }
         }
