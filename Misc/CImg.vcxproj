@@ -233,6 +233,8 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgSmooth.png $(OutDir)$(ProjectName).o
     <ClCompile Include="..\CImg\CImgNoise.cpp" />
     <ClCompile Include="..\CImg\CImgPlasma.cpp" />
     <ClCompile Include="..\CImg\CImgRollingGuidance.cpp" />
+    <ClCompile Include="..\CImg\CImgSharpenInvDiff.cpp" />
+    <ClCompile Include="..\CImg\CImgSharpenShock.cpp" />
     <ClCompile Include="..\CImg\CImgSmooth.cpp" />
     <ClCompile Include="..\CImg\PluginRegistration.cpp" />
   </ItemGroup>
@@ -250,6 +252,8 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgSmooth.png $(OutDir)$(ProjectName).o
     <ClInclude Include="..\CImg\CImgNoise.h" />
     <ClInclude Include="..\CImg\CImgPlasma.h" />
     <ClInclude Include="..\CImg\CImgRollingGuidance.h" />
+    <ClInclude Include="..\CImg\CImgSharpenInvDiff.h" />
+    <ClInclude Include="..\CImg\CImgSharpenShock.h" />
     <ClInclude Include="..\CImg\CImgSmooth.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
