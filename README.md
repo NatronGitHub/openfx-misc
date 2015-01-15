@@ -215,7 +215,7 @@ The stereoscopic plugins Anaglyph, JoinViews, MixViews, OneView,
 ReConverge, SideBySide are by Frederic Devernay.
 
 ColorLookup, Switch, TimeOffset, ChromaKeyer, Difference, Constant,
-Shuffle, Rectangle, Radial are by Frederic Devernay.
+Shuffle, Rectangle, Radial, HSVTool and the CImg plugins are by Frederic Devernay.
 
 Merge, ColorCorrect, Grade, Roto, Crop, CopyRectangle  are by
 Alexandre Gauthier.
