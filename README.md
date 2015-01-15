@@ -139,9 +139,9 @@ Notes & Caveats
 
 If you use the Roto plugin in any other host than [Natron](http://natron.inria.fr), you will notice that it doesn't do much. It's role is just to provide an entry point for a host-based rotoscoping tool, which provides a roto mask to this plugin.
 
-### ColorLookup and ColorCorrect do not work on Nuke 8
+### ColorLookup and ColorCorrect do not work on Nuke 8/9
 
-The plugins using parametric parameters (ColorLookup, ColorCorrect) don't work in Nuke 8 on OS X, and maybe on other platforms. The plugins cannot be instanciated, nothing seems to happen, and the following message appears on the console:
+The plugins using parametric parameters (ColorLookup, ColorCorrect) don't work in Nuke 8 or Nuke 9 on OS X, and maybe on other platforms. The plugins cannot be instanciated, nothing seems to happen, and the following message appears on the console:
 
     Exception thrown
       basic_string::_S_construct NULL not valid
