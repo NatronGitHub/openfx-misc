@@ -349,7 +349,7 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
-                for (int c = 0; c < nComponents; ++c) {
+                for (int c = 0; c < 4; ++c) { // tmpPix has 4 components
                     if ((processR && c == 0) ||
                         (processG && c == 1) ||
                         (processB && c == 2) ||
