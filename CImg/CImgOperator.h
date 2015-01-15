@@ -1,6 +1,7 @@
 //
 //  CImgOperator.h
-//  Misc
+//
+//  A base class to simplify the creation of CImg plugins that have two images as input (and no mask)
 //
 //  Created by Frédéric Devernay on 09/10/2014.
 //  Copyright (c) 2014 OpenFX. All rights reserved.
@@ -143,8 +144,8 @@ public:
                            bool processAlpha = false,
                            bool processIsSecret = false)
     {
-        OFX::ClipDescriptor *srcAClip = desc.defineClip(kClipA);
         OFX::ClipDescriptor *srcBClip = desc.defineClip(kClipB);
+        OFX::ClipDescriptor *srcAClip = desc.defineClip(kClipA);
         OFX::ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
         if (supportsRGBA) {
             srcAClip->addSupportedComponent(OFX::ePixelComponentRGBA);
