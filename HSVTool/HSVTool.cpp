@@ -110,7 +110,7 @@
 #define kGroupHueHint "Hue modification settings."
 #define kParamHueRange "hueRange"
 #define kParamHueRangeLabel "Hue Range"
-#define kParamHueRangeHint "Range of color hues that are modified (in degrees). Red is 0, green is 120, blue is 240. The affected hue range is the smallest interval. For example, if the range is (12, 348), then the selected range is red plus or minus 12 degrees."
+#define kParamHueRangeHint "Range of color hues that are modified (in degrees). Red is 0, green is 120, blue is 240. The affected hue range is the smallest interval. For example, if the range is (12, 348), then the selected range is red plus or minus 12 degrees. Exception: if the range width is exactly 360, then all hues are modified."
 #define kParamHueRotation "hueRotation"
 #define kParamHueRotationLabel "Hue Rotation"
 #define kParamHueRotationHint "Rotation of color hues (in degrees) within the range."
