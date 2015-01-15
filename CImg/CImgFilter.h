@@ -1,6 +1,7 @@
 //
 //  CImgFilter.h
-//  Misc
+//
+//  A base class to simplify the creation of CImg plugins that have one image as input and an optional mask.
 //
 //  Created by Frédéric Devernay on 09/10/2014.
 //  Copyright (c) 2014 OpenFX. All rights reserved.
