@@ -349,7 +349,7 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
-                for (int c = 0; c < 4; ++c) {
+                for (int c = 0; c < nComponents; ++c) {
                     if ((processR && c == 0) ||
                         (processG && c == 1) ||
                         (processB && c == 2) ||
@@ -553,7 +553,7 @@ ColorMatrixPlugin::render(const OFX::RenderArguments &args)
                 break;
             }
             case OFX::eBitDepthFloat: {
-                ColorMatrixProcessor<float, 1, 1> fred(*this);
+                ColorMatrixProcessor<float, 4, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
