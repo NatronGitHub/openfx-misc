@@ -90,7 +90,7 @@
 #define kPluginName          "ErodeSmoothCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-"Erode or dilate input stream using a normalize power-weighted filter.\n" \
+"Erode or dilate input stream using a normalized power-weighted filter.\n" \
 "This gives a smoother result than the Erode or Dilate node.\n" \
 "See \"Robust local max-min filters by normalized power-weighted filtering\" by L.J. van Vliet, " \
 "http://dx.doi.org/10.1109/ICPR.2004.1334273\n" \

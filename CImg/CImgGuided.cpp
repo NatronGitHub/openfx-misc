@@ -90,8 +90,11 @@
 #define kPluginName          "GuidedCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-"Blur input stream by bilateral filtering.\n" \
-"Uses the 'blur_bilateral' function from the CImg library.\n" \
+"Blur image, with the Guided Image filter.\n" \
+"The algorithm is described in: " \
+"He et al., \"Guided Image Filtering,\" " \
+"http://research.microsoft.com/en-us/um/people/kahe/publications/pami12guidedfilter.pdf\n" \
+"Uses the 'blur_guided' function from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.sourceforge.net)."

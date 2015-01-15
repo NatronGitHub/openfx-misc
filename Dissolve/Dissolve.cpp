@@ -82,7 +82,7 @@
 
 #define kPluginName "DissolveOFX"
 #define kPluginGrouping "Merge"
-#define kPluginDescription "Weighted average of two inputs"
+#define kPluginDescription "Weighted average of two inputs."
 #define kPluginIdentifier "net.sf.openfx.DissolvePlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.

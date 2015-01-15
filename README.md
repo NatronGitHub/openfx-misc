@@ -71,15 +71,33 @@ matrix.
 * Transform/RGBToXYZ and XYZToRGB: Convert to/from XYZ color representation.
 * VectorToColor: Convert x and y vector components to a color representation.
 
+### Filter
+
+* BilateralCImg: Blur input stream by bilateral filtering.
+* BilateralGuidedCImg: Apply joint/cross bilateral filtering on image A, guided by the intensity differences of image B.
+* BlurCImg: Blur input stream by a quasi-Gaussian or Gaussian filter (recursive implementation), or compute derivatives.
+* DenoiseCImg: Denoise selected images by non-local patch averaging.
+* DilateCImg: Dilate input stream by a rectangular structuring element of specified size and Neumann boundary conditions.
+* ErodeCImg: Erode input stream by a rectangular structuring element of specified size and Neumann boundary conditions.
+* ErodeSmoothCImg: Erode or dilate input stream using a [normalized power-weighted filter](http://dx.doi.org/10.1109/ICPR.2004.1334273).
+* GuidedCImg: Blur image, with the [Guided Image filter](http://research.microsoft.com/en-us/um/people/kahe/publications/pami12guidedfilter.pdf).
+* RollingGuidanceCImg: Filter out details under a given scale using the [Rolling Guidance filter](http://www.cse.cuhk.edu.hk/~leojia/projects/rollguidance/).
+* SharpenInvDiffCImg: Sharpen selected images by inverse diffusion.
+* SharpenShockCImg: Sharpen selected images by shock filters.
+* SmoothCImg: Smooth/Denoise input stream using anisotropic PDE-based smoothing.
+
 ### Keyer
 
 * ChromaKeyerOFX: Apply chroma keying, as described in "Video Demystified" by Keith Jack.  
 * DifferenceOFX: Produce a rough matte from the difference of two
   images.
 * KeyerOFX: A collection of simple keyers. 
+* HSVToolOFX (in the "Color" section) can also be used as a keyer.
 
 ### Merge
 
+* CopyRectangleOFX: Copies a rectangle from the input A to the input B in output.
+* DissolveOFX: Weighted average of two inputs.
 * MergeOFX: Pixel-by-pixel merge operation between the two inputs.
 * PreMultOFX/UnpremultOFX: Multiply/divide the selected channels by
 alpha (or another channel).
