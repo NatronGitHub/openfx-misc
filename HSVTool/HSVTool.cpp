@@ -251,6 +251,10 @@ double
 angleCoeff01(double h, double h0, double h1)
 {
     assert(0 <= h && h <= 360 && 0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360);
+    if (h1 == (h0 + 360.)) {
+        // interval is the whole hue circle
+        return 1.;
+    }
     if (!angleWithinRange(h, h0, h1)) {
         return 0.;
     }
@@ -351,26 +355,37 @@ public:
         _values = values;
         // set the intervals
         // the hue interval is from the right of h0 to the left of h1
-        double h0 = normalizeAngle(_values.hueRange[0]);
-        double h1 = normalizeAngle(_values.hueRange[1]);
-        if (h1 < h0) {
-            std::swap(h0, h1);
-        }
-        // take the smallest of both angles
-        if ((h1 - h0) > 180.) {
-            std::swap(h0, h1);
-        }
-        assert (0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360);
-        _values.hueRange[0] = h0;
-        _values.hueRange[1] = h1;
-        // set strict bounds on rolloff
-        if (_values.hueRolloff < 0.) {
+        double h0 = _values.hueRange[0];
+        double h1 = _values.hueRange[1];
+        if (h1 == (h0+360.)) {
+            // special case: select any hue (useful to rotate all colors)
+            _values.hueRange[0] = 0.;
+            _values.hueRange[1] = 360.;
             _values.hueRolloff = 0.;
-        } else if (_values.hueRolloff >= 180.) {
-            _values.hueRolloff = 180.;
+            _values.hueRangeWithRolloff[0] = 0.;
+            _values.hueRangeWithRolloff[1] = 360.;
+        } else {
+            h0 = normalizeAngle(h0);
+            h1 = normalizeAngle(h1);
+            if (h1 < h0) {
+                std::swap(h0, h1);
+            }
+            // take the smallest of both angles
+            if ((h1 - h0) > 180.) {
+                std::swap(h0, h1);
+            }
+            assert (0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360);
+            _values.hueRange[0] = h0;
+            _values.hueRange[1] = h1;
+            // set strict bounds on rolloff
+            if (_values.hueRolloff < 0.) {
+                _values.hueRolloff = 0.;
+            } else if (_values.hueRolloff >= 180.) {
+                _values.hueRolloff = 180.;
+            }
+            _values.hueRangeWithRolloff[0] = normalizeAngle(h0 - _values.hueRolloff);
+            _values.hueRangeWithRolloff[1] = normalizeAngle(h1 + _values.hueRolloff);
         }
-        _values.hueRangeWithRolloff[0] = normalizeAngle(h0 - _values.hueRolloff);
-        _values.hueRangeWithRolloff[1] = normalizeAngle(h1 + _values.hueRolloff);
         if (_values.satRange[1] < _values.satRange[0]) {
             std::swap(_values.satRange[0], _values.satRange[1]);
         }
