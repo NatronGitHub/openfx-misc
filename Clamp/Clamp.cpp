@@ -745,6 +745,28 @@ ClampPlugin::changedClip(const InstanceChangedArgs &args, const std::string &cli
                 _premult->setValue(false);
                 break;
         }
+        switch (srcClip_->getPixelComponents()) {
+            case OFX::ePixelComponentAlpha:
+                _processR->setValue(false);
+                _processG->setValue(false);
+                _processB->setValue(false);
+                _processA->setValue(true);
+                break;
+            case OFX::ePixelComponentRGB:
+                _processR->setValue(true);
+                _processG->setValue(true);
+                _processB->setValue(true);
+                _processA->setValue(false);
+                break;
+            case OFX::ePixelComponentRGBA:
+                _processR->setValue(true);
+                _processG->setValue(true);
+                _processB->setValue(true);
+                _processA->setValue(true);
+                break;
+            default:
+                break;
+        }
     }
 }
 
