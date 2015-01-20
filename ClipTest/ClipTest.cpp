@@ -312,15 +312,15 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
+                bool zebralow = ((processR && (unpPix[0] < _lower.r)) ||
+                                 (processG && (unpPix[1] < _lower.g)) ||
+                                 (processB && (unpPix[2] < _lower.b)) ||
+                                 (processA && (unpPix[3] < _lower.a)));
+                bool zebrahigh = ((processR && (_upper.r < unpPix[0])) ||
+                                  (processG && (_upper.g < unpPix[1])) ||
+                                  (processB && (_upper.b < unpPix[2])) ||
+                                  (processA && (_upper.a < unpPix[3])));
                 for (int c = 0; c < 4; ++c) {
-                    bool zebralow = (unpPix[0] < _lower.r ||
-                                     unpPix[1] < _lower.g ||
-                                     unpPix[2] < _lower.b ||
-                                     unpPix[3] < _lower.a);
-                    bool zebrahigh = (_upper.r < unpPix[0] ||
-                                      _upper.g < unpPix[1] ||
-                                      _upper.b < unpPix[2] ||
-                                      _upper.a < unpPix[3]);
                     if (!zebralow && !zebrahigh) {
                         tmpPix[c] = unpPix[c];
                     } else {
@@ -607,6 +607,28 @@ ClipTestPlugin::changedClip(const InstanceChangedArgs &args, const std::string &
                 break;
             case eImageUnPreMultiplied:
                 _premult->setValue(false);
+                break;
+        }
+        switch (srcClip_->getPixelComponents()) {
+            case OFX::ePixelComponentAlpha:
+                _processR->setValue(false);
+                _processG->setValue(false);
+                _processB->setValue(false);
+                _processA->setValue(true);
+                break;
+            case OFX::ePixelComponentRGB:
+                _processR->setValue(true);
+                _processG->setValue(true);
+                _processB->setValue(true);
+                _processA->setValue(false);
+                break;
+            case OFX::ePixelComponentRGBA:
+                _processR->setValue(true);
+                _processG->setValue(true);
+                _processB->setValue(true);
+                _processA->setValue(true);
+                break;
+            default:
                 break;
         }
     }
