@@ -716,24 +716,54 @@ RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
 {
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    if (mix != 1.) {
-        // default region of definition
-        return false;
+    if (mix == 0.) {
+        if (srcClip_->isConnected()) {
+            // nothing to draw: return default region of definition
+            return false;
+        } else {
+            // empty RoD
+            rod.x1 = rod.y1 = rod.x2 = rod.y2 = 0.;
+            return true;
+        }
     }
     RGBAValues color0;
     _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
     if (color0.a != 0.) {
-        // default region of definition
+        // something has to be drawn outside of the rectangle
+        // return default RoD.
         return false;
+        //// Other option: RoD could be union(defaultRoD,inputsRoD)
+        //// Natron does this if the RoD is infinite
+        //rod.x1 = rod.y1 = kOfxFlagInfiniteMin;
+        //rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
+    }
+    RGBAValues color1;
+    _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
+    if (color1.a == 0.) {
+        if (srcClip_->isConnected()) {
+            // nothing to draw: return default region of definition
+            return false;
+        } else {
+            // empty RoD
+            rod.x1 = rod.y1 = rod.x2 = rod.y2 = 0.;
+            return true;
+        }
     }
     OfxPointD btmLeft, size;
     _btmLeft->getValueAtTime(args.time, btmLeft.x, btmLeft.y);
     _size->getValueAtTime(args.time, size.x, size.y);
-
     rod.x1 = btmLeft.x;
     rod.y1 = btmLeft.y;
     rod.x2 = rod.x1 + size.x;
     rod.y2 = rod.y1 + size.y;
+    if (srcClip_->isConnected()) {
+        // something has to be drawn outside of the rectangle: return union of input RoD and rectangle
+        OfxRectD srcRoD = srcClip_->getRegionOfDefinition(args.time);
+        rod.x1 = std::min(rod.x1, srcRoD.x1);
+        rod.x2 = std::max(rod.x2, srcRoD.x2);
+        rod.y1 = std::min(rod.y1, srcRoD.y1);
+        rod.y2 = std::max(rod.y2, srcRoD.y2);
+    }
 
     return true;
 }
