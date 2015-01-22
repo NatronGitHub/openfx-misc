@@ -565,10 +565,10 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
                 fred.reset(new OFX::PixelCopierUnPremult<float, 4, 1, float, 4, 1>(*this));
             } else if (dstPixelComponents == OFX::ePixelComponentRGB) {
                 // just copy, no premult
-                fred.reset(new OFX::PixelCopier<float, 3, 1>(*this));
+                fred.reset(new OFX::PixelCopier<float, 3>(*this));
             }  else if (dstPixelComponents == OFX::ePixelComponentAlpha) {
                 // just copy, no premult
-                fred.reset(new OFX::PixelCopier<float, 1, 1>(*this));
+                fred.reset(new OFX::PixelCopier<float, 1>(*this));
             }
         }
         setupAndCopy(*fred, time, srcRoI,
@@ -596,10 +596,10 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
                 fred.reset(new OFX::PixelCopierUnPremult<float, 4, 1, float, 4, 1>(*this));
             } else if (dstPixelComponents == OFX::ePixelComponentRGB) {
                 // just copy, no premult
-                fred.reset(new OFX::PixelCopier<float, 3, 1>(*this));
+                fred.reset(new OFX::PixelCopier<float, 3>(*this));
             }  else if (dstPixelComponents == OFX::ePixelComponentAlpha) {
                 // just copy, no premult
-                fred.reset(new OFX::PixelCopier<float, 1, 1>(*this));
+                fred.reset(new OFX::PixelCopier<float, 1>(*this));
             }
         }
         setupAndCopy(*fred, time, srcRoI,
@@ -677,11 +677,11 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
             fred.reset(new OFX::PixelCopierPremult<float, 4, 1, float, 4, 1>(*this));
         } else if (dstPixelComponents == OFX::ePixelComponentRGB) {
             // just copy, no premult
-            fred.reset(new OFX::PixelCopier<float, 3, 1>(*this));
+            fred.reset(new OFX::PixelCopier<float, 3>(*this));
         }  else if (dstPixelComponents == OFX::ePixelComponentAlpha) {
             // just copy, no premult
             assert(srcAPixelComponents == OFX::ePixelComponentAlpha);
-            fred.reset(new OFX::PixelCopier<float, 1, 1>(*this));
+            fred.reset(new OFX::PixelCopier<float, 1>(*this));
         }
         setupAndCopy(*fred, time, renderWindow,
                      tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes, 0,

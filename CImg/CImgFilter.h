@@ -729,11 +729,11 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     {
         std::auto_ptr<OFX::PixelProcessorFilterBase> fred;
         if (dstPixelComponents == OFX::ePixelComponentRGBA) {
-            fred.reset(new OFX::PixelCopier<float, 4, 1>(*this));
+            fred.reset(new OFX::PixelCopier<float, 4>(*this));
         } else if (dstPixelComponents == OFX::ePixelComponentRGB) {
-            fred.reset(new OFX::PixelCopier<float, 3, 1>(*this));
+            fred.reset(new OFX::PixelCopier<float, 3>(*this));
         }  else if (dstPixelComponents == OFX::ePixelComponentAlpha) {
-            fred.reset(new OFX::PixelCopier<float, 1, 1>(*this));
+            fred.reset(new OFX::PixelCopier<float, 1>(*this));
         }
         setupAndCopy(*fred, time, copyWindowN, src.get(), mask.get(),
                      srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes, srcBoundary,
@@ -842,10 +842,10 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
                 fred.reset(new OFX::PixelCopierUnPremult<float, 4, 1, float, 4, 1>(*this));
             } else if (dstPixelComponents == OFX::ePixelComponentRGB) {
                 // just copy, no premult
-                fred.reset(new OFX::PixelCopier<float, 3, 1>(*this));
+                fred.reset(new OFX::PixelCopier<float, 3>(*this));
             }  else if (dstPixelComponents == OFX::ePixelComponentAlpha) {
                 // just copy, no premult
-                fred.reset(new OFX::PixelCopier<float, 1, 1>(*this));
+                fred.reset(new OFX::PixelCopier<float, 1>(*this));
             }
         }
         setupAndCopy(*fred, time, srcRoI, src.get(), mask.get(),

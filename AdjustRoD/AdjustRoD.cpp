@@ -239,17 +239,17 @@ AdjustRoDPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthE
 {
     switch (dstBitDepth) {
         case OFX::eBitDepthUByte: {
-            OFX::PixelCopier<unsigned char, nComponents, 255> fred(*this);
+            OFX::PixelCopier<unsigned char, nComponents> fred(*this);
             setupAndCopy(fred, args);
             break;
         }
         case OFX::eBitDepthUShort: {
-            OFX::PixelCopier<unsigned short, nComponents, 65535> fred(*this);
+            OFX::PixelCopier<unsigned short, nComponents> fred(*this);
             setupAndCopy(fred, args);
             break;
         }
         case OFX::eBitDepthFloat: {
-            OFX::PixelCopier<float, nComponents, 1> fred(*this);
+            OFX::PixelCopier<float, nComponents> fred(*this);
             setupAndCopy(fred, args);
             break;
         }
