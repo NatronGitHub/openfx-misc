@@ -471,7 +471,7 @@ public:
     virtual bool keyUp(const OFX::KeyArgs &args) OVERRIDE FINAL;
 
     /** @brief Called when the interact is loses input focus */
-    virtual void loseFocus(const FocusArgs &/*args*/) OVERRIDE FINAL;
+    virtual void loseFocus(const FocusArgs &args) OVERRIDE FINAL;
 
 private:
     void getCenter(double time, OfxPointD *center)
@@ -1421,6 +1421,7 @@ void TransformInteract::loseFocus(const FocusArgs &/*args*/)
 {
     // reset the modifiers state
     _modifierStateCtrl = 0;
+    _modifierStateShift = 0;
 }
 
 
