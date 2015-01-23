@@ -1375,17 +1375,22 @@ bool TransformInteract::keyDown(const OFX::KeyArgs &args)
     // cmd/apple/cloverleaf is kOfxKey_Control_L
     // ctrl is kOfxKey_Meta_L
     // alt/option is kOfxKey_Alt_L
+    bool mustRedraw = false;
 
     // the two control keys may be pressed consecutively, be aware about this
     if (args.keySymbol == kOfxKey_Control_L || args.keySymbol == kOfxKey_Control_R) {
+        mustRedraw = _modifierStateCtrl == 0;
         ++_modifierStateCtrl;
-        _effect->redrawOverlays();
     }
     if (args.keySymbol == kOfxKey_Shift_L || args.keySymbol == kOfxKey_Shift_R) {
+        mustRedraw = _modifierStateShift == 0;
         ++_modifierStateShift;
         if (_modifierStateShift > 0) {
             _orientation = eOrientationNotSet;
         }
+    }
+    if (mustRedraw) {
+        _effect->redrawOverlays();
     }
     //std::cout << std::hex << args.keySymbol << std::endl;
     // modifiers are not "caught"
@@ -1395,22 +1400,26 @@ bool TransformInteract::keyDown(const OFX::KeyArgs &args)
 // keyUp just updates the modifier state
 bool TransformInteract::keyUp(const OFX::KeyArgs &args)
 {
+    bool mustRedraw = false;
+
     if (args.keySymbol == kOfxKey_Control_L || args.keySymbol == kOfxKey_Control_R) {
         // we may have missed a keypress
         if (_modifierStateCtrl > 0) {
             --_modifierStateCtrl;
+            mustRedraw = _modifierStateCtrl == 0;
         }
-        if (_modifierStateCtrl == 0) {
-            _effect->redrawOverlays();
-       }
     }
     if (args.keySymbol == kOfxKey_Shift_L || args.keySymbol == kOfxKey_Shift_R) {
         if (_modifierStateShift > 0) {
             --_modifierStateShift;
+            mustRedraw = _modifierStateShift == 0;
         }
         if (_modifierStateShift == 0) {
             _orientation = eOrientationAllDirections;
         }
+    }
+    if (mustRedraw) {
+        _effect->redrawOverlays();
     }
     // modifiers are not "caught"
     return false;
