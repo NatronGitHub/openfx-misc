@@ -34,36 +34,39 @@ CLANG_DIAG_OFF(shorten-64-to-32)
 #include "CImg.h"
 CLANG_DIAG_ON(shorten-64-to-32)
 
-#define kClipA "A"
-#define kClipB "B"
-
 template <class Params>
 class CImgOperatorPluginHelper : public OFX::ImageEffect
 {
 public:
 
     CImgOperatorPluginHelper(OfxImageEffectHandle handle,
-                           bool supportsTiles,
-                           bool supportsMultiResolution,
-                           bool supportsRenderScale,
-                           bool defaultUnpremult = true,
-                           bool defaultProcessAlphaOnRGBA = false)
+                             const char* srcAClipName, //!< should be either kOfxImageEffectSimpleSourceClipName or "A" if you want this to be the default output when plugin is disabled
+                             const char* srcBClipName,
+                             bool supportsTiles,
+                             bool supportsMultiResolution,
+                             bool supportsRenderScale,
+                             bool defaultUnpremult = true,
+                             bool defaultProcessAlphaOnRGBA = false)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcAClip_(0)
-    , srcBClip_(0)
+    , _dstClip(0)
+    , _srcAClip(0)
+    , _srcBClip(0)
+    , _premult(0)
+    , _premultChannel(0)
+    , _srcAClipName(srcAClipName)
+    , _srcBClipName(srcBClipName)
     , _supportsTiles(supportsTiles)
     , _supportsMultiResolution(supportsMultiResolution)
     , _supportsRenderScale(supportsRenderScale)
     , _defaultUnpremult(defaultUnpremult)
     , _defaultProcessAlphaOnRGBA(defaultProcessAlphaOnRGBA)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGB || dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA));
-        srcAClip_ = fetchClip(kClipA);
-        assert(srcAClip_ && (srcAClip_->getPixelComponents() == OFX::ePixelComponentRGB || srcAClip_->getPixelComponents() == OFX::ePixelComponentRGBA));
-        srcBClip_ = fetchClip(kClipB);
-        assert(srcBClip_ && (srcBClip_->getPixelComponents() == OFX::ePixelComponentRGB || srcBClip_->getPixelComponents() == OFX::ePixelComponentRGBA));
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA));
+        _srcAClip = fetchClip(_srcAClipName);
+        assert(_srcAClip && (_srcAClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcAClip->getPixelComponents() == OFX::ePixelComponentRGBA));
+        _srcBClip = fetchClip(_srcBClipName);
+        assert(_srcBClip && (_srcBClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcBClip->getPixelComponents() == OFX::ePixelComponentRGBA));
 
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
@@ -82,9 +85,9 @@ public:
 
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL
     {
-        if (clipName == kClipA && srcAClip_ && args.reason == OFX::eChangeUserEdit) {
+        if (clipName == _srcAClipName && _srcAClip && args.reason == OFX::eChangeUserEdit) {
             if (_defaultUnpremult) {
-                switch (srcAClip_->getPreMultiplication()) {
+                switch (_srcAClip->getPreMultiplication()) {
                     case OFX::eImageOpaque:
                         _premult->setValue(false);
                         break;
@@ -97,9 +100,9 @@ public:
                 }
             }
         }
-        if (clipName == kClipB && srcBClip_ && args.reason == OFX::eChangeUserEdit) {
+        if (clipName == _srcBClipName && _srcBClip && args.reason == OFX::eChangeUserEdit) {
             if (_defaultUnpremult) {
-                switch (srcBClip_->getPreMultiplication()) {
+                switch (_srcBClip->getPreMultiplication()) {
                     case OFX::eImageOpaque:
                         _premult->setValue(false);
                         break;
@@ -136,6 +139,8 @@ public:
     static OFX::PageParamDescriptor*
     describeInContextBegin(OFX::ImageEffectDescriptor &desc,
                            OFX::ContextEnum context,
+                           const char* srcAClipName,
+                           const char* srcBClipName,
                            bool supportsRGBA,
                            bool supportsRGB,
                            bool supportsAlpha,
@@ -144,8 +149,8 @@ public:
                            bool processAlpha = false,
                            bool processIsSecret = false)
     {
-        OFX::ClipDescriptor *srcBClip = desc.defineClip(kClipB);
-        OFX::ClipDescriptor *srcAClip = desc.defineClip(kClipA);
+        OFX::ClipDescriptor *srcBClip = desc.defineClip(srcBClipName);
+        OFX::ClipDescriptor *srcAClip = desc.defineClip(srcAClipName);
         OFX::ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
         if (supportsRGBA) {
             srcAClip->addSupportedComponent(OFX::ePixelComponentRGBA);
@@ -235,14 +240,16 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcAClip_;
-    OFX::Clip *srcBClip_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcAClip;
+    OFX::Clip *_srcBClip;
 
     // params
     OFX::BooleanParam* _premult;
     OFX::ChoiceParam* _premultChannel;
 
+    std::string _srcAClipName;
+    std::string _srcBClipName;
     bool _supportsTiles;
     bool _supportsMultiResolution;
     bool _supportsRenderScale;
@@ -342,7 +349,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     const OfxRectI& renderWindow = args.renderWindow;
     const OFX::FieldEnum fieldToRender = args.fieldToRender;
 
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -356,7 +363,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     const OFX::PixelComponentEnum dstPixelComponents  = dst->getPixelComponents();
     assert(dstBitDepth == OFX::eBitDepthFloat); // only float is supported for now (others are untested)
 
-    std::auto_ptr<const OFX::Image> srcA(srcAClip_->fetchImage(time));
+    std::auto_ptr<const OFX::Image> srcA(_srcAClip->fetchImage(time));
     if (srcA.get()) {
         OFX::BitDepthEnum    srcABitDepth      = srcA->getPixelDepth();
         OFX::PixelComponentEnum srcAPixelComponents = srcA->getPixelComponents();
@@ -382,22 +389,22 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         srcAPixelData = NULL;
         srcABounds.x1 = srcABounds.y1 = srcABounds.x2 = srcABounds.y2 = 0;
         srcARoD.x1 = srcARoD.y1 = srcARoD.x2 = srcARoD.y2 = 0;
-        srcAPixelComponents = srcAClip_->getPixelComponents();
-        srcABitDepth = srcAClip_->getPixelDepth();
+        srcAPixelComponents = _srcAClip->getPixelComponents();
+        srcABitDepth = _srcAClip->getPixelDepth();
         //srcAPixelBytes = getPixelBytes(srcAPixelComponents, srcABitDepth);
         srcARowBytes = 0;
     } else {
         srcAPixelData = srcA->getPixelData();
         srcABounds = srcA->getBounds();
         // = src->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-        OFX::MergeImages2D::toPixelEnclosing(srcAClip_->getRegionOfDefinition(time), args.renderScale, srcAClip_->getPixelAspectRatio(), &srcARoD);
+        OFX::MergeImages2D::toPixelEnclosing(_srcAClip->getRegionOfDefinition(time), args.renderScale, _srcAClip->getPixelAspectRatio(), &srcARoD);
         srcAPixelComponents = srcA->getPixelComponents();
         srcABitDepth = srcA->getPixelDepth();
         //srcAPixelBytes = getPixelBytes(srcAPixelComponents, srcABitDepth);
         srcARowBytes = srcA->getRowBytes();
     }
 
-    std::auto_ptr<const OFX::Image> srcB(srcBClip_->fetchImage(time));
+    std::auto_ptr<const OFX::Image> srcB(_srcBClip->fetchImage(time));
     if (srcB.get()) {
         OFX::BitDepthEnum    srcBBitDepth      = srcB->getPixelDepth();
         OFX::PixelComponentEnum srcBPixelComponents = srcB->getPixelComponents();
@@ -423,15 +430,15 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         srcBPixelData = NULL;
         srcBBounds.x1 = srcBBounds.y1 = srcBBounds.x2 = srcBBounds.y2 = 0;
         srcBRoD.x1 = srcBRoD.y1 = srcBRoD.x2 = srcBRoD.y2 = 0;
-        srcBPixelComponents = srcBClip_->getPixelComponents();
-        srcBBitDepth = srcBClip_->getPixelDepth();
+        srcBPixelComponents = _srcBClip->getPixelComponents();
+        srcBBitDepth = _srcBClip->getPixelDepth();
         //srcPixelBytes = getPixelBytes(srcPixelComponents, srcBitDepth);
         srcBRowBytes = 0;
     } else {
         srcBPixelData = srcB->getPixelData();
         srcBBounds = srcB->getBounds();
         // = srcB->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-        OFX::MergeImages2D::toPixelEnclosing(srcBClip_->getRegionOfDefinition(time), args.renderScale, srcBClip_->getPixelAspectRatio(), &srcBRoD);
+        OFX::MergeImages2D::toPixelEnclosing(_srcBClip->getRegionOfDefinition(time), args.renderScale, _srcBClip->getPixelAspectRatio(), &srcBRoD);
         srcBPixelComponents = srcB->getPixelComponents();
         srcBBitDepth = srcB->getPixelDepth();
         //srcPixelBytes = getPixelBytes(srcPixelComponents, srcBitDepth);
@@ -441,7 +448,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     void *dstPixelData = dst->getPixelData();
     const OfxRectI& dstBounds = dst->getBounds();
     OfxRectI dstRoD; // = dst->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-    OFX::MergeImages2D::toPixelEnclosing(dstClip_->getRegionOfDefinition(time), args.renderScale, dstClip_->getPixelAspectRatio(), &dstRoD);
+    OFX::MergeImages2D::toPixelEnclosing(_dstClip->getRegionOfDefinition(time), args.renderScale, _dstClip->getPixelAspectRatio(), &dstRoD);
     //const OFX::PixelComponentEnum dstPixelComponents = dst->getPixelComponents();
     //const OFX::BitDepthEnum dstBitDepth = dst->getPixelDepth();
     //dstPixelBytes = getPixelBytes(dstPixelComponents, dstBitDepth);
@@ -713,7 +720,7 @@ CImgOperatorPluginHelper<Params>::getRegionsOfInterest(const OFX::RegionsOfInter
 
     {
         OfxRectD srcRoI;
-        double pixelaspectratio = srcAClip_ ? srcAClip_->getPixelAspectRatio() : 1.;
+        double pixelaspectratio = _srcAClip ? _srcAClip->getPixelAspectRatio() : 1.;
 
         OfxRectI rectPixel;
         OFX::MergeImages2D::toPixelEnclosing(regionOfInterest, args.renderScale, pixelaspectratio, &rectPixel);
@@ -721,11 +728,11 @@ CImgOperatorPluginHelper<Params>::getRegionsOfInterest(const OFX::RegionsOfInter
         getRoI(rectPixel, args.renderScale, params, &srcRoIPixel);
         OFX::MergeImages2D::toCanonical(srcRoIPixel, args.renderScale, pixelaspectratio, &srcRoI);
 
-        rois.setRegionOfInterest(*srcAClip_, srcRoI);
+        rois.setRegionOfInterest(*_srcAClip, srcRoI);
     }
     {
         OfxRectD srcRoI;
-        double pixelaspectratio = srcBClip_ ? srcBClip_->getPixelAspectRatio() : 1.;
+        double pixelaspectratio = _srcBClip ? _srcBClip->getPixelAspectRatio() : 1.;
 
         OfxRectI rectPixel;
         OFX::MergeImages2D::toPixelEnclosing(regionOfInterest, args.renderScale, pixelaspectratio, &rectPixel);
@@ -733,7 +740,7 @@ CImgOperatorPluginHelper<Params>::getRegionsOfInterest(const OFX::RegionsOfInter
         getRoI(rectPixel, args.renderScale, params, &srcRoIPixel);
         OFX::MergeImages2D::toCanonical(srcRoIPixel, args.renderScale, pixelaspectratio, &srcRoI);
 
-        rois.setRegionOfInterest(*srcBClip_, srcRoI);
+        rois.setRegionOfInterest(*_srcBClip, srcRoI);
     }
 }
 
@@ -748,25 +755,25 @@ CImgOperatorPluginHelper<Params>::getRegionOfDefinition(const OFX::RegionOfDefin
     Params params;
     getValuesAtTime(args.time, params);
 
-    double srcApixelaspectratio = srcAClip_ ? srcAClip_->getPixelAspectRatio() : 1.;
+    double srcApixelaspectratio = _srcAClip ? _srcAClip->getPixelAspectRatio() : 1.;
 
     OfxRectI srcARoDPixel = {0, 0, 0, 0};
-    if (srcAClip_) {
-        OFX::MergeImages2D::toPixelEnclosing(srcAClip_->getRegionOfDefinition(args.time), args.renderScale, srcApixelaspectratio, &srcARoDPixel);
+    if (_srcAClip) {
+        OFX::MergeImages2D::toPixelEnclosing(_srcAClip->getRegionOfDefinition(args.time), args.renderScale, srcApixelaspectratio, &srcARoDPixel);
     }
 
-    double srcBpixelaspectratio = srcBClip_ ? srcBClip_->getPixelAspectRatio() : 1.;
+    double srcBpixelaspectratio = _srcBClip ? _srcBClip->getPixelAspectRatio() : 1.;
 
     OfxRectI srcBRoDPixel = {0, 0, 0, 0};
-    if (srcBClip_) {
-        OFX::MergeImages2D::toPixelEnclosing(srcBClip_->getRegionOfDefinition(args.time), args.renderScale, srcBpixelaspectratio, &srcARoDPixel);
+    if (_srcBClip) {
+        OFX::MergeImages2D::toPixelEnclosing(_srcBClip->getRegionOfDefinition(args.time), args.renderScale, srcBpixelaspectratio, &srcARoDPixel);
     }
 
     OfxRectI rodPixel;
 
     bool ret = getRoD(srcARoDPixel, srcBRoDPixel, args.renderScale, params, &rodPixel);
     if (ret) {
-        double dstpixelaspectratio = dstClip_ ? dstClip_->getPixelAspectRatio() : 1.;
+        double dstpixelaspectratio = _dstClip ? _dstClip->getPixelAspectRatio() : 1.;
         OFX::MergeImages2D::toCanonical(rodPixel, args.renderScale, dstpixelaspectratio, &rod);
         return true;
     }
@@ -791,10 +798,10 @@ CImgOperatorPluginHelper<Params>::isIdentity(const OFX::IsIdentityArguments &arg
         case 0:
             return false;
         case 1:
-            identityClip = srcAClip_;
+            identityClip = _srcAClip;
             return true;
         case 2:
-            identityClip = srcBClip_;
+            identityClip = _srcBClip;
             return true;
     }
     return false;
