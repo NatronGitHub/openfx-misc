@@ -356,6 +356,7 @@
 		1E6CC0871A768BD000173EB3 /* ImageStatistics.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E6CC0811A768BC800173EB3 /* ImageStatistics.cpp */; };
 		1E6CC0881A768BD700173EB3 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E6CC0851A768BC800173EB3 /* PluginRegistration.cpp */; };
 		1E6CC0891A76ADEA00173EB3 /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
+		1E6CC0941A76B1F700173EB3 /* ofxsOGLFontData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F4D198A51840095C8AA /* ofxsOGLFontData.cpp */; };
 		1E77A3BC1906988C00286856 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7349E8B18E7766F0097DB1D /* PluginRegistration.cpp */; };
 		1E814C9419C9817A00C2C668 /* net.sf.openfx.ChromaKeyerPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9319C9816E00C2C668 /* net.sf.openfx.ChromaKeyerPlugin.svg */; };
 		1E814C9619C9818800C2C668 /* net.sf.openfx.ColorCorrectPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814C9519C9818200C2C668 /* net.sf.openfx.ColorCorrectPlugin.svg */; };
@@ -5052,6 +5053,7 @@
 				1ECA4DF71A3F3AC900C5128B /* Ramp.cpp in Sources */,
 				1ECA4DF81A3F3AC900C5128B /* PluginRegistration.cpp in Sources */,
 				1E0072F91A407A3600E77042 /* ofxsOGLTextRenderer.cpp in Sources */,
+				1E6CC0941A76B1F700173EB3 /* ofxsOGLFontData.cpp in Sources */,
 				1ECA4DE41A3F3A6500C5128B /* ofxsCore.cpp in Sources */,
 				1ECA4DE51A3F3A6500C5128B /* ofxsImageEffect.cpp in Sources */,
 				1ECA4DE61A3F3A6500C5128B /* ofxsInteract.cpp in Sources */,
