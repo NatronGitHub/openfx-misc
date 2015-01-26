@@ -45,6 +45,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
+#include "ofxsCopier.h"
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
@@ -69,69 +70,6 @@
 #define kParamForceCopy "forceCopy"
 #define kParamForceCopyLabel "Force Copy"
 #define kParamForceCopyHint "Force copy from input to output"
-
-// Base class for the RGBA and the Alpha processor
-class CopierBase : public OFX::ImageProcessor
-{
-protected:
-    const OFX::Image *_srcImg;
-
-public:
-    /** @brief no arg ctor */
-    CopierBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _srcImg(0)
-    {
-    }
-
-    /** @brief set the src image */
-    void setSrcImg(const OFX::Image *v) {_srcImg = v;}
-};
-
-// template to do the RGBA processing
-template <class PIX, int nComponents>
-class ImageCopier : public CopierBase
-{
-public:
-    // ctor
-    ImageCopier(OFX::ImageEffect &instance)
-    : CopierBase(instance)
-    {}
-
-private:
-    // and do some processing
-    void multiThreadProcessImages(OfxRectI procWindow)
-    {
-        for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) {
-                break;
-            }
-            
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-
-            for (int x = procWindow.x1; x < procWindow.x2; x++) {
-
-                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-
-                // do we have a source image to scale up
-                if (srcPix) {
-                    for (int c = 0; c < nComponents; c++) {
-                        dstPix[c] = srcPix[c];
-                    }
-                }
-                else {
-                    // no src pixel here, be black and transparent
-                    for (int c = 0; c < nComponents; c++) {
-                        dstPix[c] = 0;
-                    }
-                }
-
-                // increment the dst pixel
-                dstPix += nComponents;
-            }
-        }
-    }
-};
 
 using namespace OFX;
 
@@ -159,9 +97,6 @@ private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
-    /* set up and run a processor */
-    void setupAndProcess(CopierBase &, const OFX::RenderArguments &args);
-
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
 #ifdef OFX_EXTENSIONS_NUKE
@@ -187,48 +122,6 @@ private:
 // basic plugin render function, just a skelington to instantiate templates from
 
 
-/* set up and run a processor */
-void
-NoOpPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArguments &args)
-{
-    // get a dst image
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
-    if (!dst.get()) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-    }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        dst->getField() != args.fieldToRender) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-    }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-
-    // fetch main input image
-    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
-
-    // make sure bit depths are sane
-    if (src.get()) {
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-
-        // see if they have the same depths and bytes and all
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-    }
-
-    // set the images
-    processor.setDstImg(dst.get());
-    processor.setSrcImg(src.get());
-
-    // set the render window
-    processor.setRenderWindow(args.renderWindow);
-
-    // Call the base class process member, this will call the derived templated process code
-    processor.process();
-}
-
 // the overridden render function
 void
 NoOpPlugin::render(const OFX::RenderArguments &args)
@@ -241,80 +134,10 @@ NoOpPlugin::render(const OFX::RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
 
-    // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
-
     // do the rendering
-    if (dstComponents == OFX::ePixelComponentRGBA) {
-        switch(dstBitDepth) {
-            case OFX::eBitDepthUByte : {
-                ImageCopier<unsigned char, 4> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthUShort : {
-                ImageCopier<unsigned short, 4> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthFloat : {
-                ImageCopier<float, 4> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
-        switch(dstBitDepth) {
-            case OFX::eBitDepthUByte : {
-                ImageCopier<unsigned char, 3> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthUShort : {
-                ImageCopier<unsigned short, 3> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthFloat : {
-                ImageCopier<float, 3> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
-    } else if (dstComponents == OFX::ePixelComponentAlpha) {
-        switch(dstBitDepth) {
-            case OFX::eBitDepthUByte : {
-                ImageCopier<unsigned char, 1> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthUShort : {
-                ImageCopier<unsigned short, 1> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthFloat : {
-                ImageCopier<float, 1> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
-    } else {
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-    }
+    std::auto_ptr<const OFX::Image> srcImg(srcClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dstImg(dstClip_->fetchImage(args.time));
+    copyPixels(*this, args.renderWindow, srcImg.get(), dstImg.get());
 }
 
 bool
