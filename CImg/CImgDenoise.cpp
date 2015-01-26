@@ -91,6 +91,10 @@
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
 "Denoise selected images by non-local patch averaging.\n" \
+"This uses the method described in:  " \
+"Non-Local Image Smoothing by Applying Anisotropic Diffusion PDE's in the Space of Patches " \
+"(D. Tschumperlé, L. Brun), ICIP'09. " \
+"<https://tschumperle.users.greyc.fr/publications/tschumperle_icip09.pdf>.\n" \
 "Uses the 'blur_patch' function from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
