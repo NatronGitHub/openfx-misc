@@ -899,7 +899,7 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(0.25, 0.25);
         param->setIncrement(1.);
-        param->setHint("Coordinates of the bottom left corner of the effect rectangle");
+        param->setHint("Coordinates of the bottom left corner of the effect rectangle.");
         param->setDigits(0);
         page->addChild(*param);
     }
@@ -912,8 +912,8 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(0.5, 0.5);
         param->setIncrement(1.);
-        param->setDimensionLabels("width", "height");
-        param->setHint("Width and height of the effect rectangle");
+        param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
+        param->setHint("Width and height of the effect rectangle.");
         param->setDigits(0);
         page->addChild(*param);
     }
