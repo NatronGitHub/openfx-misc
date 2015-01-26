@@ -17,6 +17,7 @@
 #include "Gamma.h"
 #include "Grade.h"
 #include "HSVTool.h"
+#include "ImageStatistics.h"
 #include "Invert.h"
 #include "JoinViews.h"
 #include "Keyer.h"
@@ -69,6 +70,7 @@ namespace OFX
             getGammaPluginID(ids);
             getGradePluginID(ids);
             getHSVToolPluginID(ids);
+            getImageStatisticsPluginID(ids);
             getInvertPluginID(ids);
             getJoinViewsPluginID(ids);
             getKeyerPluginID(ids);
