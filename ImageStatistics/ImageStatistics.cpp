@@ -928,20 +928,24 @@ ImageStatisticsPlugin::update(OFX::Image* srcImg, double time)
     if (abort()) {
         return;
     }
+    beginEditBlock("updateStatistics");
     _statMin->setValueAtTime(time, results.min.r, results.min.g, results.min.b, results.min.a);
     _statMax->setValueAtTime(time, results.max.r, results.max.g, results.max.b, results.max.a);
     _statMean->setValueAtTime(time, results.mean.r, results.mean.g, results.mean.b, results.mean.a);
     updateSDev(srcImg, time, results, &results);
     if (abort()) {
+        endEditBlock();
         return;
     }
     _statSDev->setValueAtTime(time, results.sdev.r, results.sdev.g, results.sdev.b, results.sdev.a);
     updateSkewnessKurtosis(srcImg, time, results, &results);
     if (abort()) {
+        endEditBlock();
         return;
     }
     _statSkewness->setValueAtTime(time, results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
     _statKurtosis->setValueAtTime(time, results.kurtosis.r, results.kurtosis.g, results.kurtosis.b, results.kurtosis.a);
+    endEditBlock();
 }
 
 class ImageStatisticsInteract : public RectangleInteract
