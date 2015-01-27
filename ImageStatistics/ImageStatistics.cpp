@@ -108,9 +108,13 @@
 #define kParamRestrictToRectangleLabel "Restrict to Rectangle"
 #define kParamRestrictToRectangleHint "Restrict statistics computation to a rectangle."
 
-#define kParamUpdate "update"
-#define kParamUpdateLabel "Update Values"
-#define kParamUpdateHint "Update values from current input image."
+#define kParamAnalyzeFrame "analyzeFrame"
+#define kParamAnalyzeFrameLabel "Analyze Frame"
+#define kParamAnalyzeFrameHint "Analyze current frame and set values."
+
+#define kParamAnalyzeSequence "analyzeSequence"
+#define kParamAnalyzeSequenceLabel "Analyze Sequence"
+#define kParamAnalyzeSequenceHint "Analyze all frames from the sequence and set values."
 
 #define kParamAutoUpdate "autoUpdate"
 #define kParamAutoUpdateLabel "Auto Update"
@@ -298,9 +302,12 @@ public:
         _size = fetchDouble2DParam(kParamRectangleInteractSize);
         _restrictToRectangle = fetchBooleanParam(kParamRestrictToRectangle);
         assert(_btmLeft && _size && _restrictToRectangle);
-        _update = fetchPushButtonParam(kParamUpdate);
+        _update = fetchPushButtonParam(kParamAnalyzeFrame);
         _autoUpdate = fetchBooleanParam(kParamAutoUpdate);
-
+        assert(_update && _autoUpdate);
+        _statMean = fetchRGBAParam(kParamStatMean);
+        assert(_statMean);
+        
         // update visibility
         bool restrictToRectangle;
         _restrictToRectangle->getValue(restrictToRectangle);
@@ -355,14 +362,18 @@ ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
     copyPixels(*this, args.renderWindow, srcImg.get(), dstImg.get());
 
     // compute statistics if it is an interactive render
-    if (args.interactiveRenderStatus) {
-        bool autoUpdate;
-        _autoUpdate->getValueAtTime(args.time, autoUpdate);
-
-        if (autoUpdate) {
+    //if (args.interactiveRenderStatus) {
+    bool autoUpdate;
+    _autoUpdate->getValueAtTime(args.time, autoUpdate);
+    assert(autoUpdate); // render should only be called if autoUpdate is true: in other cases isIdentity returns true
+    if (autoUpdate) {
+        // check if there is already a Keyframe, if yes update it
+        int k = _statMean->getKeyIndex(args.time, eKeySearchNear);
+        if (k != -1) {
             update(srcImg.get(), args.time);
         }
     }
+    //}
 }
 
 bool
@@ -387,6 +398,7 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                                     const std::string &paramName)
 {
     bool doUpdate = false;
+    bool doAnalyze = false;
 
     if (paramName == kParamRestrictToRectangle) {
         // update visibility
@@ -399,13 +411,39 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         doUpdate = true;
     }
     if (paramName == kParamRectangleInteractBtmLeft ||
-        paramName == kParamRectangleInteractSize ||
-        paramName == kParamUpdate) {
+        paramName == kParamRectangleInteractSize) {
         doUpdate = true;
     }
+    if (paramName == kParamAnalyzeFrame) {
+        doAnalyze = true;
+    }
     if (doUpdate) {
+        // check if there is already a Keyframe, if yes update it
+        int k = _statMean->getKeyIndex(args.time, eKeySearchNear);
+        doAnalyze = (k != -1);
+    }
+    if (doAnalyze) {
         std::auto_ptr<const OFX::Image> srcImg(_srcClip->fetchImage(args.time));
+        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
         update(srcImg.get(), args.time);
+        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
+    }
+    if (paramName == kParamAnalyzeSequence) {
+        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
+        progressStart("Analyzing sequence...");
+        OfxRangeD range;
+        getTimeDomain(range);
+        int tmin = std::ceil(range.min);
+        int tmax = std::floor(range.max);
+        for (int t = tmin; t <= tmax; ++t) {
+            std::auto_ptr<const OFX::Image> srcImg(_srcClip->fetchImage(t));
+            update(srcImg.get(), t);
+            if (tmax != tmin) {
+                progressUpdate((t-tmin)/(double)(tmax-tmin));
+            }
+        }
+        progressEnd();
+        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
     }
 }
 
@@ -464,7 +502,7 @@ ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor, 
 
     processor.getResults(&results);
 
-
+    _statMean->setValueAtTime(time, results.mean.r, results.mean.g, results.mean.b, results.mean.a);
 }
 
 // update image statistics
@@ -727,11 +765,19 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         page->addChild(*param);
     }
 
-    // update
+    // analyzeFrame
     {
-        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamUpdate);
-        param->setLabels(kParamUpdateLabel, kParamUpdateLabel, kParamUpdateLabel);
-        param->setHint(kParamUpdateHint);
+        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeFrame);
+        param->setLabels(kParamAnalyzeFrameLabel, kParamAnalyzeFrameLabel, kParamAnalyzeFrameLabel);
+        param->setHint(kParamAnalyzeFrameHint);
+        page->addChild(*param);
+    }
+
+    // analyzeSequence
+    {
+        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeSequence);
+        param->setLabels(kParamAnalyzeSequenceLabel, kParamAnalyzeSequenceLabel, kParamAnalyzeSequenceLabel);
+        param->setHint(kParamAnalyzeSequenceHint);
         page->addChild(*param);
     }
 
