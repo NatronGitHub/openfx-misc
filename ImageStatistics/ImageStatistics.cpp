@@ -120,9 +120,42 @@
 #define kParamAutoUpdateLabel "Auto Update"
 #define kParamAutoUpdateHint "Automatically update values when input changes. If not checked, values are only updated if the plugin parameters change."
 
+#define kParamStatMin "statMin"
+#define kParamStatMinLabel "Min."
+#define kParamStatMinHint "Minimum value."
+
+#define kParamStatMax "statMax"
+#define kParamStatMaxLabel "Max."
+#define kParamStatMaxHint "Maximum value."
+
 #define kParamStatMean "statMean"
 #define kParamStatMeanLabel "Mean"
-#define kParamStatMeanHint "Mean value."
+#define kParamStatMeanHint "The mean is the average. Add up the values, and divide by the number of values."
+
+#define kParamStatSDev "statSDev"
+#define kParamStatSDevLabel "S.Dev."
+#define kParamStatSDevHint "The standard deviation (S.Dev.) quantifies variability or scatter, and it is expressed in the same units as your data."
+
+#define kParamStatKurtosis "statKurtosis"
+#define kParamStatKurtosisLabel "Kurtosis"
+#define kParamStatKurtosisHint \
+"Kurtosis quantifies whether the shape of the data distribution matches the Gaussian distribution.\n" \
+"•A Gaussian distribution has a kurtosis of 0.\n" \
+"•A flatter distribution has a negative kurtosis,\n" \
+"•A distribution more peaked than a Gaussian distribution has a positive kurtosis.\n" \
+"•Kurtosis has no units.\n" \
+"•The value that this plugin reports is sometimes called the excess kurtosis since the expected kurtosis for a Gaussian distribution is 0.0.\n" \
+"•An alternative definition of kurtosis is computed by adding 3 to the value reported by this plugin. With this definition, a Gaussian distribution is expected to have a kurtosis of 3.0."
+
+#define kParamStatSkewness "statSkewness"
+#define kParamStatSkewnessLabel "Skewness"
+#define kParamStatSkewnessHint \
+"Skewness quantifies how symmetrical the distribution is.\n" \
+"• A symmetrical distribution has a skewness of zero.\n" \
+"• An asymmetrical distribution with a long tail to the right (higher values) has a positive skew.\n" \
+"• An asymmetrical distribution with a long tail to the left (lower values) has a negative skew.\n" \
+"• The skewness is unitless.\n" \
+"• Any threshold or rule of thumb is arbitrary, but here is one: If the skewness is greater than 1.0 (or less than -1.0), the skewness is substantial and the distribution is far from symmetrical."
 
 using namespace OFX;
 
@@ -134,150 +167,83 @@ namespace {
     };
 
     struct Results {
+        RGBAValues min;
+        RGBAValues max;
         RGBAValues mean;
+        RGBAValues sdev;
+        RGBAValues skewness;
+        RGBAValues kurtosis;
     };
 }
 
 class ImageStatisticsProcessorBase : public OFX::ImageProcessor
 {
 protected:
-    OfxRectI _rectangle;
-
     OFX::MultiThread::Mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
-    RGBAValues _sum;
     unsigned long _count;
 
 public:
     ImageStatisticsProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
-    , _sum()
+    , _mutex()
     , _count(0)
     {
-        _rectangle.x1 = _rectangle.x2 = _rectangle.y1 = _rectangle.y2 = 0;
     }
 
     virtual ~ImageStatisticsProcessorBase()
     {
     }
 
-    bool setValues(OFX::Image *src, const OfxRectD & regionOfInterest)
-    {
-        OfxRectI rectangle;
-        OfxPointD rsOne = { 1., 1.};
-        MergeImages2D::toPixelEnclosing(regionOfInterest,
-                                        rsOne,
-                                        src->getPixelAspectRatio(),
-                                        &rectangle);
-        MergeImages2D::rectIntersection(rectangle, src->getBounds(), &rectangle);
-        setRectangle(rectangle);
-        setDstImg(src);
-        return true;
-    }
+    virtual void setPrevResults(const Results &results) = 0;
 
-    void getResults(Results* results) const
-    {
-        assert(results);
-        if (_count == 0) {
-            results->mean.r = results->mean.g = results->mean.b = results->mean.a = 0.;
-        } else {
-            results->mean.r = _sum.r / _count;
-            results->mean.g = _sum.g / _count;
-            results->mean.b = _sum.b / _count;
-            results->mean.a = _sum.a / _count;
-        }
-    }
+    virtual void getResults(Results *results) = 0;
 
 protected:
-    void addResults(const RGBAValues& sum, unsigned long count) {
-        _mutex.lock();
-        _sum.r += sum.r;
-        _sum.g += sum.g;
-        _sum.b += sum.b;
-        _sum.a += sum.a;
-        _count += count;
-        _mutex.unlock();
-    }
-
-private:
-    void setRectangle(const OfxRectI& rectangle) {
-        _rectangle = rectangle;
-    }
-};
 
 
-// The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
-// by the compiler, using the same generic code for all filters.
-template <class PIX, int nComponents, int maxValue>
-class ImageStatisticsProcessor : public ImageStatisticsProcessorBase
-{
-protected:
-
-public:
-    ImageStatisticsProcessor(OFX::ImageEffect &instance)
-    : ImageStatisticsProcessorBase(instance)
+    void toRGBA(const double *sum, int nComponents, RGBAValues* rgba)
     {
-    }
-
-    ~ImageStatisticsProcessor()
-    {
-    }
-private:
-
-    void multiThreadProcessImages(OfxRectI procWindow)
-    {
-        ///we're not interested in the alpha channel for RGBA images
-        double sum[nComponents];
-        std::fill(sum, sum + nComponents, 0.);
-        unsigned long count = 0;
-        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
-               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
-        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if (_effect.abort()) {
-                break;
-            }
-
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-
-            double sumLine[nComponents]; // partial sum to avoid underflows
-            std::fill(sumLine, sumLine + nComponents, 0.);
-
-            for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                for (int c = 0; c < nComponents; ++c) {
-                    sumLine[c] += *dstPix;
-                    ++dstPix;
-                }
-            }
-            for (int c = 0; c < nComponents; ++c) {
-                sum[c] += sumLine[c];
-            }
-            count += procWindow.x2 - procWindow.x1;
-        }
-
-        RGBAValues rgba;
         if (nComponents == 4) {
-            rgba.r = sum[0];
-            rgba.g = sum[1];
-            rgba.b = sum[2];
-            rgba.a = sum[3];
+            rgba->r = sum[0];
+            rgba->g = sum[1];
+            rgba->b = sum[2];
+            rgba->a = sum[3];
         } else if (nComponents == 3) {
-            rgba.r = sum[0];
-            rgba.g = sum[1];
-            rgba.b = sum[2];
-            rgba.a = 0;
+            rgba->r = sum[0];
+            rgba->g = sum[1];
+            rgba->b = sum[2];
+            rgba->a = 0;
         } else if (nComponents == 1) {
-            rgba.r = 0;
-            rgba.g = 0;
-            rgba.b = 0;
-            rgba.a = sum[0];
+            rgba->r = 0;
+            rgba->g = 0;
+            rgba->b = 0;
+            rgba->a = sum[0];
         } else {
-            rgba.r = 0;
-            rgba.g = 0;
-            rgba.b = 0;
-            rgba.a = 0;
+            rgba->r = 0;
+            rgba->g = 0;
+            rgba->b = 0;
+            rgba->a = 0;
         }
-        addResults(rgba, count);
+    }
+
+    void toComponents(const RGBAValues& rgba, double *sum, int nComponents)
+    {
+        if (nComponents == 4) {
+            sum[0] = rgba.r;
+            sum[1] = rgba.g;
+            sum[2] = rgba.b;
+            sum[3] = rgba.a;
+        } else if (nComponents == 3) {
+            sum[0] = rgba.r;
+            sum[1] = rgba.g;
+            sum[2] = rgba.b;
+        } else if (nComponents == 1) {
+            sum[0] = rgba.a;
+        }
     }
 };
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -305,8 +271,13 @@ public:
         _update = fetchPushButtonParam(kParamAnalyzeFrame);
         _autoUpdate = fetchBooleanParam(kParamAutoUpdate);
         assert(_update && _autoUpdate);
+        _statMin = fetchRGBAParam(kParamStatMin);
+        _statMax = fetchRGBAParam(kParamStatMax);
         _statMean = fetchRGBAParam(kParamStatMean);
-        assert(_statMean);
+        _statSDev = fetchRGBAParam(kParamStatSDev);
+        _statSkewness = fetchRGBAParam(kParamStatSkewness);
+        _statKurtosis = fetchRGBAParam(kParamStatKurtosis);
+        assert(_statMin && _statMax && _statMean && _statSDev && _statSkewness);
         
         // update visibility
         bool restrictToRectangle;
@@ -329,10 +300,34 @@ private:
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(ImageStatisticsProcessorBase &processor, double time);
+    void setupAndProcess(ImageStatisticsProcessorBase &processor, OFX::Image* srcImg, double time, const Results &prevResults, Results *results);
 
     // update image statistics
-    void update(const OFX::Image* srcImg, double time);
+    void update(OFX::Image* srcImg, double time);
+
+    template <class PIX, int nComponents, int maxValue>
+    void updateMinMaxMeanComponentsDepth(OFX::Image* srcImg, double time, Results* results);
+
+    template <int nComponents>
+    void updateMinMaxMeanComponents(OFX::Image* srcImg, double time, Results* results);
+
+    void updateMinMaxMean(OFX::Image* srcImg, double time, Results* results);
+
+    template <class PIX, int nComponents, int maxValue>
+    void updateSDevComponentsDepth(OFX::Image* srcImg, double time, const Results &prevResults, Results* results);
+
+    template <int nComponents>
+    void updateSDevComponents(OFX::Image* srcImg, double time, const Results &prevResults, Results* results);
+
+    void updateSDev(OFX::Image* srcImg, double time, const Results &prevResults, Results* results);
+
+    template <class PIX, int nComponents, int maxValue>
+    void updateSkewnessKurtosisComponentsDepth(OFX::Image* srcImg, double time, const Results &prevResults, Results* results);
+
+    template <int nComponents>
+    void updateSkewnessKurtosisComponents(OFX::Image* srcImg, double time, const Results &prevResults, Results* results);
+
+    void updateSkewnessKurtosis(OFX::Image* srcImg, double time, const Results &prevResults, Results* results);
 
 private:
 
@@ -345,7 +340,12 @@ private:
     BooleanParam* _restrictToRectangle;
     PushButtonParam* _update;
     BooleanParam* _autoUpdate;
+    RGBAParam* _statMin;
+    RGBAParam* _statMax;
     RGBAParam* _statMean;
+    RGBAParam* _statSDev;
+    RGBAParam* _statSkewness;
+    RGBAParam* _statKurtosis;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -357,7 +357,7 @@ void
 ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
 {
     // do the rendering
-    std::auto_ptr<const OFX::Image> srcImg(_srcClip->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> srcImg(_srcClip->fetchImage(args.time));
     std::auto_ptr<OFX::Image> dstImg(_dstClip->fetchImage(args.time));
     copyPixels(*this, args.renderWindow, srcImg.get(), dstImg.get());
 
@@ -423,7 +423,7 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         doAnalyze = (k != -1);
     }
     if (doAnalyze) {
-        std::auto_ptr<const OFX::Image> srcImg(_srcClip->fetchImage(args.time));
+        std::auto_ptr<OFX::Image> srcImg(_srcClip->fetchImage(args.time));
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
         update(srcImg.get(), args.time);
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
@@ -436,7 +436,7 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         int tmin = std::ceil(range.min);
         int tmax = std::floor(range.max);
         for (int t = tmin; t <= tmax; ++t) {
-            std::auto_ptr<const OFX::Image> srcImg(_srcClip->fetchImage(t));
+            std::auto_ptr<OFX::Image> srcImg(_srcClip->fetchImage(t));
             update(srcImg.get(), t);
             if (tmax != tmin) {
                 progressUpdate((t-tmin)/(double)(tmax-tmin));
@@ -449,10 +449,8 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 
 /* set up and run a processor */
 void
-ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor, double time)
+ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor, OFX::Image* srcImg, double time, const Results &prevResults, Results *results)
 {
-    // fetch main input image
-    std::auto_ptr<OFX::Image> src(_srcClip->fetchImage(time));
     OfxRectI renderWindow;
     OfxPointD rsOne = { 1., 1.};
 
@@ -484,100 +482,466 @@ ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor, 
     }
     MergeImages2D::toPixelEnclosing(regionOfInterest,
                                     rsOne,
-                                    src->getPixelAspectRatio(),
+                                    srcImg->getPixelAspectRatio(),
                                     &renderWindow);
     // stay within bounds
-    MergeImages2D::rectIntersection(renderWindow, src->getBounds(), &renderWindow);
+    MergeImages2D::rectIntersection(renderWindow, srcImg->getBounds(), &renderWindow);
 
     // set the images
-    processor.setDstImg(src.get()); // not a bug: we only set dst
+    processor.setDstImg(srcImg); // not a bug: we only set dst
 
     // set the render window
     processor.setRenderWindow(renderWindow);
 
+    processor.setPrevResults(prevResults);
+
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 
-    Results results;
+    if (!abort()) {
+        processor.getResults(results);
+    }
+}
 
-    processor.getResults(&results);
+template <class PIX, int nComponents, int maxValue>
+class ImageMinMaxMeanProcessor : public ImageStatisticsProcessorBase
+{
+private:
+    double _min[nComponents];
+    double _max[nComponents];
+    double _sum[nComponents];
+public:
+    ImageMinMaxMeanProcessor(OFX::ImageEffect &instance)
+    : ImageStatisticsProcessorBase(instance)
+    {
+        std::fill(_min, _min+nComponents, +std::numeric_limits<double>::infinity());
+        std::fill(_max, _max+nComponents, -std::numeric_limits<double>::infinity());
+        std::fill(_sum, _sum+nComponents, 0.);
+    }
 
-    _statMean->setValueAtTime(time, results.mean.r, results.mean.g, results.mean.b, results.mean.a);
+    ~ImageMinMaxMeanProcessor()
+    {
+    }
+
+    void setPrevResults(const Results &results) OVERRIDE FINAL {}
+
+    void getResults(Results *results) OVERRIDE FINAL
+    {
+        if (_count > 0) {
+            toRGBA(_min, nComponents, &results->min);
+            toRGBA(_max, nComponents, &results->max);
+            double mean[nComponents];
+            for (int c = 0; c < nComponents; ++c) {
+                mean[c] = _sum[c]/_count;
+            }
+            toRGBA(mean, nComponents, &results->mean);
+        }
+    }
+
+private:
+
+    void addResults(double min[nComponents], double max[nComponents], double sum[nComponents], unsigned long count) {
+        _mutex.lock();
+        for (int c = 0; c < nComponents; ++c) {
+            _min[c] = std::min(_min[c], min[c]);
+            _max[c] = std::max(_max[c], max[c]);
+            _sum[c] += sum[c];
+        }
+        _count += count;
+        _mutex.unlock();
+    }
+
+
+    void multiThreadProcessImages(OfxRectI procWindow)
+    {
+        double min[nComponents], max[nComponents], sum[nComponents];
+        std::fill(sum, sum + nComponents, 0.);
+        unsigned long count = 0;
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if (_effect.abort()) {
+                break;
+            }
+
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
+            double sumLine[nComponents]; // partial sum to avoid underflows
+            std::fill(sumLine, sumLine + nComponents, 0.);
+
+            for (int x = procWindow.x1; x < procWindow.x2; ++x) {
+                for (int c = 0; c < nComponents; ++c) {
+                    double v = *dstPix;
+                    min[c] = std::min(min[c], v);
+                    max[c] = std::max(max[c], v);
+                    sumLine[c] += v;
+                    ++dstPix;
+                }
+            }
+            for (int c = 0; c < nComponents; ++c) {
+                sum[c] += sumLine[c];
+            }
+            count += procWindow.x2 - procWindow.x1;
+        }
+        
+        addResults(min, max, sum, count);
+    }
+};
+
+template <class PIX, int nComponents, int maxValue>
+void
+ImageStatisticsPlugin::updateMinMaxMeanComponentsDepth(OFX::Image* srcImg, double time, Results* results)
+{
+    ImageMinMaxMeanProcessor<PIX, nComponents, maxValue> fred(*this);
+    setupAndProcess(fred, srcImg, time, *results, results);
+}
+
+template <int nComponents>
+void
+ImageStatisticsPlugin::updateMinMaxMeanComponents(OFX::Image* srcImg, double time, Results* results)
+{
+    OFX::BitDepthEnum       srcBitDepth    = srcImg->getPixelDepth();
+    switch (srcBitDepth) {
+        case OFX::eBitDepthUByte: {
+            updateMinMaxMeanComponentsDepth<unsigned char, nComponents, 255>(srcImg, time, results);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            updateMinMaxMeanComponentsDepth<unsigned short, nComponents, 65535>(srcImg, time, results);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            updateMinMaxMeanComponentsDepth<float, nComponents, 1>(srcImg, time, results);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
+void
+ImageStatisticsPlugin::updateMinMaxMean(OFX::Image* srcImg, double time, Results* results)
+{
+    OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
+    assert(srcComponents == OFX::ePixelComponentAlpha ||srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA);
+    if (srcComponents == OFX::ePixelComponentAlpha) {
+        updateMinMaxMeanComponents<1>(srcImg, time, results);
+    } else if (srcComponents == OFX::ePixelComponentRGBA) {
+        updateMinMaxMeanComponents<4>(srcImg, time, results);
+    } else if (srcComponents == OFX::ePixelComponentRGB) {
+        updateMinMaxMeanComponents<3>(srcImg, time, results);
+    } else {
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
+
+
+template <class PIX, int nComponents, int maxValue>
+class ImageSDevProcessor : public ImageStatisticsProcessorBase
+{
+private:
+    double _mean[nComponents];
+    double _sum_p2[nComponents];
+public:
+    ImageSDevProcessor(OFX::ImageEffect &instance)
+    : ImageStatisticsProcessorBase(instance)
+    {
+        std::fill(_mean, _mean+nComponents, 0.);
+        std::fill(_sum_p2, _sum_p2+nComponents, 0.);
+    }
+
+    ~ImageSDevProcessor()
+    {
+    }
+
+    void setPrevResults(const Results &results) OVERRIDE FINAL
+    {
+        toComponents(results.mean, _mean, nComponents);
+    }
+
+    void getResults(Results *results) OVERRIDE FINAL
+    {
+        if (_count > 1) {
+            double sdev[nComponents];
+            for (int c = 0; c < nComponents; ++c) {
+                // sdev^2 is an unbiased estimator for the population variance
+                sdev[c] = std::sqrt(std::max(0., _sum_p2[c]/(_count-1)));
+            }
+            toRGBA(sdev, nComponents, &results->sdev);
+        }
+    }
+
+private:
+
+    void addResults(double sum_p2[nComponents], unsigned long count) {
+        _mutex.lock();
+        for (int c = 0; c < nComponents; ++c) {
+            _sum_p2[c] += sum_p2[c];
+        }
+        _count += count;
+        _mutex.unlock();
+    }
+
+
+    void multiThreadProcessImages(OfxRectI procWindow)
+    {
+        double sum_p2[nComponents];
+        std::fill(sum_p2, sum_p2 + nComponents, 0.);
+        unsigned long count = 0;
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if (_effect.abort()) {
+                break;
+            }
+
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
+            double sumLine_p2[nComponents]; // partial sum to avoid underflows
+            std::fill(sumLine_p2, sumLine_p2 + nComponents, 0.);
+
+            for (int x = procWindow.x1; x < procWindow.x2; ++x) {
+                for (int c = 0; c < nComponents; ++c) {
+                    double v = (*dstPix - _mean[c]);
+                    sumLine_p2[c] += v * v;
+                    ++dstPix;
+                }
+            }
+            for (int c = 0; c < nComponents; ++c) {
+                sum_p2[c] += sumLine_p2[c];
+            }
+            count += procWindow.x2 - procWindow.x1;
+        }
+
+        addResults(sum_p2, count);
+    }
+};
+
+template <class PIX, int nComponents, int maxValue>
+void
+ImageStatisticsPlugin::updateSDevComponentsDepth(OFX::Image* srcImg, double time, const Results& prevResults, Results* results)
+{
+    ImageSDevProcessor<PIX, nComponents, maxValue> fred(*this);
+    setupAndProcess(fred, srcImg, time, prevResults, results);
+}
+
+template <int nComponents>
+void
+ImageStatisticsPlugin::updateSDevComponents(OFX::Image* srcImg, double time, const Results& prevResults, Results* results)
+{
+    OFX::BitDepthEnum       srcBitDepth    = srcImg->getPixelDepth();
+    switch (srcBitDepth) {
+        case OFX::eBitDepthUByte: {
+            updateSDevComponentsDepth<unsigned char, nComponents, 255>(srcImg, time, prevResults, results);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            updateSDevComponentsDepth<unsigned short, nComponents, 65535>(srcImg, time, prevResults, results);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            updateSDevComponentsDepth<float, nComponents, 1>(srcImg, time, prevResults, results);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
+void
+ImageStatisticsPlugin::updateSDev(OFX::Image* srcImg, double time, const Results& prevResults, Results* results)
+{
+    OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
+    assert(srcComponents == OFX::ePixelComponentAlpha ||srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA);
+    if (srcComponents == OFX::ePixelComponentAlpha) {
+        updateSDevComponents<1>(srcImg, time, prevResults, results);
+    } else if (srcComponents == OFX::ePixelComponentRGBA) {
+        updateSDevComponents<4>(srcImg, time, prevResults, results);
+    } else if (srcComponents == OFX::ePixelComponentRGB) {
+        updateSDevComponents<3>(srcImg, time, prevResults, results);
+    } else {
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
+
+
+template <class PIX, int nComponents, int maxValue>
+class ImageSkewnessKurtosisProcessor : public ImageStatisticsProcessorBase
+{
+private:
+    double _mean[nComponents];
+    double _sdev[nComponents];
+    double _sum_p3[nComponents];
+    double _sum_p4[nComponents];
+public:
+    ImageSkewnessKurtosisProcessor(OFX::ImageEffect &instance)
+    : ImageStatisticsProcessorBase(instance)
+    {
+        std::fill(_mean, _mean+nComponents, 0.);
+        std::fill(_sdev, _sdev+nComponents, 0.);
+        std::fill(_sum_p3, _sum_p3+nComponents, 0.);
+        std::fill(_sum_p4, _sum_p4+nComponents, 0.);
+    }
+
+    ~ImageSkewnessKurtosisProcessor()
+    {
+    }
+
+    void setPrevResults(const Results &results) OVERRIDE FINAL
+    {
+        toComponents(results.mean, _mean, nComponents);
+        toComponents(results.sdev, _sdev, nComponents);
+    }
+
+    void getResults(Results *results) OVERRIDE FINAL
+    {
+        if (_count > 2) {
+            double skewness[nComponents];
+            // factor for the adjusted Fisher-Pearson standardized moment coefficient G_1
+            double skewfac = ((double)_count*_count) / ((double)(_count-1)*(_count-2));
+            for (int c = 0; c < nComponents; ++c) {
+                skewness[c] = skewfac * _sum_p3[c] / _count;
+            }
+            toRGBA(skewness, nComponents, &results->skewness);
+        }
+        if (_count > 3) {
+            double kurtosis[nComponents];
+            double kurtfac = ((double)(_count+1)*_count) / ((double)(_count-1)*(_count-2)*(_count-3));
+            double kurtshift = -3 * ((double)(_count-1)*(_count-1)) / ((double)(_count-2)*(_count-3));
+            for (int c = 0; c < nComponents; ++c) {
+                kurtosis[c] = kurtfac * _sum_p4[c] + kurtshift;
+            }
+            toRGBA(kurtosis, nComponents, &results->kurtosis);
+        }
+    }
+
+private:
+
+    void addResults(double sum_p3[nComponents], double sum_p4[nComponents], unsigned long count) {
+        _mutex.lock();
+        for (int c = 0; c < nComponents; ++c) {
+            _sum_p3[c] += sum_p3[c];
+            _sum_p4[c] += sum_p4[c];
+        }
+        _count += count;
+        _mutex.unlock();
+    }
+
+
+    void multiThreadProcessImages(OfxRectI procWindow)
+    {
+        double sum_p3[nComponents];
+        double sum_p4[nComponents];
+        std::fill(sum_p3, sum_p3 + nComponents, 0.);
+        std::fill(sum_p4, sum_p4 + nComponents, 0.);
+        unsigned long count = 0;
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if (_effect.abort()) {
+                break;
+            }
+
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
+            double sumLine_p3[nComponents]; // partial sum to avoid underflows
+            double sumLine_p4[nComponents]; // partial sum to avoid underflows
+            std::fill(sumLine_p4, sumLine_p4 + nComponents, 0.);
+
+            for (int x = procWindow.x1; x < procWindow.x2; ++x) {
+                for (int c = 0; c < nComponents; ++c) {
+                    if (_sdev[c] > 0.) {
+                        double v = (*dstPix - _mean[c])/_sdev[c];
+                        double v2 = v * v;
+                        sumLine_p3[c] += v2 * v;
+                        sumLine_p4[c] += v2 * v2;
+                    }
+                    ++dstPix;
+                }
+            }
+            for (int c = 0; c < nComponents; ++c) {
+                sum_p3[c] += sumLine_p3[c];
+                sum_p4[c] += sumLine_p4[c];
+            }
+            count += procWindow.x2 - procWindow.x1;
+        }
+
+        addResults(sum_p3, sum_p4, count);
+    }
+};
+
+template <class PIX, int nComponents, int maxValue>
+void
+ImageStatisticsPlugin::updateSkewnessKurtosisComponentsDepth(OFX::Image* srcImg, double time, const Results& prevResults, Results* results)
+{
+    ImageSkewnessKurtosisProcessor<PIX, nComponents, maxValue> fred(*this);
+    setupAndProcess(fred, srcImg, time, prevResults, results);
+}
+
+template <int nComponents>
+void
+ImageStatisticsPlugin::updateSkewnessKurtosisComponents(OFX::Image* srcImg, double time, const Results& prevResults, Results* results)
+{
+    OFX::BitDepthEnum       srcBitDepth    = srcImg->getPixelDepth();
+    switch (srcBitDepth) {
+        case OFX::eBitDepthUByte: {
+            updateSkewnessKurtosisComponentsDepth<unsigned char, nComponents, 255>(srcImg, time, prevResults, results);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            updateSkewnessKurtosisComponentsDepth<unsigned short, nComponents, 65535>(srcImg, time, prevResults, results);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            updateSkewnessKurtosisComponentsDepth<float, nComponents, 1>(srcImg, time, prevResults, results);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
+void
+ImageStatisticsPlugin::updateSkewnessKurtosis(OFX::Image* srcImg, double time, const Results& prevResults, Results* results)
+{
+    OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
+    assert(srcComponents == OFX::ePixelComponentAlpha ||srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA);
+    if (srcComponents == OFX::ePixelComponentAlpha) {
+        updateSkewnessKurtosisComponents<1>(srcImg, time, prevResults, results);
+    } else if (srcComponents == OFX::ePixelComponentRGBA) {
+        updateSkewnessKurtosisComponents<4>(srcImg, time, prevResults, results);
+    } else if (srcComponents == OFX::ePixelComponentRGB) {
+        updateSkewnessKurtosisComponents<3>(srcImg, time, prevResults, results);
+    } else {
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
 }
 
 // update image statistics
 void
-ImageStatisticsPlugin::update(const OFX::Image* srcImg, double time)
+ImageStatisticsPlugin::update(OFX::Image* srcImg, double time)
 {
-    // instantiate the render code based on the pixel depth of the src clip
-    OFX::BitDepthEnum       srcBitDepth    = _srcClip->getPixelDepth();
-    OFX::PixelComponentEnum srcComponents  = _srcClip->getPixelComponents();
-
     Results results;
-
-    assert(srcComponents == OFX::ePixelComponentAlpha ||srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA);
-    if (srcComponents == OFX::ePixelComponentAlpha) {
-        switch (srcBitDepth) {
-            case OFX::eBitDepthUByte: {
-                ImageStatisticsProcessor<unsigned char, 1, 255> fred(*this);
-                setupAndProcess(fred, time);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                ImageStatisticsProcessor<unsigned short, 1, 65535> fred(*this);
-                setupAndProcess(fred, time);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                ImageStatisticsProcessor<float, 1, 1> fred(*this);
-                setupAndProcess(fred, time);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
-    } else if (srcComponents == OFX::ePixelComponentRGBA) {
-        switch (srcBitDepth) {
-            case OFX::eBitDepthUByte: {
-                ImageStatisticsProcessor<unsigned char, 4, 255> fred(*this);
-                setupAndProcess(fred, time);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                ImageStatisticsProcessor<unsigned short, 4, 65535> fred(*this);
-                setupAndProcess(fred, time);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                ImageStatisticsProcessor<float, 4, 1> fred(*this);
-                setupAndProcess(fred, time);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
-    } else {
-        assert(srcComponents == OFX::ePixelComponentRGB);
-        switch (srcBitDepth) {
-            case OFX::eBitDepthUByte: {
-                ImageStatisticsProcessor<unsigned char, 3, 255> fred(*this);
-                setupAndProcess(fred, time);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                ImageStatisticsProcessor<unsigned short, 3, 65535> fred(*this);
-                setupAndProcess(fred, time);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                ImageStatisticsProcessor<float, 3, 1> fred(*this);
-                setupAndProcess(fred, time);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+    updateMinMaxMean(srcImg, time, &results);
+    if (abort()) {
+        return;
     }
+    _statMin->setValueAtTime(time, results.min.r, results.min.g, results.min.b, results.min.a);
+    _statMax->setValueAtTime(time, results.max.r, results.max.g, results.max.b, results.max.a);
+    _statMean->setValueAtTime(time, results.mean.r, results.mean.g, results.mean.b, results.mean.a);
+    updateSDev(srcImg, time, results, &results);
+    if (abort()) {
+        return;
+    }
+    _statSDev->setValueAtTime(time, results.sdev.r, results.sdev.g, results.sdev.b, results.sdev.a);
+    updateSkewnessKurtosis(srcImg, time, results, &results);
+    if (abort()) {
+        return;
+    }
+    _statSkewness->setValueAtTime(time, results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
+    _statKurtosis->setValueAtTime(time, results.kurtosis.r, results.kurtosis.g, results.kurtosis.b, results.kurtosis.a);
 }
 
 class ImageStatisticsInteract : public RectangleInteract
@@ -591,7 +955,6 @@ public:
         _restrictToRectangle = effect->fetchBooleanParam(kParamRestrictToRectangle);
         addParamToSlaveTo(_restrictToRectangle);
     }
-
 
 private:
 
@@ -755,11 +1118,61 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         page->addChild(*param);
     }
 
-    // mean
+    // min
+    {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatMin);
+        param->setLabels(kParamStatMinLabel, kParamStatMinLabel, kParamStatMinLabel);
+        param->setHint(kParamStatMinHint);
+        param->setEvaluateOnChange(false);
+        param->setEnabled(false);
+        page->addChild(*param);
+    }
+
+    // statMax
+    {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatMax);
+        param->setLabels(kParamStatMaxLabel, kParamStatMaxLabel, kParamStatMaxLabel);
+        param->setHint(kParamStatMaxHint);
+        param->setEvaluateOnChange(false);
+        param->setEnabled(false);
+        page->addChild(*param);
+    }
+
+    // statMean
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatMean);
         param->setLabels(kParamStatMeanLabel, kParamStatMeanLabel, kParamStatMeanLabel);
         param->setHint(kParamStatMeanHint);
+        param->setEvaluateOnChange(false);
+        param->setEnabled(false);
+        page->addChild(*param);
+    }
+
+    // statSDev
+    {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatSDev);
+        param->setLabels(kParamStatSDevLabel, kParamStatSDevLabel, kParamStatSDevLabel);
+        param->setHint(kParamStatSDevHint);
+        param->setEvaluateOnChange(false);
+        param->setEnabled(false);
+        page->addChild(*param);
+    }
+
+    // statSkewness
+    {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatSkewness);
+        param->setLabels(kParamStatSkewnessLabel, kParamStatSkewnessLabel, kParamStatSkewnessLabel);
+        param->setHint(kParamStatSkewnessHint);
+        param->setEvaluateOnChange(false);
+        param->setEnabled(false);
+        page->addChild(*param);
+    }
+
+    // statKurtosis
+    {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatKurtosis);
+        param->setLabels(kParamStatKurtosisLabel, kParamStatKurtosisLabel, kParamStatKurtosisLabel);
+        param->setHint(kParamStatKurtosisHint);
         param->setEvaluateOnChange(false);
         param->setEnabled(false);
         page->addChild(*param);
