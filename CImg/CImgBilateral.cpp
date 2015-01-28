@@ -129,6 +129,9 @@
 #define kParamSigmaRHint "Standard deviation of the range kernel (color sigma), in intensity units (>=0). A reasonable value is 1/10 of the intensity range. Small values (1/256 of the intensity range and below) will slow down filtering."
 #define kParamSigmaRDefault 0.4
 
+#define kClipImage kOfxImageEffectSimpleSourceClipName
+#define kClipGuide "Guide"
+
 using namespace OFX;
 
 /// Bilateral plugin
@@ -201,7 +204,7 @@ class CImgBilateralGuidedPlugin : public CImgOperatorPluginHelper<CImgBilateralP
 public:
 
     CImgBilateralGuidedPlugin(OfxImageEffectHandle handle)
-    : CImgOperatorPluginHelper<CImgBilateralParams>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgOperatorPluginHelper<CImgBilateralParams>(handle, kClipImage, kClipGuide, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);
@@ -353,10 +356,12 @@ void CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescrip
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgBilateralGuidedPlugin::describeInContextBegin(desc, context,
-                                                                                 kSupportsRGBA,
-                                                                                 kSupportsRGB,
-                                                                                 kSupportsAlpha,
-                                                                                 kSupportsTiles);
+                                                                                       kClipImage,
+                                                                                       kClipGuide,
+                                                                                       kSupportsRGBA,
+                                                                                       kSupportsRGB,
+                                                                                       kSupportsAlpha,
+                                                                                       kSupportsTiles);
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);

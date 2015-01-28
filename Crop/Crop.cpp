@@ -564,7 +564,7 @@ public:
     
 private:
     
-    virtual OfxPointD getBtmLeft(OfxTime time) const /*OVERRIDE FINAL*/ {
+    virtual OfxPointD getBtmLeft(OfxTime time) const OVERRIDE FINAL {
         OfxPointD btmLeft;
         bool reformat;
         _reformat->getValueAtTime(time, reformat);
@@ -576,18 +576,18 @@ private:
         return btmLeft;
     }
     
-    virtual void aboutToCheckInteractivity(OfxTime time) {
+    virtual void aboutToCheckInteractivity(OfxTime time) OVERRIDE FINAL {
         _reformat->getValueAtTime(time,_isReformated);
     }
     
-    virtual bool allowTopLeftInteraction() const { return !_isReformated; }
-    virtual bool allowBtmRightInteraction() const { return !_isReformated; }
-    virtual bool allowBtmLeftInteraction() const { return !_isReformated; }
-    virtual bool allowBtmMidInteraction() const { return !_isReformated; }
-    virtual bool allowMidLeftInteraction() const { return !_isReformated; }
-    virtual bool allowCenterInteraction() const { return !_isReformated; }
+    virtual bool allowTopLeftInteraction() const OVERRIDE FINAL { return !_isReformated; }
+    virtual bool allowBtmRightInteraction() const OVERRIDE FINAL { return !_isReformated; }
+    virtual bool allowBtmLeftInteraction() const OVERRIDE FINAL { return !_isReformated; }
+    virtual bool allowBtmMidInteraction() const OVERRIDE FINAL { return !_isReformated; }
+    virtual bool allowMidLeftInteraction() const OVERRIDE FINAL { return !_isReformated; }
+    virtual bool allowCenterInteraction() const OVERRIDE FINAL { return !_isReformated; }
 
-
+private:
     OFX::BooleanParam* _reformat;
     bool _isReformated; //< @see aboutToCheckInteractivity
 };
@@ -672,7 +672,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(0., 0.);
         param->setIncrement(1.);
-        param->setHint("Coordinates of the bottom left corner of the crop rectangle");
+        param->setHint("Coordinates of the bottom left corner of the crop rectangle.");
         param->setDigits(0);
         page->addChild(*param);
     }
@@ -685,8 +685,8 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(1., 1.);
         param->setIncrement(1.);
-        param->setDimensionLabels("width", "height");
-        param->setHint("Width and height of the crop rectangle");
+        param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
+        param->setHint("Width and height of the crop rectangle.");
         param->setIncrement(1.);
         param->setDigits(0);
         page->addChild(*param);
@@ -700,7 +700,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setRange(0., 1000.);
         param->setDisplayRange(0., 100.);
         param->setIncrement(1.);
-        param->setHint("Size of the fade to black around edges to apply");
+        param->setHint("Size of the fade to black around edges to apply.");
         page->addChild(*param);
     }
 

@@ -18,6 +18,7 @@ Gamma.o \
 Grade.o \
 ColorTransform.o \
 HSVTool.o \
+ImageStatistics.o \
 Invert.o \
 JoinViews.o \
 Keyer.o \
@@ -160,6 +161,7 @@ VPATH += \
 ../Grade \
 ../ColorTransform \
 ../HSVTool \
+../ImageStatistics \
 ../Invert \
 ../JoinViews \
 ../Keyer \
@@ -211,6 +213,7 @@ CXXFLAGS += \
 -I../Grade \
 -I../ColorTransform \
 -I../HSVTool \
+-I../ImageStatistics \
 -I../Invert \
 -I../JoinViews \
 -I../Keyer \

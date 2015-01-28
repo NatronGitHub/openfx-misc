@@ -21,6 +21,7 @@ Gamma \
 Grade \
 ColorTransform \
 HSVTool \
+ImageStatistics \
 Invert \
 JoinViews \
 Keyer \
