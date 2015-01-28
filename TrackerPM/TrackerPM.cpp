@@ -717,12 +717,16 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
             newCenterPixelSub.x = refCenterPixelSub.x + bestMatch.x - refCenterI.x;
             newCenterPixelSub.y = refCenterPixelSub.y + bestMatch.y - refCenterI.y;
             OFX::MergeImages2D::toCanonicalSub(newCenterPixelSub, rsOne, par, &newCenter);
-            beginEditBlock("trackerUpdate");
+            
+            //Commented-out for Natron compat: Natron does beginEditBlock in the main-thread, hence
+            //since the instanceChanged action is executed in multiple separated thread by Natron when tracking, there's no
+            //telling that the actual setting of the value will be done when the next frame is tracked
+            //beginEditBlock("trackerUpdate");
             // create a keyframe at starting point
             _center->setValueAtTime(refTime, refCenter.x, refCenter.y);
             // create a keyframe at end point
             _center->setValueAtTime(otherTime, newCenter.x - otherOffset.x, newCenter.y - otherOffset.y);
-            endEditBlock();
+           // endEditBlock();
         }
     }
 }
