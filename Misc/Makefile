@@ -85,6 +85,10 @@ RESOURCES = \
 ../ColorTransform/net.sf.openfx.HSVToRGBPlugin.svg \
 ../ColorTransform/net.sf.openfx.RGBToHSVPlugin.png \
 ../ColorTransform/net.sf.openfx.RGBToHSVPlugin.svg \
+../ColorTransform/net.sf.openfx.RGBToLABPlugin.png \
+../ColorTransform/net.sf.openfx.RGBToXYZPlugin.png \
+../ColorTransform/net.sf.openfx.LABToRGBPlugin.png \
+../ColorTransform/net.sf.openfx.XYZToRGBPlugin.png \
 ../HSVTool/net.sf.openfx.HSVToolPlugin.png \
 ../HSVTool/net.sf.openfx.HSVToolPlugin.svg \
 ../Invert/net.sf.openfx.Invert.png \

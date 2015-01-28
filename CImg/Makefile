@@ -23,6 +23,8 @@ net.sf.cimg.CImgPlasma.png \
 net.sf.cimg.CImgPlasma.svg \
 net.sf.cimg.CImgRollingGuidance.png \
 net.sf.cimg.CImgRollingGuidance.svg \
+net.sf.cimg.CImgSharpenInvDiff.png \
+net.sf.cimg.CImgSharpenShock.png \
 net.sf.cimg.CImgSmooth.png \
 net.sf.cimg.CImgSmooth.svg \
 
