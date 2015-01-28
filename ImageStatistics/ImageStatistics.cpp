@@ -958,6 +958,8 @@ private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
+    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
+
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD & rod) OVERRIDE FINAL;
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
@@ -1081,6 +1083,24 @@ ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
         }
     }
     //}
+}
+
+// override the roi call
+// Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
+// (this is the case here)
+void
+ImageStatisticsPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+{
+    bool restrictToRectangle;
+    _restrictToRectangle->getValueAtTime(args.time, restrictToRectangle);
+    if (restrictToRectangle) {
+        OfxRectD regionOfInterest;
+        _btmLeft->getValueAtTime(args.time, regionOfInterest.x1, regionOfInterest.y1);
+        _size->getValueAtTime(args.time, regionOfInterest.x2, regionOfInterest.y2);
+        regionOfInterest.x2 += regionOfInterest.x1;
+        regionOfInterest.y2 += regionOfInterest.y1;
+        rois.setRegionOfInterest(*_srcClip, regionOfInterest);
+    }
 }
 
 bool
