@@ -1099,6 +1099,8 @@ ImageStatisticsPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArgument
         _size->getValueAtTime(args.time, regionOfInterest.x2, regionOfInterest.y2);
         regionOfInterest.x2 += regionOfInterest.x1;
         regionOfInterest.y2 += regionOfInterest.y1;
+        // Union with output RoD, so that render works
+        MergeImages2D::rectBoundingBox(args.regionOfInterest, regionOfInterest, &regionOfInterest);
         rois.setRegionOfInterest(*_srcClip, regionOfInterest);
     }
 }
