@@ -109,12 +109,6 @@
 #define kParamRestrictToRectangleLabel "Restrict to Rectangle"
 #define kParamRestrictToRectangleHint "Restrict statistics computation to a rectangle."
 
-// the following three parameters are used to check if the previous analysis was done on the same area,
-// so that only one analysis is done when the interact changes
-#define kParamTopRightAnalysis "topRightAnalysis"
-#define kParamBtmLeftAnalysis "btmLeftAnalysis"
-#define kParamAnalysisIsRGBA "analysisIsRGBA"
-
 #define kParamAnalyzeFrame "analyzeFrame"
 #define kParamAnalyzeFrameLabel "Analyze Frame"
 #define kParamAnalyzeFrameHint "Analyze current frame and set values."
@@ -133,7 +127,7 @@
 
 #define kParamAutoUpdate "autoUpdate"
 #define kParamAutoUpdateLabel "Auto Update"
-#define kParamAutoUpdateHint "Automatically update values when input changes if an analysis was performed at current frame. If not checked, values are only updated if the plugin parameters change."
+#define kParamAutoUpdateHint "Automatically update values when input or rectangle changes if an analysis was performed at current frame. If not checked, values are only updated if the plugin parameters change."
 
 #define kParamGroupRGBA "RGBA"
 
@@ -922,10 +916,6 @@ public:
         _restrictToRectangle = fetchBooleanParam(kParamRestrictToRectangle);
         _autoUpdate = fetchBooleanParam(kParamAutoUpdate);
         assert(_btmLeft && _size && _restrictToRectangle && _autoUpdate);
-        _btmLeftAnalysis = fetchInt2DParam(kParamBtmLeftAnalysis);
-        _topRightAnalysis = fetchInt2DParam(kParamTopRightAnalysis);
-        _analysisIsRGBA = fetchBooleanParam(kParamAnalysisIsRGBA);
-        assert(_btmLeftAnalysis && _topRightAnalysis && _analysisIsRGBA);
         _statMin = fetchRGBAParam(kParamStatMin);
         _statMax = fetchRGBAParam(kParamStatMax);
         _statMean = fetchRGBAParam(kParamStatMean);
@@ -1033,9 +1023,6 @@ private:
     Double2DParam* _size;
     BooleanParam* _restrictToRectangle;
     BooleanParam* _autoUpdate;
-    Int2DParam* _btmLeftAnalysis;
-    Int2DParam* _topRightAnalysis;
-    BooleanParam* _analysisIsRGBA;
     RGBAParam* _statMin;
     RGBAParam* _statMax;
     RGBAParam* _statMean;
@@ -1137,10 +1124,7 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
     bool doAnalyzeHSVL = false;
     bool doAnalyzeSequenceRGBA = false;
     bool doAnalyzeSequenceHSVL = false;
-    bool checkDoubleAnalysis = false;
-    bool analysisIsRGBA = false;
     OfxRectI analysisWindow;
-    OfxRectI analysisWindowPrev = {-1, -1, -1, -1};
 
     if (paramName == kParamRestrictToRectangle) {
         // update visibility
@@ -1152,13 +1136,10 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _size->setIsSecret(restrictToRectangle);
         doUpdate = true;
     }
-    if (paramName == kParamRectangleInteractBtmLeft ||
+    if (//paramName == kParamRectangleInteractBtmLeft ||
+        // only trigger on kParamRectangleInteractSize (the last one changed)
         paramName == kParamRectangleInteractSize) {
-        doUpdate = true;
-        checkDoubleAnalysis = true;
-        _btmLeftAnalysis->getValue(analysisWindowPrev.x1, analysisWindowPrev.y1);
-        _topRightAnalysis->getValue(analysisWindowPrev.x2, analysisWindowPrev.y2);
-        _analysisIsRGBA->getValue(analysisIsRGBA);
+        _autoUpdate->getValue(doUpdate);
     }
     if (paramName == kParamAnalyzeFrame) {
         doAnalyzeRGBA = true;
@@ -1218,24 +1199,14 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             OfxPointD rs = srcImg->getRenderScale();
             assert(rs.x == args.renderScale.x && rs.y == args.renderScale.y);
             computeWindow(srcImg.get(), args.time, &analysisWindow);
-            if (checkDoubleAnalysis &&
-                ((doAnalyzeRGBA && analysisIsRGBA) ||
-                 (doAnalyzeHSVL && !analysisIsRGBA)) &&
-                (analysisWindowPrev.x1 == analysisWindow.x1) &&
-                (analysisWindowPrev.x2 == analysisWindow.x2) &&
-                (analysisWindowPrev.y1 == analysisWindow.y1) &&
-                (analysisWindowPrev.y2 == analysisWindow.y2)) {
-                // analysis already done, do nothing
-            } else {
-                getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
-                if (doAnalyzeRGBA) {
-                    update(srcImg.get(), args.time, analysisWindow);
-                }
-                if (doAnalyzeHSVL) {
-                    updateHSVL(srcImg.get(), args.time, analysisWindow);
-                }
-                getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
+            getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
+            if (doAnalyzeRGBA) {
+                update(srcImg.get(), args.time, analysisWindow);
             }
+            if (doAnalyzeHSVL) {
+                updateHSVL(srcImg.get(), args.time, analysisWindow);
+            }
+            getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
         }
     }
     if (doAnalyzeSequenceRGBA || doAnalyzeSequenceHSVL) {
@@ -1349,9 +1320,6 @@ ImageStatisticsPlugin::update(OFX::Image* srcImg, double time, const OfxRectI &a
     _statSDev->setValueAtTime(time, results.sdev.r, results.sdev.g, results.sdev.b, results.sdev.a);
     _statSkewness->setValueAtTime(time, results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
     _statKurtosis->setValueAtTime(time, results.kurtosis.r, results.kurtosis.g, results.kurtosis.b, results.kurtosis.a);
-    _btmLeftAnalysis->setValueAtTime(time, analysisWindow.x1, analysisWindow.y1);
-    _topRightAnalysis->setValueAtTime(time, analysisWindow.x2, analysisWindow.y2);
-    _analysisIsRGBA->setValueAtTime(time, true);
     endEditBlock();
 }
 
@@ -1378,9 +1346,6 @@ ImageStatisticsPlugin::updateHSVL(OFX::Image* srcImg, double time, const OfxRect
     _statHSVLSDev->setValueAtTime(time, results.sdev.r, results.sdev.g, results.sdev.b, results.sdev.a);
     _statHSVLSkewness->setValueAtTime(time, results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
     _statHSVLKurtosis->setValueAtTime(time, results.kurtosis.r, results.kurtosis.g, results.kurtosis.b, results.kurtosis.a);
-    _btmLeftAnalysis->setValueAtTime(time, analysisWindow.x1, analysisWindow.y1);
-    _topRightAnalysis->setValueAtTime(time, analysisWindow.x2, analysisWindow.y2);
-    _analysisIsRGBA->setValueAtTime(time, false);
     endEditBlock();
 }
 
@@ -1566,37 +1531,6 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setHint(kParamRectangleInteractSizeHint);
         param->setDigits(0);
         param->setEvaluateOnChange(false);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-
-    // the following two parameters are used to check if the previous analysis was done on the same area,
-    // so that only one analysis is done when the interact changes.
-    // btmLeftAnalysis
-    {
-        Int2DParamDescriptor* param = desc.defineInt2DParam(kParamBtmLeftAnalysis);
-        param->setDefault(-1, -1);
-        param->setIsSecret(true);
-        param->setIsPersistant(false);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-
-    // topRightAnalysis
-    {
-        Int2DParamDescriptor* param = desc.defineInt2DParam(kParamTopRightAnalysis);
-        param->setDefault(-1, -1);
-        param->setIsSecret(true);
-        param->setIsPersistant(false);
-        param->setAnimates(true);
-        page->addChild(*param);
-    }
-
-    // topRightAnalysis
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAnalysisIsRGBA);
-        param->setIsSecret(true);
-        param->setIsPersistant(false);
         param->setAnimates(true);
         page->addChild(*param);
     }
