@@ -80,6 +80,7 @@
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
 #include "ofxsMerging.h"
+#include "ofxsLut.h"
 
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
@@ -108,6 +109,12 @@
 #define kParamRestrictToRectangleLabel "Restrict to Rectangle"
 #define kParamRestrictToRectangleHint "Restrict statistics computation to a rectangle."
 
+// the following three parameters are used to check if the previous analysis was done on the same area,
+// so that only one analysis is done when the interact changes
+#define kParamTopRightAnalysis "topRightAnalysis"
+#define kParamBtmLeftAnalysis "btmLeftAnalysis"
+#define kParamAnalysisIsRGBA "analysisIsRGBA"
+
 #define kParamAnalyzeFrame "analyzeFrame"
 #define kParamAnalyzeFrameLabel "Analyze Frame"
 #define kParamAnalyzeFrameHint "Analyze current frame and set values."
@@ -116,9 +123,19 @@
 #define kParamAnalyzeSequenceLabel "Analyze Sequence"
 #define kParamAnalyzeSequenceHint "Analyze all frames from the sequence and set values."
 
+#define kParamClearFrame "clearFrame"
+#define kParamClearFrameLabel "Clear Frame"
+#define kParamClearFrameHint "Clear analysis for current frame."
+
+#define kParamClearSequence "clearSequence"
+#define kParamClearSequenceLabel "Clear Sequence"
+#define kParamClearSequenceHint "Clear analysis for all frames from the sequence."
+
 #define kParamAutoUpdate "autoUpdate"
 #define kParamAutoUpdateLabel "Auto Update"
-#define kParamAutoUpdateHint "Automatically update values when input changes. If not checked, values are only updated if the plugin parameters change."
+#define kParamAutoUpdateHint "Automatically update values when input changes if an analysis was performed at current frame. If not checked, values are only updated if the plugin parameters change."
+
+#define kParamGroupRGBA "RGBA"
 
 #define kParamStatMin "statMin"
 #define kParamStatMinLabel "Min."
@@ -150,6 +167,62 @@
 #define kParamStatSkewness "statSkewness"
 #define kParamStatSkewnessLabel "Skewness"
 #define kParamStatSkewnessHint \
+"Skewness quantifies how symmetrical the distribution is.\n" \
+"• A symmetrical distribution has a skewness of zero.\n" \
+"• An asymmetrical distribution with a long tail to the right (higher values) has a positive skew.\n" \
+"• An asymmetrical distribution with a long tail to the left (lower values) has a negative skew.\n" \
+"• The skewness is unitless.\n" \
+"• Any threshold or rule of thumb is arbitrary, but here is one: If the skewness is greater than 1.0 (or less than -1.0), the skewness is substantial and the distribution is far from symmetrical."
+
+
+#define kParamGroupHSVL "HSVL"
+
+#define kParamAnalyzeFrameHSVL "analyzeFrameHSVL"
+#define kParamAnalyzeFrameHSVLLabel "Analyze Frame"
+#define kParamAnalyzeFrameHSVLHint "Analyze current frame as HSVL and set values."
+
+#define kParamAnalyzeSequenceHSVL "analyzeSequenceHSVL"
+#define kParamAnalyzeSequenceHSVLLabel "Analyze Sequence"
+#define kParamAnalyzeSequenceHSVLHint "Analyze all frames from the sequence as HSVL and set values."
+
+#define kParamClearFrameHSVL "clearFrameHSVL"
+#define kParamClearFrameHSVLLabel "Clear Frame"
+#define kParamClearFrameHSVLHint "Clear HSVL analysis for current frame."
+
+#define kParamClearSequenceHSVL "clearSequenceHSVL"
+#define kParamClearSequenceHSVLLabel "Clear Sequence"
+#define kParamClearSequenceHSVLHint "Clear HSVL analysis for all frames from the sequence."
+
+#define kParamStatHSVLMin "statHSVLMin"
+#define kParamStatHSVLMinLabel "HSVL Min."
+#define kParamStatHSVLMinHint "Minimum value."
+
+#define kParamStatHSVLMax "statHSVLMax"
+#define kParamStatHSVLMaxLabel "HSVL Max."
+#define kParamStatHSVLMaxHint "Maximum value."
+
+#define kParamStatHSVLMean "statHSVLMean"
+#define kParamStatHSVLMeanLabel "HSVL Mean"
+#define kParamStatHSVLMeanHint "The mean is the average. Add up the values, and divide by the number of values."
+
+#define kParamStatHSVLSDev "statHSVLSDev"
+#define kParamStatHSVLSDevLabel "HSVL S.Dev."
+#define kParamStatHSVLSDevHint "The standard deviation (S.Dev.) quantifies variability or scatter, and it is expressed in the same units as your data."
+
+#define kParamStatHSVLKurtosis "statHSVLKurtosis"
+#define kParamStatHSVLKurtosisLabel "HSVL Kurtosis"
+#define kParamStatHSVLKurtosisHint \
+"Kurtosis quantifies whether the shape of the data distribution matches the Gaussian distribution.\n" \
+"•A Gaussian distribution has a kurtosis of 0.\n" \
+"•A flatter distribution has a negative kurtosis,\n" \
+"•A distribution more peaked than a Gaussian distribution has a positive kurtosis.\n" \
+"•Kurtosis has no units.\n" \
+"•The value that this plugin reports is sometimes called the excess kurtosis since the expected kurtosis for a Gaussian distribution is 0.0.\n" \
+"•An alternative definition of kurtosis is computed by adding 3 to the value reported by this plugin. With this definition, a Gaussian distribution is expected to have a kurtosis of 3.0."
+
+#define kParamStatHSVLSkewness "statHSVLSkewness"
+#define kParamStatHSVLSkewnessLabel "HSVL Skewness"
+#define kParamStatHSVLSkewnessHint \
 "Skewness quantifies how symmetrical the distribution is.\n" \
 "• A symmetrical distribution has a skewness of zero.\n" \
 "• An asymmetrical distribution with a long tail to the right (higher values) has a positive skew.\n" \
@@ -200,24 +273,24 @@ public:
 
 protected:
 
-
-    void toRGBA(const double *sum, int nComponents, RGBAValues* rgba)
+    template<class PIX, int nComponents, int maxValue>
+    void toRGBA(const PIX *p, RGBAValues* rgba)
     {
         if (nComponents == 4) {
-            rgba->r = sum[0];
-            rgba->g = sum[1];
-            rgba->b = sum[2];
-            rgba->a = sum[3];
+            rgba->r = p[0]/(double)maxValue;
+            rgba->g = p[1]/(double)maxValue;
+            rgba->b = p[2]/(double)maxValue;
+            rgba->a = p[3]/(double)maxValue;
         } else if (nComponents == 3) {
-            rgba->r = sum[0];
-            rgba->g = sum[1];
-            rgba->b = sum[2];
+            rgba->r = p[0]/(double)maxValue;
+            rgba->g = p[1]/(double)maxValue;
+            rgba->b = p[2]/(double)maxValue;
             rgba->a = 0;
         } else if (nComponents == 1) {
             rgba->r = 0;
             rgba->g = 0;
             rgba->b = 0;
-            rgba->a = sum[0];
+            rgba->a = p[0]/(double)maxValue;
         } else {
             rgba->r = 0;
             rgba->g = 0;
@@ -226,282 +299,42 @@ protected:
         }
     }
 
-    void toComponents(const RGBAValues& rgba, double *sum, int nComponents)
+    template<class PIX, int nComponents, int maxValue>
+    void
+    pixToHSVL(const PIX *p, float hsvl[4])
+    {
+        if (nComponents == 4 || nComponents == 3) {
+            float r, g, b;
+            r = p[0]/(float)maxValue;
+            g = p[1]/(float)maxValue;
+            b = p[2]/(float)maxValue;
+            OFX::Color::rgb_to_hsv(r, g, b, &hsvl[0], &hsvl[1], &hsvl[2]);
+            float min = std::min(std::min(r, g), b);
+            float max = std::max(std::max(r, g), b);
+            hsvl[3] = (min + max)/2;
+        } else {
+            hsvl[0] = hsvl[1] = hsvl[2] = hsvl[3] = 0.;
+        }
+    }
+
+    template<class PIX, int nComponents, int maxValue>
+    void toComponents(const RGBAValues& rgba, PIX *p)
     {
         if (nComponents == 4) {
-            sum[0] = rgba.r;
-            sum[1] = rgba.g;
-            sum[2] = rgba.b;
-            sum[3] = rgba.a;
+            p[0] = rgba.r * maxValue + ((maxValue != 1) ? 0.5 : 0);
+            p[1] = rgba.g * maxValue + ((maxValue != 1) ? 0.5 : 0);
+            p[2] = rgba.b * maxValue + ((maxValue != 1) ? 0.5 : 0);
+            p[3] = rgba.a * maxValue + ((maxValue != 1) ? 0.5 : 0);
         } else if (nComponents == 3) {
-            sum[0] = rgba.r;
-            sum[1] = rgba.g;
-            sum[2] = rgba.b;
+            p[0] = rgba.r * maxValue + ((maxValue != 1) ? 0.5 : 0);
+            p[1] = rgba.g * maxValue + ((maxValue != 1) ? 0.5 : 0);
+            p[2] = rgba.b * maxValue + ((maxValue != 1) ? 0.5 : 0);
         } else if (nComponents == 1) {
-            sum[0] = rgba.a;
+            p[0] = rgba.a * maxValue + ((maxValue != 1) ? 0.5 : 0);
         }
     }
 };
 
-
-
-////////////////////////////////////////////////////////////////////////////////
-/** @brief The plugin that does our work */
-class ImageStatisticsPlugin : public OFX::ImageEffect
-{
-public:
-    /** @brief ctor */
-    ImageStatisticsPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _btmLeft(0)
-    , _size(0)
-    , _restrictToRectangle(0)
-    {
-        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
-
-        _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
-        _size = fetchDouble2DParam(kParamRectangleInteractSize);
-        _restrictToRectangle = fetchBooleanParam(kParamRestrictToRectangle);
-        assert(_btmLeft && _size && _restrictToRectangle);
-        _update = fetchPushButtonParam(kParamAnalyzeFrame);
-        _autoUpdate = fetchBooleanParam(kParamAutoUpdate);
-        assert(_update && _autoUpdate);
-        _statMin = fetchRGBAParam(kParamStatMin);
-        _statMax = fetchRGBAParam(kParamStatMax);
-        _statMean = fetchRGBAParam(kParamStatMean);
-        _statSDev = fetchRGBAParam(kParamStatSDev);
-        _statSkewness = fetchRGBAParam(kParamStatSkewness);
-        _statKurtosis = fetchRGBAParam(kParamStatKurtosis);
-        assert(_statMin && _statMax && _statMean && _statSDev && _statSkewness);
-        
-        // update visibility
-        bool restrictToRectangle;
-        _restrictToRectangle->getValue(restrictToRectangle);
-        _btmLeft->setEnabled(!restrictToRectangle);
-        _btmLeft->setIsSecret(restrictToRectangle);
-        _size->setEnabled(!restrictToRectangle);
-        _size->setIsSecret(restrictToRectangle);
-    }
-
-private:
-    /* override is identity */
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-
-
-    /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
-
-    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
-
-    /* set up and run a processor */
-    void setupAndProcess(ImageStatisticsProcessorBase &processor, OFX::Image* srcImg, double time, const Results &prevResults, Results *results);
-
-    // update image statistics
-    void update(OFX::Image* srcImg, double time);
-
-    template <class PIX, int nComponents, int maxValue>
-    void updateMinMaxMeanComponentsDepth(OFX::Image* srcImg, double time, Results* results);
-
-    template <int nComponents>
-    void updateMinMaxMeanComponents(OFX::Image* srcImg, double time, Results* results);
-
-    void updateMinMaxMean(OFX::Image* srcImg, double time, Results* results);
-
-    template <class PIX, int nComponents, int maxValue>
-    void updateSDevComponentsDepth(OFX::Image* srcImg, double time, const Results &prevResults, Results* results);
-
-    template <int nComponents>
-    void updateSDevComponents(OFX::Image* srcImg, double time, const Results &prevResults, Results* results);
-
-    void updateSDev(OFX::Image* srcImg, double time, const Results &prevResults, Results* results);
-
-    template <class PIX, int nComponents, int maxValue>
-    void updateSkewnessKurtosisComponentsDepth(OFX::Image* srcImg, double time, const Results &prevResults, Results* results);
-
-    template <int nComponents>
-    void updateSkewnessKurtosisComponents(OFX::Image* srcImg, double time, const Results &prevResults, Results* results);
-
-    void updateSkewnessKurtosis(OFX::Image* srcImg, double time, const Results &prevResults, Results* results);
-
-private:
-
-    // do not need to delete these, the ImageEffect is managing them for us
-    Clip *_dstClip;
-    Clip *_srcClip;
-
-    Double2DParam* _btmLeft;
-    Double2DParam* _size;
-    BooleanParam* _restrictToRectangle;
-    PushButtonParam* _update;
-    BooleanParam* _autoUpdate;
-    RGBAParam* _statMin;
-    RGBAParam* _statMax;
-    RGBAParam* _statMean;
-    RGBAParam* _statSDev;
-    RGBAParam* _statSkewness;
-    RGBAParam* _statKurtosis;
-};
-
-////////////////////////////////////////////////////////////////////////////////
-/** @brief render for the filter */
-
-
-// the overridden render function
-void
-ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
-{
-    // do the rendering
-    std::auto_ptr<OFX::Image> srcImg(_srcClip->fetchImage(args.time));
-    std::auto_ptr<OFX::Image> dstImg(_dstClip->fetchImage(args.time));
-    copyPixels(*this, args.renderWindow, srcImg.get(), dstImg.get());
-
-    // compute statistics if it is an interactive render
-    //if (args.interactiveRenderStatus) {
-    bool autoUpdate;
-    _autoUpdate->getValueAtTime(args.time, autoUpdate);
-    assert(autoUpdate); // render should only be called if autoUpdate is true: in other cases isIdentity returns true
-    if (autoUpdate) {
-        // check if there is already a Keyframe, if yes update it
-        int k = _statMean->getKeyIndex(args.time, eKeySearchNear);
-        if (k != -1) {
-            update(srcImg.get(), args.time);
-        }
-    }
-    //}
-}
-
-bool
-ImageStatisticsPlugin::isIdentity(const OFX::IsIdentityArguments &args,
-                                  OFX::Clip * &identityClip,
-                                  double &/*identityTime*/)
-{
-    bool autoUpdate;
-    _autoUpdate->getValue(autoUpdate);
-
-    if (!autoUpdate) {
-        identityClip = _srcClip;
-        return true;
-    } else {
-        return false;
-    }
-}
-
-
-void
-ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
-                                    const std::string &paramName)
-{
-    bool doUpdate = false;
-    bool doAnalyze = false;
-
-    if (paramName == kParamRestrictToRectangle) {
-        // update visibility
-        bool restrictToRectangle;
-        _restrictToRectangle->getValue(restrictToRectangle);
-        _btmLeft->setEnabled(!restrictToRectangle);
-        _btmLeft->setIsSecret(restrictToRectangle);
-        _size->setEnabled(!restrictToRectangle);
-        _size->setIsSecret(restrictToRectangle);
-        doUpdate = true;
-    }
-    if (paramName == kParamRectangleInteractBtmLeft ||
-        paramName == kParamRectangleInteractSize) {
-        doUpdate = true;
-    }
-    if (paramName == kParamAnalyzeFrame) {
-        doAnalyze = true;
-    }
-    if (doUpdate) {
-        // check if there is already a Keyframe, if yes update it
-        int k = _statMean->getKeyIndex(args.time, eKeySearchNear);
-        doAnalyze = (k != -1);
-    }
-    if (doAnalyze) {
-        std::auto_ptr<OFX::Image> srcImg(_srcClip->fetchImage(args.time));
-        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
-        update(srcImg.get(), args.time);
-        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
-    }
-    if (paramName == kParamAnalyzeSequence) {
-        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
-        progressStart("Analyzing sequence...");
-        OfxRangeD range;
-        getTimeDomain(range);
-        int tmin = std::ceil(range.min);
-        int tmax = std::floor(range.max);
-        for (int t = tmin; t <= tmax; ++t) {
-            std::auto_ptr<OFX::Image> srcImg(_srcClip->fetchImage(t));
-            update(srcImg.get(), t);
-            if (tmax != tmin) {
-                progressUpdate((t-tmin)/(double)(tmax-tmin));
-            }
-        }
-        progressEnd();
-        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
-    }
-}
-
-/* set up and run a processor */
-void
-ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor, OFX::Image* srcImg, double time, const Results &prevResults, Results *results)
-{
-    OfxRectI renderWindow;
-    OfxPointD rsOne = { 1., 1.};
-
-    OfxRectD regionOfInterest;
-    bool restrictToRectangle;
-    _restrictToRectangle->getValueAtTime(time, restrictToRectangle);
-    if (!restrictToRectangle) {
-        // use the src region of definition as rectangle, but avoid infinite rectangle
-        regionOfInterest = _srcClip->getRegionOfDefinition(time);
-        OfxPointD size = getProjectSize();
-        OfxPointD offset = getProjectOffset();
-        if (regionOfInterest.x1 <= kOfxFlagInfiniteMin) {
-            regionOfInterest.x1 = offset.x;
-        }
-        if (regionOfInterest.x2 >= kOfxFlagInfiniteMax) {
-            regionOfInterest.x2 = offset.x + size.x;
-        }
-        if (regionOfInterest.y1 <= kOfxFlagInfiniteMin) {
-            regionOfInterest.y1 = offset.y;
-        }
-        if (regionOfInterest.y2 >= kOfxFlagInfiniteMax) {
-            regionOfInterest.y2 = offset.y + size.y;
-        }
-    } else {
-        _btmLeft->getValueAtTime(time, regionOfInterest.x1, regionOfInterest.y1);
-        _size->getValueAtTime(time, regionOfInterest.x2, regionOfInterest.y2);
-        regionOfInterest.x2 += regionOfInterest.x1;
-        regionOfInterest.y2 += regionOfInterest.y1;
-    }
-    MergeImages2D::toPixelEnclosing(regionOfInterest,
-                                    rsOne,
-                                    srcImg->getPixelAspectRatio(),
-                                    &renderWindow);
-    // stay within bounds
-    MergeImages2D::rectIntersection(renderWindow, srcImg->getBounds(), &renderWindow);
-
-    // set the images
-    processor.setDstImg(srcImg); // not a bug: we only set dst
-
-    // set the render window
-    processor.setRenderWindow(renderWindow);
-
-    processor.setPrevResults(prevResults);
-
-    // Call the base class process member, this will call the derived templated process code
-    processor.process();
-
-    if (!abort()) {
-        processor.getResults(results);
-    }
-}
 
 template <class PIX, int nComponents, int maxValue>
 class ImageMinMaxMeanProcessor : public ImageStatisticsProcessorBase
@@ -528,13 +361,13 @@ public:
     void getResults(Results *results) OVERRIDE FINAL
     {
         if (_count > 0) {
-            toRGBA(_min, nComponents, &results->min);
-            toRGBA(_max, nComponents, &results->max);
+            toRGBA<double, nComponents, 1>(_min, &results->min);
+            toRGBA<double, nComponents, 1>(_max, &results->max);
             double mean[nComponents];
             for (int c = 0; c < nComponents; ++c) {
                 mean[c] = _sum[c]/_count;
             }
-            toRGBA(mean, nComponents, &results->mean);
+            toRGBA<double, nComponents, 1>(mean, &results->mean);
         }
     }
 
@@ -583,57 +416,11 @@ private:
             }
             count += procWindow.x2 - procWindow.x1;
         }
-        
+
         addResults(min, max, sum, count);
     }
 };
 
-template <class PIX, int nComponents, int maxValue>
-void
-ImageStatisticsPlugin::updateMinMaxMeanComponentsDepth(OFX::Image* srcImg, double time, Results* results)
-{
-    ImageMinMaxMeanProcessor<PIX, nComponents, maxValue> fred(*this);
-    setupAndProcess(fred, srcImg, time, *results, results);
-}
-
-template <int nComponents>
-void
-ImageStatisticsPlugin::updateMinMaxMeanComponents(OFX::Image* srcImg, double time, Results* results)
-{
-    OFX::BitDepthEnum       srcBitDepth    = srcImg->getPixelDepth();
-    switch (srcBitDepth) {
-        case OFX::eBitDepthUByte: {
-            updateMinMaxMeanComponentsDepth<unsigned char, nComponents, 255>(srcImg, time, results);
-            break;
-        }
-        case OFX::eBitDepthUShort: {
-            updateMinMaxMeanComponentsDepth<unsigned short, nComponents, 65535>(srcImg, time, results);
-            break;
-        }
-        case OFX::eBitDepthFloat: {
-            updateMinMaxMeanComponentsDepth<float, nComponents, 1>(srcImg, time, results);
-            break;
-        }
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-    }
-}
-
-void
-ImageStatisticsPlugin::updateMinMaxMean(OFX::Image* srcImg, double time, Results* results)
-{
-    OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
-    assert(srcComponents == OFX::ePixelComponentAlpha ||srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA);
-    if (srcComponents == OFX::ePixelComponentAlpha) {
-        updateMinMaxMeanComponents<1>(srcImg, time, results);
-    } else if (srcComponents == OFX::ePixelComponentRGBA) {
-        updateMinMaxMeanComponents<4>(srcImg, time, results);
-    } else if (srcComponents == OFX::ePixelComponentRGB) {
-        updateMinMaxMeanComponents<3>(srcImg, time, results);
-    } else {
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-    }
-}
 
 
 
@@ -657,7 +444,7 @@ public:
 
     void setPrevResults(const Results &results) OVERRIDE FINAL
     {
-        toComponents(results.mean, _mean, nComponents);
+        toComponents<double, nComponents, 1>(results.mean, _mean);
     }
 
     void getResults(Results *results) OVERRIDE FINAL
@@ -668,7 +455,7 @@ public:
                 // sdev^2 is an unbiased estimator for the population variance
                 sdev[c] = std::sqrt(std::max(0., _sum_p2[c]/(_count-1)));
             }
-            toRGBA(sdev, nComponents, &results->sdev);
+            toRGBA<double, nComponents, 1>(sdev, &results->sdev);
         }
     }
 
@@ -718,52 +505,6 @@ private:
     }
 };
 
-template <class PIX, int nComponents, int maxValue>
-void
-ImageStatisticsPlugin::updateSDevComponentsDepth(OFX::Image* srcImg, double time, const Results& prevResults, Results* results)
-{
-    ImageSDevProcessor<PIX, nComponents, maxValue> fred(*this);
-    setupAndProcess(fred, srcImg, time, prevResults, results);
-}
-
-template <int nComponents>
-void
-ImageStatisticsPlugin::updateSDevComponents(OFX::Image* srcImg, double time, const Results& prevResults, Results* results)
-{
-    OFX::BitDepthEnum       srcBitDepth    = srcImg->getPixelDepth();
-    switch (srcBitDepth) {
-        case OFX::eBitDepthUByte: {
-            updateSDevComponentsDepth<unsigned char, nComponents, 255>(srcImg, time, prevResults, results);
-            break;
-        }
-        case OFX::eBitDepthUShort: {
-            updateSDevComponentsDepth<unsigned short, nComponents, 65535>(srcImg, time, prevResults, results);
-            break;
-        }
-        case OFX::eBitDepthFloat: {
-            updateSDevComponentsDepth<float, nComponents, 1>(srcImg, time, prevResults, results);
-            break;
-        }
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-    }
-}
-
-void
-ImageStatisticsPlugin::updateSDev(OFX::Image* srcImg, double time, const Results& prevResults, Results* results)
-{
-    OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
-    assert(srcComponents == OFX::ePixelComponentAlpha ||srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA);
-    if (srcComponents == OFX::ePixelComponentAlpha) {
-        updateSDevComponents<1>(srcImg, time, prevResults, results);
-    } else if (srcComponents == OFX::ePixelComponentRGBA) {
-        updateSDevComponents<4>(srcImg, time, prevResults, results);
-    } else if (srcComponents == OFX::ePixelComponentRGB) {
-        updateSDevComponents<3>(srcImg, time, prevResults, results);
-    } else {
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-    }
-}
 
 
 
@@ -791,8 +532,8 @@ public:
 
     void setPrevResults(const Results &results) OVERRIDE FINAL
     {
-        toComponents(results.mean, _mean, nComponents);
-        toComponents(results.sdev, _sdev, nComponents);
+        toComponents<double, nComponents, 1>(results.mean, _mean);
+        toComponents<double, nComponents, 1>(results.sdev, _sdev);
     }
 
     void getResults(Results *results) OVERRIDE FINAL
@@ -804,7 +545,7 @@ public:
             for (int c = 0; c < nComponents; ++c) {
                 skewness[c] = skewfac * _sum_p3[c] / _count;
             }
-            toRGBA(skewness, nComponents, &results->skewness);
+            toRGBA<double, nComponents, 1>(skewness, &results->skewness);
         }
         if (_count > 3) {
             double kurtosis[nComponents];
@@ -813,7 +554,7 @@ public:
             for (int c = 0; c < nComponents; ++c) {
                 kurtosis[c] = kurtfac * _sum_p4[c] + kurtshift;
             }
-            toRGBA(kurtosis, nComponents, &results->kurtosis);
+            toRGBA<double, nComponents, 1>(kurtosis, &results->kurtosis);
         }
     }
 
@@ -867,84 +608,779 @@ private:
             }
             count += procWindow.x2 - procWindow.x1;
         }
-
+        
         addResults(sum_p3, sum_p4, count);
     }
 };
 
+#define nComponentsHSVL 4
+
 template <class PIX, int nComponents, int maxValue>
-void
-ImageStatisticsPlugin::updateSkewnessKurtosisComponentsDepth(OFX::Image* srcImg, double time, const Results& prevResults, Results* results)
+class ImageHSVLMinMaxMeanProcessor : public ImageStatisticsProcessorBase
 {
-    ImageSkewnessKurtosisProcessor<PIX, nComponents, maxValue> fred(*this);
-    setupAndProcess(fred, srcImg, time, prevResults, results);
-}
+private:
+    double _min[nComponentsHSVL];
+    double _max[nComponentsHSVL];
+    double _sum[nComponentsHSVL];
+public:
+    ImageHSVLMinMaxMeanProcessor(OFX::ImageEffect &instance)
+    : ImageStatisticsProcessorBase(instance)
+    {
+        std::fill(_min, _min+nComponentsHSVL, +std::numeric_limits<double>::infinity());
+        std::fill(_max, _max+nComponentsHSVL, -std::numeric_limits<double>::infinity());
+        std::fill(_sum, _sum+nComponentsHSVL, 0.);
+    }
 
-template <int nComponents>
-void
-ImageStatisticsPlugin::updateSkewnessKurtosisComponents(OFX::Image* srcImg, double time, const Results& prevResults, Results* results)
+    ~ImageHSVLMinMaxMeanProcessor()
+    {
+    }
+
+    void setPrevResults(const Results &results) OVERRIDE FINAL {}
+
+    void getResults(Results *results) OVERRIDE FINAL
+    {
+        if (_count > 0) {
+            toRGBA<double, nComponentsHSVL, 1>(_min, &results->min);
+            toRGBA<double, nComponentsHSVL, 1>(_max, &results->max);
+            double mean[nComponentsHSVL];
+            for (int c = 0; c < nComponentsHSVL; ++c) {
+                mean[c] = _sum[c]/_count;
+            }
+            toRGBA<double, nComponentsHSVL, 1>(mean, &results->mean);
+        }
+    }
+
+private:
+
+    void addResults(double min[nComponentsHSVL], double max[nComponentsHSVL], double sum[nComponentsHSVL], unsigned long count) {
+        _mutex.lock();
+        for (int c = 0; c < nComponentsHSVL; ++c) {
+            _min[c] = std::min(_min[c], min[c]);
+            _max[c] = std::max(_max[c], max[c]);
+            _sum[c] += sum[c];
+        }
+        _count += count;
+        _mutex.unlock();
+    }
+
+
+    void multiThreadProcessImages(OfxRectI procWindow)
+    {
+        double min[nComponentsHSVL], max[nComponentsHSVL], sum[nComponentsHSVL];
+        std::fill(sum, sum + nComponentsHSVL, 0.);
+        unsigned long count = 0;
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if (_effect.abort()) {
+                break;
+            }
+
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
+            double sumLine[nComponentsHSVL]; // partial sum to avoid underflows
+            std::fill(sumLine, sumLine + nComponentsHSVL, 0.);
+
+            for (int x = procWindow.x1; x < procWindow.x2; ++x) {
+                float hsvl[nComponentsHSVL];
+                pixToHSVL<PIX, nComponents, maxValue>(dstPix, hsvl);
+                for (int c = 0; c < nComponentsHSVL; ++c) {
+                    double v = hsvl[c];
+                    min[c] = std::min(min[c], v);
+                    max[c] = std::max(max[c], v);
+                    sumLine[c] += v;
+                }
+                dstPix += nComponents;
+            }
+            for (int c = 0; c < nComponentsHSVL; ++c) {
+                sum[c] += sumLine[c];
+            }
+            count += procWindow.x2 - procWindow.x1;
+        }
+
+        addResults(min, max, sum, count);
+    }
+};
+
+
+
+
+template <class PIX, int nComponents, int maxValue>
+class ImageHSVLSDevProcessor : public ImageStatisticsProcessorBase
 {
-    OFX::BitDepthEnum       srcBitDepth    = srcImg->getPixelDepth();
-    switch (srcBitDepth) {
-        case OFX::eBitDepthUByte: {
-            updateSkewnessKurtosisComponentsDepth<unsigned char, nComponents, 255>(srcImg, time, prevResults, results);
-            break;
+private:
+    double _mean[nComponentsHSVL];
+    double _sum_p2[nComponentsHSVL];
+public:
+    ImageHSVLSDevProcessor(OFX::ImageEffect &instance)
+    : ImageStatisticsProcessorBase(instance)
+    {
+        std::fill(_mean, _mean+nComponentsHSVL, 0.);
+        std::fill(_sum_p2, _sum_p2+nComponentsHSVL, 0.);
+    }
+
+    ~ImageHSVLSDevProcessor()
+    {
+    }
+
+    void setPrevResults(const Results &results) OVERRIDE FINAL
+    {
+        toComponents<double, nComponentsHSVL, 1>(results.mean, _mean);
+    }
+
+    void getResults(Results *results) OVERRIDE FINAL
+    {
+        if (_count > 1) {
+            double sdev[nComponentsHSVL];
+            for (int c = 0; c < nComponentsHSVL; ++c) {
+                // sdev^2 is an unbiased estimator for the population variance
+                sdev[c] = std::sqrt(std::max(0., _sum_p2[c]/(_count-1)));
+            }
+            toRGBA<double, nComponentsHSVL, 1>(sdev, &results->sdev);
         }
-        case OFX::eBitDepthUShort: {
-            updateSkewnessKurtosisComponentsDepth<unsigned short, nComponents, 65535>(srcImg, time, prevResults, results);
-            break;
+    }
+
+private:
+
+    void addResults(double sum_p2[nComponentsHSVL], unsigned long count) {
+        _mutex.lock();
+        for (int c = 0; c < nComponentsHSVL; ++c) {
+            _sum_p2[c] += sum_p2[c];
         }
-        case OFX::eBitDepthFloat: {
-            updateSkewnessKurtosisComponentsDepth<float, nComponents, 1>(srcImg, time, prevResults, results);
-            break;
+        _count += count;
+        _mutex.unlock();
+    }
+
+
+    void multiThreadProcessImages(OfxRectI procWindow)
+    {
+        double sum_p2[nComponentsHSVL];
+        std::fill(sum_p2, sum_p2 + nComponentsHSVL, 0.);
+        unsigned long count = 0;
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if (_effect.abort()) {
+                break;
+            }
+
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
+            double sumLine_p2[nComponentsHSVL]; // partial sum to avoid underflows
+            std::fill(sumLine_p2, sumLine_p2 + nComponentsHSVL, 0.);
+
+            for (int x = procWindow.x1; x < procWindow.x2; ++x) {
+                float hsvl[nComponentsHSVL];
+                pixToHSVL<PIX, nComponents, maxValue>(dstPix, hsvl);
+                for (int c = 0; c < nComponentsHSVL; ++c) {
+                    double v = (hsvl[c] - _mean[c]);
+                    sumLine_p2[c] += v * v;
+                }
+                dstPix += nComponents;
+            }
+            for (int c = 0; c < nComponentsHSVL; ++c) {
+                sum_p2[c] += sumLine_p2[c];
+            }
+            count += procWindow.x2 - procWindow.x1;
         }
-        default:
+
+        addResults(sum_p2, count);
+    }
+};
+
+
+
+
+template <class PIX, int nComponents, int maxValue>
+class ImageHSVLSkewnessKurtosisProcessor : public ImageStatisticsProcessorBase
+{
+private:
+    double _mean[nComponentsHSVL];
+    double _sdev[nComponentsHSVL];
+    double _sum_p3[nComponentsHSVL];
+    double _sum_p4[nComponentsHSVL];
+public:
+    ImageHSVLSkewnessKurtosisProcessor(OFX::ImageEffect &instance)
+    : ImageStatisticsProcessorBase(instance)
+    {
+        std::fill(_mean, _mean+nComponentsHSVL, 0.);
+        std::fill(_sdev, _sdev+nComponentsHSVL, 0.);
+        std::fill(_sum_p3, _sum_p3+nComponentsHSVL, 0.);
+        std::fill(_sum_p4, _sum_p4+nComponentsHSVL, 0.);
+    }
+
+    ~ImageHSVLSkewnessKurtosisProcessor()
+    {
+    }
+
+    void setPrevResults(const Results &results) OVERRIDE FINAL
+    {
+        toComponents<double, nComponentsHSVL, 1>(results.mean, _mean);
+        toComponents<double, nComponentsHSVL, 1>(results.sdev, _sdev);
+    }
+
+    void getResults(Results *results) OVERRIDE FINAL
+    {
+        if (_count > 2) {
+            double skewness[nComponentsHSVL];
+            // factor for the adjusted Fisher-Pearson standardized moment coefficient G_1
+            double skewfac = ((double)_count*_count) / ((double)(_count-1)*(_count-2));
+            for (int c = 0; c < nComponentsHSVL; ++c) {
+                skewness[c] = skewfac * _sum_p3[c] / _count;
+            }
+            toRGBA<double, nComponentsHSVL, 1>(skewness, &results->skewness);
+        }
+        if (_count > 3) {
+            double kurtosis[nComponentsHSVL];
+            double kurtfac = ((double)(_count+1)*_count) / ((double)(_count-1)*(_count-2)*(_count-3));
+            double kurtshift = -3 * ((double)(_count-1)*(_count-1)) / ((double)(_count-2)*(_count-3));
+            for (int c = 0; c < nComponentsHSVL; ++c) {
+                kurtosis[c] = kurtfac * _sum_p4[c] + kurtshift;
+            }
+            toRGBA<double, nComponentsHSVL, 1>(kurtosis, &results->kurtosis);
+        }
+    }
+
+private:
+
+    void addResults(double sum_p3[nComponentsHSVL], double sum_p4[nComponentsHSVL], unsigned long count) {
+        _mutex.lock();
+        for (int c = 0; c < nComponentsHSVL; ++c) {
+            _sum_p3[c] += sum_p3[c];
+            _sum_p4[c] += sum_p4[c];
+        }
+        _count += count;
+        _mutex.unlock();
+    }
+
+
+    void multiThreadProcessImages(OfxRectI procWindow)
+    {
+        double sum_p3[nComponentsHSVL];
+        double sum_p4[nComponentsHSVL];
+        std::fill(sum_p3, sum_p3 + nComponentsHSVL, 0.);
+        std::fill(sum_p4, sum_p4 + nComponentsHSVL, 0.);
+        unsigned long count = 0;
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if (_effect.abort()) {
+                break;
+            }
+
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
+            double sumLine_p3[nComponentsHSVL]; // partial sum to avoid underflows
+            double sumLine_p4[nComponentsHSVL]; // partial sum to avoid underflows
+            std::fill(sumLine_p4, sumLine_p4 + nComponentsHSVL, 0.);
+
+            for (int x = procWindow.x1; x < procWindow.x2; ++x) {
+                float hsvl[nComponentsHSVL];
+                pixToHSVL<PIX, nComponents, maxValue>(dstPix, hsvl);
+                for (int c = 0; c < nComponentsHSVL; ++c) {
+                    if (_sdev[c] > 0.) {
+                        double v = (hsvl[c] - _mean[c])/_sdev[c];
+                        double v2 = v * v;
+                        sumLine_p3[c] += v2 * v;
+                        sumLine_p4[c] += v2 * v2;
+                    }
+                }
+                dstPix += nComponents;
+            }
+            for (int c = 0; c < nComponentsHSVL; ++c) {
+                sum_p3[c] += sumLine_p3[c];
+                sum_p4[c] += sumLine_p4[c];
+            }
+            count += procWindow.x2 - procWindow.x1;
+        }
+        
+        addResults(sum_p3, sum_p4, count);
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+/** @brief The plugin that does our work */
+class ImageStatisticsPlugin : public OFX::ImageEffect
+{
+public:
+    /** @brief ctor */
+    ImageStatisticsPlugin(OfxImageEffectHandle handle)
+    : ImageEffect(handle)
+    , _dstClip(0)
+    , _srcClip(0)
+    , _btmLeft(0)
+    , _size(0)
+    , _restrictToRectangle(0)
+    {
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
+
+        _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
+        _size = fetchDouble2DParam(kParamRectangleInteractSize);
+        _restrictToRectangle = fetchBooleanParam(kParamRestrictToRectangle);
+        _autoUpdate = fetchBooleanParam(kParamAutoUpdate);
+        assert(_btmLeft && _size && _restrictToRectangle && _autoUpdate);
+        _btmLeftAnalysis = fetchInt2DParam(kParamBtmLeftAnalysis);
+        _topRightAnalysis = fetchInt2DParam(kParamTopRightAnalysis);
+        _analysisIsRGBA = fetchBooleanParam(kParamAnalysisIsRGBA);
+        assert(_btmLeftAnalysis && _topRightAnalysis && _analysisIsRGBA);
+        _statMin = fetchRGBAParam(kParamStatMin);
+        _statMax = fetchRGBAParam(kParamStatMax);
+        _statMean = fetchRGBAParam(kParamStatMean);
+        _statSDev = fetchRGBAParam(kParamStatSDev);
+        _statSkewness = fetchRGBAParam(kParamStatSkewness);
+        _statKurtosis = fetchRGBAParam(kParamStatKurtosis);
+        assert(_statMin && _statMax && _statMean && _statSDev && _statSkewness);
+        _analyzeFrame = fetchPushButtonParam(kParamAnalyzeFrame);
+        _analyzeSequence = fetchPushButtonParam(kParamAnalyzeSequence);
+        assert(_analyzeFrame && _analyzeSequence);
+        _statHSVLMin = fetchRGBAParam(kParamStatHSVLMin);
+        _statHSVLMax = fetchRGBAParam(kParamStatHSVLMax);
+        _statHSVLMean = fetchRGBAParam(kParamStatHSVLMean);
+        _statHSVLSDev = fetchRGBAParam(kParamStatHSVLSDev);
+        _statHSVLSkewness = fetchRGBAParam(kParamStatHSVLSkewness);
+        _statHSVLKurtosis = fetchRGBAParam(kParamStatHSVLKurtosis);
+        assert(_statHSVLMin && _statHSVLMax && _statHSVLMean && _statHSVLSDev && _statHSVLSkewness);
+        _analyzeFrameHSVL = fetchPushButtonParam(kParamAnalyzeFrameHSVL);
+        _analyzeSequenceHSVL = fetchPushButtonParam(kParamAnalyzeSequenceHSVL);
+        assert(_analyzeFrameHSVL && _analyzeSequenceHSVL);
+
+        // update visibility
+        bool restrictToRectangle;
+        _restrictToRectangle->getValue(restrictToRectangle);
+        _btmLeft->setEnabled(!restrictToRectangle);
+        _btmLeft->setIsSecret(restrictToRectangle);
+        _size->setEnabled(!restrictToRectangle);
+        _size->setIsSecret(restrictToRectangle);
+    }
+
+private:
+    /* override is identity */
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+
+
+    /* Override the render */
+    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD & rod) OVERRIDE FINAL;
+
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
+    /* set up and run a processor */
+    void setupAndProcess(ImageStatisticsProcessorBase &processor, OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results &prevResults, Results *results);
+
+    // compute computation window in srcImg
+    void computeWindow(OFX::Image* srcImg, double time, OfxRectI *analysisWindow);
+
+    // update image statistics
+    void update(OFX::Image* srcImg, double time, const OfxRectI& analysisWindow);
+    void updateHSVL(OFX::Image* srcImg, double time, const OfxRectI& analysisWindow);
+
+    template <template<class PIX, int nComponents, int maxValue> class Processor, class PIX, int nComponents, int maxValue>
+    void updateSubComponentsDepth(OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results& prevResults, Results* results)
+    {
+        Processor<PIX, nComponents, maxValue> fred(*this);
+        setupAndProcess(fred, srcImg, time, analysisWindow, prevResults, results);
+    }
+
+    template <template<class PIX, int nComponents, int maxValue> class Processor, int nComponents>
+    void updateSubComponents(OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results& prevResults, Results* results)
+    {
+        OFX::BitDepthEnum srcBitDepth = srcImg->getPixelDepth();
+        switch (srcBitDepth) {
+            case OFX::eBitDepthUByte: {
+                updateSubComponentsDepth<Processor, unsigned char, nComponents, 255>(srcImg, time, analysisWindow, prevResults, results);
+                break;
+            }
+            case OFX::eBitDepthUShort: {
+                updateSubComponentsDepth<Processor, unsigned short, nComponents, 65535>(srcImg, time, analysisWindow, prevResults, results);
+                break;
+            }
+            case OFX::eBitDepthFloat: {
+                updateSubComponentsDepth<Processor, float, nComponents, 1>(srcImg, time, analysisWindow, prevResults, results);
+                break;
+            }
+            default:
+                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
+    }
+
+    template <template<class PIX, int nComponents, int maxValue> class Processor>
+    void updateSub(OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results& prevResults, Results* results)
+    {
+        OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
+        assert(srcComponents == OFX::ePixelComponentAlpha ||srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA);
+        if (srcComponents == OFX::ePixelComponentAlpha) {
+            updateSubComponents<Processor, 1>(srcImg, time, analysisWindow, prevResults, results);
+        } else if (srcComponents == OFX::ePixelComponentRGBA) {
+            updateSubComponents<Processor, 4>(srcImg, time, analysisWindow, prevResults, results);
+        } else if (srcComponents == OFX::ePixelComponentRGB) {
+            updateSubComponents<Processor, 3>(srcImg, time, analysisWindow, prevResults, results);
+        } else {
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
+    }
+
+private:
+
+    // do not need to delete these, the ImageEffect is managing them for us
+    Clip *_dstClip;
+    Clip *_srcClip;
+
+    Double2DParam* _btmLeft;
+    Double2DParam* _size;
+    BooleanParam* _restrictToRectangle;
+    BooleanParam* _autoUpdate;
+    Int2DParam* _btmLeftAnalysis;
+    Int2DParam* _topRightAnalysis;
+    BooleanParam* _analysisIsRGBA;
+    RGBAParam* _statMin;
+    RGBAParam* _statMax;
+    RGBAParam* _statMean;
+    RGBAParam* _statSDev;
+    RGBAParam* _statSkewness;
+    RGBAParam* _statKurtosis;
+    PushButtonParam* _analyzeFrame;
+    PushButtonParam* _analyzeSequence;
+    RGBAParam* _statHSVLMin;
+    RGBAParam* _statHSVLMax;
+    RGBAParam* _statHSVLMean;
+    RGBAParam* _statHSVLSDev;
+    RGBAParam* _statHSVLSkewness;
+    RGBAParam* _statHSVLKurtosis;
+    PushButtonParam* _analyzeFrameHSVL;
+    PushButtonParam* _analyzeSequenceHSVL;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+/** @brief render for the filter */
+
+
+// the overridden render function
+void
+ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
+{
+    if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+
+    // do the rendering
+    std::auto_ptr<OFX::Image> srcImg(_srcClip->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dstImg(_dstClip->fetchImage(args.time));
+    copyPixels(*this, args.renderWindow, srcImg.get(), dstImg.get());
+
+    // compute statistics if it is an interactive render
+    //if (args.interactiveRenderStatus) {
+    bool autoUpdate;
+    _autoUpdate->getValueAtTime(args.time, autoUpdate);
+    assert(autoUpdate); // render should only be called if autoUpdate is true: in other cases isIdentity returns true
+    if (autoUpdate) {
+        // check if there is already a Keyframe, if yes update it
+        int k = _statMean->getKeyIndex(args.time, eKeySearchNear);
+        OfxRectI analysisWindow;
+        computeWindow(srcImg.get(), args.time, &analysisWindow);
+        if (k != -1) {
+            update(srcImg.get(), args.time, analysisWindow);
+        }
+        k = _statHSVLMean->getKeyIndex(args.time, eKeySearchNear);
+        if (k != -1) {
+            updateHSVL(srcImg.get(), args.time, analysisWindow);
+        }
+    }
+    //}
+}
+
+bool
+ImageStatisticsPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                             OfxRectD & /*rod*/)
+{
+    if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+
+    return false;
+}
+
+bool
+ImageStatisticsPlugin::isIdentity(const OFX::IsIdentityArguments &args,
+                                  OFX::Clip * &identityClip,
+                                  double &/*identityTime*/)
+{
+    if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+
+    bool autoUpdate;
+    _autoUpdate->getValue(autoUpdate);
+
+    if (!autoUpdate) {
+        identityClip = _srcClip;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+
+void
+ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+                                    const std::string &paramName)
+{
+    if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+
+    bool doUpdate = false;
+    bool doAnalyzeRGBA = false;
+    bool doAnalyzeHSVL = false;
+    bool doAnalyzeSequenceRGBA = false;
+    bool doAnalyzeSequenceHSVL = false;
+    bool checkDoubleAnalysis = false;
+    bool analysisIsRGBA = false;
+    OfxRectI analysisWindow;
+    OfxRectI analysisWindowPrev = {-1, -1, -1, -1};
+
+    if (paramName == kParamRestrictToRectangle) {
+        // update visibility
+        bool restrictToRectangle;
+        _restrictToRectangle->getValue(restrictToRectangle);
+        _btmLeft->setEnabled(!restrictToRectangle);
+        _btmLeft->setIsSecret(restrictToRectangle);
+        _size->setEnabled(!restrictToRectangle);
+        _size->setIsSecret(restrictToRectangle);
+        doUpdate = true;
+    }
+    if (paramName == kParamRectangleInteractBtmLeft ||
+        paramName == kParamRectangleInteractSize) {
+        doUpdate = true;
+        checkDoubleAnalysis = true;
+        _btmLeftAnalysis->getValue(analysisWindowPrev.x1, analysisWindowPrev.y1);
+        _topRightAnalysis->getValue(analysisWindowPrev.x2, analysisWindowPrev.y2);
+        _analysisIsRGBA->getValue(analysisIsRGBA);
+    }
+    if (paramName == kParamAnalyzeFrame) {
+        doAnalyzeRGBA = true;
+    }
+    if (paramName == kParamAnalyzeSequence) {
+        doAnalyzeSequenceRGBA = true;
+    }
+    if (paramName == kParamAnalyzeFrameHSVL) {
+        doAnalyzeHSVL = true;
+    }
+    if (paramName == kParamAnalyzeSequenceHSVL) {
+        doAnalyzeSequenceHSVL = true;
+    }
+    if (paramName == kParamClearFrame) {
+        _statMin->deleteKeyAtTime(args.time);
+        _statMax->deleteKeyAtTime(args.time);
+        _statMean->deleteKeyAtTime(args.time);
+        _statSDev->deleteKeyAtTime(args.time);
+        _statSkewness->deleteKeyAtTime(args.time);
+        _statKurtosis->deleteKeyAtTime(args.time);
+    }
+    if (paramName == kParamClearSequence) {
+        _statMin->deleteAllKeys();
+        _statMax->deleteAllKeys();
+        _statMean->deleteAllKeys();
+        _statSDev->deleteAllKeys();
+        _statSkewness->deleteAllKeys();
+        _statKurtosis->deleteAllKeys();
+    }
+    if (paramName == kParamClearFrameHSVL) {
+        _statHSVLMin->deleteKeyAtTime(args.time);
+        _statHSVLMax->deleteKeyAtTime(args.time);
+        _statHSVLMean->deleteKeyAtTime(args.time);
+        _statHSVLSDev->deleteKeyAtTime(args.time);
+        _statHSVLSkewness->deleteKeyAtTime(args.time);
+        _statHSVLKurtosis->deleteKeyAtTime(args.time);
+    }
+    if (paramName == kParamClearSequenceHSVL) {
+        _statHSVLMin->deleteAllKeys();
+        _statHSVLMax->deleteAllKeys();
+        _statHSVLMean->deleteAllKeys();
+        _statHSVLSDev->deleteAllKeys();
+        _statHSVLSkewness->deleteAllKeys();
+        _statHSVLKurtosis->deleteAllKeys();
+    }
+    if (doUpdate) {
+        // check if there is already a Keyframe, if yes update it
+        int k = _statMean->getKeyIndex(args.time, eKeySearchNear);
+        doAnalyzeRGBA = (k != -1);
+        k = _statHSVLMean->getKeyIndex(args.time, eKeySearchNear);
+        doAnalyzeHSVL = (k != -1);
+    }
+    // RGBA analysis
+    if (doAnalyzeRGBA || doAnalyzeHSVL) {
+        std::auto_ptr<OFX::Image> srcImg(_srcClip->fetchImage(args.time));
+        if (srcImg.get()) {
+            OfxPointD rs = srcImg->getRenderScale();
+            assert(rs.x == args.renderScale.x && rs.y == args.renderScale.y);
+            computeWindow(srcImg.get(), args.time, &analysisWindow);
+            if (checkDoubleAnalysis &&
+                ((doAnalyzeRGBA && analysisIsRGBA) ||
+                 (doAnalyzeHSVL && !analysisIsRGBA)) &&
+                (analysisWindowPrev.x1 == analysisWindow.x1) &&
+                (analysisWindowPrev.x2 == analysisWindow.x2) &&
+                (analysisWindowPrev.y1 == analysisWindow.y1) &&
+                (analysisWindowPrev.y2 == analysisWindow.y2)) {
+                // analysis already done, do nothing
+            } else {
+                getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
+                if (doAnalyzeRGBA) {
+                    update(srcImg.get(), args.time, analysisWindow);
+                }
+                if (doAnalyzeHSVL) {
+                    updateHSVL(srcImg.get(), args.time, analysisWindow);
+                }
+                getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
+            }
+        }
+    }
+    if (doAnalyzeSequenceRGBA || doAnalyzeSequenceHSVL) {
+        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
+        progressStart("Analyzing sequence...");
+        OfxRangeD range;
+        getTimeDomain(range);
+        int tmin = std::ceil(range.min);
+        int tmax = std::floor(range.max);
+        for (int t = tmin; t <= tmax; ++t) {
+            std::auto_ptr<OFX::Image> srcImg(_srcClip->fetchImage(t));
+            if (srcImg.get()) {
+                OfxPointD rs = srcImg->getRenderScale();
+                assert(rs.x == args.renderScale.x && rs.y == args.renderScale.y);
+                computeWindow(srcImg.get(), t, &analysisWindow);
+                if (doAnalyzeSequenceRGBA) {
+                    update(srcImg.get(), t, analysisWindow);
+                }
+                if (doAnalyzeSequenceHSVL) {
+                    updateHSVL(srcImg.get(), t, analysisWindow);
+                }
+            }
+            if (tmax != tmin) {
+                progressUpdate((t-tmin)/(double)(tmax-tmin));
+            }
+        }
+        progressEnd();
+        getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
+    }
+}
+
+/* set up and run a processor */
+void
+ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor, OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results &prevResults, Results *results)
+{
+
+    // set the images
+    processor.setDstImg(srcImg); // not a bug: we only set dst
+
+    // set the render window
+    processor.setRenderWindow(analysisWindow);
+
+    processor.setPrevResults(prevResults);
+
+    // Call the base class process member, this will call the derived templated process code
+    processor.process();
+
+    if (!abort()) {
+        processor.getResults(results);
     }
 }
 
 void
-ImageStatisticsPlugin::updateSkewnessKurtosis(OFX::Image* srcImg, double time, const Results& prevResults, Results* results)
+ImageStatisticsPlugin::computeWindow(OFX::Image* srcImg, double time, OfxRectI *analysisWindow)
 {
-    OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
-    assert(srcComponents == OFX::ePixelComponentAlpha ||srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA);
-    if (srcComponents == OFX::ePixelComponentAlpha) {
-        updateSkewnessKurtosisComponents<1>(srcImg, time, prevResults, results);
-    } else if (srcComponents == OFX::ePixelComponentRGBA) {
-        updateSkewnessKurtosisComponents<4>(srcImg, time, prevResults, results);
-    } else if (srcComponents == OFX::ePixelComponentRGB) {
-        updateSkewnessKurtosisComponents<3>(srcImg, time, prevResults, results);
-    } else {
-        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-    }
-}
+    OfxPointD rsOne = { 1., 1.};
 
+    OfxRectD regionOfInterest;
+    bool restrictToRectangle;
+    _restrictToRectangle->getValueAtTime(time, restrictToRectangle);
+    if (!restrictToRectangle) {
+        // use the src region of definition as rectangle, but avoid infinite rectangle
+        regionOfInterest = _srcClip->getRegionOfDefinition(time);
+        OfxPointD size = getProjectSize();
+        OfxPointD offset = getProjectOffset();
+        if (regionOfInterest.x1 <= kOfxFlagInfiniteMin) {
+            regionOfInterest.x1 = offset.x;
+        }
+        if (regionOfInterest.x2 >= kOfxFlagInfiniteMax) {
+            regionOfInterest.x2 = offset.x + size.x;
+        }
+        if (regionOfInterest.y1 <= kOfxFlagInfiniteMin) {
+            regionOfInterest.y1 = offset.y;
+        }
+        if (regionOfInterest.y2 >= kOfxFlagInfiniteMax) {
+            regionOfInterest.y2 = offset.y + size.y;
+        }
+    } else {
+        _btmLeft->getValueAtTime(time, regionOfInterest.x1, regionOfInterest.y1);
+        _size->getValueAtTime(time, regionOfInterest.x2, regionOfInterest.y2);
+        regionOfInterest.x2 += regionOfInterest.x1;
+        regionOfInterest.y2 += regionOfInterest.y1;
+    }
+    MergeImages2D::toPixelEnclosing(regionOfInterest,
+                                    rsOne,
+                                    srcImg->getPixelAspectRatio(),
+                                    analysisWindow);
+}
 // update image statistics
 void
-ImageStatisticsPlugin::update(OFX::Image* srcImg, double time)
+ImageStatisticsPlugin::update(OFX::Image* srcImg, double time, const OfxRectI &analysisWindow)
 {
+    // TODO: CHECK if checkDoubleAnalysis param is true and analysisWindow is the same as btmLeft/sizeAnalysis
     Results results;
-    updateMinMaxMean(srcImg, time, &results);
+    if (!abort()) {
+        updateSub<ImageMinMaxMeanProcessor>(srcImg, time, analysisWindow, results, &results);
+    }
+    if (!abort()) {
+        updateSub<ImageSDevProcessor>(srcImg, time, analysisWindow, results, &results);
+    }
+    if (!abort()) {
+        updateSub<ImageSkewnessKurtosisProcessor>(srcImg, time, analysisWindow, results, &results);
+    }
     if (abort()) {
         return;
     }
-    beginEditBlock("updateStatistics");
+    beginEditBlock("updateStatisticsRGBA");
     _statMin->setValueAtTime(time, results.min.r, results.min.g, results.min.b, results.min.a);
     _statMax->setValueAtTime(time, results.max.r, results.max.g, results.max.b, results.max.a);
     _statMean->setValueAtTime(time, results.mean.r, results.mean.g, results.mean.b, results.mean.a);
-    updateSDev(srcImg, time, results, &results);
-    if (abort()) {
-        endEditBlock();
-        return;
-    }
     _statSDev->setValueAtTime(time, results.sdev.r, results.sdev.g, results.sdev.b, results.sdev.a);
-    updateSkewnessKurtosis(srcImg, time, results, &results);
-    if (abort()) {
-        endEditBlock();
-        return;
-    }
     _statSkewness->setValueAtTime(time, results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
     _statKurtosis->setValueAtTime(time, results.kurtosis.r, results.kurtosis.g, results.kurtosis.b, results.kurtosis.a);
+    _btmLeftAnalysis->setValueAtTime(time, analysisWindow.x1, analysisWindow.y1);
+    _topRightAnalysis->setValueAtTime(time, analysisWindow.x2, analysisWindow.y2);
+    _analysisIsRGBA->setValueAtTime(time, true);
+    endEditBlock();
+}
+
+void
+ImageStatisticsPlugin::updateHSVL(OFX::Image* srcImg, double time, const OfxRectI &analysisWindow)
+{
+    Results results;
+    if (!abort()) {
+        updateSub<ImageHSVLMinMaxMeanProcessor>(srcImg, time, analysisWindow, results, &results);
+    }
+    if (!abort()) {
+        updateSub<ImageHSVLSDevProcessor>(srcImg, time, analysisWindow, results, &results);
+    }
+    if (!abort()) {
+        updateSub<ImageHSVLSkewnessKurtosisProcessor>(srcImg, time, analysisWindow, results, &results);
+    }
+    if (abort()) {
+        return;
+    }
+    beginEditBlock("updateStatisticsHSVL");
+    _statHSVLMin->setValueAtTime(time, results.min.r, results.min.g, results.min.b, results.min.a);
+    _statHSVLMax->setValueAtTime(time, results.max.r, results.max.g, results.max.b, results.max.a);
+    _statHSVLMean->setValueAtTime(time, results.mean.r, results.mean.g, results.mean.b, results.mean.a);
+    _statHSVLSDev->setValueAtTime(time, results.sdev.r, results.sdev.g, results.sdev.b, results.sdev.a);
+    _statHSVLSkewness->setValueAtTime(time, results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
+    _statHSVLKurtosis->setValueAtTime(time, results.kurtosis.r, results.kurtosis.g, results.kurtosis.b, results.kurtosis.a);
+    _btmLeftAnalysis->setValueAtTime(time, analysisWindow.x1, analysisWindow.y1);
+    _topRightAnalysis->setValueAtTime(time, analysisWindow.x2, analysisWindow.y2);
+    _analysisIsRGBA->setValueAtTime(time, false);
     endEditBlock();
 }
 
@@ -1084,11 +1520,21 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    // autoUpdate
+    // restrictToRectangle
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamRestrictToRectangle);
         param->setLabels(kParamRestrictToRectangleLabel, kParamRestrictToRectangleLabel, kParamRestrictToRectangleLabel);
         param->setHint(kParamRestrictToRectangleHint);
+        param->setDefault(true);
+        param->setAnimates(false);
+        page->addChild(*param);
+    }
+
+    // autoUpdate
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutoUpdate);
+        param->setLabels(kParamAutoUpdateLabel, kParamAutoUpdateLabel, kParamAutoUpdateLabel);
+        param->setHint(kParamAutoUpdateHint);
         param->setDefault(true);
         param->setAnimates(false);
         page->addChild(*param);
@@ -1104,6 +1550,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setIncrement(1.);
         param->setHint(kParamRectangleInteractBtmLeftHint);
         param->setDigits(0);
+        param->setAnimates(true);
         page->addChild(*param);
     }
 
@@ -1119,95 +1566,278 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setHint(kParamRectangleInteractSizeHint);
         param->setDigits(0);
         param->setEvaluateOnChange(false);
+        param->setAnimates(true);
         page->addChild(*param);
     }
 
-    // min
+    // the following two parameters are used to check if the previous analysis was done on the same area,
+    // so that only one analysis is done when the interact changes.
+    // btmLeftAnalysis
     {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatMin);
-        param->setLabels(kParamStatMinLabel, kParamStatMinLabel, kParamStatMinLabel);
-        param->setHint(kParamStatMinHint);
-        param->setEvaluateOnChange(false);
-        param->setEnabled(false);
+        Int2DParamDescriptor* param = desc.defineInt2DParam(kParamBtmLeftAnalysis);
+        param->setDefault(-1, -1);
+        param->setIsSecret(true);
+        param->setIsPersistant(false);
+        param->setAnimates(true);
         page->addChild(*param);
     }
 
-    // statMax
+    // topRightAnalysis
     {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatMax);
-        param->setLabels(kParamStatMaxLabel, kParamStatMaxLabel, kParamStatMaxLabel);
-        param->setHint(kParamStatMaxHint);
-        param->setEvaluateOnChange(false);
-        param->setEnabled(false);
+        Int2DParamDescriptor* param = desc.defineInt2DParam(kParamTopRightAnalysis);
+        param->setDefault(-1, -1);
+        param->setIsSecret(true);
+        param->setIsPersistant(false);
+        param->setAnimates(true);
         page->addChild(*param);
     }
 
-    // statMean
+    // topRightAnalysis
     {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatMean);
-        param->setLabels(kParamStatMeanLabel, kParamStatMeanLabel, kParamStatMeanLabel);
-        param->setHint(kParamStatMeanHint);
-        param->setEvaluateOnChange(false);
-        param->setEnabled(false);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAnalysisIsRGBA);
+        param->setIsSecret(true);
+        param->setIsPersistant(false);
+        param->setAnimates(true);
         page->addChild(*param);
     }
 
-    // statSDev
     {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatSDev);
-        param->setLabels(kParamStatSDevLabel, kParamStatSDevLabel, kParamStatSDevLabel);
-        param->setHint(kParamStatSDevHint);
-        param->setEvaluateOnChange(false);
-        param->setEnabled(false);
-        page->addChild(*param);
+        GroupParamDescriptor* group = desc.defineGroupParam(kParamGroupRGBA);
+        group->setLabels(kParamGroupRGBA, kParamGroupRGBA, kParamGroupRGBA);
+        group->setAsTab();
+        // min
+        {
+            RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatMin);
+            param->setLabels(kParamStatMinLabel, kParamStatMinLabel, kParamStatMinLabel);
+            param->setHint(kParamStatMinHint);
+            param->setEvaluateOnChange(false);
+            param->setEnabled(false);
+            param->setAnimates(true);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
+
+        // statMax
+        {
+            RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatMax);
+            param->setLabels(kParamStatMaxLabel, kParamStatMaxLabel, kParamStatMaxLabel);
+            param->setHint(kParamStatMaxHint);
+            param->setEvaluateOnChange(false);
+            param->setEnabled(false);
+            param->setAnimates(true);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
+
+        // statMean
+        {
+            RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatMean);
+            param->setLabels(kParamStatMeanLabel, kParamStatMeanLabel, kParamStatMeanLabel);
+            param->setHint(kParamStatMeanHint);
+            param->setEvaluateOnChange(false);
+            param->setEnabled(false);
+            param->setAnimates(true);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
+
+        // statSDev
+        {
+            RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatSDev);
+            param->setLabels(kParamStatSDevLabel, kParamStatSDevLabel, kParamStatSDevLabel);
+            param->setHint(kParamStatSDevHint);
+            param->setEvaluateOnChange(false);
+            param->setEnabled(false);
+            param->setAnimates(true);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
+
+        // statSkewness
+        {
+            RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatSkewness);
+            param->setLabels(kParamStatSkewnessLabel, kParamStatSkewnessLabel, kParamStatSkewnessLabel);
+            param->setHint(kParamStatSkewnessHint);
+            param->setEvaluateOnChange(false);
+            param->setEnabled(false);
+            param->setAnimates(true);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
+
+        // statKurtosis
+        {
+            RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatKurtosis);
+            param->setLabels(kParamStatKurtosisLabel, kParamStatKurtosisLabel, kParamStatKurtosisLabel);
+            param->setHint(kParamStatKurtosisHint);
+            param->setEvaluateOnChange(false);
+            param->setEnabled(false);
+            param->setAnimates(true);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
+
+        // analyzeFrame
+        {
+            PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeFrame);
+            param->setLabels(kParamAnalyzeFrameLabel, kParamAnalyzeFrameLabel, kParamAnalyzeFrameLabel);
+            param->setHint(kParamAnalyzeFrameHint);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
+
+        // analyzeSequence
+        {
+            PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeSequence);
+            param->setLabels(kParamAnalyzeSequenceLabel, kParamAnalyzeSequenceLabel, kParamAnalyzeSequenceLabel);
+            param->setHint(kParamAnalyzeSequenceHint);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
+
+        // clearFrame
+        {
+            PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClearFrame);
+            param->setLabels(kParamClearFrameLabel, kParamClearFrameLabel, kParamClearFrameLabel);
+            param->setHint(kParamClearFrameHint);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
+
+        // clearSequence
+        {
+            PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClearSequence);
+            param->setLabels(kParamClearSequenceLabel, kParamClearSequenceLabel, kParamClearSequenceLabel);
+            param->setHint(kParamClearSequenceHint);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
     }
 
-    // statSkewness
     {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatSkewness);
-        param->setLabels(kParamStatSkewnessLabel, kParamStatSkewnessLabel, kParamStatSkewnessLabel);
-        param->setHint(kParamStatSkewnessHint);
-        param->setEvaluateOnChange(false);
-        param->setEnabled(false);
-        page->addChild(*param);
-    }
+        GroupParamDescriptor* group = desc.defineGroupParam(kParamGroupHSVL);
+        group->setLabels(kParamGroupHSVL, kParamGroupHSVL, kParamGroupHSVL);
+        group->setAsTab();
+        // min
+        {
+            RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatHSVLMin);
+            param->setLabels(kParamStatHSVLMinLabel, kParamStatHSVLMinLabel, kParamStatHSVLMinLabel);
+            param->setHint(kParamStatHSVLMinHint);
+            param->setDimensionLabels("h", "s", "v", "l");
+            param->setEvaluateOnChange(false);
+            param->setEnabled(false);
+            param->setAnimates(true);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
 
-    // statKurtosis
-    {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatKurtosis);
-        param->setLabels(kParamStatKurtosisLabel, kParamStatKurtosisLabel, kParamStatKurtosisLabel);
-        param->setHint(kParamStatKurtosisHint);
-        param->setEvaluateOnChange(false);
-        param->setEnabled(false);
-        page->addChild(*param);
-    }
+        // statHSVLMax
+        {
+            RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatHSVLMax);
+            param->setLabels(kParamStatHSVLMaxLabel, kParamStatHSVLMaxLabel, kParamStatHSVLMaxLabel);
+            param->setHint(kParamStatHSVLMaxHint);
+            param->setDimensionLabels("h", "s", "v", "l");
+            param->setEvaluateOnChange(false);
+            param->setEnabled(false);
+            param->setAnimates(true);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
 
-    // analyzeFrame
-    {
-        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeFrame);
-        param->setLabels(kParamAnalyzeFrameLabel, kParamAnalyzeFrameLabel, kParamAnalyzeFrameLabel);
-        param->setHint(kParamAnalyzeFrameHint);
-        page->addChild(*param);
-    }
+        // statHSVLMean
+        {
+            RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatHSVLMean);
+            param->setLabels(kParamStatHSVLMeanLabel, kParamStatHSVLMeanLabel, kParamStatHSVLMeanLabel);
+            param->setHint(kParamStatHSVLMeanHint);
+            param->setDimensionLabels("h", "s", "v", "l");
+            param->setEvaluateOnChange(false);
+            param->setEnabled(false);
+            param->setAnimates(true);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
 
-    // analyzeSequence
-    {
-        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeSequence);
-        param->setLabels(kParamAnalyzeSequenceLabel, kParamAnalyzeSequenceLabel, kParamAnalyzeSequenceLabel);
-        param->setHint(kParamAnalyzeSequenceHint);
-        page->addChild(*param);
-    }
+        // statHSVLSDev
+        {
+            RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatHSVLSDev);
+            param->setLabels(kParamStatHSVLSDevLabel, kParamStatHSVLSDevLabel, kParamStatHSVLSDevLabel);
+            param->setHint(kParamStatHSVLSDevHint);
+            param->setDimensionLabels("h", "s", "v", "l");
+            param->setEvaluateOnChange(false);
+            param->setEnabled(false);
+            param->setAnimates(true);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
 
-    // autoUpdate
-    {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutoUpdate);
-        param->setLabels(kParamAutoUpdateLabel, kParamAutoUpdateLabel, kParamAutoUpdateLabel);
-        param->setHint(kParamAutoUpdateHint);
-        param->setDefault(true);
-        param->setAnimates(false);
-        page->addChild(*param);
+        // statHSVLSkewness
+        {
+            RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatHSVLSkewness);
+            param->setLabels(kParamStatHSVLSkewnessLabel, kParamStatHSVLSkewnessLabel, kParamStatHSVLSkewnessLabel);
+            param->setHint(kParamStatHSVLSkewnessHint);
+            param->setDimensionLabels("h", "s", "v", "l");
+            param->setEvaluateOnChange(false);
+            param->setEnabled(false);
+            param->setAnimates(true);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
+
+        // statHSVLKurtosis
+        {
+            RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatHSVLKurtosis);
+            param->setLabels(kParamStatHSVLKurtosisLabel, kParamStatHSVLKurtosisLabel, kParamStatHSVLKurtosisLabel);
+            param->setHint(kParamStatHSVLKurtosisHint);
+            param->setDimensionLabels("h", "s", "v", "l");
+            param->setEvaluateOnChange(false);
+            param->setEnabled(false);
+            param->setAnimates(true);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
+
+        // analyzeFrameHSVL
+        {
+            PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeFrameHSVL);
+            param->setLabels(kParamAnalyzeFrameHSVLLabel, kParamAnalyzeFrameHSVLLabel, kParamAnalyzeFrameHSVLLabel);
+            param->setHint(kParamAnalyzeFrameHSVLHint);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
+
+        // analyzeSequenceHSVL
+        {
+            PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeSequenceHSVL);
+            param->setLabels(kParamAnalyzeSequenceHSVLLabel, kParamAnalyzeSequenceHSVLLabel, kParamAnalyzeSequenceHSVLLabel);
+            param->setHint(kParamAnalyzeSequenceHSVLHint);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
+
+        // clearFrameHSVL
+        {
+            PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClearFrameHSVL);
+            param->setLabels(kParamClearFrameHSVLLabel, kParamClearFrameHSVLLabel, kParamClearFrameHSVLLabel);
+            param->setHint(kParamClearFrameHSVLHint);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
+
+        // clearSequenceHSVL
+        {
+            PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClearSequenceHSVL);
+            param->setLabels(kParamClearSequenceHSVLLabel, kParamClearSequenceHSVLLabel, kParamClearSequenceHSVLLabel);
+            param->setHint(kParamClearSequenceHSVLHint);
+            param->setParent(*group);
+            page->addChild(*param);
+        }
     }
 }
+
 
 void getImageStatisticsPluginID(OFX::PluginFactoryArray &ids)
 {
