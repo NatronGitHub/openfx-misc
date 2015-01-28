@@ -382,6 +382,8 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         double min[nComponents], max[nComponents], sum[nComponents];
+        std::fill(min, min+nComponents, +std::numeric_limits<double>::infinity());
+        std::fill(max, max+nComponents, -std::numeric_limits<double>::infinity());
         std::fill(sum, sum + nComponents, 0.);
         unsigned long count = 0;
         assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
@@ -661,6 +663,8 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         double min[nComponentsHSVL], max[nComponentsHSVL], sum[nComponentsHSVL];
+        std::fill(min, min+nComponentsHSVL, +std::numeric_limits<double>::infinity());
+        std::fill(max, max+nComponentsHSVL, -std::numeric_limits<double>::infinity());
         std::fill(sum, sum + nComponentsHSVL, 0.);
         unsigned long count = 0;
         assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
@@ -1470,17 +1474,6 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
-
-    if (context == eContextGeneral || context == eContextPaint) {
-        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
-        maskClip->addSupportedComponent(ePixelComponentAlpha);
-        maskClip->setTemporalClipAccess(false);
-        if (context == eContextGeneral) {
-            maskClip->setOptional(true);
-        }
-        maskClip->setSupportsTiles(kSupportsTiles);
-        maskClip->setIsMask(true);
-    }
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
