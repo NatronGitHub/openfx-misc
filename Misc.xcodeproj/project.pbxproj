@@ -304,6 +304,7 @@
 		1E3E3CC417995D5C005F2132 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1E3E3CC517995D5C005F2132 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E3E3CC617995D8C005F2132 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1E4551C81A797F060044F01B /* ofxsLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED537381A234F12007966D5 /* ofxsLut.cpp */; };
 		1E47341D1907FB9400DC26E1 /* ChromaKeyer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3451F3190695850080D699 /* ChromaKeyer.cpp */; };
 		1E52FFBE1955CE120000FB79 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E52FFBF1955CE120000FB79 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
@@ -4880,6 +4881,7 @@
 			files = (
 				1E6CC0861A768BCE00173EB3 /* ImageStatistics.cpp in Sources */,
 				1E6CC0881A768BD700173EB3 /* PluginRegistration.cpp in Sources */,
+				1E4551C81A797F060044F01B /* ofxsLut.cpp in Sources */,
 				1E6CC0891A76ADEA00173EB3 /* ofxsRectangleInteract.cpp in Sources */,
 				1E6CC06F1A768B7200173EB3 /* ofxsCore.cpp in Sources */,
 				1E6CC0701A768B7200173EB3 /* ofxsImageEffect.cpp in Sources */,
