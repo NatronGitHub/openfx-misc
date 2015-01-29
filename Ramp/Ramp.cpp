@@ -919,7 +919,7 @@ RampInteract::draw(const DrawArgs &args)
     }
 
     glPushAttrib(GL_ALL_ATTRIB_BITS);
-    glMatrixMode(GL_PROJECTION);
+    glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
 
     glEnable(GL_LINE_SMOOTH);
     glEnable(GL_BLEND);
