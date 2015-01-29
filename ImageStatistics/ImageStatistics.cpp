@@ -946,10 +946,10 @@ public:
         // update visibility
         bool restrictToRectangle;
         _restrictToRectangle->getValue(restrictToRectangle);
-        _btmLeft->setEnabled(!restrictToRectangle);
-        _btmLeft->setIsSecret(restrictToRectangle);
-        _size->setEnabled(!restrictToRectangle);
-        _size->setIsSecret(restrictToRectangle);
+        _btmLeft->setEnabled(restrictToRectangle);
+        _btmLeft->setIsSecret(!restrictToRectangle);
+        _size->setEnabled(restrictToRectangle);
+        _size->setIsSecret(!restrictToRectangle);
     }
 
 private:
@@ -1183,10 +1183,10 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         // update visibility
         bool restrictToRectangle;
         _restrictToRectangle->getValue(restrictToRectangle);
-        _btmLeft->setEnabled(!restrictToRectangle);
-        _btmLeft->setIsSecret(restrictToRectangle);
-        _size->setEnabled(!restrictToRectangle);
-        _size->setIsSecret(restrictToRectangle);
+        _btmLeft->setEnabled(restrictToRectangle);
+        _btmLeft->setIsSecret(!restrictToRectangle);
+        _size->setEnabled(restrictToRectangle);
+        _size->setIsSecret(!restrictToRectangle);
         doUpdate = true;
     }
     if (//paramName == kParamRectangleInteractBtmLeft ||
@@ -1544,16 +1544,6 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         page->addChild(*param);
     }
 
-    // autoUpdate
-    {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutoUpdate);
-        param->setLabels(kParamAutoUpdateLabel, kParamAutoUpdateLabel, kParamAutoUpdateLabel);
-        param->setHint(kParamAutoUpdateHint);
-        param->setDefault(true);
-        param->setAnimates(false);
-        page->addChild(*param);
-    }
-
     // btmLeft
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
@@ -1581,6 +1571,16 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setDigits(0);
         param->setEvaluateOnChange(false);
         param->setAnimates(true);
+        page->addChild(*param);
+    }
+
+    // autoUpdate
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutoUpdate);
+        param->setLabels(kParamAutoUpdateLabel, kParamAutoUpdateLabel, kParamAutoUpdateLabel);
+        param->setHint(kParamAutoUpdateHint);
+        param->setDefault(true);
+        param->setAnimates(false);
         page->addChild(*param);
     }
 
