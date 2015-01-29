@@ -1288,8 +1288,6 @@ ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor, 
 void
 ImageStatisticsPlugin::computeWindow(OFX::Image* srcImg, double time, OfxRectI *analysisWindow)
 {
-    OfxPointD rs = srcImg->getRenderScale();
-
     OfxRectD regionOfInterest;
     bool restrictToRectangle;
     _restrictToRectangle->getValueAtTime(time, restrictToRectangle);
@@ -1317,7 +1315,7 @@ ImageStatisticsPlugin::computeWindow(OFX::Image* srcImg, double time, OfxRectI *
         regionOfInterest.y2 += regionOfInterest.y1;
     }
     MergeImages2D::toPixelEnclosing(regionOfInterest,
-                                    rs,
+                                    srcImg->getRenderScale(),
                                     srcImg->getPixelAspectRatio(),
                                     analysisWindow);
     MergeImages2D::rectIntersection(*analysisWindow, srcImg->getBounds(), analysisWindow);
