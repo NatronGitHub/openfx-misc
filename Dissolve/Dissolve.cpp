@@ -203,22 +203,22 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
 
     // make sure bit depths are sane
     if (fromImg.get()) {
-        checkComponents(*fromImg, dstBitDepth, dstComponents);
         if (fromImg->getRenderScale().x != args.renderScale.x ||
             fromImg->getRenderScale().y != args.renderScale.y ||
             fromImg->getField() != args.fieldToRender) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
+        checkComponents(*fromImg, dstBitDepth, dstComponents);
     }
     if (toImg.get()) {
-        checkComponents(*toImg, dstBitDepth, dstComponents);
         if (toImg->getRenderScale().x != args.renderScale.x ||
             toImg->getRenderScale().y != args.renderScale.y ||
             toImg->getField() != args.fieldToRender) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
+        checkComponents(*toImg, dstBitDepth, dstComponents);
     }
 
     std::auto_ptr<OFX::Image> mask(maskClip_->fetchImage(args.time));

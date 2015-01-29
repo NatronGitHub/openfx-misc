@@ -266,6 +266,12 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
 
     // make sure bit depths are sane
     if (src1.get()) {
+        if (src1->getRenderScale().x != args.renderScale.x ||
+            src1->getRenderScale().y != args.renderScale.y ||
+            src1->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         OFX::BitDepthEnum    srcBitDepth      = src1->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src1->getPixelComponents();
 
@@ -274,6 +280,12 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
     }
     if (src2.get()) {
+        if (src2->getRenderScale().x != args.renderScale.x ||
+            src2->getRenderScale().y != args.renderScale.y ||
+            src2->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         OFX::BitDepthEnum    srcBitDepth      = src2->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src2->getPixelComponents();
 

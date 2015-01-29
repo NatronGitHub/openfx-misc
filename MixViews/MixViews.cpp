@@ -230,6 +230,12 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor, const OFX::RenderArgume
 
     // make sure bit depths are sane
     if (srcLeft.get()) {
+        if (srcLeft->getRenderScale().x != args.renderScale.x ||
+            srcLeft->getRenderScale().y != args.renderScale.y ||
+            srcLeft->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         OFX::BitDepthEnum    srcBitDepth      = srcLeft->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcLeft->getPixelComponents();
 
@@ -238,6 +244,12 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor, const OFX::RenderArgume
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
     }
     if (srcRight.get()) {
+        if (srcRight->getRenderScale().x != args.renderScale.x ||
+            srcRight->getRenderScale().y != args.renderScale.y ||
+            srcRight->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         OFX::BitDepthEnum    srcBitDepth      = srcRight->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcRight->getPixelComponents();
 

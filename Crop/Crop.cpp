@@ -399,8 +399,13 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
-    if (src.get() && dst.get())
-    {
+    if (src.get()) {
+        if (src->getRenderScale().x != args.renderScale.x ||
+            src->getRenderScale().y != args.renderScale.y ||
+            src->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
         OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();

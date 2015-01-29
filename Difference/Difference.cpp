@@ -258,6 +258,12 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor, const OFX::RenderA
     std::auto_ptr<const OFX::Image> srcA(srcClipA_->fetchImage(args.time));
     std::auto_ptr<const OFX::Image> srcB(srcClipB_->fetchImage(args.time));
     if (srcA.get()) {
+        if (srcA->getRenderScale().x != args.renderScale.x ||
+            srcA->getRenderScale().y != args.renderScale.y ||
+            srcA->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         OFX::BitDepthEnum    srcBitDepth      = srcA->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcA->getPixelComponents();
         if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
@@ -266,6 +272,12 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor, const OFX::RenderA
     }
 
     if (srcB.get()) {
+        if (srcB->getRenderScale().x != args.renderScale.x ||
+            srcB->getRenderScale().y != args.renderScale.y ||
+            srcB->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         OFX::BitDepthEnum    srcBitDepth      = srcB->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcB->getPixelComponents();
         if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {

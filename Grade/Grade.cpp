@@ -543,6 +543,12 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
     if (src.get()) {
+        if (src->getRenderScale().x != args.renderScale.x ||
+            src->getRenderScale().y != args.renderScale.y ||
+            src->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
         if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
@@ -551,6 +557,14 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     }
     std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
     if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+        if (mask.get()) {
+            if (mask->getRenderScale().x != args.renderScale.x ||
+                mask->getRenderScale().y != args.renderScale.y ||
+                mask->getField() != args.fieldToRender) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+            }
+        }
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         processor.doMasking(true);

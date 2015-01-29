@@ -541,12 +541,24 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     OFX::BitDepthEnum    srcBitDepth = eBitDepthNone;
     OFX::PixelComponentEnum srcComponents = ePixelComponentNone;
     if (srcA.get()) {
+        if (srcA->getRenderScale().x != args.renderScale.x ||
+            srcA->getRenderScale().y != args.renderScale.y ||
+            srcA->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         srcBitDepth      = srcA->getPixelDepth();
         srcComponents = srcA->getPixelComponents();
         assert(srcClipA_->getPixelComponents() == srcComponents);
     }
 
     if (srcB.get()) {
+        if (srcB->getRenderScale().x != args.renderScale.x ||
+            srcB->getRenderScale().y != args.renderScale.y ||
+            srcB->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         OFX::BitDepthEnum    srcBBitDepth      = srcB->getPixelDepth();
         OFX::PixelComponentEnum srcBComponents = srcB->getPixelComponents();
         assert(srcClipB_->getPixelComponents() == srcBComponents);

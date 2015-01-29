@@ -277,6 +277,12 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+    if (dst->getRenderScale().x != args.renderScale.x ||
+        dst->getRenderScale().y != args.renderScale.y ||
+        dst->getField() != args.fieldToRender) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
@@ -285,6 +291,12 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
 
     // make sure bit depths are sane
     if (src.get()) {
+        if (src->getRenderScale().x != args.renderScale.x ||
+            src->getRenderScale().y != args.renderScale.y ||
+            src->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
 
@@ -330,6 +342,14 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
 
     // do we do masking
     if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+        if (mask.get()) {
+            if (mask->getRenderScale().x != args.renderScale.x ||
+                mask->getRenderScale().y != args.renderScale.y ||
+                mask->getField() != args.fieldToRender) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+            }
+        }
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         // say we are masking

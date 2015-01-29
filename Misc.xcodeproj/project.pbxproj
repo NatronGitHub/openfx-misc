@@ -1876,6 +1876,8 @@
 		1E23600618369E890019C45F /* TimeOffset.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TimeOffset.cpp; sourceTree = "<group>"; };
 		1E23600818369E920019C45F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E23600918369E920019C45F /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1E2770281A7A47A700516761 /* ofxsImageBlender.H */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = ofxsImageBlender.H; path = openfx/Support/Plugins/include/ofxsImageBlender.H; sourceTree = SOURCE_ROOT; };
+		1E2770291A7A47A700516761 /* ofxsProcessing.H */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = ofxsProcessing.H; path = openfx/Support/Plugins/include/ofxsProcessing.H; sourceTree = SOURCE_ROOT; };
 		1E2A93581990EE690061B1F1 /* Retime.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Retime.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E2A935A1990EEB60061B1F1 /* Retime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Retime.cpp; sourceTree = "<group>"; };
 		1E2A935D1990EEC70061B1F1 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
@@ -2969,6 +2971,8 @@
 				1E3E3D3617996112005F2132 /* ofxsMessage.h */,
 				1E3E3D3717996112005F2132 /* ofxsMultiThread.h */,
 				1E3E3D3817996112005F2132 /* ofxsParam.h */,
+				1E2770281A7A47A700516761 /* ofxsImageBlender.H */,
+				1E2770291A7A47A700516761 /* ofxsProcessing.H */,
 			);
 			name = Headers;
 			path = openfx/Support/include;

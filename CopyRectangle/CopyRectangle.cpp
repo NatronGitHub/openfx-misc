@@ -367,29 +367,29 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     if (srcA.get()) {
-        OFX::BitDepthEnum    srcBitDepth      = srcA->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = srcA->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
-            OFX::throwSuiteStatusException(kOfxStatFailed);
-        }
         if (srcA->getRenderScale().x != args.renderScale.x ||
             srcA->getRenderScale().y != args.renderScale.y ||
             srcA->getField() != args.fieldToRender) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-    }
-    std::auto_ptr<const OFX::Image> srcB(srcClipB_->fetchImage(args.time));
-    if (srcB.get()) {
-        OFX::BitDepthEnum    srcBitDepth      = srcB->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = srcB->getPixelComponents();
+        OFX::BitDepthEnum    srcBitDepth      = srcA->getPixelDepth();
+        OFX::PixelComponentEnum srcComponents = srcA->getPixelComponents();
         if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
+    }
+    std::auto_ptr<const OFX::Image> srcB(srcClipB_->fetchImage(args.time));
+    if (srcB.get()) {
         if (srcB->getRenderScale().x != args.renderScale.x ||
             srcB->getRenderScale().y != args.renderScale.y ||
             srcB->getField() != args.fieldToRender) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+        OFX::BitDepthEnum    srcBitDepth      = srcB->getPixelDepth();
+        OFX::PixelComponentEnum srcComponents = srcB->getPixelComponents();
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }

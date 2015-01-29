@@ -350,12 +350,16 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     }
     std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
     if (src.get() && dst.get()) {
+        if (src->getRenderScale().x != args.renderScale.x ||
+            src->getRenderScale().y != args.renderScale.y ||
+            src->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         OFX::BitDepthEnum dstBitDepth = dst->getPixelDepth();
         OFX::BitDepthEnum srcBitDepth = src->getPixelDepth();
         if (srcBitDepth != dstBitDepth)
             OFX::throwSuiteStatusException(kOfxStatFailed);
-        
-        
     }
     
     // auto ptr for the mask.
@@ -365,6 +369,14 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     if (getContext() != OFX::eContextFilter && rotoClip_->isConnected()) {
         if (!mask.get()) {
             OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+        if (mask.get()) {
+            if (mask->getRenderScale().x != args.renderScale.x ||
+                mask->getRenderScale().y != args.renderScale.y ||
+                mask->getField() != args.fieldToRender) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+            }
         }
         assert(mask->getPixelComponents() == OFX::ePixelComponentRGBA || mask->getPixelComponents() == OFX::ePixelComponentAlpha);
         if (mask->getPixelComponents() != dst->getPixelComponents()) {

@@ -435,14 +435,44 @@ void DeinterlacePlugin::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
 
     std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    if (dst->getRenderScale().x != args.renderScale.x ||
+        dst->getRenderScale().y != args.renderScale.y ||
+        dst->getField() != args.fieldToRender) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
 
     std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time)),
                               srcp(srcClip_->fetchImage(args.time-1.0)),
                               srcn(srcClip_->fetchImage(args.time+1.0));
-    if (!src.get() || !dst.get() || !srcp.get() || !srcn.get()) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+    if (src.get()) {
+        if (src->getRenderScale().x != args.renderScale.x ||
+            src->getRenderScale().y != args.renderScale.y ||
+            src->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
     }
-    
+    if (srcp.get()) {
+        if (srcp->getRenderScale().x != args.renderScale.x ||
+            srcp->getRenderScale().y != args.renderScale.y ||
+            srcp->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+    }
+    if (srcn.get()) {
+        if (srcn->getRenderScale().x != args.renderScale.x ||
+            srcn->getRenderScale().y != args.renderScale.y ||
+            srcn->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+    }
+
     const OfxRectI rect = dst->getBounds();
 
     int width=rect.x2-rect.x1;

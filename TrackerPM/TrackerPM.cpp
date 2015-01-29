@@ -147,7 +147,7 @@ private:
     virtual void trackRange(const OFX::TrackArguments& args);
     
     template <int nComponents>
-    void trackInternal(OfxTime refTime, OfxTime otherTime);
+    void trackInternal(OfxTime refTime, OfxTime otherTime, const OFX::TrackArguments& args);
 
     template <class PIX, int nComponents, int maxValue>
     void trackInternalForDepth(OfxTime refTime,
@@ -554,12 +554,12 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
                srcComponents == OFX::ePixelComponentAlpha);
         
         if (srcComponents == OFX::ePixelComponentRGBA) {
-            trackInternal<4>(t,other);
+            trackInternal<4>(t, other, args);
         } else if (srcComponents == OFX::ePixelComponentRGB) {
-            trackInternal<3>(t,other);
+            trackInternal<3>(t, other, args);
         } else {
             assert(srcComponents == OFX::ePixelComponentAlpha);
-            trackInternal<1>(t,other);
+            trackInternal<1>(t, other, args);
         }
         if (args.forward) {
             ++t;
@@ -771,7 +771,7 @@ TrackerPMPlugin::trackInternalForDepth(OfxTime refTime,
 // the internal render function
 template <int nComponents>
 void
-TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime)
+TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime, const OFX::TrackArguments& args)
 {
     OfxRectD refRect;
     _innerBtmLeft->getValueAtTime(refTime, refRect.x1, refRect.y1);
@@ -800,6 +800,22 @@ TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime)
     if (!srcRef.get() || !srcOther.get()) {
         return;
     }
+    if (srcRef.get()) {
+        if (srcRef->getRenderScale().x != args.renderScale.x ||
+            srcRef->getRenderScale().y != args.renderScale.y/* ||
+            srcRef->getField() != args.fieldToRender*/) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+    }
+    if (srcOther.get()) {
+        if (srcOther->getRenderScale().x != args.renderScale.x ||
+            srcOther->getRenderScale().y != args.renderScale.y/* ||
+            srcOther->getField() != args.fieldToRender*/) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+    }
     // renderScale should never be something else than 1 when called from ActionInstanceChanged
     if ((srcRef->getPixelDepth() != srcOther->getPixelDepth()) ||
         (srcRef->getPixelComponents() != srcOther->getPixelComponents()) ||
@@ -812,6 +828,14 @@ TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime)
     
     // auto ptr for the mask.
     std::auto_ptr<OFX::Image> mask((getContext() != OFX::eContextFilter) ? maskClip_->fetchImage(refTime) : 0);
+    if (mask.get()) {
+        if (mask->getRenderScale().x != args.renderScale.x ||
+            mask->getRenderScale().y != args.renderScale.y/* ||
+            mask->getField() != args.fieldToRender*/) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+    }
 
     OfxRectD trackSearchBounds;
     getTrackSearchBounds(refRect, refCenterWithOffset, searchRect, &trackSearchBounds);

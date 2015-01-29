@@ -236,6 +236,15 @@ RetimePlugin::setupAndProcess(OFX::ImageBlenderBase &processor, const OFX::Rende
 {
     // get a dst image
     std::auto_ptr<OFX::Image>  dst(dstClip_->fetchImage(args.time));
+    if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    if (dst->getRenderScale().x != args.renderScale.x ||
+        dst->getRenderScale().y != args.renderScale.y ||
+        dst->getField() != args.fieldToRender) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
     OFX::BitDepthEnum          dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum    dstComponents  = dst->getPixelComponents();
 
@@ -261,9 +270,21 @@ RetimePlugin::setupAndProcess(OFX::ImageBlenderBase &processor, const OFX::Rende
 
     // make sure bit depths are sane
     if (fromImg.get()) {
+        if (fromImg->getRenderScale().x != args.renderScale.x ||
+            fromImg->getRenderScale().y != args.renderScale.y ||
+            fromImg->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         checkComponents(*fromImg, dstBitDepth, dstComponents);
     }
     if (toImg.get()) {
+        if (toImg->getRenderScale().x != args.renderScale.x ||
+            toImg->getRenderScale().y != args.renderScale.y ||
+            toImg->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
 
