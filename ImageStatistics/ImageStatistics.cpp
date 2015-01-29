@@ -1091,25 +1091,24 @@ ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
 
     copyPixels(*this, args.renderWindow, src.get(), dst.get());
 
-    // compute statistics if it is an interactive render
-    //if (args.interactiveRenderStatus) {
-    bool autoUpdate;
-    _autoUpdate->getValueAtTime(args.time, autoUpdate);
-    assert(autoUpdate); // render should only be called if autoUpdate is true: in other cases isIdentity returns true
-    if (autoUpdate) {
-        // check if there is already a Keyframe, if yes update it
-        int k = _statMean->getKeyIndex(args.time, eKeySearchNear);
-        OfxRectI analysisWindow;
-        computeWindow(src.get(), args.time, &analysisWindow);
-        if (k != -1) {
-            update(src.get(), args.time, analysisWindow);
-        }
-        k = _statHSVLMean->getKeyIndex(args.time, eKeySearchNear);
-        if (k != -1) {
-            updateHSVL(src.get(), args.time, analysisWindow);
+    if (src.get()) {
+        bool autoUpdate;
+        _autoUpdate->getValueAtTime(args.time, autoUpdate);
+        assert(autoUpdate); // render should only be called if autoUpdate is true: in other cases isIdentity returns true
+        if (autoUpdate) {
+            // check if there is already a Keyframe, if yes update it
+            int k = _statMean->getKeyIndex(args.time, eKeySearchNear);
+            OfxRectI analysisWindow;
+            computeWindow(src.get(), args.time, &analysisWindow);
+            if (k != -1) {
+                update(src.get(), args.time, analysisWindow);
+            }
+            k = _statHSVLMean->getKeyIndex(args.time, eKeySearchNear);
+            if (k != -1) {
+                updateHSVL(src.get(), args.time, analysisWindow);
+            }
         }
     }
-    //}
 }
 
 // override the roi call
