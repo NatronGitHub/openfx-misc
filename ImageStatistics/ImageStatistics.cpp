@@ -94,14 +94,16 @@
 #define kPluginName "ImageStatisticsOFX"
 #define kPluginGrouping "Other"
 #define kPluginDescription \
-"Compute image statistics over the whole image or over a rectangle."
+"Compute image statistics over the whole image or over a rectangle. " \
+"The statistics can be computed either on RGBA components or in the HSVL colorspace " \
+"(which is the HSV coilorspace with an additional L component from HSL)."
 #define kPluginIdentifier "net.sf.openfx.ImageStatistics"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
-#define kSupportsRenderScale 0 // no renderscale support
+#define kSupportsRenderScale 0 // no renderscale support: statistics are computed at full resolution
 #define kRenderThreadSafety eRenderFullySafe
 
 
@@ -127,7 +129,7 @@
 
 #define kParamAutoUpdate "autoUpdate"
 #define kParamAutoUpdateLabel "Auto Update"
-#define kParamAutoUpdateHint "Automatically update values when input or rectangle changes if an analysis was performed at current frame. If not checked, values are only updated if the plugin parameters change."
+#define kParamAutoUpdateHint "Automatically update values when input or rectangle changes if an analysis was performed at current frame. If not checked, values are only updated if the plugin parameters change. "
 
 #define kParamGroupRGBA "RGBA"
 
@@ -1060,9 +1062,34 @@ ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
     }
 
     // do the rendering
-    std::auto_ptr<OFX::Image> srcImg(_srcClip->fetchImage(args.time));
-    std::auto_ptr<OFX::Image> dstImg(_dstClip->fetchImage(args.time));
-    copyPixels(*this, args.renderWindow, srcImg.get(), dstImg.get());
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
+    if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    if (dst->getRenderScale().x != args.renderScale.x ||
+        dst->getRenderScale().y != args.renderScale.y ||
+        dst->getField() != args.fieldToRender) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    std::auto_ptr<OFX::Image> src(_srcClip->fetchImage(args.time));
+    if (src.get()) {
+        if (src->getRenderScale().x != args.renderScale.x ||
+            src->getRenderScale().y != args.renderScale.y ||
+            src->getField() != args.fieldToRender) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
+    }
+
+    copyPixels(*this, args.renderWindow, src.get(), dst.get());
 
     // compute statistics if it is an interactive render
     //if (args.interactiveRenderStatus) {
@@ -1073,13 +1100,13 @@ ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
         // check if there is already a Keyframe, if yes update it
         int k = _statMean->getKeyIndex(args.time, eKeySearchNear);
         OfxRectI analysisWindow;
-        computeWindow(srcImg.get(), args.time, &analysisWindow);
+        computeWindow(src.get(), args.time, &analysisWindow);
         if (k != -1) {
-            update(srcImg.get(), args.time, analysisWindow);
+            update(src.get(), args.time, analysisWindow);
         }
         k = _statHSVLMean->getKeyIndex(args.time, eKeySearchNear);
         if (k != -1) {
-            updateHSVL(srcImg.get(), args.time, analysisWindow);
+            updateHSVL(src.get(), args.time, analysisWindow);
         }
     }
     //}
@@ -1220,17 +1247,21 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
     }
     // RGBA analysis
     if (doAnalyzeRGBA || doAnalyzeHSVL) {
-        std::auto_ptr<OFX::Image> srcImg(_srcClip->fetchImage(args.time));
-        if (srcImg.get()) {
-            OfxPointD rs = srcImg->getRenderScale();
-            assert(rs.x == args.renderScale.x && rs.y == args.renderScale.y);
-            computeWindow(srcImg.get(), args.time, &analysisWindow);
+        std::auto_ptr<OFX::Image> src(_srcClip->fetchImage(args.time));
+        if (src.get()) {
+            if (src->getRenderScale().x != args.renderScale.x ||
+                src->getRenderScale().y != args.renderScale.y/* ||
+                src->getField() != args.fieldToRender*/) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+            }
+            computeWindow(src.get(), args.time, &analysisWindow);
             getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
             if (doAnalyzeRGBA) {
-                update(srcImg.get(), args.time, analysisWindow);
+                update(src.get(), args.time, analysisWindow);
             }
             if (doAnalyzeHSVL) {
-                updateHSVL(srcImg.get(), args.time, analysisWindow);
+                updateHSVL(src.get(), args.time, analysisWindow);
             }
             getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
         }
@@ -1243,16 +1274,20 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         int tmin = std::ceil(range.min);
         int tmax = std::floor(range.max);
         for (int t = tmin; t <= tmax; ++t) {
-            std::auto_ptr<OFX::Image> srcImg(_srcClip->fetchImage(t));
-            if (srcImg.get()) {
-                OfxPointD rs = srcImg->getRenderScale();
-                assert(rs.x == args.renderScale.x && rs.y == args.renderScale.y);
-                computeWindow(srcImg.get(), t, &analysisWindow);
+            std::auto_ptr<OFX::Image> src(_srcClip->fetchImage(t));
+            if (src.get()) {
+                if (src->getRenderScale().x != args.renderScale.x ||
+                    src->getRenderScale().y != args.renderScale.y/* ||
+                    src->getField() != args.fieldToRender*/) {
+                    setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                    OFX::throwSuiteStatusException(kOfxStatFailed);
+                }
+                computeWindow(src.get(), t, &analysisWindow);
                 if (doAnalyzeSequenceRGBA) {
-                    update(srcImg.get(), t, analysisWindow);
+                    update(src.get(), t, analysisWindow);
                 }
                 if (doAnalyzeSequenceHSVL) {
-                    updateHSVL(srcImg.get(), t, analysisWindow);
+                    updateHSVL(src.get(), t, analysisWindow);
                 }
             }
             if (tmax != tmin) {
@@ -1559,7 +1594,6 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setLabels(kParamStatMinLabel, kParamStatMinLabel, kParamStatMinLabel);
             param->setHint(kParamStatMinHint);
             param->setEvaluateOnChange(false);
-            param->setEnabled(false);
             param->setAnimates(true);
             param->setParent(*group);
             page->addChild(*param);
@@ -1571,7 +1605,6 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setLabels(kParamStatMaxLabel, kParamStatMaxLabel, kParamStatMaxLabel);
             param->setHint(kParamStatMaxHint);
             param->setEvaluateOnChange(false);
-            param->setEnabled(false);
             param->setAnimates(true);
             param->setParent(*group);
             page->addChild(*param);
@@ -1583,7 +1616,6 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setLabels(kParamStatMeanLabel, kParamStatMeanLabel, kParamStatMeanLabel);
             param->setHint(kParamStatMeanHint);
             param->setEvaluateOnChange(false);
-            param->setEnabled(false);
             param->setAnimates(true);
             param->setParent(*group);
             page->addChild(*param);
@@ -1595,7 +1627,6 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setLabels(kParamStatSDevLabel, kParamStatSDevLabel, kParamStatSDevLabel);
             param->setHint(kParamStatSDevHint);
             param->setEvaluateOnChange(false);
-            param->setEnabled(false);
             param->setAnimates(true);
             param->setParent(*group);
             page->addChild(*param);
@@ -1607,7 +1638,6 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setLabels(kParamStatSkewnessLabel, kParamStatSkewnessLabel, kParamStatSkewnessLabel);
             param->setHint(kParamStatSkewnessHint);
             param->setEvaluateOnChange(false);
-            param->setEnabled(false);
             param->setAnimates(true);
             param->setParent(*group);
             page->addChild(*param);
@@ -1619,7 +1649,6 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setLabels(kParamStatKurtosisLabel, kParamStatKurtosisLabel, kParamStatKurtosisLabel);
             param->setHint(kParamStatKurtosisHint);
             param->setEvaluateOnChange(false);
-            param->setEnabled(false);
             param->setAnimates(true);
             param->setParent(*group);
             page->addChild(*param);
@@ -1675,7 +1704,6 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setHint(kParamStatHSVLMinHint);
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
-            param->setEnabled(false);
             param->setAnimates(true);
             param->setParent(*group);
             page->addChild(*param);
@@ -1688,7 +1716,6 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setHint(kParamStatHSVLMaxHint);
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
-            param->setEnabled(false);
             param->setAnimates(true);
             param->setParent(*group);
             page->addChild(*param);
@@ -1701,7 +1728,6 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setHint(kParamStatHSVLMeanHint);
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
-            param->setEnabled(false);
             param->setAnimates(true);
             param->setParent(*group);
             page->addChild(*param);
@@ -1714,7 +1740,6 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setHint(kParamStatHSVLSDevHint);
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
-            param->setEnabled(false);
             param->setAnimates(true);
             param->setParent(*group);
             page->addChild(*param);
@@ -1727,7 +1752,6 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setHint(kParamStatHSVLSkewnessHint);
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
-            param->setEnabled(false);
             param->setAnimates(true);
             param->setParent(*group);
             page->addChild(*param);
@@ -1740,7 +1764,6 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setHint(kParamStatHSVLKurtosisHint);
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
-            param->setEnabled(false);
             param->setAnimates(true);
             param->setParent(*group);
             page->addChild(*param);
