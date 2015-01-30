@@ -292,11 +292,11 @@ class ImageInverter : public InvertBase
 
                 // do we have a source image to scale up
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
-                tmpPix[0] = processR ? (1. - unpPix[0]) : unpPix[0];
-                tmpPix[1] = processG ? (1. - unpPix[1]) : unpPix[1];
-                tmpPix[2] = processB ? (1. - unpPix[2]) : unpPix[2];
-                tmpPix[3] = processA ? (1. - unpPix[3]) : unpPix[3];
-                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                tmpPix[0] = processR ? (1.f - unpPix[0]) : unpPix[0];
+                tmpPix[1] = processG ? (1.f - unpPix[1]) : unpPix[1];
+                tmpPix[2] = processB ? (1.f - unpPix[2]) : unpPix[2];
+                tmpPix[3] = processA ? (1.f - unpPix[3]) : unpPix[3];
+                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
 
                 // increment the dst pixel
                 dstPix += nComponents;

@@ -250,7 +250,7 @@ static int floatToInt(float value)
     } else if (value >= 1.) {
         return numvals - 1;
     }
-    return value * (numvals-1) + 0.5;
+    return value * (numvals-1) + 0.5f;
 }
 
 template <typename SRCPIX,typename DSTPIX>

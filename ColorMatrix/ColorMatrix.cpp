@@ -354,12 +354,12 @@ private:
                         (processG && c == 1) ||
                         (processB && c == 2) ||
                         (processA && c == 3)) {
-                        tmpPix[c] = apply(c, unpPix[0], unpPix[1], unpPix[2], unpPix[3]);
+                        tmpPix[c] = (float)apply(c, unpPix[0], unpPix[1], unpPix[2], unpPix[3]);
                     } else {
                         tmpPix[c] = unpPix[c];
                     }
                 }
-                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // copy back original values from unprocessed channels
                 if (nComponents == 1) {
                     if (!processA) {

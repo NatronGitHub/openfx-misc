@@ -196,7 +196,7 @@ pixToVector(const PIX *p, float v[2], InputChannelEnum xChannel, InputChannelEnu
 {
     assert(nComponents == 3 || nComponents == 4);
     if (!p) {
-        v[0] = v[1] = 0.;
+        v[0] = v[1] = 0.f;
         return;
     }
     switch (xChannel) {
@@ -210,7 +210,7 @@ pixToVector(const PIX *p, float v[2], InputChannelEnum xChannel, InputChannelEnu
             v[0] = p[2];
             break;
         case eInputChannelA:
-            v[0] = (nComponents == 4) ? p[3] : 0.;
+            v[0] = (nComponents == 4) ? p[3] : 0.f;
             break;
     }
     switch (yChannel) {
@@ -224,7 +224,7 @@ pixToVector(const PIX *p, float v[2], InputChannelEnum xChannel, InputChannelEnu
             v[1] = p[2];
             break;
         case eInputChannelA:
-            v[1] = (nComponents == 4) ? p[3] : 0.;
+            v[1] = (nComponents == 4) ? p[3] : 0.f;
             break;
     }
 }
@@ -243,7 +243,7 @@ public:
         assert(nComponents == 3 || nComponents == 4);
         assert(_dstImg);
         float vec[2];
-        float h, s = 1., v = 1.;
+        float h, s = 1.f, v = 1.f;
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -254,11 +254,11 @@ public:
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 pixToVector<PIX, nComponents>(srcPix, vec, _xChannel, _yChannel);
-                h = std::atan2(_inverseY?-vec[1]:vec[1], vec[0]) * 180. / M_PI;
+                h = (float)(std::atan2(_inverseY?-vec[1]:vec[1], vec[0]) * 180. / M_PI);
                 if (_opposite) {
                     h += 180;
                 }
-                double norm = std::sqrt(vec[0] * vec[0] + vec[1] *  vec[1]);
+                float norm = std::sqrt(vec[0] * vec[0] + vec[1] *  vec[1]);
                 if (_modulateV) {
                     v = norm;
                 } else {
@@ -272,7 +272,7 @@ public:
                     OFX::Color::hsv_to_rgb(h, s, v, &dstPix[0], &dstPix[1], &dstPix[2]);
                 }
                 if (nComponents == 4) {
-                    dstPix[3] = 1.;
+                    dstPix[3] = 1.f;
                 }
 
                 // increment the dst pixel

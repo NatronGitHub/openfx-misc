@@ -169,7 +169,7 @@ public:
             if (abort()) {
                 return;
             }
-            cimg.sharpen(params.amplitude);
+            cimg.sharpen((float)params.amplitude);
         }
     }
 

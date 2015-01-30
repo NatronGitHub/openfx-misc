@@ -240,7 +240,7 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
     }
 
     // get the transition value
-    float blend = std::max(0., std::min(_transition->getValueAtTime(args.time), 1.));
+    float blend = std::max(0.f, std::min((float)_transition->getValueAtTime(args.time), 1.f));
 
     // set the images
     processor.setDstImg( dst.get() );

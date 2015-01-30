@@ -309,7 +309,7 @@ protected:
             float max = std::max(std::max(r, g), b);
             hsvl[3] = (min + max)/2;
         } else {
-            hsvl[0] = hsvl[1] = hsvl[2] = hsvl[3] = 0.;
+            hsvl[0] = hsvl[1] = hsvl[2] = hsvl[3] = 0.f;
         }
     }
 
@@ -1270,8 +1270,8 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         progressStart("Analyzing sequence...");
         OfxRangeD range;
         getTimeDomain(range);
-        int tmin = std::ceil(range.min);
-        int tmax = std::floor(range.max);
+        int tmin = (int)std::ceil(range.min);
+        int tmax = (int)std::floor(range.max);
         for (int t = tmin; t <= tmax; ++t) {
             std::auto_ptr<OFX::Image> src(_srcClip->fetchImage(t));
             if (src.get()) {

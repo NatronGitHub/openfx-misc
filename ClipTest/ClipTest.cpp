@@ -329,13 +329,13 @@ private:
                             (processB && c == 2) ||
                             (processA && c == 3)) {
                             int z = ((x + y) & 4) >> 2;
-                            tmpPix[c] = zebralow ? (0.8 + 0.2 * z) : 0.1 * z;
+                            tmpPix[c] = zebralow ? (0.8f + 0.2f * z) : 0.1f * z;
                         } else {
                             tmpPix[c] = unpPix[c];
                         }
                     }
                 }
-                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // copy back original values from unprocessed channels
                 if (nComponents == 1) {
                     if (!processA) {

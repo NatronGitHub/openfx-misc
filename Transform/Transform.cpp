@@ -598,12 +598,12 @@ drawSquare(const OfxPointD& center,
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
     if (hovered) {
         if (althovered) {
-            glColor3f(0.*l, 1.*l, 0.*l);
+            glColor3f(0.f*l, 1.f*l, 0.f*l);
         } else {
-            glColor3f(1.*l, 0.*l, 0.*l);
+            glColor3f(1.f*l, 0.f*l, 0.f*l);
         }
     } else {
-        glColor3f(0.8*l, 0.8*l, 0.8*l);
+        glColor3f(0.8f*l, 0.8f*l, 0.8f*l);
     }
     double halfWidth = (POINT_SIZE / 2.) * meanPixelScale;
     double halfHeight = (POINT_SIZE / 2.) * meanPixelScale;
@@ -626,21 +626,21 @@ drawEllipse(const OfxPointD& center,
             int l)
 {
     if (hovered) {
-        glColor3f(1.*l, 0.*l, 0.*l);
+        glColor3f(1.f*l, 0.f*l, 0.f*l);
     } else {
-        glColor3f(0.8*l, 0.8*l, 0.8*l);
+        glColor3f(0.8f*l, 0.8f*l, 0.8f*l);
     }
 
     glPushMatrix();
     //  center the oval at x_center, y_center
-    glTranslatef(center.x, center.y, 0);
+    glTranslatef((float)center.x, (float)center.y, 0.f);
     //  draw the oval using line segments
     glBegin(GL_LINE_LOOP);
     // we don't need to be pixel-perfect here, it's just an interact!
     // 40 segments is enough.
     for (int i = 0; i < 40; ++i) {
         double theta = i * 2 * OFX::ofxsPi() / 40.;
-        glVertex2f(radius.x * std::cos(theta), radius.y * std::sin(theta));
+        glVertex2d(radius.x * std::cos(theta), radius.y * std::sin(theta));
     }
     glEnd();
     
@@ -656,9 +656,9 @@ drawSkewBar(const OfxPointD &center,
             int l)
 {
     if (hovered) {
-        glColor3f(1.*l, 0.*l, 0.*l);
+        glColor3f(1.f*l, 0.f*l, 0.f*l);
     } else {
-        glColor3f(0.8*l, 0.8*l, 0.8*l);
+        glColor3f(0.8f*l, 0.8f*l, 0.8f*l);
     }
 
     // we are not axis-aligned: use the mean pixel scale
@@ -666,7 +666,7 @@ drawSkewBar(const OfxPointD &center,
     double barHalfSize = radiusY + 20. * meanPixelScale;
 
     glPushMatrix();
-    glTranslatef(center.x, center.y, 0);
+    glTranslatef((float)center.x, (float)center.y, 0.f);
     glRotated(angle, 0, 0, 1);
     
     glBegin(GL_LINES);
@@ -712,9 +712,9 @@ drawRotationBar(const OfxPointD& pixelScale,
     // we are not axis-aligned
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
     if (hovered) {
-        glColor3f(1.*l, 0.*l, 0.*l);
+        glColor3f(1.f*l, 0.f*l, 0.f*l);
     } else {
-        glColor3f(0.8*l, 0.8*l, 0.8*l);
+        glColor3f(0.8f*l, 0.8f*l, 0.8f*l);
     }
 
     double barExtra = 30. * meanPixelScale;
@@ -733,29 +733,29 @@ drawRotationBar(const OfxPointD& pixelScale,
         
         glPushMatrix();
         //  center the oval at x_center, y_center
-        glTranslatef(arrowCenterX, 0., 0);
+        glTranslatef((float)arrowCenterX, 0.f, 0);
         //  draw the oval using line segments
         glBegin(GL_LINE_STRIP);
-        glVertex2f(0, arrowRadius.y);
-        glVertex2f(arrowRadius.x, 0.);
-        glVertex2f(0, -arrowRadius.y);
+        glVertex2d(0, arrowRadius.y);
+        glVertex2d(arrowRadius.x, 0.);
+        glVertex2d(0, -arrowRadius.y);
         glEnd();
         
 
         glBegin(GL_LINES);
         ///draw the top head
-        glVertex2f(0., arrowRadius.y);
-        glVertex2f(0., arrowRadius.y - 5. * meanPixelScale);
+        glVertex2d(0., arrowRadius.y);
+        glVertex2d(0., arrowRadius.y - 5. * meanPixelScale);
         
-        glVertex2f(0., arrowRadius.y);
-        glVertex2f(4. * meanPixelScale, arrowRadius.y - 3. * meanPixelScale); // 5^2 = 3^2+4^2
+        glVertex2d(0., arrowRadius.y);
+        glVertex2d(4. * meanPixelScale, arrowRadius.y - 3. * meanPixelScale); // 5^2 = 3^2+4^2
         
         ///draw the bottom head
-        glVertex2f(0., -arrowRadius.y);
-        glVertex2f(0., -arrowRadius.y + 5. * meanPixelScale);
+        glVertex2d(0., -arrowRadius.y);
+        glVertex2d(0., -arrowRadius.y + 5. * meanPixelScale);
         
-        glVertex2f(0., -arrowRadius.y);
-        glVertex2f(4. * meanPixelScale, -arrowRadius.y + 3. * meanPixelScale); // 5^2 = 3^2+4^2
+        glVertex2d(0., -arrowRadius.y);
+        glVertex2d(4. * meanPixelScale, -arrowRadius.y + 3. * meanPixelScale); // 5^2 = 3^2+4^2
         
         glEnd();
 
@@ -768,7 +768,7 @@ drawRotationBar(const OfxPointD& pixelScale,
         double arrowHeadOffsetY = 3 * meanPixelScale;
 
         glPushMatrix();
-        glTranslatef(arrowXPosition, 0., 0);
+        glTranslatef((float)arrowXPosition, 0, 0);
 
         glBegin(GL_LINES);
         ///draw the central bar
@@ -822,9 +822,7 @@ bool
 TransformInteract::draw(const OFX::DrawArgs &args)
 {
     //std::cout << "pixelScale= "<<args.pixelScale.x << "," << args.pixelScale.y << " renderscale=" << args.renderScale.x << "," << args.renderScale.y << std::endl;
-    OfxPointD pscale;
-    pscale.x = args.pixelScale.x / args.renderScale.x;
-    pscale.y = args.pixelScale.y / args.renderScale.y;
+    const OfxPointD &pscale = args.pixelScale;
 
     OfxPointD center, left, right, bottom, top;
     getPoints(args.time, pscale, &center, &left, &bottom, &top, &right);
@@ -858,7 +856,7 @@ TransformInteract::draw(const OFX::DrawArgs &args)
     //glEnable(GL_POINT_SMOOTH);
     glEnable(GL_BLEND);
     glHint(GL_LINE_SMOOTH_HINT,GL_DONT_CARE);
-    glLineWidth(1.5);
+    glLineWidth(1.5f);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 
     // Draw everything twice
@@ -870,7 +868,7 @@ TransformInteract::draw(const OFX::DrawArgs &args)
             // shift by (1,1) pixel
             glTranslated(pscale.x, -pscale.y, 0);
         }
-        glColor3f(0.8*l, 0.8*l, 0.8*l);
+        glColor3f(0.8f*l, 0.8f*l, 0.8f*l);
 
         glPushMatrix();
         glTranslated(center.x, center.y, 0.);
@@ -998,9 +996,7 @@ static OfxRectD rectFromCenterPoint(const OfxPointD& center, const OfxPointD& pi
 // overridden functions from OFX::Interact to do things
 bool TransformInteract::penMotion(const OFX::PenArgs &args)
 {
-    OfxPointD pscale;
-    pscale.x = args.pixelScale.x / args.renderScale.x;
-    pscale.y = args.pixelScale.y / args.renderScale.y;
+    const OfxPointD &pscale = args.pixelScale;
 
     OfxPointD center, left, right, top, bottom;
     getPoints(args.time, pscale, &center, &left, &bottom, &top, &right);
@@ -1274,9 +1270,7 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
 {
     using OFX::Matrix3x3;
 
-    OfxPointD pscale;
-    pscale.x = args.pixelScale.x / args.renderScale.x;
-    pscale.y = args.pixelScale.y / args.renderScale.y;
+    const OfxPointD &pscale = args.pixelScale;
 
     OfxPointD center,left,right,top,bottom;
     getPoints(args.time, pscale, &center, &left, &bottom, &top, &right);

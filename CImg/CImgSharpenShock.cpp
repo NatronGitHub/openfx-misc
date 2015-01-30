@@ -189,13 +189,13 @@ public:
         if (params.iterations <= 0 || params.amplitude == 0.) {
             return;
         }
-        float alpha = args.renderScale.x * params.alpha;
-        float sigma = args.renderScale.x * params.sigma;
+        double alpha = args.renderScale.x * params.alpha;
+        double sigma = args.renderScale.x * params.sigma;
         for (int i = 1; i < params.iterations; ++i) {
             if (abort()) {
                 return;
             }
-            cimg.sharpen(params.amplitude, true, params.edge, alpha, sigma);
+            cimg.sharpen((float)params.amplitude, true, (float)params.edge, (float)alpha, (float)sigma);
         }
     }
 

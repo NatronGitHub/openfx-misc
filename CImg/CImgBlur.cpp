@@ -458,7 +458,7 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = std::ceil((params.size * 1.5) * renderScale.x);
+        int delta_pix = (int)std::ceil((params.size * 1.5) * renderScale.x);
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
@@ -469,7 +469,7 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        float sigma = args.renderScale.x * params.size / 2.4;
+        float sigma = (float)(args.renderScale.x * params.size / 2.4);
         if (sigma <= 0.5 && params.orderX == 0 && params.orderY == 0) {
             return;
         }
@@ -500,7 +500,7 @@ public:
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgBlurParams& params) OVERRIDE FINAL
     {
-        float sigma = args.renderScale.x * params.size / 2.4;
+        float sigma = (float)(args.renderScale.x * params.size / 2.4);
         return (sigma < 0.1 && params.orderX == 0 && params.orderY == 0);
     };
 
@@ -524,7 +524,7 @@ bool
 CImgBlurPlugin::getRoD(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* dstRoD)
 {
     if (params.expandRoD && !isEmpty(srcRoD)) {
-        int delta_pix = std::ceil((params.size * 1.5) * renderScale.x);
+        int delta_pix = (int)std::ceil((params.size * 1.5) * renderScale.x);
         dstRoD->x1 = srcRoD.x1 - delta_pix;
         dstRoD->x2 = srcRoD.x2 + delta_pix;
         dstRoD->y1 = srcRoD.y1 - delta_pix;

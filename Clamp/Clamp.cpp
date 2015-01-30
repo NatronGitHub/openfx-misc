@@ -404,32 +404,32 @@ class ImageClamper : public ClampBase
                 if (!processR) {
                     tmpPix[0] = unpPix[0];
                 } else {
-                    tmpPix[0] = clamp<minimumEnable, maximumEnable, minClampToEnable, maxClampToEnable>(unpPix[0],
+                    tmpPix[0] = (float)clamp<minimumEnable, maximumEnable, minClampToEnable, maxClampToEnable>(unpPix[0],
                                                                                                         _minimum.r, _maximum.r,
                                                                                                         _minClampTo.r, _maxClampTo.r);
                 }
                 if (!processG) {
                     tmpPix[1] = unpPix[1];
                 } else {
-                    tmpPix[1] = clamp<minimumEnable, maximumEnable, minClampToEnable, maxClampToEnable>(unpPix[1],
+                    tmpPix[1] = (float)clamp<minimumEnable, maximumEnable, minClampToEnable, maxClampToEnable>(unpPix[1],
                                                                                                         _minimum.g, _maximum.g,
                                                                                                         _minClampTo.g, _maxClampTo.g);
                 }
                 if (!processB) {
                     tmpPix[2] = unpPix[2];
                 } else {
-                    tmpPix[2] = clamp<minimumEnable, maximumEnable, minClampToEnable, maxClampToEnable>(unpPix[2],
+                    tmpPix[2] = (float)clamp<minimumEnable, maximumEnable, minClampToEnable, maxClampToEnable>(unpPix[2],
                                                                                                         _minimum.b, _maximum.b,
                                                                                                         _minClampTo.b, _maxClampTo.b);
                 }
                 if (!processA) {
                     tmpPix[3] = unpPix[3];
                 } else {
-                    tmpPix[3] = clamp<minimumEnable, maximumEnable, minClampToEnable, maxClampToEnable>(unpPix[3],
+                    tmpPix[3] = (float)clamp<minimumEnable, maximumEnable, minClampToEnable, maxClampToEnable>(unpPix[3],
                                                                                                         _minimum.a, _maximum.a,
                                                                                                         _minClampTo.a, _maxClampTo.a);
                 }
-                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
 
                 // increment the dst pixel
                 dstPix += nComponents;

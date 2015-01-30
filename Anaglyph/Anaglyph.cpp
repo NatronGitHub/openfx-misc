@@ -185,17 +185,17 @@ private:
                 dstPix[3] = 0; // start with transparent
                 if (srcRedPix) {
                     PIX srcLuminance = luminance(srcRedPix[0],srcRedPix[1],srcRedPix[2]);
-                    dstPix[0] = srcLuminance*(1.-_amtcolour) + srcRedPix[0]*_amtcolour;
-                    dstPix[3] += 0.5*srcRedPix[3];
+                    dstPix[0] = srcLuminance*(1.f-(float)_amtcolour) + srcRedPix[0]*(float)_amtcolour;
+                    dstPix[3] += 0.5f * srcRedPix[3];
                 } else {
                     // no src pixel here, be black and transparent
                     dstPix[0] = 0;
                 }
                 if (srcCyanPix) {
                     PIX srcLuminance = luminance(srcCyanPix[0],srcCyanPix[1],srcCyanPix[2]);
-                    dstPix[1] = srcLuminance*(1.-_amtcolour) + srcCyanPix[1]*_amtcolour;
-                    dstPix[2] = srcLuminance*(1.-_amtcolour) + srcCyanPix[2]*_amtcolour;
-                    dstPix[3] += 0.5*srcCyanPix[3];
+                    dstPix[1] = srcLuminance*(1.f-(float)_amtcolour) + srcCyanPix[1]*(float)_amtcolour;
+                    dstPix[2] = srcLuminance*(1.f-(float)_amtcolour) + srcCyanPix[2]*(float)_amtcolour;
+                    dstPix[3] += 0.5f * srcCyanPix[3];
                 } else {
                     // no src pixel here, be black and transparent
                     dstPix[1] = 0;

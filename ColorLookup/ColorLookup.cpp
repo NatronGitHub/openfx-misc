@@ -215,6 +215,12 @@ protected:
     {
         return std::max(0.f, std::min(value, float(maxValue)));
     }
+    // clamp for integer types
+    template<class PIX>
+    double clamp(double value, int maxValue)
+    {
+        return std::max(0., std::min(value, double(maxValue)));
+    }
 };
 
 
@@ -224,9 +230,9 @@ float ColorLookupProcessorBase::clamp<float>(float value, int maxValue)
 {
     assert(maxValue == 1.);
     if (_clampBlack && value < 0.) {
-        value = 0.;
+        value = 0.f;
     } else  if (_clampWhite && value > 1.0) {
-        value = 1.0;
+        value = 1.0f;
     }
     return value;
 }
@@ -279,7 +285,7 @@ public:
             int lutIndex = nComponents == 1 ? kCurveAlpha : componentToCurve(component); // special case for components == alpha only
             for (int position = 0; position <= nbValues; ++position) {
                 // position to evaluate the param at
-                float parametricPos = _rangeMin + (_rangeMax - _rangeMin) * float(position)/nbValues;
+                double parametricPos = _rangeMin + (_rangeMax - _rangeMin) * double(position)/nbValues;
 
                 // evaluate the parametric param
                 double value = _lookupTableParam->getValue(lutIndex, _time, parametricPos);
@@ -287,7 +293,7 @@ public:
                     value += _lookupTableParam->getValue(kCurveMaster, _time, parametricPos) - parametricPos;
                 }
                 // set that in the lut
-                _lookupTable[component][position] = clamp<PIX>(value, maxValue);
+                _lookupTable[component][position] = (float)clamp<PIX>(value, maxValue);
             }
         }
     }
@@ -312,12 +318,12 @@ private:
                     // RGB and Alpha: don't premult/unpremult, just apply curves
                     // normalize/denormalize properly
                     for (int c = 0; c < nComponents; ++c) {
-                        tmpPix[c] = interpolate(c, srcPix ? (srcPix[c] / (double)maxValue) : 0.) * maxValue;
+                        tmpPix[c] = (float)interpolate(c, srcPix ? (srcPix[c] / (float)maxValue) : 0.f) * maxValue;
                         assert(!isnan(srcPix[c]) && !isnan(srcPix[c]) &&
                                !isnan(tmpPix[c]) && !isnan(tmpPix[c]));
                     }
                     // ofxsMaskMix expects denormalized input
-                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 } else {
                     //assert(nComponents == 4);
                     float unpPix[nComponents];
@@ -329,7 +335,7 @@ private:
                                !isnan(tmpPix[c]) && !isnan(tmpPix[c]));
                     }
                     // ofxsPremultMaskMixPix expects normalized input
-                    ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                    ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 }
                 // increment the dst pixel
                 dstPix += nComponents;
@@ -346,15 +352,15 @@ private:
             if (nComponents != 1 && lutIndex != kCurveAlpha) {
                 ret += _lookupTableParam->getValue(kCurveMaster, _time, value) - value;
             }
-            return clamp<PIX>(ret, maxValue);;
+            return (float)clamp<PIX>(ret, maxValue);;
         } else {
-            double x = (value - _rangeMin) / (_rangeMax - _rangeMin);
+            float x = (float)(value - _rangeMin) / (float)(_rangeMax - _rangeMin);
             int i = (int)(x * nbValues);
             assert(0 <= i && i <= nbValues);
-            float alpha = std::max(0.,std::min(x * nbValues - i, 1.));
+            float alpha = std::max(0.f,std::min(x * nbValues - i, 1.f));
             float a = _lookupTable[component][i];
-            float b = (i  < nbValues) ? _lookupTable[component][i+1] : 0.;
-            return a * (1. - alpha) + b * alpha;
+            float b = (i  < nbValues) ? _lookupTable[component][i+1] : 0.f;
+            return a * (1.f - alpha) + b * alpha;
         }
     }
 

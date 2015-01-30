@@ -103,7 +103,7 @@ class MixViewsBase : public OFX::ImageProcessor
 protected:
     const OFX::Image *_srcLeftImg;
     const OFX::Image *_srcRightImg;
-    double _mix;
+    float _mix;
 
 public:
     /** @brief no arg ctor */
@@ -152,7 +152,7 @@ private:
                 const PIX *srcRightPix = (const PIX *)(_srcRightImg ? _srcRightImg->getPixelAddress(x, y) : 0);
 
                 for (int c = 0; c < nComponents; c++) {
-                    dstPix[c] = (srcLeftPix ? srcLeftPix[c] : 0)*(1-_mix) + (srcRightPix ? srcRightPix[c] : 0)*_mix;
+                    dstPix[c] = (srcLeftPix ? srcLeftPix[c] : PIX())*(1-_mix) + (srcRightPix ? srcRightPix[c] : PIX())*_mix;
                 }
 
                 // increment the dst pixel
@@ -269,7 +269,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor, const OFX::RenderArgume
     processor.setRenderWindow(args.renderWindow);
 
     // set the parameters
-    processor.setMix(mix);
+    processor.setMix((float)mix);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();

@@ -308,14 +308,28 @@ template<class PIX, int maxValue>
 static PIX floatToSample(float value)
 {
     if (maxValue == 1) {
-        return value;
+        return PIX(value);
     }
     if (value <= 0) {
         return 0;
     } else if (value >= 1.) {
         return maxValue;
     }
-    return value * maxValue + 0.5;
+    return PIX(value * maxValue + 0.5f);
+}
+
+template<class PIX, int maxValue>
+static PIX floatToSample(double value)
+{
+    if (maxValue == 1) {
+        return PIX(value);
+    }
+    if (value <= 0) {
+        return 0;
+    } else if (value >= 1.) {
+        return maxValue;
+    }
+    return PIX(value * maxValue + 0.5);
 }
 
 template <class PIX, int nComponents, int maxValue>
@@ -354,12 +368,12 @@ private:
                 const PIX *inMaskPix = (const PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
                 const PIX *outMaskPix = (const PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
 
-                float inMask = inMaskPix ? *inMaskPix : 0.;
+                float inMask = inMaskPix ? *inMaskPix : 0.f;
                 if (_sourceAlpha == eSourceAlphaAddToInsideMask && nComponents == 4 && srcPix) {
                     // take the max of inMask and the source Alpha
                     inMask = std::max(inMask, sampleToFloat<PIX,maxValue>(srcPix[3]));
                 }
-                float outMask = outMaskPix ? *outMaskPix : 0.;
+                float outMask = outMaskPix ? *outMaskPix : 0.f;
                 double Kbg = 0.;
 
                 // clamp inMask and outMask in the [0,1] range
@@ -477,15 +491,15 @@ private:
                         break;
                     case eOutputModePremultiplied:
                     case eOutputModeUnpremultiplied:
-                        dstPix[0] = floatToSample<PIX,maxValue>(fgr);
-                        dstPix[1] = floatToSample<PIX,maxValue>(fgg);
-                        dstPix[2] = floatToSample<PIX,maxValue>(fgb);
+                        dstPix[0] = (float)floatToSample<PIX,maxValue>(fgr);
+                        dstPix[1] = (float)floatToSample<PIX,maxValue>(fgg);
+                        dstPix[2] = (float)floatToSample<PIX,maxValue>(fgb);
                         break;
                     case eOutputModeComposite:
                         // [FD] not sure if this is the expected way to use compAlpha
-                        dstPix[0] = floatToSample<PIX,maxValue>(compAlpha * (fgr + bgr * Kbg) + (1.-compAlpha) * bgr);
-                        dstPix[1] = floatToSample<PIX,maxValue>(compAlpha * (fgg + bgg * Kbg) + (1.-compAlpha) * bgg);
-                        dstPix[2] = floatToSample<PIX,maxValue>(compAlpha * (fgb + bgb * Kbg) + (1.-compAlpha) * bgb);
+                        dstPix[0] = (float)floatToSample<PIX,maxValue>(compAlpha * (fgr + bgr * Kbg) + (1.-compAlpha) * bgr);
+                        dstPix[1] = (float)floatToSample<PIX,maxValue>(compAlpha * (fgg + bgg * Kbg) + (1.-compAlpha) * bgg);
+                        dstPix[2] = (float)floatToSample<PIX,maxValue>(compAlpha * (fgb + bgb * Kbg) + (1.-compAlpha) * bgb);
                         break;
                 }
                 if (nComponents == 4) {

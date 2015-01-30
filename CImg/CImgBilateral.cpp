@@ -163,7 +163,7 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgBilateralParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = std::ceil((params.sigma_s * 4.) * renderScale.x);
+        int delta_pix = (int)std::ceil((params.sigma_s * 4.) * renderScale.x);
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
@@ -181,9 +181,9 @@ public:
 #pragma message WARN("The bilateral filter before CImg 1.6.0 produces incorrect results, please upgrade CImg.")
 #endif
 #if cimg_version >= 157
-        cimg.blur_bilateral(cimg, params.sigma_s * args.renderScale.x, params.sigma_r);
+        cimg.blur_bilateral(cimg, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r);
 #else
-        cimg.blur_bilateral(params.sigma_s * args.renderScale.x, params.sigma_r);
+        cimg.blur_bilateral((float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r);
 #endif
     }
 
@@ -221,7 +221,7 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgBilateralParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = std::ceil((params.sigma_s * 4.) * renderScale.x);
+        int delta_pix = (int)std::ceil((params.sigma_s * 4.) * renderScale.x);
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
@@ -241,7 +241,7 @@ public:
 #if cimg_version < 157
 #error "BilateralGuided requires CImg >= 1.57"
 #endif
-        dst = srcA.get_blur_bilateral(srcB, params.sigma_s * args.renderScale.x, params.sigma_r);
+        dst = srcA.get_blur_bilateral(srcB, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r);
     }
 
     virtual int isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgBilateralParams& params) OVERRIDE FINAL

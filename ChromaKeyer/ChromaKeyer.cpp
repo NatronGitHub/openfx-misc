@@ -301,14 +301,28 @@ template<class PIX, int maxValue>
 static PIX floatToSample(float value)
 {
     if (maxValue == 1) {
-        return value;
+        return PIX(value);
     }
     if (value <= 0) {
-        return 0;
+        return PIX();
     } else if (value >= 1.) {
-        return maxValue;
+        return PIX(maxValue);
     }
-    return value * maxValue + 0.5;
+    return PIX(value * maxValue + 0.5);
+}
+
+template<class PIX, int maxValue>
+static PIX floatToSample(double value)
+{
+    if (maxValue == 1) {
+        return PIX(value);
+    }
+    if (value <= 0) {
+        return PIX();
+    } else if (value >= 1.) {
+        return PIX(maxValue);
+    }
+    return PIX(value * maxValue + 0.5);
 }
 
 template <class PIX, int nComponents, int maxValue>
@@ -338,13 +352,13 @@ private:
                 const PIX *inMaskPix = (const PIX *)  (_inMaskImg ? _inMaskImg->getPixelAddress(x, y) : 0);
                 const PIX *outMaskPix = (const PIX *)  (_outMaskImg ? _outMaskImg->getPixelAddress(x, y) : 0);
 
-                float inMask = inMaskPix ? *inMaskPix : 0.;
+                float inMask = inMaskPix ? *inMaskPix : 0.f;
                 if (_sourceAlpha == eSourceAlphaAddToInsideMask && nComponents == 4 && srcPix) {
                     // take the max of inMask and the source Alpha
                     inMask = std::max(inMask, sampleToFloat<PIX,maxValue>(srcPix[3]));
                 }
-                float outMask = outMaskPix ? *outMaskPix : 0.;
-                float Kbg = 0.;
+                float outMask = outMaskPix ? *outMaskPix : 0.f;
+                float Kbg = 0.f;
 
                 // clamp inMask and outMask in the [0,1] range
                 inMask = std::max(0.f,std::min(inMask,1.f));
@@ -361,10 +375,10 @@ private:
                 // we want to be able to play with the matte even if the background is not connected
                 if (!srcPix) {
                     // no source, take only background
-                    Kbg = 1.;
+                    Kbg = 1.f;
                     fgr = fgg = fgb = 0.;
                 } else if (outMask >= 1.) { // optimize
-                    Kbg = 1.;
+                    Kbg = 1.f;
                     fgr = fgg = fgb = 0.;
                 } else {
                     // general case: compute Kbg from [1]
@@ -490,25 +504,25 @@ private:
                     // in our implementation, _keyGain is a multiplier of xKey (1 by default) and keylift is the fraction (from 0 to 1) of _keyGain*_xKey where the linear ramp begins
                     if (_keyGain <= 0.) {
                         if (Kfg > 0.) {
-                            Kbg = 1.;
+                            Kbg = 1.f;
                         } else {
-                            Kbg = 0.;
+                            Kbg = 0.f;
                         }
                     } else if (_keyLift >= 1.) {
                         if (Kfg >= _keyGain*_xKey) {
-                            Kbg = 1.;
+                            Kbg = 1.f;
                         } else {
-                            Kbg = 0.;
+                            Kbg = 0.f;
                         }
                     } else {
                         assert(_keyGain > 0. && 0. <= _keyLift && _keyLift < 1.);
-                        Kbg = (Kfg/(_keyGain*_xKey) -_keyLift)/ (1.-_keyLift);
+                        Kbg = (float)((Kfg/(_keyGain*_xKey) -_keyLift) / (1.-_keyLift));
                     }
                     //Kbg = Kfg/_xKey; // if _keyGain = 1 and _keyLift = 0
                     if (Kbg > 1.) {
-                        Kbg = 1.;
+                        Kbg = 1.f;
                     } else if (Kbg < 0.) {
-                        Kbg = 0.;
+                        Kbg = 0.f;
                     }
 
                     // Additional controls may be implemented to enable the foreground and background signals to be controlled independently. Examples are adjusting the contrast of the foreground so it matches the background or fading the fore- ground in various ways (such as fading to the background to make a foreground object van- ish or fading to black to generate a silhouette).

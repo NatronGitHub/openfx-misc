@@ -387,16 +387,16 @@ private:
                 double t = (p.x - _point0.x) * nx + (p.y - _point0.y) * ny;
 
                 if (t <= 0) {
-                    tmpPix[0] = _color0.r;
-                    tmpPix[1] = _color0.g;
-                    tmpPix[2] = _color0.b;
-                    tmpPix[3] = _color0.a;
+                    tmpPix[0] = (float)_color0.r;
+                    tmpPix[1] = (float)_color0.g;
+                    tmpPix[2] = (float)_color0.b;
+                    tmpPix[3] = (float)_color0.a;
 
                 } else if (t >= 1.) {
-                    tmpPix[0] = _color1.r;
-                    tmpPix[1] = _color1.g;
-                    tmpPix[2] = _color1.b;
-                    tmpPix[3] = _color1.a;
+                    tmpPix[0] = (float)_color1.r;
+                    tmpPix[1] = (float)_color1.g;
+                    tmpPix[2] = (float)_color1.b;
+                    tmpPix[3] = (float)_color1.a;
 
                 } else {
                     switch (type) {
@@ -418,12 +418,12 @@ private:
                             break;
                     }
                     
-                    tmpPix[0] = _color0.r * (1 - t) + _color1.r * t;
-                    tmpPix[1] = _color0.g * (1 - t) + _color1.g * t;
-                    tmpPix[2] = _color0.b * (1 - t) + _color1.b * t;
-                    tmpPix[3] = _color0.a * (1 - t) + _color1.a * t;
+                    tmpPix[0] = (float)_color0.r * (1 - (float)t) + (float)_color1.r * (float)t;
+                    tmpPix[1] = (float)_color0.g * (1 - (float)t) + (float)_color1.g * (float)t;
+                    tmpPix[2] = (float)_color0.b * (1 - (float)t) + (float)_color1.b * (float)t;
+                    tmpPix[3] = (float)_color0.a * (1 - (float)t) + (float)_color1.a * (float)t;
                 }
-                double a = tmpPix[3];
+                float a = tmpPix[3];
 
                 // ofxsMaskMixPix takes non-normalized values
                 tmpPix[0] *= maxValue;
@@ -442,26 +442,26 @@ private:
                     }
                 }
                 if (processR) {
-                    tmpPix[0] = tmpPix[0] + srcPixRGBA[0]*(1.-a);
+                    tmpPix[0] = tmpPix[0] + srcPixRGBA[0]*(1.f-a);
                 } else {
                     tmpPix[0] = srcPixRGBA[0];
                 }
                 if (processG) {
-                    tmpPix[1] = tmpPix[1] + srcPixRGBA[1]*(1.-a);
+                    tmpPix[1] = tmpPix[1] + srcPixRGBA[1]*(1.f-a);
                 } else {
                     tmpPix[1] = srcPixRGBA[1];
                 }
                 if (processB) {
-                    tmpPix[2] = tmpPix[2] + srcPixRGBA[2]*(1.-a);
+                    tmpPix[2] = tmpPix[2] + srcPixRGBA[2]*(1.f-a);
                 } else {
                     tmpPix[2] = srcPixRGBA[2];
                 }
                 if (processA) {
-                    tmpPix[3] = tmpPix[3] + srcPixRGBA[3]*(1.-a);
+                    tmpPix[3] = tmpPix[3] + srcPixRGBA[3]*(1.f-a);
                 } else {
                     tmpPix[3] = srcPixRGBA[3];
                 }
-                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
             }
         }
     }
@@ -825,9 +825,7 @@ crossProd(const Ofx3DPointD& u,
 bool
 RampInteract::draw(const DrawArgs &args)
 {
-    OfxPointD pscale;
-    pscale.x = args.pixelScale.x / args.renderScale.x;
-    pscale.y = args.pixelScale.y / args.renderScale.y;
+    const OfxPointD &pscale = args.pixelScale;
     
     OfxPointD p[2];
     if (_state == eInteractStateDraggingPoint0) {
@@ -938,7 +936,7 @@ RampInteract::draw(const DrawArgs &args)
     glEnable(GL_LINE_SMOOTH);
     glEnable(GL_BLEND);
     glHint(GL_LINE_SMOOTH_HINT,GL_DONT_CARE);
-    glLineWidth(1.5);
+    glLineWidth(1.5f);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 
     glPointSize(POINT_SIZE);
@@ -956,9 +954,9 @@ RampInteract::draw(const DrawArgs &args)
             bool dragging = _state == (i == 0 ? eInteractStateDraggingPoint0 : eInteractStateDraggingPoint1);
             glBegin(GL_POINTS);
             if (dragging) {
-                glColor3f(0.*l, 1.*l, 0.*l);
+                glColor3f(0.f*l, 1.f*l, 0.f*l);
             } else {
-                glColor3f(0.8*l, 0.8*l, 0.8*l);
+                glColor3f(0.8f*l, 0.8f*l, 0.8f*l);
             }
             glVertex2d(p[i].x, p[i].y);
             glEnd();
@@ -966,7 +964,7 @@ RampInteract::draw(const DrawArgs &args)
             glLineStipple(2, 0xAAAA);
             glEnable(GL_LINE_STIPPLE);
             glBegin(GL_LINES);
-            glColor3f(0.8*l, 0.8*l, 0.8*l);
+            glColor3f(0.8f*l, 0.8f*l, 0.8f*l);
             glVertex2d(pline1[i].x, pline1[i].y);
             glVertex2d(pline2[i].x, pline2[i].y);
             glEnd();
@@ -995,9 +993,7 @@ static bool isNearby(const OfxPointD& p, double x, double y, double tolerance, c
 bool
 RampInteract::penMotion(const PenArgs &args)
 {
-    OfxPointD pscale;
-    pscale.x = args.pixelScale.x / args.renderScale.x;
-    pscale.y = args.pixelScale.y / args.renderScale.y;
+    //const OfxPointD &pscale = args.pixelScale;
     
     OfxPointD p0,p1;
     _point0->getValueAtTime(args.time, p0.x, p0.y);
@@ -1028,9 +1024,7 @@ RampInteract::penMotion(const PenArgs &args)
 bool
 RampInteract::penDown(const PenArgs &args)
 {
-    OfxPointD pscale;
-    pscale.x = args.pixelScale.x / args.renderScale.x;
-    pscale.y = args.pixelScale.y / args.renderScale.y;
+    const OfxPointD &pscale = args.pixelScale;
 
     OfxPointD p0,p1;
     _point0->getValueAtTime(args.time, p0.x, p0.y);
@@ -1059,9 +1053,8 @@ bool
 RampInteract::penUp(const PenArgs &args)
 {
     bool didSmthing = false;
-    OfxPointD pscale;
-    pscale.x = args.pixelScale.x / args.renderScale.x;
-    pscale.y = args.pixelScale.y / args.renderScale.y;
+    const OfxPointD &pscale = args.pixelScale;
+
     if (_state == eInteractStateDraggingPoint0) {
         // round newx/y to the closest int, 1/10 int, etc
         // this make parameter editing easier

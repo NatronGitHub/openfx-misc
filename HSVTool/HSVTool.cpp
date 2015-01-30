@@ -226,7 +226,7 @@ static inline
 double
 normalizeAngle(double a)
 {
-    int c = std::floor(a / 360);
+    int c = (int)std::floor(a / 360);
     a -= c * 360;
     assert(a >= 0 && a <= 360);
     return a;
@@ -416,7 +416,7 @@ public:
         const double h1prolloff = _values.hueRangeWithRolloff[1];
         // the affected
         if (angleWithinRange(h, h0, h1)) {
-            *hcoeff = 1.;
+            *hcoeff = 1.f;
         } else {
             double c0 = 0.;
             double c1 = 0.;
@@ -427,7 +427,7 @@ public:
             if (angleWithinRange(h, h1, h1prolloff)) {
                 c1 = angleCoeff10(h, h1, h1prolloff);
             }
-            *hcoeff = std::max(c0, c1);
+            *hcoeff = (float)std::max(c0, c1);
         }
         assert(0 <= *hcoeff && *hcoeff <= 1.);
         const double s0 = _values.satRange[0];
@@ -435,13 +435,13 @@ public:
         const double s0mrolloff = s0 - _values.satRolloff;
         const double s1prolloff = s1 + _values.satRolloff;
         if (s0 <= s && s <= s1) {
-            *scoeff = 1.;
+            *scoeff = 1.f;
         } else if (s0mrolloff <= s && s <= s0) {
-            *scoeff = (s - s0mrolloff) / _values.satRolloff;
+            *scoeff = (float)(s - s0mrolloff) / (float)_values.satRolloff;
         } else if (s1 <= s && s <= s1prolloff) {
-            *scoeff = (s1prolloff - s) / _values.satRolloff;
+            *scoeff = (float)(s1prolloff - s) / (float)_values.satRolloff;
         } else {
-            *scoeff = 0.;
+            *scoeff = 0.f;
         }
         assert(0 <= *scoeff && *scoeff <= 1.);
         const double v0 = _values.valRange[0];
@@ -449,25 +449,25 @@ public:
         const double v0mrolloff = v0 - _values.valRolloff;
         const double v1prolloff = v1 + _values.valRolloff;
         if (v0 <= v && v <= v1) {
-            *vcoeff = 1.;
+            *vcoeff = 1.f;
         } else if (v0mrolloff <= v && v <= v0) {
-            *vcoeff = (v - v0mrolloff) / _values.valRolloff;
+            *vcoeff = (float)(v - v0mrolloff) / (float)_values.valRolloff;
         } else if (v1 <= v && v <= v1prolloff) {
-            *vcoeff = (v1prolloff - v) / _values.valRolloff;
+            *vcoeff = (float)(v1prolloff - v) / (float)_values.valRolloff;
         } else {
-            *vcoeff = 0.;
+            *vcoeff = 0.f;
         }
         assert(0 <= *vcoeff && *vcoeff <= 1.);
-        double coeff = std::min(std::min(*hcoeff, *scoeff), *vcoeff);
+        float coeff = std::min(std::min(*hcoeff, *scoeff), *vcoeff);
         assert(0 <= coeff && coeff <= 1.);
         if (coeff <= 0.) {
             *rout = r;
             *gout = g;
             *bout = b;
         } else {
-            h += coeff * _values.hueRotation;
-            s += coeff * _values.satAdjust;
-            v += coeff * _values.valAdjust;
+            h += coeff * (float)_values.hueRotation;
+            s += coeff * (float)_values.satAdjust;
+            v += coeff * (float)_values.valAdjust;
             OFX::Color::hsv_to_rgb(h, s, v, rout, gout, bout);
         }
         if (_clampBlack) {
@@ -519,7 +519,7 @@ public:
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
                 float hcoeff, scoeff, vcoeff;
                 hsvtool(unpPix[0], unpPix[1], unpPix[2], &hcoeff, &scoeff, &vcoeff, &tmpPix[0], &tmpPix[1], &tmpPix[2]);
-                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, premultOut, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, premultOut, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // if output alpha is not source alpha, set it to the right value
                 if (nComponents == 4 && _outputAlpha != eOutputAlphaSource) {
                     float a = 0.f;
@@ -554,11 +554,11 @@ public:
                         float maskScale;
                         // figure the scale factor from that pixel
                         if (maskPix == 0) {
-                            maskScale = _maskInvert ? 1. : 0.;
+                            maskScale = _maskInvert ? 1.f : 0.f;
                         } else {
                             maskScale = *maskPix/float(maxValue);
                             if (_maskInvert) {
-                                maskScale = 1. - maskScale;
+                                maskScale = 1.f - maskScale;
                             }
                         }
                         a = std::min(a, maskScale);
@@ -914,7 +914,7 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
         double r, g, b;
         _srcColor->getValueAtTime(args.time, r, g, b);
         float h, s, v;
-        OFX::Color::rgb_to_hsv(r, g, b, &h, &s, &v);
+        OFX::Color::rgb_to_hsv((float)r, (float)g, (float)b, &h, &s, &v);
         _hueRange->setValue(h, h);
         _hueRangeRolloff->setValue(50.);
         _saturationRange->setValue(s, s);
@@ -927,11 +927,11 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
         double r, g, b;
         _srcColor->getValueAtTime(args.time, r, g, b);
         float h, s, v;
-        OFX::Color::rgb_to_hsv(r, g, b, &h, &s, &v);
+        OFX::Color::rgb_to_hsv((float)r, (float)g, (float)b, &h, &s, &v);
         double tor, tog, tob;
         _dstColor->getValueAtTime(args.time, tor, tog, tob);
         float toh, tos, tov;
-        OFX::Color::rgb_to_hsv(tor, tog, tob, &toh, &tos, &tov);
+        OFX::Color::rgb_to_hsv((float)tor, (float)tog, (float)tob, &toh, &tos, &tov);
         double dh = toh - h;
         while (dh <= -180.) {
             dh += 360;

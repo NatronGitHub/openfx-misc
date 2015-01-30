@@ -136,7 +136,7 @@ public:
     , _maskInvert(false)
     {
         _process[0] = _process[1] = _process[2] = _process[3] = false;
-        _rectangle.x1 = _rectangle.y1 = _rectangle.x2 = _rectangle.y2 = 0.;
+        _rectangle.x1 = _rectangle.y1 = _rectangle.x2 = _rectangle.y2 = 0.f;
     }
 
     /** @brief set the src image */
@@ -185,7 +185,7 @@ private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
-        double yMultiplier,xMultiplier;
+        float yMultiplier, xMultiplier;
         float tmpPix[nComponents];
 
         //assert(filter == _filter);
@@ -203,9 +203,9 @@ private:
             bool yInRectangle = y >= _rectangle.y1 && y < _rectangle.y2;
             if (yInRectangle) {
                 ///apply softness only within the rectangle
-                yMultiplier = yDistance < _softness ? (double)yDistance / _softness : 1.;
+                yMultiplier = yDistance < _softness ? yDistance / (float)_softness : 1.f;
             } else {
-                yMultiplier = 1.;
+                yMultiplier = 1.f;
             }
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
@@ -217,9 +217,9 @@ private:
                 
                 if (xInRectangle) {
                     ///apply softness only within the rectangle
-                    xMultiplier = xDistance < _softness ? (double)xDistance / _softness : 1.;
+                    xMultiplier = xDistance < _softness ? xDistance / (float)_softness : 1.f;
                 } else {
-                    xMultiplier = 1.;
+                    xMultiplier = 1.f;
                 }
                 
                 const PIX *srcPixB = _srcImgB ?(const PIX*)_srcImgB->getPixelAddress(x, y) : NULL;
@@ -227,21 +227,21 @@ private:
                 if (xInRectangle && yInRectangle) {
                     const PIX *srcPixA = _srcImgA ? (const PIX*)_srcImgA->getPixelAddress(x, y) : NULL;
 
-                    double multiplier = xMultiplier * yMultiplier;
+                    float multiplier = xMultiplier * yMultiplier;
 
                     for (int k = 0; k < nComponents; ++k) {
                         if (!_process[(nComponents) == 1 ? 3 : k]) {
-                            tmpPix[k] = srcPixB ? srcPixB[k] : 0.;
+                            tmpPix[k] = srcPixB ? srcPixB[k] : 0.f;
                         } else {
-                            PIX A = srcPixA ? srcPixA[k] : 0.;
-                            PIX B = srcPixB ? srcPixB[k] : 0.;
-                            tmpPix[k] = A *  multiplier + B * (1. - multiplier) ;
+                            PIX A = srcPixA ? srcPixA[k] : PIX();
+                            PIX B = srcPixB ? srcPixB[k] : PIX();
+                            tmpPix[k] = A *  multiplier + B * (1.f - multiplier) ;
                         }
                     }
-                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPixB, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPixB, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 } else {
                     for (int k = 0; k < nComponents; ++k) {
-                        dstPix[k] = srcPixB ? srcPixB[k] : 0.;
+                        dstPix[k] = srcPixB ? srcPixB[k] : PIX();
                     }
                 }
                 

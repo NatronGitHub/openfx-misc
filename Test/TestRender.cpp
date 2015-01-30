@@ -181,10 +181,10 @@ private:
                 } else {
                     // no src pixel here, be black and transparent
                     for (int c = 0; c < nComponents; ++c) {
-                        tmpPix[c] = (maxValue - 0.);
+                        tmpPix[c] = (maxValue - 0.f);
                     }
                 }
-                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
 
                 // increment the dst pixel
                 dstPix += nComponents;

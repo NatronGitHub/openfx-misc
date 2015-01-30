@@ -201,7 +201,7 @@ private:
                 // treat the black case separately
                 if (xblack || yblack || !_srcImg) {
                     for (int k = 0; k < nComponents; ++k) {
-                        dstPix[k] =  0.;
+                        dstPix[k] =  PIX();
                     }
                 } else {
                     OfxPointI p_pixel;
@@ -216,13 +216,13 @@ private:
                     if (dx <=0 || dy <= 0) {
                         // outside of the rectangle
                         for (int k = 0; k < nComponents; ++k) {
-                            dstPix[k] =  0.;
+                            dstPix[k] =  PIX();
                         }
                     } else {
                         const PIX *srcPix = (const PIX*)_srcImg->getPixelAddress(p_pixel.x, p_pixel.y);
                         if (!srcPix) {
                             for (int k = 0; k < nComponents; ++k) {
-                                dstPix[k] =  0.;
+                                dstPix[k] =  PIX();
                             }
                         } else if (_softness == 0 || (dx >= _softness && dy >= _softness)) {
                             // inside of the rectangle
@@ -252,7 +252,7 @@ private:
                                 //    t = t*t*t;
                                 //}
                                 for (int k = 0; k < nComponents; ++k) {
-                                    dstPix[k] =  srcPix[k] * t;
+                                    dstPix[k] =  PIX(srcPix[k] * t);
                                 }
                             }
                         }

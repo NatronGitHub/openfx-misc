@@ -144,8 +144,8 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgErodeParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix_x = std::ceil(params.sx * renderScale.x);
-        int delta_pix_y = std::ceil(params.sy * renderScale.y);
+        int delta_pix_x = (int)std::ceil(params.sx * renderScale.x);
+        int delta_pix_y = (int)std::ceil(params.sy * renderScale.y);
         roi->x1 = rect.x1 - delta_pix_x;
         roi->x2 = rect.x2 + delta_pix_x;
         roi->y1 = rect.y1 - delta_pix_y;
@@ -156,7 +156,8 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        cimg.erode(std::floor(params.sx * args.renderScale.x) * 2 + 1, std::floor(params.sy * args.renderScale.y) * 2 + 1);
+        cimg.erode((unsigned int)std::floor(std::max(0, params.sx) * args.renderScale.x) * 2 + 1,
+                   (unsigned int)std::floor(std::max(0, params.sy) * args.renderScale.y) * 2 + 1);
     }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgErodeParams& params) OVERRIDE FINAL
