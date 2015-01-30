@@ -825,6 +825,8 @@ crossProd(const Ofx3DPointD& u,
 bool
 RampInteract::draw(const DrawArgs &args)
 {
+    OfxRGBColourD color = { 0.8, 0.8, 0.8 };
+    getSuggestedColour(color);
     const OfxPointD &pscale = args.pixelScale;
     
     OfxPointD p[2];
@@ -931,7 +933,6 @@ RampInteract::draw(const DrawArgs &args)
     }
 
     glPushAttrib(GL_ALL_ATTRIB_BITS);
-    glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
 
     glEnable(GL_LINE_SMOOTH);
     glEnable(GL_BLEND);
@@ -945,18 +946,20 @@ RampInteract::draw(const DrawArgs &args)
     // l = 0: shadow
     // l = 1: drawing
     for (int l = 0; l < 2; ++l) {
-        if (l == 0) {
-            // translate (1,-1) pixels
-            glTranslated(pscale.x, -pscale.y, 0);
-        }
-
+        // shadow (uses GL_PROJECTION)
+        glMatrixMode(GL_PROJECTION);
+        int direction = (l == 0) ? 1 : -1;
+        // translate (1,-1) pixels
+        glTranslated(direction * pscale.x / 256, -direction * pscale.y / 256, 0);
+        glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
+        
         for (int i = 0; i < 2; ++i) {
             bool dragging = _state == (i == 0 ? eInteractStateDraggingPoint0 : eInteractStateDraggingPoint1);
             glBegin(GL_POINTS);
             if (dragging) {
                 glColor3f(0.f*l, 1.f*l, 0.f*l);
             } else {
-                glColor3f(0.8f*l, 0.8f*l, 0.8f*l);
+                glColor3f((float)color.r*l, (float)color.g*l, (float)color.b*l);
             }
             glVertex2d(p[i].x, p[i].y);
             glEnd();
@@ -964,7 +967,7 @@ RampInteract::draw(const DrawArgs &args)
             glLineStipple(2, 0xAAAA);
             glEnable(GL_LINE_STIPPLE);
             glBegin(GL_LINES);
-            glColor3f(0.8f*l, 0.8f*l, 0.8f*l);
+            glColor3f((float)color.r*l, (float)color.g*l, (float)color.b*l);
             glVertex2d(pline1[i].x, pline1[i].y);
             glVertex2d(pline2[i].x, pline2[i].y);
             glEnd();
@@ -972,10 +975,6 @@ RampInteract::draw(const DrawArgs &args)
             double xoffset = 5 * pscale.x;
             double yoffset = 5 * pscale.y;
             TextRenderer::bitmapString(p[i].x + xoffset, p[i].y + yoffset, i == 0 ? kParamPoint0Label : kParamPoint1Label);
-        }
-        if (l == 0) {
-            // translate (-1,1) pixels
-            glTranslated(-pscale.x, pscale.y, 0);
         }
     }
 
