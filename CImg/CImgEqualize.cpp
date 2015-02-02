@@ -170,7 +170,7 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        cimg.equalize(params.nb_levels, params.min_value, params.max_value);
+        cimg.equalize(params.nb_levels, (float)params.min_value, (float)params.max_value);
     }
 
     //virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgEqualizeParams& /*params*/) OVERRIDE FINAL

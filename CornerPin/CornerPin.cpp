@@ -654,9 +654,9 @@ static bool isNearby(const OfxPointD& p, double x, double y, double tolerance, c
 
 bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
 {
-    OfxPointD pscale;
-    pscale.x = args.pixelScale.x / args.renderScale.x;
-    pscale.y = args.pixelScale.y / args.renderScale.y;
+    const OfxPointD &pscale = args.pixelScale;
+    OfxRGBColourD color = { 0.8, 0.8, 0.8 };
+    getSuggestedColour(color);
 
     bool useFrom = isFromPoints(args.time);
 
@@ -694,14 +694,13 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
     }
     
     glPushAttrib(GL_ALL_ATTRIB_BITS);
-    glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
 
     //glDisable(GL_LINE_STIPPLE);
     glEnable(GL_LINE_SMOOTH);
     //glEnable(GL_POINT_SMOOTH);
     glEnable(GL_BLEND);
     glHint(GL_LINE_SMOOTH_HINT,GL_DONT_CARE);
-    glLineWidth(1.5);
+    glLineWidth(1.5f);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 
     glPointSize(POINT_SIZE);
@@ -709,11 +708,14 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
     // l = 0: shadow
     // l = 1: drawing
     for (int l = 0; l < 2; ++l) {
-        if (l == 0) {
-            // translate (1,-1) pixels
-            glTranslated(pscale.x, -pscale.y, 0);
-        }
-        glColor3f(0.4*l, 0.4*l, 0.4*l);
+        // shadow (uses GL_PROJECTION)
+        glMatrixMode(GL_PROJECTION);
+        int direction = (l == 0) ? 1 : -1;
+        // translate (1,-1) pixels
+        glTranslated(direction * pscale.x / 256, -direction * pscale.y / 256, 0);
+        glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
+
+        glColor3f((float)(color.r/2)*l, (float)(color.g/2)*l, (float)(color.b/2)*l);
         glBegin(GL_LINES);
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
@@ -722,7 +724,7 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
             }
         }
         glEnd();
-        glColor3f(0.8*l, 0.8*l, 0.8*l);
+        glColor3f((float)color.r*l, (float)color.g*l, (float)color.b*l);
         glBegin(GL_LINE_LOOP);
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
@@ -734,23 +736,19 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
                 if (_hovering == i || _dragging == i) {
-                    glColor3f(0.*l, 1.*l, 0.*l);
+                    glColor3f(0.f*l, 1.f*l, 0.f*l);
                 } else {
-                    glColor3f(0.8*l, 0.8*l, 0.8*l);
+                    glColor3f((float)color.r*l, (float)color.g*l, (float)color.b*l);
                 }
                 glVertex2d(p[i].x, p[i].y);
             }
         }
         glEnd();
-        glColor3f(0.8*l, 0.8*l, 0.8*l);
+        glColor3f((float)color.r*l, (float)color.g*l, (float)color.b*l);
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
                 TextRenderer::bitmapString(p[i].x, p[i].y, useFrom ? kParamFrom[i] : kParamTo[i]);
             }
-        }
-        if (l == 0) {
-            // translate (-1,1) pixels
-            glTranslated(-pscale.x, pscale.y, 0);
         }
     }
 
@@ -788,9 +786,7 @@ bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
         }
     }
 
-    OfxPointD pscale;
-    pscale.x = args.pixelScale.x / args.renderScale.x;
-    pscale.y = args.pixelScale.y / args.renderScale.y;
+    const OfxPointD &pscale = args.pixelScale;
 
     bool didSomething = false;
     OfxPointD delta;
@@ -846,9 +842,7 @@ bool CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
         }
     }
 
-    OfxPointD pscale;
-    pscale.x = args.pixelScale.x / args.renderScale.x;
-    pscale.y = args.pixelScale.y / args.renderScale.y;
+    const OfxPointD &pscale = args.pixelScale;
 
     bool didSomething = false;
 

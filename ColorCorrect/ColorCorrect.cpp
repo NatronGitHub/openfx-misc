@@ -428,7 +428,7 @@ private:
         return comp;
     }
 
-    float interpolate(int curve, double value)
+    double interpolate(int curve, double value)
     {
         if (value < 0.) {
             return _lookupTable[curve][0];
@@ -584,11 +584,11 @@ private:
                 double t_b = unpPix[2];
                 double t_a = unpPix[3];
                 colorTransform<processR,processG,processB,processA>(&t_r, &t_g, &t_b,&t_a);
-                tmpPix[0] = t_r;
-                tmpPix[1] = t_g;
-                tmpPix[2] = t_b;
-                tmpPix[3] = t_a;
-                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                tmpPix[0] = (float)t_r;
+                tmpPix[1] = (float)t_g;
+                tmpPix[2] = (float)t_b;
+                tmpPix[3] = (float)t_a;
+                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 dstPix += nComponents;
             }
         }

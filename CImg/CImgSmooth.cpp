@@ -230,7 +230,7 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgSmoothParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = std::ceil((params.amplitude + params.alpha + params.sigma) * renderScale.x);
+        int delta_pix = (int)std::ceil((params.amplitude + params.alpha + params.sigma) * renderScale.x);
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
@@ -241,14 +241,14 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        cimg.blur_anisotropic(params.amplitude * args.renderScale.x, // in pixels
-                              params.sharpness,
-                              params.anisotropy,
-                              params.alpha * args.renderScale.x, // in pixels
-                              params.sigma * args.renderScale.x, // in pixels
-                              params.dl, // in pixel, but we don't discretize more
-                              params.da,
-                              params.gprec,
+        cimg.blur_anisotropic((float)(params.amplitude * args.renderScale.x), // in pixels
+                              (float)params.sharpness,
+                              (float)params.anisotropy,
+                              (float)(params.alpha * args.renderScale.x), // in pixels
+                              (float)(params.sigma * args.renderScale.x), // in pixels
+                              (float)params.dl, // in pixel, but we don't discretize more
+                              (float)params.da,
+                              (float)params.gprec,
                               params.interp_i,
                               params.fast_approx);
 

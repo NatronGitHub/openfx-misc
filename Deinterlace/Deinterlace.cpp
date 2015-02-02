@@ -252,7 +252,7 @@ inline int halven(int i) { return i>>1; }
 
 inline int one1(unsigned char *) { return 1; }
 inline int one1(unsigned short *) { return 1; }
-inline float one1(float *) { return 0.; }
+inline float one1(float *) { return 0.f; }
 
 #define CHECK(j)\
     {   Diff score = FFABS(cur[mrefs - ch + (j)] - cur[prefs - ch - (j)])\

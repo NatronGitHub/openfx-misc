@@ -204,17 +204,17 @@ private:
                 const PIX *srcPix = (const PIX*)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 const PIX *maskPix = (const PIX*) (_roto ? _roto->getPixelAddress(x, y) : 0);
 
-                PIX srcAlpha = 0.;
+                PIX srcAlpha = PIX();
                 if (srcPix) {
                     if (srcNComponents == 1) {
                             srcAlpha = srcPix[0];
                     } else if (srcNComponents == 3) {
-                            srcAlpha = 0.;
+                            srcAlpha = PIX();
                     } else if (srcNComponents == 4) {
                             srcAlpha = srcPix[3];
                     }
                 }
-                PIX maskAlpha = maskPix ? maskPix[dstNComponents-1] : 0.;
+                PIX maskAlpha = maskPix ? maskPix[dstNComponents-1] : PIX();
 
                 PIX srcVal[dstNComponents];
                 // fill srcVal (hopefully the compiler will optimize this)
@@ -240,7 +240,7 @@ private:
                         for (int c = 0; c < dstNComponents-1; ++c) {
                             srcVal[c] = srcPix[c];
                         }
-                        srcVal[dstNComponents-1] = 0.;
+                        srcVal[dstNComponents-1] = PIX();
                     } else if (srcNComponents == 4) {
                         for (int c = 0; c < dstNComponents; ++c) {
                             srcVal[c] = srcPix[c];
@@ -255,7 +255,7 @@ private:
 
                 // merge/over
                 for (int c = 0; c < dstNComponents; ++c) {
-                    dstPix[c] = proc[c] ? OFX::MergeImages2D::overFunctor<PIX,maxValue>(maskPix ? maskPix[c] : 0., srcVal[c], maskAlpha, srcAlpha) : srcVal[c];
+                    dstPix[c] = proc[c] ? OFX::MergeImages2D::overFunctor<PIX,maxValue>(maskPix ? maskPix[c] : PIX(), srcVal[c], maskAlpha, srcAlpha) : srcVal[c];
                 }
             }
         }

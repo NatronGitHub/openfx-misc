@@ -132,7 +132,7 @@ static int floatToInt(float value)
     } else if (value >= 1.) {
         return max;
     }
-    return value * max + 0.5;
+    return value * max + 0.5f;
 }
 
 static inline float to_func_srgb(float v)
@@ -163,19 +163,19 @@ private:
         float colorf[nComponents];
         if (nComponents == 1) {
             // alpha
-            colorf[0] = _color.a;
+            colorf[0] = (float)_color.a;
         } else if (nComponents == 3) {
             // rgb
-            colorf[0] = _color.r;
-            colorf[1] = _color.g;
-            colorf[2] = _color.b;
+            colorf[0] = (float)_color.r;
+            colorf[1] = (float)_color.g;
+            colorf[2] = (float)_color.b;
         } else {
             assert(nComponents == 4);
             // rgba
-            colorf[0] = _color.r;
-            colorf[1] = _color.g;
-            colorf[2] = _color.b;
-            colorf[3] = _color.a;
+            colorf[0] = (float)_color.r;
+            colorf[1] = (float)_color.g;
+            colorf[2] = (float)_color.b;
+            colorf[3] = (float)_color.a;
         }
 
 

@@ -212,7 +212,7 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgErodeSmoothParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = std::ceil((std::abs(params.sigma) * 6.) * renderScale.x);
+        int delta_pix = (int)std::ceil((std::abs(params.sigma) * 6.) * renderScale.x);
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
@@ -225,7 +225,7 @@ public:
         // This is the only place where the actual processing takes place
         const double rmin = params.sigma < 0 ? params.min : params.max;
         const double rmax = params.sigma < 0 ? params.max : params.min;
-        double s = std::abs(params.sigma) * args.renderScale.x;
+        float s = (float)(std::abs(params.sigma) * args.renderScale.x);
 
         if (rmax == rmin) {
             return;
@@ -234,7 +234,7 @@ public:
 #ifdef cimg_use_openmp
 #pragma omp parallel for if (denom.size()>=4096)
 #endif
-        cimg_rof(cimg,ptrd,float) *ptrd = (*ptrd-rmin)/(rmax-rmin) + ERODESMOOTH_OFFSET;
+        cimg_rof(cimg,ptrd,float) *ptrd = (float)((*ptrd-rmin)/(rmax-rmin) + ERODESMOOTH_OFFSET);
 
         // see "Robust local max-min filters by normalized power-weighted filtering" by L.J. van Vliet
         // http://dx.doi.org/10.1109/ICPR.2004.1334273
@@ -246,7 +246,7 @@ public:
 #ifdef cimg_use_openmp
 #pragma omp parallel for if (denom.size()>=4096)
 #endif
-            cimg_rof(denom,ptrd,float) *ptrd = std::pow((double)((*ptrd<0.?0.:*ptrd)+vmin), params.exponent); // C++98 and C++11 both have std::pow(double,int)
+            cimg_rof(denom,ptrd,float) *ptrd = (float)std::pow((double)((*ptrd<0.?0.:*ptrd)+vmin), params.exponent); // C++98 and C++11 both have std::pow(double,int)
 
             cimg.mul(denom);
 
@@ -265,7 +265,7 @@ public:
 #ifdef cimg_use_openmp
 #pragma omp parallel for if (denom.size()>=4096)
 #endif
-        cimg_rof(cimg,ptrd,float) *ptrd = (*ptrd-ERODESMOOTH_OFFSET)*(rmax-rmin)+rmin;
+        cimg_rof(cimg,ptrd,float) *ptrd = (float)((*ptrd-ERODESMOOTH_OFFSET)*(rmax-rmin)+rmin);
 }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgErodeSmoothParams& params) OVERRIDE FINAL

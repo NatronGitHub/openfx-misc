@@ -365,46 +365,46 @@ private:
 
                 if (dx <=0 || dy <= 0) {
                     // outside of the rectangle
-                    tmpPix[0] = _color0.r;
-                    tmpPix[1] = _color0.g;
-                    tmpPix[2] = _color0.b;
-                    tmpPix[3] = _color0.a;
+                    tmpPix[0] = (float)_color0.r;
+                    tmpPix[1] = (float)_color0.g;
+                    tmpPix[2] = (float)_color0.b;
+                    tmpPix[3] = (float)_color0.a;
                 } else if (_softness == 0 || (dx >= _softness && dy >= _softness)) {
                     // inside of the rectangle
-                    tmpPix[0] = _color1.r;
-                    tmpPix[1] = _color1.g;
-                    tmpPix[2] = _color1.b;
-                    tmpPix[3] = _color1.a;
+                    tmpPix[0] = (float)_color1.r;
+                    tmpPix[1] = (float)_color1.g;
+                    tmpPix[2] = (float)_color1.b;
+                    tmpPix[3] = (float)_color1.a;
                 } else {
-                    double tx, ty;
+                    float tx, ty;
                     if (dx >= _softness) {
-                        tx = 1.;
+                        tx = 1.f;
                     } else {
-                        tx = rampSmooth(dx / _softness);
+                        tx = (float)rampSmooth(dx / _softness);
                     }
                     if (dy >= _softness) {
-                        ty = 1.;
+                        ty = 1.f;
                     } else {
-                        ty = rampSmooth(dy / _softness);
+                        ty = (float)rampSmooth(dy / _softness);
                     }
-                    double t = tx * ty;
+                    float t = tx * ty;
                     if (t >= 1) {
-                        tmpPix[0] = _color1.r;
-                        tmpPix[1] = _color1.g;
-                        tmpPix[2] = _color1.b;
-                        tmpPix[3] = _color1.a;
+                        tmpPix[0] = (float)_color1.r;
+                        tmpPix[1] = (float)_color1.g;
+                        tmpPix[2] = (float)_color1.b;
+                        tmpPix[3] = (float)_color1.a;
                     } else {
                         //if (_plinear) {
                         //    // it seems to be the way Nuke does it... I could understand t*t, but why t*t*t?
                         //    t = t*t*t;
                         //}
-                        tmpPix[0] = _color0.r * (1 - t) + _color1.r * t;
-                        tmpPix[1] = _color0.g * (1 - t) + _color1.g * t;
-                        tmpPix[2] = _color0.b * (1 - t) + _color1.b * t;
-                        tmpPix[3] = _color0.a * (1 - t) + _color1.a * t;
+                        tmpPix[0] = (float)_color0.r * (1.f - t) + (float)_color1.r * t;
+                        tmpPix[1] = (float)_color0.g * (1.f - t) + (float)_color1.g * t;
+                        tmpPix[2] = (float)_color0.b * (1.f - t) + (float)_color1.b * t;
+                        tmpPix[3] = (float)_color0.a * (1.f - t) + (float)_color1.a * t;
                     }
                 }
-                double a = tmpPix[3];
+                float a = tmpPix[3];
 
                 // ofxsMaskMixPix takes non-normalized values
                 tmpPix[0] *= maxValue;
@@ -423,26 +423,26 @@ private:
                     }
                 }
                 if (processR) {
-                    tmpPix[0] = tmpPix[0] + srcPixRGBA[0]*(1.-a);
+                    tmpPix[0] = tmpPix[0] + srcPixRGBA[0]*(1.f-(float)a);
                 } else {
                     tmpPix[0] = srcPixRGBA[0];
                 }
                 if (processG) {
-                    tmpPix[1] = tmpPix[1] + srcPixRGBA[1]*(1.-a);
+                    tmpPix[1] = tmpPix[1] + srcPixRGBA[1]*(1.f-(float)a);
                 } else {
                     tmpPix[1] = srcPixRGBA[1];
                 }
                 if (processB) {
-                    tmpPix[2] = tmpPix[2] + srcPixRGBA[2]*(1.-a);
+                    tmpPix[2] = tmpPix[2] + srcPixRGBA[2]*(1.f-(float)a);
                 } else {
                     tmpPix[2] = srcPixRGBA[2];
                 }
                 if (processA) {
-                    tmpPix[3] = tmpPix[3] + srcPixRGBA[3]*(1.-a);
+                    tmpPix[3] = tmpPix[3] + srcPixRGBA[3]*(1.f-(float)a);
                 } else {
                     tmpPix[3] = srcPixRGBA[3];
                 }
-                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
             }
         }
     }

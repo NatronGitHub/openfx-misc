@@ -252,7 +252,7 @@ public:
 
                 }
                 tmpPix[3] = unpPix[3];
-                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, dopremult, _premultChannel, x, y, srcPix, /*doMasking=*/false, /*maskImg=*/NULL, /*mix=*/1., /*maskInvert=*/false, dstPix);
+                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, dopremult, _premultChannel, x, y, srcPix, /*doMasking=*/false, /*maskImg=*/NULL, /*mix=*/1.f, /*maskInvert=*/false, dstPix);
                 // increment the dst pixel
                 dstPix += nComponents;
             }

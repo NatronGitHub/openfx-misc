@@ -276,18 +276,18 @@ private:
 
                 if (!refPix) {
                     // no reference pixel, set weight to 0
-                    *weightPtr = 0.;
+                    *weightPtr = 0.f;
                     for (int c = 0; c < nComponents; ++c) {
                         patternPtr[c] = PIX();
                     }
                 } else {
                     if (!mask) {
                         // no mask, weight is uniform
-                        *weightPtr = 1.;
+                        *weightPtr = 1.f;
                     } else {
                         PIX *maskPix = (PIX*) mask->getPixelAddress(_refCenterI.x + j, _refCenterI.y + i);
                         // weight is zero if there's a mask but we're outside of it
-                        *weightPtr = maskPix ? (*maskPix/(double)maxValue) : 0.;
+                        *weightPtr = maskPix ? (*maskPix/(float)maxValue) : 0.f;
                     }
                     for (int c = 0; c < nComponents; ++c) {
                         patternPtr[c] = refPix[c];

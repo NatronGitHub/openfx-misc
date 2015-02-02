@@ -155,7 +155,7 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgGuidedParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = std::ceil(params.radius * renderScale.x);
+        int delta_pix = (int)std::ceil(params.radius * renderScale.x);
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
@@ -170,7 +170,7 @@ public:
             return;
         }
         // blur_guided was introduced in CImg 1.6.0 on Thu Oct 30 11:47:06 2014 +0100
-        cimg.blur_guided(cimg, std::ceil(params.radius * args.renderScale.x), params.epsilon*params.epsilon);
+        cimg.blur_guided(cimg, (float)(params.radius * args.renderScale.x), (float)(params.epsilon*params.epsilon));
     }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgGuidedParams& params) OVERRIDE FINAL

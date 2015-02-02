@@ -162,7 +162,7 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgRollingGuidanceParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = std::ceil((params.sigma_s * 4.) * renderScale.x);
+        int delta_pix = (int)std::ceil((params.sigma_s * 4.) * renderScale.x);
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
@@ -181,18 +181,18 @@ public:
         // http://www.cse.cuhk.edu.hk/~leojia/projects/rollguidance/
         if (params.iterations == 1) {
             // Gaussian filter
-            cimg.blur(params.sigma_s * args.renderScale.x, true, true);
+            cimg.blur((float)(params.sigma_s * args.renderScale.x), true, true);
             return;
         }
         // first iteration is Gaussian blur (equivalent to a bilateral filter with a constant image as the guide)
-        cimg_library::CImg<float> guide = cimg.get_blur(params.sigma_s * args.renderScale.x, true, true);
+        cimg_library::CImg<float> guide = cimg.get_blur((float)(params.sigma_s * args.renderScale.x), true, true);
         // next iterations use the bilateral filter
         for (int i = 1; i < params.iterations; ++i) {
             if (abort()) {
                 return;
             }
             // filter the original image using the updated guide
-            guide = cimg.get_blur_bilateral(guide, params.sigma_s * args.renderScale.x, params.sigma_r);
+            guide = cimg.get_blur_bilateral(guide, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r);
         }
         cimg = guide;
     }

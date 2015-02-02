@@ -186,7 +186,7 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgDenoiseParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = std::ceil((params.sigma_s * 4.) * renderScale.x) + std::ceil(params.psize * renderScale.x) + std::ceil(params.lsize * renderScale.x);
+        int delta_pix = (int)std::ceil((params.sigma_s * 4.) * renderScale.x) + std::ceil(params.psize * renderScale.x) + std::ceil(params.lsize * renderScale.x);
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
@@ -197,7 +197,12 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        cimg.blur_patch(params.sigma_s * args.renderScale.x, params.sigma_r, std::ceil(params.psize * args.renderScale.x), std::ceil(params.lsize * args.renderScale.x), params.smoothness * args.renderScale.x, params.fast_approx);
+        cimg.blur_patch((float)(params.sigma_s * args.renderScale.x),
+                        (float)params.sigma_r,
+                        (unsigned int)std::ceil(std::max(0, params.psize) * args.renderScale.x),
+                        (unsigned int)std::ceil(std::max(0, params.lsize) * args.renderScale.x),
+                        (float)(params.smoothness * args.renderScale.x),
+                        params.fast_approx);
     }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgDenoiseParams& params) OVERRIDE FINAL

@@ -316,7 +316,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
     processor.setRenderWindow(args.renderWindow);
 
     // set the parameters
-    processor.setVerticalAndOffset(vertical, vertical?rod.y2:rod.x2);
+    processor.setVerticalAndOffset(vertical, vertical?(int)rod.y2:(int)rod.x2);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();

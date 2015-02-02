@@ -307,18 +307,18 @@ private:
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, _premult, _premultChannel);
                 for (int c = 0; c < 4; ++c) {
                     if (processR && c == 0) {
-                        tmpPix[0] = unpPix[0] * _value.r;
+                        tmpPix[0] = unpPix[0] * (float)_value.r;
                     } else if (processG && c == 1) {
-                        tmpPix[1] = unpPix[1] * _value.g;
+                        tmpPix[1] = unpPix[1] * (float)_value.g;
                     } else if (processB && c == 2) {
-                        tmpPix[2] = unpPix[2] * _value.b;
+                        tmpPix[2] = unpPix[2] * (float)_value.b;
                     } else if (processA && c == 3) {
-                        tmpPix[3] = unpPix[3] * _value.a;
+                        tmpPix[3] = unpPix[3] * (float)_value.a;
                     } else {
                         tmpPix[c] = unpPix[c];
                     }
                 }
-                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, _mix, _maskInvert, dstPix);
+                ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // copy back original values from unprocessed channels
                 if (nComponents == 1) {
                     if (!processA) {

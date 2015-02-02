@@ -168,7 +168,7 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgPlasmaParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = std::ceil((params.scale) * renderScale.x);
+        int delta_pix = (int)std::ceil((params.scale) * renderScale.x);
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
@@ -179,7 +179,7 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-      cimg.draw_plasma(params.alpha, params.beta, std::floor(params.scale * args.renderScale.x));
+      cimg.draw_plasma((float)params.alpha, (float)params.beta, (unsigned int)std::floor(params.scale * args.renderScale.x));
     }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgPlasmaParams& params) OVERRIDE FINAL
