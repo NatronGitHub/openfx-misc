@@ -446,7 +446,7 @@ VectorToColorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 static void
-addInputChannelOtions(ChoiceParamDescriptor* outputR, InputChannelEnum def, OFX::ContextEnum context)
+addInputChannelOtions(ChoiceParamDescriptor* outputR, InputChannelEnum def, OFX::ContextEnum /*context*/)
 {
     assert(outputR->getNOptions() == eInputChannelR);
     outputR->appendOption(kParamChannelOptionR,kParamChannelOptionRHint);

@@ -352,7 +352,7 @@ public:
     {
     }
 
-    void setPrevResults(const Results &results) OVERRIDE FINAL {}
+    void setPrevResults(const Results &/*results*/) OVERRIDE FINAL {}
 
     void getResults(Results *results) OVERRIDE FINAL
     {
@@ -633,7 +633,7 @@ public:
     {
     }
 
-    void setPrevResults(const Results &results) OVERRIDE FINAL {}
+    void setPrevResults(const Results &/*results*/) OVERRIDE FINAL {}
 
     void getResults(Results *results) OVERRIDE FINAL
     {
@@ -1300,7 +1300,7 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 
 /* set up and run a processor */
 void
-ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor, OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results &prevResults, Results *results)
+ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor, OFX::Image* srcImg, double /*time*/, const OfxRectI &analysisWindow, const Results &prevResults, Results *results)
 {
 
     // set the images
@@ -1508,7 +1508,7 @@ OFX::ImageEffect* ImageStatisticsPluginFactory::createInstance(OfxImageEffectHan
 
 
 
-void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip

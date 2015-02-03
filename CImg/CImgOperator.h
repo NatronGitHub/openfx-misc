@@ -138,16 +138,16 @@ public:
 
     static OFX::PageParamDescriptor*
     describeInContextBegin(OFX::ImageEffectDescriptor &desc,
-                           OFX::ContextEnum context,
+                           OFX::ContextEnum /*context*/,
                            const char* srcAClipName,
                            const char* srcBClipName,
                            bool supportsRGBA,
                            bool supportsRGB,
                            bool supportsAlpha,
                            bool supportsTiles,
-                           bool processRGB = true,
-                           bool processAlpha = false,
-                           bool processIsSecret = false)
+                           bool /*processRGB*/ = true,
+                           bool /*processAlpha*/ = false,
+                           bool /*processIsSecret*/ = false)
     {
         OFX::ClipDescriptor *srcBClip = desc.defineClip(srcBClipName);
         OFX::ClipDescriptor *srcAClip = desc.defineClip(srcAClipName);

@@ -149,7 +149,7 @@ public:
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgSharpenInvDiffParams& params, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI& rect, const OfxPointD& /*renderScale*/, const CImgSharpenInvDiffParams& /*params*/, OfxRectI* roi) OVERRIDE FINAL
     {
         int delta_pix = 24; // overlap is 24 in gmicol
         roi->x1 = rect.x1 - delta_pix;
@@ -158,7 +158,7 @@ public:
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args, const CImgSharpenInvDiffParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &/*args*/, const CImgSharpenInvDiffParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
