@@ -937,6 +937,14 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         page->addChild(*param);
     }
 
+    // interactive
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamRectangleInteractInteractive);
+        param->setLabels(kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel);
+        param->setHint(kParamRectangleInteractInteractiveHint);
+        page->addChild(*param);
+    }
+
     // softness
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSoftness);

@@ -87,6 +87,16 @@
 #else
 #include <GL/gl.h>
 #endif
+
+#ifdef _WINDOWS
+#include <windows.h>
+#define isnan _isnan
+#else
+using std::isnan;
+#endif
+
+#
+
 #define POINT_TOLERANCE 6
 #define POINT_SIZE 5
 
@@ -540,19 +550,23 @@ public:
             double skewness[nComponents];
             // factor for the adjusted Fisher-Pearson standardized moment coefficient G_1
             double skewfac = ((double)_count*_count) / ((double)(_count-1)*(_count-2));
+            assert(!isnan(skewfac));
             for (int c = 0; c < nComponents; ++c) {
                 skewness[c] = skewfac * _sum_p3[c] / _count;
             }
             toRGBA<double, nComponents, 1>(skewness, &results->skewness);
+            assert(!isnan(results->skewness.r) && !isnan(results->skewness.g) && !isnan(results->skewness.b) && !isnan(results->skewness.a));
         }
         if (_count > 3) {
             double kurtosis[nComponents];
             double kurtfac = ((double)(_count+1)*_count) / ((double)(_count-1)*(_count-2)*(_count-3));
             double kurtshift = -3 * ((double)(_count-1)*(_count-1)) / ((double)(_count-2)*(_count-3));
+            assert(!isnan(kurtfac) && !isnan(kurtshift));
             for (int c = 0; c < nComponents; ++c) {
                 kurtosis[c] = kurtfac * _sum_p4[c] + kurtshift;
             }
             toRGBA<double, nComponents, 1>(kurtosis, &results->kurtosis);
+            assert(!isnan(results->kurtosis.r) && !isnan(results->kurtosis.g) && !isnan(results->kurtosis.b) && !isnan(results->kurtosis.a));
         }
     }
 
@@ -910,6 +924,7 @@ public:
     , _srcClip(0)
     , _btmLeft(0)
     , _size(0)
+    , _interactive(0)
     , _restrictToRectangle(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -919,9 +934,10 @@ public:
 
         _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
         _size = fetchDouble2DParam(kParamRectangleInteractSize);
+        _interactive = fetchBooleanParam(kParamRectangleInteractInteractive);
         _restrictToRectangle = fetchBooleanParam(kParamRestrictToRectangle);
         _autoUpdate = fetchBooleanParam(kParamAutoUpdate);
-        assert(_btmLeft && _size && _restrictToRectangle && _autoUpdate);
+        assert(_btmLeft && _size && _interactive && _restrictToRectangle && _autoUpdate);
         _statMin = fetchRGBAParam(kParamStatMin);
         _statMax = fetchRGBAParam(kParamStatMax);
         _statMean = fetchRGBAParam(kParamStatMean);
@@ -950,6 +966,10 @@ public:
         _btmLeft->setIsSecret(!restrictToRectangle);
         _size->setEnabled(restrictToRectangle);
         _size->setIsSecret(!restrictToRectangle);
+        bool doUpdate;
+        _autoUpdate->getValue(doUpdate);
+        _interactive->setEnabled(restrictToRectangle && doUpdate);
+        _interactive->setIsSecret(!restrictToRectangle || !doUpdate);
     }
 
 private:
@@ -1029,6 +1049,7 @@ private:
 
     Double2DParam* _btmLeft;
     Double2DParam* _size;
+    BooleanParam* _interactive;
     BooleanParam* _restrictToRectangle;
     BooleanParam* _autoUpdate;
     RGBAParam* _statMin;
@@ -1186,7 +1207,16 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _btmLeft->setIsSecret(!restrictToRectangle);
         _size->setEnabled(restrictToRectangle);
         _size->setIsSecret(!restrictToRectangle);
+        _interactive->setEnabled(restrictToRectangle);
+        _interactive->setIsSecret(!restrictToRectangle);
         doUpdate = true;
+    }
+    if (paramName == kParamAutoUpdate) {
+        bool restrictToRectangle;
+        _restrictToRectangle->getValue(restrictToRectangle);
+        _autoUpdate->getValue(doUpdate);
+        _interactive->setEnabled(restrictToRectangle && doUpdate);
+        _interactive->setIsSecret(!restrictToRectangle || !doUpdate);
     }
     if (//paramName == kParamRectangleInteractBtmLeft ||
         // only trigger on kParamRectangleInteractSize (the last one changed)
@@ -1378,6 +1408,7 @@ ImageStatisticsPlugin::update(OFX::Image* srcImg, double time, const OfxRectI &a
     _statMean->setValueAtTime(time, results.mean.r, results.mean.g, results.mean.b, results.mean.a);
     _statSDev->setValueAtTime(time, results.sdev.r, results.sdev.g, results.sdev.b, results.sdev.a);
     _statSkewness->setValueAtTime(time, results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
+    printf("skewness = %g %g %g %g\n", results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
     _statKurtosis->setValueAtTime(time, results.kurtosis.r, results.kurtosis.g, results.kurtosis.b, results.kurtosis.a);
     endEditBlock();
 }
@@ -1580,6 +1611,14 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setHint(kParamAutoUpdateHint);
         param->setDefault(true);
         param->setAnimates(false);
+        page->addChild(*param);
+    }
+
+    // interactive
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamRectangleInteractInteractive);
+        param->setLabels(kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel);
+        param->setHint(kParamRectangleInteractInteractiveHint);
         page->addChild(*param);
     }
 

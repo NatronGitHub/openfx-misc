@@ -789,19 +789,19 @@ bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
     const OfxPointD &pscale = args.pixelScale;
 
     bool didSomething = false;
+    bool valuesChanged = false;
     OfxPointD delta;
     delta.x = args.penPosition.x - _lastMousePos.x;
     delta.y = args.penPosition.y - _lastMousePos.y;
 
     _hovering = -1;
-    didSomething = false;
 
     for (int i = enableBegin; i < enableEnd; ++i) {
         if (enable[i]) {
             if (_dragging == i) {
                 _draggedPos[i].x += delta.x;
                 _draggedPos[i].y += delta.y;
-                didSomething = true;
+                valuesChanged = true;
             } else if (isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale)) {
                 _hovering = i;
                 didSomething = true;
@@ -809,8 +809,13 @@ bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
         }
     }
 
+    if (didSomething || valuesChanged) {
+        _effect->redrawOverlays();
+    }
+
     _lastMousePos = args.penPosition;
-    return didSomething;
+    
+    return didSomething || valuesChanged;
 }
 
 bool CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
@@ -856,7 +861,12 @@ bool CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
         }
     }
 
+    if (didSomething) {
+        _effect->redrawOverlays();
+    }
+
     _lastMousePos = args.penPosition;
+
     return didSomething;
 }
 
@@ -881,6 +891,11 @@ bool CornerPinTransformInteract::penUp(const OFX::PenArgs &args)
     }
 
     _dragging = -1;
+
+    if (didSomething) {
+        _effect->redrawOverlays();
+    }
+
     return didSomething;
 }
 
