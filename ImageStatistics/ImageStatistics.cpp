@@ -1269,7 +1269,7 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
         progressStart("Analyzing sequence...");
         OfxRangeD range;
-        getTimeDomain(range);
+        timeLineGetBounds(range.min, range.max);
         int tmin = (int)std::ceil(range.min);
         int tmax = (int)std::floor(range.max);
         for (int t = tmin; t <= tmax; ++t) {
