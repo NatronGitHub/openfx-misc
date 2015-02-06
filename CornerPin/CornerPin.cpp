@@ -174,6 +174,10 @@ static const char* const kParamFrom[4] = {
 #define kParamExtraMatrixRow2 "row2"
 #define kParamExtraMatrixRow3 "row3"
 
+#define kParamInteractive "interactive"
+#define kParamInteractiveLabel "Interactive Update"
+#define kParamInteractiveHint "If checked, update the parameter values during interaction with the image viewer, else update the values when pen is released."
+
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
 
 using namespace OFX;
@@ -588,26 +592,38 @@ public:
     
     CornerPinTransformInteract(OfxInteractHandle handle, OFX::ImageEffect* effect)
     : OFX::OverlayInteract(handle)
+    , _plugin(dynamic_cast<CornerPinPlugin*>(effect))
     , _invert(0)
     , _overlayPoints(0)
+    , _interactive(0)
     , _dragging(-1)
     , _hovering(-1)
     , _lastMousePos()
     {
+        assert(_plugin);
         for (int i = 0; i < 4; ++i) {
-            _to[i] = effect->fetchDouble2DParam(kParamTo[i]);
-            _from[i] = effect->fetchDouble2DParam(kParamFrom[i]);
-            _enable[i] = effect->fetchBooleanParam(kParamEnable[i]);
+            _to[i] = _plugin->fetchDouble2DParam(kParamTo[i]);
+            _from[i] = _plugin->fetchDouble2DParam(kParamFrom[i]);
+            _enable[i] = _plugin->fetchBooleanParam(kParamEnable[i]);
             assert(_to[i] && _from[i] && _enable[i]);
             addParamToSlaveTo(_to[i]);
             addParamToSlaveTo(_from[i]);
             addParamToSlaveTo(_enable[i]);
-            _draggedPos[i].x = _draggedPos[i].y = 0;
         }
-        _invert = effect->fetchBooleanParam(kParamTransform3x3Invert);
+        _invert = _plugin->fetchBooleanParam(kParamTransform3x3Invert);
         addParamToSlaveTo(_invert);
-        _overlayPoints = effect->fetchChoiceParam(kParamOverlayPoints);
+        _overlayPoints = _plugin->fetchChoiceParam(kParamOverlayPoints);
         addParamToSlaveTo(_overlayPoints);
+        _interactive = _plugin->fetchBooleanParam(kParamInteractive);
+        assert(_invert && _overlayPoints && _interactive);
+
+        for (int i = 0; i < 4; ++i) {
+            _toDrag[i].x = _toDrag[i].y = 0;
+            _fromDrag[i].x = _fromDrag[i].y = 0;
+            _enableDrag[i] = false;
+        }
+        _useFromDrag = false;
+        _interactiveDrag = false;
     }
 
     // overridden functions from OFX::Interact to do things
@@ -624,24 +640,31 @@ private:
      * @brief Returns true if the points that should be used by the overlay are
      * the "from" points, otherwise the overlay is assumed to use the "to" points.
      **/
+    /*
     bool isFromPoints(double time) const
     {
         int v;
         _overlayPoints->getValueAtTime(time, v);
         return v == 1;
     }
-
+*/
+    CornerPinPlugin* _plugin;
     OFX::Double2DParam* _to[4];
     OFX::Double2DParam* _from[4];
     OFX::BooleanParam* _enable[4];
     OFX::BooleanParam* _invert;
     OFX::ChoiceParam* _overlayPoints;
-    
+    OFX::BooleanParam* _interactive;
+
     int _dragging; // -1: idle, else dragging point number
     int _hovering; // -1: idle, else hovering point number
     OfxPointD _lastMousePos;
 
-    OfxPointD _draggedPos[4];
+    OfxPointD _toDrag[4];
+    OfxPointD _fromDrag[4];
+    bool _enableDrag[4];
+    bool _useFromDrag;
+    bool _interactiveDrag;
 };
 
 
@@ -655,34 +678,45 @@ static bool isNearby(const OfxPointD& p, double x, double y, double tolerance, c
 bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
 {
     const OfxPointD &pscale = args.pixelScale;
+    const double &time = args.time;
     OfxRGBColourD color = { 0.8, 0.8, 0.8 };
     getSuggestedColour(color);
 
-    bool useFrom = isFromPoints(args.time);
+    OfxPointD to[4];
+    OfxPointD from[4];
+    bool enable[4];
+    bool useFrom;
+
+    if (_dragging == -1) {
+        for (int i = 0; i < 4; ++i) {
+            _to[i]->getValueAtTime(time, to[i].x, to[i].y);
+            _from[i]->getValueAtTime(time, from[i].x, from[i].y);
+            _enable[i]->getValueAtTime(time, enable[i]);
+        }
+        int v;
+        _overlayPoints->getValueAtTime(time, v);
+        useFrom = (v == 1);
+    } else {
+        for (int i = 0; i < 4; ++i) {
+            to[i] = _toDrag[i];
+            from[i] = _fromDrag[i];
+            enable[i] = _enableDrag[i];
+        }
+        useFrom = _useFromDrag;
+    }
 
     OfxPointD p[4];
     OfxPointD q[4];
-    bool enable[4];
     int enableBegin = 4;
     int enableEnd = 0;
     for (int i = 0; i < 4; ++i) {
-        _enable[i]->getValueAtTime(args.time, enable[i]);
         if (enable[i]) {
-            if (_dragging == i) {
-                p[i] = _draggedPos[i];
-                if (useFrom) {
-                    _to[i]->getValueAtTime(args.time, q[i].x, q[i].y);
-                } else {
-                    _from[i]->getValueAtTime(args.time, q[i].x, q[i].y);
-                }
+            if (useFrom) {
+                p[i] = from[i];
+                q[i] = to[i];
             } else {
-                if (useFrom) {
-                    _from[i]->getValueAtTime(args.time, p[i].x, p[i].y);
-                    _to[i]->getValueAtTime(args.time, q[i].x, q[i].y);
-                } else {
-                    _to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
-                    _from[i]->getValueAtTime(args.time, q[i].x, q[i].y);
-                }
+                q[i] = from[i];
+                p[i] = to[i];
             }
             if (i < enableBegin) {
                 enableBegin = i;
@@ -692,7 +726,7 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
             }
         }
     }
-    
+
     glPushAttrib(GL_ALL_ATTRIB_BITS);
 
     //glDisable(GL_LINE_STIPPLE);
@@ -759,49 +793,75 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
 
 bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
 {
-    bool useFrom = isFromPoints(args.time);
+    const OfxPointD &pscale = args.pixelScale;
+    const double &time = args.time;
+
+    OfxPointD to[4];
+    OfxPointD from[4];
+    bool enable[4];
+    bool useFrom;
+
+    if (_dragging == -1) { // mouse is released
+        for (int i = 0; i < 4; ++i) {
+            _to[i]->getValueAtTime(time, to[i].x, to[i].y);
+            _from[i]->getValueAtTime(time, from[i].x, from[i].y);
+            _enable[i]->getValueAtTime(time, enable[i]);
+        }
+        int v;
+        _overlayPoints->getValueAtTime(time, v);
+        useFrom = (v == 1);
+    } else {
+        for (int i = 0; i < 4; ++i) {
+            to[i] = _toDrag[i];
+            from[i] = _fromDrag[i];
+            enable[i] = _enableDrag[i];
+        }
+        useFrom = _useFromDrag;
+    }
 
     OfxPointD p[4];
-    bool enable[4];
+    //OfxPointD q[4];
     int enableBegin = 4;
     int enableEnd = 0;
     for (int i = 0; i < 4; ++i) {
-        _enable[i]->getValueAtTime(args.time, enable[i]);
         if (enable[i]) {
+            if (useFrom) {
+                p[i] = from[i];
+                //q[i] = to[i];
+            } else {
+                //q[i] = from[i];
+                p[i] = to[i];
+            }
             if (i < enableBegin) {
                 enableBegin = i;
             }
             if (i + 1 > enableEnd) {
                 enableEnd = i + 1;
             }
-            if (_dragging == i) {
-                p[i] = _draggedPos[i];
-            } else {
-                if (useFrom) {
-                    _from[i]->getValueAtTime(args.time, p[i].x, p[i].y);
-                } else {
-                    _to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
-                }
-            }
         }
     }
 
-    const OfxPointD &pscale = args.pixelScale;
-
     bool didSomething = false;
+    bool valuesChanged = false;
     OfxPointD delta;
     delta.x = args.penPosition.x - _lastMousePos.x;
     delta.y = args.penPosition.y - _lastMousePos.y;
 
     _hovering = -1;
-    didSomething = false;
 
     for (int i = enableBegin; i < enableEnd; ++i) {
         if (enable[i]) {
             if (_dragging == i) {
-                _draggedPos[i].x += delta.x;
-                _draggedPos[i].y += delta.y;
-                didSomething = true;
+                if (useFrom) {
+                    from[i].x += delta.x;
+                    from[i].y += delta.y;
+                    _fromDrag[i] = from[i];
+                } else {
+                    to[i].x += delta.x;
+                    to[i].y += delta.y;
+                    _toDrag[i] = to[i];
+                }
+                valuesChanged = true;
             } else if (isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale)) {
                 _hovering = i;
                 didSomething = true;
@@ -809,40 +869,74 @@ bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
         }
     }
 
+    if (_dragging != -1 && _interactiveDrag && valuesChanged) {
+        // no need to redraw overlay since it is slave to the paramaters
+        if (useFrom) {
+            _from[_dragging]->setValue(from[_dragging].x, from[_dragging].y);
+        } else {
+            _to[_dragging]->setValue(to[_dragging].x, to[_dragging].y);
+        }
+    } else if (didSomething || valuesChanged) {
+        _effect->redrawOverlays();
+    }
+
     _lastMousePos = args.penPosition;
-    return didSomething;
+    
+    return didSomething || valuesChanged;
 }
 
 bool CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
 {
-    bool useFrom = isFromPoints(args.time);
+    const OfxPointD &pscale = args.pixelScale;
+    const double &time = args.time;
+
+    OfxPointD to[4];
+    OfxPointD from[4];
+    bool enable[4];
+    bool useFrom;
+
+    if (_dragging == -1) {
+        for (int i = 0; i < 4; ++i) {
+            _to[i]->getValueAtTime(time, to[i].x, to[i].y);
+            _from[i]->getValueAtTime(time, from[i].x, from[i].y);
+            _enable[i]->getValueAtTime(time, enable[i]);
+        }
+        int v;
+        _overlayPoints->getValueAtTime(time, v);
+        useFrom = (v == 1);
+        if (_interactive) {
+            _interactive->getValueAtTime(args.time, _interactiveDrag);
+        }
+    } else {
+        for (int i = 0; i < 4; ++i) {
+            to[i] = _toDrag[i];
+            from[i] = _fromDrag[i];
+            enable[i] = _enableDrag[i];
+        }
+        useFrom = _useFromDrag;
+    }
 
     OfxPointD p[4];
-    bool enable[4];
+    //OfxPointD q[4];
     int enableBegin = 4;
     int enableEnd = 0;
     for (int i = 0; i < 4; ++i) {
-        _enable[i]->getValueAtTime(args.time, enable[i]);
         if (enable[i]) {
+            if (useFrom) {
+                p[i] = from[i];
+                //q[i] = to[i];
+            } else {
+                //q[i] = from[i];
+                p[i] = to[i];
+            }
             if (i < enableBegin) {
                 enableBegin = i;
             }
             if (i + 1 > enableEnd) {
                 enableEnd = i + 1;
             }
-            if (_dragging == i) {
-                p[i] = _draggedPos[i];
-            } else {
-                if (useFrom) {
-                    _from[i]->getValueAtTime(args.time, p[i].x, p[i].y);
-                } else {
-                    _to[i]->getValueAtTime(args.time, p[i].x, p[i].y);
-                }
-            }
         }
     }
-
-    const OfxPointD &pscale = args.pixelScale;
 
     bool didSomething = false;
 
@@ -850,37 +944,41 @@ bool CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
         if (enable[i]) {
             if (isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale)) {
                 _dragging = i;
-                _draggedPos[i] = args.penPosition;
                 didSomething = true;
             }
+            _toDrag[i] = to[i];
+            _fromDrag[i] = from[i];
+            _enableDrag[i] = enable[i];
         }
+    }
+    _useFromDrag = useFrom;
+
+    if (didSomething) {
+    _effect->redrawOverlays();
     }
 
     _lastMousePos = args.penPosition;
+
     return didSomething;
 }
 
 bool CornerPinTransformInteract::penUp(const OFX::PenArgs &args)
 {
-    bool didSomething = false;
+    bool didSomething = _dragging != -1;
 
-    bool useFrom = isFromPoints(args.time);
-
-    if (0 <= _dragging && _dragging < 4) {
-        int i = _dragging;
-        bool enable;
-        _enable[i]->getValueAtTime(args.time, enable);
-        if (enable) {
-            if (useFrom) {
-                _from[i]->setValue(_draggedPos[i].x, _draggedPos[i].y);
-            } else {
-                _to[i]->setValue(_draggedPos[i].x,_draggedPos[i].y);
-            }
-            didSomething = true;
+    if (!_interactiveDrag && _dragging != -1) {
+        // no need to redraw overlay since it is slave to the paramaters
+        if (_useFromDrag) {
+            _from[_dragging]->setValue(_fromDrag[_dragging].x, _fromDrag[_dragging].y);
+        } else {
+            _to[_dragging]->setValue(_toDrag[_dragging].x, _toDrag[_dragging].y);
         }
+    } else if (didSomething) {
+        _effect->redrawOverlays();
     }
 
     _dragging = -1;
+
     return didSomething;
 }
 
@@ -1041,6 +1139,15 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
         param->appendOption("To");
         param->appendOption("From");
         param->setDefault(0);
+        param->setEvaluateOnChange(false);
+        page->addChild(*param);
+    }
+
+    // interactive
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
+        param->setLabels(kParamInteractiveLabel, kParamInteractiveLabel, kParamInteractiveLabel);
+        param->setHint(kParamInteractiveHint);
         param->setEvaluateOnChange(false);
         page->addChild(*param);
     }

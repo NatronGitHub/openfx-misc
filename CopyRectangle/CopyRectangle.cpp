@@ -673,6 +673,15 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
         page->addChild(*param);
     }
     
+    // interactive
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamRectangleInteractInteractive);
+        param->setLabels(kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel);
+        param->setHint(kParamRectangleInteractInteractiveHint);
+        param->setEvaluateOnChange(false);
+        page->addChild(*param);
+    }
+
     defineComponentParam(desc, page, kParamRed, kParamRedLabel,false);
     defineComponentParam(desc, page, kParamGreen, kParamGreenLabel,false);
     defineComponentParam(desc, page, kParamBlue, kParamBlueLabel,false);

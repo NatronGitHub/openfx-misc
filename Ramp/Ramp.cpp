@@ -132,6 +132,10 @@
 #define kParamType "type"
 #define kParamTypeLabel "Type"
 
+#define kParamInteractive "interactive"
+#define kParamInteractiveLabel "Interactive Update"
+#define kParamInteractiveHint "If checked, update the parameter values during interaction with the image viewer, else update the values when pen is released."
+
 enum RampTypeEnum
 {
     eRampTypeLinear = 0,
@@ -490,6 +494,8 @@ public:
     , _color0(0)
     , _point1(0)
     , _color1(0)
+    , _type(0)
+    , _interactive(0)
     {
         dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
         assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
@@ -509,7 +515,8 @@ public:
         _color0 = fetchRGBAParam(kParamColor0);
         _color1 = fetchRGBAParam(kParamColor1);
         _type = fetchChoiceParam(kParamType);
-        assert(_point0 && _point1 && _color0 && _color1 && _type);
+        _interactive = fetchBooleanParam(kParamInteractive);
+        assert(_point0 && _point1 && _color0 && _color1 && _type && _interactive);
 
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
@@ -553,6 +560,7 @@ private:
     Double2DParam* _point1;
     RGBAParam* _color1;
     ChoiceParam* _type;
+    BooleanParam* _interactive;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
 };
@@ -761,7 +769,9 @@ class RampInteract : public OFX::OverlayInteract
     
     Double2DParam* _point0;
     Double2DParam* _point1;
+    BooleanParam* _interactive;
     OfxPointD _point0DragPos,_point1DragPos;
+    bool _interactiveDrag;
     OfxPointD _lastMousePos;
     InteractState _state;
     RampPlugin* _effect;
@@ -771,14 +781,18 @@ public:
     : OFX::OverlayInteract(handle)
     , _point0(0)
     , _point1(0)
+    , _interactive(0)
     , _point0DragPos()
     , _point1DragPos()
+    , _interactiveDrag(false)
     , _lastMousePos()
     , _state(eInteractStateIdle)
     , _effect(0)
     {
         _point0 = effect->fetchDouble2DParam(kParamPoint0);
         _point1 = effect->fetchDouble2DParam(kParamPoint1);
+        _interactive = effect->fetchBooleanParam(kParamInteractive);
+        assert(_point0 && _point1 && _interactive);
         _effect = dynamic_cast<RampPlugin*>(effect);
         assert(_effect);
     }
@@ -830,15 +844,12 @@ RampInteract::draw(const DrawArgs &args)
     const OfxPointD &pscale = args.pixelScale;
     
     OfxPointD p[2];
-    if (_state == eInteractStateDraggingPoint0) {
-        p[0] = _point0DragPos;
-    } else {
+    if (_state == eInteractStateIdle) {
         _point0->getValueAtTime(args.time, p[0].x, p[0].y);
-    }
-    if (_state == eInteractStateDraggingPoint1) {
-        p[1] = _point1DragPos;
-    } else {
         _point1->getValueAtTime(args.time, p[1].x, p[1].y);
+    } else {
+        p[0] = _point0DragPos;
+        p[1] = _point1DragPos;
     }
     
     ///Clamp points to the rod
@@ -992,13 +1003,17 @@ static bool isNearby(const OfxPointD& p, double x, double y, double tolerance, c
 bool
 RampInteract::penMotion(const PenArgs &args)
 {
-    //const OfxPointD &pscale = args.pixelScale;
-    
-    OfxPointD p0,p1;
-    _point0->getValueAtTime(args.time, p0.x, p0.y);
-    _point1->getValueAtTime(args.time, p1.x, p1.y);
+    const OfxPointD &pscale = args.pixelScale;
 
-    bool didSomething = false;
+    OfxPointD p0,p1;
+    if (_state != eInteractStateIdle) {
+        p0 = _point0DragPos;
+        p1 = _point1DragPos;
+    } else {
+        _point0->getValueAtTime(args.time, p0.x, p0.y);
+        _point1->getValueAtTime(args.time, p1.x, p1.y);
+    }
+    bool valuesChanged = false;
     
     OfxPointD delta;
     delta.x = args.penPosition.x - _lastMousePos.x;
@@ -1007,17 +1022,29 @@ RampInteract::penMotion(const PenArgs &args)
     if (_state == eInteractStateDraggingPoint0) {
         _point0DragPos.x += delta.x;
         _point0DragPos.y += delta.y;
-        didSomething = true;
+        valuesChanged = true;
 
     } else if (_state == eInteractStateDraggingPoint1) {
         _point1DragPos.x += delta.x;
         _point1DragPos.y += delta.y;
-        didSomething = true;
+        valuesChanged = true;
     }
-    
+
+    if (_state != eInteractStateIdle && _interactiveDrag && valuesChanged) {
+        if (_state == eInteractStateDraggingPoint0) {
+            _point0->setValue(fround(_point0DragPos.x, pscale.x), fround(_point0DragPos.y, pscale.y));
+        } else if (_state == eInteractStateDraggingPoint1) {
+            _point1->setValue(fround(_point1DragPos.x, pscale.x), fround(_point1DragPos.y, pscale.y));
+        }
+    }
+
+    if (valuesChanged) {
+        _effect->redrawOverlays();
+    }
+
     _lastMousePos = args.penPosition;
 
-    return didSomething;
+    return valuesChanged;
 }
 
 bool
@@ -1026,9 +1053,15 @@ RampInteract::penDown(const PenArgs &args)
     const OfxPointD &pscale = args.pixelScale;
 
     OfxPointD p0,p1;
-    _point0->getValueAtTime(args.time, p0.x, p0.y);
-    _point1->getValueAtTime(args.time, p1.x, p1.y);
-    
+    if (_state != eInteractStateIdle) {
+        p0 = _point0DragPos;
+        p1 = _point1DragPos;
+    } else {
+        _point0->getValueAtTime(args.time, p0.x, p0.y);
+        _point1->getValueAtTime(args.time, p1.x, p1.y);
+        _interactive->getValueAtTime(args.time, _interactiveDrag);
+    }
+
     bool didSomething = false;
     
     if (isNearby(args.penPosition, p0.x, p0.y, POINT_TOLERANCE, pscale)) {
@@ -1045,28 +1078,37 @@ RampInteract::penDown(const PenArgs &args)
     _point1DragPos = p1;
     _lastMousePos = args.penPosition;
 
+    if (didSomething) {
+        _effect->redrawOverlays();
+    }
+
     return didSomething;
 }
 
 bool
 RampInteract::penUp(const PenArgs &args)
 {
-    bool didSmthing = false;
+    bool didSomething = false;
     const OfxPointD &pscale = args.pixelScale;
 
-    if (_state == eInteractStateDraggingPoint0) {
-        // round newx/y to the closest int, 1/10 int, etc
-        // this make parameter editing easier
-      
-        _point0->setValue(fround(_point0DragPos.x, pscale.x), fround(_point0DragPos.y, pscale.y));
-        didSmthing = true;
-    } else if (_state == eInteractStateDraggingPoint1) {
-        _point1->setValue(fround(_point1DragPos.x, pscale.x), fround(_point1DragPos.y, pscale.y));
-        didSmthing = true;
-    }
-    _state = eInteractStateIdle;
+    if (!_interactiveDrag && _state != eInteractStateIdle) {
+        if (_state == eInteractStateDraggingPoint0) {
+            // round newx/y to the closest int, 1/10 int, etc
+            // this make parameter editing easier
 
-    return didSmthing;
+            _point0->setValue(fround(_point0DragPos.x, pscale.x), fround(_point0DragPos.y, pscale.y));
+            didSomething = true;
+        } else if (_state == eInteractStateDraggingPoint1) {
+            _point1->setValue(fround(_point1DragPos.x, pscale.x), fround(_point1DragPos.y, pscale.y));
+            didSomething = true;
+        }
+    } else  if (_state != eInteractStateIdle) {
+        _effect->redrawOverlays();
+    }
+    
+    _state = eInteractStateIdle;
+    
+    return didSomething;
 }
 
 class RampOverlayDescriptor : public DefaultEffectOverlayDescriptor<RampOverlayDescriptor, RampInteract> {};
@@ -1233,6 +1275,15 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->appendOption("Smooth");
         param->setDefault(eRampTypeLinear);
         param->setAnimates(true);
+        page->addChild(*param);
+    }
+
+    // interactive
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
+        param->setLabels(kParamInteractiveLabel, kParamInteractiveLabel, kParamInteractiveLabel);
+        param->setHint(kParamInteractiveHint);
+        param->setEvaluateOnChange(false);
         page->addChild(*param);
     }
 

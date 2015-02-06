@@ -723,7 +723,7 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
 }
 
 bool
-ShufflePlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &/*identityTime*/)
+ShufflePlugin::isIdentity(const OFX::IsIdentityArguments &/*args*/, OFX::Clip * &identityClip, double &/*identityTime*/)
 {
     int r_i;
     _r->getValue(r_i);

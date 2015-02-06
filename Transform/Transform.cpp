@@ -138,6 +138,9 @@
 #define kParamResetCenterLabel "Reset Center"
 #define kParamResetCenterHint "Reset the position of the center to the center of the input region of definition"
 
+#define kParamInteractive "interactive"
+#define kParamInteractiveLabel "Interactive Update"
+#define kParamInteractiveHint "If checked, update the parameter values during interaction with the image viewer, else update the values when pen is released."
 
 #define CIRCLE_RADIUS_BASE 30.
 #define CIRCLE_RADIUS_MIN 15.
@@ -159,6 +162,21 @@ static double fround(double val, double pscale)
 }
 
 
+static void getScale(const OfxPointD &scaleParam, bool scaleUniform, OfxPointD* scale)
+{
+    scale->x = scaleParam.x;
+    if (std::fabs(scale->x) < SCALE_MIN) {
+        scale->x = (scale->x >= 0) ? SCALE_MIN : -SCALE_MIN;
+    }
+    if (scaleUniform) {
+        scale->y = scaleParam.x;
+    } else {
+        scale->y = scaleParam.y;
+    }
+    if (std::fabs(scale->y) < SCALE_MIN) {
+        scale->y = (scale->y >= 0) ? SCALE_MIN : -SCALE_MIN;
+    }
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -177,6 +195,7 @@ public:
     , _skewY(0)
     , _skewOrder(0)
     , _center(0)
+    , _interactive(0)
     {
         // NON-GENERIC
         _translate = fetchDouble2DParam(kParamTranslate);
@@ -187,6 +206,8 @@ public:
         _skewY = fetchDoubleParam(kParamSkewY);
         _skewOrder = fetchChoiceParam(kParamSkewOrder);
         _center = fetchDouble2DParam(kParamCenter);
+        _interactive = fetchBooleanParam(kParamInteractive);
+        assert(_translate && _rotate && _scale && _scaleUniform && _skewX && _skewY && _skewOrder && _center && _interactive);
     }
 
 private:
@@ -210,6 +231,7 @@ private:
     OFX::DoubleParam* _skewY;
     OFX::ChoiceParam* _skewOrder;
     OFX::Double2DParam* _center;
+    BooleanParam* _interactive;
 };
 
 // overridden is identity
@@ -242,40 +264,32 @@ TransformPlugin::isIdentity(double time)
 bool
 TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) const
 {
-    double scaleX, scaleY;
-    double translateX, translateY;
-    double rotate;
-    double skewX, skewY;
-    int skewOrder;
-    double centerX, centerY;
-
     // NON-GENERIC
-    _scale->getValueAtTime(time, scaleX, scaleY);
+    OfxPointD center;
+    _center->getValueAtTime(time, center.x, center.y);
+    OfxPointD translate;
+    _translate->getValueAtTime(time, translate.x, translate.y);
+    OfxPointD scaleParam;
+    _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
     bool scaleUniform;
     _scaleUniform->getValueAtTime(time, scaleUniform);
-    if (scaleUniform) {
-        scaleY = scaleX;
-    }
-    if (std::fabs(scaleX) < SCALE_MIN) {
-        scaleX = scaleX >= 0 ? SCALE_MIN : -SCALE_MIN;
-    }
-    if (std::fabs(scaleY) < SCALE_MIN) {
-        scaleY = scaleY >= 0 ? SCALE_MIN : -SCALE_MIN;
-    }
-    _translate->getValueAtTime(time, translateX, translateY);
+    double rotate;
     _rotate->getValueAtTime(time, rotate);
-    rotate = OFX::ofxsToRadians(rotate);
-
+    double skewX, skewY;
+    int skewOrder;
     _skewX->getValueAtTime(time, skewX);
     _skewY->getValueAtTime(time, skewY);
     _skewOrder->getValueAtTime(time, skewOrder);
 
-    _center->getValueAtTime(time, centerX, centerY);
+    OfxPointD scale;
+    getScale(scaleParam, scaleUniform, &scale);
+
+    double rot = OFX::ofxsToRadians(rotate);
 
     if (!invert) {
-        *invtransform = OFX::ofxsMatInverseTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+        *invtransform = OFX::ofxsMatInverseTransformCanonical(translate.x, translate.y, scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, center.x, center.y);
     } else {
-        *invtransform = OFX::ofxsMatTransformCanonical(translateX, translateY, scaleX, scaleY, skewX, skewY, (bool)skewOrder, rotate, centerX, centerY);
+        *invtransform = OFX::ofxsMatTransformCanonical(translate.x, translate.y, scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, center.x, center.y);
     }
     return true;
 }
@@ -301,37 +315,32 @@ TransformPlugin::resetCenter(double time)
     double rot = OFX::ofxsToRadians(currentRotation);
 
     double skewX, skewY;
-    int skewOrderYX;
+    int skewOrder;
     _skewX->getValueAtTime(time, skewX);
     _skewY->getValueAtTime(time, skewY);
-    _skewOrder->getValueAtTime(time, skewOrderYX);
+    _skewOrder->getValueAtTime(time, skewOrder);
 
-    OfxPointD scale;
-    _scale->getValueAtTime(time, scale.x, scale.y);
+    OfxPointD scaleParam;
+    _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
     bool scaleUniform;
     _scaleUniform->getValueAtTime(time, scaleUniform);
-    if (scaleUniform) {
-        scale.y = scale.x;
-    }
-    if (std::fabs(scale.x) < SCALE_MIN) {
-        scale.x = scale.x >= 0 ? SCALE_MIN : -SCALE_MIN;
-    }
-    if (std::fabs(scale.y) < SCALE_MIN) {
-        scale.y = scale.y >= 0 ? SCALE_MIN : -SCALE_MIN;
-    }
-    OfxPointD currentTranslation;
-    _translate->getValueAtTime(time, currentTranslation.x, currentTranslation.y);
-    OfxPointD currentCenter;
-    _center->getValueAtTime(time, currentCenter.x, currentCenter.y);
+
+    OfxPointD scale;
+    getScale(scaleParam, scaleUniform, &scale);
+
+    OfxPointD translate;
+    _translate->getValueAtTime(time, translate.x, translate.y);
+    OfxPointD center;
+    _center->getValueAtTime(time, center.x, center.y);
 
     OFX::Matrix3x3 Rinv = (ofxsMatRotation(-rot) *
-                           ofxsMatSkewXY(skewX, skewY, skewOrderYX) *
+                           ofxsMatSkewXY(skewX, skewY, skewOrder) *
                            ofxsMatScale(scale.x, scale.y));
-
-    double newx = (rod.x1+rod.x2)/2;
-    double newy = (rod.y1+rod.y2)/2;
-    double dxrot = newx - currentCenter.x;
-    double dyrot = newy - currentCenter.y;
+    OfxPointD newCenter;
+    newCenter.x = (rod.x1+rod.x2)/2;
+    newCenter.y = (rod.y1+rod.y2)/2;
+    double dxrot = newCenter.x - center.x;
+    double dyrot = newCenter.y - center.y;
     OFX::Point3D dRot;
     dRot.x = dxrot;
     dRot.y = dyrot;
@@ -343,12 +352,13 @@ TransformPlugin::resetCenter(double time)
     }
     double dx = dRot.x;
     double dy = dRot.y;
-    currentTranslation.x += dx - dxrot;
-    currentTranslation.y += dy - dyrot;
+    OfxPointD newTranslate;
+    newTranslate.x = translate.x + dx - dxrot;
+    newTranslate.y = translate.y + dy - dyrot;
 
     beginEditBlock("resetCenter");
-    _center->setValue(newx, newy);
-    _translate->setValue(currentTranslation.x,currentTranslation.y);
+    _center->setValue(newCenter.x, newCenter.y);
+    _translate->setValue(newTranslate.x,newTranslate.y);
     endEditBlock();
 }
 
@@ -427,7 +437,18 @@ protected:
     OrientationEnum _orientation;
     TransformPlugin* _plugin;
     OfxPointD _lastMousePos;
-    
+
+    OfxPointD _centerDrag;
+    OfxPointD _translateDrag;
+    OfxPointD _scaleParamDrag;
+    bool _scaleUniformDrag;
+    double _rotateDrag;
+    double _skewXDrag;
+    double _skewYDrag;
+    int _skewOrderDrag;
+    bool _invertedDrag;
+    bool _interactiveDrag;
+
 public:
     TransformInteract(OfxInteractHandle handle, OFX::ImageEffect* effect)
     : OFX::OverlayInteract(handle)
@@ -438,8 +459,25 @@ public:
     , _orientation(eOrientationAllDirections)
     , _plugin(dynamic_cast<TransformPlugin*>(effect))
     , _lastMousePos()
+    , _scaleUniformDrag(0)
+    , _rotateDrag(0)
+    , _skewXDrag(0)
+    , _skewYDrag(0)
+    , _skewOrderDrag(0)
+    , _invertedDrag(0)
+    , _interactiveDrag(false)
+    , _translate(0)
+    , _rotate(0)
+    , _scale(0)
+    , _scaleUniform(0)
+    , _skewX(0)
+    , _skewY(0)
+    , _skewOrder(0)
+    , _center(0)
+    , _invert(0)
+    , _interactive(0)
     {
-        
+
         assert(_plugin);
         _lastMousePos.x = _lastMousePos.y = 0.;
         // NON-GENERIC
@@ -452,6 +490,8 @@ public:
         _skewOrder = _plugin->fetchChoiceParam(kParamSkewOrder);
         _center = _plugin->fetchDouble2DParam(kParamCenter);
         _invert = _plugin->fetchBooleanParam(kParamTransform3x3Invert);
+        _interactive = _plugin->fetchBooleanParam(kParamInteractive);
+        assert(_translate && _rotate && _scale && _scaleUniform && _skewX && _skewY && _skewOrder && _center && _interactive);
         addParamToSlaveTo(_translate);
         addParamToSlaveTo(_rotate);
         addParamToSlaveTo(_scale);
@@ -460,6 +500,11 @@ public:
         addParamToSlaveTo(_skewOrder);
         addParamToSlaveTo(_center);
         addParamToSlaveTo(_invert);
+        _centerDrag.x = _centerDrag.y = 0.;
+        _translateDrag.x = _translateDrag.y = 0.;
+        _scaleParamDrag.x = _scaleParamDrag.y = 0.;
+
+
     }
     
     // overridden functions from OFX::Interact to do things
@@ -474,97 +519,71 @@ public:
     virtual void loseFocus(const FocusArgs &args) OVERRIDE FINAL;
 
 private:
-    void getCenter(double time, OfxPointD *center)
+    void getTargetCenter(const OfxPointD &center, const OfxPointD &translate, OfxPointD *targetCenter)
     {
-        OfxPointD translate;
-        _center->getValueAtTime(time, center->x, center->y);
-        _translate->getValueAtTime(time, translate.x, translate.y);
-        center->x += translate.x;
-        center->y += translate.y;
+        targetCenter->x = center.x + translate.x;
+        targetCenter->y = center.y + translate.y;
     }
-    
-    void getScale(double time, OfxPointD* scale)
+
+    void getTargetRadius(const OfxPointD& scale, const OfxPointD& pixelScale, OfxPointD* targetRadius)
     {
-        _scale->getValueAtTime(time, scale->x, scale->y);
-        bool scaleUniform;
-        _scaleUniform->getValueAtTime(time, scaleUniform);
-        if (scaleUniform) {
-            scale->y = scale->x;
-        }
-        if (std::fabs(scale->x) < SCALE_MIN) {
-            scale->x = scale->x >= 0 ? SCALE_MIN : -SCALE_MIN;
-        }
-        if (std::fabs(scale->y) < SCALE_MIN) {
-            scale->y = scale->y >= 0 ? SCALE_MIN : -SCALE_MIN;
-        }
-    }
-    
-    void getCircleRadius(double time, const OfxPointD& pixelScale, OfxPointD* radius)
-    {
-        OfxPointD scale;
-        getScale(time, &scale);
-        radius->x = scale.x * CIRCLE_RADIUS_BASE;
-        radius->y = scale.y * CIRCLE_RADIUS_BASE;
+        targetRadius->x = scale.x * CIRCLE_RADIUS_BASE;
+        targetRadius->y = scale.y * CIRCLE_RADIUS_BASE;
         // don't draw too small. 15 pixels is the limit
-        if (std::fabs(radius->x) < CIRCLE_RADIUS_MIN && std::fabs(radius->y) < CIRCLE_RADIUS_MIN) {
-            radius->x = radius->x >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
-            radius->y = radius->y >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
-        } else if (std::fabs(radius->x) > CIRCLE_RADIUS_MAX && std::fabs(radius->y) > CIRCLE_RADIUS_MAX) {
-            radius->x = radius->x >= 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
-            radius->y = radius->y >= 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
+        if (std::fabs(targetRadius->x) < CIRCLE_RADIUS_MIN && std::fabs(targetRadius->y) < CIRCLE_RADIUS_MIN) {
+            targetRadius->x = targetRadius->x >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
+            targetRadius->y = targetRadius->y >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
+        } else if (std::fabs(targetRadius->x) > CIRCLE_RADIUS_MAX && std::fabs(targetRadius->y) > CIRCLE_RADIUS_MAX) {
+            targetRadius->x = targetRadius->x >= 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
+            targetRadius->y = targetRadius->y >= 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
         } else {
-            if (std::fabs(radius->x) < CIRCLE_RADIUS_MIN) {
-                if (radius->x == 0. && radius->y != 0.) {
-                    radius->y = radius->y > 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
+            if (std::fabs(targetRadius->x) < CIRCLE_RADIUS_MIN) {
+                if (targetRadius->x == 0. && targetRadius->y != 0.) {
+                    targetRadius->y = targetRadius->y > 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
                 } else {
-                    radius->y *= std::fabs(CIRCLE_RADIUS_MIN/radius->x);
+                    targetRadius->y *= std::fabs(CIRCLE_RADIUS_MIN/targetRadius->x);
                 }
-                radius->x = radius->x >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
+                targetRadius->x = targetRadius->x >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
             }
-            if (std::fabs(radius->x) > CIRCLE_RADIUS_MAX) {
-                radius->y *= std::fabs(CIRCLE_RADIUS_MAX/radius->x);
-                radius->x = radius->x > 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
+            if (std::fabs(targetRadius->x) > CIRCLE_RADIUS_MAX) {
+                targetRadius->y *= std::fabs(CIRCLE_RADIUS_MAX/targetRadius->x);
+                targetRadius->x = targetRadius->x > 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
             }
-            if (std::fabs(radius->y) < CIRCLE_RADIUS_MIN) {
-                if (radius->y == 0. && radius->x != 0.) {
-                    radius->x = radius->x > 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
+            if (std::fabs(targetRadius->y) < CIRCLE_RADIUS_MIN) {
+                if (targetRadius->y == 0. && targetRadius->x != 0.) {
+                    targetRadius->x = targetRadius->x > 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
                 } else {
-                    radius->x *= std::fabs(CIRCLE_RADIUS_MIN/radius->y);
+                    targetRadius->x *= std::fabs(CIRCLE_RADIUS_MIN/targetRadius->y);
                 }
-                radius->y = radius->y >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
+                targetRadius->y = targetRadius->y >= 0 ? CIRCLE_RADIUS_MIN : -CIRCLE_RADIUS_MIN;
             }
-            if (std::fabs(radius->y) > CIRCLE_RADIUS_MAX) {
-                radius->x *= std::fabs(CIRCLE_RADIUS_MAX/radius->x);
-                radius->y = radius->y > 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
+            if (std::fabs(targetRadius->y) > CIRCLE_RADIUS_MAX) {
+                targetRadius->x *= std::fabs(CIRCLE_RADIUS_MAX/targetRadius->x);
+                targetRadius->y = targetRadius->y > 0 ? CIRCLE_RADIUS_MAX : -CIRCLE_RADIUS_MAX;
             }
         }
         // the circle axes are not aligned with the images axes, so we cannot use the x and y scales separately
         double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
-        radius->x *= meanPixelScale;
-        radius->y *= meanPixelScale;
+        targetRadius->x *= meanPixelScale;
+        targetRadius->y *= meanPixelScale;
     }
-    
-    void getPoints(double time,
-                   const OfxPointD& pixelScale,
-                   OfxPointD *center,
+
+    void getTargetPoints(const OfxPointD& targetCenter,
+                   const OfxPointD& targetRadius,
                    OfxPointD *left,
                    OfxPointD *bottom,
                    OfxPointD *top,
                    OfxPointD *right)
     {
-        getCenter(time, center);
-        OfxPointD radius;
-        getCircleRadius(time, pixelScale, &radius);
-        left->x = center->x - radius.x ;
-        left->y = center->y;
-        right->x = center->x + radius.x ;
-        right->y = center->y;
-        top->x = center->x;
-        top->y = center->y + radius.y ;
-        bottom->x = center->x;
-        bottom->y = center->y - radius.y ;
+        left->x = targetCenter.x - targetRadius.x ;
+        left->y = targetCenter.y;
+        right->x = targetCenter.x + targetRadius.x ;
+        right->y = targetCenter.y;
+        top->x = targetCenter.x;
+        top->y = targetCenter.y + targetRadius.y ;
+        bottom->x = targetCenter.x;
+        bottom->y = targetCenter.y - targetRadius.y ;
     }
-    
 
     OfxRangeD getViewportSize()
     {
@@ -585,6 +604,7 @@ private:
     OFX::ChoiceParam* _skewOrder;
     OFX::Double2DParam* _center;
     OFX::BooleanParam* _invert;
+    OFX::BooleanParam* _interactive;
 };
 
 static void
@@ -623,7 +643,7 @@ drawSquare(const OfxRGBColourD& color,
 static void
 drawEllipse(const OfxRGBColourD& color,
             const OfxPointD& center,
-            const OfxPointD& radius,
+            const OfxPointD& targetRadius,
             bool hovered,
             int l)
 {
@@ -642,7 +662,7 @@ drawEllipse(const OfxRGBColourD& color,
     // 40 segments is enough.
     for (int i = 0; i < 40; ++i) {
         double theta = i * 2 * OFX::ofxsPi() / 40.;
-        glVertex2d(radius.x * std::cos(theta), radius.y * std::sin(theta));
+        glVertex2d(targetRadius.x * std::cos(theta), targetRadius.y * std::sin(theta));
     }
     glEnd();
     
@@ -653,7 +673,7 @@ static void
 drawSkewBar(const OfxRGBColourD& color,
             const OfxPointD &center,
             const OfxPointD& pixelScale,
-            double radiusY,
+            double targetRadiusY,
             bool hovered,
             double angle,
             int l)
@@ -666,7 +686,7 @@ drawSkewBar(const OfxRGBColourD& color,
 
     // we are not axis-aligned: use the mean pixel scale
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
-    double barHalfSize = radiusY + 20. * meanPixelScale;
+    double barHalfSize = targetRadiusY + 20. * meanPixelScale;
 
     glPushMatrix();
     glTranslatef((float)center.x, (float)center.y, 0.f);
@@ -677,7 +697,7 @@ drawSkewBar(const OfxRGBColourD& color,
     glVertex2d(0., + barHalfSize);
     
     if (hovered) {
-        double arrowYPosition = radiusY + 10. * meanPixelScale;
+        double arrowYPosition = targetRadiusY + 10. * meanPixelScale;
         double arrowXHalfSize = 10 * meanPixelScale;
         double arrowHeadOffsetX = 3 * meanPixelScale;
         double arrowHeadOffsetY = 3 * meanPixelScale;
@@ -708,7 +728,7 @@ drawSkewBar(const OfxRGBColourD& color,
 static void
 drawRotationBar(const OfxRGBColourD& color,
                 const OfxPointD& pixelScale,
-                double radiusX,
+                double targetRadiusX,
                 bool hovered,
                 bool inverted,
                 int l)
@@ -724,11 +744,11 @@ drawRotationBar(const OfxRGBColourD& color,
     double barExtra = 30. * meanPixelScale;
     glBegin(GL_LINES);
     glVertex2d(0., 0.);
-    glVertex2d(0. + radiusX + barExtra, 0.);
+    glVertex2d(0. + targetRadiusX + barExtra, 0.);
     glEnd();
 
     if (hovered) {
-        double arrowCenterX = radiusX + barExtra / 2.;
+        double arrowCenterX = targetRadiusX + barExtra / 2.;
         
         ///draw an arrow slightly bended. This is an arc of circle of radius 5 in X, and 10 in Y.
         OfxPointD arrowRadius;
@@ -766,7 +786,7 @@ drawRotationBar(const OfxRGBColourD& color,
         glPopMatrix();
     }
     if (inverted) {
-        double arrowXPosition = radiusX + barExtra * 1.5;
+        double arrowXPosition = targetRadiusX + barExtra * 1.5;
         double arrowXHalfSize = 10 * meanPixelScale;
         double arrowHeadOffsetX = 3 * meanPixelScale;
         double arrowHeadOffsetY = 3 * meanPixelScale;
@@ -827,29 +847,57 @@ TransformInteract::draw(const OFX::DrawArgs &args)
 {
     //std::cout << "pixelScale= "<<args.pixelScale.x << "," << args.pixelScale.y << " renderscale=" << args.renderScale.x << "," << args.renderScale.y << std::endl;
     const OfxPointD &pscale = args.pixelScale;
+    const double time = args.time;
     OfxRGBColourD color = { 0.8, 0.8, 0.8 };
     getSuggestedColour(color);
-    OfxPointD center, left, right, bottom, top;
-    getPoints(args.time, pscale, &center, &left, &bottom, &top, &right);
 
-    double angle;
-    _rotate->getValueAtTime(args.time, angle);
-    
+    OfxPointD center;
+    OfxPointD translate;
+    OfxPointD scaleParam;
+    bool scaleUniform;
+    double rotate;
     double skewX, skewY;
-    int skewOrderYX;
-    _skewX->getValueAtTime(args.time, skewX);
-    _skewY->getValueAtTime(args.time, skewY);
-    _skewOrder->getValueAtTime(args.time, skewOrderYX);
-
+    int skewOrder;
     bool inverted;
-    _invert->getValueAtTime(args.time, inverted);
 
-    OfxPointD radius;
-    getCircleRadius(args.time, pscale, &radius);
+    if (_mouseState == eReleased) {
+        _center->getValueAtTime(time, center.x, center.y);
+        _translate->getValueAtTime(time, translate.x, translate.y);
+        _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
+        _scaleUniform->getValueAtTime(time, scaleUniform);
+        _rotate->getValueAtTime(time, rotate);
+        _skewX->getValueAtTime(time, skewX);
+        _skewY->getValueAtTime(time, skewY);
+        _skewOrder->getValueAtTime(time, skewOrder);
+        _invert->getValueAtTime(time, inverted);
+    } else {
+        center = _centerDrag;
+        translate = _translateDrag;
+        scaleParam = _scaleParamDrag;
+        scaleUniform = _scaleUniformDrag;
+        rotate = _rotateDrag;
+        skewX = _skewXDrag;
+        skewY = _skewYDrag;
+        skewOrder = _skewOrderDrag;
+        inverted = _invertedDrag;
+    }
+
+    OfxPointD targetCenter;
+    getTargetCenter(center, translate, &targetCenter);
+
+    OfxPointD scale;
+    getScale(scaleParam, scaleUniform, &scale);
+
+    OfxPointD targetRadius;
+    getTargetRadius(scale, pscale, &targetRadius);
+
+    OfxPointD left, right, bottom, top;
+    getTargetPoints(targetCenter, targetRadius, &left, &bottom, &top, &right);
+
 
     GLdouble skewMatrix[16];
-    skewMatrix[0] = (skewOrderYX ? 1. : (1.+skewX*skewY)); skewMatrix[1] = skewY; skewMatrix[2] = 0.; skewMatrix[3] = 0;
-    skewMatrix[4] = skewX; skewMatrix[5] = (skewOrderYX ? (1.+skewX*skewY) : 1.); skewMatrix[6] = 0.; skewMatrix[7] = 0;
+    skewMatrix[0] = (skewOrder ? 1. : (1.+skewX*skewY)); skewMatrix[1] = skewY; skewMatrix[2] = 0.; skewMatrix[3] = 0;
+    skewMatrix[4] = skewX; skewMatrix[5] = (skewOrder ? (1.+skewX*skewY) : 1.); skewMatrix[6] = 0.; skewMatrix[7] = 0;
     skewMatrix[8] = 0.; skewMatrix[9] = 0.; skewMatrix[10] = 1.; skewMatrix[11] = 0;
     skewMatrix[12] = 0.; skewMatrix[13] = 0.; skewMatrix[14] = 0.; skewMatrix[15] = 1.;
 
@@ -877,24 +925,22 @@ TransformInteract::draw(const OFX::DrawArgs &args)
         glColor3f(color.r*l, color.g*l, color.b*l);
 
         glPushMatrix();
-        glTranslated(center.x, center.y, 0.);
+        glTranslated(targetCenter.x, targetCenter.y, 0.);
 
-        glRotated(angle, 0, 0., 1.);
-        drawRotationBar(color, pscale, radius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered, inverted, l);
+        glRotated(rotate, 0, 0., 1.);
+        drawRotationBar(color, pscale, targetRadius.x, _mouseState == eDraggingRotationBar || _drawState == eRotationBarHovered, inverted, l);
         glMultMatrixd(skewMatrix);
-        glTranslated(-center.x, -center.y, 0.);
+        glTranslated(-targetCenter.x, -targetCenter.y, 0.);
 
-        drawEllipse(color, center, radius, _mouseState == eDraggingCircle || _drawState == eCircleHovered, l);
+        drawEllipse(color, targetCenter, targetRadius, _mouseState == eDraggingCircle || _drawState == eCircleHovered, l);
 
         // add 180 to the angle to draw the arrows on the other side. unfortunately, this requires knowing
         // the mouse position in the ellipse frame
         double flip = 0.;
         if (_drawState == eSkewXBarHoverered || _drawState == eSkewYBarHoverered) {
-            OfxPointD scale;
-            getScale(args.time, &scale);
-            double rot = OFX::ofxsToRadians(angle);
+            double rot = OFX::ofxsToRadians(rotate);
             OFX::Matrix3x3 transformscale;
-            transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+            transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, targetCenter.x, targetCenter.y);
 
             OFX::Point3D previousPos;
             previousPos.x = _lastMousePos.x;
@@ -905,16 +951,16 @@ TransformInteract::draw(const OFX::DrawArgs &args)
                 previousPos.x /= previousPos.z;
                 previousPos.y /= previousPos.z;
             }
-            if ((_drawState == eSkewXBarHoverered && previousPos.y > center.y) ||
-                (_drawState == eSkewYBarHoverered && previousPos.x > center.x)) {
+            if ((_drawState == eSkewXBarHoverered && previousPos.y > targetCenter.y) ||
+                (_drawState == eSkewYBarHoverered && previousPos.x > targetCenter.x)) {
                 flip = 180.;
             }
         }
-        drawSkewBar(color, center, pscale, radius.y, _mouseState == eDraggingSkewXBar || _drawState == eSkewXBarHoverered, flip, l);
-        drawSkewBar(color, center, pscale, radius.x, _mouseState == eDraggingSkewYBar || _drawState == eSkewYBarHoverered, flip - 90., l);
+        drawSkewBar(color, targetCenter, pscale, targetRadius.y, _mouseState == eDraggingSkewXBar || _drawState == eSkewXBarHoverered, flip, l);
+        drawSkewBar(color, targetCenter, pscale, targetRadius.x, _mouseState == eDraggingSkewYBar || _drawState == eSkewYBarHoverered, flip - 90., l);
 
 
-        drawSquare(color, center, pscale, _mouseState == eDraggingTranslation || _mouseState == eDraggingCenter || _drawState == eCenterPointHovered, _modifierStateCtrl, l);
+        drawSquare(color, targetCenter, pscale, _mouseState == eDraggingTranslation || _mouseState == eDraggingCenter || _drawState == eCenterPointHovered, _modifierStateCtrl, l);
         drawSquare(color, left, pscale, _mouseState == eDraggingLeftPoint || _drawState == eLeftPointHovered, false, l);
         drawSquare(color, right, pscale, _mouseState == eDraggingRightPoint || _drawState == eRightPointHovered, false, l);
         drawSquare(color, top, pscale, _mouseState == eDraggingTopPoint || _drawState == eTopPointHovered, false, l);
@@ -927,28 +973,38 @@ TransformInteract::draw(const OFX::DrawArgs &args)
     return true;
 }
 
-static bool squareContains(const OFX::Point3D& pos,const OfxRectD& rect,double toleranceX= 0.,double toleranceY = 0.)
+static bool squareContains(const OFX::Point3D& pos,
+                           const OfxRectD& rect,
+                           double toleranceX= 0.,
+                           double toleranceY = 0.)
 {
     return (pos.x >= (rect.x1 - toleranceX) && pos.x < (rect.x2 + toleranceX)
             && pos.y >= (rect.y1 - toleranceY) && pos.y < (rect.y2 + toleranceY));
 }
 
-static bool isOnEllipseBorder(const OFX::Point3D& pos,const OfxPointD& radius,const OfxPointD& center,double epsilon = 0.1)
+static bool isOnEllipseBorder(const OFX::Point3D& pos,
+                              const OfxPointD& targetRadius,
+                              const OfxPointD& targetCenter,
+                              double epsilon = 0.1)
 {
 
-    double v = ((pos.x - center.x) * (pos.x - center.x) / (radius.x * radius.x) +
-                (pos.y - center.y) * (pos.y - center.y) / (radius.y * radius.y));
+    double v = ((pos.x - targetCenter.x) * (pos.x - targetCenter.x) / (targetRadius.x * targetRadius.x) +
+                (pos.y - targetCenter.y) * (pos.y - targetCenter.y) / (targetRadius.y * targetRadius.y));
     if (v <= (1. + epsilon) && v >= (1. - epsilon)) {
         return true;
     }
     return false;
 }
 
-static bool isOnSkewXBar(const OFX::Point3D& pos,double radiusY,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
+static bool isOnSkewXBar(const OFX::Point3D& pos,
+                         double targetRadiusY,
+                         const OfxPointD& center,
+                         const OfxPointD& pixelScale,
+                         double tolerance)
 {
     // we are not axis-aligned
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
-    double barHalfSize = radiusY + (20. * meanPixelScale);
+    double barHalfSize = targetRadiusY + (20. * meanPixelScale);
     if (pos.x >= (center.x - tolerance) && pos.x <= (center.x + tolerance) &&
         pos.y >= (center.y - barHalfSize - tolerance) && pos.y <= (center.y + barHalfSize + tolerance)) {
         return true;
@@ -957,11 +1013,15 @@ static bool isOnSkewXBar(const OFX::Point3D& pos,double radiusY,const OfxPointD&
     return false;
 }
 
-static bool isOnSkewYBar(const OFX::Point3D& pos,double radiusX,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
+static bool isOnSkewYBar(const OFX::Point3D& pos,
+                         double targetRadiusX,
+                         const OfxPointD& center,
+                         const OfxPointD& pixelScale,
+                         double tolerance)
 {
     // we are not axis-aligned
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
-    double barHalfSize = radiusX + (20. * meanPixelScale);
+    double barHalfSize = targetRadiusX + (20. * meanPixelScale);
     if (pos.y >= (center.y - tolerance) && pos.y <= (center.y + tolerance) &&
         pos.x >= (center.x - barHalfSize - tolerance) && pos.x <= (center.x + barHalfSize + tolerance)) {
         return true;
@@ -970,12 +1030,16 @@ static bool isOnSkewYBar(const OFX::Point3D& pos,double radiusX,const OfxPointD&
     return false;
 }
 
-static bool isOnRotationBar(const  OFX::Point3D& pos,double radiusX,const OfxPointD& center,const OfxPointD& pixelScale,double tolerance)
+static bool isOnRotationBar(const  OFX::Point3D& pos,
+                            double targetRadiusX,
+                            const OfxPointD& center,
+                            const OfxPointD& pixelScale,
+                            double tolerance)
 {
     // we are not axis-aligned
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
     double barExtra = 30. * meanPixelScale;
-    if (pos.x >= (center.x - tolerance) && pos.x <= (center.x + radiusX + barExtra + tolerance) &&
+    if (pos.x >= (center.x - tolerance) && pos.x <= (center.x + targetRadiusX + barExtra + tolerance) &&
         pos.y >= (center.y  - tolerance) && pos.y <= (center.y + tolerance)) {
         return true;
     }
@@ -983,7 +1047,8 @@ static bool isOnRotationBar(const  OFX::Point3D& pos,double radiusX,const OfxPoi
     return false;
 }
 
-static OfxRectD rectFromCenterPoint(const OfxPointD& center, const OfxPointD& pixelScale)
+static OfxRectD rectFromCenterPoint(const OfxPointD& center,
+                                    const OfxPointD& pixelScale)
 {
     // we are not axis-aligned
     double meanPixelScale = (pixelScale.x + pixelScale.y) / 2.;
@@ -1000,45 +1065,71 @@ static OfxRectD rectFromCenterPoint(const OfxPointD& center, const OfxPointD& pi
 bool TransformInteract::penMotion(const OFX::PenArgs &args)
 {
     const OfxPointD &pscale = args.pixelScale;
+    const double time = args.time;
 
-    OfxPointD center, left, right, top, bottom;
-    getPoints(args.time, pscale, &center, &left, &bottom, &top, &right);
+    OfxPointD center;
+    OfxPointD translate;
+    OfxPointD scaleParam;
+    bool scaleUniform;
+    double rotate;
+    double skewX, skewY;
+    int skewOrder;
+    bool inverted;
 
-    OfxRectD centerPoint = rectFromCenterPoint(center, pscale);
+    if (_mouseState == eReleased) {
+        _center->getValueAtTime(time, center.x, center.y);
+        _translate->getValueAtTime(time, translate.x, translate.y);
+        _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
+        _scaleUniform->getValueAtTime(time, scaleUniform);
+        _rotate->getValueAtTime(time, rotate);
+        _skewX->getValueAtTime(time, skewX);
+        _skewY->getValueAtTime(time, skewY);
+        _skewOrder->getValueAtTime(time, skewOrder);
+        _invert->getValueAtTime(time, inverted);
+    } else {
+        center = _centerDrag;
+        translate = _translateDrag;
+        scaleParam = _scaleParamDrag;
+        scaleUniform = _scaleUniformDrag;
+        rotate = _rotateDrag;
+        skewX = _skewXDrag;
+        skewY = _skewYDrag;
+        skewOrder = _skewOrderDrag;
+        inverted = _invertedDrag;
+    }
+
+    bool didSomething = false;
+    bool centerChanged = false;
+    bool translateChanged = false;
+    bool scaleChanged = false;
+    bool rotateChanged = false;
+    bool skewXChanged = false;
+    bool skewYChanged = false;
+
+    OfxPointD targetCenter;
+    getTargetCenter(center, translate, &targetCenter);
+
+    OfxPointD scale;
+    getScale(scaleParam, scaleUniform, &scale);
+
+    OfxPointD targetRadius;
+    getTargetRadius(scale, pscale, &targetRadius);
+
+    OfxPointD left, right, bottom, top;
+    getTargetPoints(targetCenter, targetRadius, &left, &bottom, &top, &right);
+
+    OfxRectD centerPoint = rectFromCenterPoint(targetCenter, pscale);
     OfxRectD leftPoint = rectFromCenterPoint(left, pscale);
     OfxRectD rightPoint = rectFromCenterPoint(right, pscale);
     OfxRectD topPoint = rectFromCenterPoint(top, pscale);
     OfxRectD bottomPoint = rectFromCenterPoint(bottom, pscale);
     
-    OfxPointD ellipseRadius;
-    getCircleRadius(args.time, pscale, &ellipseRadius);
-    
+
     //double dx = args.penPosition.x - _lastMousePos.x;
     //double dy = args.penPosition.y - _lastMousePos.y;
     
-    double currentRotation;
-    _rotate->getValueAtTime(args.time, currentRotation);
-    double rot = OFX::ofxsToRadians(currentRotation);
+    double rot = OFX::ofxsToRadians(rotate);
     
-    double skewX, skewY;
-    int skewOrderYX;
-    _skewX->getValueAtTime(args.time, skewX);
-    _skewY->getValueAtTime(args.time, skewY);
-    _skewOrder->getValueAtTime(args.time, skewOrderYX);
-    
-    OfxPointD scale;
-    _scale->getValueAtTime(args.time, scale.x, scale.y);
-    bool scaleUniform;
-    _scaleUniform->getValueAtTime(args.time, scaleUniform);
-    if (scaleUniform) {
-        scale.y = scale.x;
-    }
-    if (std::fabs(scale.x) < SCALE_MIN) {
-        scale.x = scale.x >= 0 ? SCALE_MIN : -SCALE_MIN;
-    }
-    if (std::fabs(scale.y) < SCALE_MIN) {
-        scale.y = scale.y >= 0 ? SCALE_MIN : -SCALE_MIN;
-    }
 
     OFX::Point3D penPos, prevPenPos, rotationPos, transformedPos, previousPos, currentPos;
     penPos.x = args.penPosition.x;
@@ -1052,13 +1143,13 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
     ////for the rotation bar/translation/center dragging we dont use the same transform, we don't want to undo the rotation transform
     if (_mouseState != eDraggingTranslation && _mouseState != eDraggingCenter) {
         ///undo skew + rotation to the current position
-        rotation = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
-        transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
-        transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+        rotation = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, targetCenter.x, targetCenter.y);
+        transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrder, rot, targetCenter.x, targetCenter.y);
+        transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, targetCenter.x, targetCenter.y);
     } else {
-        rotation = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, 0., center.x, center.y);
-        transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
-        transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrderYX, 0., center.x, center.y);
+        rotation = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, 0., targetCenter.x, targetCenter.y);
+        transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrder, 0., targetCenter.x, targetCenter.y);
+        transformscale = OFX::ofxsMatInverseTransformCanonical(0., 0., scale.x, scale.y, skewX, skewY, (bool)skewOrder, 0., targetCenter.x, targetCenter.y);
     }
 
     rotationPos = rotation * penPos;
@@ -1084,35 +1175,40 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         currentPos.x /= currentPos.z;
         currentPos.y /= currentPos.z;
     }
-    
-    
-    
-    bool ret = true;
+
     if (_mouseState == eReleased) {
         // we are not axis-aligned
         double meanPixelScale = (pscale.x + pscale.y) / 2.;
         double hoverTolerance = (POINT_SIZE / 2.) * meanPixelScale;
         if (squareContains(transformedPos, centerPoint)) {
             _drawState = eCenterPointHovered;
+            didSomething = true;
         } else if (squareContains(transformedPos, leftPoint)) {
             _drawState = eLeftPointHovered;
+            didSomething = true;
         } else if (squareContains(transformedPos, rightPoint)) {
             _drawState = eRightPointHovered;
+            didSomething = true;
         } else if (squareContains(transformedPos, topPoint)) {
             _drawState = eTopPointHovered;
+            didSomething = true;
         } else if (squareContains(transformedPos, bottomPoint)) {
             _drawState = eBottomPointHovered;
-        } else if (isOnEllipseBorder(transformedPos, ellipseRadius, center)) {
+            didSomething = true;
+        } else if (isOnEllipseBorder(transformedPos, targetRadius, targetCenter)) {
             _drawState = eCircleHovered;
-        } else if (isOnRotationBar(rotationPos, ellipseRadius.x, center, pscale, hoverTolerance)) {
+            didSomething = true;
+        } else if (isOnRotationBar(rotationPos, targetRadius.x, targetCenter, pscale, hoverTolerance)) {
             _drawState = eRotationBarHovered;
-        } else if (isOnSkewXBar(transformedPos,ellipseRadius.y,center,pscale,hoverTolerance)) {
+            didSomething = true;
+        } else if (isOnSkewXBar(transformedPos, targetRadius.y, targetCenter, pscale, hoverTolerance)) {
             _drawState = eSkewXBarHoverered;
-        } else if (isOnSkewYBar(transformedPos,ellipseRadius.x,center,pscale,hoverTolerance)) {
+            didSomething = true;
+        } else if (isOnSkewYBar(transformedPos, targetRadius.x, targetCenter, pscale, hoverTolerance)) {
             _drawState = eSkewYBarHoverered;
+            didSomething = true;
         } else {
             _drawState = eInActive;
-            ret = false;
         }
     } else if (_mouseState == eDraggingCircle) {
         double minX,minY,maxX,maxY;
@@ -1121,44 +1217,44 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         // we need to compute the backtransformed points with the scale
         
         // the scale ratio is the ratio of distances to the center
-        double prevDistSq = (center.x - previousPos.x)*(center.x - previousPos.x) + (center.y - previousPos.y)*(center.y - previousPos.y);
+        double prevDistSq = (targetCenter.x - previousPos.x)*(targetCenter.x - previousPos.x) + (targetCenter.y - previousPos.y)*(targetCenter.y - previousPos.y);
         if (prevDistSq != 0.) {
-            const double distSq = (center.x - currentPos.x)*(center.x - currentPos.x) + (center.y - currentPos.y)*(center.y - currentPos.y);
+            const double distSq = (targetCenter.x - currentPos.x)*(targetCenter.x - currentPos.x) + (targetCenter.y - currentPos.y)*(targetCenter.y - currentPos.y);
             const double distRatio = std::sqrt(distSq/prevDistSq);
             scale.x *= distRatio;
             scale.y *= distRatio;
-            _scale->setValue(scale.x, scale.y);
+            //_scale->setValue(scale.x, scale.y);
+            scaleChanged = true;
         }
     } else if (_mouseState == eDraggingLeftPoint || _mouseState == eDraggingRightPoint) {
         // avoid division by zero
-        if (center.x != previousPos.x) {
+        if (targetCenter.x != previousPos.x) {
             double minX,minY,maxX,maxY;
             _scale->getRange(minX, minY, maxX, maxY);
-            const double scaleRatio = (center.x - currentPos.x)/(center.x - previousPos.x);
-            scale.x *= scaleRatio;
-            scale.x = std::max(minX, std::min(scale.x, maxX));
-            if (scaleUniform) {
-                scale.y = scale.x;
-            }
-            _scale->setValue(scale.x, scale.y);
+            const double scaleRatio = (targetCenter.x - currentPos.x)/(targetCenter.x - previousPos.x);
+            OfxPointD newScale;
+            newScale.x = scale.x * scaleRatio;
+            newScale.x = std::max(minX, std::min(newScale.x, maxX));
+            newScale.y = scaleUniform ? newScale.x : scale.y;
+            scale = newScale;
+            //_scale->setValue(scale.x, scale.y);
+            scaleChanged = true;
         }
     } else if (_mouseState == eDraggingTopPoint || _mouseState == eDraggingBottomPoint) {
         // avoid division by zero
-        if (center.y != previousPos.y) {
+        if (targetCenter.y != previousPos.y) {
             double minX,minY,maxX,maxY;
             _scale->getRange(minX, minY, maxX, maxY);
-            const double scaleRatio = (center.y - currentPos.y)/(center.y - previousPos.y);
-            scale.y *= scaleRatio;
-            scale.y = std::max(minY, std::min(scale.y, maxY));
-            if (scaleUniform) {
-                scale.x = scale.y;
-            }
-            _scale->setValue(scale.x, scale.y);
+            const double scaleRatio = (targetCenter.y - currentPos.y)/(targetCenter.y - previousPos.y);
+            OfxPointD newScale;
+            newScale.y = scale.y * scaleRatio;
+            newScale.y = std::max(minY, std::min(newScale.y, maxY));
+            newScale.x = scaleUniform ? newScale.y : scale.x;
+            scale = newScale;
+            //_scale->setValue(scale.x, scale.y);
+            scaleChanged = true;
         }
     } else if (_mouseState == eDraggingTranslation) {
-        OfxPointD currentTranslation;
-        _translate->getValueAtTime(args.time, currentTranslation.x, currentTranslation.y);
-        
         double dx = args.penPosition.x - _lastMousePos.x;
         double dy = args.penPosition.y - _lastMousePos.y;
         
@@ -1168,19 +1264,20 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         
         dx = _orientation == eOrientationVertical ? 0 : dx;
         dy = _orientation == eOrientationHorizontal ? 0 : dy;
-        double newx = currentTranslation.x + dx;
-        double newy = currentTranslation.y + dy;
+        double newx = translate.x + dx;
+        double newy = translate.y + dy;
         // round newx/y to the closest int, 1/10 int, etc
         // this make parameter editing easier
         newx = fround(newx, pscale.x);
         newy = fround(newy, pscale.y);
-        _translate->setValue(newx,newy);
+        translate.x = newx;
+        translate.y = newy;
+        //_translate->setValue(translate.x, translate.y);
+        translateChanged = true;
     } else if (_mouseState == eDraggingCenter) {
-        OfxPointD currentTranslation;
-        _translate->getValueAtTime(args.time, currentTranslation.x, currentTranslation.y);
         OfxPointD currentCenter;
         _center->getValueAtTime(args.time, currentCenter.x, currentCenter.y);
-        OFX::Matrix3x3 R = ofxsMatScale(1. / scale.x, 1. / scale.y) * ofxsMatSkewXY(-skewX, -skewY, !skewOrderYX) * ofxsMatRotation(rot);
+        OFX::Matrix3x3 R = ofxsMatScale(1. / scale.x, 1. / scale.y) * ofxsMatSkewXY(-skewX, -skewY, !skewOrder) * ofxsMatRotation(rot);
 
         double dx = args.penPosition.x - _lastMousePos.x;
         double dy = args.penPosition.y - _lastMousePos.y;
@@ -1209,8 +1306,11 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         // this make parameter editing easier
         newx = fround(newx, pscale.x);
         newy = fround(newy, pscale.y);
-        _plugin->beginEditBlock("setCenter");
-        _center->setValue(newx,newy);
+        center.x = newx;
+        center.y = newy;
+        //_plugin->beginEditBlock("setCenter");
+        //_center->setValue(center.x, center.y);
+        centerChanged = true;
         // recompute dxrot,dyrot after rounding
         double det = ofxsMatDeterminant(R);
         if (det != 0.) {
@@ -1228,45 +1328,92 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
             }
             dx = dRot.x;
             dy = dRot.y;
-            currentTranslation.x += dx - dxrot;
-            currentTranslation.y += dy - dyrot;
-            _translate->setValue(currentTranslation.x,currentTranslation.y);
+            OfxPointD newTranslation;
+            newTranslation.x = translate.x + dx - dxrot;
+            newTranslation.y = translate.y + dy - dyrot;
+            translate = newTranslation;
+            //_translate->setValue(translate.x, translate.y);
+            translateChanged = true;
         }
-        _plugin->endEditBlock();
+        //_plugin->endEditBlock();
     } else if (_mouseState == eDraggingRotationBar) {
         OfxPointD diffToCenter;
         ///the current mouse position (untransformed) is doing has a certain angle relative to the X axis
         ///which can be computed by : angle = arctan(opposite / adjacent)
-        diffToCenter.y = rotationPos.y - center.y;
-        diffToCenter.x = rotationPos.x - center.x;
+        diffToCenter.y = rotationPos.y - targetCenter.y;
+        diffToCenter.x = rotationPos.x - targetCenter.x;
         double angle = std::atan2(diffToCenter.y, diffToCenter.x);
-        double angledegrees = currentRotation+OFX::ofxsToDegrees(angle);
+        double angledegrees = rotate + OFX::ofxsToDegrees(angle);
         double closest90 = 90. * std::floor((angledegrees + 45.)/90.);
         if (std::fabs(angledegrees - closest90) < 5.) {
             // snap to closest multiple of 90.
             angledegrees = closest90;
         }
-        _rotate->setValue(angledegrees);
+        rotate = angledegrees;
+        //_rotate->setValue(rotate);
+        rotateChanged = true;
         
     } else if (_mouseState == eDraggingSkewXBar) {
         // avoid division by zero
-        if (scale.y != 0. && center.y != previousPos.y) {
-            const double addSkew = (scale.x/scale.y)*(currentPos.x - previousPos.x)/(currentPos.y - center.y);
-            _skewX->setValue(skewX + addSkew);
+        if (scale.y != 0. && targetCenter.y != previousPos.y) {
+            const double addSkew = (scale.x/scale.y)*(currentPos.x - previousPos.x)/(currentPos.y - targetCenter.y);
+            skewX = skewX + addSkew;
+            //_skewX->setValue(skewX);
+            skewXChanged = true;
         }
     } else if (_mouseState == eDraggingSkewYBar) {
         // avoid division by zero
-        if (scale.x != 0. && center.x != previousPos.x) {
-            const double addSkew = (scale.y/scale.x)*(currentPos.y - previousPos.y)/(currentPos.x - center.x);
-            _skewY->setValue(skewY + addSkew);
+        if (scale.x != 0. && targetCenter.x != previousPos.x) {
+            const double addSkew = (scale.y/scale.x)*(currentPos.y - previousPos.y)/(currentPos.x - targetCenter.x);
+            skewY = skewY + addSkew;
+            //_skewY->setValue(skewY + addSkew);
+            skewYChanged = true;
         }
     } else {
         assert(false);
     }
+
+    _centerDrag = center;
+    _translateDrag = translate;
+    _scaleParamDrag = scaleParam;
+    _scaleUniformDrag = scaleUniform;
+    _rotateDrag = rotate;
+    _skewXDrag = skewX;
+    _skewYDrag = skewY;
+    _skewOrderDrag = skewOrder;
+    _invertedDrag = inverted;
+
+    bool valuesChanged = (centerChanged || translateChanged || scaleChanged || rotateChanged || skewXChanged || skewYChanged);
+
+    if (_mouseState != eReleased && _interactiveDrag && valuesChanged) {
+        // no need to redraw overlay since it is slave to the paramaters
+        _plugin->beginEditBlock("setTransform");
+        if (centerChanged) {
+            _center->setValue(center.x, center.y);
+        }
+        if (translateChanged) {
+            _translate->setValue(translate.x, translate.y);
+        }
+        if (scaleChanged) {
+            _scale->setValue(scale.x, scale.y);
+        }
+        if (rotateChanged) {
+            _rotate->setValue(rotate);
+        }
+        if (skewXChanged) {
+            _skewX->setValue(skewX);
+        }
+        if (skewYChanged) {
+            _skewY->setValue(skewY);
+        }
+        _plugin->endEditBlock();
+    } else if (didSomething || valuesChanged) {
+        _effect->redrawOverlays();
+    }
+
     _lastMousePos = args.penPosition;
-    _effect->redrawOverlays();
-    return ret;
-    
+
+    return didSomething || valuesChanged;
 }
 
 bool TransformInteract::penDown(const OFX::PenArgs &args)
@@ -1274,39 +1421,72 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     using OFX::Matrix3x3;
 
     const OfxPointD &pscale = args.pixelScale;
+    const double time = args.time;
 
-    OfxPointD center,left,right,top,bottom;
-    getPoints(args.time, pscale, &center, &left, &bottom, &top, &right);
-    OfxRectD centerPoint = rectFromCenterPoint(center, pscale);
+    OfxPointD center;
+    OfxPointD translate;
+    OfxPointD scaleParam;
+    bool scaleUniform;
+    double rotate;
+    double skewX, skewY;
+    int skewOrder;
+    bool inverted;
+
+    if (_mouseState == eReleased) {
+        _center->getValueAtTime(time, center.x, center.y);
+        _translate->getValueAtTime(time, translate.x, translate.y);
+        _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
+        _scaleUniform->getValueAtTime(time, scaleUniform);
+        _rotate->getValueAtTime(time, rotate);
+        _skewX->getValueAtTime(time, skewX);
+        _skewY->getValueAtTime(time, skewY);
+        _skewOrder->getValueAtTime(time, skewOrder);
+        _invert->getValueAtTime(time, inverted);
+        if (_interactive) {
+            _interactive->getValueAtTime(args.time, _interactiveDrag);
+        }
+    } else {
+        center = _centerDrag;
+        translate = _translateDrag;
+        scaleParam = _scaleParamDrag;
+        scaleUniform = _scaleUniformDrag;
+        rotate = _rotateDrag;
+        skewX = _skewXDrag;
+        skewY = _skewYDrag;
+        skewOrder = _skewOrderDrag;
+        inverted = _invertedDrag;
+    }
+
+    OfxPointD targetCenter;
+    getTargetCenter(center, translate, &targetCenter);
+
+    OfxPointD scale;
+    getScale(scaleParam, scaleUniform, &scale);
+
+    OfxPointD targetRadius;
+    getTargetRadius(scale, pscale, &targetRadius);
+
+    OfxPointD left, right, bottom, top;
+    getTargetPoints(targetCenter, targetRadius, &left, &bottom, &top, &right);
+
+    OfxRectD centerPoint = rectFromCenterPoint(targetCenter, pscale);
     OfxRectD leftPoint = rectFromCenterPoint(left, pscale);
     OfxRectD rightPoint = rectFromCenterPoint(right, pscale);
     OfxRectD topPoint = rectFromCenterPoint(top, pscale);
     OfxRectD bottomPoint = rectFromCenterPoint(bottom, pscale);
     
-    OfxPointD ellipseRadius;
-    getCircleRadius(args.time, pscale, &ellipseRadius);
-    
-    
-    double currentRotation;
-    _rotate->getValueAtTime(args.time, currentRotation);
-    
-    double skewX, skewY;
-    int skewOrderYX;
-    _skewX->getValueAtTime(args.time, skewX);
-    _skewY->getValueAtTime(args.time, skewY);
-    _skewOrder->getValueAtTime(args.time, skewOrderYX);
-    
+
     OFX::Point3D transformedPos, rotationPos;
     transformedPos.x = args.penPosition.x;
     transformedPos.y = args.penPosition.y;
     transformedPos.z = 1.;
     
-    double rot = OFX::ofxsToRadians(currentRotation);
+    double rot = OFX::ofxsToRadians(rotate);
 
     ///now undo skew + rotation to the current position
     OFX::Matrix3x3 rotation, transform;
-    rotation = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, center.x, center.y);
-    transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrderYX, rot, center.x, center.y);
+    rotation = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., 0., 0., false, rot, targetCenter.x, targetCenter.y);
+    transform = OFX::ofxsMatInverseTransformCanonical(0., 0., 1., 1., skewX, skewY, (bool)skewOrder, rot, targetCenter.x, targetCenter.y);
 
     rotationPos = rotation * transformedPos;
     if (rotationPos.z != 0) {
@@ -1323,45 +1503,91 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
     
     double pressToleranceX = 5 * pscale.x;
     double pressToleranceY = 5 * pscale.y;
-    bool ret = true;
+
+    bool didSomething = false;
     if (squareContains(transformedPos, centerPoint,pressToleranceX,pressToleranceY)) {
         _mouseState = _modifierStateCtrl ? eDraggingCenter : eDraggingTranslation;
         if (_modifierStateShift > 0) {
             _orientation = eOrientationNotSet;
         }
+        didSomething = true;
+
     } else if (squareContains(transformedPos, leftPoint,pressToleranceX,pressToleranceY)) {
         _mouseState = eDraggingLeftPoint;
+        didSomething = true;
+
     } else if (squareContains(transformedPos, rightPoint,pressToleranceX,pressToleranceY)) {
         _mouseState = eDraggingRightPoint;
+        didSomething = true;
+
     } else if (squareContains(transformedPos, topPoint,pressToleranceX,pressToleranceY)) {
         _mouseState = eDraggingTopPoint;
+        didSomething = true;
+
     } else if (squareContains(transformedPos, bottomPoint,pressToleranceX,pressToleranceY)) {
         _mouseState = eDraggingBottomPoint;
-    } else if (isOnEllipseBorder(transformedPos,ellipseRadius, center)) {
+        didSomething = true;
+
+    } else if (isOnEllipseBorder(transformedPos, targetRadius, targetCenter)) {
         _mouseState = eDraggingCircle;
-    } else if (isOnRotationBar(rotationPos, ellipseRadius.x, center, pscale, pressToleranceY)) {
+        didSomething = true;
+
+    } else if (isOnRotationBar(rotationPos, targetRadius.x, targetCenter, pscale, pressToleranceY)) {
         _mouseState = eDraggingRotationBar;
-    } else if (isOnSkewXBar(transformedPos,ellipseRadius.y,center,pscale,pressToleranceY)) {
+        didSomething = true;
+
+    } else if (isOnSkewXBar(transformedPos, targetRadius.y, targetCenter, pscale, pressToleranceY)) {
         _mouseState = eDraggingSkewXBar;
-    } else if (isOnSkewYBar(transformedPos,ellipseRadius.x,center,pscale,pressToleranceX)) {
+        didSomething = true;
+
+    } else if (isOnSkewYBar(transformedPos, targetRadius.x, targetCenter, pscale, pressToleranceX)) {
         _mouseState = eDraggingSkewYBar;
+        didSomething = true;
+
     } else {
         _mouseState = eReleased;
-        ret =  false;
     }
     
     _lastMousePos = args.penPosition;
-    
-    _effect->redrawOverlays();
-    return ret;
+
+    _centerDrag = center;
+    _translateDrag = translate;
+    _scaleParamDrag = scaleParam;
+    _scaleUniformDrag = scaleUniform;
+    _rotateDrag = rotate;
+    _skewXDrag = skewX;
+    _skewYDrag = skewY;
+    _skewOrderDrag = skewOrder;
+    _invertedDrag = inverted;
+
+    if (didSomething) {
+        _effect->redrawOverlays();
+    }
+
+    return didSomething;
 }
 
 bool TransformInteract::penUp(const OFX::PenArgs &args)
 {
     bool ret = _mouseState != eReleased;
+
+    if (!_interactiveDrag && _mouseState != eReleased) {
+        // no need to redraw overlay since it is slave to the paramaters
+        _plugin->beginEditBlock("setTransform");
+        _center->setValue(_centerDrag.x, _centerDrag.y);
+        _translate->setValue(_translateDrag.x, _translateDrag.y);
+        _scale->setValue(_scaleParamDrag.x, _scaleParamDrag.y);
+        _rotate->setValue(_rotateDrag);
+        _skewX->setValue(_skewXDrag);
+        _skewY->setValue(_skewYDrag);
+        _plugin->endEditBlock();
+    } else if (_mouseState != eReleased) {
+        _effect->redrawOverlays();
+    }
+
     _mouseState = eReleased;
     _lastMousePos = args.penPosition;
-    _effect->redrawOverlays();
+
     return ret;
 }
 
@@ -1540,6 +1766,15 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamResetCenter);
         param->setLabels(kParamResetCenterLabel, kParamResetCenterLabel, kParamResetCenterLabel);
         param->setHint(kParamResetCenterHint);
+        page->addChild(*param);
+    }
+
+    // interactive
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
+        param->setLabels(kParamInteractiveLabel, kParamInteractiveLabel, kParamInteractiveLabel);
+        param->setHint(kParamInteractiveHint);
+        param->setEvaluateOnChange(false);
         page->addChild(*param);
     }
 }
