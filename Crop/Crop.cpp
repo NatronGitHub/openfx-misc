@@ -702,6 +702,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamRectangleInteractInteractive);
         param->setLabels(kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel);
         param->setHint(kParamRectangleInteractInteractiveHint);
+        param->setEvaluateOnChange(false);
         page->addChild(*param);
     }
 

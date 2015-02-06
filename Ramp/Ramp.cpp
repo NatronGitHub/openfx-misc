@@ -1091,22 +1091,23 @@ RampInteract::penUp(const PenArgs &args)
     bool didSomething = false;
     const OfxPointD &pscale = args.pixelScale;
 
-    if (_state == eInteractStateDraggingPoint0) {
-        // round newx/y to the closest int, 1/10 int, etc
-        // this make parameter editing easier
-      
-        _point0->setValue(fround(_point0DragPos.x, pscale.x), fround(_point0DragPos.y, pscale.y));
-        didSomething = true;
-    } else if (_state == eInteractStateDraggingPoint1) {
-        _point1->setValue(fround(_point1DragPos.x, pscale.x), fround(_point1DragPos.y, pscale.y));
-        didSomething = true;
-    }
-    _state = eInteractStateIdle;
+    if (!_interactiveDrag && _state != eInteractStateIdle) {
+        if (_state == eInteractStateDraggingPoint0) {
+            // round newx/y to the closest int, 1/10 int, etc
+            // this make parameter editing easier
 
-    if (didSomething) {
+            _point0->setValue(fround(_point0DragPos.x, pscale.x), fround(_point0DragPos.y, pscale.y));
+            didSomething = true;
+        } else if (_state == eInteractStateDraggingPoint1) {
+            _point1->setValue(fround(_point1DragPos.x, pscale.x), fround(_point1DragPos.y, pscale.y));
+            didSomething = true;
+        }
+    } else  if (_state != eInteractStateIdle) {
         _effect->redrawOverlays();
     }
-
+    
+    _state = eInteractStateIdle;
+    
     return didSomething;
 }
 
@@ -1282,6 +1283,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
         param->setLabels(kParamInteractiveLabel, kParamInteractiveLabel, kParamInteractiveLabel);
         param->setHint(kParamInteractiveHint);
+        param->setEvaluateOnChange(false);
         page->addChild(*param);
     }
 

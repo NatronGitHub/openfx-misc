@@ -1570,10 +1570,8 @@ bool TransformInteract::penDown(const OFX::PenArgs &args)
 bool TransformInteract::penUp(const OFX::PenArgs &args)
 {
     bool ret = _mouseState != eReleased;
-    _mouseState = eReleased;
-    _lastMousePos = args.penPosition;
 
-    if (!_interactiveDrag) {
+    if (!_interactiveDrag && _mouseState != eReleased) {
         // no need to redraw overlay since it is slave to the paramaters
         _plugin->beginEditBlock("setTransform");
         _center->setValue(_centerDrag.x, _centerDrag.y);
@@ -1583,9 +1581,13 @@ bool TransformInteract::penUp(const OFX::PenArgs &args)
         _skewX->setValue(_skewXDrag);
         _skewY->setValue(_skewYDrag);
         _plugin->endEditBlock();
-    } else if (ret) {
+    } else if (_mouseState != eReleased) {
         _effect->redrawOverlays();
     }
+
+    _mouseState = eReleased;
+    _lastMousePos = args.penPosition;
+
     return ret;
 }
 
@@ -1772,6 +1774,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
         param->setLabels(kParamInteractiveLabel, kParamInteractiveLabel, kParamInteractiveLabel);
         param->setHint(kParamInteractiveHint);
+        param->setEvaluateOnChange(false);
         page->addChild(*param);
     }
 }

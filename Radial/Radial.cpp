@@ -942,6 +942,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamRectangleInteractInteractive);
         param->setLabels(kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel);
         param->setHint(kParamRectangleInteractInteractiveHint);
+        param->setEvaluateOnChange(false);
         page->addChild(*param);
     }
 
