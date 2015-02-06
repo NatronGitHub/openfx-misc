@@ -1408,7 +1408,7 @@ ImageStatisticsPlugin::update(OFX::Image* srcImg, double time, const OfxRectI &a
     _statMean->setValueAtTime(time, results.mean.r, results.mean.g, results.mean.b, results.mean.a);
     _statSDev->setValueAtTime(time, results.sdev.r, results.sdev.g, results.sdev.b, results.sdev.a);
     _statSkewness->setValueAtTime(time, results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
-    printf("skewness = %g %g %g %g\n", results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
+   // printf("skewness = %g %g %g %g\n", results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
     _statKurtosis->setValueAtTime(time, results.kurtosis.r, results.kurtosis.g, results.kurtosis.b, results.kurtosis.a);
     endEditBlock();
 }
