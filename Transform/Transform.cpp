@@ -303,12 +303,13 @@ TransformPlugin::resetCenter(double time)
         return;
     }
     if (rod.x1 == 0. && rod.x2 == 0. && rod.y1 == 0. && rod.y2 == 0.) {
+        // default to project window
         OfxPointD offset = getProjectOffset();
-        OfxPointD extent = getProjectExtent();
+        OfxPointD size = getProjectSize();
         rod.x1 = offset.x;
+        rod.x2 = offset.x + size.x;
         rod.y1 = offset.y;
-        rod.x2 = extent.x;
-        rod.y2 = extent.y;
+        rod.y2 = offset.y + size.y;
     }
     double currentRotation;
     _rotate->getValueAtTime(time, currentRotation);
