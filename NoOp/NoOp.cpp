@@ -81,16 +81,16 @@ public:
     /** @brief ctor */
     NoOpPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClip_(0)
-    , forceCopy_(0)
+    , _dstClip(0)
+    , _srcClip(0)
+    , _forceCopy(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
-        forceCopy_ = fetchBooleanParam(kParamForceCopy);
-        assert(forceCopy_);
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
+        _forceCopy = fetchBooleanParam(kParamForceCopy);
+        assert(_forceCopy);
     }
 
 private:
@@ -108,10 +108,10 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcClip;
 
-    OFX::BooleanParam *forceCopy_;
+    OFX::BooleanParam *_forceCopy;
 };
 
 
@@ -127,7 +127,7 @@ void
 NoOpPlugin::render(const OFX::RenderArguments &args)
 {
     bool forceCopy;
-    forceCopy_->getValue(forceCopy);
+    _forceCopy->getValue(forceCopy);
 
     if (!forceCopy) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host should not render");
@@ -135,7 +135,7 @@ NoOpPlugin::render(const OFX::RenderArguments &args)
     }
 
     // do the rendering
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -147,7 +147,7 @@ NoOpPlugin::render(const OFX::RenderArguments &args)
     }
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -168,10 +168,10 @@ bool
 NoOpPlugin::isIdentity(const IsIdentityArguments &/*args*/, Clip * &identityClip, double &/*identityTime*/)
 {
     bool forceCopy;
-    forceCopy_->getValue(forceCopy);
+    _forceCopy->getValue(forceCopy);
 
     if (!forceCopy) {
-        identityClip = srcClip_;
+        identityClip = _srcClip;
         return true;
     } else {
         return false;
@@ -184,11 +184,11 @@ bool
 NoOpPlugin::getTransform(const OFX::TransformArguments &/*args*/, OFX::Clip * &transformClip, double transformMatrix[9])
 {
     bool forceCopy;
-    forceCopy_->getValue(forceCopy);
+    _forceCopy->getValue(forceCopy);
     if (forceCopy) {
         return false;
     }
-    transformClip = srcClip_;
+    transformClip = _srcClip;
     transformMatrix[0] = 1.;
     transformMatrix[1] = 0.;
     transformMatrix[2] = 0.;
@@ -299,10 +299,10 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string
         std::ostringstream oss;
         oss << "Clip Info:\n\n";
         oss << "Input: ";
-        if (!srcClip_) {
+        if (!_srcClip) {
             oss << "N/A";
         } else {
-            OFX::Clip &c = *srcClip_;
+            OFX::Clip &c = *_srcClip;
             oss << pixelComponentString(c.getPixelComponentsProperty());
             oss << bitDepthString(c.getPixelDepth());
             oss << " (unmapped: ";
@@ -340,10 +340,10 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string
         }
         oss << "\n\n";
         oss << "Output: ";
-        if (!dstClip_) {
+        if (!_dstClip) {
             oss << "N/A";
         } else {
-            OFX::Clip &c = *dstClip_;
+            OFX::Clip &c = *_dstClip;
             oss << pixelComponentString(c.getPixelComponentsProperty());
             oss << bitDepthString(c.getPixelDepth());
             oss << " (unmapped: ";

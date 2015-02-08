@@ -458,15 +458,15 @@ class ClampPlugin : public OFX::ImageEffect
     /** @brief ctor */
     ClampPlugin(OfxImageEffectHandle handle)
             : ImageEffect(handle)
-            , dstClip_(0)
-            , srcClip_(0)
+            , _dstClip(0)
+            , _srcClip(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha));
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA || srcClip_->getPixelComponents() == ePixelComponentAlpha));
-        maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-        assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA || _srcClip->getPixelComponents() == ePixelComponentAlpha));
+        _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _processR = fetchBooleanParam(kParamProcessR);
         _processG = fetchBooleanParam(kParamProcessG);
         _processB = fetchBooleanParam(kParamProcessB);
@@ -506,9 +506,9 @@ class ClampPlugin : public OFX::ImageEffect
 
   private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
-    OFX::Clip *maskClip_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcClip;
+    OFX::Clip *_maskClip;
 
     OFX::BooleanParam* _processR;
     OFX::BooleanParam* _processG;
@@ -541,8 +541,15 @@ void
 ClampPlugin::setupAndProcess(ClampBase &processor, const OFX::RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -551,11 +558,9 @@ ClampPlugin::setupAndProcess(ClampBase &processor, const OFX::RenderArguments &a
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
     // fetch main input image
-    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
 
     // make sure bit depths are sane
     if (src.get()) {
@@ -575,10 +580,10 @@ ClampPlugin::setupAndProcess(ClampBase &processor, const OFX::RenderArguments &a
     }
 
     // auto ptr for the mask.
-    std::auto_ptr<OFX::Image> mask((getContext() != OFX::eContextFilter) ? maskClip_->fetchImage(args.time) : 0);
+    std::auto_ptr<OFX::Image> mask((getContext() != OFX::eContextFilter) ? _maskClip->fetchImage(args.time) : 0);
 
     // do we do masking
-    if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+    if (getContext() != OFX::eContextFilter && _maskClip->isConnected()) {
         if (mask.get()) {
             if (mask->getRenderScale().x != args.renderScale.x ||
                 mask->getRenderScale().y != args.renderScale.y ||
@@ -645,8 +650,8 @@ void
 ClampPlugin::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
@@ -734,7 +739,7 @@ ClampPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
     _mix->getValueAtTime(args.time, mix);
 
     if (mix == 0. || (!processR && !processG && !processB && !processA)) {
-        identityClip = srcClip_;
+        identityClip = _srcClip;
         return true;
     }
 
@@ -743,7 +748,7 @@ ClampPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
     _maximumEnable->getValueAtTime(args.time, maximumEnable);
 
     if (!minimumEnable && !maximumEnable) {
-        identityClip = srcClip_;
+        identityClip = _srcClip;
         return true;
     }
 
@@ -753,8 +758,8 @@ ClampPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
 void
 ClampPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
-        switch (srcClip_->getPreMultiplication()) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+        switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
                 _premult->setValue(false);
                 break;
@@ -765,7 +770,7 @@ ClampPlugin::changedClip(const InstanceChangedArgs &args, const std::string &cli
                 _premult->setValue(false);
                 break;
         }
-        switch (srcClip_->getPixelComponents()) {
+        switch (_srcClip->getPixelComponents()) {
             case OFX::ePixelComponentAlpha:
                 _processR->setValue(false);
                 _processG->setValue(false);

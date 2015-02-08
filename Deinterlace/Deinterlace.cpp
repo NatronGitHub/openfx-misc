@@ -174,10 +174,10 @@ enum YadifModeEnum {
 class DeinterlacePlugin : public OFX::ImageEffect 
 {
 public:
-    DeinterlacePlugin(OfxImageEffectHandle handle) : ImageEffect(handle), dstClip_(0), srcClip_(0)
+    DeinterlacePlugin(OfxImageEffectHandle handle) : ImageEffect(handle), _dstClip(0), _srcClip(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
 
         mode = fetchChoiceParam("mode");
         fieldOrder = fetchChoiceParam("fieldOrder");
@@ -197,8 +197,8 @@ private:
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcClip;
 
     OFX::ChoiceParam *fieldOrder, *mode, *parity;
     
@@ -431,10 +431,10 @@ void DeinterlacePlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -445,9 +445,9 @@ void DeinterlacePlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time)),
-                              srcp(srcClip_->fetchImage(args.time-1.0)),
-                              srcn(srcClip_->fetchImage(args.time+1.0));
+    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time)),
+                              srcp(_srcClip->fetchImage(args.time-1.0)),
+                              srcn(_srcClip->fetchImage(args.time+1.0));
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -590,7 +590,7 @@ void DeinterlacePlugin::render(const OFX::RenderArguments &args)
 void
 DeinterlacePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-    // set the fielding of dstClip_
+    // set the fielding of _dstClip
     clipPreferences.setOutputFielding(OFX::eFieldNone);
 }
 
@@ -668,6 +668,7 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     srcClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
+    dstClip->setFieldExtraction(OFX::eFieldExtractBoth);
 
 
     PageParamDescriptor *page = desc.definePageParam("Controls");

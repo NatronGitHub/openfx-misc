@@ -203,16 +203,16 @@ public:
     /** @brief ctor */
     DifferencePlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClipA_(0)
-    , srcClipB_(0)
+    , _dstClip(0)
+    , _srcClipA(0)
+    , _srcClipB(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha));
-        srcClipA_ = fetchClip(kClipA);
-        assert(srcClipA_ && (srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA || srcClipA_->getPixelComponents() == ePixelComponentAlpha));
-        srcClipB_ = fetchClip(kClipB);
-        assert(srcClipB_ && (srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA || srcClipB_->getPixelComponents() == ePixelComponentAlpha));
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));
+        _srcClipA = fetchClip(kClipA);
+        assert(_srcClipA && (_srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentAlpha));
+        _srcClipB = fetchClip(kClipB);
+        assert(_srcClipB && (_srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentAlpha));
         _offset = fetchDoubleParam(kParamOffset);
         assert(_offset);
         _gain = fetchDoubleParam(kParamGain);
@@ -228,9 +228,9 @@ private:
     
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClipA_;
-    OFX::Clip *srcClipB_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcClipA;
+    OFX::Clip *_srcClipB;
 
     OFX::DoubleParam *_offset;
     OFX::DoubleParam *_gain;
@@ -243,8 +243,15 @@ private:
 void
 DifferencePlugin::setupAndProcess(DifferencerBase &processor, const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -253,10 +260,8 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor, const OFX::RenderA
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const OFX::Image> srcA(srcClipA_->fetchImage(args.time));
-    std::auto_ptr<const OFX::Image> srcB(srcClipB_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> srcA(_srcClipA->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> srcB(_srcClipB->fetchImage(args.time));
     if (srcA.get()) {
         if (srcA->getRenderScale().x != args.renderScale.x ||
             srcA->getRenderScale().y != args.renderScale.y ||
@@ -303,8 +308,8 @@ DifferencePlugin::render(const OFX::RenderArguments &args)
 {
     
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {

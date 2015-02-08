@@ -202,15 +202,15 @@ public:
     /** @brief ctor */
     TestRenderPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClip_(0)
+    , _dstClip(0)
+    , _srcClip(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha));
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA || srcClip_->getPixelComponents() == ePixelComponentAlpha));
-        maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-        assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA || _srcClip->getPixelComponents() == ePixelComponentAlpha));
+        _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         _color[0] = fetchRGBAParam(kParamColor0);
         _color[1] = fetchRGBAParam(kParamColor0);
@@ -246,9 +246,9 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
-    OFX::Clip *maskClip_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcClip;
+    OFX::Clip *_maskClip;
 
     OFX::RGBAParam* _color[6];
     OFX::BooleanParam* _identityEven;
@@ -273,8 +273,15 @@ void
 TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::setupAndProcess(TestRenderBase &processor, const OFX::RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -283,11 +290,9 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
     // fetch main input image
-    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
 
     // make sure bit depths are sane
     if (src.get()) {
@@ -305,10 +310,10 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
         OfxRectI srcRod; // = src->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-        OFX::MergeImages2D::toPixelEnclosing(srcClip_->getRegionOfDefinition(args.time), args.renderScale, srcClip_->getPixelAspectRatio(), &srcRod);
+        OFX::MergeImages2D::toPixelEnclosing(_srcClip->getRegionOfDefinition(args.time), args.renderScale, _srcClip->getPixelAspectRatio(), &srcRod);
         const OfxRectI& srcBounds = src->getBounds();
         OfxRectI dstRod; // = dst->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-        OFX::MergeImages2D::toPixelEnclosing(dstClip_->getRegionOfDefinition(args.time), args.renderScale, dstClip_->getPixelAspectRatio(), &dstRod);
+        OFX::MergeImages2D::toPixelEnclosing(_dstClip->getRegionOfDefinition(args.time), args.renderScale, _dstClip->getPixelAspectRatio(), &dstRod);
         const OfxRectI& dstBounds = dst->getBounds();
 
         if (!supportsTiles) {
@@ -338,10 +343,10 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
     }
 
     // auto ptr for the mask.
-    std::auto_ptr<OFX::Image> mask((getContext() != OFX::eContextFilter) ? maskClip_->fetchImage(args.time) : 0);
+    std::auto_ptr<OFX::Image> mask((getContext() != OFX::eContextFilter) ? _maskClip->fetchImage(args.time) : 0);
 
     // do we do masking
-    if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+    if (getContext() != OFX::eContextFilter && _maskClip->isConnected()) {
         if (mask.get()) {
             if (mask->getRenderScale().x != args.renderScale.x ||
                 mask->getRenderScale().y != args.renderScale.y ||
@@ -384,8 +389,8 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::ren
     }
 
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
@@ -476,7 +481,7 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isI
     _mix->getValueAtTime(args.time, mix);
 
     if (mix == 0.) {
-        identityClip = srcClip_;
+        identityClip = _srcClip;
         return true;
     }
 #if 0
@@ -486,12 +491,12 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isI
     unsigned int mipMapLevel = MergeImages2D::mipmapLevelFromScale(args.renderScale.x);
     bool isOdd = bool(mipMapLevel & 1);
     if ((identityEven && !isOdd) || (identityOdd && isOdd)) {
-        identityClip = srcClip_;
+        identityClip = _srcClip;
         return true;
     }
 
     // if renderWindow is fully in the lower left or upper right corner, return true
-    const OfxRectD rod = dstClip_->getRegionOfDefinition(args.time);
+    const OfxRectD rod = _dstClip->getRegionOfDefinition(args.time);
     OfxRectI roi = args.renderWindow;
     OfxRectD roiCanonical;
     roiCanonical.x1 = roi.x1 / args.renderScale.x;
@@ -502,7 +507,7 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isI
     double ymid = rod.y1 + (rod.y2 - rod.y1)/2;
     if ((roiCanonical.x2 < xmid && roiCanonical.y2 < ymid) ||
         (roiCanonical.x2 >= xmid && roiCanonical.y2 >= ymid)) {
-        identityClip = srcClip_;
+        identityClip = _srcClip;
         return true;
     }
 #endif
@@ -610,10 +615,10 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::cha
         std::ostringstream oss;
         oss << "Clip Info:\n\n";
         oss << "Input: ";
-        if (!srcClip_) {
+        if (!_srcClip) {
             oss << "N/A";
         } else {
-            OFX::Clip &c = *srcClip_;
+            OFX::Clip &c = *_srcClip;
             oss << pixelComponentString(c.getPixelComponentsProperty());
             oss << bitDepthString(c.getPixelDepth());
             oss << " (unmapped: ";
@@ -651,10 +656,10 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::cha
         }
         oss << "\n\n";
         oss << "Output: ";
-        if (!dstClip_) {
+        if (!_dstClip) {
             oss << "N/A";
         } else {
-            OFX::Clip &c = *dstClip_;
+            OFX::Clip &c = *_dstClip;
             oss << pixelComponentString(c.getPixelComponentsProperty());
             oss << bitDepthString(c.getPixelDepth());
             oss << " (unmapped: ";

@@ -172,16 +172,16 @@ public:
     /** @brief ctor */
     OneViewPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClip_(0)
-    , view_(0)
+    , _dstClip(0)
+    , _srcClip(0)
+    , _view(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
-        view_ = fetchChoiceParam(kParamView);
-        assert(view_);
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
+        _view = fetchChoiceParam(kParamView);
+        assert(_view);
     }
 
 private:
@@ -193,10 +193,10 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcClip;
 
-    OFX::ChoiceParam     *view_;
+    OFX::ChoiceParam     *_view;
 };
 
 
@@ -212,23 +212,28 @@ void
 OneViewPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+   if (dst->getRenderScale().x != args.renderScale.x ||
         dst->getRenderScale().y != args.renderScale.y ||
         dst->getField() != args.fieldToRender) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
     int view;
-    view_->getValueAtTime(args.time, view);
+    _view->getValueAtTime(args.time, view);
     // fetch main input image
-    std::auto_ptr<const OFX::Image> src(srcClip_->fetchStereoscopicImage(args.time,view));
+    std::auto_ptr<const OFX::Image> src(_srcClip->fetchStereoscopicImage(args.time,view));
 
     // make sure bit depths are sane
     if (src.get()) {
@@ -266,8 +271,8 @@ OneViewPlugin::render(const OFX::RenderArguments &args)
     }
 
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {

@@ -192,16 +192,16 @@ public:
     /** @brief ctor */
     SideBySidePlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClip_(0)
+    , _dstClip(0)
+    , _srcClip(0)
     , vertical_(0)
     , view1_(0)
     , view2_(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
         vertical_ = fetchBooleanParam(kParamVertical);
         view1_ = fetchChoiceParam(kParamView1);
         view2_ = fetchChoiceParam(kParamView2);
@@ -222,8 +222,8 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcClip;
 
     OFX::BooleanParam *vertical_;
     OFX::ChoiceParam *view1_;
@@ -243,8 +243,15 @@ void
 SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -253,16 +260,14 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
     // fetch main input image
     int view1;
     view1_->getValueAtTime(args.time, view1);
     int view2;
     view2_->getValueAtTime(args.time, view2);
-    std::auto_ptr<const OFX::Image> src1(srcClip_->fetchStereoscopicImage(args.time,view1));
-    std::auto_ptr<const OFX::Image> src2(srcClip_->fetchStereoscopicImage(args.time,view2));
+    std::auto_ptr<const OFX::Image> src1(_srcClip->fetchStereoscopicImage(args.time,view1));
+    std::auto_ptr<const OFX::Image> src2(_srcClip->fetchStereoscopicImage(args.time,view2));
 
     // make sure bit depths are sane
     if (src1.get()) {
@@ -299,7 +304,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
     OfxPointD size = getProjectSize();
 
     // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask
-    OfxRectD rod = srcClip_->getRegionOfDefinition(args.time);
+    OfxRectD rod = _srcClip->getRegionOfDefinition(args.time);
 
     // clip to the project rect
     //rod.x1 = std::max(rod.x1,offset.x);
@@ -331,7 +336,7 @@ SideBySidePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
     OfxPointD size = getProjectSize();
 
     // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask
-    rod = srcClip_->getRegionOfDefinition(args.time);
+    rod = _srcClip->getRegionOfDefinition(args.time);
 
     // clip to the project rect
     rod.x1 = std::max(rod.x1,offset.x);
@@ -356,7 +361,7 @@ SideBySidePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
     bool vertical = vertical_->getValueAtTime(args.time);
 
     // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask
-    OfxRectD roi = srcClip_->getRegionOfDefinition(args.time);
+    OfxRectD roi = _srcClip->getRegionOfDefinition(args.time);
 
     // since getRegionsOfInterest is not view-specific, return a full horizontal or vertical band
     if (vertical) {
@@ -366,11 +371,11 @@ SideBySidePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
         roi.y1 = args.regionOfInterest.y1;
         roi.y2 = args.regionOfInterest.y2;
     }
-    rois.setRegionOfInterest(*srcClip_, roi);
+    rois.setRegionOfInterest(*_srcClip, roi);
 
     // set it on the mask only if we are in an interesting context
     //if (getContext() != OFX::eContextFilter)
-    //  rois.setRegionOfInterest(*maskClip_, roi);
+    //  rois.setRegionOfInterest(*_maskClip, roi);
 }
 
 // the overridden render function
@@ -382,8 +387,8 @@ SideBySidePlugin::render(const OFX::RenderArguments &args)
     }
 
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {

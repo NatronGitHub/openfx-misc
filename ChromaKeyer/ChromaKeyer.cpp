@@ -184,9 +184,9 @@ protected:
     const OFX::Image *_outMaskImg;
     OfxRGBColourD _keyColor;
     double _acceptanceAngle;
-    double _tan_acceptanceAngle_2;
+    double _tan__acceptanceAngle2;
     double _suppressionAngle;
-    double _tan_suppressionAngle_2;
+    double _tan__suppressionAngle2;
     double _keyLift;
     double _keyGain;
     OutputModeEnum _outputMode;
@@ -202,9 +202,9 @@ public:
     , _inMaskImg(0)
     , _outMaskImg(0)
     , _acceptanceAngle(0.)
-    , _tan_acceptanceAngle_2(0.)
+    , _tan__acceptanceAngle2(0.)
     , _suppressionAngle(0.)
-    , _tan_suppressionAngle_2(0.)
+    , _tan__suppressionAngle2(0.)
     , _keyLift(0.)
     , _keyGain(1.)
     , _outputMode(eOutputModeComposite)
@@ -247,10 +247,10 @@ public:
         _sinKey = 2*cr/_xKey;
         _ys = _xKey == 0. ? 0. : y/_xKey;
         if (_acceptanceAngle < 180.) {
-            _tan_acceptanceAngle_2 = std::tan((_acceptanceAngle/2) * M_PI / 180);
+            _tan__acceptanceAngle2 = std::tan((_acceptanceAngle/2) * M_PI / 180);
         }
         if (_suppressionAngle < 180.) {
-            _tan_suppressionAngle_2 = std::tan((_suppressionAngle/2) * M_PI / 180);
+            _tan__suppressionAngle2 = std::tan((_suppressionAngle/2) * M_PI / 180);
         }
     }
 
@@ -420,11 +420,11 @@ private:
 
                     double Kfg;
 
-                    if (fgx <= 0 || (_acceptanceAngle >= 180. && fgx >= 0) || std::abs(fgz)/fgx > _tan_acceptanceAngle_2) {
+                    if (fgx <= 0 || (_acceptanceAngle >= 180. && fgx >= 0) || std::abs(fgz)/fgx > _tan__acceptanceAngle2) {
                         /* keep foreground Kfg = 0*/
                         Kfg = 0.;
                     } else {
-                        Kfg = _tan_acceptanceAngle_2 > 0 ? (fgx - std::abs(fgz)/_tan_acceptanceAngle_2) : 0.;
+                        Kfg = _tan__acceptanceAngle2 > 0 ? (fgx - std::abs(fgz)/_tan__acceptanceAngle2) : 0.;
                     }
                     assert(Kfg >= 0.);
                     double fgx_scaled = fgx;
@@ -447,7 +447,7 @@ private:
                     }
                     if (Kfg != 0.) {
                         // modify the fgx used for the suppression angle test
-                        fgx_scaled = Kfg_new + std::abs(fgz)/_tan_acceptanceAngle_2;
+                        fgx_scaled = Kfg_new + std::abs(fgz)/_tan__acceptanceAngle2;
                     }
                     Kfg = Kfg_new;
 
@@ -465,7 +465,7 @@ private:
                         // [FD] there is an error in the paper, which doesn't take into account chrominance denormalization:
                         // (X,Z) was computed from twice the chrominance, so subtracting Kfg from X means to
                         // subtract Kfg/2 from (Cb,Cr).
-                        if (fgx_scaled > 0 && (_suppressionAngle >= 180. || fgx_scaled - std::abs(fgz)/_tan_suppressionAngle_2 > 0.)) {
+                        if (fgx_scaled > 0 && (_suppressionAngle >= 180. || fgx_scaled - std::abs(fgz)/_tan__suppressionAngle2 > 0.)) {
                             fgcb = 0;
                             fgcr = 0;
                         } else {
@@ -583,37 +583,37 @@ public:
     /** @brief ctor */
     ChromaKeyerPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClip_(0)
-    , bgClip_(0)
-    , inMaskClip_(0)
-    , outMaskClip_(0)
-    , keyColor_(0)
-    , acceptanceAngle_(0)
-    , suppressionAngle_(0)
-    , keyLift_(0)
-    , keyGain_(0)
-    , outputMode_(0)
-    , sourceAlpha_(0)
+    , _dstClip(0)
+    , _srcClip(0)
+    , _bgClip(0)
+    , _inMaskClip(0)
+    , _outMaskClip(0)
+    , _keyColor(0)
+    , _acceptanceAngle(0)
+    , _suppressionAngle(0)
+    , _keyLift(0)
+    , _keyGain(0)
+    , _outputMode(0)
+    , _sourceAlpha(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
-        bgClip_ = fetchClip(kClipBg);
-        assert(bgClip_ && (bgClip_->getPixelComponents() == ePixelComponentRGB || bgClip_->getPixelComponents() == ePixelComponentRGBA));
-        inMaskClip_ = fetchClip(kClipInsideMask);;
-        assert(inMaskClip_ && inMaskClip_->getPixelComponents() == ePixelComponentAlpha);
-        outMaskClip_ = fetchClip(kClipOutsidemask);;
-        assert(outMaskClip_ && outMaskClip_->getPixelComponents() == ePixelComponentAlpha);
-        keyColor_ = fetchRGBParam(kParamKeyColor);
-        acceptanceAngle_ = fetchDoubleParam(kParamAcceptanceAngle);
-        suppressionAngle_ = fetchDoubleParam(kParamSuppressionAngle);
-        keyLift_ = fetchDoubleParam(kParamKeyLift);
-        keyGain_ = fetchDoubleParam(kParamKeyGain);
-        outputMode_ = fetchChoiceParam(kParamOutputMode);
-        sourceAlpha_ = fetchChoiceParam(kParamSourceAlpha);
-        assert(keyColor_ && acceptanceAngle_ && suppressionAngle_ && keyLift_ && keyGain_ && outputMode_ && sourceAlpha_);
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
+        _bgClip = fetchClip(kClipBg);
+        assert(_bgClip && (_bgClip->getPixelComponents() == ePixelComponentRGB || _bgClip->getPixelComponents() == ePixelComponentRGBA));
+        _inMaskClip = fetchClip(kClipInsideMask);;
+        assert(_inMaskClip && _inMaskClip->getPixelComponents() == ePixelComponentAlpha);
+        _outMaskClip = fetchClip(kClipOutsidemask);;
+        assert(_outMaskClip && _outMaskClip->getPixelComponents() == ePixelComponentAlpha);
+        _keyColor = fetchRGBParam(kParamKeyColor);
+        _acceptanceAngle = fetchDoubleParam(kParamAcceptanceAngle);
+        _suppressionAngle = fetchDoubleParam(kParamSuppressionAngle);
+        _keyLift = fetchDoubleParam(kParamKeyLift);
+        _keyGain = fetchDoubleParam(kParamKeyGain);
+        _outputMode = fetchChoiceParam(kParamOutputMode);
+        _sourceAlpha = fetchChoiceParam(kParamSourceAlpha);
+        assert(_keyColor && _acceptanceAngle && _suppressionAngle && _keyLift && _keyGain && _outputMode && _sourceAlpha);
     }
  
 private:
@@ -628,19 +628,19 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
-    OFX::Clip *bgClip_;
-    OFX::Clip *inMaskClip_;
-    OFX::Clip *outMaskClip_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcClip;
+    OFX::Clip *_bgClip;
+    OFX::Clip *_inMaskClip;
+    OFX::Clip *_outMaskClip;
     
-    OFX::RGBParam* keyColor_;
-    OFX::DoubleParam* acceptanceAngle_;
-    OFX::DoubleParam* suppressionAngle_;
-    OFX::DoubleParam* keyLift_;
-    OFX::DoubleParam* keyGain_;
-    OFX::ChoiceParam* outputMode_;
-    OFX::ChoiceParam* sourceAlpha_;
+    OFX::RGBParam* _keyColor;
+    OFX::DoubleParam* _acceptanceAngle;
+    OFX::DoubleParam* _suppressionAngle;
+    OFX::DoubleParam* _keyLift;
+    OFX::DoubleParam* _keyGain;
+    OFX::ChoiceParam* _outputMode;
+    OFX::ChoiceParam* _sourceAlpha;
 };
 
 
@@ -654,8 +654,15 @@ private:
 void
 ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -664,10 +671,8 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
-    std::auto_ptr<OFX::Image> bg(bgClip_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> bg(_bgClip->fetchImage(args.time));
     if (src.get()) {
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
@@ -697,7 +702,7 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
     }
     
     // auto ptr for the masks.
-    std::auto_ptr<OFX::Image> inMask(inMaskClip_ ? inMaskClip_->fetchImage(args.time) : 0);
+    std::auto_ptr<OFX::Image> inMask(_inMaskClip ? _inMaskClip->fetchImage(args.time) : 0);
     if (inMask.get()) {
         if (inMask->getRenderScale().x != args.renderScale.x ||
             inMask->getRenderScale().y != args.renderScale.y ||
@@ -706,7 +711,7 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<OFX::Image> outMask(outMaskClip_ ? outMaskClip_->fetchImage(args.time) : 0);
+    std::auto_ptr<OFX::Image> outMask(_outMaskClip ? _outMaskClip->fetchImage(args.time) : 0);
     if (outMask.get()) {
         if (outMask->getRenderScale().x != args.renderScale.x ||
             outMask->getRenderScale().y != args.renderScale.y ||
@@ -723,14 +728,14 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
     double keyGain;
     int outputModeI;
     int sourceAlphaI;
-    keyColor_->getValueAtTime(args.time, keyColor.r, keyColor.g, keyColor.b);
-    acceptanceAngle_->getValueAtTime(args.time, acceptanceAngle);
-    suppressionAngle_->getValueAtTime(args.time, suppressionAngle);
-    keyLift_->getValueAtTime(args.time, keyLift);
-    keyGain_->getValueAtTime(args.time, keyGain);
-    outputMode_->getValueAtTime(args.time, outputModeI);
+    _keyColor->getValueAtTime(args.time, keyColor.r, keyColor.g, keyColor.b);
+    _acceptanceAngle->getValueAtTime(args.time, acceptanceAngle);
+    _suppressionAngle->getValueAtTime(args.time, suppressionAngle);
+    _keyLift->getValueAtTime(args.time, keyLift);
+    _keyGain->getValueAtTime(args.time, keyGain);
+    _outputMode->getValueAtTime(args.time, outputModeI);
     OutputModeEnum outputMode = (OutputModeEnum)outputModeI;
-    sourceAlpha_->getValueAtTime(args.time, sourceAlphaI);
+    _sourceAlpha->getValueAtTime(args.time, sourceAlphaI);
     SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)sourceAlphaI;
     processor.setValues(keyColor, acceptanceAngle, suppressionAngle, keyLift, keyGain, outputMode, sourceAlpha);
     processor.setDstImg(dst.get());
@@ -746,8 +751,8 @@ ChromaKeyerPlugin::render(const OFX::RenderArguments &args)
 {
     
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
@@ -799,10 +804,10 @@ ChromaKeyerPlugin::render(const OFX::RenderArguments &args)
 void
 ChromaKeyerPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-    // set the premultiplication of dstClip_
+    // set the premultiplication of _dstClip
     int outputModeI;
     OutputModeEnum outputMode;
-    outputMode_->getValue(outputModeI);
+    _outputMode->getValue(outputModeI);
     outputMode = (OutputModeEnum)outputModeI;
 
     switch(outputMode) {
@@ -817,7 +822,7 @@ ChromaKeyerPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreference
     }
     
     // Output is RGBA
-    clipPreferences.setClipComponents(*dstClip_, ePixelComponentRGBA);
+    clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
 }
 
 mDeclarePluginFactory(ChromaKeyerPluginFactory, {}, {});

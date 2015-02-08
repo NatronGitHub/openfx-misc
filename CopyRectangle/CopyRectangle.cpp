@@ -262,9 +262,9 @@ public:
     /** @brief ctor */
     CopyRectanglePlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClipA_(0)
-    , srcClipB_(0)
+    , _dstClip(0)
+    , _srcClipA(0)
+    , _srcClipB(0)
     , _btmLeft(0)
     , _size(0)
     , _softness(0)
@@ -273,14 +273,14 @@ public:
     , _processB(0)
     , _processA(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
-        srcClipA_ = fetchClip(kClipA);
-        assert(srcClipA_ && (srcClipA_->getPixelComponents() == ePixelComponentAlpha || srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA));
-        srcClipB_ = fetchClip(kClipB);
-        assert(srcClipB_ && (srcClipB_->getPixelComponents() == ePixelComponentAlpha || srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA));
-        maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-        assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcClipA = fetchClip(kClipA);
+        assert(_srcClipA && (_srcClipA->getPixelComponents() == ePixelComponentAlpha || _srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA));
+        _srcClipB = fetchClip(kClipB);
+        assert(_srcClipB && (_srcClipB->getPixelComponents() == ePixelComponentAlpha || _srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA));
+        _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
         _size = fetchDouble2DParam(kParamRectangleInteractSize);
@@ -316,10 +316,10 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClipA_;
-    OFX::Clip *srcClipB_;
-    OFX::Clip *maskClip_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcClipA;
+    OFX::Clip *_srcClipB;
+    OFX::Clip *_maskClip;
 
     OFX::Double2DParam* _btmLeft;
     OFX::Double2DParam* _size;
@@ -353,8 +353,15 @@ CopyRectanglePlugin::getRectanglecanonical(OfxTime time,OfxRectD& rect) const
 void
 CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -363,9 +370,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> srcA(srcClipA_->fetchImage(args.time));
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    std::auto_ptr<const OFX::Image> srcA(_srcClipA->fetchImage(args.time));
     if (srcA.get()) {
         if (srcA->getRenderScale().x != args.renderScale.x ||
             srcA->getRenderScale().y != args.renderScale.y ||
@@ -379,7 +384,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<const OFX::Image> srcB(srcClipB_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> srcB(_srcClipB->fetchImage(args.time));
     if (srcB.get()) {
         if (srcB->getRenderScale().x != args.renderScale.x ||
             srcB->getRenderScale().y != args.renderScale.y ||
@@ -393,7 +398,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
+    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? _maskClip->fetchImage(args.time) : 0);
     if (mask.get()) {
         if (mask->getRenderScale().x != args.renderScale.x ||
             mask->getRenderScale().y != args.renderScale.y ||
@@ -402,7 +407,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+    if (getContext() != OFX::eContextFilter && _maskClip->isConnected()) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         processor.doMasking(true);
@@ -426,7 +431,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     _softness->getValueAtTime(args.time, softness);
     softness *= args.renderScale.x;
     
-    const OfxRectD& dstRoD = dstClip_->getRegionOfDefinition(args.time);
+    const OfxRectD& dstRoD = _dstClip->getRegionOfDefinition(args.time);
     OfxRectI dstRoDPix;
     MergeImages2D::toPixelEnclosing(dstRoD, args.renderScale, par, &dstRoDPix);
    
@@ -463,7 +468,7 @@ CopyRectanglePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments 
     MergeImages2D::rectIntersection(rectangle, args.regionOfInterest, &rectangle);
 
     double mix = 1.;
-    const bool doMasking = getContext() != OFX::eContextFilter && maskClip_->isConnected();
+    const bool doMasking = getContext() != OFX::eContextFilter && _maskClip->isConnected();
     if (doMasking) {
         _mix->getValueAtTime(args.time, mix);
     }
@@ -472,8 +477,8 @@ CopyRectanglePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments 
         // compute the bounding box with the default ROI
         MergeImages2D::rectBoundingBox(rectangle, args.regionOfInterest, &rectangle);
     }
-    rois.setRegionOfInterest(*srcClipA_, rectangle);
-    // no need to set the RoI on srcClipB_, since it's the same as the output RoI
+    rois.setRegionOfInterest(*_srcClipA, rectangle);
+    // no need to set the RoI on _srcClipB, since it's the same as the output RoI
 }
 
 
@@ -482,7 +487,7 @@ CopyRectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgument
 {
     OfxRectD rect;
     getRectanglecanonical(args.time, rect);
-    const OfxRectD& srcB_rod = srcClipB_->getRegionOfDefinition(args.time);
+    const OfxRectD& srcB_rod = _srcClipB->getRegionOfDefinition(args.time);
     MergeImages2D::rectBoundingBox(rect, srcB_rod, &rod);
     return true;
 }
@@ -520,7 +525,7 @@ CopyRectanglePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identit
     _mix->getValueAtTime(args.time, mix);
 
     if (mix == 0.) {
-        identityClip = srcClipB_;
+        identityClip = _srcClipB;
         return true;
     } else {
         return false;
@@ -533,8 +538,8 @@ CopyRectanglePlugin::render(const OFX::RenderArguments &args)
 {
     
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentAlpha);
     if (dstComponents == OFX::ePixelComponentRGBA) {

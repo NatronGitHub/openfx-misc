@@ -130,8 +130,8 @@ public:
     : GenericTrackerPlugin(handle)
     , _score(0)
     {
-        maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-        assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
+        _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _score = fetchChoiceParam(kParamScore);
         assert(_score);
     }
@@ -172,7 +172,7 @@ private:
                          const OfxRectD& trackSearchBounds,
                          const OFX::Image* otherImg);
 
-    OFX::Clip *maskClip_;
+    OFX::Clip *_maskClip;
     ChoiceParam* _score;
 };
 
@@ -549,7 +549,7 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
     while (args.forward ? (t <= args.last) : (t >= args.last)) {
         OfxTime other = args.forward ? (t + 1) : (t - 1);
         
-        OFX::PixelComponentEnum srcComponents  = srcClip_->getPixelComponents();
+        OFX::PixelComponentEnum srcComponents  = _srcClip->getPixelComponents();
         assert(srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA ||
                srcComponents == OFX::ePixelComponentAlpha);
         
@@ -661,7 +661,7 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
                                  const OfxRectD& trackSearchBounds,
                                  const OFX::Image* otherImg)
 {
-    const double par = srcClip_->getPixelAspectRatio();
+    const double par = _srcClip->getPixelAspectRatio();
     const OfxPointD rsOne = {1., 1.};
     OfxRectI trackSearchBoundsPixel;
     OFX::MergeImages2D::toPixelEnclosing(trackSearchBounds, rsOne, par, &trackSearchBoundsPixel);
@@ -795,8 +795,8 @@ TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime, const OFX::Tr
     OfxRectD otherBounds;
     getOtherBounds(refCenterWithOffset, searchRect, &otherBounds);
 
-    std::auto_ptr<const OFX::Image> srcRef(srcClip_->fetchImage(refTime, refBounds));
-    std::auto_ptr<const OFX::Image> srcOther(srcClip_->fetchImage(otherTime, otherBounds));
+    std::auto_ptr<const OFX::Image> srcRef(_srcClip->fetchImage(refTime, refBounds));
+    std::auto_ptr<const OFX::Image> srcOther(_srcClip->fetchImage(otherTime, otherBounds));
     if (!srcRef.get() || !srcOther.get()) {
         return;
     }
@@ -827,7 +827,7 @@ TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime, const OFX::Tr
     OFX::BitDepthEnum srcBitDepth = srcRef->getPixelDepth();
     
     // auto ptr for the mask.
-    std::auto_ptr<OFX::Image> mask((getContext() != OFX::eContextFilter) ? maskClip_->fetchImage(refTime) : 0);
+    std::auto_ptr<OFX::Image> mask((getContext() != OFX::eContextFilter) ? _maskClip->fetchImage(refTime) : 0);
     if (mask.get()) {
         if (mask->getRenderScale().x != args.renderScale.x ||
             mask->getRenderScale().y != args.renderScale.y/* ||

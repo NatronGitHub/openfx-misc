@@ -226,20 +226,20 @@ public:
     /** @brief ctor */
     AnaglyphPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClip_(0)
-    , amtcolour_(0)
-    , swap_(0)
-    , offset_(0)
+    , _dstClip(0)
+    , _srcClip(0)
+    , _amtcolour(0)
+    , _swap(0)
+    , _offset(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && dstClip_->getPixelComponents() == ePixelComponentRGBA);
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_ && srcClip_->getPixelComponents() == ePixelComponentRGBA);
-        amtcolour_  = fetchDoubleParam(kParamAmtColour);
-        swap_ = fetchBooleanParam(kParamSwap);
-        offset_ = fetchIntParam(kParamOffset);
-        assert(amtcolour_ && swap_ && offset_);
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && _dstClip->getPixelComponents() == ePixelComponentRGBA);
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(_srcClip && _srcClip->getPixelComponents() == ePixelComponentRGBA);
+        _amtcolour  = fetchDoubleParam(kParamAmtColour);
+        _swap = fetchBooleanParam(kParamSwap);
+        _offset = fetchIntParam(kParamOffset);
+        assert(_amtcolour && _swap && _offset);
     }
 
 private:
@@ -251,12 +251,12 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcClip;
 
-    OFX::DoubleParam  *amtcolour_;
-    OFX::BooleanParam *swap_;
-    OFX::IntParam     *offset_;
+    OFX::DoubleParam  *_amtcolour;
+    OFX::BooleanParam *_swap;
+    OFX::IntParam     *_offset;
     
 };
 
@@ -273,8 +273,15 @@ void
 AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor, const OFX::RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -283,11 +290,9 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor, const OFX::RenderArgume
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
     // fetch main input image
-    std::auto_ptr<const OFX::Image> srcLeft(srcClip_->fetchStereoscopicImage(args.time,0));
+    std::auto_ptr<const OFX::Image> srcLeft(_srcClip->fetchStereoscopicImage(args.time,0));
     if (srcLeft.get()) {
         if (srcLeft->getRenderScale().x != args.renderScale.x ||
             srcLeft->getRenderScale().y != args.renderScale.y ||
@@ -296,7 +301,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor, const OFX::RenderArgume
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<const OFX::Image> srcRight(srcClip_->fetchStereoscopicImage(args.time,1));
+    std::auto_ptr<const OFX::Image> srcRight(_srcClip->fetchStereoscopicImage(args.time,1));
     if (srcRight.get()) {
         if (srcRight->getRenderScale().x != args.renderScale.x ||
             srcRight->getRenderScale().y != args.renderScale.y ||
@@ -324,9 +329,9 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor, const OFX::RenderArgume
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
     }
 
-    double amtcolour = amtcolour_->getValueAtTime(args.time);
-    bool swap = swap_->getValueAtTime(args.time);
-    int offset = offset_->getValueAtTime(args.time);
+    double amtcolour = _amtcolour->getValueAtTime(args.time);
+    bool swap = _swap->getValueAtTime(args.time);
+    int offset = _offset->getValueAtTime(args.time);
 
     // set the images
     processor.setDstImg(dst.get());
@@ -354,8 +359,8 @@ AnaglyphPlugin::render(const OFX::RenderArguments &args)
     }
 
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
     assert(dstComponents == OFX::ePixelComponentRGBA);

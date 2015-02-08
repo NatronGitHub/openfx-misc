@@ -275,8 +275,8 @@ public:
     /** @brief ctor */
     CropPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClip_(0)
+    , _dstClip(0)
+    , _srcClip(0)
     , _btmLeft(0)
     , _size(0)
     , _softness(0)
@@ -284,10 +284,10 @@ public:
     , _intersect(0)
     , _blackOutside(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
         
         _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
         _size = fetchDouble2DParam(kParamRectangleInteractSize);
@@ -320,8 +320,8 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcClip;
 
     OFX::Double2DParam* _btmLeft;
     OFX::Double2DParam* _size;
@@ -371,7 +371,7 @@ CropPlugin::getCropRectangle_canonical(OfxTime time,bool useReformat,bool forceI
     }
     
     if (intersect) {
-        const OfxRectD& srcRoD = srcClip_->getRegionOfDefinition(time);
+        const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(time);
         MergeImages2D::rectIntersection(cropRect, srcRoD, &cropRect);
     }
     
@@ -388,8 +388,15 @@ CropPlugin::getCropRectangle_canonical(OfxTime time,bool useReformat,bool forceI
 void
 CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -398,7 +405,7 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -442,7 +449,7 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
     _softness->getValueAtTime(args.time, softness);
     softness *= args.renderScale.x;
     
-    const OfxRectD& dstRoD = dstClip_->getRegionOfDefinition(args.time);
+    const OfxRectD& dstRoD = _dstClip->getRegionOfDefinition(args.time);
     OfxRectI dstRoDPix;
     MergeImages2D::toPixelEnclosing(dstRoD, args.renderScale, par, &dstRoDPix);
 
@@ -480,7 +487,7 @@ CropPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OF
 
     // intersect the crop rectangle with args.regionOfInterest
     MergeImages2D::rectIntersection(cropRect, roi, &cropRect);
-    rois.setRegionOfInterest(*srcClip_, cropRect);
+    rois.setRegionOfInterest(*_srcClip, cropRect);
 }
 
 
@@ -524,8 +531,8 @@ CropPlugin::render(const OFX::RenderArguments &args)
 {
     
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentAlpha);
     if (dstComponents == OFX::ePixelComponentRGBA) {

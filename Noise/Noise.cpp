@@ -196,27 +196,27 @@ class NoisePlugin : public OFX::ImageEffect
 {
 protected:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *srcClip_;
-    OFX::Clip *dstClip_;
+    OFX::Clip *_srcClip;
+    OFX::Clip *_dstClip;
 
-    OFX::DoubleParam  *noise_;
-    OFX::IntParam  *seed_;
+    OFX::DoubleParam  *_noise;
+    OFX::IntParam  *_seed;
 
 public:
     /** @brief ctor */
     NoisePlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , noise_(0)
-    , seed_(0)
+    , _dstClip(0)
+    , _noise(0)
+    , _seed(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha));
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA || srcClip_->getPixelComponents() == ePixelComponentAlpha));
-        noise_   = fetchDoubleParam(kParamNoiseLevel);
-        seed_   = fetchIntParam(kParamSeed);
-        assert(noise_ && seed_);
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA || _srcClip->getPixelComponents() == ePixelComponentAlpha));
+        _noise   = fetchDoubleParam(kParamNoiseLevel);
+        _seed   = fetchIntParam(kParamSeed);
+        assert(_noise && _seed);
     }
 
     /* Override the render */
@@ -242,10 +242,15 @@ void
 NoisePlugin::setupAndProcess(NoiseGeneratorBase &processor, const OFX::RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image>  dst(dstClip_->fetchImage(args.time));
-    //OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    //OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    std::auto_ptr<OFX::Image>  dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -264,12 +269,12 @@ NoisePlugin::setupAndProcess(NoiseGeneratorBase &processor, const OFX::RenderArg
     // set the scales
     // noise level depends on the render scale
     // (the following formula is for Gaussian noise only, but we use it as an approximation)
-    double noise = noise_->getValueAtTime(args.time);
+    double noise = _noise->getValueAtTime(args.time);
     processor.setNoiseLevel((float)(noise * std::sqrt(args.renderScale.x)));
     processor.setNoiseMean((float)(noise / 2.));
 
     // set the seed based on the current time, and double it we get difference seeds on different fields
-    processor.setSeed(uint32_t(args.time * 2.0f + seed_->getValueAtTime(args.time)));
+    processor.setSeed(uint32_t(args.time * 2.0f + _seed->getValueAtTime(args.time)));
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -287,8 +292,8 @@ void
 NoisePlugin::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
@@ -380,7 +385,6 @@ void NoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
-    dstClip->setFieldExtraction(eFieldExtractSingle);
 
     PageParamDescriptor *page = desc.definePageParam("Controls");
 

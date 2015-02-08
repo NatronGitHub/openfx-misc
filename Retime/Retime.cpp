@@ -127,40 +127,40 @@ class RetimePlugin : public OFX::ImageEffect
 {
 protected:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;            /**< @brief Mandated output clips */
-    OFX::Clip *srcClip_;            /**< @brief Mandated input clips */
+    OFX::Clip *_dstClip;            /**< @brief Mandated output clips */
+    OFX::Clip *_srcClip;            /**< @brief Mandated input clips */
 
-    OFX::DoubleParam  *sourceTime_; /**< @brief mandated parameter, only used in the retimer context. */
-    OFX::DoubleParam  *speed_;      /**< @brief only used in the filter context. */
-    OFX::DoubleParam  *duration_;   /**< @brief how long the output should be as a proportion of input. General context only  */
+    OFX::DoubleParam  *_sourceTime; /**< @brief mandated parameter, only used in the retimer context. */
+    OFX::DoubleParam  *_speed;      /**< @brief only used in the filter context. */
+    OFX::DoubleParam  *_duration;   /**< @brief how long the output should be as a proportion of input. General context only  */
 
 public:
     /** @brief ctor */
     RetimePlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClip_(0)
-    , sourceTime_(0)
-    , speed_(0)
-    , duration_(0)
+    , _dstClip(0)
+    , _srcClip(0)
+    , _sourceTime(0)
+    , _speed(0)
+    , _duration(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
 
         // What parameters we instantiate depend on the context
         if (getContext() == OFX::eContextRetimer) {
             // fetch the mandated parameter which the host uses to pass us the frame to retime to
-            sourceTime_ = fetchDoubleParam(kOfxImageEffectRetimerParamName);
-            assert(sourceTime_);
+            _sourceTime = fetchDoubleParam(kOfxImageEffectRetimerParamName);
+            assert(_sourceTime);
         } else { // context == OFX::eContextFilter || context == OFX::eContextGeneral
             // filter context means we are in charge of how to retime, and our example is using a speed curve to do that
-            speed_ = fetchDoubleParam(kParamSpeed);
-            assert(speed_);
+            _speed = fetchDoubleParam(kParamSpeed);
+            assert(_speed);
         }
         // fetch duration param for general context
         if (getContext() == OFX::eContextGeneral) {
-            duration_ = fetchDoubleParam(kParamDuration);
-            assert(duration_);
+            _duration = fetchDoubleParam(kParamDuration);
+            assert(_duration);
         }
     }
 
@@ -235,8 +235,15 @@ void
 RetimePlugin::setupAndProcess(OFX::ImageBlenderBase &processor, const OFX::RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image>  dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image>  dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -245,18 +252,16 @@ RetimePlugin::setupAndProcess(OFX::ImageBlenderBase &processor, const OFX::Rende
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum          dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum    dstComponents  = dst->getPixelComponents();
 
     // figure the frame we should be retiming from
     double sourceTime;
 
     if (getContext() == OFX::eContextRetimer) {
         // the host is specifying it, so fetch it from the kOfxImageEffectRetimerParamName pseudo-param
-        sourceTime = sourceTime_->getValueAtTime(args.time);
+        sourceTime = _sourceTime->getValueAtTime(args.time);
     } else {
         // we have our own param, which is a speed, so we integrate it to get the time we want
-        sourceTime = speed_->integrate(0, args.time);
+        sourceTime = _speed->integrate(0, args.time);
     }
 
     // figure the two images we are blending between
@@ -265,8 +270,8 @@ RetimePlugin::setupAndProcess(OFX::ImageBlenderBase &processor, const OFX::Rende
     framesNeeded(sourceTime, args.fieldToRender, &fromTime, &toTime, &blend);
 
     // fetch the two source images
-    std::auto_ptr<OFX::Image> fromImg(srcClip_->fetchImage(fromTime));
-    std::auto_ptr<OFX::Image> toImg(srcClip_->fetchImage(toTime));
+    std::auto_ptr<OFX::Image> fromImg(_srcClip->fetchImage(fromTime));
+    std::auto_ptr<OFX::Image> toImg(_srcClip->fetchImage(toTime));
 
     // make sure bit depths are sane
     if (fromImg.get()) {
@@ -315,7 +320,7 @@ RetimePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
     OfxRangeD range;
     range.min = fromTime;
     range.max = toTime;
-    frames.setFramesNeeded(*srcClip_, range);
+    frames.setFramesNeeded(*_srcClip, range);
 }
 
 /* override the time domain action, only for the general context */
@@ -327,10 +332,10 @@ RetimePlugin::getTimeDomain(OfxRangeD &range)
         // If we are a general context, we can changed the duration of the effect, so have a param to do that
         // We need a separate param as it is impossible to derive this from a speed param and the input clip
         // duration (the speed may be animating or wired to an expression).
-        double duration = duration_->getValue(); //don't animate
+        double duration = _duration->getValue(); //don't animate
 
         // how many frames on the input clip
-        OfxRangeD srcRange = srcClip_->getFrameRange();
+        OfxRangeD srcRange = _srcClip->getFrameRange();
 
         range.min = 0;
         range.max = srcRange.max * duration;
@@ -345,8 +350,8 @@ void
 RetimePlugin::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {

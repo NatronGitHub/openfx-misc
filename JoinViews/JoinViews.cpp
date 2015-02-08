@@ -171,16 +171,16 @@ public:
     /** @brief ctor */
     JoinViewsPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcLeftClip_(0)
-    , srcRightClip_(0)
+    , _dstClip(0)
+    , _srcLeftClip(0)
+    , _srcRightClip(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
-        srcLeftClip_ = fetchClip(kClipLeft);
-        assert(srcLeftClip_ && (srcLeftClip_->getPixelComponents() == ePixelComponentAlpha || srcLeftClip_->getPixelComponents() == ePixelComponentRGB || srcLeftClip_->getPixelComponents() == ePixelComponentRGBA));
-        srcRightClip_ = fetchClip(kClipRight);
-        assert(srcRightClip_ && (srcRightClip_->getPixelComponents() == ePixelComponentAlpha || srcRightClip_->getPixelComponents() == ePixelComponentRGB || srcRightClip_->getPixelComponents() == ePixelComponentRGBA));
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcLeftClip = fetchClip(kClipLeft);
+        assert(_srcLeftClip && (_srcLeftClip->getPixelComponents() == ePixelComponentAlpha || _srcLeftClip->getPixelComponents() == ePixelComponentRGB || _srcLeftClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcRightClip = fetchClip(kClipRight);
+        assert(_srcRightClip && (_srcRightClip->getPixelComponents() == ePixelComponentAlpha || _srcRightClip->getPixelComponents() == ePixelComponentRGB || _srcRightClip->getPixelComponents() == ePixelComponentRGBA));
     }
 
 private:
@@ -192,9 +192,9 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcLeftClip_;
-    OFX::Clip *srcRightClip_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcLeftClip;
+    OFX::Clip *_srcRightClip;
 };
 
 
@@ -210,8 +210,15 @@ void
 JoinViewsPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -220,13 +227,11 @@ JoinViewsPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArgumen
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
     // fetch main input image
     std::auto_ptr<const OFX::Image> src(args.renderView == 0
-                                  ? srcLeftClip_->fetchStereoscopicImage(args.time,0)
-                                  : srcRightClip_->fetchStereoscopicImage(args.time,0));
+                                  ? _srcLeftClip->fetchStereoscopicImage(args.time,0)
+                                  : _srcRightClip->fetchStereoscopicImage(args.time,0));
 
     // make sure bit depths are sane
     if (src.get()) {
@@ -264,8 +269,8 @@ JoinViewsPlugin::render(const OFX::RenderArguments &args)
     }
 
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {

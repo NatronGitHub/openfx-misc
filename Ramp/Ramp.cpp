@@ -484,8 +484,8 @@ public:
     /** @brief ctor */
     RampPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClip_(0)
+    , _dstClip(0)
+    , _srcClip(0)
     , _processR(0)
     , _processG(0)
     , _processB(0)
@@ -497,12 +497,12 @@ public:
     , _type(0)
     , _interactive(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
-        maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-        assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
+        _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         _processR = fetchBooleanParam(kParamProcessR);
         _processG = fetchBooleanParam(kParamProcessG);
@@ -525,7 +525,7 @@ public:
 
     OfxRectD getRegionOfDefinitionForInteract(OfxTime time) const
     {
-        return dstClip_->getRegionOfDefinition(time);
+        return _dstClip->getRegionOfDefinition(time);
     }
     
 private:
@@ -547,9 +547,9 @@ private:
 private:
     
     // do not need to delete these, the ImageEffect is managing them for us
-    Clip *dstClip_;
-    Clip *srcClip_;
-    Clip *maskClip_;
+    Clip *_dstClip;
+    Clip *_srcClip;
+    Clip *_maskClip;
 
     BooleanParam* _processR;
     BooleanParam* _processG;
@@ -575,8 +575,15 @@ private:
 void
 RampPlugin::setupAndProcess(RampProcessorBase &processor, const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -585,10 +592,8 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor, const OFX::RenderArgum
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    assert(srcClip_);
-    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
+    assert(_srcClip);
+    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -602,8 +607,8 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor, const OFX::RenderArgum
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
-    if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? _maskClip->fetchImage(args.time) : 0);
+    if (getContext() != OFX::eContextFilter && _maskClip->isConnected()) {
         if (mask.get()) {
             if (mask->getRenderScale().x != args.renderScale.x ||
                 mask->getRenderScale().y != args.renderScale.y ||
@@ -695,8 +700,8 @@ RampPlugin::render(const OFX::RenderArguments &args)
 {
     
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentAlpha);
     if (dstComponents == OFX::ePixelComponentRGBA) {
@@ -718,7 +723,7 @@ RampPlugin::isIdentity(const OFX::IsIdentityArguments &args,
     _mix->getValueAtTime(args.time, mix);
 
     if (mix == 0. /*|| (!processR && !processG && !processB && !processA)*/) {
-        identityClip = srcClip_;
+        identityClip = _srcClip;
         return true;
     }
 
@@ -731,7 +736,7 @@ RampPlugin::isIdentity(const OFX::IsIdentityArguments &args,
     _processB->getValueAtTime(args.time, processB);
     _processA->getValueAtTime(args.time, processA);
     if (!processR && !processG && !processB && !processA) {
-        identityClip = srcClip_;
+        identityClip = _srcClip;
         return true;
     }
 
@@ -739,7 +744,7 @@ RampPlugin::isIdentity(const OFX::IsIdentityArguments &args,
     _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
     _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
     if (color0.a == 0. && color1.a == 0.) {
-        identityClip = srcClip_;
+        identityClip = _srcClip;
         return true;
     }
 
@@ -750,10 +755,10 @@ RampPlugin::isIdentity(const OFX::IsIdentityArguments &args,
 void
 RampPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-    // set the premultiplication of dstClip_ if alpha is affected and source is Opaque
+    // set the premultiplication of _dstClip if alpha is affected and source is Opaque
     bool alpha;
     _processA->getValue(alpha);
-    if (alpha && srcClip_->getPreMultiplication() == eImageOpaque) {
+    if (alpha && _srcClip->getPreMultiplication() == eImageOpaque) {
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }
 }

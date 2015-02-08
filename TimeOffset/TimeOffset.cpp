@@ -127,25 +127,25 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    //OFX::Clip *dstClip_;            /**< @brief Mandated output clips */
-    OFX::Clip *srcClip_;            /**< @brief Mandated input clips */
+    //OFX::Clip *_dstClip;            /**< @brief Mandated output clips */
+    OFX::Clip *_srcClip;            /**< @brief Mandated input clips */
 
-    OFX::IntParam  *time_offset_;      /**< @brief only used in the filter context. */
-    OFX::BooleanParam  *reverse_input_;
+    OFX::IntParam  *_time_offset;      /**< @brief only used in the filter context. */
+    OFX::BooleanParam  *_reverse_input;
 };
 
 TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
 : ImageEffect(handle)
-, srcClip_(0)
-, time_offset_(0)
-, reverse_input_(0)
+, _srcClip(0)
+, _time_offset(0)
+, _reverse_input(0)
 {
-    srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(srcClip_ && (srcClip_->getPixelComponents() == OFX::ePixelComponentAlpha || srcClip_->getPixelComponents() == OFX::ePixelComponentRGB || srcClip_->getPixelComponents() == OFX::ePixelComponentRGBA));
+    _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+    assert(_srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentAlpha || _srcClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA));
 
-    time_offset_   = fetchIntParam(kParamTimeOffset);
-    reverse_input_ = fetchBooleanParam(kParamReverseInput);
-    assert(time_offset_ && reverse_input_);
+    _time_offset   = fetchIntParam(kParamTimeOffset);
+    _reverse_input = fetchBooleanParam(kParamReverseInput);
+    assert(_time_offset && _reverse_input);
 }
 
 
@@ -159,9 +159,9 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
 double
 TimeOffsetPlugin::getSourceTime(double t) const
 {
-    double sourceTime = t - time_offset_->getValueAtTime(t); // no animation
-    OfxRangeD range = srcClip_->getFrameRange();
-    bool reverse_input = reverse_input_->getValueAtTime(t);
+    double sourceTime = t - _time_offset->getValueAtTime(t); // no animation
+    OfxRangeD range = _srcClip->getFrameRange();
+    bool reverse_input = _reverse_input->getValueAtTime(t);
     if (reverse_input) {
         sourceTime = range.max - sourceTime + range.min;
     }
@@ -181,10 +181,10 @@ TimeOffsetPlugin::getTimeDomain(OfxRangeD &range)
     // this should only be called in the general context, ever!
     if (getContext() == OFX::eContextGeneral) {
         // how many frames on the input clip
-        OfxRangeD srcRange = srcClip_->getFrameRange();
+        OfxRangeD srcRange = _srcClip->getFrameRange();
 
-        range.min = srcRange.min + time_offset_->getValueAtTime(srcRange.min);
-        range.max = srcRange.max + time_offset_->getValueAtTime(srcRange.max);
+        range.min = srcRange.min + _time_offset->getValueAtTime(srcRange.min);
+        range.max = srcRange.max + _time_offset->getValueAtTime(srcRange.max);
         return true;
     }
 
@@ -199,7 +199,7 @@ TimeOffsetPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
     OfxRangeD range;
     range.min = sourceTime;
     range.max = sourceTime;
-    frames.setFramesNeeded(*srcClip_, range);
+    frames.setFramesNeeded(*_srcClip, range);
 }
 
 // the overridden render function
@@ -213,7 +213,7 @@ TimeOffsetPlugin::render(const OFX::RenderArguments &/*args*/)
 bool
 TimeOffsetPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime)
 {
-    identityClip = srcClip_;
+    identityClip = _srcClip;
     identityTime = getSourceTime(args.time);
     return true;
 }

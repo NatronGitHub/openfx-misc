@@ -132,27 +132,27 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *srcClip_[kClipSourceCount];
+    OFX::Clip *_srcClip[kClipSourceCount];
 
-    OFX::IntParam *which_;
+    OFX::IntParam *_which;
 };
 
 SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle)
 : ImageEffect(handle)
-, which_(0)
+, _which(0)
 {
     for (int i = 0; i < kClipSourceCount; ++i) {
         if (getContext() == OFX::eContextFilter && i == 0) {
-            srcClip_[i] = fetchClip(kOfxImageEffectSimpleSourceClipName);
+            _srcClip[i] = fetchClip(kOfxImageEffectSimpleSourceClipName);
         } else {
             std::stringstream s;
             s << i;
-            srcClip_[i] = fetchClip(s.str());
+            _srcClip[i] = fetchClip(s.str());
         }
-        assert(srcClip_[i]);
+        assert(_srcClip[i]);
     }
-    which_  = fetchIntParam(kParamWhich);
-    assert(which_);
+    _which  = fetchIntParam(kParamWhich);
+    assert(_which);
 }
 
 void
@@ -166,8 +166,8 @@ bool
 SwitchPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &/*identityTime*/)
 {
     int input;
-    which_->getValueAtTime(args.time, input);
-    identityClip = srcClip_[input];
+    _which->getValueAtTime(args.time, input);
+    identityClip = _srcClip[input];
     return true;
 }
 
@@ -175,10 +175,10 @@ bool
 SwitchPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     int input;
-    which_->getValueAtTime(args.time, input);
+    _which->getValueAtTime(args.time, input);
 
-    if (srcClip_[input] && srcClip_[input]->isConnected()) {
-        rod = srcClip_[input]->getRegionOfDefinition(args.time);
+    if (_srcClip[input] && _srcClip[input]->isConnected()) {
+        rod = _srcClip[input]->getRegionOfDefinition(args.time);
 
         return true;
     }
@@ -192,8 +192,8 @@ bool
 SwitchPlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9])
 {
     int input;
-    which_->getValueAtTime(args.time, input);
-    transformClip = srcClip_[input];
+    _which->getValueAtTime(args.time, input);
+    transformClip = _srcClip[input];
 
     transformMatrix[0] = 1.;
     transformMatrix[1] = 0.;
@@ -213,11 +213,11 @@ SwitchPlugin::changedClip(const OFX::InstanceChangedArgs &/*args*/, const std::s
 {
     int maxconnected = 1;
     for (int i = 2; i < kClipSourceCount; ++i) {
-        if (srcClip_[i]->isConnected()) {
+        if (_srcClip[i]->isConnected()) {
             maxconnected = i;
         }
     }
-    which_->setDisplayRange(0, maxconnected);
+    _which->setDisplayRange(0, maxconnected);
 }
 
 

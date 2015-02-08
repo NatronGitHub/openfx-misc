@@ -297,7 +297,7 @@ TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX::Mat
 void
 TransformPlugin::resetCenter(double time)
 {
-    OfxRectD rod = srcClip_->getRegionOfDefinition(time);
+    OfxRectD rod = _srcClip->getRegionOfDefinition(time);
     if (rod.x1 <= kOfxFlagInfiniteMin || kOfxFlagInfiniteMax <= rod.x2 ||
         rod.y1 <= kOfxFlagInfiniteMin || kOfxFlagInfiniteMax <= rod.y2) {
         return;
@@ -384,7 +384,7 @@ TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::s
 void
 TransformPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
         resetCenter(args.time);
     }
 }

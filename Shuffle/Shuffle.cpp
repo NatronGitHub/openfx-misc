@@ -444,9 +444,9 @@ public:
     /** @brief ctor */
     ShufflePlugin(OfxImageEffectHandle handle, OFX::ContextEnum context)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClipA_(0)
-    , srcClipB_(0)
+    , _dstClip(0)
+    , _srcClipA(0)
+    , _srcClipB(0)
     , _outputComponents(0)
     , _outputBitDepth(0)
     , _r(0)
@@ -454,13 +454,13 @@ public:
     , _b(0)
     , _a(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA || dstClip_->getPixelComponents() == ePixelComponentAlpha));
-        srcClipA_ = fetchClip(context == eContextGeneral ? kClipA : kOfxImageEffectSimpleSourceClipName);
-        assert(srcClipA_ && (srcClipA_->getPixelComponents() == ePixelComponentRGB || srcClipA_->getPixelComponents() == ePixelComponentRGBA || srcClipA_->getPixelComponents() == ePixelComponentAlpha));
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));
+        _srcClipA = fetchClip(context == eContextGeneral ? kClipA : kOfxImageEffectSimpleSourceClipName);
+        assert(_srcClipA && (_srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentAlpha));
         if (context == eContextGeneral) {
-            srcClipB_ = fetchClip(kClipB);
-            assert(srcClipB_ && (srcClipB_->getPixelComponents() == ePixelComponentRGB || srcClipB_->getPixelComponents() == ePixelComponentRGBA || srcClipB_->getPixelComponents() == ePixelComponentAlpha));
+            _srcClipB = fetchClip(kClipB);
+            assert(_srcClipB && (_srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentAlpha));
         }
         _outputComponents = fetchChoiceParam(kParamOutputComponents);
         if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
@@ -505,9 +505,9 @@ private:
     void setupAndProcess(ShufflerBase &, const OFX::RenderArguments &args);
 
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClipA_;
-    OFX::Clip *srcClipB_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcClipA;
+    OFX::Clip *_srcClipB;
 
     OFX::ChoiceParam *_outputComponents;
     OFX::ChoiceParam *_outputBitDepth;
@@ -524,8 +524,15 @@ private:
 void
 ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -534,10 +541,8 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    //OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const OFX::Image> srcA(srcClipA_ ? srcClipA_->fetchImage(args.time) : 0);
-    std::auto_ptr<const OFX::Image> srcB(srcClipB_ ? srcClipB_->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> srcA(_srcClipA ? _srcClipA->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> srcB(_srcClipB ? _srcClipB->fetchImage(args.time) : 0);
     OFX::BitDepthEnum    srcBitDepth = eBitDepthNone;
     OFX::PixelComponentEnum srcComponents = ePixelComponentNone;
     if (srcA.get()) {
@@ -549,7 +554,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
         }
         srcBitDepth      = srcA->getPixelDepth();
         srcComponents = srcA->getPixelComponents();
-        assert(srcClipA_->getPixelComponents() == srcComponents);
+        assert(_srcClipA->getPixelComponents() == srcComponents);
     }
 
     if (srcB.get()) {
@@ -561,7 +566,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
         }
         OFX::BitDepthEnum    srcBBitDepth      = srcB->getPixelDepth();
         OFX::PixelComponentEnum srcBComponents = srcB->getPixelComponents();
-        assert(srcClipB_->getPixelComponents() == srcBComponents);
+        assert(_srcClipB->getPixelComponents() == srcBComponents);
         // both input must have the same bit depth and components
         if ((srcBitDepth != eBitDepthNone && srcBitDepth != srcBBitDepth) ||
             (srcComponents != ePixelComponentNone && srcComponents != srcBComponents)) {
@@ -677,11 +682,11 @@ void
 ShufflePlugin::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == ePixelComponentAlpha);
 
-    // get the components of dstClip_
+    // get the components of _dstClip
     int outputComponents_i;
     _outputComponents->getValue(outputComponents_i);
     PixelComponentEnum outputComponents = gOutputComponentsMap[outputComponents_i];
@@ -691,7 +696,7 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
     }
 
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
-        // get the bitDepth of dstClip_
+        // get the bitDepth of _dstClip
         int outputBitDepth_i;
         _outputBitDepth->getValue(outputBitDepth_i);
         BitDepthEnum outputBitDepth = gOutputBitDepthMap[outputBitDepth_i];
@@ -701,10 +706,10 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-    OFX::BitDepthEnum srcBitDepth = srcClipA_->getPixelDepth();
+    OFX::BitDepthEnum srcBitDepth = _srcClipA->getPixelDepth();
 
-    if (srcClipB_ && srcClipA_->isConnected() && srcClipB_->isConnected()) {
-        OFX::BitDepthEnum srcBBitDepth = srcClipB_->getPixelDepth();
+    if (_srcClipB && _srcClipA->isConnected() && _srcClipB->isConnected()) {
+        OFX::BitDepthEnum srcBBitDepth = _srcClipB->getPixelDepth();
         // both input must have the same bit depth
         if (srcBitDepth != srcBBitDepth) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Shuffle: both inputs must have the same bit depth");
@@ -738,13 +743,13 @@ ShufflePlugin::isIdentity(const OFX::IsIdentityArguments &/*args*/, OFX::Clip * 
     _a->getValue(a_i);
     InputChannelEnum a = InputChannelEnum(a_i);
 
-    if (r == eInputChannelAR && g == eInputChannelBG && b == eInputChannelAB && a == eInputChannelAA && srcClipA_) {
-        identityClip = srcClipA_;
+    if (r == eInputChannelAR && g == eInputChannelBG && b == eInputChannelAB && a == eInputChannelAA && _srcClipA) {
+        identityClip = _srcClipA;
 
         return true;
     }
-    if (r == eInputChannelBR && g == eInputChannelBG && b == eInputChannelBB && a == eInputChannelBA && srcClipB_) {
-        identityClip = srcClipB_;
+    if (r == eInputChannelBR && g == eInputChannelBG && b == eInputChannelBB && a == eInputChannelBA && _srcClipB) {
+        identityClip = _srcClipB;
 
         return true;
     }
@@ -767,19 +772,19 @@ ShufflePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &arg
     _a->getValue(a_i);
     InputChannelEnum a = InputChannelEnum(a_i);
 
-    if (r == eInputChannelAR && g == eInputChannelBG && b == eInputChannelAB && a == eInputChannelAA && srcClipA_) {
-        rod = srcClipA_->getRegionOfDefinition(args.time);
+    if (r == eInputChannelAR && g == eInputChannelBG && b == eInputChannelAB && a == eInputChannelAA && _srcClipA) {
+        rod = _srcClipA->getRegionOfDefinition(args.time);
 
         return true;
     }
-    if (r == eInputChannelBR && g == eInputChannelBG && b == eInputChannelBB && a == eInputChannelBA && srcClipB_) {
-        rod = srcClipB_->getRegionOfDefinition(args.time);
+    if (r == eInputChannelBR && g == eInputChannelBG && b == eInputChannelBB && a == eInputChannelBA && _srcClipB) {
+        rod = _srcClipB->getRegionOfDefinition(args.time);
 
         return true;
     }
-    if (srcClipA_ && srcClipA_->isConnected() && srcClipB_ && srcClipB_->isConnected()) {
-        OfxRectD rodA = srcClipA_->getRegionOfDefinition(args.time);
-        OfxRectD rodB = srcClipB_->getRegionOfDefinition(args.time);
+    if (_srcClipA && _srcClipA->isConnected() && _srcClipB && _srcClipB->isConnected()) {
+        OfxRectD rodA = _srcClipA->getRegionOfDefinition(args.time);
+        OfxRectD rodB = _srcClipB->getRegionOfDefinition(args.time);
         rod.x1 = std::min(rodA.x1, rodB.x1);
         rod.y1 = std::min(rodA.y1, rodB.y1);
         rod.x2 = std::max(rodA.x2, rodB.x2);
@@ -794,18 +799,18 @@ ShufflePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &arg
 void
 ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-    // set the components of dstClip_
+    // set the components of _dstClip
     int outputComponents_i;
     _outputComponents->getValue(outputComponents_i);
     PixelComponentEnum outputComponents = gOutputComponentsMap[outputComponents_i];
-    clipPreferences.setClipComponents(*dstClip_, outputComponents);
+    clipPreferences.setClipComponents(*_dstClip, outputComponents);
 
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
-        // set the bitDepth of dstClip_
+        // set the bitDepth of _dstClip
         int outputBitDepth_i;
         _outputBitDepth->getValue(outputBitDepth_i);
         BitDepthEnum outputBitDepth = gOutputBitDepthMap[outputBitDepth_i];
-        clipPreferences.setClipBitDepth(*dstClip_, outputBitDepth);
+        clipPreferences.setClipBitDepth(*_dstClip, outputBitDepth);
     }
 }
 
@@ -864,26 +869,26 @@ ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::str
     } else if (paramName == kParamClipInfo && args.reason == eChangeUserEdit) {
         std::string msg;
         msg += "Input A: ";
-        if (!srcClipA_) {
+        if (!_srcClipA) {
             msg += "N/A";
         } else {
-            msg += imageFormatString(srcClipA_->getPixelComponents(), srcClipA_->getPixelDepth());
+            msg += imageFormatString(_srcClipA->getPixelComponents(), _srcClipA->getPixelDepth());
         }
         msg += "\n";
         if (getContext() == eContextGeneral) {
             msg += "Input B: ";
-            if (!srcClipB_) {
+            if (!_srcClipB) {
                 msg += "N/A";
             } else {
-                msg += imageFormatString(srcClipB_->getPixelComponents(), srcClipB_->getPixelDepth());
+                msg += imageFormatString(_srcClipB->getPixelComponents(), _srcClipB->getPixelDepth());
             }
             msg += "\n";
         }
         msg += "Output: ";
-        if (!dstClip_) {
+        if (!_dstClip) {
             msg += "N/A";
         } else {
-            msg += imageFormatString(dstClip_->getPixelComponents(), dstClip_->getPixelDepth());
+            msg += imageFormatString(_dstClip->getPixelComponents(), _dstClip->getPixelDepth());
         }
         msg += "\n";
         sendMessage(OFX::Message::eMessageMessage, "", msg);
@@ -896,10 +901,10 @@ ShufflePlugin::changedClip(const InstanceChangedArgs &/*args*/, const std::strin
     if (getContext() == eContextGeneral &&
         (clipName == kClipA || clipName == kClipB)) {
         // check that A and B are compatible if they're both connected
-        OFX::BitDepthEnum srcBitDepth = srcClipA_->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth = _srcClipA->getPixelDepth();
 
-        if (srcClipB_ && srcClipA_->isConnected() && srcClipB_->isConnected()) {
-            OFX::BitDepthEnum srcBBitDepth = srcClipB_->getPixelDepth();
+        if (_srcClipB && _srcClipA->isConnected() && _srcClipB->isConnected()) {
+            OFX::BitDepthEnum srcBBitDepth = _srcClipB->getPixelDepth();
             // both input must have the same bit depth
             if (srcBitDepth != srcBBitDepth) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Shuffle: both inputs must have the same bit depth");

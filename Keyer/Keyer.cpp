@@ -520,11 +520,11 @@ public:
     /** @brief ctor */
     KeyerPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClip_(0)
-    , bgClip_(0)
-    , inMaskClip_(0)
-    , outMaskClip_(0)
+    , _dstClip(0)
+    , _srcClip(0)
+    , _bgClip(0)
+    , _inMaskClip(0)
+    , _outMaskClip(0)
     , _keyColor(0)
     , _keyerMode(0)
     , _softnessLower(0)
@@ -536,16 +536,16 @@ public:
     , _outputMode(0)
     , _sourceAlpha(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
-        bgClip_ = fetchClip(kClipBg);
-        assert(bgClip_ && (bgClip_->getPixelComponents() == ePixelComponentRGB || bgClip_->getPixelComponents() == ePixelComponentRGBA));
-        inMaskClip_ = fetchClip(kClipInsideMask);;
-        assert(inMaskClip_ && inMaskClip_->getPixelComponents() == ePixelComponentAlpha);
-        outMaskClip_ = fetchClip(kClipOutsidemask);;
-        assert(outMaskClip_ && outMaskClip_->getPixelComponents() == ePixelComponentAlpha);
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
+        _bgClip = fetchClip(kClipBg);
+        assert(_bgClip && (_bgClip->getPixelComponents() == ePixelComponentRGB || _bgClip->getPixelComponents() == ePixelComponentRGBA));
+        _inMaskClip = fetchClip(kClipInsideMask);;
+        assert(_inMaskClip && _inMaskClip->getPixelComponents() == ePixelComponentAlpha);
+        _outMaskClip = fetchClip(kClipOutsidemask);;
+        assert(_outMaskClip && _outMaskClip->getPixelComponents() == ePixelComponentAlpha);
         _keyColor = fetchRGBParam(kParamKeyColor);
         _keyerMode = fetchChoiceParam(kParamKeyerMode);
         _softnessLower = fetchDoubleParam(kParamSoftnessLower);
@@ -576,11 +576,11 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
-    OFX::Clip *bgClip_;
-    OFX::Clip *inMaskClip_;
-    OFX::Clip *outMaskClip_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcClip;
+    OFX::Clip *_bgClip;
+    OFX::Clip *_inMaskClip;
+    OFX::Clip *_outMaskClip;
     
     OFX::RGBParam* _keyColor;
     OFX::ChoiceParam* _keyerMode;
@@ -606,8 +606,15 @@ private:
 void
 KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -616,10 +623,8 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArg
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
-    std::auto_ptr<OFX::Image> bg(bgClip_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> bg(_bgClip->fetchImage(args.time));
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -649,7 +654,7 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArg
     }
     
     // auto ptr for the masks.
-    std::auto_ptr<OFX::Image> inMask(inMaskClip_ ? inMaskClip_->fetchImage(args.time) : 0);
+    std::auto_ptr<OFX::Image> inMask(_inMaskClip ? _inMaskClip->fetchImage(args.time) : 0);
     if (inMask.get()) {
         if (inMask->getRenderScale().x != args.renderScale.x ||
             inMask->getRenderScale().y != args.renderScale.y ||
@@ -658,7 +663,7 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArg
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<OFX::Image> outMask(outMaskClip_ ? outMaskClip_->fetchImage(args.time) : 0);
+    std::auto_ptr<OFX::Image> outMask(_outMaskClip ? _outMaskClip->fetchImage(args.time) : 0);
     if (outMask.get()) {
         if (outMask->getRenderScale().x != args.renderScale.x ||
             outMask->getRenderScale().y != args.renderScale.y ||
@@ -705,8 +710,8 @@ KeyerPlugin::render(const OFX::RenderArguments &args)
 {
     
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
@@ -758,7 +763,7 @@ KeyerPlugin::render(const OFX::RenderArguments &args)
 void
 KeyerPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-    // set the premultiplication of dstClip_
+    // set the premultiplication of _dstClip
     int outputModeI;
     OutputModeEnum outputMode;
     _outputMode->getValue(outputModeI);
@@ -776,7 +781,7 @@ KeyerPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     }
     
     // Output is RGBA
-    clipPreferences.setClipComponents(*dstClip_, ePixelComponentRGBA);
+    clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
 }
 
 void

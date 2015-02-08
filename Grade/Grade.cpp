@@ -447,16 +447,16 @@ public:
     /** @brief ctor */
     GradePlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClip_(0)
-    , maskClip_(0)
+    , _dstClip(0)
+    , _srcClip(0)
+    , _maskClip(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
-        maskClip_ = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-        assert(!maskClip_ || maskClip_->getPixelComponents() == ePixelComponentAlpha);
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
+        _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _blackPoint = fetchRGBAParam(kParamBlackPoint);
         _whitePoint = fetchRGBAParam(kParamWhitePoint);
         _black = fetchRGBAParam(kParamBlack);
@@ -496,9 +496,9 @@ private:
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
-    OFX::Clip *maskClip_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcClip;
+    OFX::Clip *_maskClip;
     BooleanParam* _processR;
     BooleanParam* _processG;
     BooleanParam* _processB;
@@ -529,8 +529,15 @@ private:
 void
 GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -539,9 +546,7 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -555,8 +560,8 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? maskClip_->fetchImage(args.time) : 0);
-    if (getContext() != OFX::eContextFilter && maskClip_->isConnected()) {
+    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? _maskClip->fetchImage(args.time) : 0);
+    if (getContext() != OFX::eContextFilter && _maskClip->isConnected()) {
         if (mask.get()) {
             if (mask->getRenderScale().x != args.renderScale.x ||
                 mask->getRenderScale().y != args.renderScale.y ||
@@ -610,8 +615,8 @@ void
 GradePlugin::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
@@ -666,7 +671,7 @@ GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
     _mix->getValueAtTime(args.time, mix);
 
     if (mix == 0.) {
-        identityClip = srcClip_;
+        identityClip = _srcClip;
         return true;
     }
 
@@ -679,7 +684,7 @@ GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
     _processB->getValueAtTime(args.time, processB);
     _processA->getValueAtTime(args.time, processA);
     if (!processR && !processG && !processB && !processA) {
-        identityClip = srcClip_;
+        identityClip = _srcClip;
         return true;
     }
 
@@ -704,7 +709,7 @@ GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
         multiply.r == 1. && multiply.g == 1. && multiply.b == 1. && multiply.a == 1. &&
         offset.r == 0. && offset.g == 0. && offset.b == 0. && offset.a == 0. &&
         gamma.r == 1. && gamma.g == 1. && gamma.b == 1. && gamma.a == 1) {
-        identityClip = srcClip_;
+        identityClip = _srcClip;
         return true;
     }
     return false;
@@ -713,8 +718,8 @@ GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
 void
 GradePlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && srcClip_ && args.reason == OFX::eChangeUserEdit) {
-        switch (srcClip_->getPreMultiplication()) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+        switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
                 _premult->setValue(false);
                 break;

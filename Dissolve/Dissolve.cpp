@@ -108,20 +108,20 @@ public:
     /** @brief ctor */
     DissolvePlugin(OfxImageEffectHandle handle)
         : ImageEffect(handle)
-          , dstClip_(0)
-          , fromClip_(0)
-          , toClip_(0)
-          , maskClip_(0)
+          , _dstClip(0)
+          , _fromClip(0)
+          , _toClip(0)
+          , _maskClip(0)
           , _transition(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == OFX::ePixelComponentRGB || dstClip_->getPixelComponents() == OFX::ePixelComponentRGBA || dstClip_->getPixelComponents() == OFX::ePixelComponentAlpha));
-        fromClip_ = fetchClip(getContext() == OFX::eContextTransition ?  kOfxImageEffectTransitionSourceFromClipName : kClipFrom);
-        assert(fromClip_ && (fromClip_->getPixelComponents() == OFX::ePixelComponentRGB || fromClip_->getPixelComponents() == OFX::ePixelComponentRGBA || fromClip_->getPixelComponents() == OFX::ePixelComponentAlpha));
-        toClip_   = fetchClip(getContext() == OFX::eContextTransition ? kOfxImageEffectTransitionSourceToClipName : kClipTo);
-        assert(toClip_ && (toClip_->getPixelComponents() == OFX::ePixelComponentRGB || toClip_->getPixelComponents() == OFX::ePixelComponentRGBA || toClip_->getPixelComponents() == OFX::ePixelComponentAlpha));
-        maskClip_ = fetchClip("Mask");
-        assert(!maskClip_ || maskClip_->getPixelComponents() == OFX::ePixelComponentAlpha);
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha));
+        _fromClip = fetchClip(getContext() == OFX::eContextTransition ?  kOfxImageEffectTransitionSourceFromClipName : kClipFrom);
+        assert(_fromClip && (_fromClip->getPixelComponents() == OFX::ePixelComponentRGB || _fromClip->getPixelComponents() == OFX::ePixelComponentRGBA || _fromClip->getPixelComponents() == OFX::ePixelComponentAlpha));
+        _toClip   = fetchClip(getContext() == OFX::eContextTransition ? kOfxImageEffectTransitionSourceToClipName : kClipTo);
+        assert(_toClip && (_toClip->getPixelComponents() == OFX::ePixelComponentRGB || _toClip->getPixelComponents() == OFX::ePixelComponentRGBA || _toClip->getPixelComponents() == OFX::ePixelComponentAlpha));
+        _maskClip = fetchClip("Mask");
+        assert(!_maskClip || _maskClip->getPixelComponents() == OFX::ePixelComponentAlpha);
         _transition = fetchDoubleParam(getContext() == OFX::eContextTransition ? kOfxImageEffectTransitionParamName : kParamWhich);
         assert(_transition);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
@@ -148,10 +148,10 @@ private:
     void renderForBitDepth(const OFX::RenderArguments &args);
 
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *fromClip_;
-    OFX::Clip *toClip_;
-    OFX::Clip *maskClip_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_fromClip;
+    OFX::Clip *_toClip;
+    OFX::Clip *_maskClip;
     OFX::DoubleParam* _transition;
     OFX::BooleanParam* _maskInvert;
 };
@@ -184,8 +184,15 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
                                 const OFX::RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image>  dst( dstClip_->fetchImage(args.time) );
+    std::auto_ptr<OFX::Image>  dst( _dstClip->fetchImage(args.time) );
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -194,12 +201,10 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum dstBitDepth = dst->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents = dst->getPixelComponents();
 
     // fetch the two source images
-    std::auto_ptr<OFX::Image> fromImg(fromClip_->fetchImage(args.time));
-    std::auto_ptr<OFX::Image> toImg(toClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> fromImg(_fromClip->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> toImg(_toClip->fetchImage(args.time));
 
     // make sure bit depths are sane
     if (fromImg.get()) {
@@ -221,7 +226,7 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
 
-    std::auto_ptr<OFX::Image> mask(maskClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> mask(_maskClip->fetchImage(args.time));
     if (mask.get()) {
         if (mask->getRenderScale().x != args.renderScale.x ||
             mask->getRenderScale().y != args.renderScale.y ||
@@ -232,7 +237,7 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
     }
     if (getContext() != OFX::eContextFilter &&
         getContext() != OFX::eContextTransition &&
-        maskClip_->isConnected()) {
+        _maskClip->isConnected()) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         processor.doMasking(true);
@@ -262,7 +267,7 @@ void
 DissolvePlugin::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
@@ -279,7 +284,7 @@ template<int nComponents>
 void
 DissolvePlugin::renderForComponents(const OFX::RenderArguments &args)
 {
-    OFX::BitDepthEnum dstBitDepth    = dstClip_->getPixelDepth();
+    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     switch (dstBitDepth) {
         case OFX::eBitDepthUByte:
             renderForBitDepth<unsigned char, nComponents, 255>(args);
@@ -303,7 +308,7 @@ DissolvePlugin::renderForBitDepth(const OFX::RenderArguments &args)
 {
     if (getContext() != OFX::eContextFilter &&
         getContext() != OFX::eContextTransition &&
-        maskClip_->isConnected()) {
+        _maskClip->isConnected()) {
         OFX::ImageBlenderMasked<PIX, nComponents, maxValue, true> fred(*this);
         setupAndProcess(fred, args);
     } else {
@@ -325,7 +330,7 @@ DissolvePlugin::isIdentity(const OFX::IsIdentityArguments &args,
 
     // at the start?
     if (blend <= 0.0) {
-        identityClip = fromClip_;
+        identityClip = _fromClip;
         identityTime = args.time;
 
         return true;
@@ -333,8 +338,8 @@ DissolvePlugin::isIdentity(const OFX::IsIdentityArguments &args,
 
     // at the end?
     if (blend >= 1.0 &&
-        (!maskClip_ || !maskClip_->isConnected())) {
-        identityClip = toClip_;
+        (!_maskClip || !_maskClip->isConnected())) {
+        identityClip = _toClip;
         identityTime = args.time;
 
         return true;
@@ -350,23 +355,23 @@ DissolvePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
     // get the transition value
     float blend = (float)_transition->getValueAtTime(args.time);
     // at the start?
-    if (blend <= 0.0 && fromClip_ && fromClip_->isConnected()) {
-        rod = fromClip_->getRegionOfDefinition(args.time);
+    if (blend <= 0.0 && _fromClip && _fromClip->isConnected()) {
+        rod = _fromClip->getRegionOfDefinition(args.time);
 
         return true;
     }
 
     // at the end?
-    if (blend >= 1.0 && toClip_ && toClip_->isConnected() &&
-        (!maskClip_ || !maskClip_->isConnected())) {
-        rod = toClip_->getRegionOfDefinition(args.time);
+    if (blend >= 1.0 && _toClip && _toClip->isConnected() &&
+        (!_maskClip || !_maskClip->isConnected())) {
+        rod = _toClip->getRegionOfDefinition(args.time);
 
         return true;
     }
 
-    if (fromClip_ && fromClip_->isConnected() && toClip_ && toClip_->isConnected()) {
-        OfxRectD fromRoD = fromClip_->getRegionOfDefinition(args.time);
-        OfxRectD toRoD = toClip_->getRegionOfDefinition(args.time);
+    if (_fromClip && _fromClip->isConnected() && _toClip && _toClip->isConnected()) {
+        OfxRectD fromRoD = _fromClip->getRegionOfDefinition(args.time);
+        OfxRectD toRoD = _toClip->getRegionOfDefinition(args.time);
         rod.x1 = std::min(fromRoD.x1, toRoD.x1);
         rod.y1 = std::min(fromRoD.y1, toRoD.y1);
         rod.x2 = std::max(fromRoD.x2, toRoD.x2);

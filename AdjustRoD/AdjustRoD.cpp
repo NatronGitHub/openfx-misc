@@ -106,14 +106,14 @@ public:
     /** @brief ctor */
     AdjustRoDPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
-    , dstClip_(0)
-    , srcClip_(0)
+    , _dstClip(0)
+    , _srcClip(0)
     , _size(0)
     {
-        dstClip_ = fetchClip(kOfxImageEffectOutputClipName);
-        assert(dstClip_ && (dstClip_->getPixelComponents() == ePixelComponentAlpha || dstClip_->getPixelComponents() == ePixelComponentRGB || dstClip_->getPixelComponents() == ePixelComponentRGBA));
-        srcClip_ = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(srcClip_ && (srcClip_->getPixelComponents() == ePixelComponentAlpha || srcClip_->getPixelComponents() == ePixelComponentRGB || srcClip_->getPixelComponents() == ePixelComponentRGBA));
+        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
         
         _size = fetchDouble2DParam(kParamAddPixels);
         assert(_size);
@@ -139,8 +139,8 @@ private:
     
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *dstClip_;
-    OFX::Clip *srcClip_;
+    OFX::Clip *_dstClip;
+    OFX::Clip *_srcClip;
 
     OFX::Double2DParam* _size;
 
@@ -158,7 +158,7 @@ void
 AdjustRoDPlugin::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
                               const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(dstClip_->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -168,7 +168,7 @@ AdjustRoDPlugin::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src(srcClip_->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
     if (src.get() && dst.get())
     {
         OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
@@ -200,7 +200,7 @@ AdjustRoDPlugin::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
 void
 AdjustRoDPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
-    const OfxRectD& srcRod = srcClip_->getRegionOfDefinition(args.time);
+    const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(args.time);
     double w,h;
     _size->getValueAtTime(args.time, w, h);
     
@@ -212,14 +212,14 @@ AdjustRoDPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     
     // intersect the crop rectangle with args.regionOfInterest
     MergeImages2D::rectIntersection(srcRod, paddedRoD, &paddedRoD);
-    rois.setRegionOfInterest(*srcClip_, paddedRoD);
+    rois.setRegionOfInterest(*_srcClip, paddedRoD);
 }
 
 
 bool
 AdjustRoDPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
-    const OfxRectD& srcRod = srcClip_->getRegionOfDefinition(args.time);
+    const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(args.time);
     double w,h;
     _size->getValueAtTime(args.time, w, h);
     
@@ -264,8 +264,8 @@ AdjustRoDPlugin::render(const OFX::RenderArguments &args)
 {
     
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentAlpha);
     if (dstComponents == OFX::ePixelComponentRGBA) {
@@ -284,7 +284,7 @@ AdjustRoDPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCli
     double w,h;
     _size->getValueAtTime(args.time, w, h);
     if (w == 0 && h == 0) {
-        identityClip = srcClip_;
+        identityClip = _srcClip;
         identityTime = args.time;
         return true;
     }
