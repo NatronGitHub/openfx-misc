@@ -1,5 +1,5 @@
 /*
- OFX ColorCorrect plugin.
+ OFX Constant plugin.
 
  Copyright (C) 2014 INRIA
 
@@ -81,6 +81,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsGenerator.h"
+#include "ofxsLut.h"
 
 #define kPluginName "ConstantOFX"
 #define kPluginGrouping "Image"
@@ -106,96 +107,89 @@
 
 static bool gHostIsNatron   = false;
 
-
 /** @brief  Base class used to blend two images together */
-class ConstantGeneratorBase : public OFX::ImageProcessor {
+class ConstantProcessorBase : public OFX::ImageProcessor {
 protected:
     OfxRGBAColourD _color;
 
 public:
     /** @brief no arg ctor */
-    ConstantGeneratorBase(OFX::ImageEffect &instance)
+    ConstantProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     {
         _color.r = _color.g = _color.b = _color.a = 0.;
     }
 
     /** @brief set the color */
-    void setColor(const OfxRGBAColourD& color) {_color = color;}
+    void setColor(const OfxRGBAColourD &color)
+    {
+        _color = color;
+    }
 };
-
-template<int max>
-static int floatToInt(float value)
-{
-    if (value <= 0) {
-        return 0;
-    } else if (value >= 1.) {
-        return max;
-    }
-    return value * max + 0.5f;
-}
-
-static inline float to_func_srgb(float v)
-{
-    if (v < 0.0031308f) {
-        return (v < 0.0f) ? 0.0f : v * 12.92f;
-    } else {
-        return 1.055f * std::pow(v, 1.0f / 2.4f) - 0.055f;
-    }
-}
-
 
 /** @brief templated class to blend between two images */
 template <class PIX, int nComponents, int max>
-class ConstantGenerator : public ConstantGeneratorBase
+class ConstantProcessor : public ConstantProcessorBase
 {
 public:
     // ctor
-    ConstantGenerator(OFX::ImageEffect &instance)
-    : ConstantGeneratorBase(instance)
+    ConstantProcessor(OFX::ImageEffect &instance)
+    : ConstantProcessorBase(instance)
     {
     }
 
 private:
-    // and do some processing
-    void multiThreadProcessImages(OfxRectI procWindow)
+    static void
+    colorToPIX(const OfxRGBAColourD& color, PIX colorPix[nComponents])
     {
-        float colorf[nComponents];
+        float colorf[4];
         if (nComponents == 1) {
             // alpha
-            colorf[0] = (float)_color.a;
+            colorf[0] = (float)color.a;
         } else if (nComponents == 3) {
             // rgb
-            colorf[0] = (float)_color.r;
-            colorf[1] = (float)_color.g;
-            colorf[2] = (float)_color.b;
+            colorf[0] = (float)color.r;
+            colorf[1] = (float)color.g;
+            colorf[2] = (float)color.b;
         } else {
             assert(nComponents == 4);
             // rgba
-            colorf[0] = (float)_color.r;
-            colorf[1] = (float)_color.g;
-            colorf[2] = (float)_color.b;
-            colorf[3] = (float)_color.a;
+            colorf[0] = (float)color.r;
+            colorf[1] = (float)color.g;
+            colorf[2] = (float)color.b;
+            colorf[3] = (float)color.a;
         }
 
 
-        PIX color[nComponents];
         if (max == 1) { // implies float, don't clamp
             for (int c = 0; c < nComponents; ++c) {
-                color[c] = colorf[c];
+                colorPix[c] = colorf[c];
             }
         } else {
             // color is supposed to be linear: delinearize first
             if (nComponents == 3 || nComponents == 4) {
-                for (int c = 0; c < nComponents; ++c) {
-                    colorf[c] = to_func_srgb(colorf[c]);
+                // don't delinearize alpha: it is always linear
+                for (int c = 0; c < 3; ++c) {
+                    if (max == 255) {
+                        colorf[c] = OFX::Color::to_func_srgb(colorf[c]);
+                    } else {
+                        assert(max == 65535);
+                        colorf[c] = OFX::Color::to_func_Rec709(colorf[c]);
+                    }
                 }
             }
             // clamp and convert to the destination type
             for (int c = 0; c < nComponents; ++c) {
-                color[c] = floatToInt<max>(colorf[c]);
+                colorPix[c] = OFX::Color::floatToInt<max+1>(colorf[c]);
             }
         }
+    }
+
+    // and do some processing
+    void multiThreadProcessImages(OfxRectI procWindow)
+    {
+        PIX color[nComponents];
+        colorToPIX(_color, color);
 
         // push pixels
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
@@ -220,22 +214,17 @@ private:
 /** @brief The plugin that does our work */
 class ConstantPlugin : public GeneratorPlugin
 {
-protected:
- 
-    OFX::RGBAParam  *color_;
-    OFX::Int2DParam  *range_;
-
 public:
     /** @brief ctor */
     ConstantPlugin(OfxImageEffectHandle handle)
     : GeneratorPlugin(handle)
-    , color_(0)
-    , range_(0)
+    , _color(0)
+    , _range(0)
     {
         
-        color_   = fetchRGBAParam(kParamColor);
-        range_   = fetchInt2DParam(kParamRange);
-        assert(color_ && range_);
+        _color   = fetchRGBAParam(kParamColor);
+        _range   = fetchInt2DParam(kParamRange);
+        assert(_color && _range);
     }
 
 private:
@@ -246,11 +235,15 @@ private:
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(ConstantGeneratorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(ConstantProcessorBase &, const OFX::RenderArguments &args);
     
     virtual bool isIdentity(const OFX::IsIdentityArguments &args,
                                OFX::Clip * &identityClip,
                                double &identityTime) OVERRIDE FINAL;
+
+private:
+    OFX::RGBAParam  *_color;
+    OFX::Int2DParam  *_range;
 };
 
 
@@ -263,13 +256,18 @@ private:
 
 /* set up and run a processor */
 void
-ConstantPlugin::setupAndProcess(ConstantGeneratorBase &processor, const OFX::RenderArguments &args)
+ConstantPlugin::setupAndProcess(ConstantProcessorBase &processor, const OFX::RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image>  dst(dstClip_->fetchImage(args.time));
-    //OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    //OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    std::auto_ptr<OFX::Image>  dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
@@ -286,7 +284,7 @@ ConstantPlugin::setupAndProcess(ConstantGeneratorBase &processor, const OFX::Ren
     processor.setRenderWindow(args.renderWindow);
 
     OfxRGBAColourD color;
-    color_->getValueAtTime(args.time, color.r, color.g, color.b, color.a);
+    _color->getValueAtTime(args.time, color.r, color.g, color.b, color.a);
 
     processor.setColor(color);
 
@@ -299,24 +297,27 @@ void
 ConstantPlugin::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = dstClip_->getPixelDepth();
-    OFX::PixelComponentEnum dstComponents  = dstClip_->getPixelComponents();
+    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentAlpha);
+
+    checkComponents(dstBitDepth, dstComponents);
 
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
             case OFX::eBitDepthUByte: {
-                ConstantGenerator<unsigned char, 4, 255> fred(*this);
+                ConstantProcessor<unsigned char, 4, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
             case OFX::eBitDepthUShort: {
-                ConstantGenerator<unsigned short, 4, 65535> fred(*this);
+                ConstantProcessor<unsigned short, 4, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
             case OFX::eBitDepthFloat: {
-                ConstantGenerator<float, 4, 1> fred(*this);
+                ConstantProcessor<float, 4, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -326,17 +327,17 @@ ConstantPlugin::render(const OFX::RenderArguments &args)
     } else if (dstComponents == OFX::ePixelComponentRGB) {
         switch (dstBitDepth) {
             case OFX::eBitDepthUByte: {
-                ConstantGenerator<unsigned char, 3, 255> fred(*this);
+                ConstantProcessor<unsigned char, 3, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
             case OFX::eBitDepthUShort: {
-                ConstantGenerator<unsigned short, 3, 65535> fred(*this);
+                ConstantProcessor<unsigned short, 3, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
             case OFX::eBitDepthFloat: {
-                ConstantGenerator<float, 3, 1> fred(*this);
+                ConstantProcessor<float, 3, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -348,17 +349,17 @@ ConstantPlugin::render(const OFX::RenderArguments &args)
         switch (dstBitDepth)
         {
             case OFX::eBitDepthUByte: {
-                ConstantGenerator<unsigned char, 1, 255> fred(*this);
+                ConstantProcessor<unsigned char, 1, 255> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
             case OFX::eBitDepthUShort: {
-                ConstantGenerator<unsigned short, 1, 65535> fred(*this);
+                ConstantProcessor<unsigned short, 1, 65535> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
             case OFX::eBitDepthFloat: {
-                ConstantGenerator<float, 1, 1> fred(*this);
+                ConstantProcessor<float, 1, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -375,10 +376,10 @@ ConstantPlugin::getTimeDomain(OfxRangeD &range)
     // this should only be called in the general context, ever!
     if (getContext() == OFX::eContextGeneral) {
         // how many frames on the input clip
-        //OfxRangeD srcRange = srcClip_->getFrameRange();
+        //OfxRangeD srcRange = _srcClip->getFrameRange();
 
         int min, max;
-        range_->getValue(min, max);
+        _range->getValue(min, max);
         range.min = min;
         range.max = max;
         return true;
@@ -398,7 +399,7 @@ ConstantPlugin::isIdentity(const OFX::IsIdentityArguments &args,
         // only Natron supports setting the identityClip to the output clip
         
         int min, max;
-        range_->getValue(min, max);
+        _range->getValue(min, max);
         
         int type_i;
         _type->getValue(type_i);
@@ -406,15 +407,15 @@ ConstantPlugin::isIdentity(const OFX::IsIdentityArguments &args,
         if (type == eGeneratorTypeSize) {
             ///If not animated and different than 'min' time, return identity on the min time.
             ///We need to check more parameters
-            if (color_->getNumKeys() == 0 && _size->getNumKeys() == 0 && _btmLeft->getNumKeys() == 0 && args.time != min) {
-                identityClip = dstClip_;
+            if (_color->getNumKeys() == 0 && _size->getNumKeys() == 0 && _btmLeft->getNumKeys() == 0 && args.time != min) {
+                identityClip = _dstClip;
                 identityTime = min;
                 return true;
             }
         } else {
             ///If not animated and different than 'min' time, return identity on the min time.
-            if (color_->getNumKeys() == 0 && args.time != min) {
-                identityClip = dstClip_;
+            if (_color->getNumKeys() == 0 && args.time != min) {
+                identityClip = _dstClip;
                 identityTime = min;
                 return true;
             }
@@ -441,6 +442,8 @@ void ConstantPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
+
+    // set a few flags
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
@@ -471,11 +474,10 @@ void ConstantPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
-    dstClip->setFieldExtraction(eFieldExtractSingle);
     
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    generatorDescribeInContext(page, desc, context);
+    generatorDescribeInContext(page, desc, *dstClip, context);
 
     // color
     {
