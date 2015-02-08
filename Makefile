@@ -4,6 +4,7 @@ SUBDIRS_NOMULTI = \
 Add \
 AdjustRoD \
 Anaglyph \
+CheckerBoard \
 ChromaKeyer \
 Clamp \
 ClipTest \

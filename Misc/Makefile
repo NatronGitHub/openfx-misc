@@ -2,6 +2,7 @@ PLUGINOBJECTS = \
 Add.o \
 AdjustRoD.o \
 Anaglyph.o \
+CheckerBoard.o \
 ChromaKeyer.o \
 Clamp.o \
 ClipTest.o \
@@ -145,6 +146,7 @@ VPATH += \
 ../Add \
 ../AdjustRoD \
 ../Anaglyph \
+../CheckerBoard \
 ../ChromaKeyer \
 ../Clamp \
 ../ClipTest \
@@ -196,6 +198,7 @@ CXXFLAGS += \
 -I../Add \
 -I../AdjustRoD \
 -I../Anaglyph \
+-I../CheckerBoard \
 -I../ChromaKeyer \
 -I../Clamp \
 -I../ClipTest \

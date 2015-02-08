@@ -20,6 +20,7 @@ grouping).
 
 ### Image
 
+* CheckerBoardOFX: Generator for an image with a checkerboard color
 * ConstantOFX: Generator for an image with a uniform color
 
 ### Draw
@@ -129,6 +130,7 @@ with Nuke).
 
 ### Other
 
+* ImageStatisticsOFX: Compute statistics over an image or a rectangular area.
 * NoOpOFX: Copies the input to the ouput. Useful for inspecting the properties of input and output clips.
 * TestRenderOFX: Test some rendering features of the OFX host.
 
@@ -229,7 +231,8 @@ The stereoscopic plugins Anaglyph, JoinViews, MixViews, OneView,
 ReConverge, SideBySide are by Frederic Devernay.
 
 ColorLookup, Switch, TimeOffset, ChromaKeyer, Difference, Constant,
-Shuffle, Rectangle, Radial, HSVTool and the CImg plugins are by Frederic Devernay.
+Shuffle, Rectangle, Radial, HSVTool, ImageStatistics, CheckerBoard,
+and the CImg plugins are by Frederic Devernay.
 
 Merge, ColorCorrect, Grade, Roto, Crop, CopyRectangle  are by
 Alexandre Gauthier.

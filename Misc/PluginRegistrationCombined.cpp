@@ -1,6 +1,7 @@
 #include "Add.h"
 #include "AdjustRoD.h"
 #include "Anaglyph.h"
+#include "CheckerBoard.h"
 #include "ChromaKeyer.h"
 #include "Clamp.h"
 #include "ClipTest.h"
@@ -54,6 +55,7 @@ namespace OFX
             getAddPluginID(ids);
             getAdjustRoDPluginID(ids);
             getAnaglyphPluginID(ids);
+            getCheckerBoardPluginID(ids);
             getChromaKeyerPluginID(ids);
             getClampPluginID(ids);
             getClipTestPluginID(ids);

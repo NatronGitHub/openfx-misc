@@ -404,17 +404,18 @@ ConstantPlugin::isIdentity(const OFX::IsIdentityArguments &args,
         int type_i;
         _type->getValue(type_i);
         GeneratorTypeEnum type = (GeneratorTypeEnum)type_i;
+        bool paramsNotAnimated = (_color->getNumKeys() == 0);
         if (type == eGeneratorTypeSize) {
             ///If not animated and different than 'min' time, return identity on the min time.
             ///We need to check more parameters
-            if (_color->getNumKeys() == 0 && _size->getNumKeys() == 0 && _btmLeft->getNumKeys() == 0 && args.time != min) {
+            if (paramsNotAnimated && _size->getNumKeys() == 0 && _btmLeft->getNumKeys() == 0 && args.time != min) {
                 identityClip = _dstClip;
                 identityTime = min;
                 return true;
             }
         } else {
             ///If not animated and different than 'min' time, return identity on the min time.
-            if (_color->getNumKeys() == 0 && args.time != min) {
+            if (paramsNotAnimated && args.time != min) {
                 identityClip = _dstClip;
                 identityTime = min;
                 return true;
