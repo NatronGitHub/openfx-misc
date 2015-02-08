@@ -46,6 +46,7 @@ TimeOffset.o \
 TrackerPM.o \
 Transform.o \
 VectorToColor.o \
+ofxsGenerator.o \
 ofxsLut.o \
 ofxsOGLTextRenderer.o \
 ofxsOGLFontData.o  \
