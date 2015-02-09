@@ -1376,7 +1376,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
 
     _centerDrag = center;
     _translateDrag = translate;
-    _scaleParamDrag = scaleParam;
+    _scaleParamDrag = scale;
     _scaleUniformDrag = scaleUniform;
     _rotateDrag = rotate;
     _skewXDrag = skewX;
