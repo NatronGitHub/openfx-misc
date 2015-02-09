@@ -727,7 +727,7 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
         }
     }
 
-    glPushAttrib(GL_ALL_ATTRIB_BITS);
+    //glPushAttrib(GL_ALL_ATTRIB_BITS); // caller is responsible for protecting attribs
 
     //glDisable(GL_LINE_STIPPLE);
     glEnable(GL_LINE_SMOOTH);
@@ -786,7 +786,7 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
         }
     }
 
-    glPopAttrib();
+    //glPopAttrib();
 
     return true;
 }

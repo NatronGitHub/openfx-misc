@@ -948,7 +948,7 @@ RampInteract::draw(const DrawArgs &args)
         }
     }
 
-    glPushAttrib(GL_ALL_ATTRIB_BITS);
+    //glPushAttrib(GL_ALL_ATTRIB_BITS); // caller is responsible for protecting attribs
 
     glEnable(GL_LINE_SMOOTH);
     glEnable(GL_BLEND);
@@ -994,7 +994,7 @@ RampInteract::draw(const DrawArgs &args)
         }
     }
 
-    glPopAttrib();
+    //glPopAttrib();
 
     return true;
 }

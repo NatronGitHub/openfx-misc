@@ -902,7 +902,7 @@ TransformInteract::draw(const OFX::DrawArgs &args)
     skewMatrix[8] = 0.; skewMatrix[9] = 0.; skewMatrix[10] = 1.; skewMatrix[11] = 0;
     skewMatrix[12] = 0.; skewMatrix[13] = 0.; skewMatrix[14] = 0.; skewMatrix[15] = 1.;
 
-    glPushAttrib(GL_ALL_ATTRIB_BITS);
+    //glPushAttrib(GL_ALL_ATTRIB_BITS); // caller is responsible for protecting attribs
 
     //glDisable(GL_LINE_STIPPLE);
     glEnable(GL_LINE_SMOOTH);
@@ -969,7 +969,7 @@ TransformInteract::draw(const OFX::DrawArgs &args)
 
         glPopMatrix();
     }
-    glPopAttrib();
+    //glPopAttrib();
 
     return true;
 }
