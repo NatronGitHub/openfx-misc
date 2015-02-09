@@ -73,6 +73,7 @@
     <ClCompile Include="..\openfx\Support\Library\ofxsParams.cpp" />
     <ClCompile Include="..\openfx\Support\Library\ofxsProperty.cpp" />
     <ClCompile Include="..\openfx\Support\Library\ofxsPropertyValidation.cpp" />
+    <ClCompile Include="..\SupportExt\ofxsGenerator.cpp" />
     <ClCompile Include="..\SupportExt\ofxsLut.cpp" />
     <ClCompile Include="..\SupportExt\ofxsOGLFontData.cpp" />
     <ClCompile Include="..\SupportExt\ofxsOGLTextRenderer.cpp" />
