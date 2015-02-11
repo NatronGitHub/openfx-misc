@@ -681,6 +681,8 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
     const double &time = args.time;
     OfxRGBColourD color = { 0.8, 0.8, 0.8 };
     getSuggestedColour(color);
+    GLfloat modelview[16];
+    glGetFloatv( GL_MODELVIEW_MATRIX, modelview);
 
     OfxPointD to[4];
     OfxPointD from[4];
@@ -746,7 +748,7 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
         glMatrixMode(GL_PROJECTION);
         int direction = (l == 0) ? 1 : -1;
         // translate (1,-1) pixels
-        glTranslated(direction * pscale.x / 256, -direction * pscale.y / 256, 0);
+        glTranslated(direction * pscale.x * modelview[0], -direction * pscale.y * modelview[5], 0);
         glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
 
         glColor3f((float)(color.r/2)*l, (float)(color.g/2)*l, (float)(color.b/2)*l);

@@ -847,7 +847,9 @@ RampInteract::draw(const DrawArgs &args)
     OfxRGBColourD color = { 0.8, 0.8, 0.8 };
     getSuggestedColour(color);
     const OfxPointD &pscale = args.pixelScale;
-    
+    GLfloat modelview[16];
+    glGetFloatv( GL_MODELVIEW_MATRIX, modelview);
+
     OfxPointD p[2];
     if (_state == eInteractStateIdle) {
         _point0->getValueAtTime(args.time, p[0].x, p[0].y);
@@ -966,7 +968,7 @@ RampInteract::draw(const DrawArgs &args)
         glMatrixMode(GL_PROJECTION);
         int direction = (l == 0) ? 1 : -1;
         // translate (1,-1) pixels
-        glTranslated(direction * pscale.x / 256, -direction * pscale.y / 256, 0);
+        glTranslated(direction * pscale.x * modelview[0], -direction * pscale.y * modelview[5], 0);
         glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
         
         for (int i = 0; i < 2; ++i) {
