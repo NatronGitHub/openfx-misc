@@ -90,8 +90,10 @@
 #define kPluginName          "DilateCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-"Dilate input stream by a rectangular structuring element of specified size and Neumann boundary conditions.\n" \
-"Uses the 'dilate' function from the CImg library.\n" \
+"Dilate (or erode) input stream by a rectangular structuring element of specified size and Neumann boundary conditions (pixels out of the image get the value of the nearest pixel).\n" \
+"A negative size will perform an erosion instead of a dilation.\n" \
+"Different sizes can be given for the x and y axis.\n" \
+"Uses the 'dilate' and 'erode' functions from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.sourceforge.net)."
@@ -144,8 +146,8 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgDilateParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix_x = (int)std::ceil(params.sx * renderScale.x);
-        int delta_pix_y = (int)std::ceil(params.sy * renderScale.y);
+        int delta_pix_x = (int)std::ceil(std::abs(params.sx) * renderScale.x);
+        int delta_pix_y = (int)std::ceil(std::abs(params.sy) * renderScale.y);
         roi->x1 = rect.x1 - delta_pix_x;
         roi->x2 = rect.x2 + delta_pix_x;
         roi->y1 = rect.y1 - delta_pix_y;
@@ -156,8 +158,14 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        cimg.dilate((unsigned int)std::floor(std::max(0, params.sx) * args.renderScale.x) * 2 + 1,
-                    (unsigned int)std::floor(std::max(0, params.sy) * args.renderScale.y) * 2 + 1);
+        if (params.sx > 0 || params.sy > 0) {
+            cimg.dilate((unsigned int)std::floor(std::max(0, params.sx) * args.renderScale.x) * 2 + 1,
+                        (unsigned int)std::floor(std::max(0, params.sy) * args.renderScale.y) * 2 + 1);
+        }
+        if (params.sx < 0 || params.sy < 0) {
+            cimg.erode((unsigned int)std::floor(std::max(0, -params.sx) * args.renderScale.x) * 2 + 1,
+                       (unsigned int)std::floor(std::max(0, -params.sy) * args.renderScale.y) * 2 + 1);
+        }
     }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgDilateParams& params) OVERRIDE FINAL
@@ -214,8 +222,8 @@ void CImgDilatePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         OFX::Int2DParamDescriptor *param = desc.defineInt2DParam(kParamSize);
         param->setLabels(kParamSizeLabel, kParamSizeLabel, kParamSizeLabel);
         param->setHint(kParamSizeHint);
-        param->setRange(0, 0, 1000, 1000);
-        param->setDisplayRange(0, 0, 100, 100);
+        param->setRange(-1000, -1000, 1000, 1000);
+        param->setDisplayRange(-100, -100, 100, 100);
         param->setDefault(kParamSizeDefault, kParamSizeDefault);
         page->addChild(*param);
     }
