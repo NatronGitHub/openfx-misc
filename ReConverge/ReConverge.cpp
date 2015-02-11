@@ -110,6 +110,11 @@
 #define kParamConvergePointLabel "Converge Upon"
 #define kParamConvergePointHint "Position of the tracked point when the convergence is set"
 
+#define kParamInteractive "interactive"
+#define kParamInteractiveLabel "Interactive"
+#define kParamInteractiveHint \
+"When checked the image will be rendered whenever moving the overlay interact instead of when releasing the mouse button."
+
 #define kParamOffset "offset"
 #define kParamOffsetLabel "Convergence Offset"
 #define kParamOffsetHint "The disparity of the tracked point will be set to this"
@@ -219,10 +224,13 @@ public:
         _dispClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(kClipDisparity);
         assert(!_dispClip || (_dispClip->getPixelComponents() == ePixelComponentAlpha || _dispClip->getPixelComponents() == ePixelComponentRGB || _dispClip->getPixelComponents() == ePixelComponentRGBA));
 
-        convergepoint_ = fetchDouble2DParam(kParamConvergePoint);
+        if (getContext() == OFX::eContextGeneral) {
+            _convergepoint = fetchDouble2DParam(kParamConvergePoint);
+            assert(_convergepoint);
+        }
         _offset = fetchIntParam(kParamOffset);
-        convergemode_ = fetchChoiceParam(kParamConvergeMode);
-        assert(convergepoint_ && _offset && convergepoint_);
+        _convergemode = fetchChoiceParam(kParamConvergeMode);
+        assert(_offset && _convergemode);
     }
 
 private:
@@ -241,9 +249,9 @@ private:
     OFX::Clip *_srcClip;
     OFX::Clip *_dispClip;
 
-    OFX::Double2DParam *convergepoint_;
+    OFX::Double2DParam *_convergepoint;
     OFX::IntParam     *_offset;
-    OFX::ChoiceParam  *convergemode_;
+    OFX::ChoiceParam  *_convergemode;
 };
 
 
@@ -298,7 +306,7 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor, const OFX::RenderArg
 
     int offset = _offset->getValueAtTime(args.time);
     int convergemode;
-    convergemode_->getValueAtTime(args.time, convergemode);
+    _convergemode->getValueAtTime(args.time, convergemode);
 
     // set the images
     processor.setDstImg(dst.get());
@@ -310,7 +318,7 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor, const OFX::RenderArg
 #pragma message ("TODO")
     (void)offset;
     // set the parameters
-    if (getContext() == OFX::eContextGeneral && convergepoint_ && _dispClip) {
+    if (getContext() == OFX::eContextGeneral && _convergepoint && _dispClip) {
         // fetch the disparity of the tracked point
     }
     //
@@ -332,7 +340,7 @@ void
 ReConvergePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
     // set the ROI of the disp clip to the tracked point position (rounded to the nearest pixel)
-    if (getContext() == OFX::eContextGeneral && convergepoint_ && _dispClip) {
+    if (getContext() == OFX::eContextGeneral && _convergepoint && _dispClip) {
         OfxRectD roi;
         // since getRegionsOfInterest is not view-specific, return a full horizontal band
         roi = _srcClip->getRegionOfDefinition(args.time);
@@ -429,6 +437,7 @@ mDeclarePluginFactory(ReConvergePluginFactory, {}, {});
 
 struct ConvergePointParam {
     static const char* name() { return kParamConvergePoint; }
+    static const char* interactiveName() { return kParamInteractive; }
 };
 
 
@@ -496,15 +505,24 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 
     // convergepoint
     if (context == eContextGeneral) {
-        Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamConvergePoint);
-        param->setLabels(kParamConvergePointLabel, kParamConvergePointLabel, kParamConvergePointLabel);
-        param->setHint(kParamConvergePointHint);
-        param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
-        param->setDefault(0.5, 0.5);
-        param->setIncrement(1.);
-        param->setAnimates(true);
-        page->addChild(*param);
+        {
+            Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamConvergePoint);
+            param->setLabels(kParamConvergePointLabel, kParamConvergePointLabel, kParamConvergePointLabel);
+            param->setHint(kParamConvergePointHint);
+            param->setDoubleType(eDoubleTypeXYAbsolute);
+            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+            param->setDefault(0.5, 0.5);
+            param->setIncrement(1.);
+            param->setAnimates(true);
+            page->addChild(*param);
+        }
+        {
+            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
+            param->setLabels(kParamInteractiveLabel, kParamInteractiveLabel, kParamInteractiveLabel);
+            param->setHint(kParamInteractiveHint);
+            param->setAnimates(false);
+            page->addChild(*param);
+        }
     }
 
     // offset
