@@ -846,27 +846,15 @@ drawRotationBar(const OfxRGBColourD& color,
 bool
 TransformInteract::draw(const OFX::DrawArgs &args)
 {
-#ifdef DEBUG_SHADOW
-    std::cout << "pixelScale= "<<args.pixelScale.x << "," << args.pixelScale.y << " renderscale=" << args.renderScale.x << "," << args.renderScale.y << std::endl;
-    std::cout << "viewport=" << args.viewportSize.x << " x " << args.viewportSize.y << "\n";
-    GLfloat buffer[16];
-    glGetFloatv( GL_PROJECTION_MATRIX, buffer);
-    std::cout << "projection:\n" << ' ' << buffer[0] << ' ' << buffer[1] << ' ' << buffer[2] << ' ' << buffer[3] << ' ' << "\n" << ' ' << buffer[4] << ' ' << buffer[5] << ' ' << buffer[6] << ' ' << buffer[7] << ' ' << "\n" << ' ' << buffer[8] << ' ' << buffer[9] << ' ' << buffer[10] << ' ' << buffer[11] << ' ' << "\n" << ' ' << buffer[12] << ' ' << buffer[13] << ' ' << buffer[14] << ' ' << buffer[15] << ' ' << "\n";
-    glGetFloatv( GL_MODELVIEW_MATRIX, buffer);
-    std::cout << "modelview:\n" << ' ' << buffer[0] << ' ' << buffer[1] << ' ' << buffer[2] << ' ' << buffer[3] << ' ' << "\n" << ' ' << buffer[4] << ' ' << buffer[5] << ' ' << buffer[6] << ' ' << buffer[7] << ' ' << "\n" << ' ' << buffer[8] << ' ' << buffer[9] << ' ' << buffer[10] << ' ' << buffer[11] << ' ' << "\n" << ' ' << buffer[12] << ' ' << buffer[13] << ' ' << buffer[14] << ' ' << buffer[15] << ' ' << "\n";
-    std::cout << "2*PAR/modelview[0],2/modelview[5]=" << 2.*_effect->getProjectPixelAspectRatio()/buffer[0] << "," << 2./buffer[5] << "\n"; // = viewerimage.width
-    OfxPointD p = _effect->getProjectExtent();
-    std::cout << "projectextent=" << p.x << "," << p.y << "\n";
-    p = _effect->getProjectSize();
-    std::cout << "projectsize=" << p.x << "," << p.y << "\n";
-#endif
-    
     const OfxPointD &pscale = args.pixelScale;
     const double time = args.time;
     OfxRGBColourD color = { 0.8, 0.8, 0.8 };
     getSuggestedColour(color);
-    GLfloat modelview[16];
-    glGetFloatv( GL_MODELVIEW_MATRIX, modelview);
+    GLdouble projection[16];
+    glGetDoublev( GL_PROJECTION_MATRIX, projection);
+    OfxPointD shadow; // how much to translate GL_PROJECTION to get exactly one pixel on screen
+    shadow.x = 2./(projection[0] * args.viewportSize.x);
+    shadow.y = 2./(projection[5] * args.viewportSize.y);
 
     OfxPointD center;
     OfxPointD translate;
@@ -936,7 +924,7 @@ TransformInteract::draw(const OFX::DrawArgs &args)
         glMatrixMode(GL_PROJECTION);
         int direction = (l == 0) ? 1 : -1;
         // translate (1,-1) pixels
-        glTranslated(direction * pscale.x * modelview[0], -direction * pscale.y * modelview[5], 0);
+        glTranslated(direction * shadow.x, -direction * shadow.y, 0);
         glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
         
         glColor3f(color.r*l, color.g*l, color.b*l);
