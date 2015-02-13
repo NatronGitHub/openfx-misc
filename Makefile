@@ -52,8 +52,6 @@ VectorToColor
 ifneq ($(DEBUGFLAG),-O3)
   # DebugProxy is only useful to debug the communication between a host and a plugin
   SUBDIRS += DebugProxy
-  # TrackerPM is not well tested yet
-  SUBDIRS += TrackerPM
 endif
 
 HAVE_CIMG ?= 1
