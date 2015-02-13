@@ -255,12 +255,12 @@ inline int one1(unsigned short *) { return 1; }
 inline float one1(float *) { return 0.f; }
 
 #define CHECK(j)\
-    {   Diff score = FFABS(cur[mrefs - ch + (j)] - cur[prefs - ch - (j)])\
-                 + FFABS(cur[mrefs   +(j)] - cur[prefs   -(j)])\
-                 + FFABS(cur[mrefs + ch + (j)] - cur[prefs + ch - (j)]);\
+    {   Diff score = FFABS(cur[mrefs + ch * (- 1 + (j))] - cur[prefs + ch * (- 1 - (j))])\
+                 + FFABS(cur[mrefs   + ch * (j)] - cur[prefs   - ch * (j)])\
+                 + FFABS(cur[mrefs + ch * (1 + (j))] - cur[prefs + ch * (1 - (j))]);\
         if(score < spatial_score){\
             spatial_score= score;\
-            spatial_pred= halven(cur[mrefs  +(j)] + cur[prefs  -(j)]);\
+            spatial_pred= halven(cur[mrefs  + ch * (j)] + cur[prefs  - ch * (j)]);\
 
 /* The is_not_edge argument here controls when the code will enter a branch
  * which reads up to and including x-3 and x+3. */
@@ -279,8 +279,8 @@ inline float one1(float *) { return 0.f; }
         if (is_not_edge) {\
             Diff spatial_score = FFABS(cur[mrefs-ch] - cur[prefs-ch]) + FFABS(c-e) \
                               + FFABS(cur[mrefs+ch] - cur[prefs+ch]) - one1((Comp*)0); \
-            CHECK(-ch) CHECK(-(ch*2)) }} }} \
-            CHECK( ch) CHECK( (ch*2)) }} }} \
+            CHECK(-1) CHECK(-2) }} }} \
+            CHECK( 1) CHECK( 2) }} }} \
         }\
  \
         if (!(mode&2)) { \
@@ -327,7 +327,6 @@ inline void filter_line_c(Comp *dst1,
     FILTER(0, w, 1)
 }
 
-#if 0 // filter_edges is only necessary if we are using the assembly version of filter_line
 #define MAX_ALIGN 8
 template<int ch,typename Comp,typename Diff>
 inline void filter_edges(Comp *dst1,
@@ -346,17 +345,15 @@ inline void filter_edges(Comp *dst1,
      * for is_not_edge should let the compiler ignore the whole branch. */
     FILTER(0, 3, 0)
 
-    dst  = dst1  + (w - (MAX_ALIGN/sizeof(Comp)-1))*ch;
-    prev = prev1 + (w - (MAX_ALIGN/sizeof(Comp)-1))*ch;
-    cur  = cur1  + (w - (MAX_ALIGN/sizeof(Comp)-1))*ch;
-    next = next1 + (w - (MAX_ALIGN/sizeof(Comp)-1))*ch;
+    dst  = dst1  + (w - 3)*ch;
+    prev = prev1 + (w - 3)*ch;
+    cur  = cur1  + (w - 3)*ch;
+    next = next1 + (w - 3)*ch;
     prev2 = parity ? prev : cur;
     next2 = parity ? cur  : next;
 
-    FILTER(w - (MAX_ALIGN/sizeof(Comp)-1), w - 3, 1)
     FILTER(w - 3, w, 0)
 }
-#endif // 0
 
 inline void interpolate(unsigned char *dst, const unsigned char *cur0,  const unsigned char *cur2, int w)
 {
@@ -380,18 +377,24 @@ static void filter_plane(int mode, Comp *dst, int dst_stride,
                          const Comp *prev0, const Comp *cur0, const Comp *next0,
                          int refs, int w, int h, int parity, int tff)
 {
+    int pix_3 = 3 * ch;
     for (int y = 0; y < h; ++y) {
         if (((y ^ parity) & 1)) {
             const Comp *prev= prev0 + y*refs;
             const Comp *cur = cur0 + y*refs;
             const Comp *next= next0 + y*refs;
             Comp *dst2= dst + y*dst_stride;
+            int mode2 = y == 1 || y + 2 == h ? 2 : mode;
 
             for (int c = 0; c < ch; ++c) {
-                filter_line_c<ch,Comp,Diff>(dst2 + c, prev + c, cur + c, next + c, w,
+                filter_line_c<ch,Comp,Diff>(dst2 + c + pix_3, prev + c + pix_3, cur + c + pix_3, next + c + pix_3, w - 6,
                                             y + 1 < h ? refs : -refs,
                                             y ? -refs : refs,
-                                            parity ^ tff, mode);
+                                            parity ^ tff, mode2);
+                filter_edges<ch,Comp,Diff>(dst2 + c, prev + c, cur + c, next + c, w,
+                                           y + 1 < h ? refs : -refs,
+                                           y ? -refs : refs,
+                                           parity ^ tff, mode2);
             }
         } else {
             memcpy(&dst[y * dst_stride],
