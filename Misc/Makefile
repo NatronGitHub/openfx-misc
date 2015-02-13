@@ -58,7 +58,7 @@ PluginRegistrationCombined.o
 
 PLUGINNAME = Misc
 
-# ls */*.png */*.svg|sort|sed -e 's!^!../!' -e 's!$! \\!'
+# ls */*.png */*.svg|sort|sed -e 's!^!../!' -e 's!$! \\!' | fgrep -v net.sf.cimg
 RESOURCES = \
 ../Anaglyph/net.sf.openfx.anaglyphPlugin.png \
 ../Anaglyph/net.sf.openfx.anaglyphPlugin.svg \
@@ -66,10 +66,16 @@ RESOURCES = \
 ../CheckerBoard/net.sf.openfx.CheckerBoardPlugin.svg \
 ../ChromaKeyer/net.sf.openfx.ChromaKeyerPlugin.png \
 ../ChromaKeyer/net.sf.openfx.ChromaKeyerPlugin.svg \
+../Clamp/net.sf.openfx.Clamp.png \
+../Clamp/net.sf.openfx.Clamp.svg \
+../ClipTest/net.sf.openfx.ClipTestPlugin.png \
+../ClipTest/net.sf.openfx.ClipTestPlugin.svg \
 ../ColorCorrect/net.sf.openfx.ColorCorrectPlugin.png \
 ../ColorCorrect/net.sf.openfx.ColorCorrectPlugin.svg \
 ../ColorLookup/net.sf.openfx.ColorLookupPlugin.png \
 ../ColorLookup/net.sf.openfx.ColorLookupPlugin.svg \
+../ColorMatrix/net.sf.openfx.ColorMatrixPlugin.png \
+../ColorMatrix/net.sf.openfx.ColorMatrixPlugin.svg \
 ../ColorTransform/net.sf.openfx.HSVToRGBPlugin.png \
 ../ColorTransform/net.sf.openfx.HSVToRGBPlugin.svg \
 ../ColorTransform/net.sf.openfx.LABToRGBPlugin.png \

@@ -1,0 +1,9 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="128px" height="128px" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:1.41421;">
+    <g>
+        <g id="Co Clip Test">
+            <path d="M0,128L0,102.685L25.3151,128L0,128ZM50.3226,128L0,77.6774L0,51.4742L76.5258,128L50.3226,128ZM101.533,128L0,26.4666L0,0.263437L127.737,128L101.533,128ZM128,103.256L24.7441,0L50.9473,0L128,77.0527L128,103.256ZM128,52.0452L75.9548,0L102.158,0L128,25.842L128,52.0452Z" style="fill:rgb(200,200,200);"/>
+        </g>
+    </g>
+</svg>

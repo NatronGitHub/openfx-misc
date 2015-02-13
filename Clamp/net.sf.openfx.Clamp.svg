@@ -1,0 +1,11 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="128px" height="128px" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:1.41421;">
+    <g>
+        <g id="Co Clamp">
+            <g>
+                <path d="M38.1436,108.989L9.01382,108.989L9.01382,19.0114L38.1436,19.0114L38.1436,32.9932L22.7317,32.9932L22.7317,95.0068L38.1436,95.0068L38.1436,108.989ZM89.8564,108.989L89.8564,95.0068L105.268,95.0068L105.268,32.9932L89.8564,32.9932L89.8564,19.0114L118.986,19.0114L118.986,108.989L89.8564,108.989Z" style="fill:rgb(200,200,200);"/>
+            </g>
+        </g>
+    </g>
+</svg>

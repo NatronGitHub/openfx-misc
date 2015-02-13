@@ -759,6 +759,18 @@
 		1EF46F47194A39C800825BDF /* Shuffle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF46F45194A39C800825BDF /* Shuffle.cpp */; };
 		1EF46F48194A39C800825BDF /* Shuffle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF46F45194A39C800825BDF /* Shuffle.cpp */; };
 		1EF46F4B194A39DB00825BDF /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF46F4A194A39DB00825BDF /* PluginRegistration.cpp */; };
+		1EFA60EF1A8E1D0B00EA4CBF /* net.sf.openfx.Clamp.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60ED1A8E1CFA00EA4CBF /* net.sf.openfx.Clamp.png */; };
+		1EFA60F01A8E1D0B00EA4CBF /* net.sf.openfx.Clamp.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60EE1A8E1CFA00EA4CBF /* net.sf.openfx.Clamp.svg */; };
+		1EFA60F31A8E1D2A00EA4CBF /* net.sf.openfx.ClipTestPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60F11A8E1D2000EA4CBF /* net.sf.openfx.ClipTestPlugin.png */; };
+		1EFA60F41A8E1D2A00EA4CBF /* net.sf.openfx.ClipTestPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60F21A8E1D2000EA4CBF /* net.sf.openfx.ClipTestPlugin.svg */; };
+		1EFA60F71A8E1D4700EA4CBF /* net.sf.openfx.ColorMatrixPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60F51A8E1D3A00EA4CBF /* net.sf.openfx.ColorMatrixPlugin.png */; };
+		1EFA60F81A8E1D4700EA4CBF /* net.sf.openfx.ColorMatrixPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60F61A8E1D3A00EA4CBF /* net.sf.openfx.ColorMatrixPlugin.svg */; };
+		1EFA60F91A8E1D5400EA4CBF /* net.sf.openfx.ColorMatrixPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60F51A8E1D3A00EA4CBF /* net.sf.openfx.ColorMatrixPlugin.png */; };
+		1EFA60FA1A8E1D5400EA4CBF /* net.sf.openfx.ColorMatrixPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60F61A8E1D3A00EA4CBF /* net.sf.openfx.ColorMatrixPlugin.svg */; };
+		1EFA60FB1A8E1D6200EA4CBF /* net.sf.openfx.ClipTestPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60F11A8E1D2000EA4CBF /* net.sf.openfx.ClipTestPlugin.png */; };
+		1EFA60FC1A8E1D6200EA4CBF /* net.sf.openfx.ClipTestPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60F21A8E1D2000EA4CBF /* net.sf.openfx.ClipTestPlugin.svg */; };
+		1EFA60FD1A8E1D6800EA4CBF /* net.sf.openfx.Clamp.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60ED1A8E1CFA00EA4CBF /* net.sf.openfx.Clamp.png */; };
+		1EFA60FE1A8E1D6800EA4CBF /* net.sf.openfx.Clamp.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60EE1A8E1CFA00EA4CBF /* net.sf.openfx.Clamp.svg */; };
 		1EFA77161A24DCFA00212DB0 /* CImgHistEQ.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFA77141A24DCFA00212DB0 /* CImgHistEQ.cpp */; };
 		1EFA77171A24E05F00212DB0 /* ofxsLut.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED537381A234F12007966D5 /* ofxsLut.cpp */; };
 		1EFA771C1A24F0BA00212DB0 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
@@ -1428,6 +1440,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				1EFA60EF1A8E1D0B00EA4CBF /* net.sf.openfx.Clamp.png in CopyFiles */,
+				1EFA60F01A8E1D0B00EA4CBF /* net.sf.openfx.Clamp.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1698,10 +1712,16 @@
 				1E75A0891A88E2D0005BAA36 /* net.sf.openfx.CheckerBoardPlugin.svg in CopyFiles */,
 				1EE4A8B019C6EF3300E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png in CopyFiles */,
 				1E814CC019C9837600C2C668 /* net.sf.openfx.ChromaKeyerPlugin.svg in CopyFiles */,
+				1EFA60FD1A8E1D6800EA4CBF /* net.sf.openfx.Clamp.png in CopyFiles */,
+				1EFA60FE1A8E1D6800EA4CBF /* net.sf.openfx.Clamp.svg in CopyFiles */,
+				1EFA60FB1A8E1D6200EA4CBF /* net.sf.openfx.ClipTestPlugin.png in CopyFiles */,
+				1EFA60FC1A8E1D6200EA4CBF /* net.sf.openfx.ClipTestPlugin.svg in CopyFiles */,
 				1EE4A8B119C6EF3500E6E3AE /* net.sf.openfx.ColorCorrectPlugin.png in CopyFiles */,
 				1E814CC119C9837A00C2C668 /* net.sf.openfx.ColorCorrectPlugin.svg in CopyFiles */,
 				1EE4A8BF19C6EF7400E6E3AE /* net.sf.openfx.ColorLookupPlugin.png in CopyFiles */,
 				1E3284B81A41C52F00C9A4E4 /* net.sf.openfx.ColorLookupPlugin.svg in CopyFiles */,
+				1EFA60F91A8E1D5400EA4CBF /* net.sf.openfx.ColorMatrixPlugin.png in CopyFiles */,
+				1EFA60FA1A8E1D5400EA4CBF /* net.sf.openfx.ColorMatrixPlugin.svg in CopyFiles */,
 				1EE4A8B219C6EF3900E6E3AE /* net.sf.openfx.ConstantPlugin.png in CopyFiles */,
 				1E814CC219C9837E00C2C668 /* net.sf.openfx.ConstantPlugin.svg in CopyFiles */,
 				1EE4A8B319C6EF3E00E6E3AE /* net.sf.openfx.CornerPinPlugin.png in CopyFiles */,
@@ -1782,6 +1802,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				1EFA60F71A8E1D4700EA4CBF /* net.sf.openfx.ColorMatrixPlugin.png in CopyFiles */,
+				1EFA60F81A8E1D4700EA4CBF /* net.sf.openfx.ColorMatrixPlugin.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1800,6 +1822,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				1EFA60F31A8E1D2A00EA4CBF /* net.sf.openfx.ClipTestPlugin.png in CopyFiles */,
+				1EFA60F41A8E1D2A00EA4CBF /* net.sf.openfx.ClipTestPlugin.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2255,6 +2279,12 @@
 		1EF46F4A194A39DB00825BDF /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1EF46F4C194A39E800825BDF /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EF5C7101A6553E000DEF59A /* CImgOperator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgOperator.h; sourceTree = "<group>"; };
+		1EFA60ED1A8E1CFA00EA4CBF /* net.sf.openfx.Clamp.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.Clamp.png; sourceTree = "<group>"; };
+		1EFA60EE1A8E1CFA00EA4CBF /* net.sf.openfx.Clamp.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.Clamp.svg; sourceTree = "<group>"; };
+		1EFA60F11A8E1D2000EA4CBF /* net.sf.openfx.ClipTestPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ClipTestPlugin.png; sourceTree = "<group>"; };
+		1EFA60F21A8E1D2000EA4CBF /* net.sf.openfx.ClipTestPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.ClipTestPlugin.svg; sourceTree = "<group>"; };
+		1EFA60F51A8E1D3A00EA4CBF /* net.sf.openfx.ColorMatrixPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ColorMatrixPlugin.png; sourceTree = "<group>"; };
+		1EFA60F61A8E1D3A00EA4CBF /* net.sf.openfx.ColorMatrixPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.ColorMatrixPlugin.svg; sourceTree = "<group>"; };
 		1EFA77141A24DCFA00212DB0 /* CImgHistEQ.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgHistEQ.cpp; sourceTree = "<group>"; };
 		1EFA77151A24DCFA00212DB0 /* CImgHistEQ.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgHistEQ.h; sourceTree = "<group>"; };
 		1EFA772C1A24F0BA00212DB0 /* HSVTool.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HSVTool.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -2808,6 +2838,8 @@
 				1E10A7091997C03100EE87A1 /* ColorMatrix.cpp */,
 				1E10A70E1997C05200EE87A1 /* ColorMatrix.h */,
 				1E10A70F1997C05200EE87A1 /* Info.plist */,
+				1EFA60F51A8E1D3A00EA4CBF /* net.sf.openfx.ColorMatrixPlugin.png */,
+				1EFA60F61A8E1D3A00EA4CBF /* net.sf.openfx.ColorMatrixPlugin.svg */,
 				1E10A7101997C05200EE87A1 /* Makefile */,
 				1E10A70C1997C04500EE87A1 /* PluginRegistration.cpp */,
 			);
@@ -3262,6 +3294,8 @@
 				1E92573519EC1E140018F19A /* Clamp.cpp */,
 				1E92573619EC1E140018F19A /* Clamp.h */,
 				1E92573B19EC1E260018F19A /* Info.plist */,
+				1EFA60ED1A8E1CFA00EA4CBF /* net.sf.openfx.Clamp.png */,
+				1EFA60EE1A8E1CFA00EA4CBF /* net.sf.openfx.Clamp.svg */,
 				1E92573C19EC1E260018F19A /* Makefile */,
 				1E92573919EC1E1F0018F19A /* PluginRegistration.cpp */,
 			);
@@ -3517,6 +3551,8 @@
 				1ED12E4D1A4B318000ABA348 /* ClipTest.cpp */,
 				1ED12E4E1A4B318000ABA348 /* ClipTest.h */,
 				1ED12E4F1A4B318000ABA348 /* Info.plist */,
+				1EFA60F11A8E1D2000EA4CBF /* net.sf.openfx.ClipTestPlugin.png */,
+				1EFA60F21A8E1D2000EA4CBF /* net.sf.openfx.ClipTestPlugin.svg */,
 				1ED12E501A4B318000ABA348 /* Makefile */,
 				1ED12E511A4B318000ABA348 /* PluginRegistration.cpp */,
 			);
