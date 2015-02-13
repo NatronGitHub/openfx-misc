@@ -104,6 +104,13 @@
 #include "ofxhBinary.h"
 #include "ofxhUtilities.h"
 
+#if defined __APPLE__ || defined linux || defined __FreeBSD__
+#  define EXPORT __attribute__((visibility("default")))
+#elif defined _WIN32
+#  define EXPORT OfxExport
+#else
+#  error Not building on your operating system quite yet
+#endif
 
 // the Plugin path can be set here in the source code, or at runtime via the OFX_DEBUGPROXY_BINARY environment variable
 #ifndef BINARY_PATH
@@ -2006,7 +2013,7 @@ setHostNthFunc(int nth)
 
 
 // the two mandated functions
-OfxPlugin *
+EXPORT OfxPlugin *
 OfxGetPlugin(int nth)
 {
   // get the OfxPlugin* from the underlying plugin
@@ -2046,7 +2053,7 @@ OfxGetPlugin(int nth)
   return &gPlugins[nth];
 }
  
-int
+EXPORT int
 OfxGetNumberOfPlugins(void)
 {
   if (OfxGetNumberOfPlugins_binary == 0) {
