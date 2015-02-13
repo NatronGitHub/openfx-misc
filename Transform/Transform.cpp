@@ -1716,7 +1716,8 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamScaleUniform);
         param->setLabels(kParamScaleUniformLabel, kParamScaleUniformLabel, kParamScaleUniformLabel);
         param->setHint(kParamScaleUniformHint);
-        param->setDefault(true);
+        // don't check it by default: it is easy to obtain Uniform scaling using the slider or the interact
+        param->setDefault(false);
         param->setAnimates(true);
         page->addChild(*param);
     }
