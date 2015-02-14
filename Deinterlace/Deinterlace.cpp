@@ -195,6 +195,10 @@ private:
 
     /* override is identity */
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+
+    /** Override the get frames needed action */
+    virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -618,6 +622,16 @@ DeinterlacePlugin::isIdentity(const OFX::IsIdentityArguments &args,
     }
 
     return false;
+}
+
+void
+DeinterlacePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
+                                   OFX::FramesNeededSetter &frames)
+{
+    OfxRangeD range;
+    range.min = args.time - 1;
+    range.max = args.time + 1;
+    frames.setFramesNeeded(*_srcClip, range);
 }
 
 mDeclarePluginFactory(DeinterlacePluginFactory, {}, {});
