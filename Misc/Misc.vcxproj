@@ -94,8 +94,10 @@
 
 xcopy $(SolutionDir)..\ChromaKeyer\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorCorrect\net.sf.openfx.ColorCorrectPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
-
+xcopy $(SolutionDir)..\Clamp\net.sf.openfx.Clamp.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ClipTest\net.sf.openfx.ClipTestPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ColorMatrix\net.sf.openfx.ColorMatrixPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CheckerBoard\net.sf.openfx.CheckerBoardPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\ColorLookup\net.sf.openfx.ColorLookupPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Constant\net.sf.openfx.ConstantPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -124,11 +126,9 @@ xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToXYZPlugin.png $(OutDir)
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.LABToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.XYZToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
-xcopy $(SolutionDir)..\CheckerBoard\net.sf.openfx.CheckerBoardPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+xcopy $(SolutionDir)..\ImageStatistics\net.sf.openfx.ImageStatistics.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Invert\net.sf.openfx.Invert.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
-xcopy $(SolutionDir)..\ImageStatistics\net.sf.openfx.ImageStatistics.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\JoinViews\net.sf.openfx.joinViewsPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -208,8 +208,10 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
 
 xcopy $(SolutionDir)..\ChromaKeyer\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorCorrect\net.sf.openfx.ColorCorrectPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
-
+xcopy $(SolutionDir)..\Clamp\net.sf.openfx.Clamp.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ClipTest\net.sf.openfx.ClipTestPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ColorMatrix\net.sf.openfx.ColorMatrixPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CheckerBoard\net.sf.openfx.CheckerBoardPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\ColorLookup\net.sf.openfx.ColorLookupPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Constant\net.sf.openfx.ConstantPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -238,11 +240,9 @@ xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToXYZPlugin.png $(OutDir)
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.LABToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.XYZToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
-xcopy $(SolutionDir)..\CheckerBoard\net.sf.openfx.CheckerBoardPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+xcopy $(SolutionDir)..\ImageStatistics\net.sf.openfx.ImageStatistics.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Invert\net.sf.openfx.Invert.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
-xcopy $(SolutionDir)..\ImageStatistics\net.sf.openfx.ImageStatistics.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\JoinViews\net.sf.openfx.joinViewsPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -327,8 +327,10 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
 
 xcopy $(SolutionDir)..\ChromaKeyer\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorCorrect\net.sf.openfx.ColorCorrectPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
-
+xcopy $(SolutionDir)..\Clamp\net.sf.openfx.Clamp.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ClipTest\net.sf.openfx.ClipTestPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ColorMatrix\net.sf.openfx.ColorMatrixPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CheckerBoard\net.sf.openfx.CheckerBoardPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\ColorLookup\net.sf.openfx.ColorLookupPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Constant\net.sf.openfx.ConstantPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -357,11 +359,9 @@ xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToXYZPlugin.png $(OutDir)
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.LABToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.XYZToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
-xcopy $(SolutionDir)..\CheckerBoard\net.sf.openfx.CheckerBoardPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+xcopy $(SolutionDir)..\ImageStatistics\net.sf.openfx.ImageStatistics.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Invert\net.sf.openfx.Invert.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
-xcopy $(SolutionDir)..\ImageStatistics\net.sf.openfx.ImageStatistics.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\JoinViews\net.sf.openfx.joinViewsPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -446,8 +446,10 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
 
 xcopy $(SolutionDir)..\ChromaKeyer\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorCorrect\net.sf.openfx.ColorCorrectPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
-
+xcopy $(SolutionDir)..\Clamp\net.sf.openfx.Clamp.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ClipTest\net.sf.openfx.ClipTestPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\ColorMatrix\net.sf.openfx.ColorMatrixPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\CheckerBoard\net.sf.openfx.CheckerBoardPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\ColorLookup\net.sf.openfx.ColorLookupPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Constant\net.sf.openfx.ConstantPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -476,11 +478,9 @@ xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToXYZPlugin.png $(OutDir)
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.LABToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.XYZToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
-xcopy $(SolutionDir)..\CheckerBoard\net.sf.openfx.CheckerBoardPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+xcopy $(SolutionDir)..\ImageStatistics\net.sf.openfx.ImageStatistics.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Invert\net.sf.openfx.Invert.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
-xcopy $(SolutionDir)..\ImageStatistics\net.sf.openfx.ImageStatistics.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\JoinViews\net.sf.openfx.joinViewsPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
