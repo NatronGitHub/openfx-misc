@@ -887,6 +887,7 @@ private:
 
             double sumLine_p3[nComponentsHSVL]; // partial sum to avoid underflows
             double sumLine_p4[nComponentsHSVL]; // partial sum to avoid underflows
+            std::fill(sumLine_p3, sumLine_p3 + nComponentsHSVL, 0.);
             std::fill(sumLine_p4, sumLine_p4 + nComponentsHSVL, 0.);
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
