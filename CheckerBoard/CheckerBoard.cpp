@@ -162,12 +162,14 @@ public:
     , _centerlineInf(0.)
     , _centerlineSup(0.)
     {
+        _boxSize.x = _boxSize.y = 0.;
         _color0.r = _color0.g = _color0.b = _color0.a = 0.;
         _color1.r = _color1.g = _color1.b = _color1.a = 0.;
         _color2.r = _color2.g = _color2.b = _color2.a = 0.;
         _color3.r = _color3.g = _color3.b = _color3.a = 0.;
         _lineColor.r = _lineColor.g = _lineColor.b = _lineColor.a = 0.;
         _centerlineColor.r = _centerlineColor.g = _centerlineColor.b = _centerlineColor.a = 0.;
+        _rod.x1 = _rod.x2 = _rod.y1 = _rod.y2 = 0.;
     }
 
     /** @brief set the color */

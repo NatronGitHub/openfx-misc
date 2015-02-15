@@ -601,6 +601,7 @@ private:
 
             double sumLine_p3[nComponents]; // partial sum to avoid underflows
             double sumLine_p4[nComponents]; // partial sum to avoid underflows
+            std::fill(sumLine_p3, sumLine_p3 + nComponents, 0.);
             std::fill(sumLine_p4, sumLine_p4 + nComponents, 0.);
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
@@ -1037,6 +1038,7 @@ private:
         } else if (srcComponents == OFX::ePixelComponentRGB) {
             updateSubComponents<Processor, 3>(srcImg, time, analysisWindow, prevResults, results);
         } else {
+            // coverity[dead_error_line]
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
