@@ -399,7 +399,7 @@ private:
 
     virtual bool isIdentity(double time) OVERRIDE FINAL;
 
-    virtual bool getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
+    virtual bool getInverseTransformCanonical(double time, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
     
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
@@ -421,7 +421,7 @@ private:
 };
 
 
-bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, bool invert, OFX::Matrix3x3* invtransform) const
+bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, double amount, bool invert, OFX::Matrix3x3* invtransform) const
 {
     // in this new version, both from and to are enableds/disabled at the same time
     bool enable[4];
@@ -438,6 +438,17 @@ bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, bool invert, OF
             ++k;
         }
         p[0][i].z = p[1][i].z = 1.;
+    }
+
+    if (amount != 1.) {
+        int k = 0;
+        for (int i=0; i < 4; ++i) {
+            if (enable[i]) {
+                p[t][k].x = p[f][k].x + amount * (p[t][k].x - p[f][k].x);
+                p[t][k].y = p[f][k].y + amount * (p[t][k].y - p[f][k].y);
+                ++k;
+            }
+        }
     }
 
     // k contains the number of valid points

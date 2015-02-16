@@ -213,7 +213,7 @@ public:
 private:
     virtual bool isIdentity(double time) OVERRIDE FINAL;
 
-    virtual bool getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
+    virtual bool getInverseTransformCanonical(double time, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
 
     void resetCenter(double time);
 
@@ -262,7 +262,7 @@ TransformPlugin::isIdentity(double time)
 }
 
 bool
-TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX::Matrix3x3* invtransform) const
+TransformPlugin::getInverseTransformCanonical(double time, double amount, bool invert, OFX::Matrix3x3* invtransform) const
 {
     // NON-GENERIC
     OfxPointD center;
@@ -283,6 +283,16 @@ TransformPlugin::getInverseTransformCanonical(double time, bool invert, OFX::Mat
 
     OfxPointD scale;
     getScale(scaleParam, scaleUniform, &scale);
+
+    if (amount != 1.) {
+        translate.x *= amount;
+        translate.y *= amount;
+        scale.x = 1. + (scale.x - 1.) * amount;
+        scale.y = 1. + (scale.y - 1.) * amount;
+        rotate *= amount;
+        skewX *= amount;
+        skewY *= amount;
+    }
 
     double rot = OFX::ofxsToRadians(rotate);
 
