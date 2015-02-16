@@ -422,7 +422,7 @@ struct CImgBlurParams
     int orderX;
     int orderY;
     int boundary_i;
-    int filter_i;
+    FilterEnum filter;
     bool expandRoD;
 };
 
@@ -450,7 +450,9 @@ public:
         _orderX->getValueAtTime(time, params.orderX);
         _orderY->getValueAtTime(time, params.orderY);
         _boundary->getValueAtTime(time, params.boundary_i);
-        _filter->getValueAtTime(time, params.filter_i);
+        int filter_i;
+        _filter->getValueAtTime(time, filter_i);
+        params.filter = (FilterEnum)filter_i;
         _expandRoD->getValueAtTime(time, params.expandRoD);
     }
 
@@ -458,11 +460,21 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = (int)std::ceil((params.size * 1.5) * renderScale.x);
-        roi->x1 = rect.x1 - delta_pix;
-        roi->x2 = rect.x2 + delta_pix;
-        roi->y1 = rect.y1 - delta_pix;
-        roi->y2 = rect.y2 + delta_pix;
+        if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
+            float sigma = (float)(renderScale.x * params.size / 2.4);
+            if (sigma < 0.1 && params.orderX == 0 && params.orderY == 0) {
+                *roi = rect;
+                return;
+            }
+
+            int delta_pix = std::max(3, (int)std::ceil((params.size * 1.5) * renderScale.x));
+            roi->x1 = rect.x1 - delta_pix - params.orderX;
+            roi->x2 = rect.x2 + delta_pix + params.orderX;
+            roi->y1 = rect.y1 - delta_pix - params.orderY;
+            roi->y2 = rect.y2 + delta_pix + params.orderY;
+        } else {
+            assert(false);
+        }
     }
 
     virtual void render(const OFX::RenderArguments &args, const CImgBlurParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
@@ -470,32 +482,36 @@ public:
         // PROCESSING.
         // This is the only place where the actual processing takes place
         float sigma = (float)(args.renderScale.x * params.size / 2.4);
-        if (sigma <= 0.5 && params.orderX == 0 && params.orderY == 0) {
+        if (sigma < 0.1 && params.orderX == 0 && params.orderY == 0) {
             return;
         }
-#if cimg_version >= 160
-        if (params.orderX == 0 && params.orderY == 0) {
-            cimg.blur(sigma, (bool)params.boundary_i, (bool)params.filter_i);
-        } else {
-            if ((bool)params.filter_i) {
-                cimg.vanvliet(sigma, params.orderX, 'x', (bool)params.boundary_i);
-                cimg.vanvliet(sigma, params.orderY, 'y', (bool)params.boundary_i);
+        if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
+#if       cimg_version >= 160
+            if (params.orderX == 0 && params.orderY == 0) {
+                cimg.blur(sigma, (bool)params.boundary_i, params.filter == eFilterGaussian);
+            } else {
+                if (params.filter == eFilterGaussian) {
+                    cimg.vanvliet(sigma, params.orderX, 'x', (bool)params.boundary_i);
+                    cimg.vanvliet(sigma, params.orderY, 'y', (bool)params.boundary_i);
+                } else {
+                    cimg.deriche(sigma, params.orderX, 'x', (bool)params.boundary_i);
+                    cimg.deriche(sigma, params.orderY, 'y', (bool)params.boundary_i);
+                }
+            }
+#         else
+            // VanVliet filter was inexistent before 1.53, and buggy before CImg.h from
+            // 57ffb8393314e5102c00e5f9f8fa3dcace179608 Thu Dec 11 10:57:13 2014 +0100
+            if (params.filter == eFilterGaussian) {
+                vanvliet(cimg,/*cimg.vanvliet(*/sigma, params.orderX, 'x', (bool)params.boundary_i);
+                vanvliet(cimg,/*cimg.vanvliet(*/sigma, params.orderY, 'y', (bool)params.boundary_i);
             } else {
                 cimg.deriche(sigma, params.orderX, 'x', (bool)params.boundary_i);
                 cimg.deriche(sigma, params.orderY, 'y', (bool)params.boundary_i);
             }
-        }
-#else
-        // VanVliet filter was inexistent before 1.53, and buggy before CImg.h from
-        // 57ffb8393314e5102c00e5f9f8fa3dcace179608 Thu Dec 11 10:57:13 2014 +0100
-        if ((bool)params.filter_i) {
-            vanvliet(cimg,/*cimg.vanvliet(*/sigma, params.orderX, 'x', (bool)params.boundary_i);
-            vanvliet(cimg,/*cimg.vanvliet(*/sigma, params.orderY, 'y', (bool)params.boundary_i);
+#         endif
         } else {
-            cimg.deriche(sigma, params.orderX, 'x', (bool)params.boundary_i);
-            cimg.deriche(sigma, params.orderY, 'y', (bool)params.boundary_i);
+            assert(false);
         }
-#endif
     }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgBlurParams& params) OVERRIDE FINAL
@@ -582,6 +598,7 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
         param->setRange(0, INT_MAX);
         param->setDisplayRange(0, 100);
         param->setDefault(kParamSizeDefault);
+        param->setDigits(1);
         param->setIncrement(0.1);
         page->addChild(*param);
     }
