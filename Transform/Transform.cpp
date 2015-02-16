@@ -1290,8 +1290,7 @@ bool TransformInteract::penMotion(const OFX::PenArgs &args)
         //_translate->setValue(translate.x, translate.y);
         translateChanged = true;
     } else if (_mouseState == eDraggingCenter) {
-        OfxPointD currentCenter;
-        _center->getValueAtTime(args.time, currentCenter.x, currentCenter.y);
+        OfxPointD currentCenter = center;
         OFX::Matrix3x3 R = ofxsMatScale(1. / scale.x, 1. / scale.y) * ofxsMatSkewXY(-skewX, -skewY, !skewOrder) * ofxsMatRotation(rot);
 
         double dx = args.penPosition.x - _lastMousePos.x;
