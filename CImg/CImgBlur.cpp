@@ -423,10 +423,10 @@ static inline
 T get_data(T *data, const int N, const unsigned long off, const bool boundary_conditions, const int x)
 {
     assert(N >= 1);
-    if (x <= 0) {
+    if (x < 0) {
         return boundary_conditions ? data[0] : T();
     }
-    if (x >= N-1) {
+    if (x >= N) {
         return boundary_conditions ? data[(N-1)*off] : T();
     }
     return data[x*off];
@@ -499,8 +499,10 @@ static void _cimg_box_apply(T *data, const double width, const int N, const unsi
                 // advance
                 p = c;
                 c = n;
-                n = get_data(data, N, off, boundary_conditions, x+1);
+                n = get_data(data, N, off, boundary_conditions, x+2);
             }
+            // last pixel
+            data[(N-1)*off] = (n-p)/2.;
         } break;
         case 2: {
             T p = get_data(data, N, off, boundary_conditions, -1);
@@ -511,8 +513,10 @@ static void _cimg_box_apply(T *data, const double width, const int N, const unsi
                 // advance
                 p = c;
                 c = n;
-                n = get_data(data, N, off, boundary_conditions, x+1);
+                n = get_data(data, N, off, boundary_conditions, x+2);
             }
+            // last pixel
+            data[(N-1)*off] = n-2*c+p;
         } break;
     }
 }
