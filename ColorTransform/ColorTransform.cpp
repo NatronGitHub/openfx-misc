@@ -83,20 +83,48 @@
 #include "ofxsLut.h"
 
 #define kPluginRGBToHSVName "RGBToHSVOFX"
-#define kPluginRGBToHSVDescription "Convert from RGB to HSV color model (as defined by A. R. Smith in 1978). H is in degrees, S and V are in the same units as RGB."
+#define kPluginRGBToHSVDescription "Convert from RGB to HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978). H is in degrees, S and V are in the same units as RGB."
 #define kPluginRGBToHSVIdentifier "net.sf.openfx.RGBToHSVPlugin"
 
 #define kPluginHSVToRGBName "HSVToRGBOFX"
-#define kPluginHSVToRGBDescription "Convert from HSV color model (as defined by A. R. Smith in 1978) to RGB. H is in degrees, S and V are in the same units as RGB."
+#define kPluginHSVToRGBDescription "Convert from HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978) to RGB. H is in degrees, S and V are in the same units as RGB."
 #define kPluginHSVToRGBIdentifier "net.sf.openfx.HSVToRGBPlugin"
 
 #define kPluginRGBToHSLName "RGBToHSLOFX"
-#define kPluginRGBToHSLDescription "Convert from RGB to HSL color model (as defined by Joblove and Greenberg in 1978). H is in degrees, S and L are in the same units as RGB."
+#define kPluginRGBToHSLDescription "Convert from RGB to HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978). H is in degrees, S and L are in the same units as RGB."
 #define kPluginRGBToHSLIdentifier "net.sf.openfx.RGBToHSLPlugin"
 
 #define kPluginHSLToRGBName "HSLToRGBOFX"
-#define kPluginHSLToRGBDescription "Convert from HSL color model (as defined by Joblove and Greenberg in 1978) to RGB. H is in degrees, S and L are in the same units as RGB."
+#define kPluginHSLToRGBDescription "Convert from HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978) to RGB. H is in degrees, S and L are in the same units as RGB."
 #define kPluginHSLToRGBIdentifier "net.sf.openfx.HSLToRGBPlugin"
+
+#define kPluginRGBToHSIName "RGBToHSIOFX"
+#define kPluginRGBToHSIDescription "Convert from RGB to HSI color model (hue, saturation, intensity, as defined by Gonzalez and Woods in 1992). H is in degrees, S and I are in the same units as RGB.\n" \
+"The HSI colour space (hue, saturation and intensity) attempts to produce a more intuitive representation of colour. The I axis represents the luminance information. The H and S axes are polar coordinates on the plane orthogonal to I. H is the angle, specified such that red is at zero, green at 120 degrees, and blue at 240 degrees. Hue thus represents what humans implicitly understand as colour. S is the magnitude of the colour vector projected in the plane orthogonal to I, and so represents the difference between pastel colours (low saturation) and vibrant colours (high saturation). The main drawback of this colour space is that hue is undefined if saturation is zero, making error propagation in transformations from the RGB colour space more complicated.\n" \
+"It should also be noted that, although the HSI colour space may be more intuitive, is not \"perceptual\", in the sense that small displacements of equal size in different parts of the colour space will be perceived by human observers as changes of different magnitude. Attempts have been made to define such colour spaces: CIE-LAB and CIE-LUV are two examples."
+#define kPluginRGBToHSIIdentifier "net.sf.openfx.RGBToHSIPlugin"
+
+#define kPluginHSIToRGBName "HSIoRGBOFX"
+#define kPluginHSIToRGBDescription "Convert from HSI color model (hue, saturation, intensity, as defined by Gonzalez and Woods in 1992) to RGB. H is in degrees, S and I are in the same units as RGB.\n" \
+"The HSI colour space (hue, saturation and intensity) attempts to produce a more intuitive representation of colour. The I axis represents the luminance information. The H and S axes are polar coordinates on the plane orthogonal to I. H is the angle, specified such that red is at zero, green at 120 degrees, and blue at 240 degrees. Hue thus represents what humans implicitly understand as colour. S is the magnitude of the colour vector projected in the plane orthogonal to I, and so represents the difference between pastel colours (low saturation) and vibrant colours (high saturation). The main drawback of this colour space is that hue is undefined if saturation is zero, making error propagation in transformations from the RGB colour space more complicated.\n" \
+"It should also be noted that, although the HSI colour space may be more intuitive, is not \"perceptual\", in the sense that small displacements of equal size in different parts of the colour space will be perceived by human observers as changes of different magnitude. Attempts have been made to define such colour spaces: CIE-LAB and CIE-LUV are two examples."
+#define kPluginHSIToRGBIdentifier "net.sf.openfx.HSIToRGBPlugin"
+
+#define kPluginRGBToYCbCrName "RGBToYCbCrOFX"
+#define kPluginRGBToYCbCrDescription "Convert from RGB to YCbCr color model (ITU.BT-709). For strict standards conformance, RGB should be nonlinear (gamma-compressed)."
+#define kPluginRGBToYCbCrIdentifier "net.sf.openfx.RGBToYCbCrPlugin"
+
+#define kPluginYCbCrToRGBName "YCbCroRGBOFX"
+#define kPluginYCbCrToRGBDescription "Convert from YCbCr color model (ITU.BT-709) to RGB. RGB on output is nonlinear (gamma-compressed)."
+#define kPluginYCbCrToRGBIdentifier "net.sf.openfx.YCbCrToRGBPlugin"
+
+#define kPluginRGBToYUVName "RGBToYUVOFX"
+#define kPluginRGBToYUVDescription "Convert from RGB to YUV color model (ITU.BT-709). For strict standards conformance, RGB should be nonlinear (gamma-compressed)."
+#define kPluginRGBToYUVIdentifier "net.sf.openfx.RGBToYUVPlugin"
+
+#define kPluginYUVToRGBName "YUVoRGBOFX"
+#define kPluginYUVToRGBDescription "Convert from YUV color model (ITU.BT-709) to RGB. RGB on output is nonlinear (gamma-compressed)."
+#define kPluginYUVToRGBIdentifier "net.sf.openfx.YUVToRGBPlugin"
 
 
 #define kPluginRGBToXYZName "RGBToXYZOFX"
@@ -142,6 +170,12 @@ enum ColorTransformEnum {
     eColorTransformHSVToRGB,
     eColorTransformRGBToHSL,
     eColorTransformHSLToRGB,
+    eColorTransformRGBToHSI,
+    eColorTransformHSIToRGB,
+    eColorTransformRGBToYCbCr,
+    eColorTransformYCbCrToRGB,
+    eColorTransformRGBToYUV,
+    eColorTransformYUVToRGB,
     eColorTransformRGBToXYZ,
     eColorTransformXYZToRGB,
     eColorTransformRGBToLab,
@@ -150,6 +184,9 @@ enum ColorTransformEnum {
 
 #define toRGB(e)   ((e) == eColorTransformHSVToRGB || \
                     (e) == eColorTransformHSLToRGB || \
+                    (e) == eColorTransformHSIToRGB || \
+                    (e) == eColorTransformYCbCrToRGB || \
+                    (e) == eColorTransformYUVToRGB || \
                     (e) == eColorTransformXYZToRGB || \
                     (e) == eColorTransformLabToRGB)
 
@@ -234,6 +271,31 @@ public:
                         OFX::Color::hsl_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                         break;
 
+                    case eColorTransformRGBToHSI:
+                        OFX::Color::rgb_to_hsi(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+
+                    case eColorTransformHSIToRGB:
+                        OFX::Color::hsi_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+
+
+                    case eColorTransformRGBToYCbCr:
+                        OFX::Color::rgb_to_ycbcr(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+
+                    case eColorTransformYCbCrToRGB:
+                        OFX::Color::ycbcr_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+                        
+                    case eColorTransformRGBToYUV:
+                        OFX::Color::rgb_to_yuv(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+
+                    case eColorTransformYUVToRGB:
+                        OFX::Color::yuv_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+                        
                     case eColorTransformRGBToXYZ:
                         OFX::Color::rgb_to_xyz_rec709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                         break;
@@ -493,6 +555,36 @@ ColorTransformPluginFactory<transform>::describe(OFX::ImageEffectDescriptor &des
             desc.setPluginDescription(kPluginHSLToRGBDescription);
             break;
 
+        case eColorTransformRGBToHSI:
+            desc.setLabels(kPluginRGBToHSIName, kPluginRGBToHSIName, kPluginRGBToHSIName);
+            desc.setPluginDescription(kPluginRGBToHSIDescription);
+            break;
+
+        case eColorTransformHSIToRGB:
+            desc.setLabels(kPluginHSIToRGBName, kPluginHSIToRGBName, kPluginHSIToRGBName);
+            desc.setPluginDescription(kPluginHSIToRGBDescription);
+            break;
+
+        case eColorTransformRGBToYCbCr:
+            desc.setLabels(kPluginRGBToYCbCrName, kPluginRGBToYCbCrName, kPluginRGBToYCbCrName);
+            desc.setPluginDescription(kPluginRGBToYCbCrDescription);
+            break;
+
+        case eColorTransformYCbCrToRGB:
+            desc.setLabels(kPluginYCbCrToRGBName, kPluginYCbCrToRGBName, kPluginYCbCrToRGBName);
+            desc.setPluginDescription(kPluginYCbCrToRGBDescription);
+            break;
+
+        case eColorTransformRGBToYUV:
+            desc.setLabels(kPluginRGBToYUVName, kPluginRGBToYUVName, kPluginRGBToYUVName);
+            desc.setPluginDescription(kPluginRGBToYUVDescription);
+            break;
+
+        case eColorTransformYUVToRGB:
+            desc.setLabels(kPluginYUVToRGBName, kPluginYUVToRGBName, kPluginYUVToRGBName);
+            desc.setPluginDescription(kPluginYUVToRGBDescription);
+            break;
+            
         case eColorTransformRGBToXYZ:
             desc.setLabels(kPluginRGBToXYZName, kPluginRGBToXYZName, kPluginRGBToXYZName);
             desc.setPluginDescription(kPluginRGBToXYZDescription);
@@ -611,6 +703,36 @@ void getColorTransformPluginIDs(OFX::PluginFactoryArray &ids)
     {
         // HSLtoRGB
         static ColorTransformPluginFactory<eColorTransformHSLToRGB> p(kPluginHSLToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        // RGBtoHSI
+        static ColorTransformPluginFactory<eColorTransformRGBToHSI> p(kPluginRGBToHSIIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        // HSItoRGB
+        static ColorTransformPluginFactory<eColorTransformHSIToRGB> p(kPluginHSIToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        // RGBtoYCbCr
+        static ColorTransformPluginFactory<eColorTransformRGBToYCbCr> p(kPluginRGBToYCbCrIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        // YCbCrtoRGB
+        static ColorTransformPluginFactory<eColorTransformYCbCrToRGB> p(kPluginYCbCrToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        // RGBtoYUV
+        static ColorTransformPluginFactory<eColorTransformRGBToYUV> p(kPluginRGBToYUVIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        // YUVtoRGB
+        static ColorTransformPluginFactory<eColorTransformYUVToRGB> p(kPluginYUVToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
         ids.push_back(&p);
     }
     {
