@@ -1,5 +1,5 @@
 /*
- OFX Transform plugin.
+ OFX Transform & DirBlur plugin.
  
  Copyright (C) 2014 INRIA
  
@@ -109,6 +109,10 @@
 #define kPluginDescription "Translate / Rotate / Scale a 2D image."
 #define kPluginIdentifier "net.sf.openfx.TransformPlugin"
 #define kPluginMaskedIdentifier "net.sf.openfx.TransformMaskedPlugin"
+#define kPluginDirBlurName "DirBlurOFX"
+#define kPluginDirBlurGrouping "Filter"
+#define kPluginDirBlurDescription "Apply directional blur to an image."
+#define kPluginDirBlurIdentifier "net.sf.openfx.DirBlur"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -185,8 +189,8 @@ class TransformPlugin : public Transform3x3Plugin
 {
 public:
     /** @brief ctor */
-    TransformPlugin(OfxImageEffectHandle handle, bool masked)
-    : Transform3x3Plugin(handle, masked)
+    TransformPlugin(OfxImageEffectHandle handle, bool masked, bool isDirBlur)
+    : Transform3x3Plugin(handle, masked, isDirBlur)
     , _translate(0)
     , _rotate(0)
     , _scale(0)
@@ -1818,7 +1822,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
 OFX::ImageEffect* TransformPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
-    return new TransformPlugin(handle, false);
+    return new TransformPlugin(handle, false, false);
 }
 
 
@@ -1849,7 +1853,37 @@ void TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
 
 OFX::ImageEffect* TransformMaskedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
-    return new TransformPlugin(handle, true);
+    return new TransformPlugin(handle, true, false);
+}
+
+mDeclarePluginFactory(DirBlurPluginFactory, {}, {});
+
+void DirBlurPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+{
+    // basic labels
+    desc.setLabels(kPluginDirBlurName, kPluginDirBlurName, kPluginDirBlurName);
+    desc.setPluginGrouping(kPluginDirBlurGrouping);
+    desc.setPluginDescription(kPluginDirBlurDescription);
+
+    Transform3x3Describe(desc, true);
+
+    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
+}
+
+
+void DirBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+{
+    // make some pages and to things in
+    PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, true);
+
+    TransformPluginDescribeInContext(desc, context, page);
+
+    Transform3x3DescribeInContextEnd(desc, context, page, true, true);
+}
+
+OFX::ImageEffect* DirBlurPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+{
+    return new TransformPlugin(handle, true, true);
 }
 
 void getTransformPluginIDs(OFX::PluginFactoryArray &ids)
@@ -1860,6 +1894,10 @@ void getTransformPluginIDs(OFX::PluginFactoryArray &ids)
     }
     {
         static TransformMaskedPluginFactory p(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static DirBlurPluginFactory p(kPluginDirBlurIdentifier, kPluginVersionMajor, kPluginVersionMinor);
         ids.push_back(&p);
     }
 }

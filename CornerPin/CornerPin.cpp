@@ -350,7 +350,7 @@ class CornerPinPlugin : public Transform3x3Plugin
 public:
     /** @brief ctor */
     CornerPinPlugin(OfxImageEffectHandle handle, bool masked)
-    : Transform3x3Plugin(handle, masked)
+    : Transform3x3Plugin(handle, masked, false)
     , _extraMatrixRow1(0)
     , _extraMatrixRow2(0)
     , _extraMatrixRow3(0)

@@ -78,8 +78,8 @@ matrix.
 * BilateralGuidedCImg: Apply joint/cross bilateral filtering on image A, guided by the intensity differences of image B.
 * BlurCImg: Blur input stream by a quasi-Gaussian or Gaussian filter (recursive implementation), or compute derivatives.
 * DenoiseCImg: Denoise selected images by non-local patch averaging.
-* DilateCImg: Dilate input stream by a rectangular structuring element of specified size and Neumann boundary conditions.
-* ErodeCImg: Erode input stream by a rectangular structuring element of specified size and Neumann boundary conditions.
+* DilateCImg/ErodeCImg: Dilate/erode input stream by a rectangular structuring element of specified size and Neumann boundary conditions.
+* DirBlurOFX: Directional blur.
 * ErodeSmoothCImg: Erode or dilate input stream using a [normalized power-weighted filter](http://dx.doi.org/10.1109/ICPR.2004.1334273).
 * GuidedCImg: Blur image, with the [Guided Image filter](http://research.microsoft.com/en-us/um/people/kahe/publications/pami12guidedfilter.pdf).
 * RollingGuidanceCImg: Filter out details under a given scale using the [Rolling Guidance filter](http://www.cse.cuhk.edu.hk/~leojia/projects/rollguidance/).
