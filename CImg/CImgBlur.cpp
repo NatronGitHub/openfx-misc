@@ -70,9 +70,6 @@
 
  */
 
-// TODO: fix Gaussian filter in CImg when Border= nearest and no expand RoD
-// TODO: pass the border conditions to the copy processors in CImgFilter
-
 #include "CImgBlur.h"
 
 #include <memory>
@@ -101,7 +98,7 @@
 "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgBlur"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
@@ -150,14 +147,23 @@ enum BoundaryEnum
 #define kParamFilterLabel "Filter"
 #define kParamFilterHint "Bluring filter. The quasi-Gaussian filter should be appropriate in most cases. The Gaussian filter is more isotropic (its impulse response has rotational symmetry), but slower."
 #define kParamFilterOptionQuasiGaussian "Quasi-Gaussian"
-#define kParamFilterOptionQuasiGaussianHint "Quasi-Gaussian filter (0-order recursive Deriche filter, faster)."
+#define kParamFilterOptionQuasiGaussianHint "Quasi-Gaussian filter (0-order recursive Deriche filter, faster) - IIR (infinite support / impulsional response)."
 #define kParamFilterOptionGaussian "Gaussian"
-#define kParamFilterOptionGaussianHint "Gaussian filter (Van Vliet recursive Gaussian filter, more isotropic, slower)."
+#define kParamFilterOptionGaussianHint "Gaussian filter (Van Vliet recursive Gaussian filter, more isotropic, slower) - IIR (infinite support / impulsional response)."
+#define kParamFilterOptionBox "Box"
+#define kParamFilterOptionBoxHint "Box filter - FIR (finite support / impulsional response)."
+#define kParamFilterOptionTriangle "Triangle"
+#define kParamFilterOptionTriangleHint "Triangle/tent filter - FIR (finite support / impulsional response)."
+#define kParamFilterOptionQuadratic "Quadratic"
+#define kParamFilterOptionQuadraticHint "Quadratic filter - FIR (finite support / impulsional response)."
 #define kParamFilterDefault eFilterGaussian
 enum FilterEnum
 {
     eFilterQuasiGaussian = 0,
     eFilterGaussian,
+    eFilterBox,
+    eFilterTriangle,
+    eFilterQuadratic,
 };
 
 #define kParamExpandRoD "expandRoD"
@@ -413,12 +419,171 @@ vanvliet(CImg<T>& img, const float sigma, const int order, const char axis='x', 
 }
 #endif // cimg_version < 160
 
+static inline
+T get_data(T *data, const int N, const unsigned long off, const bool boundary_conditions, const int x)
+{
+    assert(N >= 1);
+    if (x <= 0) {
+        return boundary_conditions ? data[0] : T();
+    }
+    if (x >= N-1) {
+        return boundary_conditions ? data[(N-1)*off] : T();
+    }
+    return data[x*off];
+}
+
+// [internal] Apply a recursive filter (used by CImg<T>::vanvliet()).
+/**
+ \param ptr the pointer of the data
+ \param N size of the data
+ \param width width of the box filter
+ \param off the offset between two data point
+ \param iter number of iterations (1 = box, 2 = triangle, 3 = quadratic)
+ \param order the order of the filter 0 (smoothing), 1st derivtive, 2nd derivative, 3rd derivative
+ \param boundary_conditions Boundary conditions. Can be <tt>{ 0=dirichlet | 1=neumann }</tt>.
+ **/
+static void _cimg_box_apply(T *data, const double width, const int N, const unsigned long off, const int iter,
+                                  const int order, const bool boundary_conditions)
+{
+    // smooth
+    if (width > 1. && iter > 0) {
+        int w2 = (int)(width - 1)/2;
+        double frac = (width - (2*w2+1)) / 2.;
+        int winsize = 2*w2+1;
+        std::vector<T> win(winsize);
+        for (int i = 0; i < iter; ++i) {
+            // prepare for first iteration
+            double sum = 0; // window sum
+            for (int x = -w2; x <= w2; ++x) {
+                win[x+w2] = get_data(data, N, off, boundary_conditions, x);
+                sum += win[x+w2];
+            }
+            int ifirst = 0;
+            int ilast = 2*w2;
+            T prev = get_data(data, N, off, boundary_conditions, - w2 - 1);
+            T next = get_data(data, N, off, boundary_conditions, + w2 + 1);
+            // main loop
+            for (int x = 0; x < N-1; ++x) {
+                // add partial pixels
+                double sum2 = sum + frac * (prev + next);
+                // fill result
+                data[x*off] = sum2 / width;
+                // advance for next iteration
+                prev = win[ifirst];
+                sum -= prev;
+                ifirst = (ifirst + 1) % winsize;
+                ilast = (ilast + 1) % winsize;
+                assert((ilast + 1) % winsize == ifirst); // it is a circular buffer
+                win[ilast] = next;
+                sum += next;
+                next = get_data(data, N, off, boundary_conditions, x + w2 + 2);
+            }
+            // last iteration
+            // add partial pixels
+            double sum2 = sum + frac * (prev + next);
+            // fill result
+            data[(N-1)*off] = sum2 / width;
+        }
+    }
+    // derive
+    switch (order) {
+        case 0 :
+            // nothing to do
+            break;
+        case 1 : {
+            T p = get_data(data, N, off, boundary_conditions, -1);
+            T c = get_data(data, N, off, boundary_conditions, 0);
+            T n = get_data(data, N, off, boundary_conditions, +1);
+            for (int x = 0; x < N-1; ++x) {
+                data[x*off] = (n-p)/2.;
+                // advance
+                p = c;
+                c = n;
+                n = get_data(data, N, off, boundary_conditions, x+1);
+            }
+        } break;
+        case 2: {
+            T p = get_data(data, N, off, boundary_conditions, -1);
+            T c = get_data(data, N, off, boundary_conditions, 0);
+            T n = get_data(data, N, off, boundary_conditions, +1);
+            for (int x = 0; x < N-1; ++x) {
+                data[x*off] = n-2*c+p;
+                // advance
+                p = c;
+                c = n;
+                n = get_data(data, N, off, boundary_conditions, x+1);
+            }
+        } break;
+    }
+}
+
+//! Van Vliet recursive Gaussian filter.
+/**
+ \param width width of the box filter
+ \param iter number of iterations (1 = box, 2 = triangle, 3 = quadratic)
+ \param order the order of the filter 0,1,2,3
+ \param axis  Axis along which the filter is computed. Can be <tt>{ 'x' | 'y' | 'z' | 'c' }</tt>.
+ \param boundary_conditions Boundary conditions. Can be <tt>{ 0=dirichlet | 1=neumann }</tt>.
+ \note dirichlet boundary condition has a strange behavior
+
+ I.T. Young, L.J. van Vliet, M. van Ginkel, Recursive Gabor filtering.
+ IEEE Trans. Sig. Proc., vol. 50, pp. 2799-2805, 2002.
+
+ (this is an improvement over Young-Van Vliet, Sig. Proc. 44, 1995)
+
+ Boundary conditions (only for order 0) using Triggs matrix, from
+ B. Triggs and M. Sdika. Boundary conditions for Young-van Vliet
+ recursive filtering. IEEE Trans. Signal Processing,
+ vol. 54, pp. 2365-2367, 2006.
+ **/
+static void
+box(CImg<T>& img, const float width, const int iter, const int order, const char axis='x', const bool boundary_conditions=true)
+{
+    if (img.is_empty()) return/* *this*/;
+    const unsigned int _width = img._width, _height = img._height, _depth = img._depth, _spectrum = img._spectrum;
+    const char naxis = cimg::uncase(axis);
+    if (img.is_empty() || (width <= 1.f && !order)) return/* *this*/;
+    switch (naxis) {
+        case 'x' : {
+#ifdef cimg_use_openmp
+#pragma omp parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16)
+#endif
+            cimg_forYZC(img,y,z,c)
+            _cimg_box_apply(img.data(0,y,z,c),width,img._width,1U,iter,order,boundary_conditions);
+        } break;
+        case 'y' : {
+#ifdef cimg_use_openmp
+#pragma omp parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16)
+#endif
+            cimg_forXZC(img,x,z,c)
+            _cimg_box_apply(img.data(x,0,z,c),width,_height,(unsigned long)_width,iter,order,boundary_conditions);
+        } break;
+        case 'z' : {
+#ifdef cimg_use_openmp
+#pragma omp parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16)
+#endif
+            cimg_forXYC(img,x,y,c)
+            _cimg_box_apply(img.data(x,y,0,c),width,_depth,(unsigned long)(_width*_height),
+                                     iter,order,boundary_conditions);
+        } break;
+        default : {
+#ifdef cimg_use_openmp
+#pragma omp parallel for collapse(3) if (_width>=256 && _height*_depth*_spectrum>=16)
+#endif
+            cimg_forXYZ(img,x,y,z)
+            _cimg_box_apply(img.data(x,y,z,0),width,_spectrum,(unsigned long)(_width*_height*_depth),
+                                     iter,order,boundary_conditions);
+        }
+    }
+    return/* *this*/;
+}
+
 using namespace OFX;
 
 /// Blur plugin
 struct CImgBlurParams
 {
-    double size;
+    double sizex, sizey;
     int orderX;
     int orderY;
     int boundary_i;
@@ -432,12 +597,23 @@ public:
 
     CImgBlurPlugin(OfxImageEffectHandle handle)
     : CImgFilterPluginHelper<CImgBlurParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, kDefaultUnpremult, kDefaultProcessAlphaOnRGBA)
+    , _size(0)
+    , _size2D(0)
+    , _orderX(0)
+    , _orderY(0)
+    , _boundary(0)
+    , _filter(0)
+    , _expandRoD(0)
     {
-        _size  = fetchDoubleParam(kParamSize);
+        try {
+            _size  = fetchDoubleParam(kParamSize);
+        } catch (OFX::Exception::TypeRequest) {
+            _size2D  = fetchDouble2DParam(kParamSize);
+        }
         _orderX = fetchIntParam(kParamOrderX);
         _orderY = fetchIntParam(kParamOrderY);
         _boundary  = fetchChoiceParam(kParamBoundary);
-        assert(_size && _orderX && _orderY && _boundary);
+        assert((_size || _size2D) && _orderX && _orderY && _boundary);
         _filter = fetchChoiceParam(kParamFilter);
         assert(_filter);
         _expandRoD = fetchBooleanParam(kParamExpandRoD);
@@ -446,7 +622,14 @@ public:
 
     virtual void getValuesAtTime(double time, CImgBlurParams& params) OVERRIDE FINAL
     {
-        _size->getValueAtTime(time, params.size);
+        if (_size) {
+            _size->getValueAtTime(time, params.sizex);
+            params.sizey = params.sizex;
+        } else {
+            // major version > 1
+            assert(_size2D);
+            _size2D->getValueAtTime(time, params.sizex, params.sizey);
+        }
         _orderX->getValueAtTime(time, params.orderX);
         _orderY->getValueAtTime(time, params.orderY);
         _boundary->getValueAtTime(time, params.boundary_i);
@@ -461,17 +644,28 @@ public:
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
         if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
-            float sigma = (float)(renderScale.x * params.size / 2.4);
-            if (sigma < 0.1 && params.orderX == 0 && params.orderY == 0) {
+            float sigmax = (float)(renderScale.x * params.sizex / 2.4);
+            float sigmay = (float)(renderScale.y * params.sizey / 2.4);
+            if (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0) {
                 *roi = rect;
                 return;
             }
 
-            int delta_pix = std::max(3, (int)std::ceil((params.size * 1.5) * renderScale.x));
-            roi->x1 = rect.x1 - delta_pix - params.orderX;
-            roi->x2 = rect.x2 + delta_pix + params.orderX;
-            roi->y1 = rect.y1 - delta_pix - params.orderY;
-            roi->y2 = rect.y2 + delta_pix + params.orderY;
+            int delta_pixX = std::max(3, (int)std::ceil((params.sizex * 1.5) * renderScale.x));
+            int delta_pixY = std::max(3, (int)std::ceil((params.sizey * 1.5) * renderScale.y));
+            roi->x1 = rect.x1 - delta_pixX - params.orderX;
+            roi->x2 = rect.x2 + delta_pixX + params.orderX;
+            roi->y1 = rect.y1 - delta_pixY - params.orderY;
+            roi->y2 = rect.y2 + delta_pixY + params.orderY;
+        } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
+            int iter = (params.filter == eFilterBox ? 1 :
+                        (params.filter == eFilterTriangle ? 2 : 3));
+            int delta_pixX = iter * (std::floor((renderScale.x * params.sizex-1)/ 2) + 1);
+            int delta_pixY = iter * (std::floor((renderScale.y * params.sizey-1)/ 2) + 1);
+            roi->x1 = rect.x1 - delta_pixX - (params.orderX > 0);
+            roi->x2 = rect.x2 + delta_pixX + (params.orderX > 0);
+            roi->y1 = rect.y1 - delta_pixY - (params.orderY > 0);
+            roi->y2 = rect.y2 + delta_pixY + (params.orderY > 0);
         } else {
             assert(false);
         }
@@ -481,34 +675,40 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        float sigma = (float)(args.renderScale.x * params.size / 2.4);
-        if (sigma < 0.1 && params.orderX == 0 && params.orderY == 0) {
-            return;
-        }
         if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
-#if       cimg_version >= 160
-            if (params.orderX == 0 && params.orderY == 0) {
-                cimg.blur(sigma, (bool)params.boundary_i, params.filter == eFilterGaussian);
-            } else {
-                if (params.filter == eFilterGaussian) {
-                    cimg.vanvliet(sigma, params.orderX, 'x', (bool)params.boundary_i);
-                    cimg.vanvliet(sigma, params.orderY, 'y', (bool)params.boundary_i);
-                } else {
-                    cimg.deriche(sigma, params.orderX, 'x', (bool)params.boundary_i);
-                    cimg.deriche(sigma, params.orderY, 'y', (bool)params.boundary_i);
-                }
+            float sigmax = (float)(args.renderScale.x * params.sizex / 2.4);
+            float sigmay = (float)(args.renderScale.y * params.sizey / 2.4);
+            if (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0) {
+                return;
             }
+#if       cimg_version >= 160
+            //if (params.orderX == 0 && params.orderY == 0) {
+            //    cimg.blur(sigma, (bool)params.boundary_i, params.filter == eFilterGaussian);
+            //} else {
+            if (params.filter == eFilterGaussian) {
+                cimg.vanvliet(sigmax, params.orderX, 'x', (bool)params.boundary_i);
+                cimg.vanvliet(sigmay, params.orderY, 'y', (bool)params.boundary_i);
+            } else {
+                cimg.deriche(sigmax, params.orderX, 'x', (bool)params.boundary_i);
+                cimg.deriche(sigmay, params.orderY, 'y', (bool)params.boundary_i);
+            }
+            //}
 #         else
             // VanVliet filter was inexistent before 1.53, and buggy before CImg.h from
             // 57ffb8393314e5102c00e5f9f8fa3dcace179608 Thu Dec 11 10:57:13 2014 +0100
             if (params.filter == eFilterGaussian) {
-                vanvliet(cimg,/*cimg.vanvliet(*/sigma, params.orderX, 'x', (bool)params.boundary_i);
-                vanvliet(cimg,/*cimg.vanvliet(*/sigma, params.orderY, 'y', (bool)params.boundary_i);
+                vanvliet(cimg,/*cimg.vanvliet(*/sigmax, params.orderX, 'x', (bool)params.boundary_i);
+                vanvliet(cimg,/*cimg.vanvliet(*/sigmay, params.orderY, 'y', (bool)params.boundary_i);
             } else {
-                cimg.deriche(sigma, params.orderX, 'x', (bool)params.boundary_i);
-                cimg.deriche(sigma, params.orderY, 'y', (bool)params.boundary_i);
+                cimg.deriche(sigmax, params.orderX, 'x', (bool)params.boundary_i);
+                cimg.deriche(sigmay, params.orderY, 'y', (bool)params.boundary_i);
             }
 #         endif
+        } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
+            int iter = (params.filter == eFilterBox ? 1 :
+                        (params.filter == eFilterTriangle ? 2 : 3));
+            box(cimg, params.sizex, iter, params.orderX, 'x', (bool)params.boundary_i);
+            box(cimg, params.sizey, iter, params.orderY, 'y', (bool)params.boundary_i);
         } else {
             assert(false);
         }
@@ -516,8 +716,15 @@ public:
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgBlurParams& params) OVERRIDE FINAL
     {
-        float sigma = (float)(args.renderScale.x * params.size / 2.4);
-        return (sigma < 0.1 && params.orderX == 0 && params.orderY == 0);
+        if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
+            float sigmax = (float)(args.renderScale.x * params.sizex / 2.4);
+            float sigmay = (float)(args.renderScale.y * params.sizey / 2.4);
+            return (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0);
+        } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
+            return (args.renderScale.x * params.sizex <= 1 && args.renderScale.y * params.sizey <= 1 && params.orderX == 0 && params.orderY == 0);
+        } else {
+            assert(false);
+        }
     };
 
     virtual bool getRoD(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* dstRoD) OVERRIDE FINAL;
@@ -529,6 +736,7 @@ private:
 
     // params
     OFX::DoubleParam *_size;
+    OFX::Double2DParam *_size2D;
     OFX::IntParam *_orderX;
     OFX::IntParam *_orderY;
     OFX::ChoiceParam *_boundary;
@@ -540,12 +748,25 @@ bool
 CImgBlurPlugin::getRoD(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* dstRoD)
 {
     if (params.expandRoD && !isEmpty(srcRoD)) {
-        int delta_pix = (int)std::ceil((params.size * 1.5) * renderScale.x);
-        dstRoD->x1 = srcRoD.x1 - delta_pix;
-        dstRoD->x2 = srcRoD.x2 + delta_pix;
-        dstRoD->y1 = srcRoD.y1 - delta_pix;
-        dstRoD->y2 = srcRoD.y2 + delta_pix;
-
+        if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
+            int delta_pixX = std::max(3, (int)std::ceil((params.sizex * 1.5) * renderScale.x));
+            int delta_pixY = std::max(3, (int)std::ceil((params.sizey * 1.5) * renderScale.y));
+            dstRoD->x1 = srcRoD.x1 - delta_pixX - params.orderX;
+            dstRoD->x2 = srcRoD.x2 + delta_pixX + params.orderX;
+            dstRoD->y1 = srcRoD.y1 - delta_pixY - params.orderY;
+            dstRoD->y2 = srcRoD.y2 + delta_pixY + params.orderY;
+        } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
+            int iter = (params.filter == eFilterBox ? 1 :
+                        (params.filter == eFilterTriangle ? 2 : 3));
+            int delta_pixX = iter * (std::floor((renderScale.x * params.sizex-1)/ 2) + 1);
+            int delta_pixY = iter * (std::floor((renderScale.y * params.sizey-1)/ 2) + 1);
+            dstRoD->x1 = srcRoD.x1 - delta_pixX - (params.orderX > 0);
+            dstRoD->x2 = srcRoD.x2 + delta_pixX + (params.orderX > 0);
+            dstRoD->y1 = srcRoD.y1 - delta_pixY - (params.orderY > 0);
+            dstRoD->y2 = srcRoD.y2 + delta_pixY + (params.orderY > 0);
+        } else {
+            assert(false);
+        }
         return true;
     }
 
@@ -591,13 +812,23 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
                                                                               kSupportsAlpha,
                                                                               kSupportsTiles);
 
-    {
+    if (getMajorVersion() <= 1) {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSize);
         param->setLabels(kParamSizeLabel, kParamSizeLabel, kParamSizeLabel);
         param->setHint(kParamSizeHint);
         param->setRange(0, INT_MAX);
         param->setDisplayRange(0, 100);
         param->setDefault(kParamSizeDefault);
+        param->setDigits(1);
+        param->setIncrement(0.1);
+        page->addChild(*param);
+    } else {
+        OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSize);
+        param->setLabels(kParamSizeLabel, kParamSizeLabel, kParamSizeLabel);
+        param->setHint(kParamSizeHint);
+        param->setRange(0, 0, INT_MAX, INT_MAX);
+        param->setDisplayRange(0, 0, 100, 100);
+        param->setDefault(kParamSizeDefault, kParamSizeDefault);
         param->setDigits(1);
         param->setIncrement(0.1);
         page->addChild(*param);
@@ -639,6 +870,12 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
         param->appendOption(kParamFilterOptionQuasiGaussian, kParamFilterOptionQuasiGaussianHint);
         assert(param->getNOptions() == eFilterGaussian && param->getNOptions() == 1);
         param->appendOption(kParamFilterOptionGaussian, kParamFilterOptionGaussianHint);
+        assert(param->getNOptions() == eFilterBox && param->getNOptions() == 2);
+        param->appendOption(kParamFilterOptionBox, kParamFilterOptionBoxHint);
+        assert(param->getNOptions() == eFilterTriangle && param->getNOptions() == 3);
+        param->appendOption(kParamFilterOptionTriangle, kParamFilterOptionTriangleHint);
+        assert(param->getNOptions() == eFilterQuadratic && param->getNOptions() == 4);
+        param->appendOption(kParamFilterOptionQuadratic, kParamFilterOptionQuadraticHint);
         param->setDefault((int)kParamFilterDefault);
         page->addChild(*param);
     }
@@ -661,6 +898,13 @@ OFX::ImageEffect* CImgBlurPluginFactory::createInstance(OfxImageEffectHandle han
 
 void getCImgBlurPluginID(OFX::PluginFactoryArray &ids)
 {
-    static CImgBlurPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
+    {
+        // version 1
+        static CImgBlurPluginFactory p(kPluginIdentifier, 1, 0);
+        ids.push_back(&p);
+    }
+    {
+        static CImgBlurPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
 }
