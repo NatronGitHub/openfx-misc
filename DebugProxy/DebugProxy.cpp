@@ -193,6 +193,7 @@ struct ImageEffectHostDescription {
   bool supportsParametricAnimation;
 #ifdef OFX_EXTENSIONS_NUKE
   bool canTransform;
+  bool multiPlanar;
 #endif
   int maxParameters;
   int maxPages;
@@ -574,6 +575,12 @@ fetchHostDescription(int nth)
         int canTransform = 0;
         st = gPropHost[nth]->propGetInt(host, kFnOfxImageEffectCanTransform, 0, &canTransform);
         hostDesc.canTransform = (st == kOfxStatOK) && canTransform != 0;
+    }
+    {
+        int multiplanar = 0;
+        st = gPropHost[nth]->propGetInt(host, kFnOfxImageEffectPropMultiPlanar, 0, &multiplanar);
+        hostDesc.multiPlanar = (st == kOfxStatOK) && multiplanar != 0;
+        
     }
 
 #endif
@@ -1322,6 +1329,91 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
 #endif
       }
     }
+#ifdef OFX_EXTENSIONS_NUKE
+    else if (strcmp(action, kFnOfxImageEffectActionGetFrameViewsNeeded) == 0) {
+        // outArgs has a set of properties, one for each input clip, named "OfxImageClipPropFrameRange_" with the name of the clip post-pended. For example "OfxImageClipPropFrameRange_Source". All these properties are multi-dimensional doubles, with the dimension is a multiple of two. Each pair of values indicates a continuous range of frames that is needed on the given input. They are all initalised to the default value.
+        if (st == kOfxStatOK) {
+#ifdef OFX_DEBUG_PROXY_CLIPS
+            ssr << '(';
+            const std::list<std::string>& clips = gClips[nth][getContext(nth,(OfxImageEffectHandle)handle)];
+            bool firstclip = true;
+            for (std::list<std::string>::const_iterator it = clips.begin(); it != clips.end(); ++it) {
+                const char* name = it->c_str();
+                double range[2] = {0., 0.};
+                double view = 0;
+                std::string clipFrameRangePropName = std::string("OfxImageClipPropFrameRangeView_") + name;
+                int dim = 0;
+                OfxStatus pst = gPropHost[nth]->propGetDimension(outArgs, clipFrameRangePropName.c_str(), &dim);
+                if (pst == kOfxStatOK) {
+                    if (!firstclip) {
+                        ssr << ',';
+                    }
+                    firstclip = false;
+                    bool firstrange = true;
+                    ssr << name << ":(";
+                    for (int i = 0; i < dim; i += 3) {
+                        gPropHost[nth]->propGetDoubleN(outArgs, clipFrameRangePropName.c_str(), i, &range[0]);
+                        gPropHost[nth]->propGetDoubleN(outArgs, clipFrameRangePropName.c_str(), i+1, &range[1]);
+                        gPropHost[nth]->propGetDoubleN(outArgs, clipFrameRangePropName.c_str(), i+2, &view);
+                        if (!firstrange) {
+                            ssr << ',';
+                        }
+                        firstrange = false;
+                        ssr << name << '(' << range[0] << ',' << range[1] << ',' << view << ')';
+                    }
+                    ssr << ')';
+                }
+            }
+#else
+            ssr << "(N/A)";
+#endif
+        }
+    }
+    else if (strcmp(action, kFnOfxImageEffectActionGetClipComponents) == 0) {
+        // outArgs has a set of properties, one for each input clip, named "OfxImageClipPropFrameRange_" with the name of the clip post-pended. For example "OfxImageClipPropFrameRange_Source". All these properties are multi-dimensional doubles, with the dimension is a multiple of two. Each pair of values indicates a continuous range of frames that is needed on the given input. They are all initalised to the default value.
+        if (st == kOfxStatOK) {
+#ifdef OFX_DEBUG_PROXY_CLIPS
+            ssr << '(';
+            const std::list<std::string>& clips = gClips[nth][getContext(nth,(OfxImageEffectHandle)handle)];
+            bool firstclip = true;
+            for (std::list<std::string>::const_iterator it = clips.begin(); it != clips.end(); ++it) {
+                const char* name = it->c_str();
+                
+                std::string clipFrameRangePropName = std::string(kFnOfxImageEffectActionGetClipComponentsPropString) + name;
+                int dim = 0;
+                OfxStatus pst = gPropHost[nth]->propGetDimension(outArgs, clipFrameRangePropName.c_str(), &dim);
+                if (pst == kOfxStatOK) {
+                    if (!firstclip) {
+                        ssr << ',';
+                    }
+                    firstclip = false;
+                    bool firstrange = true;
+                    ssr << name << ":(";
+                    char* comp;
+                    for (int i = 0; i < dim; ++i) {
+                        gPropHost[nth]->propGetDoubleN(outArgs, clipFrameRangePropName.c_str(), i, &comp);
+                        if (!firstrange) {
+                            ssr << ',';
+                        }
+                        firstrange = false;
+                        ssr << comp;
+                    }
+                    ssr << ')';
+                }
+            }
+            char* clipName;
+            int clipView;
+            double clipTime;
+            gPropHost[nth]->propGetDoubleN(outArgs, kFnOfxImageEffectPropPassThroughTime, i, &clipTime);
+            gPropHost[nth]->propGetStringN(outArgs, kFnOfxImageEffectPropPassThroughClip, i, &clipName);
+            gPropHost[nth]->propGetIntN(outArgs, kFnOfxImageEffectPropPassThroughView, i, &clipView);
+            ssr << '(' <<clipName<<','<<clipTime<<','<<clipView<<')';
+#else
+            ssr << "(N/A)";
+#endif
+        }
+    }
+#endif
     else if (strcmp(action, kOfxImageEffectActionIsIdentity) == 0) {
       // outArgs has the following properties which the plugin can set...
       //    kOfxPropName this to the name of the clip that should be used if the effect is an identity transform, defaults to the empty string
