@@ -301,6 +301,14 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
     OfxRectD rodB = _srcClipB->getRegionOfDefinition(args.time);
     
     int bboxChoice;
+    double mix;
+    _mix->getValueAtTime(args.time, mix);
+    //Do the same as isIdentity otherwise the result of getRoD() might not be coherent with the RoD of the identity clip.
+    if (mix == 0.) {
+        rod = rodB;
+        return true;
+    }
+    
     _bbox->getValueAtTime(args.time, bboxChoice);
     
 	switch (bboxChoice)
