@@ -67,7 +67,10 @@ matrix.
 * Math/MultiplyOFX: Multiply the selected channels by a constant.
 * SaturationOFX: Modify the color saturation of an image.
 * Transform/RGBToHSV and HSVToRGB: Convert to/from HSV color representation.
-* Transform/RGBToHSL and HSLToRGB: Convert to/from HSL color representation.
+* Transform/RGBToHSL and HSLToRGB: Convert to/from HSL color representation. 
+* Transform/RGBToHSI and HSIToRGB: Convert to/from HSI color representation. 
+* Transform/RGBToYCbCr and YCbCrToRGB: Convert to/from YCbCr color representation. 
+* Transform/RGBToYUV and YUVToRGB: Convert to/from YUV color representation. 
 * Transform/RGBToLab and LabToRGB: Convert to/from Lab color representation.
 * Transform/RGBToXYZ and XYZToRGB: Convert to/from XYZ color representation.
 * VectorToColor: Convert x and y vector components to a color representation.
