@@ -938,7 +938,7 @@ void getCImgBlurPluginID(OFX::PluginFactoryArray &ids)
 {
     {
         // version 1
-        static CImgBlurPluginFactory p(kPluginIdentifier, 1, 0);
+        static CImgBlur1PluginFactory p(kPluginIdentifier, 1, 0);
         ids.push_back(&p);
     }
     {
