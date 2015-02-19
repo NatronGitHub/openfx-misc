@@ -1391,7 +1391,7 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
                     ssr << name << ":(";
                     char* comp;
                     for (int i = 0; i < dim; ++i) {
-                        gPropHost[nth]->propGetDoubleN(outArgs, clipFrameRangePropName.c_str(), i, &comp);
+                        gPropHost[nth]->propGetString(outArgs, clipFrameRangePropName.c_str(), i, &comp);
                         if (!firstrange) {
                             ssr << ',';
                         }
@@ -1404,9 +1404,9 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
             char* clipName;
             int clipView;
             double clipTime;
-            gPropHost[nth]->propGetDoubleN(outArgs, kFnOfxImageEffectPropPassThroughTime, i, &clipTime);
-            gPropHost[nth]->propGetStringN(outArgs, kFnOfxImageEffectPropPassThroughClip, i, &clipName);
-            gPropHost[nth]->propGetIntN(outArgs, kFnOfxImageEffectPropPassThroughView, i, &clipView);
+            gPropHost[nth]->propGetDouble(outArgs, kFnOfxImageEffectPropPassThroughTime, 0, &clipTime);
+            gPropHost[nth]->propGetString(outArgs, kFnOfxImageEffectPropPassThroughClip, 0, &clipName);
+            gPropHost[nth]->propGetInt(outArgs, kFnOfxImageEffectPropPassThroughView, 0, &clipView);
             ssr << '(' <<clipName<<','<<clipTime<<','<<clipView<<')';
 #else
             ssr << "(N/A)";
