@@ -538,6 +538,8 @@
 		1EBAEFE3199A820B0037B3E6 /* TestRender.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EBAEFCE199A81AA0037B3E6 /* TestRender.cpp */; };
 		1EBAEFE4199A820D0037B3E6 /* TestRender.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EBAEFCE199A81AA0037B3E6 /* TestRender.cpp */; };
 		1EBAEFE5199A82110037B3E6 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EBAEFCD199A81AA0037B3E6 /* PluginRegistration.cpp */; };
+		1EC1B4F81A964209001D7020 /* ofxsTransformInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EC1B4F61A964209001D7020 /* ofxsTransformInteract.cpp */; };
+		1EC1B4F91A964209001D7020 /* ofxsTransformInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EC1B4F61A964209001D7020 /* ofxsTransformInteract.cpp */; };
 		1ECA4DE41A3F3A6500C5128B /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1ECA4DE51A3F3A6500C5128B /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1ECA4DE61A3F3A6500C5128B /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -2159,6 +2161,8 @@
 		1EBAEFCF199A81AA0037B3E6 /* TestRender.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestRender.h; sourceTree = "<group>"; };
 		1EBAEFE1199A81DB0037B3E6 /* Test.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Test.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EBAF03E199B74370037B3E6 /* ofxsMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsMacros.h; sourceTree = "<group>"; };
+		1EC1B4F61A964209001D7020 /* ofxsTransformInteract.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsTransformInteract.cpp; sourceTree = "<group>"; };
+		1EC1B4F71A964209001D7020 /* ofxsTransformInteract.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsTransformInteract.h; sourceTree = "<group>"; };
 		1EC7C7F818BF4F4C002A246F /* ofxReadWrite.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxReadWrite.h; sourceTree = "<group>"; };
 		1EC7C7F918BF4F85002A246F /* ofxDialog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxDialog.h; path = openfx/include/ofxDialog.h; sourceTree = SOURCE_ROOT; };
 		1EC7C7FA18BF4F85002A246F /* ofxSonyVegas.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ofxSonyVegas.h; path = openfx/include/ofxSonyVegas.h; sourceTree = SOURCE_ROOT; };
@@ -3332,6 +3336,8 @@
 				1E9B5F57198A51840095C8AA /* ofxsTransform3x3.cpp */,
 				1E9B5F58198A51840095C8AA /* ofxsTransform3x3.h */,
 				1E9B5F59198A51840095C8AA /* ofxsTransform3x3Processor.h */,
+				1EC1B4F61A964209001D7020 /* ofxsTransformInteract.cpp */,
+				1EC1B4F71A964209001D7020 /* ofxsTransformInteract.h */,
 				1E9B5F5A198A51840095C8AA /* README.md */,
 			);
 			path = SupportExt;
@@ -5058,6 +5064,7 @@
 				1E47341D1907FB9400DC26E1 /* ChromaKeyer.cpp in Sources */,
 				1E10A70B1997C03100EE87A1 /* ColorMatrix.cpp in Sources */,
 				1E593382194A0CF400804448 /* Constant.cpp in Sources */,
+				1EC1B4F91A964209001D7020 /* ofxsTransformInteract.cpp in Sources */,
 				D730310419518B560024BCA4 /* CopyRectangle.cpp in Sources */,
 				D7257D5F192E91510040CD9C /* CornerPin.cpp in Sources */,
 				1ED12E521A4B318400ABA348 /* ClipTest.cpp in Sources */,
@@ -5595,6 +5602,7 @@
 				D7349E9418E7767D0097DB1D /* ofxsLog.cpp in Sources */,
 				D7349E9718E7767D0097DB1D /* ofxsMultiThread.cpp in Sources */,
 				D7349E9818E7767D0097DB1D /* ofxsParams.cpp in Sources */,
+				1EC1B4F81A964209001D7020 /* ofxsTransformInteract.cpp in Sources */,
 				1E9B5F60198A52030095C8AA /* ofxsTransform3x3.cpp in Sources */,
 				D7349E9918E7767D0097DB1D /* ofxsProperty.cpp in Sources */,
 				D7349E9A18E7767D0097DB1D /* ofxsPropertyValidation.cpp in Sources */,

@@ -52,6 +52,7 @@ ofxsOGLTextRenderer.o \
 ofxsOGLFontData.o  \
 ofxsTracking.o \
 ofxsTransform3x3.o \
+ofxsTransformInteract.o \
 ofxsRectangleInteract.o \
 randomGenerator.o \
 PluginRegistrationCombined.o

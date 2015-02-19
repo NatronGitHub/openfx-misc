@@ -174,9 +174,9 @@ static const char* const kParamFrom[4] = {
 #define kParamExtraMatrixRow2 "row2"
 #define kParamExtraMatrixRow3 "row3"
 
-#define kParamInteractive "interactive"
-#define kParamInteractiveLabel "Interactive Update"
-#define kParamInteractiveHint "If checked, update the parameter values during interaction with the image viewer, else update the values when pen is released."
+#define kParamTransformInteractive "interactive"
+#define kParamTransformInteractiveLabel "Interactive Update"
+#define kParamTransformInteractiveHint "If checked, update the parameter values during interaction with the image viewer, else update the values when pen is released."
 
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
 
@@ -625,7 +625,7 @@ public:
         addParamToSlaveTo(_invert);
         _overlayPoints = _plugin->fetchChoiceParam(kParamOverlayPoints);
         addParamToSlaveTo(_overlayPoints);
-        _interactive = _plugin->fetchBooleanParam(kParamInteractive);
+        _interactive = _plugin->fetchBooleanParam(kParamTransformInteractive);
         assert(_invert && _overlayPoints && _interactive);
 
         for (int i = 0; i < 4; ++i) {
@@ -1161,9 +1161,9 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
 
     // interactive
     {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
-        param->setLabel(kParamInteractiveLabel);
-        param->setHint(kParamInteractiveHint);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamTransformInteractive);
+        param->setLabel(kParamTransformInteractiveLabel);
+        param->setHint(kParamTransformInteractiveHint);
         param->setEvaluateOnChange(false);
         page->addChild(*param);
     }
