@@ -16,6 +16,7 @@ Deinterlace.o \
 Difference.o \
 Dissolve.o \
 Gamma.o \
+GodRays.o \
 Grade.o \
 ColorTransform.o \
 HSVTool.o \
@@ -172,6 +173,7 @@ VPATH += \
 ../Difference \
 ../Dissolve \
 ../Gamma \
+../GodRays \
 ../Grade \
 ../ColorTransform \
 ../HSVTool \
@@ -225,6 +227,7 @@ CXXFLAGS += \
 -I../Difference \
 -I../Dissolve \
 -I../Gamma \
+-I../GodRays \
 -I../Grade \
 -I../ColorTransform \
 -I../HSVTool \

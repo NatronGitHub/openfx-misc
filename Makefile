@@ -19,6 +19,7 @@ Deinterlace \
 Difference \
 Dissolve \
 Gamma \
+GodRays \
 Grade \
 ColorTransform \
 HSVTool \

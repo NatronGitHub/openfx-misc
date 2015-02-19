@@ -16,6 +16,7 @@
 #include "Difference.h"
 #include "Dissolve.h"
 #include "Gamma.h"
+#include "GodRays.h"
 #include "Grade.h"
 #include "HSVTool.h"
 #include "ImageStatistics.h"
@@ -70,6 +71,7 @@ namespace OFX
             getDifferencePluginID(ids);
             getDissolvePluginID(ids);
             getGammaPluginID(ids);
+            getGodRaysPluginID(ids);
             getGradePluginID(ids);
             getHSVToolPluginID(ids);
             getImageStatisticsPluginID(ids);

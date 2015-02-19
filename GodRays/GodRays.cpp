@@ -1,5 +1,5 @@
 /*
- OFX Transform & DirBlur plugin.
+ OFX GodRays plugin.
  
  Copyright (C) 2014 INRIA
  
@@ -70,7 +70,7 @@
  
  */
 
-#include "Transform.h"
+#include "GodRays.h"
 #include "ofxsTransform3x3.h"
 #include "ofxsTransformInteract.h"
 
@@ -80,29 +80,46 @@
 #include <windows.h>
 #endif
 
-#define kPluginName "TransformOFX"
-#define kPluginMaskedName "TransformMaskedOFX"
-#define kPluginGrouping "Transform"
-#define kPluginDescription "Translate / Rotate / Scale a 2D image."
-#define kPluginIdentifier "net.sf.openfx.TransformPlugin"
-#define kPluginMaskedIdentifier "net.sf.openfx.TransformMaskedPlugin"
-#define kPluginDirBlurName "DirBlurOFX"
-#define kPluginDirBlurGrouping "Filter"
-#define kPluginDirBlurDescription "Apply directional blur to an image."
-#define kPluginDirBlurIdentifier "net.sf.openfx.DirBlur"
+#define kPluginName "GodRaysOFX"
+#define kPluginGrouping "Filter"
+#define kPluginDescription "God rays."
+#define kPluginIdentifier "net.sf.openfx.GodRays"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
+
+#define kParamFromColor "fromColor"
+#define kParamFromColorLabel "From Color"
+#define kParamFromColorHint "Color by which the initial image is multiplied."
+
+#define kParamToColor "toColor"
+#define kParamToColorLabel "To Color"
+#define kParamToColorHint "Color by which the final image is multiplied."
+
+#define kParamGamma "gamma"
+#define kParamGammaLabel "Gamma"
+#define kParamGammaHint "Gamma space in which the colors are interpolated. Higher values yield brighter intermediate images"
+
+#define kParamSteps "steps"
+#define kParamStepsLabel "Steps"
+#define kParamStepsHint "The number of intermediate images is 2^steps, i.e. 32 for steps=5."
+
+#define kParamMax "max"
+#define kParamMaxLabel "Max"
+#define kParamMaxHint "Output the brightest value at each pixel rather than the average."
+
+
+#define kTransform3x3MotionBlurCount 1000 // number of transforms used in the motion
 
 using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class TransformPlugin : public Transform3x3Plugin
+class GodRaysPlugin : public Transform3x3Plugin
 {
 public:
     /** @brief ctor */
-    TransformPlugin(OfxImageEffectHandle handle, bool masked, bool isDirBlur)
-    : Transform3x3Plugin(handle, masked, true, isDirBlur)
+    GodRaysPlugin(OfxImageEffectHandle handle)
+    : Transform3x3Plugin(handle, true, false, true)
     , _translate(0)
     , _rotate(0)
     , _scale(0)
@@ -112,6 +129,11 @@ public:
     , _skewOrder(0)
     , _center(0)
     , _interactive(0)
+    , _fromColor(0)
+    , _toColor(0)
+    , _gamma(0)
+    , _steps(0)
+    , _max(0)
     {
         // NON-GENERIC
         _translate = fetchDouble2DParam(kParamTransformTranslate);
@@ -124,6 +146,13 @@ public:
         _center = fetchDouble2DParam(kParamTransformCenter);
         _interactive = fetchBooleanParam(kParamTransformInteractive);
         assert(_translate && _rotate && _scale && _scaleUniform && _skewX && _skewY && _skewOrder && _center && _interactive);
+        _fromColor = fetchRGBAParam(kParamFromColor);
+        _toColor = fetchRGBAParam(kParamToColor);
+        _gamma = fetchRGBAParam(kParamGamma);
+        _steps = fetchIntParam(kParamSteps);
+        _max = fetchBooleanParam(kParamMax);
+
+        assert(_fromColor && _toColor && _gamma && _steps && _max);
     }
 
 private:
@@ -138,6 +167,17 @@ private:
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
+private:
+    /* internal render function */
+    template <class PIX, int nComponents, int maxValue, bool masked>
+    void renderInternalForBitDepth(const OFX::RenderArguments &args);
+
+    template <int nComponents, bool masked>
+    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+    
+    /* set up and run a processor (overridden in GodRays) */
+    virtual void setupAndProcess(Transform3x3ProcessorBase &, const OFX::RenderArguments &args) OVERRIDE;
+
     // NON-GENERIC
     OFX::Double2DParam* _translate;
     OFX::DoubleParam* _rotate;
@@ -148,11 +188,16 @@ private:
     OFX::ChoiceParam* _skewOrder;
     OFX::Double2DParam* _center;
     BooleanParam* _interactive;
+    RGBAParam* _fromColor;
+    RGBAParam* _toColor;
+    RGBAParam* _gamma;
+    IntParam* _steps;
+    BooleanParam* _max;
 };
 
 // overridden is identity
 bool
-TransformPlugin::isIdentity(double time)
+GodRaysPlugin::isIdentity(double time)
 {
     // NON-GENERIC
     OfxPointD scale;
@@ -178,7 +223,7 @@ TransformPlugin::isIdentity(double time)
 }
 
 bool
-TransformPlugin::getInverseTransformCanonical(double time, double amount, bool invert, OFX::Matrix3x3* invtransform) const
+GodRaysPlugin::getInverseTransformCanonical(double time, double amount, bool invert, OFX::Matrix3x3* invtransform) const
 {
     // NON-GENERIC
     OfxPointD center;
@@ -221,7 +266,7 @@ TransformPlugin::getInverseTransformCanonical(double time, double amount, bool i
 }
 
 void
-TransformPlugin::resetCenter(double time)
+GodRaysPlugin::resetCenter(double time)
 {
     OfxRectD rod = _srcClip->getRegionOfDefinition(time);
     if (rod.x1 <= kOfxFlagInfiniteMin || kOfxFlagInfiniteMax <= rod.x2 ||
@@ -290,7 +335,7 @@ TransformPlugin::resetCenter(double time)
 }
 
 void
-TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+GodRaysPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
     if (paramName == kParamTransformResetCenter) {
         resetCenter(args.time);
@@ -309,22 +354,149 @@ TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::s
 }
 
 void
-TransformPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+GodRaysPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
     if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
         resetCenter(args.time);
     }
 }
 
+/* set up and run a processor */
+void
+GodRaysPlugin::setupAndProcess(Transform3x3ProcessorBase &processor,
+                               const OFX::RenderArguments &args)
+{
+    const double time = args.time;
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+
+    if ( !dst.get() ) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
+    if (dstBitDepth != _dstClip->getPixelDepth() ||
+        dstComponents != _dstClip->getPixelComponents()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+        ( dst->getRenderScale().y != args.renderScale.y) ||
+        ( dst->getField() != args.fieldToRender) ) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    std::auto_ptr<const OFX::Image> src( _srcClip->fetchImage(time) );
+    size_t invtransformsizealloc = 0;
+    size_t invtransformsize = 0;
+    std::vector<OFX::Matrix3x3> invtransform;
+    bool blackOutside = true;
+    double mix = 1.;
+
+    if ( !src.get() ) {
+        // no source image, use a dummy transform
+        invtransformsizealloc = 1;
+        invtransform.resize(invtransformsizealloc);
+        invtransformsize = 1;
+        invtransform[0].a = 0.;
+        invtransform[0].b = 0.;
+        invtransform[0].c = 0.;
+        invtransform[0].d = 0.;
+        invtransform[0].e = 0.;
+        invtransform[0].f = 0.;
+        invtransform[0].g = 0.;
+        invtransform[0].h = 0.;
+        invtransform[0].i = 1.;
+    } else {
+        OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
+        OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
+        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+
+        bool invert;
+        _invert->getValueAtTime(time, invert);
+
+        _blackOutside->getValueAtTime(time, blackOutside);
+        if (_masked) {
+            _mix->getValueAtTime(time, mix);
+        }
+        const bool fielded = args.fieldToRender == OFX::eFieldLower || args.fieldToRender == OFX::eFieldUpper;
+        const double pixelAspectRatio = src->getPixelAspectRatio();
+
+#pragma message WARN("depend on steps")
+        invtransformsizealloc = kTransform3x3MotionBlurCount;
+        invtransform.resize(invtransformsizealloc);
+        invtransformsize = getInverseTransformsBlur(time, args.renderScale, fielded, pixelAspectRatio, invert, &invtransform.front(), invtransformsizealloc);
+
+        // compose with the input transform
+        if ( !src->getTransformIsIdentity() ) {
+            double srcTransform[9]; // transform to apply to the source image, in pixel coordinates, from source to destination
+            src->getTransform(srcTransform);
+            OFX::Matrix3x3 srcTransformMat;
+            srcTransformMat.a = srcTransform[0];
+            srcTransformMat.b = srcTransform[1];
+            srcTransformMat.c = srcTransform[2];
+            srcTransformMat.d = srcTransform[3];
+            srcTransformMat.e = srcTransform[4];
+            srcTransformMat.f = srcTransform[5];
+            srcTransformMat.g = srcTransform[6];
+            srcTransformMat.h = srcTransform[7];
+            srcTransformMat.i = srcTransform[8];
+            // invert it
+            double det = ofxsMatDeterminant(srcTransformMat);
+            if (det != 0.) {
+                OFX::Matrix3x3 srcTransformInverse = ofxsMatInverse(srcTransformMat, det);
+
+                for (size_t i = 0; i < invtransformsize; ++i) {
+                    invtransform[i] = srcTransformInverse * invtransform[i];
+                }
+            }
+        }
+    }
+
+    // auto ptr for the mask.
+    std::auto_ptr<OFX::Image> mask( ( _masked && (getContext() != OFX::eContextFilter) ) ? _maskClip->fetchImage(time) : 0 );
+
+    // do we do masking
+    if ( _masked && (getContext() != OFX::eContextFilter) && _maskClip->isConnected() ) {
+        bool maskInvert;
+        _maskInvert->getValueAtTime(time, maskInvert);
+
+        // say we are masking
+        processor.doMasking(true);
+
+        // Set it in the processor
+        processor.setMaskImg(mask.get(), maskInvert);
+    }
+
+    // set the images
+    processor.setDstImg( dst.get() );
+    processor.setSrcImg( src.get() );
+
+    // set the render window
+    processor.setRenderWindow(args.renderWindow);
+    assert(invtransform.size() && invtransformsize);
+#pragma message WARN("dynamic cast to a specific processor to set GodRays-specific values")
+    processor.setValues(&invtransform.front(),
+                        invtransformsize,
+                        blackOutside,
+                        1.,
+                        mix);
+
+    // Call the base class process member, this will call the derived templated process code
+    processor.process();
+} // setupAndProcess
 
 
 using namespace OFX;
 
-mDeclarePluginFactory(TransformPluginFactory, {}, {});
+mDeclarePluginFactory(GodRaysPluginFactory, {}, {});
 
 
 static
-void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/, PageParamDescriptor *page)
+void GodRaysPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/, PageParamDescriptor *page)
 {
     // NON-GENERIC PARAMETERS
     //
@@ -440,106 +612,99 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     }
 }
 
-void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void GodRaysPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
-    Transform3x3Describe(desc, false);
-
-    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
-}
-
-void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
-{
-    // make some pages and to things in
-    PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, false);
-
-    TransformPluginDescribeInContext(desc, context, page);
-
-    Transform3x3DescribeInContextEnd(desc, context, page, false);
-}
-
-OFX::ImageEffect* TransformPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
-{
-    return new TransformPlugin(handle, false, false);
-}
-
-
-mDeclarePluginFactory(TransformMaskedPluginFactory, {}, {});
-
-void TransformMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
-{
-    // basic labels
-    desc.setLabel(kPluginMaskedName);
-    desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
-
     Transform3x3Describe(desc, true);
 
     desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
 }
 
-
-void TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, true);
 
-    TransformPluginDescribeInContext(desc, context, page);
+    GodRaysPluginDescribeInContext(desc, context, page);
 
-    Transform3x3DescribeInContextEnd(desc, context, page, true);
-}
-
-OFX::ImageEffect* TransformMaskedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
-{
-    return new TransformPlugin(handle, true, false);
-}
-
-mDeclarePluginFactory(DirBlurPluginFactory, {}, {});
-
-void DirBlurPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
-{
-    // basic labels
-    desc.setLabel(kPluginDirBlurName);
-    desc.setPluginGrouping(kPluginDirBlurGrouping);
-    desc.setPluginDescription(kPluginDirBlurDescription);
-
-    Transform3x3Describe(desc, true);
-
-    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
-}
-
-
-void DirBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
-{
-    // make some pages and to things in
-    PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, true);
-
-    TransformPluginDescribeInContext(desc, context, page);
-
-    Transform3x3DescribeInContextEnd(desc, context, page, true, true);
-}
-
-OFX::ImageEffect* DirBlurPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
-{
-    return new TransformPlugin(handle, true, true);
-}
-
-void getTransformPluginIDs(OFX::PluginFactoryArray &ids)
-{
+    // invert
     {
-        static TransformPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamTransform3x3Invert);
+        param->setLabel(kParamTransform3x3InvertLabel);
+        param->setHint(kParamTransform3x3InvertHint);
+        param->setDefault(false);
+        param->setAnimates(true);
+        page->addChild(*param);
     }
+    // GENERIC PARAMETERS
+    //
+
+    ofxsFilterDescribeParamsInterpolate2D(desc, page, false);
+
+    // fromColor
     {
-        static TransformMaskedPluginFactory p(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamFromColor);
+        param->setLabel(kParamFromColorLabel);
+        param->setHint(kParamFromColorHint);
+        param->setDefault(1.,1.,1.,1.);
+        page->addChild(*param);
     }
+
+    // toColor
     {
-        static DirBlurPluginFactory p(kPluginDirBlurIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamToColor);
+        param->setLabel(kParamToColorLabel);
+        param->setHint(kParamToColorHint);
+        param->setDefault(1.,1.,1.,1.);
+        page->addChild(*param);
+    }
+
+    // gamma
+    {
+        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamGamma);
+        param->setLabel(kParamGammaLabel);
+        param->setHint(kParamGammaHint);
+        param->setDefault(1.,1.,1.,1.);
+        param->setDisplayRange(0.2, 0.2, 0.2, 0.2, 5., 5., 5., 5.);
+        page->addChild(*param);
+    }
+
+    // steps
+    {
+        IntParamDescriptor* param = desc.defineIntParam(kParamSteps);
+        param->setLabel(kParamStepsLabel);
+        param->setHint(kParamStepsHint);
+        param->setDefault(5);
+        param->setDisplayRange(0, 10);
+        page->addChild(*param);
+    }
+
+    // max
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMax);
+        param->setLabel(kParamMaxLabel);
+        param->setHint(kParamMaxHint);
+        param->setDefault(false);
+        page->addChild(*param);
+    }
+
+    ofxsMaskMixDescribeParams(desc, page);
+}
+
+OFX::ImageEffect* GodRaysPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+{
+    return new GodRaysPlugin(handle);
+}
+
+
+void getGodRaysPluginID(OFX::PluginFactoryArray &ids)
+{
+    {
+        static GodRaysPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
         ids.push_back(&p);
     }
 }
