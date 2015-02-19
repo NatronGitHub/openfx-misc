@@ -601,7 +601,11 @@ printHostDescription(int nth)
 {
     const ImageEffectHostDescription &hostDesc = gHostDescription[nth];
     std::cout << "OFX DebugProxy: host description follows" << std::endl;
+    std::cout << "OFX API version " << hostDesc.APIVersionMajor << '.' << APIVersionMinor << std::endl;
     std::cout << "hostName=" << hostDesc.hostName << std::endl;
+    std::cout << "hostLabel=" << hostDesc.hostLabel << std::endl;
+    std::cout << "hostVersion=" << hostDesc.versionMajor << '.' << hostDesc.versionMinor << '.' << hostDesc.versionMicro;
+    std::cout << " (" << hostDesc.versionLabel << ')' << std::endl;
     std::cout << "hostIsBackground=" << hostDesc.hostIsBackground << std::endl;
     std::cout << "supportsOverlays=" << hostDesc.supportsOverlays << std::endl;
     std::cout << "supportsMultiResolution=" << hostDesc.supportsMultiResolution << std::endl;
