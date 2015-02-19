@@ -1012,7 +1012,7 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
     // size
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTo[i]);
-        param->setLabels(kParamTo[i], kParamTo[i], kParamTo[i]);
+        param->setLabel(kParamTo[i]);
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setAnimates(true);
@@ -1027,7 +1027,7 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
     // enable
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamEnable[i]);
-        param->setLabels(kParamEnable[i], kParamEnable[i], kParamEnable[i]);
+        param->setLabel(kParamEnable[i]);
         param->setDefault(true);
         param->setAnimates(true);
         param->setHint(kParamEnableHint);
@@ -1044,7 +1044,7 @@ static void defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
                                               double y)
 {
     Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamFrom[i]);
-    param->setLabels(kParamFrom[i], kParamFrom[i], kParamFrom[i]);
+    param->setLabel(kParamFrom[i]);
     param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     param->setAnimates(true);
@@ -1064,7 +1064,7 @@ static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
                                  double z)
 {
     Double3DParamDescriptor* param = desc.defineDouble3DParam(name);
-    param->setLabels("", "", "");
+    param->setLabel("");
     param->setAnimates(true);
     param->setDefault(x,y,z);
     param->setIncrement(0.01);
@@ -1080,7 +1080,7 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     // toPoints
     {
         GroupParamDescriptor* group = desc.defineGroupParam(kGroupTo);
-        group->setLabels(kGroupTo, kGroupTo, kGroupTo);
+        group->setLabel(kGroupTo);
         group->setAsTab();
 
         defineCornerPinToDouble2DParam(desc, page, group, 0, 0, 0);
@@ -1091,7 +1091,7 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
         // copyFrom
         {
             PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyFrom);
-            param->setLabels(kParamCopyFromLabel, kParamCopyFromLabel, kParamCopyFromLabel);
+            param->setLabel(kParamCopyFromLabel);
             param->setHint(kParamCopyFromHint);
             param->setParent(*group);
             page->addChild(*param);
@@ -1103,7 +1103,7 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     // fromPoints
     {
         GroupParamDescriptor* group = desc.defineGroupParam(kGroupFrom);
-        group->setLabels(kGroupFrom, kGroupFrom, kGroupFrom);
+        group->setLabel(kGroupFrom);
         group->setAsTab();
 
         defineCornerPinFromsDouble2DParam(desc, page, group, 0, 0, 0);
@@ -1114,7 +1114,7 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
         // setToInput
         {
             PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyInputRoD);
-            param->setLabels(kParamCopyInputRoDLabel, kParamCopyInputRoDLabel, kParamCopyInputRoDLabel);
+            param->setLabel(kParamCopyInputRoDLabel);
             param->setHint(kParamCopyInputRoDHint);
             param->setLayoutHint(OFX::eLayoutHintNoNewLine);
             param->setParent(*group);
@@ -1124,7 +1124,7 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
         // copyTo
         {
             PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyTo);
-            param->setLabels(kParamCopyToLabel, kParamCopyToLabel, kParamCopyToLabel);
+            param->setLabel(kParamCopyToLabel);
             param->setHint(kParamCopyToHint);
             param->setParent(*group);
             page->addChild(*param);
@@ -1136,7 +1136,7 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     // extraMatrix
     {
         GroupParamDescriptor* group = desc.defineGroupParam(kGroupExtraMatrix);
-        group->setLabels(kGroupExtraMatrixLabel, kGroupExtraMatrixLabel, kGroupExtraMatrixLabel);
+        group->setLabel(kGroupExtraMatrixLabel);
         group->setHint(kGroupExtraMatrixHint);
         group->setOpen(false);
 
@@ -1150,7 +1150,7 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     // overlayPoints
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOverlayPoints);
-        param->setLabels(kParamOverlayPointsLabel, kParamOverlayPointsLabel, kParamOverlayPointsLabel);
+        param->setLabel(kParamOverlayPointsLabel);
         param->setHint(kParamOverlayPointsHint);
         param->appendOption("To");
         param->appendOption("From");
@@ -1162,7 +1162,7 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     // interactive
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
-        param->setLabels(kParamInteractiveLabel, kParamInteractiveLabel, kParamInteractiveLabel);
+        param->setLabel(kParamInteractiveLabel);
         param->setHint(kParamInteractiveHint);
         param->setEvaluateOnChange(false);
         page->addChild(*param);
@@ -1174,7 +1174,7 @@ mDeclarePluginFactory(CornerPinPluginFactory, {}, {});
 void CornerPinPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -1207,7 +1207,7 @@ mDeclarePluginFactory(CornerPinMaskedPluginFactory, {}, {});
 void CornerPinMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginMaskedName, kPluginMaskedName, kPluginMaskedName);
+    desc.setLabel(kPluginMaskedName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 

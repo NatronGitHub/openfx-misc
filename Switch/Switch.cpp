@@ -228,7 +228,7 @@ mDeclarePluginFactory(SwitchPluginFactory, {}, {});
 void SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -305,7 +305,7 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     // which
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamWhich);
-        param->setLabels(kParamWhichLabel, kParamWhichLabel, kParamWhichLabel);
+        param->setLabel(kParamWhichLabel);
         param->setHint(kParamWhichHint);
         param->setDefault(0);
         param->setRange(0, kClipSourceCount);

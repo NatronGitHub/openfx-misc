@@ -563,7 +563,7 @@ mDeclarePluginFactory(CopyRectanglePluginFactory, {}, {});
 void CopyRectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
     
@@ -603,7 +603,7 @@ static void defineComponentParam(OFX::ImageEffectDescriptor &desc,PageParamDescr
                                  bool newLine)
 {
     BooleanParamDescriptor* param = desc.defineBooleanParam(name);
-    param->setLabels(label, label, label);
+    param->setLabel(label);
     param->setDefault(true);
     param->setHint("Copy " + name);
     param->setLayoutHint(!newLine ? OFX::eLayoutHintNoNewLine : OFX::eLayoutHintNormal);
@@ -654,7 +654,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     // btmLeft
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
-        param->setLabels(kParamRectangleInteractBtmLeftLabel, kParamRectangleInteractBtmLeftLabel, kParamRectangleInteractBtmLeftLabel);
+        param->setLabel(kParamRectangleInteractBtmLeftLabel);
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(0., 0.);
@@ -667,7 +667,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     // size
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
-        param->setLabels(kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel);
+        param->setLabel(kParamRectangleInteractSizeLabel);
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(1., 1.);
@@ -681,7 +681,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     // interactive
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamRectangleInteractInteractive);
-        param->setLabels(kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel);
+        param->setLabel(kParamRectangleInteractInteractiveLabel);
         param->setHint(kParamRectangleInteractInteractiveHint);
         param->setEvaluateOnChange(false);
         page->addChild(*param);
@@ -695,7 +695,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     // softness
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSoftness);
-        param->setLabels(kParamSoftnessLabel, kParamSoftnessLabel, kParamSoftnessLabel);
+        param->setLabel(kParamSoftnessLabel);
         param->setDefault(0);
         param->setRange(0., 100.);
         param->setDisplayRange(0., 100.);

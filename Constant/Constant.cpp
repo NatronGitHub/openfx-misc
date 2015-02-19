@@ -434,7 +434,7 @@ mDeclarePluginFactory(ConstantPluginFactory, {}, {});
 
 void ConstantPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -483,7 +483,7 @@ void ConstantPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     // color
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor);
-        param->setLabels(kParamColorLabel, kParamColorLabel, kParamColorLabel);
+        param->setLabel(kParamColorLabel);
         param->setHint(kParamColorHint);
         param->setDefault(0.0, 0.0, 0.0, 1.0);
         param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
@@ -495,7 +495,7 @@ void ConstantPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     // range
     {
         Int2DParamDescriptor *param = desc.defineInt2DParam(kParamRange);
-        param->setLabels(kParamRangeLabel, kParamRangeLabel, kParamRangeLabel);
+        param->setLabel(kParamRangeLabel);
         param->setHint(kParamRangeHint);
         param->setDefault(1, 1);
         param->setDimensionLabels("min", "max");

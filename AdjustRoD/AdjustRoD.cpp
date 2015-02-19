@@ -296,7 +296,7 @@ mDeclarePluginFactory(AdjustRoDPluginFactory, {}, {});
 void AdjustRoDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -363,7 +363,7 @@ void AdjustRoDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // size
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamAddPixels);
-        param->setLabels(kParamAddPixelsLabel, kParamAddPixelsLabel, kParamAddPixelsLabel);
+        param->setLabel(kParamAddPixelsLabel);
         param->setHint(kParamAddPixelsHint);
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);

@@ -185,7 +185,7 @@ mDeclarePluginFactory(CImgErodePluginFactory, {}, {});
 void CImgErodePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -220,7 +220,7 @@ void CImgErodePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
 
     {
         OFX::Int2DParamDescriptor *param = desc.defineInt2DParam(kParamSize);
-        param->setLabels(kParamSizeLabel, kParamSizeLabel, kParamSizeLabel);
+        param->setLabel(kParamSizeLabel);
         param->setHint(kParamSizeHint);
         param->setRange(-1000, -1000, 1000, 1000);
         param->setDisplayRange(-100, -100, 100, 100);

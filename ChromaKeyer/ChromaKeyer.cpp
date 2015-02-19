@@ -830,7 +830,7 @@ mDeclarePluginFactory(ChromaKeyerPluginFactory, {}, {});
 void ChromaKeyerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -897,7 +897,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     // key color
     {
         RGBParamDescriptor* param = desc.defineRGBParam(kParamKeyColor);
-        param->setLabels(kParamKeyColorLabel, kParamKeyColorLabel, kParamKeyColorLabel);
+        param->setLabel(kParamKeyColorLabel);
         param->setHint(kParamKeyColorHint);
         param->setDefault(0., 0., 0.);
         // the following should be the default
@@ -912,7 +912,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     // acceptance angle
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAcceptanceAngle);
-        param->setLabels(kParamAcceptanceAngleLabel, kParamAcceptanceAngleLabel, kParamAcceptanceAngleLabel);
+        param->setLabel(kParamAcceptanceAngleLabel);
         param->setHint(kParamAcceptanceAngleHint);
         param->setDoubleType(eDoubleTypeAngle);;
         param->setRange(0., 180.);
@@ -925,7 +925,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     // suppression angle
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSuppressionAngle);
-        param->setLabels(kParamSuppressionAngleLabel, kParamSuppressionAngleLabel, kParamSuppressionAngleLabel);
+        param->setLabel(kParamSuppressionAngleLabel);
         param->setHint(kParamSuppressionAngleHint);
         param->setDoubleType(eDoubleTypeAngle);;
         param->setRange(0., 180.);
@@ -938,7 +938,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     // key lift
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamKeyLift);
-        param->setLabels(kParamKeyLiftLabel, kParamKeyLiftLabel, kParamKeyLiftLabel);
+        param->setLabel(kParamKeyLiftLabel);
         param->setHint(kParamKeyLiftHint);
         param->setRange(0., 1.);
         param->setDisplayRange(0., 1.);
@@ -952,7 +952,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     // key gain
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamKeyGain);
-        param->setLabels(kParamKeyGainLabel, kParamKeyGainLabel, kParamKeyGainLabel);
+        param->setLabel(kParamKeyGainLabel);
         param->setHint(kParamKeyGainHint);
         param->setRange(0., std::numeric_limits<double>::max());
         param->setDisplayRange(0., 2.);
@@ -966,7 +966,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     // output mode
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputMode);
-        param->setLabels(kParamOutputModeLabel, kParamOutputModeLabel, kParamOutputModeLabel);
+        param->setLabel(kParamOutputModeLabel);
         param->setHint(kParamOutputModeHint);
         assert(param->getNOptions() == (int)eOutputModeIntermediate);
         param->appendOption(kParamOutputModeOptionIntermediate, kParamOutputModeOptionIntermediateHint);
@@ -985,7 +985,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     // source alpha
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamSourceAlpha);
-        param->setLabels(kParamSourceAlphaLabel, kParamSourceAlphaLabel, kParamSourceAlphaLabel);
+        param->setLabel(kParamSourceAlphaLabel);
         param->setHint(kParamSourceAlphaHint);
         assert(param->getNOptions() == (int)eSourceAlphaIgnore);
         param->appendOption(kParamSourceAlphaOptionIgnore, kParamSourceAlphaOptionIgnoreHint);

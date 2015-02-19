@@ -613,7 +613,7 @@ mDeclarePluginFactory(CropPluginFactory, {}, {});
 void CropPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -679,7 +679,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // btmLeft
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
-        param->setLabels(kParamRectangleInteractBtmLeftLabel,kParamRectangleInteractBtmLeftLabel,kParamRectangleInteractBtmLeftLabel);
+        param->setLabel(kParamRectangleInteractBtmLeftLabel);
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(0., 0.);
@@ -692,7 +692,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // size
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
-        param->setLabels(kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel);
+        param->setLabel(kParamRectangleInteractSizeLabel);
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(1., 1.);
@@ -707,7 +707,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // interactive
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamRectangleInteractInteractive);
-        param->setLabels(kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel);
+        param->setLabel(kParamRectangleInteractInteractiveLabel);
         param->setHint(kParamRectangleInteractInteractiveHint);
         param->setEvaluateOnChange(false);
         page->addChild(*param);
@@ -716,7 +716,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // softness
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSoftness);
-        param->setLabels(kParamSoftnessLabel, kParamSoftnessLabel, kParamSoftnessLabel);
+        param->setLabel(kParamSoftnessLabel);
         param->setDefault(0);
         param->setRange(0., 1000.);
         param->setDisplayRange(0., 100.);
@@ -728,7 +728,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // reformat
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamReformat);
-        param->setLabels(kParamReformatLabel, kParamReformatLabel, kParamReformatLabel);
+        param->setLabel(kParamReformatLabel);
         param->setHint("Translates the bottom left corner of the crop rectangle to be in (0,0).");
         param->setDefault(false);
         param->setAnimates(true);
@@ -739,7 +739,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // intersect
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamIntersect);
-        param->setLabels(kParamIntersectLabel, kParamIntersectLabel, kParamIntersectLabel);
+        param->setLabel(kParamIntersectLabel);
         param->setHint("Intersects the crop rectangle with the input region of definition instead of extending it");
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
         param->setDefault(false);
@@ -750,7 +750,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // blackOutside
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBlackOutside);
-        param->setLabels(kParamBlackOutsideLabel, kParamBlackOutsideLabel, kParamBlackOutsideLabel);
+        param->setLabel(kParamBlackOutsideLabel);
         param->setDefault(false);
         param->setAnimates(true);
         param->setHint("Add 1 black pixel to the region of definition so that all the area outside the crop rectangle is black");

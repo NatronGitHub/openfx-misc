@@ -303,7 +303,7 @@ mDeclarePluginFactory(CImgErodeSmoothPluginFactory, {}, {});
 void CImgErodeSmoothPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -338,7 +338,7 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
 
     {
         Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamRange);
-        param->setLabels(kParamRangeLabel, kParamRangeLabel, kParamRangeLabel);
+        param->setLabel(kParamRangeLabel);
         param->setDimensionLabels("min", "max");
         param->setHint(kParamRangeHint);
         param->setDefault(0., 1.);
@@ -347,7 +347,7 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigma);
-        param->setLabels(kParamSigmaLabel, kParamSigmaLabel, kParamSigmaLabel);
+        param->setLabel(kParamSigmaLabel);
         param->setHint(kParamSigmaHint);
         param->setRange(-1000, 1000);
         param->setDisplayRange(-1, 1);
@@ -358,7 +358,7 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     }
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamExponent);
-        param->setLabels(kParamExponentLabel, kParamExponentLabel, kParamExponentLabel);
+        param->setLabel(kParamExponentLabel);
         param->setHint(kParamExponentHint);
         param->setRange(1, 100);
         param->setDisplayRange(1, 10);
@@ -367,7 +367,7 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
     }
     {
         OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
-        param->setLabels(kParamBoundaryLabel, kParamBoundaryLabel, kParamBoundaryLabel);
+        param->setLabel(kParamBoundaryLabel);
         param->setHint(kParamBoundaryHint);
         assert(param->getNOptions() == eBoundaryDirichlet && param->getNOptions() == 0);
         param->appendOption(kParamBoundaryOptionDirichlet, kParamBoundaryOptionDirichletHint);
@@ -381,7 +381,7 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
 #if cimg_version >= 153
     {
         OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFilter);
-        param->setLabels(kParamFilterLabel, kParamFilterLabel, kParamFilterLabel);
+        param->setLabel(kParamFilterLabel);
         param->setHint(kParamFilterHint);
         assert(param->getNOptions() == eFilterQuasiGaussian && param->getNOptions() == 0);
         param->appendOption(kParamFilterOptionQuasiGaussian, kParamFilterOptionQuasiGaussianHint);

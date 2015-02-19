@@ -863,7 +863,7 @@ mDeclarePluginFactory(TrackerPMPluginFactory, {}, {});
 void TrackerPMPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -909,7 +909,7 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // score
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamScore);
-        param->setLabels(kParamScoreLabel, kParamScoreLabel, kParamScoreLabel);
+        param->setLabel(kParamScoreLabel);
         param->setHint(kParamScoreHint);
         assert(param->getNOptions() == eTrackerSSD);
         param->appendOption(kParamScoreOptionSSD, kParamScoreOptionSSDHint);

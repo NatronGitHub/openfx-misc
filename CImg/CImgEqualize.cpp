@@ -192,7 +192,7 @@ mDeclarePluginFactory(CImgEqualizePluginFactory, {}, {});
 void CImgEqualizePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -227,14 +227,14 @@ void CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& de
 
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamNbLevels);
-        param->setLabels(kParamNbLevelsLabel, kParamNbLevelsLabel, kParamNbLevelsLabel);
+        param->setLabel(kParamNbLevelsLabel);
         param->setHint(kParamNbLevelsHint);
         param->setDefault(kParamNbLevelsDefault);
         page->addChild(*param);
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamMin);
-        param->setLabels(kParamMinLabel, kParamMinLabel, kParamMinLabel);
+        param->setLabel(kParamMinLabel);
         param->setHint(kParamMinHint);
         param->setDefault(kParamMinDefault);
         param->setIncrement(0.001);
@@ -242,7 +242,7 @@ void CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& de
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamMax);
-        param->setLabels(kParamMaxLabel, kParamMaxLabel, kParamMaxLabel);
+        param->setLabel(kParamMaxLabel);
         param->setHint(kParamMaxHint);
         param->setDefault(kParamMaxDefault);
         param->setIncrement(0.001);

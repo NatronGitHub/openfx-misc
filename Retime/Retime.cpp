@@ -430,7 +430,7 @@ void RetimePluginFactory::load()
 void RetimePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -490,7 +490,7 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
     }  else {
         // We are a general or filter context, define a speed param and a page of controls to put that in
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSpeed);
-        param->setLabels(kParamSpeedLabel, kParamSpeedLabel, kParamSpeedLabel);
+        param->setLabel(kParamSpeedLabel);
         param->setHint(kParamSpeedHint);
         param->setDefault(1);
         param->setRange(-FLT_MAX, FLT_MAX);
@@ -511,7 +511,7 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         if (context == OFX::eContextGeneral) {
             // We are a general or filter context, define a speed param and a page of controls to put that in
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDuration);
-            param->setLabels(kParamDurationLabel, kParamDurationLabel, kParamDurationLabel);
+            param->setLabel(kParamDurationLabel);
             param->setHint(kParamDurationHint);
             param->setDefault(1);
             param->setRange(0, 10);

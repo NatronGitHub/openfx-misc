@@ -1689,7 +1689,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     // translate
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTranslate);
-        param->setLabels(kParamTranslateLabel, kParamTranslateLabel, kParamTranslateLabel);
+        param->setLabel(kParamTranslateLabel);
         //param->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
         param->setDoubleType(eDoubleTypeXYAbsolute);
         //param->setDimensionLabels("x","y");
@@ -1701,7 +1701,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     // rotate
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamRotate);
-        param->setLabels(kParamRotateLabel, kParamRotateLabel, kParamRotateLabel);
+        param->setLabel(kParamRotateLabel);
         param->setDoubleType(eDoubleTypeAngle);
         param->setDefault(0);
         //param->setRange(-180, 180); // the angle may be -infinity..+infinity
@@ -1713,7 +1713,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     // scale
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamScale);
-        param->setLabels(kParamScaleLabel, kParamScaleLabel, kParamScaleLabel);
+        param->setLabel(kParamScaleLabel);
         param->setDoubleType(eDoubleTypeScale);
         //param->setDimensionLabels("w","h");
         param->setDefault(1,1);
@@ -1727,7 +1727,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     // scaleUniform
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamScaleUniform);
-        param->setLabels(kParamScaleUniformLabel, kParamScaleUniformLabel, kParamScaleUniformLabel);
+        param->setLabel(kParamScaleUniformLabel);
         param->setHint(kParamScaleUniformHint);
         // don't check it by default: it is easy to obtain Uniform scaling using the slider or the interact
         param->setDefault(false);
@@ -1738,7 +1738,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     // skewX
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSkewX);
-        param->setLabels(kParamSkewXLabel, kParamSkewXLabel, kParamSkewXLabel);
+        param->setLabel(kParamSkewXLabel);
         param->setDefault(0);
         param->setDisplayRange(-1,1);
         param->setIncrement(0.01);
@@ -1748,7 +1748,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     // skewY
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSkewY);
-        param->setLabels(kParamSkewYLabel, kParamSkewYLabel, kParamSkewYLabel);
+        param->setLabel(kParamSkewYLabel);
         param->setDefault(0);
         param->setDisplayRange(-1,1);
         param->setIncrement(0.01);
@@ -1758,7 +1758,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     // skewOrder
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamSkewOrder);
-        param->setLabels(kParamSkewOrderLabel, kParamSkewOrderLabel, kParamSkewOrderLabel);
+        param->setLabel(kParamSkewOrderLabel);
         param->setDefault(0);
         param->appendOption("XY");
         param->appendOption("YX");
@@ -1769,7 +1769,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     // center
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamCenter);
-        param->setLabels(kParamCenterLabel, kParamCenterLabel, kParamCenterLabel);
+        param->setLabel(kParamCenterLabel);
         //param->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
         param->setDoubleType(eDoubleTypeXYAbsolute);
         //param->setDimensionLabels("x","y");
@@ -1783,7 +1783,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     // resetcenter
     {
         PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamResetCenter);
-        param->setLabels(kParamResetCenterLabel, kParamResetCenterLabel, kParamResetCenterLabel);
+        param->setLabel(kParamResetCenterLabel);
         param->setHint(kParamResetCenterHint);
         page->addChild(*param);
     }
@@ -1791,7 +1791,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     // interactive
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
-        param->setLabels(kParamInteractiveLabel, kParamInteractiveLabel, kParamInteractiveLabel);
+        param->setLabel(kParamInteractiveLabel);
         param->setHint(kParamInteractiveHint);
         param->setEvaluateOnChange(false);
         page->addChild(*param);
@@ -1801,7 +1801,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
 void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -1831,7 +1831,7 @@ mDeclarePluginFactory(TransformMaskedPluginFactory, {}, {});
 void TransformMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginMaskedName, kPluginMaskedName, kPluginMaskedName);
+    desc.setLabel(kPluginMaskedName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -1861,7 +1861,7 @@ mDeclarePluginFactory(DirBlurPluginFactory, {}, {});
 void DirBlurPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginDirBlurName, kPluginDirBlurName, kPluginDirBlurName);
+    desc.setLabel(kPluginDirBlurName);
     desc.setPluginGrouping(kPluginDirBlurGrouping);
     desc.setPluginDescription(kPluginDirBlurDescription);
 

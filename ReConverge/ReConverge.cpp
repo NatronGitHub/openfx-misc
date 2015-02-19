@@ -448,7 +448,7 @@ using namespace OFX;
 void ReConvergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -510,7 +510,7 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     if (context == eContextGeneral) {
         {
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamConvergePoint);
-            param->setLabels(kParamConvergePointLabel, kParamConvergePointLabel, kParamConvergePointLabel);
+            param->setLabel(kParamConvergePointLabel);
             param->setHint(kParamConvergePointHint);
             param->setDoubleType(eDoubleTypeXYAbsolute);
             param->setDefaultCoordinateSystem(eCoordinatesNormalised);
@@ -521,7 +521,7 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         }
         {
             BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
-            param->setLabels(kParamInteractiveLabel, kParamInteractiveLabel, kParamInteractiveLabel);
+            param->setLabel(kParamInteractiveLabel);
             param->setHint(kParamInteractiveHint);
             param->setAnimates(false);
             page->addChild(*param);
@@ -531,7 +531,7 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // offset
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamOffset);
-        param->setLabels(kParamOffsetLabel, kParamOffsetLabel, kParamOffsetLabel);
+        param->setLabel(kParamOffsetLabel);
         param->setHint(kParamOffsetHint);
         param->setDefault(0);
         param->setRange(-1000, 1000);
@@ -543,7 +543,7 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // convergemode
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamConvergeMode);
-        param->setLabels(kParamConvergeModeLabel, kParamConvergeModeLabel, kParamConvergeModeLabel);
+        param->setLabel(kParamConvergeModeLabel);
         param->setHint(kParamConvergeModeHint);
         param->appendOption(kParamConvergeModeOptionShiftRight);
         param->appendOption(kParamConvergeModeOptionShiftLeft);

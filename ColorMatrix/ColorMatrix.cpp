@@ -685,7 +685,7 @@ mDeclarePluginFactory(ColorMatrixPluginFactory, {}, {});
 void ColorMatrixPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -741,7 +741,7 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+        param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -749,7 +749,7 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+        param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -757,7 +757,7 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
-        param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+        param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -765,7 +765,7 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
-        param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+        param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
         page->addChild(*param);
@@ -773,7 +773,7 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
 
     {
         RGBAParamDescriptor *param = desc.defineRGBAParam(kParamOutputRedName);
-        param->setLabels(kParamOutputRedLabel, kParamOutputRedLabel, kParamOutputRedLabel);
+        param->setLabel(kParamOutputRedLabel);
         param->setHint(kParamOutputRedHint);
         param->setDefault(1.0, 0.0, 0.0, 0.0);
         param->setAnimates(true); // can animate
@@ -781,7 +781,7 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     }
     {
         RGBAParamDescriptor *param = desc.defineRGBAParam(kParamOutputGreenName);
-        param->setLabels(kParamOutputGreenLabel, kParamOutputGreenLabel, kParamOutputGreenLabel);
+        param->setLabel(kParamOutputGreenLabel);
         param->setHint(kParamOutputGreenHint);
         param->setDefault(0.0, 1.0, 0.0, 0.0);
         param->setAnimates(true); // can animate
@@ -789,7 +789,7 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     }
     {
         RGBAParamDescriptor *param = desc.defineRGBAParam(kParamOutputBlueName);
-        param->setLabels(kParamOutputBlueLabel, kParamOutputBlueLabel, kParamOutputBlueLabel);
+        param->setLabel(kParamOutputBlueLabel);
         param->setHint(kParamOutputBlueHint);
         param->setDefault(0.0, 0.0, 1.0, 0.0);
         param->setAnimates(true); // can animate
@@ -797,7 +797,7 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     }
     {
         RGBAParamDescriptor *param = desc.defineRGBAParam(kParamOutputAlphaName);
-        param->setLabels(kParamOutputAlphaLabel, kParamOutputAlphaLabel, kParamOutputAlphaLabel);
+        param->setLabel(kParamOutputAlphaLabel);
         param->setHint(kParamOutputAlphaHint);
         param->setDefault(0.0, 0.0, 0.0, 1.0);
         param->setAnimates(true); // can animate
@@ -805,7 +805,7 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
-        param->setLabels(kParamClampBlackLabel, kParamClampBlackLabel, kParamClampBlackLabel);
+        param->setLabel(kParamClampBlackLabel);
         param->setHint(kParamClampBlackHint);
         param->setDefault(true);
         param->setAnimates(true);
@@ -813,7 +813,7 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampWhite);
-        param->setLabels(kParamClampWhiteLabel, kParamClampWhiteLabel, kParamClampWhiteLabel);
+        param->setLabel(kParamClampWhiteLabel);
         param->setHint(kParamClampWhiteHint);
         param->setDefault(false);
         param->setAnimates(true);

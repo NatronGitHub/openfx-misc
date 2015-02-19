@@ -362,7 +362,7 @@ void OneViewPluginFactory::load()
 void OneViewPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -419,7 +419,7 @@ void OneViewPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     // view
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamView);
-        param->setLabels(kParamViewLabel, kParamViewLabel, kParamViewLabel);
+        param->setLabel(kParamViewLabel);
         param->setHint(kParamViewHint);
         param->appendOption(kParamViewOptionLeft);
         param->appendOption(kParamViewOptionRight);

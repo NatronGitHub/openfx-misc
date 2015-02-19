@@ -191,7 +191,7 @@ mDeclarePluginFactory(CImgSharpenInvDiffPluginFactory, {}, {});
 void CImgSharpenInvDiffPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -226,7 +226,7 @@ void CImgSharpenInvDiffPluginFactory::describeInContext(OFX::ImageEffectDescript
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAmplitude);
-        param->setLabels(kParamAmplitudeLabel, kParamAmplitudeLabel, kParamAmplitudeLabel);
+        param->setLabel(kParamAmplitudeLabel);
         param->setHint(kParamAmplitudeHint);
         param->setRange(0, 4. /*1000/256*/);
         param->setDisplayRange(0, 1.2 /*300/255*/);
@@ -236,7 +236,7 @@ void CImgSharpenInvDiffPluginFactory::describeInContext(OFX::ImageEffectDescript
     }
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
-        param->setLabels(kParamIterationsLabel, kParamIterationsLabel, kParamIterationsLabel);
+        param->setLabel(kParamIterationsLabel);
         param->setHint(kParamIterationsHint);
         param->setRange(0, 10);
         param->setDisplayRange(0, 10);

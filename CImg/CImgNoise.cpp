@@ -214,7 +214,7 @@ mDeclarePluginFactory(CImgNoisePluginFactory, {}, {});
 void CImgNoisePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -249,7 +249,7 @@ void CImgNoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigma);
-        param->setLabels(kParamSigmaLabel, kParamSigmaLabel, kParamSigmaLabel);
+        param->setLabel(kParamSigmaLabel);
         param->setHint(kParamSigmaHint);
         param->setRange(0., 10.);
         param->setDisplayRange(0., 1.);
@@ -260,7 +260,7 @@ void CImgNoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
 
     {
         OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamType);
-        param->setLabels(kParamTypeLabel, kParamTypeLabel, kParamTypeLabel);
+        param->setLabel(kParamTypeLabel);
         param->setHint(kParamTypeHint);
         assert(param->getNOptions() == eTypeGaussian && param->getNOptions() == 0);
         param->appendOption(kParamTypeOptionGaussian, kParamTypeOptionGaussianHint);

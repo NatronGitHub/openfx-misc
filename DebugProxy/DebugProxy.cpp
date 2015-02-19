@@ -165,12 +165,15 @@ static OfxImageEffectSuiteV1imageMemoryUnlock imageMemoryUnlockNthFunc(int nth);
 /** @brief A class that lists all the properties of a host */
 struct ImageEffectHostDescription {
  public:
-    std::vector<int> apiVersion; // TODO
-    std::string type;
+  int APIVersionMajor;
+  int APIVersionMinor;
+  std::string type;
   std::string hostName;
-    std::string hostLabel;// TODO
-    std::vector<int> version;// TODO
-    std::string versionLabel;// TODO
+  std::string hostLabel;
+  int versionMajor;
+  int versionMinor;
+  int versionMicro;
+  std::string versionLabel;
   bool hostIsBackground;
   bool supportsOverlays;
   bool supportsMultiResolution;
@@ -463,11 +466,46 @@ fetchHostDescription(int nth)
     ImageEffectHostDescription &hostDesc = gHostDescription[nth];
     OfxStatus st;
     // and get some properties
-    char *name = 0;
-    st = gPropHost[nth]->propGetString(host, kOfxPropName, 0, &name);
-    assert(st == kOfxStatOK);
-    hostDesc.hostName                   = name;
-
+    {
+        int v = 0;
+        st = gPropHost[nth]->propGetInt(host, kOfxPropAPIVersion, 0, &v);
+        hostDesc.APIVersionMajor = (st == kOfxStatOK) ? v : 1; // default to 1.0
+        st = gPropHost[nth]->propGetInt(host, kOfxPropAPIVersion, 1, &v);
+        hostDesc.APIVersionMinor = (st == kOfxStatOK) ? v : 0;
+    }
+    {
+        char *type = 0;
+        st = gPropHost[nth]->propGetString(host, kOfxPropType, 0, &type);
+        assert(st == kOfxStatOK);
+        hostDesc.type = type;
+    }
+    {
+        char *name = 0;
+        st = gPropHost[nth]->propGetString(host, kOfxPropName, 0, &name);
+        assert(st == kOfxStatOK);
+        hostDesc.hostName = name;
+    }
+    {
+        char *s = 0;
+        st = gPropHost[nth]->propGetString(host, kOfxPropLabel, 0, &s);
+        assert(st == kOfxStatOK);
+        hostDesc.hostLabel = s;
+    }
+    {
+        int v = 0;
+        st = gPropHost[nth]->propGetInt(host, kOfxPropVersion, 0, &v);
+        hostDesc.versionMajor = (st == kOfxStatOK) ? v : 0;
+        st = gPropHost[nth]->propGetInt(host, kOfxPropVersion, 1, &v);
+        hostDesc.versionMinor = (st == kOfxStatOK) ? v : 0;
+        st = gPropHost[nth]->propGetInt(host, kOfxPropVersion, 2, &v);
+        hostDesc.versionMicro = (st == kOfxStatOK) ? v : 0;
+    }
+    {
+        char *s = 0;
+        st = gPropHost[nth]->propGetString(host, kOfxPropVersionLabel, 0, &s);
+        assert(st == kOfxStatOK);
+        hostDesc.versionLabel = s;
+    }
     {
         int hostIsBackground = 0;
         st = gPropHost[nth]->propGetInt(host, kOfxImageEffectHostPropIsBackground, 0, &hostIsBackground);
@@ -601,7 +639,8 @@ printHostDescription(int nth)
 {
     const ImageEffectHostDescription &hostDesc = gHostDescription[nth];
     std::cout << "OFX DebugProxy: host description follows" << std::endl;
-    std::cout << "OFX API version " << hostDesc.APIVersionMajor << '.' << APIVersionMinor << std::endl;
+    std::cout << "OFX API version " << hostDesc.APIVersionMajor << '.' << hostDesc.APIVersionMinor << std::endl;
+    std::cout << "type=" << hostDesc.type << std::endl;
     std::cout << "hostName=" << hostDesc.hostName << std::endl;
     std::cout << "hostLabel=" << hostDesc.hostLabel << std::endl;
     std::cout << "hostVersion=" << hostDesc.versionMajor << '.' << hostDesc.versionMinor << '.' << hostDesc.versionMicro;

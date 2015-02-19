@@ -737,7 +737,7 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     std::string name = (std::string(kPluginName) + "_Ti" + (supportsTiles ? "OK" : "No")
                         +                          "_Mr" + (supportsMultiResolution ? "OK" : "No")
                         +                          "_Rs" + (supportsRenderScale ? "OK" : "No"));
-    desc.setLabels(name, name, name);
+    desc.setLabel(name);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -800,7 +800,7 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     // color0
     {
         RGBAParamDescriptor *param = desc.defineRGBAParam(kParamColor0);
-        param->setLabels(kParamColor0Label, kParamColor0Label, kParamColor0Label);
+        param->setLabel(kParamColor0Label);
         param->setHint(kParamColor0Hint);
         param->setDefault(0.0, 1.0, 1.0, 1.0);
         param->setAnimates(true); // can animate
@@ -810,7 +810,7 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     // color1
     {
         RGBAParamDescriptor *param = desc.defineRGBAParam(kParamColor1);
-        param->setLabels(kParamColor1Label, kParamColor1Label, kParamColor1Label);
+        param->setLabel(kParamColor1Label);
         param->setHint(kParamColor1Hint);
         param->setDefault(1.0, 0.0, 1.0, 1.0);
         param->setAnimates(true); // can animate
@@ -820,7 +820,7 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     // color2
     {
         RGBAParamDescriptor *param = desc.defineRGBAParam(kParamColor2);
-        param->setLabels(kParamColor2Label, kParamColor2Label, kParamColor2Label);
+        param->setLabel(kParamColor2Label);
         param->setHint(kParamColor2Hint);
         param->setDefault(1.0, 1.0, 0.0, 1.0);
         param->setAnimates(true); // can animate
@@ -830,7 +830,7 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     // color3
     {
         RGBAParamDescriptor *param = desc.defineRGBAParam(kParamColor3);
-        param->setLabels(kParamColor3Label, kParamColor3Label, kParamColor3Label);
+        param->setLabel(kParamColor3Label);
         param->setHint(kParamColor3Hint);
         param->setDefault(1.0, 0.0, 0.0, 1.0);
         param->setAnimates(true); // can animate
@@ -840,7 +840,7 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     // color4
     {
         RGBAParamDescriptor *param = desc.defineRGBAParam(kParamColor4);
-        param->setLabels(kParamColor4Label, kParamColor4Label, kParamColor4Label);
+        param->setLabel(kParamColor4Label);
         param->setHint(kParamColor4Hint);
         param->setDefault(0.0, 1.0, 0.0, 1.0);
         param->setAnimates(true); // can animate
@@ -850,7 +850,7 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     // color5
     {
         RGBAParamDescriptor *param = desc.defineRGBAParam(kParamColor5);
-        param->setLabels(kParamColor5Label, kParamColor5Label, kParamColor5Label);
+        param->setLabel(kParamColor5Label);
         param->setHint(kParamColor5Hint);
         param->setDefault(0.0, 0.0, 1.0, 1.0);
         param->setAnimates(true); // can animate
@@ -860,7 +860,7 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     // identityEven
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamIdentityEven);
-        param->setLabels(kParamIdentityEvenLabel, kParamIdentityEvenLabel, kParamIdentityEvenLabel);
+        param->setLabel(kParamIdentityEvenLabel);
         param->setHint(kParamIdentityEvenHint);
         param->setDefault(false);
         param->setAnimates(false);
@@ -870,7 +870,7 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     // identityOdd
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamIdentityOdd);
-        param->setLabels(kParamIdentityOddLabel, kParamIdentityOddLabel, kParamIdentityOddLabel);
+        param->setLabel(kParamIdentityOddLabel);
         param->setHint(kParamIdentityOddHint);
         param->setDefault(false);
         param->setAnimates(false);
@@ -880,7 +880,7 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     // forceCopy
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamForceCopy);
-        param->setLabels(kParamForceCopyLabel, kParamForceCopyLabel, kParamForceCopyLabel);
+        param->setLabel(kParamForceCopyLabel);
         param->setHint(kParamForceCopyHint);
         param->setDefault(false);
         param->setAnimates(false);
@@ -890,7 +890,7 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     // clipInfo
     {
         PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
-        param->setLabels(kParamClipInfoLabel, kParamClipInfoLabel, kParamClipInfoLabel);
+        param->setLabel(kParamClipInfoLabel);
         param->setHint(kParamClipInfoHint);
         page->addChild(*param);
     }

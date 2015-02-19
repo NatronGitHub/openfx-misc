@@ -990,7 +990,7 @@ void
 HSVToolPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -1046,19 +1046,19 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
     
     {
         GroupParamDescriptor *group = desc.defineGroupParam(kGroupColorReplacement);
-        group->setLabels(kGroupColorReplacementLabel, kGroupColorReplacementLabel, kGroupColorReplacementLabel);
+        group->setLabel(kGroupColorReplacementLabel);
         group->setHint(kGroupColorReplacementHint);
         group->setEnabled(true);
         {
             RGBParamDescriptor *param = desc.defineRGBParam(kParamSrcColor);
-            param->setLabels(kParamSrcColorLabel, kParamSrcColorLabel, kParamSrcColorLabel);
+            param->setLabel(kParamSrcColorLabel);
             param->setHint(kParamSrcColorHint);
             page->addChild(*param);
             param->setParent(*group);
         }
         {
             RGBParamDescriptor *param = desc.defineRGBParam(kParamDstColor);
-            param->setLabels(kParamDstColorLabel, kParamDstColorLabel, kParamDstColorLabel);
+            param->setLabel(kParamDstColorLabel);
             param->setHint(kParamDstColorHint);
             page->addChild(*param);
             param->setParent(*group);
@@ -1069,12 +1069,12 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
 
     {
         GroupParamDescriptor *group = desc.defineGroupParam(kGroupHue);
-        group->setLabels(kGroupHueLabel, kGroupHueLabel, kGroupHueLabel);
+        group->setLabel(kGroupHueLabel);
         group->setHint(kGroupHueHint);
         group->setEnabled(true);
         {
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamHueRange);
-            param->setLabels(kParamHueRangeLabel, kParamHueRangeLabel, kParamHueRangeLabel);
+            param->setLabel(kParamHueRangeLabel);
             param->setHint(kParamHueRangeHint);
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
             param->setDefault(0., 360.);
@@ -1085,7 +1085,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamHueRotation);
-            param->setLabels(kParamHueRotationLabel, kParamHueRotationLabel, kParamHueRotationLabel);
+            param->setLabel(kParamHueRotationLabel);
             param->setHint(kParamHueRotationHint);
             param->setDisplayRange(-180., 180.);
             param->setDoubleType(eDoubleTypeAngle);
@@ -1094,7 +1094,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamHueRangeRolloff);
-            param->setLabels(kParamHueRangeRolloffLabel, kParamHueRangeRolloffLabel, kParamHueRangeRolloffLabel);
+            param->setLabel(kParamHueRangeRolloffLabel);
             param->setHint(kParamHueRangeRolloffHint);
             param->setRange(0., 180.);
             param->setDisplayRange(0., 180.);
@@ -1109,12 +1109,12 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
 
     {
         GroupParamDescriptor *group = desc.defineGroupParam(kGroupSaturation);
-        group->setLabels(kGroupSaturationLabel, kGroupSaturationLabel, kGroupSaturationLabel);
+        group->setLabel(kGroupSaturationLabel);
         group->setHint(kGroupSaturationHint);
         group->setEnabled(true);
         {
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSaturationRange);
-            param->setLabels(kParamSaturationRangeLabel, kParamSaturationRangeLabel, kParamSaturationRangeLabel);
+            param->setLabel(kParamSaturationRangeLabel);
             param->setHint(kParamSaturationRangeHint);
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
             param->setDefault(0., 1.);
@@ -1124,7 +1124,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSaturationAdjustment);
-            param->setLabels(kParamSaturationAdjustmentLabel, kParamSaturationAdjustmentLabel, kParamSaturationAdjustmentLabel);
+            param->setLabel(kParamSaturationAdjustmentLabel);
             param->setHint(kParamSaturationAdjustmentHint);
             param->setDisplayRange(0., 1.);
             page->addChild(*param);
@@ -1132,7 +1132,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSaturationRangeRolloff);
-            param->setLabels(kParamSaturationRangeRolloffLabel, kParamSaturationRangeRolloffLabel, kParamSaturationRangeRolloffLabel);
+            param->setLabel(kParamSaturationRangeRolloffLabel);
             param->setHint(kParamSaturationRangeRolloffHint);
             param->setDisplayRange(0., 1.);
             page->addChild(*param);
@@ -1145,12 +1145,12 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
 
     {
         GroupParamDescriptor *group = desc.defineGroupParam(kGroupBrightness);
-        group->setLabels(kGroupBrightnessLabel, kGroupBrightnessLabel, kGroupBrightnessLabel);
+        group->setLabel(kGroupBrightnessLabel);
         group->setHint(kGroupBrightnessHint);
         group->setEnabled(true);
         {
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamBrightnessRange);
-            param->setLabels(kParamBrightnessRangeLabel, kParamBrightnessRangeLabel, kParamBrightnessRangeLabel);
+            param->setLabel(kParamBrightnessRangeLabel);
             param->setHint(kParamBrightnessRangeHint);
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
             param->setDefault(0., 1.);
@@ -1160,7 +1160,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBrightnessAdjustment);
-            param->setLabels(kParamBrightnessAdjustmentLabel, kParamBrightnessAdjustmentLabel, kParamBrightnessAdjustmentLabel);
+            param->setLabel(kParamBrightnessAdjustmentLabel);
             param->setHint(kParamBrightnessAdjustmentHint);
             param->setDisplayRange(0., 1.);
             page->addChild(*param);
@@ -1168,7 +1168,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBrightnessRangeRolloff);
-            param->setLabels(kParamBrightnessRangeRolloffLabel, kParamBrightnessRangeRolloffLabel, kParamBrightnessRangeRolloffLabel);
+            param->setLabel(kParamBrightnessRangeRolloffLabel);
             param->setHint(kParamBrightnessRangeRolloffHint);
             param->setDisplayRange(0., 1.);
             page->addChild(*param);
@@ -1181,7 +1181,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
 
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
-        param->setLabels(kParamClampBlackLabel, kParamClampBlackLabel, kParamClampBlackLabel);
+        param->setLabel(kParamClampBlackLabel);
         param->setHint(kParamClampBlackHint);
         param->setDefault(true);
         param->setAnimates(true);
@@ -1189,7 +1189,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampWhite);
-        param->setLabels(kParamClampWhiteLabel, kParamClampWhiteLabel, kParamClampWhiteLabel);
+        param->setLabel(kParamClampWhiteLabel);
         param->setHint(kParamClampWhiteHint);
         param->setDefault(false);
         param->setAnimates(true);
@@ -1198,7 +1198,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
 
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputAlpha);
-        param->setLabels(kParamOutputAlphaLabel, kParamOutputAlphaLabel, kParamOutputAlphaLabel);
+        param->setLabel(kParamOutputAlphaLabel);
         param->setHint(kParamOutputAlphaHint);
         assert(param->getNOptions() == (int)eOutputAlphaSource);
         param->appendOption(kParamOutputAlphaOptionSource, kParamOutputAlphaOptionSourceHint);

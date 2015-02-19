@@ -809,7 +809,7 @@ mDeclarePluginFactory(RadialPluginFactory, {}, {});
 void RadialPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -885,7 +885,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+        param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -893,7 +893,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+        param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -901,7 +901,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
-        param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+        param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -909,7 +909,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
-        param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+        param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
         page->addChild(*param);
@@ -918,7 +918,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     // btmLeft
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
-        param->setLabels(kParamRectangleInteractBtmLeftLabel,kParamRectangleInteractBtmLeftLabel,kParamRectangleInteractBtmLeftLabel);
+        param->setLabel(kParamRectangleInteractBtmLeftLabel);
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(0.25, 0.25);
@@ -931,7 +931,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     // size
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
-        param->setLabels(kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel);
+        param->setLabel(kParamRectangleInteractSizeLabel);
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(0.5, 0.5);
@@ -945,7 +945,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     // interactive
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamRectangleInteractInteractive);
-        param->setLabels(kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel);
+        param->setLabel(kParamRectangleInteractInteractiveLabel);
         param->setHint(kParamRectangleInteractInteractiveHint);
         param->setEvaluateOnChange(false);
         page->addChild(*param);
@@ -954,7 +954,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     // softness
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSoftness);
-        param->setLabels(kParamSoftnessLabel, kParamSoftnessLabel, kParamSoftnessLabel);
+        param->setLabel(kParamSoftnessLabel);
         param->setHint(kParamSoftnessHint);
         param->setDefault(1.);
         param->setIncrement(0.01);
@@ -968,7 +968,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     // plinear
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPLinear);
-        param->setLabels(kParamPLinearLabel, kParamPLinearLabel, kParamPLinearLabel);
+        param->setLabel(kParamPLinearLabel);
         param->setHint(kParamPLinearHint);
         page->addChild(*param);
     }
@@ -976,7 +976,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     // color0
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor0);
-        param->setLabels(kParamColor0Label, kParamColor0Label, kParamColor0Label);
+        param->setLabel(kParamColor0Label);
         param->setDefault(0, 0, 0, 0);
         page->addChild(*param);
     }
@@ -984,7 +984,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     // color1
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor1);
-        param->setLabels(kParamColor1Label, kParamColor1Label, kParamColor1Label);
+        param->setLabel(kParamColor1Label);
         param->setDefault(1., 1., 1., 1. );
         page->addChild(*param);
     }
@@ -992,7 +992,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     // expandRoD
     {
         OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
-        param->setLabels(kParamExpandRoDLabel, kParamExpandRoDLabel, kParamExpandRoDLabel);
+        param->setLabel(kParamExpandRoDLabel);
         param->setHint(kParamExpandRoDHint);
         param->setDefault(true);
         page->addChild(*param);

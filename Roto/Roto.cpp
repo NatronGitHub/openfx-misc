@@ -582,7 +582,7 @@ void
 RotoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
     
@@ -664,7 +664,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
     // outputComps
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputComponents);
-        param->setLabels(kParamOutputComponentsLabel, kParamOutputComponentsLabel, kParamOutputComponentsLabel);
+        param->setLabel(kParamOutputComponentsLabel);
         param->setAnimates(false);
         param->appendOption(kParamOutputComponentsOptionAlpha);
         param->appendOption(kParamOutputComponentsOptionRGBA);
@@ -676,7 +676,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
     // processR
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+        param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setAnimates(false);
         param->setDefault(false);
@@ -687,7 +687,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
     // processG
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+        param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setAnimates(false);
         param->setDefault(false);
@@ -698,7 +698,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
     // processB
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
-        param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+        param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setAnimates(false);
         param->setDefault(false);
@@ -709,7 +709,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
     // processA
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
-        param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+        param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setAnimates(false);
         param->setDefault(true);

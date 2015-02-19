@@ -1130,7 +1130,7 @@ mDeclarePluginFactory(RampPluginFactory, {}, {});
 void RampPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -1207,7 +1207,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
 
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+        param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -1215,7 +1215,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+        param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -1223,7 +1223,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
-        param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+        param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -1231,7 +1231,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
-        param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+        param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
         page->addChild(*param);
@@ -1240,7 +1240,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // point0
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamPoint0);
-        param->setLabels(kParamPoint0Label,kParamPoint0Label,kParamPoint0Label);
+        param->setLabel(kParamPoint0Label);
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesCanonical);
         param->setDefault(100., 100.);
@@ -1251,7 +1251,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // color0
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor0);
-        param->setLabels(kParamColor0Label, kParamColor0Label, kParamColor0Label);
+        param->setLabel(kParamColor0Label);
         param->setDefault(0, 0, 0, 0);
         page->addChild(*param);
     }
@@ -1259,7 +1259,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // point1
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamPoint1);
-        param->setLabels(kParamPoint1Label,kParamPoint1Label,kParamPoint1Label);
+        param->setLabel(kParamPoint1Label);
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesCanonical);
         param->setDefault(100., 200.);
@@ -1269,7 +1269,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // color1
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor1);
-        param->setLabels(kParamColor1Label, kParamColor1Label, kParamColor1Label);
+        param->setLabel(kParamColor1Label);
         param->setDefault(1., 1., 1., 1. );
         page->addChild(*param);
     }
@@ -1277,7 +1277,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // type
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamType);
-        param->setLabels(kParamTypeLabel, kParamTypeLabel, kParamTypeLabel);
+        param->setLabel(kParamTypeLabel);
         param->setHint("The type of interpolation used to generate the ramp");
         param->appendOption("Linear");
         param->appendOption("Ease-in");
@@ -1291,7 +1291,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // interactive
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
-        param->setLabels(kParamInteractiveLabel, kParamInteractiveLabel, kParamInteractiveLabel);
+        param->setLabel(kParamInteractiveLabel);
         param->setHint(kParamInteractiveHint);
         param->setEvaluateOnChange(false);
         page->addChild(*param);

@@ -631,7 +631,7 @@ mDeclarePluginFactory(CheckerBoardPluginFactory, {}, {});
 
 void CheckerBoardPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -684,7 +684,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     // boxSize
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamBoxSize);
-        param->setLabels(kParamBoxSizeLabel, kParamBoxSizeLabel, kParamBoxSizeLabel);
+        param->setLabel(kParamBoxSizeLabel);
         param->setHint(kParamBoxSizeHint);
         param->setDefault(64, 64);
         param->setRange(1, 1, INT_MAX, INT_MAX);
@@ -697,7 +697,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     // color0
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor0);
-        param->setLabels(kParamColor0Label, kParamColor0Label, kParamColor0Label);
+        param->setLabel(kParamColor0Label);
         param->setHint(kParamColor0Hint);
         param->setDefault(0.1, 0.1, 0.1, 1.0);
         param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
@@ -709,7 +709,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     // color1
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor1);
-        param->setLabels(kParamColor1Label, kParamColor1Label, kParamColor1Label);
+        param->setLabel(kParamColor1Label);
         param->setHint(kParamColor1Hint);
         param->setDefault(0.5, 0.5, 0.5, 1.0);
         param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
@@ -721,7 +721,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     // color2
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor2);
-        param->setLabels(kParamColor2Label, kParamColor2Label, kParamColor2Label);
+        param->setLabel(kParamColor2Label);
         param->setHint(kParamColor2Hint);
         param->setDefault(0.1, 0.1, 0.1, 1.0);
         param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
@@ -733,7 +733,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     // color3
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor3);
-        param->setLabels(kParamColor3Label, kParamColor3Label, kParamColor3Label);
+        param->setLabel(kParamColor3Label);
         param->setHint(kParamColor3Hint);
         param->setDefault(0.5, 0.5, 0.5, 1.0);
         param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
@@ -746,7 +746,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     // linecolor
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamLineColor);
-        param->setLabels(kParamLineColorLabel, kParamLineColorLabel, kParamLineColorLabel);
+        param->setLabel(kParamLineColorLabel);
         param->setHint(kParamLineColorHint);
         param->setDefault(1.0, 1.0, 1.0, 1.0);
         param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
@@ -758,7 +758,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     // lineWidth
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamLineWidth);
-        param->setLabels(kParamLineWidthLabel, kParamLineWidthLabel, kParamLineWidthLabel);
+        param->setLabel(kParamLineWidthLabel);
         param->setHint(kParamLineWidthHint);
         param->setDefault(0.);
         param->setRange(0., INT_MAX);
@@ -771,7 +771,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     // centerlineColor
     {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamCenterLineColor);
-        param->setLabels(kParamCenterLineColorLabel, kParamCenterLineColorLabel, kParamCenterLineColorLabel);
+        param->setLabel(kParamCenterLineColorLabel);
         param->setHint(kParamCenterLineColorHint);
         param->setDefault(1.0, 1.0, 0.0, 1.0);
         param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
@@ -783,7 +783,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     // centerlineWidth
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCenterLineWidth);
-        param->setLabels(kParamCenterLineWidthLabel, kParamCenterLineWidthLabel, kParamCenterLineWidthLabel);
+        param->setLabel(kParamCenterLineWidthLabel);
         param->setHint(kParamCenterLineWidthHint);
         param->setDefault(1);
         param->setRange(0., INT_MAX);
@@ -795,7 +795,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     // range
     {
         Int2DParamDescriptor *param = desc.defineInt2DParam(kParamRange);
-        param->setLabels(kParamRangeLabel, kParamRangeLabel, kParamRangeLabel);
+        param->setLabel(kParamRangeLabel);
         param->setHint(kParamRangeHint);
         param->setDefault(1, 1);
         param->setDimensionLabels("min", "max");

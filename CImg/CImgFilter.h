@@ -217,7 +217,7 @@ public:
 
         {
             OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-            param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+            param->setLabel(kParamProcessRLabel);
             param->setHint(kParamProcessRHint);
             param->setDefault(processRGB);
             param->setIsSecret(processIsSecret);
@@ -226,7 +226,7 @@ public:
         }
         {
             OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-            param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+            param->setLabel(kParamProcessGLabel);
             param->setHint(kParamProcessGHint);
             param->setDefault(processRGB);
             param->setIsSecret(processIsSecret);
@@ -235,7 +235,7 @@ public:
         }
         {
             OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
-            param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+            param->setLabel(kParamProcessBLabel);
             param->setHint(kParamProcessBHint);
             param->setDefault(processRGB);
             param->setIsSecret(processIsSecret);
@@ -244,7 +244,7 @@ public:
         }
         {
             OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
-            param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+            param->setLabel(kParamProcessALabel);
             param->setHint(kParamProcessAHint);
             param->setDefault(processAlpha);
             param->setIsSecret(processIsSecret);

@@ -536,72 +536,72 @@ ColorTransformPluginFactory<transform>::describe(OFX::ImageEffectDescriptor &des
     // basic labels
     switch (transform) {
         case eColorTransformRGBToHSV:
-            desc.setLabels(kPluginRGBToHSVName, kPluginRGBToHSVName, kPluginRGBToHSVName);
+            desc.setLabel(kPluginRGBToHSVName);
             desc.setPluginDescription(kPluginRGBToHSVDescription);
             break;
 
         case eColorTransformHSVToRGB:
-            desc.setLabels(kPluginHSVToRGBName, kPluginHSVToRGBName, kPluginHSVToRGBName);
+            desc.setLabel(kPluginHSVToRGBName);
             desc.setPluginDescription(kPluginHSVToRGBDescription);
             break;
 
         case eColorTransformRGBToHSL:
-            desc.setLabels(kPluginRGBToHSLName, kPluginRGBToHSLName, kPluginRGBToHSLName);
+            desc.setLabel(kPluginRGBToHSLName);
             desc.setPluginDescription(kPluginRGBToHSLDescription);
             break;
 
         case eColorTransformHSLToRGB:
-            desc.setLabels(kPluginHSLToRGBName, kPluginHSLToRGBName, kPluginHSLToRGBName);
+            desc.setLabel(kPluginHSLToRGBName);
             desc.setPluginDescription(kPluginHSLToRGBDescription);
             break;
 
         case eColorTransformRGBToHSI:
-            desc.setLabels(kPluginRGBToHSIName, kPluginRGBToHSIName, kPluginRGBToHSIName);
+            desc.setLabel(kPluginRGBToHSIName);
             desc.setPluginDescription(kPluginRGBToHSIDescription);
             break;
 
         case eColorTransformHSIToRGB:
-            desc.setLabels(kPluginHSIToRGBName, kPluginHSIToRGBName, kPluginHSIToRGBName);
+            desc.setLabel(kPluginHSIToRGBName);
             desc.setPluginDescription(kPluginHSIToRGBDescription);
             break;
 
         case eColorTransformRGBToYCbCr:
-            desc.setLabels(kPluginRGBToYCbCrName, kPluginRGBToYCbCrName, kPluginRGBToYCbCrName);
+            desc.setLabel(kPluginRGBToYCbCrName);
             desc.setPluginDescription(kPluginRGBToYCbCrDescription);
             break;
 
         case eColorTransformYCbCrToRGB:
-            desc.setLabels(kPluginYCbCrToRGBName, kPluginYCbCrToRGBName, kPluginYCbCrToRGBName);
+            desc.setLabel(kPluginYCbCrToRGBName);
             desc.setPluginDescription(kPluginYCbCrToRGBDescription);
             break;
 
         case eColorTransformRGBToYUV:
-            desc.setLabels(kPluginRGBToYUVName, kPluginRGBToYUVName, kPluginRGBToYUVName);
+            desc.setLabel(kPluginRGBToYUVName);
             desc.setPluginDescription(kPluginRGBToYUVDescription);
             break;
 
         case eColorTransformYUVToRGB:
-            desc.setLabels(kPluginYUVToRGBName, kPluginYUVToRGBName, kPluginYUVToRGBName);
+            desc.setLabel(kPluginYUVToRGBName);
             desc.setPluginDescription(kPluginYUVToRGBDescription);
             break;
             
         case eColorTransformRGBToXYZ:
-            desc.setLabels(kPluginRGBToXYZName, kPluginRGBToXYZName, kPluginRGBToXYZName);
+            desc.setLabel(kPluginRGBToXYZName);
             desc.setPluginDescription(kPluginRGBToXYZDescription);
             break;
 
         case eColorTransformXYZToRGB:
-            desc.setLabels(kPluginXYZToRGBName, kPluginXYZToRGBName, kPluginXYZToRGBName);
+            desc.setLabel(kPluginXYZToRGBName);
             desc.setPluginDescription(kPluginXYZToRGBDescription);
             break;
 
         case eColorTransformRGBToLab:
-            desc.setLabels(kPluginRGBToLabName, kPluginRGBToLabName, kPluginRGBToLabName);
+            desc.setLabel(kPluginRGBToLabName);
             desc.setPluginDescription(kPluginRGBToLabDescription);
             break;
 
         case eColorTransformLabToRGB:
-            desc.setLabels(kPluginLabToRGBName, kPluginLabToRGBName, kPluginLabToRGBName);
+            desc.setLabel(kPluginLabToRGBName);
             desc.setPluginDescription(kPluginLabToRGBDescription);
             break;
     }
@@ -651,10 +651,10 @@ ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescri
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremult);
         if (fromRGB(transform)) {
-            param->setLabels(kParamPremultRGBToXXXLabel, kParamPremultRGBToXXXLabel, kParamPremultRGBToXXXLabel);
+            param->setLabel(kParamPremultRGBToXXXLabel);
             param->setHint(kParamPremultRGBToXXXHint);
         } else {
-            param->setLabels(kParamPremultXXXToRGBLabel, kParamPremultXXXToRGBLabel, kParamPremultXXXToRGBLabel);
+            param->setLabel(kParamPremultXXXToRGBLabel);
             param->setHint(kParamPremultXXXToRGBHint);
         }
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -664,7 +664,7 @@ ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescri
     {
         // not yet implemented, for future use (whenever deep compositing is supported)
         OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamPremultChannel);
-        param->setLabels(kParamPremultChannelLabel, kParamPremultChannelLabel, kParamPremultChannelLabel);
+        param->setLabel(kParamPremultChannelLabel);
         param->setHint(kParamPremultChannelHint);
         param->appendOption(kParamPremultChannelR, kParamPremultChannelRHint);
         param->appendOption(kParamPremultChannelG, kParamPremultChannelGHint);

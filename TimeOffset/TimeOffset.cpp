@@ -235,7 +235,7 @@ void TimeOffsetPluginFactory::load()
 void TimeOffsetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -287,7 +287,7 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // time_offset
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamTimeOffset);
-        param->setLabels(kParamTimeOffsetLabel,kParamTimeOffsetLabel,kParamTimeOffsetLabel);
+        param->setLabel(kParamTimeOffsetLabel);
         param->setHint(kParamTimeOffsetHint);
         param->setDefault(0);
         // keep default range (INT_MIN..INT_MAX)
@@ -302,7 +302,7 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamReverseInput);
         param->setDefault(false);
         param->setHint(kParamReverseInputHint);
-        param->setLabels(kParamReverseInputLabel,kParamReverseInputLabel,kParamReverseInputLabel);
+        param->setLabel(kParamReverseInputLabel);
         param->setAnimates(true);
         page->addChild(*param);
     }

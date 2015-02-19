@@ -393,7 +393,7 @@ mDeclarePluginFactory(NoOpPluginFactory, {}, {});
 void NoOpPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -467,7 +467,7 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // forceCopy
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamForceCopy);
-        param->setLabels(kParamForceCopyLabel, kParamForceCopyLabel, kParamForceCopyLabel);
+        param->setLabel(kParamForceCopyLabel);
         param->setHint(kParamForceCopyHint);
         param->setDefault(false);
         param->setAnimates(false);
@@ -477,7 +477,7 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // clipInfo
     {
         PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
-        param->setLabels(kParamClipInfoLabel, kParamClipInfoLabel, kParamClipInfoLabel);
+        param->setLabel(kParamClipInfoLabel);
         param->setHint(kParamClipInfoHint);
         page->addChild(*param);
     }

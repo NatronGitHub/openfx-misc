@@ -851,7 +851,7 @@ mDeclarePluginFactory(KeyerPluginFactory, {}, {});
 void KeyerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -918,7 +918,7 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // key color
     {
         RGBParamDescriptor* param = desc.defineRGBParam(kParamKeyColor);
-        param->setLabels(kParamKeyColorLabel, kParamKeyColorLabel, kParamKeyColorLabel);
+        param->setLabel(kParamKeyColorLabel);
         param->setHint(kParamKeyColorHint);
         param->setDefault(0., 0., 0.);
         // the following should be the default
@@ -933,7 +933,7 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // keyer mode
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamKeyerMode);
-        param->setLabels(kParamKeyerModeLabel, kParamKeyerModeLabel, kParamKeyerModeLabel);
+        param->setLabel(kParamKeyerModeLabel);
         param->setHint(kParamKeyerModeHint);
         assert(param->getNOptions() == (int)eKeyerModeLuminance);
         param->appendOption(kParamKeyerModeOptionLuminance, kParamKeyerModeOptionLuminanceHint);
@@ -950,7 +950,7 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // softness (lower)
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSoftnessLower);
-        param->setLabels(kParamSoftnessLowerLabel, kParamSoftnessLowerLabel, kParamSoftnessLowerLabel);
+        param->setLabel(kParamSoftnessLowerLabel);
         param->setHint(kParamSoftnessLowerHint);
         param->setRange(-1., 0.);
         param->setDisplayRange(-1., 0.);
@@ -963,7 +963,7 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // tolerance (lower)
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamToleranceLower);
-        param->setLabels(kParamToleranceLowerLabel, kParamToleranceLowerLabel, kParamToleranceLowerLabel);
+        param->setLabel(kParamToleranceLowerLabel);
         param->setHint(kParamToleranceLowerHint);
         param->setRange(-1., 0.);
         param->setDisplayRange(-1., 0.);
@@ -976,7 +976,7 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // center
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamCenter);
-        param->setLabels(kParamCenterLabel, kParamCenterLabel, kParamCenterLabel);
+        param->setLabel(kParamCenterLabel);
         param->setHint(kParamCenterHint);
         param->setRange(0., 1.);
         param->setDisplayRange(0., 1.);
@@ -989,7 +989,7 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // tolerance (upper)
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamToleranceUpper);
-        param->setLabels(kParamToleranceUpperLabel, kParamToleranceUpperLabel, kParamToleranceUpperLabel);
+        param->setLabel(kParamToleranceUpperLabel);
         param->setHint(kParamToleranceUpperHint);
         param->setRange(0., 1.);
         param->setDisplayRange(0., 1.);
@@ -1002,7 +1002,7 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // softness (upper)
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSoftnessUpper);
-        param->setLabels(kParamSoftnessUpperLabel, kParamSoftnessUpperLabel, kParamSoftnessUpperLabel);
+        param->setLabel(kParamSoftnessUpperLabel);
         param->setHint(kParamSoftnessUpperHint);
         param->setRange(0., 1.);
         param->setDisplayRange(0., 1.);
@@ -1015,7 +1015,7 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // despill
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamDespill);
-        param->setLabels(kParamDespillLabel, kParamDespillLabel, kParamDespillLabel);
+        param->setLabel(kParamDespillLabel);
         param->setHint(kParamDespillHint);
         param->setRange(0.,2.);
         param->setDisplayRange(0.,2.);
@@ -1027,7 +1027,7 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // output mode
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputMode);
-        param->setLabels(kParamOutputModeLabel, kParamOutputModeLabel, kParamOutputModeLabel);
+        param->setLabel(kParamOutputModeLabel);
         param->setHint(kParamOutputModeHint);
         assert(param->getNOptions() == (int)eOutputModeIntermediate);
         param->appendOption(kParamOutputModeOptionIntermediate, kParamOutputModeOptionIntermediateHint);
@@ -1046,7 +1046,7 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // source alpha
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamSourceAlpha);
-        param->setLabels(kParamSourceAlphaLabel, kParamSourceAlphaLabel, kParamSourceAlphaLabel);
+        param->setLabel(kParamSourceAlphaLabel);
         param->setHint(kParamSourceAlphaHint);
         assert(param->getNOptions() == (int)eSourceAlphaIgnore);
         param->appendOption(kParamSourceAlphaOptionIgnore, kParamSourceAlphaOptionIgnoreHint);

@@ -380,7 +380,7 @@ void MixViewsPluginFactory::load()
 void MixViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -436,7 +436,7 @@ void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     // mix
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamMix);
-        param->setLabels(kParamMixLabel, kParamMixLabel, kParamMixLabel);
+        param->setLabel(kParamMixLabel);
         param->setHint(kParamMixHint);
         param->setDefault(0.);
         param->setRange(0., 1.);

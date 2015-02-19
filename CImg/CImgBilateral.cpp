@@ -261,7 +261,7 @@ mDeclarePluginFactory(CImgBilateralPluginFactory, {}, {});
 void CImgBilateralPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -296,7 +296,7 @@ void CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& d
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
-        param->setLabels(kParamSigmaSLabel, kParamSigmaSLabel, kParamSigmaSLabel);
+        param->setLabel(kParamSigmaSLabel);
         param->setHint(kParamSigmaSHint);
         param->setRange(0, 100000.);
         param->setDisplayRange(0.0, 10.);
@@ -306,7 +306,7 @@ void CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& d
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
-        param->setLabels(kParamSigmaRLabel, kParamSigmaRLabel, kParamSigmaRLabel);
+        param->setLabel(kParamSigmaRLabel);
         param->setHint(kParamSigmaRHint);
         param->setRange(0, 100000.);
         param->setDisplayRange(0., 1.);
@@ -328,7 +328,7 @@ mDeclarePluginFactory(CImgBilateralGuidedPluginFactory, {}, {});
 void CImgBilateralGuidedPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
-    desc.setLabels(kPluginGuidedName, kPluginGuidedName, kPluginGuidedName);
+    desc.setLabel(kPluginGuidedName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginGuidedDescription);
 
@@ -365,7 +365,7 @@ void CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescrip
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
-        param->setLabels(kParamSigmaSLabel, kParamSigmaSLabel, kParamSigmaSLabel);
+        param->setLabel(kParamSigmaSLabel);
         param->setHint(kParamSigmaSHint);
         param->setRange(0, 100000.);
         param->setDisplayRange(0.0, 10.);
@@ -375,7 +375,7 @@ void CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescrip
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
-        param->setLabels(kParamSigmaRLabel, kParamSigmaRLabel, kParamSigmaRLabel);
+        param->setLabel(kParamSigmaRLabel);
         param->setHint(kParamSigmaRHint);
         param->setRange(0, 100000.);
         param->setDisplayRange(0., 1.);

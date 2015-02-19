@@ -783,7 +783,7 @@ mDeclarePluginFactory(CImgBlurPluginFactory, {}, {});
 void CImgBlurPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -818,7 +818,7 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
 
     if (getMajorVersion() <= 1) {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSize);
-        param->setLabels(kParamSizeLabel, kParamSizeLabel, kParamSizeLabel);
+        param->setLabel(kParamSizeLabel);
         param->setHint(kParamSizeHint);
         param->setRange(0, INT_MAX);
         param->setDisplayRange(0, 100);
@@ -828,7 +828,7 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
         page->addChild(*param);
     } else {
         OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSize);
-        param->setLabels(kParamSizeLabel, kParamSizeLabel, kParamSizeLabel);
+        param->setLabel(kParamSizeLabel);
         param->setHint(kParamSizeHint);
         param->setRange(0, 0, INT_MAX, INT_MAX);
         param->setDisplayRange(0, 0, 100, 100);
@@ -839,7 +839,7 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
     }
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamOrderX);
-        param->setLabels(kParamOrderXLabel, kParamOrderXLabel, kParamOrderXLabel);
+        param->setLabel(kParamOrderXLabel);
         param->setHint(kParamOrderXHint);
         param->setRange(0, 2);
         param->setDisplayRange(0, 2);
@@ -847,7 +847,7 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
     }
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamOrderY);
-        param->setLabels(kParamOrderYLabel, kParamOrderYLabel, kParamOrderYLabel);
+        param->setLabel(kParamOrderYLabel);
         param->setHint(kParamOrderYHint);
         param->setRange(0, 2);
         param->setDisplayRange(0, 2);
@@ -855,7 +855,7 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
     }
     {
         OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
-        param->setLabels(kParamBoundaryLabel, kParamBoundaryLabel, kParamBoundaryLabel);
+        param->setLabel(kParamBoundaryLabel);
         param->setHint(kParamBoundaryHint);
         assert(param->getNOptions() == eBoundaryDirichlet && param->getNOptions() == 0);
         param->appendOption(kParamBoundaryOptionDirichlet, kParamBoundaryOptionDirichletHint);
@@ -868,7 +868,7 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
     }
     {
         OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFilter);
-        param->setLabels(kParamFilterLabel, kParamFilterLabel, kParamFilterLabel);
+        param->setLabel(kParamFilterLabel);
         param->setHint(kParamFilterHint);
         assert(param->getNOptions() == eFilterQuasiGaussian && param->getNOptions() == 0);
         param->appendOption(kParamFilterOptionQuasiGaussian, kParamFilterOptionQuasiGaussianHint);
@@ -885,7 +885,7 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
     }
     {
         OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
-        param->setLabels(kParamExpandRoDLabel, kParamExpandRoDLabel, kParamExpandRoDLabel);
+        param->setLabel(kParamExpandRoDLabel);
         param->setHint(kParamExpandRoDHint);
         param->setDefault(true);
         page->addChild(*param);

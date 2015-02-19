@@ -193,7 +193,7 @@ mDeclarePluginFactory(CImgHistEQPluginFactory, {}, {});
 void CImgHistEQPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -231,7 +231,7 @@ void CImgHistEQPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
 
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamNbLevels);
-        param->setLabels(kParamNbLevelsLabel, kParamNbLevelsLabel, kParamNbLevelsLabel);
+        param->setLabel(kParamNbLevelsLabel);
         param->setHint(kParamNbLevelsHint);
         param->setDefault(kParamNbLevelsDefault);
         page->addChild(*param);

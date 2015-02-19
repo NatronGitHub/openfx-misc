@@ -619,7 +619,7 @@ mDeclarePluginFactory(MultiplyPluginFactory, {}, {});
 void MultiplyPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -675,7 +675,7 @@ void MultiplyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+        param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -683,7 +683,7 @@ void MultiplyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+        param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -691,7 +691,7 @@ void MultiplyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
-        param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+        param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -699,7 +699,7 @@ void MultiplyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
-        param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+        param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(false);
         page->addChild(*param);
@@ -707,7 +707,7 @@ void MultiplyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 
     {
         RGBAParamDescriptor *param = desc.defineRGBAParam(kParamValueName);
-        param->setLabels(kParamValueLabel, kParamValueLabel, kParamValueLabel);
+        param->setLabel(kParamValueLabel);
         param->setHint(kParamValueHint);
         param->setDefault(1.0, 1.0, 1.0, 1.0);
         param->setDisplayRange(0, 0, 0, 0, 4, 4, 4, 4);

@@ -350,7 +350,7 @@ using namespace OFX;
 void NoisePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -391,7 +391,7 @@ void NoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
     // noise
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamNoiseLevel);
-        param->setLabels(kParamNoiseLevelLabel, kParamNoiseLevelLabel, kParamNoiseLevelLabel);
+        param->setLabel(kParamNoiseLevelLabel);
         param->setHint(kParamNoiseLevelHint);
         param->setDefault(0.2);
         param->setRange(0, 10);
@@ -405,7 +405,7 @@ void NoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
     // seed
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamSeed);
-        param->setLabels(kParamSeed, kParamSeed, kParamSeedLabel);
+        param->setLabel(kParamSeed);
         param->setHint(kParamSeedHint);
         param->setDefault(2000);
         param->setAnimates(true); // can animate

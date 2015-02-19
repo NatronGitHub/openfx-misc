@@ -641,7 +641,7 @@ using namespace OFX;
 void DeinterlacePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -692,7 +692,7 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
 
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamMode);
-        param->setLabels(kParamModeLabel, kParamModeLabel, kParamModeLabel);
+        param->setLabel(kParamModeLabel);
         param->setHint(kParamModeHint);
         assert(param->getNOptions() == eDeinterlaceModeWeave);
         param->appendOption(kParamModeOptionWeave, kParamModeOptionWeaveHint);
@@ -715,7 +715,7 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFieldOrder);
-        param->setLabels(kParamFieldOrderLabel, kParamFieldOrderLabel, kParamFieldOrderLabel);
+        param->setLabel(kParamFieldOrderLabel);
         param->setHint(kParamFieldOrderHint);
         assert(param->getNOptions() == eFieldOrderLower);
         param->appendOption(kParamFieldOrderOptionLower);
@@ -730,7 +730,7 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
 
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamParity);
-        param->setLabels(kParamParityLabel, kParamParityLabel, kParamParityLabel);
+        param->setLabel(kParamParityLabel);
         param->setHint(kParamParityHint);
         assert(param->getNOptions() == eParityLower);
         param->appendOption(kParamParityOptionLower);
@@ -743,7 +743,7 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
 
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamYadifMode);
-        param->setLabels(kParamYadifModeLabel, kParamYadifModeLabel, kParamYadifModeLabel);
+        param->setLabel(kParamYadifModeLabel);
         param->setHint(kParamYadifModeHint);
         assert(param->getNOptions() == eYadifModeTemporalSpatial);
         param->appendOption(kParamYadifModeOptionTemporalSpatial, kParamYadifModeOptionTemporalSpatialHint);
@@ -756,7 +756,7 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
 
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamDoubleFramerate);
-        param->setLabels(kParamDoubleFramerateLabel, kParamDoubleFramerateLabel, kParamDoubleFramerateLabel);
+        param->setLabel(kParamDoubleFramerateLabel);
         param->setHint(kParamDoubleFramerateHint);
         param->setIsSecret(true); // Not yet implemented!
         page->addChild(*param);

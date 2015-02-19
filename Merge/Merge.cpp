@@ -537,7 +537,7 @@ mDeclarePluginFactory(MergePluginFactory, {}, {});
 void MergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -619,7 +619,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // operation
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOperation);
-        param->setLabels(kParamOperationLabel, kParamOperationLabel, kParamOperationLabel);
+        param->setLabel(kParamOperationLabel);
         param->setHint(kParamOperationHint);
         assert(param->getNOptions() == eMergeATop);
         param->appendOption( "atop", "Ab + B(1 - a)" );
@@ -698,7 +698,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // boundingBox
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamBbox);
-        param->setLabels(kParamBboxLabel, kParamBboxLabel, kParamBboxLabel);
+        param->setLabel(kParamBboxLabel);
         param->setHint(kParamBboxHint);
         param->appendOption("Union");
         param->appendOption("Intersection");
@@ -712,7 +712,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // alphaMasking
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAlphaMasking);
-        param->setLabels(kParamAlphaMaskingLabel, kParamAlphaMaskingLabel, kParamAlphaMaskingLabel);
+        param->setLabel(kParamAlphaMaskingLabel);
         param->setAnimates(true);
         param->setDefault(false);
         param->setEnabled(MergeImages2D::isMaskable(eMergeOver));

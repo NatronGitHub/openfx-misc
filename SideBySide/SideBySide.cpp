@@ -478,7 +478,7 @@ void SideBySidePluginFactory::load()
 void SideBySidePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -536,7 +536,7 @@ void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamVertical);
         param->setDefault(false);
         param->setHint(kParamVerticalHint);
-        param->setLabels(kParamVerticalLabel, kParamVerticalLabel, kParamVerticalLabel);
+        param->setLabel(kParamVerticalLabel);
         param->setAnimates(true);
         page->addChild(*param);
     }
@@ -545,7 +545,7 @@ void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamView1);
         param->setHint(kParamView1Hint);
-        param->setLabels(kParamView1Label, kParamView1Label, kParamView1Label);
+        param->setLabel(kParamView1Label);
         param->appendOption(kParamViewOptionLeft);
         param->appendOption(kParamViewOptionRight);
         param->setDefault(0);
@@ -557,7 +557,7 @@ void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamView2);
         param->setHint(kParamView2Hint);
-        param->setLabels(kParamView2Label, kParamView2Label, kParamView2Label);
+        param->setLabel(kParamView2Label);
         param->appendOption(kParamViewOptionLeft);
         param->appendOption(kParamViewOptionRight);
         param->setDefault(1);

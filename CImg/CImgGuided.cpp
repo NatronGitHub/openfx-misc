@@ -191,7 +191,7 @@ mDeclarePluginFactory(CImgGuidedPluginFactory, {}, {});
 void CImgGuidedPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -226,7 +226,7 @@ void CImgGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
 
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamRadius);
-        param->setLabels(kParamRadiusLabel, kParamRadiusLabel, kParamRadiusLabel);
+        param->setLabel(kParamRadiusLabel);
         param->setHint(kParamRadiusHint);
         param->setRange(0, 100);
         param->setDisplayRange(1, 10);
@@ -235,7 +235,7 @@ void CImgGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEpsilon);
-        param->setLabels(kParamEpsilonLabel, kParamEpsilonLabel, kParamEpsilonLabel);
+        param->setLabel(kParamEpsilonLabel);
         param->setHint(kParamEpsilonHint);
         param->setRange(0, 1.);
         param->setDisplayRange(0., 0.4);

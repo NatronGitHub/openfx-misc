@@ -216,7 +216,7 @@ mDeclarePluginFactory(CImgRollingGuidancePluginFactory, {}, {});
 void CImgRollingGuidancePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -251,7 +251,7 @@ void CImgRollingGuidancePluginFactory::describeInContext(OFX::ImageEffectDescrip
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
-        param->setLabels(kParamSigmaSLabel, kParamSigmaSLabel, kParamSigmaSLabel);
+        param->setLabel(kParamSigmaSLabel);
         param->setHint(kParamSigmaSHint);
         param->setRange(0, 1000);
         param->setDisplayRange(0, 25);
@@ -261,7 +261,7 @@ void CImgRollingGuidancePluginFactory::describeInContext(OFX::ImageEffectDescrip
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
-        param->setLabels(kParamSigmaRLabel, kParamSigmaRLabel, kParamSigmaRLabel);
+        param->setLabel(kParamSigmaRLabel);
         param->setHint(kParamSigmaRHint);
         param->setRange(0, 10.0);
         param->setDisplayRange(0, 0.5);
@@ -271,7 +271,7 @@ void CImgRollingGuidancePluginFactory::describeInContext(OFX::ImageEffectDescrip
     }
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
-        param->setLabels(kParamIterationsLabel, kParamIterationsLabel, kParamIterationsLabel);
+        param->setLabel(kParamIterationsLabel);
         param->setHint(kParamIterationsHint);
         param->setRange(0, 10);
         param->setDisplayRange(0, 10);

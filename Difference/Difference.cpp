@@ -382,7 +382,7 @@ mDeclarePluginFactory(DifferencePluginFactory, {}, {});
 void DifferencePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
     
@@ -434,7 +434,7 @@ void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // offset
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamOffset);
-        param->setLabels(kParamOffsetLabel, kParamOffsetLabel, kParamOffsetLabel);
+        param->setLabel(kParamOffsetLabel);
         param->setHint(kParamOffsetHint);
         param->setDefault(0.);
         param->setIncrement(0.005);
@@ -445,7 +445,7 @@ void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     // gain
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamGain);
-        param->setLabels(kParamGainLabel, kParamGainLabel, kParamGainLabel);
+        param->setLabel(kParamGainLabel);
         param->setHint(kParamGainHint);
         param->setDefault(1.);
         param->setIncrement(0.005);

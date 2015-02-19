@@ -220,7 +220,7 @@ mDeclarePluginFactory(CImgSharpenShockPluginFactory, {}, {});
 void CImgSharpenShockPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -255,7 +255,7 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAmplitude);
-        param->setLabels(kParamAmplitudeLabel, kParamAmplitudeLabel, kParamAmplitudeLabel);
+        param->setLabel(kParamAmplitudeLabel);
         param->setHint(kParamAmplitudeHint);
         param->setDisplayRange(0, 1.5 /*400/255*/);
         param->setDefault(kParamAmplitudeDefault);
@@ -264,7 +264,7 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeThreshold);
-        param->setLabels(kParamEdgeThresholdLabel, kParamEdgeThresholdLabel, kParamEdgeThresholdLabel);
+        param->setLabel(kParamEdgeThresholdLabel);
         param->setHint(kParamEdgeThresholdHint);
         param->setDisplayRange(0, 0.7);
         param->setDefault(kParamEdgeThresholdDefault);
@@ -273,7 +273,7 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamGradientSmoothness);
-        param->setLabels(kParamGradientSmoothnessLabel, kParamGradientSmoothnessLabel, kParamGradientSmoothnessLabel);
+        param->setLabel(kParamGradientSmoothnessLabel);
         param->setHint(kParamGradientSmoothnessHint);
         param->setDisplayRange(0, 10.);
         param->setDefault(kParamGradientSmoothnessDefault);
@@ -282,7 +282,7 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTensorSmoothness);
-        param->setLabels(kParamTensorSmoothnessLabel, kParamTensorSmoothnessLabel, kParamTensorSmoothnessLabel);
+        param->setLabel(kParamTensorSmoothnessLabel);
         param->setHint(kParamTensorSmoothnessHint);
         param->setDisplayRange(0, 10.);
         param->setDefault(kParamTensorSmoothnessDefault);
@@ -291,7 +291,7 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
     }
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
-        param->setLabels(kParamIterationsLabel, kParamIterationsLabel, kParamIterationsLabel);
+        param->setLabel(kParamIterationsLabel);
         param->setHint(kParamIterationsHint);
         param->setRange(0, 10);
         param->setDisplayRange(0, 10);

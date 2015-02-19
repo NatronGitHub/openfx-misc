@@ -405,7 +405,7 @@ void AnaglyphPluginFactory::load()
 void AnaglyphPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -456,7 +456,7 @@ void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAmtColour);
-        param->setLabels(kParamAmtColourLabel, kParamAmtColourLabel, kParamAmtColourLabel);
+        param->setLabel(kParamAmtColourLabel);
         param->setHint(kParamAmtColourHint);
         param->setDefault(0.);
         param->setRange(0., 1.);
@@ -468,7 +468,7 @@ void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamSwap);
-        param->setLabels(kParamSwapLabel, kParamSwapLabel, kParamSwapLabel);
+        param->setLabel(kParamSwapLabel);
         param->setDefault(false);
         param->setHint(kParamSwapHint);
         param->setAnimates(true);
@@ -476,7 +476,7 @@ void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     }
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamOffset);
-        param->setLabels(kParamOffsetLabel, kParamOffsetLabel, kParamOffsetLabel);
+        param->setLabel(kParamOffsetLabel);
         param->setHint(kParamOffsetHint);
         param->setDefault(0);
         param->setRange(-1000, 1000);

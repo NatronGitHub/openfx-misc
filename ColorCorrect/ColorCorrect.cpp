@@ -966,7 +966,7 @@ mDeclarePluginFactory(ColorCorrectPluginFactory, {}, {});
 void ColorCorrectPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -1001,7 +1001,7 @@ defineRGBAScaleParam(OFX::ImageEffectDescriptor &desc,
                      double max)
 {
     RGBAParamDescriptor *param = desc.defineRGBAParam(name);
-    param->setLabels(label, label, label);
+    param->setLabel(label);
     param->setHint(hint);
     param->setDefault(def,def,def,def);
     param->setDisplayRange(min,min,min,min,max,max,max,max);
@@ -1020,7 +1020,7 @@ defineColorGroup(const std::string& groupName,
  {
     GroupParamDescriptor* groupDesc = 0;
     groupDesc = desc.defineGroupParam(groupName);
-    groupDesc->setLabels(groupName, groupName, groupName);
+    groupDesc->setLabel(groupName);
     groupDesc->setHint(hint);
     groupDesc->setOpen(open);
     
@@ -1066,7 +1066,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+        param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -1074,7 +1074,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+        param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -1082,7 +1082,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
-        param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+        param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -1090,7 +1090,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
-        param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+        param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(false);
         page->addChild(*param);
@@ -1106,7 +1106,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     {
         OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamColorCorrectToneRanges);
         assert(param);
-        param->setLabels(kParamColorCorrectToneRangesLabel, kParamColorCorrectToneRangesLabel, kParamColorCorrectToneRangesLabel);
+        param->setLabel(kParamColorCorrectToneRangesLabel);
         param->setHint(kParamColorCorrectToneRangesHint);
 
         // define it as two dimensional
@@ -1138,7 +1138,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
 
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
-        param->setLabels(kParamClampBlackLabel, kParamClampBlackLabel, kParamClampBlackLabel);
+        param->setLabel(kParamClampBlackLabel);
         param->setHint(kParamClampBlackHint);
         param->setDefault(true);
         param->setAnimates(true);
@@ -1146,7 +1146,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampWhite);
-        param->setLabels(kParamClampWhiteLabel, kParamClampWhiteLabel, kParamClampWhiteLabel);
+        param->setLabel(kParamClampWhiteLabel);
         param->setHint(kParamClampWhiteHint);
         param->setDefault(false);
         param->setAnimates(true);

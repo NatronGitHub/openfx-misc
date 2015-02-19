@@ -430,7 +430,7 @@ void
 VectorToColorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -488,7 +488,7 @@ VectorToColorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     // xChannel
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamXChannel);
-        param->setLabels(kParamXChannelLabel, kParamXChannelLabel, kParamXChannelLabel);
+        param->setLabel(kParamXChannelLabel);
         param->setHint(kParamXChannelHint);
         addInputChannelOtions(param, eInputChannelR, context);
         page->addChild(*param);
@@ -497,7 +497,7 @@ VectorToColorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     // yChannel
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamYChannel);
-        param->setLabels(kParamYChannelLabel, kParamYChannelLabel, kParamYChannelLabel);
+        param->setLabel(kParamYChannelLabel);
         param->setHint(kParamYChannelHint);
         addInputChannelOtions(param, eInputChannelG, context);
         page->addChild(*param);
@@ -506,7 +506,7 @@ VectorToColorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     // opposite
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpposite);
-        param->setLabels(kParamOppositeLabel, kParamOppositeLabel, kParamOppositeLabel);
+        param->setLabel(kParamOppositeLabel);
         param->setHint(kParamOppositeHint);
         page->addChild(*param);
     }
@@ -514,7 +514,7 @@ VectorToColorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     // inverseY
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamInverseY);
-        param->setLabels(kParamInverseYLabel, kParamInverseYLabel, kParamInverseYLabel);
+        param->setLabel(kParamInverseYLabel);
         param->setHint(kParamInverseYHint);
         param->setDefault(true);
         page->addChild(*param);
@@ -523,7 +523,7 @@ VectorToColorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     // modulateV
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamModulateV);
-        param->setLabels(kParamModulateVLabel, kParamModulateVLabel, kParamModulateVLabel);
+        param->setLabel(kParamModulateVLabel);
         param->setHint(kParamModulateVHint);
         page->addChild(*param);
     }
@@ -531,7 +531,7 @@ VectorToColorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     // hsvOutput
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamHSVOutput);
-        param->setLabels(kParamHSVOutputLabel, kParamHSVOutputLabel, kParamHSVOutputLabel);
+        param->setLabel(kParamHSVOutputLabel);
         param->setHint(kParamHSVOutputHint);
         page->addChild(*param);
     }

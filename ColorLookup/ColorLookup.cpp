@@ -701,7 +701,7 @@ mDeclarePluginFactory(ColorLookupPluginFactory, {}, {});
 void
 ColorLookupPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -765,7 +765,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     // define it
     {
         Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamRange);
-        param->setLabels(kParamRangeLabel, kParamRangeLabel, kParamRangeLabel);
+        param->setLabel(kParamRangeLabel);
         param->setDimensionLabels("min", "max");
         param->setHint(kParamRangeHint);
         param->setDefault(0., 1.);
@@ -775,7 +775,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     {
         OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamLookupTable);
         assert(param);
-        param->setLabels(kParamLookupTableLabel, kParamLookupTableLabel, kParamLookupTableLabel);
+        param->setLabel(kParamLookupTableLabel);
         param->setHint(kParamLookupTableHint);
 
         // define it as three dimensional
@@ -823,7 +823,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     }
     {
         OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamSource);
-        param->setLabels(kParamSourceLabel, kParamSourceLabel, kParamSourceLabel);
+        param->setLabel(kParamSourceLabel);
         param->setHint(kParamSourceHint);
         param->setDisplayRange(0., 0., 0., 0., 4., 4., 4., 4.);
         param->setEvaluateOnChange(false);
@@ -832,7 +832,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     }
     {
         OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTarget);
-        param->setLabels(kParamTargetLabel, kParamTargetLabel, kParamTargetLabel);
+        param->setLabel(kParamTargetLabel);
         param->setHint(kParamTargetHint);
         param->setDisplayRange(0., 0., 0., 0., 4., 4., 4., 4.);
         param->setEvaluateOnChange(false);
@@ -841,48 +841,48 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     }
     {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetMaster);
-        param->setLabels(kParamSetMasterLabel, kParamSetMasterLabel, kParamSetMasterLabel);
+        param->setLabel(kParamSetMasterLabel);
         param->setHint(kParamSetMasterHint);
         param->setLayoutHint(eLayoutHintNoNewLine);
         page->addChild(*param);
     }
     {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetRGB);
-        param->setLabels(kParamSetRGBLabel, kParamSetRGBLabel, kParamSetRGBLabel);
+        param->setLabel(kParamSetRGBLabel);
         param->setHint(kParamSetRGBHint);
         param->setLayoutHint(eLayoutHintNoNewLine);
         page->addChild(*param);
     }
     {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetRGBA);
-        param->setLabels(kParamSetRGBALabel, kParamSetRGBALabel, kParamSetRGBALabel);
+        param->setLabel(kParamSetRGBALabel);
         param->setHint(kParamSetRGBAHint);
         param->setLayoutHint(eLayoutHintNoNewLine);
         page->addChild(*param);
     }
     {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetA);
-        param->setLabels(kParamSetALabel, kParamSetALabel, kParamSetALabel);
+        param->setLabel(kParamSetALabel);
         param->setHint(kParamSetAHint);
         page->addChild(*param);
     }
 #ifdef COLORLOOKUP_ADD
     {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAddCtrlPts);
-        param->setLabels(kParamAddCtrlPtsLabel, kParamAddCtrlPtsLabel, kParamAddCtrlPtsLabel);
+        param->setLabel(kParamAddCtrlPtsLabel, kParamAddCtrlPtsLabel, kParamAddCtrlPtsLabel);
         page->addChild(*param);
     }
 #endif
 #ifdef COLORLOOKUP_RESET
     {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamResetCtrlPts);
-        param->setLabels(kParamResetCtrlPtsLabel, kParamResetCtrlPtsLabel, kParamResetCtrlPtsLabel);
+        param->setLabel(kParamResetCtrlPtsLabel, kParamResetCtrlPtsLabel, kParamResetCtrlPtsLabel);
         page->addChild(*param);
     }
 #endif
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
-        param->setLabels(kParamClampBlackLabel, kParamClampBlackLabel, kParamClampBlackLabel);
+        param->setLabel(kParamClampBlackLabel);
         param->setHint(kParamClampBlackHint);
         param->setDefault(false);
         param->setAnimates(true);
@@ -890,7 +890,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampWhite);
-        param->setLabels(kParamClampWhiteLabel, kParamClampWhiteLabel, kParamClampWhiteLabel);
+        param->setLabel(kParamClampWhiteLabel);
         param->setHint(kParamClampWhiteHint);
         param->setDefault(false);
         param->setAnimates(true);

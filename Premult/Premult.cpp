@@ -633,11 +633,11 @@ void PremultPluginFactory<isPremult>::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     if (isPremult) {
-        desc.setLabels(kPluginPremultName, kPluginPremultName, kPluginPremultName);
+        desc.setLabel(kPluginPremultName);
         desc.setPluginGrouping(kPluginPremultGrouping);
         desc.setPluginDescription(kPluginPremultDescription);
     } else {
-        desc.setLabels(kPluginUnpremultName, kPluginUnpremultName, kPluginUnpremultName);
+        desc.setLabel(kPluginUnpremultName);
         desc.setPluginGrouping(kPluginUnpremultGrouping);
         desc.setPluginDescription(kPluginUnpremultDescription);
     }
@@ -688,7 +688,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
     const std::string premultString = isPremult ? "Multiply " : "Divide ";
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+        param->setLabel(kParamProcessRLabel);
         param->setHint(premultString+kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -698,7 +698,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
 
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+        param->setLabel(kParamProcessGLabel);
         param->setHint(premultString+kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -708,7 +708,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
 
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
-        param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+        param->setLabel(kParamProcessBLabel);
         param->setHint(premultString+kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -718,7 +718,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
 
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
-        param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+        param->setLabel(kParamProcessALabel);
         param->setHint(premultString+kParamProcessAHint);
         param->setDefault(false);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -728,7 +728,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
 
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamPremultName);
-        param->setLabels(kParamPremultLabel, kParamPremultLabel, kParamPremultLabel);
+        param->setLabel(kParamPremultLabel);
         param->setHint(kParamPremultHint);
         assert(param->getNOptions() == eInputChannelNone);
         param->appendOption(kParamPremultOptionNone, kParamPremultOptionNoneHint);
@@ -747,7 +747,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
 
     {
     PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
-    param->setLabels(kParamClipInfoLabel, kParamClipInfoLabel, kParamClipInfoLabel);
+    param->setLabel(kParamClipInfoLabel);
     param->setHint(kParamClipInfoHint);
     page->addChild(*param);
     }

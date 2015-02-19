@@ -950,7 +950,7 @@ mDeclarePluginFactory(ShufflePluginFactory, {}, {});
 void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -1116,7 +1116,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     // outputComponents
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputComponents);
-        param->setLabels(kParamOutputComponentsLabel, kParamOutputComponentsLabel, kParamOutputComponentsLabel);
+        param->setLabel(kParamOutputComponentsLabel);
         param->setHint(kParamOutputComponentsHint);
         // the following must be in the same order as in describe(), so that the map works
         if (gSupportsRGBA) {
@@ -1140,7 +1140,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     // ouputBitDepth
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputBitDepth);
-        param->setLabels(kParamOutputBitDepthLabel, kParamOutputBitDepthLabel, kParamOutputBitDepthLabel);
+        param->setLabel(kParamOutputBitDepthLabel);
         param->setHint(kParamOutputBitDepthHint);
         // the following must be in the same order as in describe(), so that the map works
         if (gSupportsFloats) {
@@ -1173,7 +1173,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         // outputR
         {
             ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputR);
-            param->setLabels(kParamOutputRLabel, kParamOutputRLabel, kParamOutputRLabel);
+            param->setLabel(kParamOutputRLabel);
             param->setHint(kParamOutputRHint);
             addInputChannelOtions(param, eInputChannelAR, context);
             page->addChild(*param);
@@ -1182,7 +1182,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         // outputG
         {
             ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputG);
-            param->setLabels(kParamOutputGLabel, kParamOutputGLabel, kParamOutputGLabel);
+            param->setLabel(kParamOutputGLabel);
             param->setHint(kParamOutputGHint);
             addInputChannelOtions(param, eInputChannelAG, context);
             page->addChild(*param);
@@ -1191,7 +1191,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         // outputB
         {
             ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputB);
-            param->setLabels(kParamOutputBLabel, kParamOutputBLabel, kParamOutputBLabel);
+            param->setLabel(kParamOutputBLabel);
             param->setHint(kParamOutputBHint);
             addInputChannelOtions(param, eInputChannelAB, context);
             page->addChild(*param);
@@ -1200,7 +1200,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     // ouputA
     if (gSupportsRGBA || gSupportsAlpha) {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputA);
-        param->setLabels(kParamOutputALabel, kParamOutputALabel, kParamOutputALabel);
+        param->setLabel(kParamOutputALabel);
         param->setHint(kParamOutputAHint);
         addInputChannelOtions(param, eInputChannelAA, context);
         page->addChild(*param);
@@ -1209,7 +1209,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     // clipInfo
     {
         PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
-        param->setLabels(kParamClipInfoLabel, kParamClipInfoLabel, kParamClipInfoLabel);
+        param->setLabel(kParamClipInfoLabel);
         param->setHint(kParamClipInfoHint);
         page->addChild(*param);
     }

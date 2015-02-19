@@ -390,7 +390,7 @@ void
 DissolvePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -464,7 +464,7 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         (void)param;
     } else {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamWhich);
-        param->setLabels(kParamWhichLabel, kParamWhichLabel, kParamWhichLabel);
+        param->setLabel(kParamWhichLabel);
         param->setHint(kParamWhichHint);
         param->setRange(0., 1.);
         param->setDisplayRange(0., 1.);

@@ -688,7 +688,7 @@ void
 SaturationPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -744,7 +744,7 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setLabels(kParamProcessRLabel, kParamProcessRLabel, kParamProcessRLabel);
+        param->setLabel(kParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -752,7 +752,7 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setLabels(kParamProcessGLabel, kParamProcessGLabel, kParamProcessGLabel);
+        param->setLabel(kParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -760,7 +760,7 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
-        param->setLabels(kParamProcessBLabel, kParamProcessBLabel, kParamProcessBLabel);
+        param->setLabel(kParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -768,7 +768,7 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
-        param->setLabels(kParamProcessALabel, kParamProcessALabel, kParamProcessALabel);
+        param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(false);
         page->addChild(*param);
@@ -776,7 +776,7 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
 
     {
         OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSaturation);
-        param->setLabels(kParamSaturationLabel, kParamSaturationLabel, kParamSaturationLabel);
+        param->setLabel(kParamSaturationLabel);
         param->setHint(kParamSaturationHint);
         param->setDisplayRange(0., 4.);
         param->setDefault(1.);
@@ -784,7 +784,7 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     }
     {
         OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamLuminanceMath);
-        param->setLabels(kParamLuminanceMathLabel, kParamLuminanceMathLabel, kParamLuminanceMathLabel);
+        param->setLabel(kParamLuminanceMathLabel);
         param->setHint(kParamLuminanceMathHint);
         assert(param->getNOptions() == eLuminanceMathRec709);
         param->appendOption(kParamLuminanceMathOptionRec709, kParamLuminanceMathOptionRec709Hint);
@@ -799,7 +799,7 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
 
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
-        param->setLabels(kParamClampBlackLabel, kParamClampBlackLabel, kParamClampBlackLabel);
+        param->setLabel(kParamClampBlackLabel);
         param->setHint(kParamClampBlackHint);
         param->setDefault(true);
         param->setAnimates(true);
@@ -807,7 +807,7 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampWhite);
-        param->setLabels(kParamClampWhiteLabel, kParamClampWhiteLabel, kParamClampWhiteLabel);
+        param->setLabel(kParamClampWhiteLabel);
         param->setHint(kParamClampWhiteHint);
         param->setDefault(false);
         param->setAnimates(true);

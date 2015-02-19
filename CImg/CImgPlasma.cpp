@@ -207,7 +207,7 @@ mDeclarePluginFactory(CImgPlasmaPluginFactory, {}, {});
 void CImgPlasmaPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -242,7 +242,7 @@ void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAlpha);
-        param->setLabels(kParamAlphaLabel, kParamAlphaLabel, kParamAlphaLabel);
+        param->setLabel(kParamAlphaLabel);
         param->setHint(kParamAlphaHint);
         param->setRange(kParamAlphaMin, kParamAlphaMax);
         param->setDisplayRange(kParamAlphaMin, kParamAlphaMax);
@@ -253,7 +253,7 @@ void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBeta);
-        param->setLabels(kParamBetaLabel, kParamBetaLabel, kParamBetaLabel);
+        param->setLabel(kParamBetaLabel);
         param->setHint(kParamBetaHint);
         param->setRange(kParamBetaMin, kParamBetaMax);
         param->setDisplayRange(kParamBetaMin, kParamBetaMax);
@@ -264,7 +264,7 @@ void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
     }
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamScale);
-        param->setLabels(kParamScaleLabel, kParamScaleLabel, kParamScaleLabel);
+        param->setLabel(kParamScaleLabel);
         param->setHint(kParamScaleHint);
         param->setRange(kParamScaleMin, kParamScaleMax);
         param->setDisplayRange(kParamScaleMin, kParamScaleMax);

@@ -1504,7 +1504,7 @@ mDeclarePluginFactory(ImageStatisticsPluginFactory, {}, {});
 void ImageStatisticsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabels(kPluginName, kPluginName, kPluginName);
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -1570,7 +1570,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     // restrictToRectangle
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamRestrictToRectangle);
-        param->setLabels(kParamRestrictToRectangleLabel, kParamRestrictToRectangleLabel, kParamRestrictToRectangleLabel);
+        param->setLabel(kParamRestrictToRectangleLabel);
         param->setHint(kParamRestrictToRectangleHint);
         param->setDefault(true);
         param->setAnimates(false);
@@ -1580,7 +1580,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     // btmLeft
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
-        param->setLabels(kParamRectangleInteractBtmLeftLabel,kParamRectangleInteractBtmLeftLabel,kParamRectangleInteractBtmLeftLabel);
+        param->setLabel(kParamRectangleInteractBtmLeftLabel);
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(0., 0.);
@@ -1594,7 +1594,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     // size
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
-        param->setLabels(kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel, kParamRectangleInteractSizeLabel);
+        param->setLabel(kParamRectangleInteractSizeLabel);
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(1., 1.);
@@ -1610,7 +1610,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     // autoUpdate
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutoUpdate);
-        param->setLabels(kParamAutoUpdateLabel, kParamAutoUpdateLabel, kParamAutoUpdateLabel);
+        param->setLabel(kParamAutoUpdateLabel);
         param->setHint(kParamAutoUpdateHint);
         param->setDefault(true);
         param->setAnimates(false);
@@ -1620,7 +1620,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     // interactive
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamRectangleInteractInteractive);
-        param->setLabels(kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel, kParamRectangleInteractInteractiveLabel);
+        param->setLabel(kParamRectangleInteractInteractiveLabel);
         param->setHint(kParamRectangleInteractInteractiveHint);
         param->setEvaluateOnChange(false);
         page->addChild(*param);
@@ -1628,12 +1628,12 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
 
     {
         GroupParamDescriptor* group = desc.defineGroupParam(kParamGroupRGBA);
-        group->setLabels(kParamGroupRGBA, kParamGroupRGBA, kParamGroupRGBA);
+        group->setLabel(kParamGroupRGBA);
         group->setAsTab();
         // min
         {
             RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatMin);
-            param->setLabels(kParamStatMinLabel, kParamStatMinLabel, kParamStatMinLabel);
+            param->setLabel(kParamStatMinLabel);
             param->setHint(kParamStatMinHint);
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
@@ -1644,7 +1644,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // statMax
         {
             RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatMax);
-            param->setLabels(kParamStatMaxLabel, kParamStatMaxLabel, kParamStatMaxLabel);
+            param->setLabel(kParamStatMaxLabel);
             param->setHint(kParamStatMaxHint);
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
@@ -1655,7 +1655,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // statMean
         {
             RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatMean);
-            param->setLabels(kParamStatMeanLabel, kParamStatMeanLabel, kParamStatMeanLabel);
+            param->setLabel(kParamStatMeanLabel);
             param->setHint(kParamStatMeanHint);
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
@@ -1666,7 +1666,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // statSDev
         {
             RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatSDev);
-            param->setLabels(kParamStatSDevLabel, kParamStatSDevLabel, kParamStatSDevLabel);
+            param->setLabel(kParamStatSDevLabel);
             param->setHint(kParamStatSDevHint);
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
@@ -1677,7 +1677,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // statSkewness
         {
             RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatSkewness);
-            param->setLabels(kParamStatSkewnessLabel, kParamStatSkewnessLabel, kParamStatSkewnessLabel);
+            param->setLabel(kParamStatSkewnessLabel);
             param->setHint(kParamStatSkewnessHint);
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
@@ -1688,7 +1688,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // statKurtosis
         {
             RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatKurtosis);
-            param->setLabels(kParamStatKurtosisLabel, kParamStatKurtosisLabel, kParamStatKurtosisLabel);
+            param->setLabel(kParamStatKurtosisLabel);
             param->setHint(kParamStatKurtosisHint);
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
@@ -1699,7 +1699,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // analyzeFrame
         {
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeFrame);
-            param->setLabels(kParamAnalyzeFrameLabel, kParamAnalyzeFrameLabel, kParamAnalyzeFrameLabel);
+            param->setLabel(kParamAnalyzeFrameLabel);
             param->setHint(kParamAnalyzeFrameHint);
             param->setLayoutHint(eLayoutHintNoNewLine);
             param->setParent(*group);
@@ -1709,7 +1709,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // analyzeSequence
         {
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeSequence);
-            param->setLabels(kParamAnalyzeSequenceLabel, kParamAnalyzeSequenceLabel, kParamAnalyzeSequenceLabel);
+            param->setLabel(kParamAnalyzeSequenceLabel);
             param->setHint(kParamAnalyzeSequenceHint);
             param->setParent(*group);
             page->addChild(*param);
@@ -1718,7 +1718,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // clearFrame
         {
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClearFrame);
-            param->setLabels(kParamClearFrameLabel, kParamClearFrameLabel, kParamClearFrameLabel);
+            param->setLabel(kParamClearFrameLabel);
             param->setHint(kParamClearFrameHint);
             param->setLayoutHint(eLayoutHintNoNewLine);
             param->setParent(*group);
@@ -1728,7 +1728,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // clearSequence
         {
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClearSequence);
-            param->setLabels(kParamClearSequenceLabel, kParamClearSequenceLabel, kParamClearSequenceLabel);
+            param->setLabel(kParamClearSequenceLabel);
             param->setHint(kParamClearSequenceHint);
             param->setParent(*group);
             page->addChild(*param);
@@ -1737,12 +1737,12 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
 
     {
         GroupParamDescriptor* group = desc.defineGroupParam(kParamGroupHSVL);
-        group->setLabels(kParamGroupHSVL, kParamGroupHSVL, kParamGroupHSVL);
+        group->setLabel(kParamGroupHSVL);
         group->setAsTab();
         // min
         {
             RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatHSVLMin);
-            param->setLabels(kParamStatHSVLMinLabel, kParamStatHSVLMinLabel, kParamStatHSVLMinLabel);
+            param->setLabel(kParamStatHSVLMinLabel);
             param->setHint(kParamStatHSVLMinHint);
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
@@ -1754,7 +1754,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // statHSVLMax
         {
             RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatHSVLMax);
-            param->setLabels(kParamStatHSVLMaxLabel, kParamStatHSVLMaxLabel, kParamStatHSVLMaxLabel);
+            param->setLabel(kParamStatHSVLMaxLabel);
             param->setHint(kParamStatHSVLMaxHint);
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
@@ -1766,7 +1766,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // statHSVLMean
         {
             RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatHSVLMean);
-            param->setLabels(kParamStatHSVLMeanLabel, kParamStatHSVLMeanLabel, kParamStatHSVLMeanLabel);
+            param->setLabel(kParamStatHSVLMeanLabel);
             param->setHint(kParamStatHSVLMeanHint);
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
@@ -1778,7 +1778,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // statHSVLSDev
         {
             RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatHSVLSDev);
-            param->setLabels(kParamStatHSVLSDevLabel, kParamStatHSVLSDevLabel, kParamStatHSVLSDevLabel);
+            param->setLabel(kParamStatHSVLSDevLabel);
             param->setHint(kParamStatHSVLSDevHint);
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
@@ -1790,7 +1790,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // statHSVLSkewness
         {
             RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatHSVLSkewness);
-            param->setLabels(kParamStatHSVLSkewnessLabel, kParamStatHSVLSkewnessLabel, kParamStatHSVLSkewnessLabel);
+            param->setLabel(kParamStatHSVLSkewnessLabel);
             param->setHint(kParamStatHSVLSkewnessHint);
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
@@ -1802,7 +1802,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // statHSVLKurtosis
         {
             RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatHSVLKurtosis);
-            param->setLabels(kParamStatHSVLKurtosisLabel, kParamStatHSVLKurtosisLabel, kParamStatHSVLKurtosisLabel);
+            param->setLabel(kParamStatHSVLKurtosisLabel);
             param->setHint(kParamStatHSVLKurtosisHint);
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
@@ -1814,7 +1814,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // analyzeFrameHSVL
         {
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeFrameHSVL);
-            param->setLabels(kParamAnalyzeFrameHSVLLabel, kParamAnalyzeFrameHSVLLabel, kParamAnalyzeFrameHSVLLabel);
+            param->setLabel(kParamAnalyzeFrameHSVLLabel);
             param->setHint(kParamAnalyzeFrameHSVLHint);
             param->setLayoutHint(eLayoutHintNoNewLine);
             param->setParent(*group);
@@ -1824,7 +1824,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // analyzeSequenceHSVL
         {
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeSequenceHSVL);
-            param->setLabels(kParamAnalyzeSequenceHSVLLabel, kParamAnalyzeSequenceHSVLLabel, kParamAnalyzeSequenceHSVLLabel);
+            param->setLabel(kParamAnalyzeSequenceHSVLLabel);
             param->setHint(kParamAnalyzeSequenceHSVLHint);
             param->setParent(*group);
             page->addChild(*param);
@@ -1833,7 +1833,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // clearFrameHSVL
         {
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClearFrameHSVL);
-            param->setLabels(kParamClearFrameHSVLLabel, kParamClearFrameHSVLLabel, kParamClearFrameHSVLLabel);
+            param->setLabel(kParamClearFrameHSVLLabel);
             param->setHint(kParamClearFrameHSVLHint);
             param->setLayoutHint(eLayoutHintNoNewLine);
             param->setParent(*group);
@@ -1843,7 +1843,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         // clearSequenceHSVL
         {
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClearSequenceHSVL);
-            param->setLabels(kParamClearSequenceHSVLLabel, kParamClearSequenceHSVLLabel, kParamClearSequenceHSVLLabel);
+            param->setLabel(kParamClearSequenceHSVLLabel);
             param->setHint(kParamClearSequenceHSVLHint);
             param->setParent(*group);
             page->addChild(*param);
