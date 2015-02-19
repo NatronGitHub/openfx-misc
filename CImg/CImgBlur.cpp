@@ -736,6 +736,12 @@ public:
     // 0: Black/Dirichlet, 1: Nearest/Neumann, 2: Repeat/Periodic
     virtual int getBoundary(const CImgBlurParams& params)  OVERRIDE FINAL { return params.boundary_i; }
 
+    // describe function for plugin factories
+    static void describe(OFX::ImageEffectDescriptor& desc, int majorVersion, int minorVersion);
+
+    // describeInContext function for plugin factories
+    static void describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context, int majorVersion, int minorVersion);
+
 private:
 
     // params
@@ -777,10 +783,8 @@ CImgBlurPlugin::getRoD(const OfxRectI& srcRoD, const OfxPointD& renderScale, con
     return false;
 }
 
-
-mDeclarePluginFactory(CImgBlurPluginFactory, {}, {});
-
-void CImgBlurPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+void
+CImgBlurPlugin::describe(OFX::ImageEffectDescriptor& desc, int /*majorVersion*/, int /*minorVersion*/)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -807,16 +811,17 @@ void CImgBlurPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
-void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+void
+CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context, int majorVersion, int /*minorVersion*/)
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgBlurPlugin::describeInContextBegin(desc, context,
-                                                                              kSupportsRGBA,
-                                                                              kSupportsRGB,
-                                                                              kSupportsAlpha,
-                                                                              kSupportsTiles);
+                                                                            kSupportsRGBA,
+                                                                            kSupportsRGB,
+                                                                            kSupportsAlpha,
+                                                                            kSupportsTiles);
 
-    if (getMajorVersion() <= 1) {
+    if (majorVersion <= 1) {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSize);
         param->setLabel(kParamSizeLabel);
         param->setHint(kParamSizeHint);
@@ -892,6 +897,35 @@ void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, 
     }
 
     CImgBlurPlugin::describeInContextEnd(desc, context, page);
+}
+
+mDeclarePluginFactory(CImgBlur1PluginFactory, {}, {});
+
+void CImgBlur1PluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+{
+    return CImgBlurPlugin::describe(desc, getMajorVersion(), getMinorVersion());
+}
+
+void CImgBlur1PluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+{
+    return CImgBlurPlugin::describeInContext(desc, context, getMajorVersion(), getMinorVersion());
+}
+
+OFX::ImageEffect* CImgBlur1PluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+{
+    return new CImgBlurPlugin(handle);
+}
+
+mDeclarePluginFactory(CImgBlurPluginFactory, {}, {});
+
+void CImgBlurPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+{
+    return CImgBlurPlugin::describe(desc, getMajorVersion(), getMinorVersion());
+}
+
+void CImgBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+{
+    return CImgBlurPlugin::describeInContext(desc, context, getMajorVersion(), getMinorVersion());
 }
 
 OFX::ImageEffect* CImgBlurPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
