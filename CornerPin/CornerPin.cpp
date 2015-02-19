@@ -81,8 +81,6 @@
    concatenate its own transform and apply the resulting transform in its render
    action. Should the host be doing this instead?
 */
-// Uncomment the following to enable the experimental host transform code.
-#define ENABLE_HOST_TRANSFORM
 
 #include "CornerPin.h"
 
@@ -100,10 +98,6 @@
 #include "ofxsOGLTextRenderer.h"
 #include "ofxsTransform3x3.h"
 
-#ifdef OFX_EXTENSIONS_NUKE
-#include "nuke/fnOfxExtensions.h"
-#endif
-
 #define kPluginName "CornerPinOFX"
 #define kPluginMaskedName "CornerPinMaskedOFX"
 #define kPluginGrouping "Transform"
@@ -119,10 +113,6 @@
 
 #define POINT_SIZE 5
 #define POINT_TOLERANCE 6
-
-#ifndef ENABLE_HOST_TRANSFORM
-#undef OFX_EXTENSIONS_NUKE // host transform is the only nuke extension used
-#endif
 
 #define kGroupTo "to"
 #define kGroupToLabel "To"
