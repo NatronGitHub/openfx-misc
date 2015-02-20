@@ -170,9 +170,9 @@ public:
     }
 };
 
-// The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
+// The "filter" and "clamp" template parameters allow filter-specific optimization
 // by the compiler, using the same generic code for all filters.
-template <class PIX, int nComponents, int maxValue, bool masked, FilterEnum filter, bool clamp>
+template <class PIX, int nComponents, int maxValue, FilterEnum filter, bool clamp>
 class GodRaysProcessor
 : public GodRaysProcessorBase
 {
@@ -267,7 +267,7 @@ private:
                     ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
                 }
 
-                ofxsMaskMix<PIX, nComponents, maxValue, masked>(tmpPix, x, y, _srcImg, _domask, _maskImg, (float)_mix, _maskInvert, dstPix);
+                ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImg, _domask, _maskImg, (float)_mix, _maskInvert, dstPix);
             }
         }
     }
@@ -399,7 +399,7 @@ private:
                         tmpPix[c] = (float)mean[c];
                     }
                 }
-                ofxsMaskMix<PIX, nComponents, maxValue, masked>(tmpPix, x, y, _srcImg, _domask, _maskImg, (float)_mix, _maskInvert, dstPix);
+                ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImg, _domask, _maskImg, (float)_mix, _maskInvert, dstPix);
             }
         }
     }
@@ -520,10 +520,10 @@ private:
 
 private:
     /* internal render function */
-    template <class PIX, int nComponents, int maxValue, bool masked>
+    template <class PIX, int nComponents, int maxValue>
     void renderInternalForBitDepth(const OFX::RenderArguments &args);
 
-    template <int nComponents, bool masked>
+    template <int nComponents>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
     
     /* set up and run a processor */
@@ -599,8 +599,20 @@ GodRaysPlugin::getInverseTransformCanonical(double time, double amount, bool inv
     if (amount != 1.) {
         translate.x *= amount;
         translate.y *= amount;
-        scale.x = 1. + (scale.x - 1.) * amount;
-        scale.y = 1. + (scale.y - 1.) * amount;
+        if (scale.x <= 0.) {
+            // linear interpolation
+            scale.x = 1. + (scale.x - 1.) * amount;
+        } else {
+            // geometric interpolation
+            scale.x = std::pow(scale.x, amount);
+        }
+        if (scale.y <= 0) {
+            // linear interpolation
+            scale.y = 1. + (scale.y - 1.) * amount;
+        } else {
+            // geometric interpolation
+            scale.y = std::pow(scale.y, amount);
+        }
         rotate *= amount;
         skewX *= amount;
         skewY *= amount;
@@ -775,9 +787,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         _invert->getValueAtTime(time, invert);
 
         _blackOutside->getValueAtTime(time, blackOutside);
-        if (_masked) {
-            _mix->getValueAtTime(time, mix);
-        }
+        _mix->getValueAtTime(time, mix);
 #ifndef USE_STEPS
         _motionblur->getValueAtTime(time, motionblur);
 #endif
@@ -822,10 +832,10 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
     }
 
     // auto ptr for the mask.
-    std::auto_ptr<OFX::Image> mask( ( _masked && (getContext() != OFX::eContextFilter) ) ? _maskClip->fetchImage(time) : 0 );
+    std::auto_ptr<OFX::Image> mask( (getContext() != OFX::eContextFilter) ? _maskClip->fetchImage(time) : 0 );
 
     // do we do masking
-    if ( _masked && (getContext() != OFX::eContextFilter) && _maskClip->isConnected() ) {
+    if ( (getContext() != OFX::eContextFilter) && _maskClip->isConnected() ) {
         bool maskInvert;
         _maskInvert->getValueAtTime(time, maskInvert);
 
@@ -875,7 +885,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
     processor.process();
 } // setupAndProcess
 
-template <class PIX, int nComponents, int maxValue, bool masked>
+template <class PIX, int nComponents, int maxValue>
 void
 GodRaysPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
 {
@@ -890,63 +900,63 @@ GodRaysPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
     // "clamped" by construction.
     switch ( (FilterEnum)filter ) {
         case eFilterImpulse: {
-            GodRaysProcessor<PIX, nComponents, maxValue, masked, eFilterImpulse, false> fred(*this);
+            GodRaysProcessor<PIX, nComponents, maxValue, eFilterImpulse, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         case eFilterBilinear: {
-            GodRaysProcessor<PIX, nComponents, maxValue, masked, eFilterBilinear, false> fred(*this);
+            GodRaysProcessor<PIX, nComponents, maxValue, eFilterBilinear, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         case eFilterCubic: {
-            GodRaysProcessor<PIX, nComponents, maxValue, masked, eFilterCubic, false> fred(*this);
+            GodRaysProcessor<PIX, nComponents, maxValue, eFilterCubic, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         case eFilterKeys:
             if (clamp) {
-                GodRaysProcessor<PIX, nComponents, maxValue, masked, eFilterKeys, true> fred(*this);
+                GodRaysProcessor<PIX, nComponents, maxValue, eFilterKeys, true> fred(*this);
                 setupAndProcess(fred, args);
             } else {
-                GodRaysProcessor<PIX, nComponents, maxValue, masked, eFilterKeys, false> fred(*this);
+                GodRaysProcessor<PIX, nComponents, maxValue, eFilterKeys, false> fred(*this);
                 setupAndProcess(fred, args);
             }
             break;
         case eFilterSimon:
             if (clamp) {
-                GodRaysProcessor<PIX, nComponents, maxValue, masked, eFilterSimon, true> fred(*this);
+                GodRaysProcessor<PIX, nComponents, maxValue, eFilterSimon, true> fred(*this);
                 setupAndProcess(fred, args);
             } else {
-                GodRaysProcessor<PIX, nComponents, maxValue, masked, eFilterSimon, false> fred(*this);
+                GodRaysProcessor<PIX, nComponents, maxValue, eFilterSimon, false> fred(*this);
                 setupAndProcess(fred, args);
             }
             break;
         case eFilterRifman:
             if (clamp) {
-                GodRaysProcessor<PIX, nComponents, maxValue, masked, eFilterRifman, true> fred(*this);
+                GodRaysProcessor<PIX, nComponents, maxValue, eFilterRifman, true> fred(*this);
                 setupAndProcess(fred, args);
             } else {
-                GodRaysProcessor<PIX, nComponents, maxValue, masked, eFilterRifman, false> fred(*this);
+                GodRaysProcessor<PIX, nComponents, maxValue, eFilterRifman, false> fred(*this);
                 setupAndProcess(fred, args);
             }
             break;
         case eFilterMitchell:
             if (clamp) {
-                GodRaysProcessor<PIX, nComponents, maxValue, masked, eFilterMitchell, true> fred(*this);
+                GodRaysProcessor<PIX, nComponents, maxValue, eFilterMitchell, true> fred(*this);
                 setupAndProcess(fred, args);
             } else {
-                GodRaysProcessor<PIX, nComponents, maxValue, masked, eFilterMitchell, false> fred(*this);
+                GodRaysProcessor<PIX, nComponents, maxValue, eFilterMitchell, false> fred(*this);
                 setupAndProcess(fred, args);
             }
             break;
         case eFilterParzen: {
-            GodRaysProcessor<PIX, nComponents, maxValue, masked, eFilterParzen, false> fred(*this);
+            GodRaysProcessor<PIX, nComponents, maxValue, eFilterParzen, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         case eFilterNotch: {
-            GodRaysProcessor<PIX, nComponents, maxValue, masked, eFilterNotch, false> fred(*this);
+            GodRaysProcessor<PIX, nComponents, maxValue, eFilterNotch, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
@@ -954,20 +964,20 @@ GodRaysPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
 } // renderInternalForBitDepth
 
 // the internal render function
-template <int nComponents, bool masked>
+template <int nComponents>
 void
 GodRaysPlugin::renderInternal(const OFX::RenderArguments &args,
                                    OFX::BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
         case OFX::eBitDepthUByte:
-            renderInternalForBitDepth<unsigned char, nComponents, 255, masked>(args);
+            renderInternalForBitDepth<unsigned char, nComponents, 255>(args);
             break;
         case OFX::eBitDepthUShort:
-            renderInternalForBitDepth<unsigned short, nComponents, 65535, masked>(args);
+            renderInternalForBitDepth<unsigned short, nComponents, 65535>(args);
             break;
         case OFX::eBitDepthFloat:
-            renderInternalForBitDepth<float, nComponents, 1, masked>(args);
+            renderInternalForBitDepth<float, nComponents, 1>(args);
             break;
         default:
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
@@ -984,24 +994,12 @@ GodRaysPlugin::render(const OFX::RenderArguments &args)
 
     assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
-        if (_masked) {
-            renderInternal<4,true>(args, dstBitDepth);
-        } else {
-            renderInternal<4,false>(args, dstBitDepth);
-        }
+        renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
-        if (_masked) {
-            renderInternal<3,true>(args, dstBitDepth);
-        } else {
-            renderInternal<3,false>(args, dstBitDepth);
-        }
+        renderInternal<3>(args, dstBitDepth);
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        if (_masked) {
-            renderInternal<1,true>(args, dstBitDepth);
-        } else {
-            renderInternal<1,false>(args, dstBitDepth);
-        }
+        renderInternal<1>(args, dstBitDepth);
     }
 }
 
