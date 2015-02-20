@@ -92,7 +92,9 @@
 " -it is 1 between (center-tolerance)and (center+tolerance)\n" \
 "- it is linear between (center+tolerance) and (center+tolerance+softness)\n" \
 "- it is 0 above (center+tolerance+softness)\n" \
-
+"\n" \
+"Keyer can pull mattes that correspond to the RGB channels, the luminance and the red, green and blue colors. " \
+"One very useful application for a luminance mask is to mask out a sky (almost always it is the brightest thing in a landscape)." \
 
 #define kPluginIdentifier "net.sf.openfx.KeyerPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.

@@ -84,7 +84,20 @@
 
 #define kPluginName "HSVToolOFX"
 #define kPluginGrouping "Color"
-#define kPluginDescription "Adjust hue, saturation and brightnes, or perform color replacement."
+#define kPluginDescription \
+"Adjust hue, saturation and brightness, or perform color replacement.\n" \
+"\n" \
+"Color replacement:\n" \
+"Set the srcColor and dstColor parameters. The range of the replacement is determined by the three groups of parameters: Hue, Saturation and Brightness.\n" \
+"\n" \
+"Color adjust:\n" \
+"Use the Rotation of the Hue parameter and the Adjustment of the Saturation and Lightness. " \
+"The ranges and falloff parameters allow for more complex adjustments.\n" \
+"\n" \
+"Hue keyer:\n" \
+"Set the outputAlpha parameter (the last one) to All (the default is Hue), and use a viewer to display the Alpha channel. " \
+"First, set the Range parameter of the Hue parameter set and then work down the other Ranges parameters, tuning with the range Falloff and Adjustment parameters." \
+
 #define kPluginIdentifier "net.sf.openfx.HSVToolPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.

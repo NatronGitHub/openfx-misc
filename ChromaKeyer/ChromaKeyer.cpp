@@ -83,7 +83,13 @@
 
 #define kPluginName "ChromaKeyerOFX"
 #define kPluginGrouping "Keyer"
-#define kPluginDescription "Apply chroma keying"
+#define kPluginDescription \
+"Simple chroma Keyer.\n" \
+"Algorithm description:\n" \
+"Keith Jack, \"Video Demystified\", Independent Pub Group (Computer), 1996, pp. 214-222, http://www.ee-techs.com/circuit/video-demy5.pdf\n" \
+"A simplified version is described in:\n" \
+"[2] High Quality Chroma Key, Michael Ashikhmin, http://www.cs.utah.edu/~michael/chroma/\n"
+
 #define kPluginIdentifier "net.sf.openfx.ChromaKeyerPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
