@@ -215,7 +215,12 @@ private:
             for (int c = 0; c < nComponents; ++c) {
                 int ci = (nComponents == 1) ? 3 : c;
                 double g = gamma[ci];
-                _color[i][c] = std::pow(alpha*std::pow(fromColor[ci],1./g) + (1.-alpha) * std::pow(toColor[ci],1./g), g);
+                if (g != 1.) {
+                    _color[i][c] = std::pow(std::pow(std::max(0.,fromColor[ci]),1./g) * alpha +
+                                            std::pow(std::max(0.,toColor[ci]),  1./g) * (1-alpha), g);
+                } else {
+                    _color[i][c] = fromColor[ci] * alpha + toColor[ci] * (1.-alpha);
+                }
             }
         }
     }
@@ -575,7 +580,7 @@ GodRaysPlugin::isIdentity(double time)
     if (steps == 0) {
         return true;
     }
-    
+
     return false;
 }
 
