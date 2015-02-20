@@ -203,8 +203,20 @@ TransformPlugin::getInverseTransformCanonical(double time, double amount, bool i
     if (amount != 1.) {
         translate.x *= amount;
         translate.y *= amount;
-        scale.x = 1. + (scale.x - 1.) * amount;
-        scale.y = 1. + (scale.y - 1.) * amount;
+        if (scale.x <= 0.) {
+            // linear interpolation
+            scale.x = 1. + (scale.x - 1.) * amount;
+        } else {
+            // geometric interpolation
+            scale.x = std::pow(scale.x, amount);
+        }
+        if (scale.y <= 0) {
+            // linear interpolation
+            scale.y = 1. + (scale.y - 1.) * amount;
+        } else {
+            // geometric interpolation
+            scale.y = std::pow(scale.y, amount);
+        }
         rotate *= amount;
         skewX *= amount;
         skewY *= amount;
