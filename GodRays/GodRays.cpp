@@ -565,11 +565,17 @@ GodRaysPlugin::isIdentity(double time)
     _rotate->getValueAtTime(time, rotate);
     _skewX->getValueAtTime(time, skewX);
     _skewY->getValueAtTime(time, skewY);
-    
+
     if (scale.x == 1. && scale.y == 1. && translate.x == 0. && translate.y == 0. && rotate == 0. && skewX == 0. && skewY == 0.) {
         return true;
     }
 
+    int steps;
+    _steps->getValueAtTime(time, steps);
+    if (steps == 0) {
+        return true;
+    }
+    
     return false;
 }
 
