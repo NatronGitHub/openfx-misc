@@ -102,7 +102,7 @@ class TransformPlugin : public Transform3x3Plugin
 public:
     /** @brief ctor */
     TransformPlugin(OfxImageEffectHandle handle, bool masked, bool isDirBlur)
-    : Transform3x3Plugin(handle, masked, true, isDirBlur)
+    : Transform3x3Plugin(handle, masked, isDirBlur)
     , _translate(0)
     , _rotate(0)
     , _scale(0)

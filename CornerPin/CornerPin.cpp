@@ -340,7 +340,7 @@ class CornerPinPlugin : public Transform3x3Plugin
 public:
     /** @brief ctor */
     CornerPinPlugin(OfxImageEffectHandle handle, bool masked)
-    : Transform3x3Plugin(handle, masked, true, false)
+    : Transform3x3Plugin(handle, masked, false)
     , _extraMatrixRow1(0)
     , _extraMatrixRow2(0)
     , _extraMatrixRow3(0)
@@ -678,7 +678,7 @@ static bool isNearby(const OfxPointD& p, double x, double y, double tolerance, c
 
 bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
 {
-    const OfxPointD &pscale = args.pixelScale;
+    //const OfxPointD &pscale = args.pixelScale;
     const double &time = args.time;
     OfxRGBColourD color = { 0.8, 0.8, 0.8 };
     getSuggestedColour(color);
