@@ -743,7 +743,7 @@ ShufflePlugin::isIdentity(const OFX::IsIdentityArguments &/*args*/, OFX::Clip * 
     _a->getValue(a_i);
     InputChannelEnum a = InputChannelEnum(a_i);
 
-    if (r == eInputChannelAR && g == eInputChannelBG && b == eInputChannelAB && a == eInputChannelAA && _srcClipA) {
+    if (r == eInputChannelAR && g == eInputChannelAG && b == eInputChannelAB && a == eInputChannelAA && _srcClipA) {
         identityClip = _srcClipA;
 
         return true;
