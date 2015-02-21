@@ -772,7 +772,7 @@ ShufflePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &arg
     _a->getValue(a_i);
     InputChannelEnum a = InputChannelEnum(a_i);
 
-    if (r == eInputChannelAR && g == eInputChannelBG && b == eInputChannelAB && a == eInputChannelAA && _srcClipA) {
+    if (r == eInputChannelAR && g == eInputChannelAG && b == eInputChannelAB && a == eInputChannelAA && _srcClipA) {
         rod = _srcClipA->getRegionOfDefinition(args.time);
 
         return true;
