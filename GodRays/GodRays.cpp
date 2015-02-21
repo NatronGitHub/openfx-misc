@@ -209,15 +209,16 @@ private:
     {
         GodRaysProcessorBase::setValues(invtransform, invtransformsize, blackOutside, motionblur, mix, fromColor, toColor, gamma, steps, max);
         _color.resize(invtransformsize);
-        int range = std::max(1, (int)invtransformsize-1); // works even if invtransformsize = 1
+        int range = std::max(1, (int)invtransformsize); // works even if invtransformsize = 1
+        // Same as Nuke: toColor is never completely reached.
         for (int i=0; i < (int)invtransformsize; ++i) {
-            double alpha = i / (double)range;
+            double alpha = (i+1) / (double)range; // alpha is never 0
             for (int c = 0; c < nComponents; ++c) {
                 int ci = (nComponents == 1) ? 3 : c;
                 double g = gamma[ci];
                 if (g != 1.) {
-                    _color[i][c] = std::pow(std::pow(std::max(0.,fromColor[ci]),1./g) * alpha +
-                                            std::pow(std::max(0.,toColor[ci]),  1./g) * (1-alpha), g);
+                    _color[i][c] = std::pow(std::pow(std::max(0.,fromColor[ci]),g) * alpha +
+                                            std::pow(std::max(0.,toColor[ci]),  g) * (1-alpha), 1./g);
                 } else {
                     _color[i][c] = fromColor[ci] * alpha + toColor[ci] * (1.-alpha);
                 }
