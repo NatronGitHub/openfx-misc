@@ -209,6 +209,8 @@ private:
     {
         GodRaysProcessorBase::setValues(invtransform, invtransformsize, blackOutside, motionblur, mix, fromColor, toColor, gamma, steps, max);
         _color.resize(invtransformsize);
+#ifdef GODRAYS_LINEAR_INTERPOLATION
+        // Linear interpolation is usually not whant the user wants, because in real life crepuscular rays have an exponential decrease in intensity.
         int range = std::max(1, (int)invtransformsize); // works even if invtransformsize = 1
         // Same as Nuke: toColor is never completely reached.
         for (int i=0; i < (int)invtransformsize; ++i) {
@@ -224,6 +226,18 @@ private:
                 }
             }
         }
+#else
+        // exponential decrease for gamma = 1, less than exponential for gamma > 1
+        for (int c = 0; c < nComponents; ++c) {
+            int ci = (nComponents == 1) ? 3 : c;
+            double g = gamma[ci];
+            double col1 = std::max(fromColor[ci],0.001);
+            double col2 = std::max(toColor[ci],0.001);
+            for (int i = invtransformsize-1; i >= 0; --i) {
+                _color[i][c] = col1 * std::pow(col2/col1, std::pow((invtransformsize-1-i)/(double)invtransformsize, g));
+            }
+        }
+#endif
     }
 
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE
