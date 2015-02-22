@@ -98,12 +98,14 @@
 "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgBlur"
-#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
+#define kSupportsMultipleClipPARs false
+#define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 #define kHostFrameThreading true
 #define kSupportsRGBA true
@@ -117,6 +119,10 @@
 #define kParamSizeLabel "Size"
 #define kParamSizeHint "Size (diameter) of the filter kernel, in pixel units (>=0). The standard deviation of the corresponding Gaussian is size/2.4. No filter is applied if size < 1.2."
 #define kParamSizeDefault 0.
+
+#define kParamUniform "uniform"
+#define kParamUniformLabel "Uniform"
+#define kParamUniformHint "Apply the same amount of blur on X and Y."
 
 #define kParamOrderX "orderX"
 #define kParamOrderXLabel "X derivation order"
@@ -602,22 +608,19 @@ public:
     CImgBlurPlugin(OfxImageEffectHandle handle)
     : CImgFilterPluginHelper<CImgBlurParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, kDefaultUnpremult, kDefaultProcessAlphaOnRGBA)
     , _size(0)
-    , _size2D(0)
+    , _uniform(0)
     , _orderX(0)
     , _orderY(0)
     , _boundary(0)
     , _filter(0)
     , _expandRoD(0)
     {
-        try {
-            _size  = fetchDoubleParam(kParamSize);
-        } catch (OFX::Exception::TypeRequest) {
-            _size2D  = fetchDouble2DParam(kParamSize);
-        }
+        _size  = fetchDouble2DParam(kParamSize);
+        _uniform = fetchBooleanParam(kParamUniform);
         _orderX = fetchIntParam(kParamOrderX);
         _orderY = fetchIntParam(kParamOrderY);
         _boundary  = fetchChoiceParam(kParamBoundary);
-        assert((_size || _size2D) && _orderX && _orderY && _boundary);
+        assert(_size && _uniform && _orderX && _orderY && _boundary);
         _filter = fetchChoiceParam(kParamFilter);
         assert(_filter);
         _expandRoD = fetchBooleanParam(kParamExpandRoD);
@@ -626,13 +629,15 @@ public:
 
     virtual void getValuesAtTime(double time, CImgBlurParams& params) OVERRIDE FINAL
     {
-        if (_size) {
-            _size->getValueAtTime(time, params.sizex);
+        _size->getValueAtTime(time, params.sizex, params.sizey);
+        bool uniform;
+        _uniform->getValueAtTime(time, uniform);
+        if (uniform) {
             params.sizey = params.sizex;
-        } else {
-            // major version > 1
-            assert(_size2D);
-            _size2D->getValueAtTime(time, params.sizex, params.sizey);
+        }
+        double par = _srcClip->getPixelAspectRatio();
+        if (par != 0.) {
+            params.sizex /= par;
         }
         _orderX->getValueAtTime(time, params.orderX);
         _orderY->getValueAtTime(time, params.orderY);
@@ -711,8 +716,8 @@ public:
         } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
             int iter = (params.filter == eFilterBox ? 1 :
                         (params.filter == eFilterTriangle ? 2 : 3));
-            box(cimg, params.sizex, iter, params.orderX, 'x', (bool)params.boundary_i);
-            box(cimg, params.sizey, iter, params.orderY, 'y', (bool)params.boundary_i);
+            box(cimg, args.renderScale.x * params.sizex, iter, params.orderX, 'x', (bool)params.boundary_i);
+            box(cimg, args.renderScale.y * params.sizey, iter, params.orderY, 'y', (bool)params.boundary_i);
         } else {
             assert(false);
         }
@@ -720,8 +725,12 @@ public:
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgBlurParams& params) OVERRIDE FINAL
     {
+        double par = _srcClip->getPixelAspectRatio();
+        if (par == 0.) {
+            par = 1.;
+        }
         if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
-            float sigmax = (float)(args.renderScale.x * params.sizex / 2.4);
+            float sigmax = (float)(args.renderScale.x * params.sizex / 2.4 / par);
             float sigmay = (float)(args.renderScale.y * params.sizey / 2.4);
             return (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0);
         } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
@@ -745,8 +754,8 @@ public:
 private:
 
     // params
-    OFX::DoubleParam *_size;
-    OFX::Double2DParam *_size2D;
+    OFX::Double2DParam *_size;
+    OFX::BooleanParam *_uniform;
     OFX::IntParam *_orderX;
     OFX::IntParam *_orderY;
     OFX::ChoiceParam *_boundary;
@@ -807,12 +816,13 @@ CImgBlurPlugin::describe(OFX::ImageEffectDescriptor& desc, int /*majorVersion*/,
     desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(true);
-    desc.setSupportsMultipleClipPARs(false);
+    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
+    desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
 void
-CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context, int majorVersion, int /*minorVersion*/)
+CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context, int /*majorVersion*/, int /*minorVersion*/)
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgBlurPlugin::describeInContextBegin(desc, context,
@@ -821,17 +831,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
                                                                             kSupportsAlpha,
                                                                             kSupportsTiles);
 
-    if (majorVersion <= 1) {
-        OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSize);
-        param->setLabel(kParamSizeLabel);
-        param->setHint(kParamSizeHint);
-        param->setRange(0, INT_MAX);
-        param->setDisplayRange(0, 100);
-        param->setDefault(kParamSizeDefault);
-        param->setDigits(1);
-        param->setIncrement(0.1);
-        page->addChild(*param);
-    } else {
+    {
         OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSize);
         param->setLabel(kParamSizeLabel);
         param->setHint(kParamSizeHint);
@@ -840,6 +840,14 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
         param->setDefault(kParamSizeDefault, kParamSizeDefault);
         param->setDigits(1);
         param->setIncrement(0.1);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+    {
+        OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamUniform);
+        param->setLabel(kParamUniformLabel);
+        param->setHint(kParamUniformHint);
+        param->setDefault(true);
         page->addChild(*param);
     }
     {
@@ -936,11 +944,6 @@ OFX::ImageEffect* CImgBlurPluginFactory::createInstance(OfxImageEffectHandle han
 
 void getCImgBlurPluginID(OFX::PluginFactoryArray &ids)
 {
-    {
-        // version 1
-        static CImgBlur1PluginFactory p(kPluginIdentifier, 1, 0);
-        ids.push_back(&p);
-    }
     {
         static CImgBlurPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
         ids.push_back(&p);

@@ -415,12 +415,13 @@ private:
         return true;
     }
 
-private:
+protected:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
     OFX::Clip *_maskClip;
 
+private:
     // params
     OFX::BooleanParam* _processR;
     OFX::BooleanParam* _processG;

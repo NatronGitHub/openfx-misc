@@ -90,6 +90,8 @@
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
+#define kSupportsMultipleClipPARs false
+#define kSupportsMultipleClipDepths true // can convert depth
 #define kRenderThreadSafety eRenderFullySafe
 
 #define kParamOutputComponents "outputComponents"
@@ -686,6 +688,10 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == ePixelComponentAlpha);
 
+    assert(kSupportsMultipleClipPARs   || _srcClipA->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert(kSupportsMultipleClipPARs   || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth());
     // get the components of _dstClip
     int outputComponents_i;
     _outputComponents->getValue(outputComponents_i);
@@ -1038,12 +1044,9 @@ void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
-    desc.setSupportsMultipleClipPARs(false);
-    if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
-        desc.setSupportsMultipleClipDepths(true); // plugin may call setClipBitDepth on output clip
-    }
+    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     // say we can support multiple pixel depths on in and out
-    desc.setSupportsMultipleClipDepths(true);
+    desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 

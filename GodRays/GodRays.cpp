@@ -87,6 +87,9 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsMultipleClipPARs false
+#define kSupportsMultipleClipDepths false
+
 #define kParamFromColor "fromColor"
 #define kParamFromColorLabel "From Color"
 #define kParamFromColorHint "Color by which the initial image is multiplied."
@@ -209,6 +212,8 @@ private:
     {
         GodRaysProcessorBase::setValues(invtransform, invtransformsize, blackOutside, motionblur, mix, fromColor, toColor, gamma, steps, max);
         _color.resize(invtransformsize);
+#ifdef GODRAYS_LINEAR_INTERPOLATION
+        // Linear interpolation is usually not whant the user wants, because in real life crepuscular rays have an exponential decrease in intensity.
         int range = std::max(1, (int)invtransformsize); // works even if invtransformsize = 1
         // Same as Nuke: toColor is never completely reached.
         for (int i=0; i < (int)invtransformsize; ++i) {
@@ -224,6 +229,18 @@ private:
                 }
             }
         }
+#else
+        // exponential decrease for gamma = 1, less than exponential for gamma > 1
+        for (int c = 0; c < nComponents; ++c) {
+            int ci = (nComponents == 1) ? 3 : c;
+            double g = gamma[ci];
+            double col1 = std::max(fromColor[ci],0.001);
+            double col2 = std::max(toColor[ci],0.001);
+            for (int i = invtransformsize-1; i >= 0; --i) {
+                _color[i][c] = col1 * std::pow(col2/col1, std::pow((invtransformsize-1-i)/(double)invtransformsize, g));
+            }
+        }
+#endif
     }
 
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE
@@ -1004,6 +1021,8 @@ GodRaysPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
+    assert(kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);

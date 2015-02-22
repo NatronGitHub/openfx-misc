@@ -96,6 +96,8 @@
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
+#define kSupportsMultipleClipPARs true
+#define kSupportsMultipleClipDepths true
 #define kRenderThreadSafety eRenderFullySafe
 
 #define kParamWhich "which"
@@ -256,8 +258,8 @@ void SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
-    desc.setSupportsMultipleClipPARs(true);
-    desc.setSupportsMultipleClipDepths(true);
+    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
+    desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
 #ifdef OFX_EXTENSIONS_NUKE
     // Enable transform by the host.
     // It is only possible for transforms which can be represented as a 3x3 matrix.
