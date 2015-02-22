@@ -321,7 +321,7 @@ protected:
     bool _maskInvert;
     bool _processR, _processG, _processB, _processA;
 public:
-    ColorCorrecterBase(OFX::ImageEffect &instance,const OFX::RenderArguments &args)
+    ColorCorrecterBase(OFX::ImageEffect &instance,const OFX::RenderArguments &/*args*/)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _maskImg(0)
@@ -337,21 +337,6 @@ public:
     , _clampBlack(true)
     , _clampWhite(true)
     {
-        // build the LUT
-        OFX::ParametricParam  *lookupTable = instance.fetchParametricParam(kParamColorCorrectToneRanges);
-        assert(lookupTable);
-        for (int curve = 0; curve < 2; ++curve) {
-            for (int position = 0; position <= LUT_MAX_PRECISION; ++position) {
-                // position to evaluate the param at
-                double parametricPos = double(position)/LUT_MAX_PRECISION;
-
-                // evaluate the parametric param
-                double value = lookupTable->getValue(curve, args.time, parametricPos);
-
-                // set that in the lut
-                _lookupTable[curve][position] = (float)std::max(0.,std::min(value*LUT_MAX_PRECISION+0.5, double(LUT_MAX_PRECISION)));
-            }
-        }
         
     }
 
@@ -451,6 +436,15 @@ private:
     ColorControlGroup _highlightsValues;
     bool _clampBlack;
     bool _clampWhite;
+    
+protected:
+    
+    // clamp for integer types
+    template<class PIX>
+    double clamp(double value, int maxValue)
+    {
+        return std::max(0., std::min(value, double(maxValue)));
+    }
 
     double _lookupTable[2][LUT_MAX_PRECISION + 1];
 };
@@ -460,10 +454,27 @@ private:
 template <class PIX, int nComponents, int maxValue>
 class ColorCorrecter : public ColorCorrecterBase
 {
+    
 public:
     ColorCorrecter(OFX::ImageEffect &instance,const OFX::RenderArguments &args)
     : ColorCorrecterBase(instance,args)
     {
+        // build the LUT
+        OFX::ParametricParam  *lookupTable = instance.fetchParametricParam(kParamColorCorrectToneRanges);
+        assert(lookupTable);
+        for (int curve = 0; curve < 2; ++curve) {
+            for (int position = 0; position <= LUT_MAX_PRECISION; ++position) {
+                // position to evaluate the param at
+                double parametricPos = double(position)/LUT_MAX_PRECISION;
+                
+                // evaluate the parametric param
+                double value = lookupTable->getValue(curve, args.time, parametricPos);
+                
+                // set that in the lut
+                _lookupTable[curve][position] = (float)clamp<PIX>(value, maxValue);
+            }
+        }
+
     }
 
     
