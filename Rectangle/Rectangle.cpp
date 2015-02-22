@@ -736,8 +736,15 @@ RectanglePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     // set the premultiplication of _dstClip if alpha is affected and source is Opaque
     bool alpha;
     _processA->getValue(alpha);
-    if (alpha && _srcClip->getPreMultiplication() == eImageOpaque) {
+    if (alpha && _srcClip->isConnected() && _srcClip->getPreMultiplication() == eImageOpaque) {
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
+    }
+    // set output PAR if used as a generator
+    if (!_srcClip->isConnected()) {
+        double par = getProjectPixelAspectRatio();
+        if (par != 0.) {
+            clipPreferences.setPixelAspectRatio(*_dstClip, par);
+        }
     }
 }
 
