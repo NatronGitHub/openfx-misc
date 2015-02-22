@@ -106,6 +106,8 @@
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
+#define kSupportsMultipleClipPARs false
+#define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
 #define kParamProcessR      "r"
@@ -456,6 +458,8 @@ PremultPlugin<isPremult>::render(const OFX::RenderArguments &args)
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
 
+    assert(kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     // do the rendering
     switch (dstBitDepth) {
         case OFX::eBitDepthUByte : {
@@ -658,7 +662,8 @@ void PremultPluginFactory<isPremult>::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
-    desc.setSupportsMultipleClipPARs(false);
+    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
+    desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 

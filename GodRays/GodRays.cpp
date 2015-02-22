@@ -87,6 +87,9 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsMultipleClipPARs false
+#define kSupportsMultipleClipDepths false
+
 #define kParamFromColor "fromColor"
 #define kParamFromColorLabel "From Color"
 #define kParamFromColorHint "Color by which the initial image is multiplied."
@@ -1018,6 +1021,8 @@ GodRaysPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
+    assert(kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);

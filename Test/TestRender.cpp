@@ -68,6 +68,9 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsMultipleClipPARs false
+#define kSupportsMultipleClipDepths false
+
 #define kParamColor0      "color0"
 #define kParamColor0Label "Color 0"
 #define kParamColor0Hint  "Color for render scale level 0"
@@ -388,6 +391,8 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::ren
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
+    assert(kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
@@ -759,8 +764,8 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     desc.setSupportsTiles(supportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
-    desc.setSupportsMultipleClipPARs(false);
-
+    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
+    desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
 }
 
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>

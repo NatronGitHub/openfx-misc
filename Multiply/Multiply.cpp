@@ -92,6 +92,8 @@
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
+#define kSupportsMultipleClipPARs false
+#define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
 #define kParamProcessR      "r"
@@ -501,6 +503,8 @@ MultiplyPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     
+    assert(kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
@@ -637,7 +641,8 @@ void MultiplyPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
-    desc.setSupportsMultipleClipPARs(false);
+    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
+    desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 

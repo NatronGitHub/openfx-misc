@@ -107,6 +107,8 @@
 #define kSupportsTiles 0 // The Rolling Guidance filter gives a global result, tiling is impossible
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
+#define kSupportsMultipleClipPARs false
+#define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 #define kHostFrameThreading true
 #define kSupportsRGBA true
@@ -236,7 +238,8 @@ void CImgRollingGuidancePluginFactory::describe(OFX::ImageEffectDescriptor& desc
     desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(true);
-    desc.setSupportsMultipleClipPARs(false);
+    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
+    desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 

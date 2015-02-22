@@ -90,6 +90,8 @@
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
+#define kSupportsMultipleClipPARs false
+#define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
 #define kClipFrom "0"
@@ -269,6 +271,10 @@ DissolvePlugin::render(const OFX::RenderArguments &args)
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
+    assert(kSupportsMultipleClipPARs   || _fromClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || _fromClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert(kSupportsMultipleClipPARs   || _toClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || _toClip->getPixelDepth()       == _dstClip->getPixelDepth());
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderForComponents<4>(args);
@@ -410,7 +416,8 @@ DissolvePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
-    desc.setSupportsMultipleClipPARs(false);
+    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
+    desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 

@@ -100,6 +100,8 @@
 #define kSupportsTiles 0
 #define kSupportsMultiResolution 0
 #define kSupportsRenderScale 1 // are images still fielded at any renderscale?
+#define kSupportsMultipleClipPARs false
+#define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
 #define kParamMode "mode"
@@ -441,6 +443,8 @@ void DeinterlacePlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
+    assert(kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -661,7 +665,8 @@ void DeinterlacePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(true);
     desc.setRenderTwiceAlways(false);
-    desc.setSupportsMultipleClipPARs(false);
+    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
+    desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
 }

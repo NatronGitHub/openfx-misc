@@ -61,6 +61,8 @@
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
+#define kSupportsMultipleClipPARs false
+#define kSupportsMultipleClipDepths true
 #define kRenderThreadSafety eRenderFullySafe
 
 #define kParamClipInfo "clipInfo"
@@ -134,6 +136,8 @@ NoOpPlugin::render(const OFX::RenderArguments &args)
         throwSuiteStatusException(kOfxStatFailed);
     }
 
+    assert(kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     // do the rendering
     std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
@@ -420,8 +424,8 @@ void NoOpPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsTiles(kSupportsTiles);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
-    desc.setSupportsMultipleClipDepths(true);
-    desc.setSupportsMultipleClipPARs(false);
+    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
+    desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 #ifdef OFX_EXTENSIONS_NUKE
     // Enable transform by the host.
