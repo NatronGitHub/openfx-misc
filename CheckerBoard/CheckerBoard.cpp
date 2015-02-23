@@ -150,19 +150,25 @@ protected:
     OfxRGBAColourD _color2;
     OfxRGBAColourD _color3;
     OfxRGBAColourD _lineColor;
-    double _lineInf, _lineSup;
+    double _lineInfX, _lineSupX;
+    double _lineInfY, _lineSupY;
     OfxRGBAColourD _centerlineColor;
-    double _centerlineInf, _centerlineSup;
+    double _centerlineInfX, _centerlineSupX;
+    double _centerlineInfY, _centerlineSupY;
     OfxRectD _rod;
 
 public:
     /** @brief no arg ctor */
     CheckerBoardProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
-    , _lineInf(0.)
-    , _lineSup(0.)
-    , _centerlineInf(0.)
-    , _centerlineSup(0.)
+    , _lineInfX(0.)
+    , _lineSupX(0.)
+    , _lineInfY(0.)
+    , _lineSupY(0.)
+    , _centerlineInfX(0.)
+    , _centerlineSupX(0.)
+    , _centerlineInfY(0.)
+    , _centerlineSupY(0.)
     {
         _boxSize.x = _boxSize.y = 0.;
         _color0.r = _color0.g = _color0.b = _color0.a = 0.;
@@ -176,6 +182,7 @@ public:
 
     /** @brief set the color */
     void setValues(const OfxPointD &renderScale,
+                   double pixelAspectRatio,
                    const OfxPointD &boxSize,
                    const OfxRGBAColourD &color0,
                    const OfxRGBAColourD &color1,
@@ -187,20 +194,28 @@ public:
                    double centerlineWidth,
                    const OfxRectD &rod)
     {
-        _boxSize.x = std::max(1., boxSize.x * renderScale.x);
+        if (pixelAspectRatio == 0) {
+            pixelAspectRatio = 1.;
+        }
+        _boxSize.x = std::max(1., boxSize.x * renderScale.x / pixelAspectRatio);
         _boxSize.y = std::max(1., boxSize.y * renderScale.y);
         _color0 = color0;
         _color1 = color1;
         _color2 = color2;
         _color3 = color3;
         _lineColor = lineColor;
-        _lineInf = std::max(0., lineWidth * renderScale.x / 2) + 0.25;
-        _lineSup = lineWidth > 0. ? (std::max(lineWidth,1.) * renderScale.x / 2 - 0.25) : 0.;
+        _lineInfX = std::max(0., lineWidth * renderScale.x / 2 / pixelAspectRatio) + 0.25;
+        _lineSupX = lineWidth > 0. ? (std::max(lineWidth, pixelAspectRatio) * renderScale.x / 2 / pixelAspectRatio - 0.25) : 0.;
+        _lineInfY = std::max(0., lineWidth * renderScale.y / 2) + 0.25;
+        _lineSupY = lineWidth > 0. ? (std::max(lineWidth, 1.) * renderScale.y / 2 - 0.25) : 0.;
+        // always draw the centerline, whatever the render scale
         _centerlineColor = centerlineColor;
-        _centerlineInf = std::max(0., centerlineWidth * renderScale.x / 2) + 0.25;
-        _centerlineSup = centerlineWidth > 0. ? (std::max(centerlineWidth,1.) * renderScale.x / 2 - 0.25) : 0.;
-        _rod.x1 = rod.x1 * renderScale.x;
-        _rod.x2 = rod.x2 * renderScale.x;
+        _centerlineInfX = std::max(0., centerlineWidth * renderScale.x / 2 / pixelAspectRatio) + 0.25;
+        _centerlineSupX = centerlineWidth > 0. ? (std::max(centerlineWidth * renderScale.x, pixelAspectRatio) / 2 / pixelAspectRatio - 0.25) : 0.;
+        _centerlineInfY = std::max(0., centerlineWidth * renderScale.y / 2) + 0.25;
+        _centerlineSupY = centerlineWidth > 0. ? (std::max(centerlineWidth * renderScale.y, 1.)  / 2 - 0.25) : 0.;
+        _rod.x1 = rod.x1 * renderScale.x / pixelAspectRatio;
+        _rod.x2 = rod.x2 * renderScale.x / pixelAspectRatio;
         _rod.y1 = rod.y1 * renderScale.y;
         _rod.y2 = rod.y2 * renderScale.y;
     }
@@ -292,7 +307,7 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             // check if we are on the centerline
-            if ((center.y - _centerlineInf) <= y && y < (center.y + _centerlineSup)) {
+            if ((center.y - _centerlineInfY) <= y && y < (center.y + _centerlineSupY)) {
                 for (int x = procWindow.x1; x < procWindow.x2; x++) {
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = centerlineColor[c];
@@ -303,7 +318,7 @@ private:
                 // the closest line between boxes
                 double yline = center.y + _boxSize.y * std::floor((y - center.y) / _boxSize.y + 0.5);
                 // check if we are on a line
-                if ((yline - _lineInf) <= y && y < (yline + _lineSup)) {
+                if ((yline - _lineInfY) <= y && y < (yline + _lineSupY)) {
                     for (int x = procWindow.x1; x < procWindow.x2; x++) {
                         for (int c = 0; c < nComponents; ++c) {
                             dstPix[c] = lineColor[c];
@@ -318,7 +333,7 @@ private:
 
                     for (int x = procWindow.x1; x < procWindow.x2; x++) {
                         // check if we are on the centerline
-                        if ((center.x - _centerlineInf) <= x && x < (center.x + _centerlineSup)) {
+                        if ((center.x - _centerlineInfX) <= x && x < (center.x + _centerlineSupX)) {
                             for (int c = 0; c < nComponents; ++c) {
                                 dstPix[c] = centerlineColor[c];
                             }
@@ -326,7 +341,7 @@ private:
                             // the closest line between boxes
                             double xline = center.x + _boxSize.x * std::floor((x - center.x) / _boxSize.x + 0.5);
                             // check if we are on a line
-                            if ((xline - _lineInf) <= x && x < (xline + _lineSup)) {
+                            if ((xline - _lineInfX) <= x && x < (xline + _lineSupX)) {
                                 for (int c = 0; c < nComponents; ++c) {
                                     dstPix[c] = lineColor[c];
                                 }
@@ -477,7 +492,7 @@ CheckerBoardPlugin::setupAndProcess(CheckerBoardProcessorBase &processor, const 
         rod.y1 = off.y;
         rod.y2 = off.y + siz.y;
     }
-    processor.setValues(args.renderScale, boxSize, color0, color1, color2, color3, lineColor, lineWidth, centerlineColor, centerlineWidth, rod);
+    processor.setValues(args.renderScale, dst->getPixelAspectRatio(), boxSize, color0, color1, color2, color3, lineColor, lineWidth, centerlineColor, centerlineWidth, rod);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
