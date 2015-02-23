@@ -134,6 +134,10 @@
 #define kParamExpandRoDLabel "Expand RoD"
 #define kParamExpandRoDHint "Expand the source region of definition by the shape RoD (if Source is connected and color0.a=0)."
 
+#define kParamBlackOutside "blackOutside"
+#define kParamBlackOutsideLabel "Black Outside"
+#define kParamBlackOutsideHint "Add a 1 pixel black and transparent border if the plugin is used as a generator."
+
 namespace {
     struct RGBAValues {
         double r,g,b,a;
@@ -475,6 +479,7 @@ public:
     , _color0(0)
     , _color1(0)
     , _expandRoD(0)
+    , _blackOutside(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
@@ -495,7 +500,8 @@ public:
         _color0 = fetchRGBAParam(kParamColor0);
         _color1 = fetchRGBAParam(kParamColor1);
         _expandRoD = fetchBooleanParam(kParamExpandRoD);
-        assert(_btmLeft && _size && _softness && _color0 && _color1 && _expandRoD);
+        _blackOutside = fetchBooleanParam(kParamBlackOutside);
+        assert(_btmLeft && _size && _softness && _color0 && _color1 && _expandRoD && _blackOutside);
 
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
@@ -539,6 +545,7 @@ private:
     BooleanParam* _expandRoD;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
+    OFX::BooleanParam* _blackOutside;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -744,8 +751,9 @@ RectanglePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 bool
 RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
+    const double time = args.time;
     double mix;
-    _mix->getValueAtTime(args.time, mix);
+    _mix->getValueAtTime(time, mix);
     if (mix == 0.) {
         if (_srcClip->isConnected()) {
             // nothing to draw: return default region of definition
@@ -757,7 +765,7 @@ RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
         }
     }
     RGBAValues color0;
-    _color0->getValueAtTime(args.time, color0.r, color0.g, color0.b, color0.a);
+    _color0->getValueAtTime(time, color0.r, color0.g, color0.b, color0.a);
     if (color0.a != 0.) {
         // something has to be drawn outside of the rectangle
         // return default RoD.
@@ -768,7 +776,7 @@ RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
         //rod.x2 = rod.y2 = kOfxFlagInfiniteMax;
     }
     RGBAValues color1;
-    _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
+    _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
     if (color1.a == 0.) {
         if (_srcClip->isConnected()) {
             // nothing to draw: return default region of definition
@@ -780,20 +788,22 @@ RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
         }
     }
     bool expandRoD;
-    _expandRoD->getValueAtTime(args.time, expandRoD);
+    _expandRoD->getValueAtTime(time, expandRoD);
     if (_srcClip->isConnected() && !expandRoD) {
         return false;
     }
     OfxPointD btmLeft, size;
-    _btmLeft->getValueAtTime(args.time, btmLeft.x, btmLeft.y);
-    _size->getValueAtTime(args.time, size.x, size.y);
-    rod.x1 = btmLeft.x;
-    rod.y1 = btmLeft.y;
-    rod.x2 = rod.x1 + size.x;
-    rod.y2 = rod.y1 + size.y;
+    _btmLeft->getValueAtTime(time, btmLeft.x, btmLeft.y);
+    _size->getValueAtTime(time, size.x, size.y);
+    bool blackOutside;
+    _blackOutside->getValueAtTime(time, blackOutside);
+    rod.x1 = btmLeft.x - (int)blackOutside;
+    rod.y1 = btmLeft.y - (int)blackOutside;
+    rod.x2 = btmLeft.x + size.x + (int)blackOutside;
+    rod.y2 = btmLeft.y + size.y + (int)blackOutside;
     if (_srcClip->isConnected()) {
         // something has to be drawn outside of the rectangle: return union of input RoD and rectangle
-        OfxRectD srcRoD = _srcClip->getRegionOfDefinition(args.time);
+        OfxRectD srcRoD = _srcClip->getRegionOfDefinition(time);
         rod.x1 = std::min(rod.x1, srcRoD.x1);
         rod.x2 = std::max(rod.x2, srcRoD.x2);
         rod.y1 = std::min(rod.y1, srcRoD.y1);
@@ -986,6 +996,16 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamExpandRoDLabel);
         param->setHint(kParamExpandRoDHint);
         param->setDefault(true);
+        page->addChild(*param);
+    }
+
+    // blackOutside
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBlackOutside);
+        param->setLabel(kParamBlackOutsideLabel);
+        param->setDefault(true);
+        param->setAnimates(true);
+        param->setHint(kParamBlackOutsideHint);
         page->addChild(*param);
     }
 
