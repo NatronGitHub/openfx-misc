@@ -491,7 +491,6 @@ CheckerBoardPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(getProjectPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentAlpha);
 
     checkComponents(dstBitDepth, dstComponents);
