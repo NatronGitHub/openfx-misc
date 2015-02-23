@@ -234,10 +234,19 @@ private:
         for (int c = 0; c < nComponents; ++c) {
             int ci = (nComponents == 1) ? 3 : c;
             double g = gamma[ci];
-            double col1 = std::max(fromColor[ci],0.001);
-            double col2 = std::max(toColor[ci],0.001);
+            double col1 = std::max(0.001,fromColor[ci]);
+            double col2 = std::max(0.001,toColor[ci]);
             for (int i = invtransformsize-1; i >= 0; --i) {
-                _color[i][c] = col1 * std::pow(col2/col1, std::pow((invtransformsize-1-i)/(double)invtransformsize, g));
+                double col = col1 * std::pow(col2/col1, (invtransformsize-1-i)/(double)invtransformsize);
+                if (g == 1. || col1 == col2) {
+                    _color[i][c] = col;
+                } else {
+                    // "gamma"-interpolation
+                    // reinterpret the color descrease in a different gamma space
+                    double alpha = (col - col2)/(col1 - col2);
+                    _color[i][c] = std::pow(std::pow(col1,g) * alpha +
+                                            std::pow(col2,g) * (1-alpha), 1./g);
+                }
             }
         }
 #endif
