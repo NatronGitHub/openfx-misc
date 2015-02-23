@@ -95,12 +95,19 @@
 
 #define kParamReformat "reformat"
 #define kParamReformatLabel "Reformat"
+#define kParamReformatHint "Translates the bottom left corner of the crop rectangle to be in (0,0)."
+
 #define kParamIntersect "intersect"
 #define kParamIntersectLabel "Intersect"
+#define kParamIntersectHint "Intersects the crop rectangle with the input region of definition instead of extending it."
+
 #define kParamBlackOutside "blackOutside"
 #define kParamBlackOutsideLabel "Black Outside"
+#define kParamBlackOutsideHint "Add 1 black and transparent pixel to the region of definition so that all the area outside the crop rectangle is black."
+
 #define kParamSoftness "softness"
 #define kParamSoftnessLabel "Softness"
+#define kParamSoftnessHint "Size of the fade to black around edges to apply."
 
 static inline
 double
@@ -726,7 +733,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setRange(0., 1000.);
         param->setDisplayRange(0., 100.);
         param->setIncrement(1.);
-        param->setHint("Size of the fade to black around edges to apply.");
+        param->setHint(kParamSoftnessHint);
         page->addChild(*param);
     }
 
@@ -734,7 +741,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamReformat);
         param->setLabel(kParamReformatLabel);
-        param->setHint("Translates the bottom left corner of the crop rectangle to be in (0,0).");
+        param->setHint(kParamReformatHint);
         param->setDefault(false);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
@@ -745,7 +752,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamIntersect);
         param->setLabel(kParamIntersectLabel);
-        param->setHint("Intersects the crop rectangle with the input region of definition instead of extending it");
+        param->setHint(kParamIntersectHint);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
         param->setDefault(false);
         param->setAnimates(true);
@@ -758,7 +765,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setLabel(kParamBlackOutsideLabel);
         param->setDefault(false);
         param->setAnimates(true);
-        param->setHint("Add 1 black pixel to the region of definition so that all the area outside the crop rectangle is black");
+        param->setHint(kParamBlackOutsideHint);
         page->addChild(*param);
     }
 }
