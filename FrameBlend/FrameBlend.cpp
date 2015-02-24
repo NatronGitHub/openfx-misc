@@ -315,7 +315,7 @@ private:
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         assert(_dstImg);
         assert(_srcImgs.size() == _fgMImgs.size());
-        double tmpPix[nComponents];
+        float tmpPix[nComponents];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -343,36 +343,43 @@ private:
                 // copy back original values from unprocessed channels
                 if (nComponents == 1) {
                     if (_outputCount) {
-                        dstPix[0] = count;
-                    } else if (!processA) {
-                        dstPix[0] = srcPix ? srcPix[0] : PIX();
+                        tmpPix[0] = count;
                     } else {
-                        dstPix[0] = count ? (PIX)(tmpPix[0] / count) : PIX();
+                        tmpPix[0] = count ? (tmpPix[0] / count) : 0;
                     }
                 } else if (nComponents == 3 || nComponents == 4) {
-                    if (processR) {
-                        dstPix[0] = count ? (PIX)(tmpPix[0] / count) : PIX();
-                    } else {
-                        dstPix[0] = srcPix ? srcPix[0] : PIX();
-                    }
-                    if (processG) {
-                        dstPix[1] = count ? (PIX)(tmpPix[1] / count) : PIX();
-                    } else {
-                        dstPix[1] = srcPix ? srcPix[1] : PIX();
-                    }
-                    if (processB) {
-                        dstPix[2] = count ? (PIX)(tmpPix[2] / count) : PIX();
-                    } else {
-                        dstPix[2] = srcPix ? srcPix[2] : PIX();
-                    }
+                    tmpPix[0] = count ? (tmpPix[0] / count) : 0;
+                    tmpPix[1] = count ? (tmpPix[1] / count) : 0;
+                    tmpPix[2] = count ? (tmpPix[2] / count) : 0;
                     if (nComponents == 4) {
                         if (_outputCount) {
-                            dstPix[3] = count;
-                        } else if (processA) {
-                            dstPix[3] = count ? (PIX)(tmpPix[3] / count) : PIX();
+                            tmpPix[3] = count;
                         } else {
-                            dstPix[3] = srcPix ? srcPix[3] : PIX();
+                            tmpPix[3] = count ? (tmpPix[3] / count) : 0;
                         }
+                    }
+                }
+                // tmpPix is not normalized, it is within [0,maxValue]
+                ofxsMaskMixPix<PIX,nComponents,maxValue,true>(tmpPix, x, y, srcPix, _doMasking,
+                                                              _maskImg, _mix, _maskInvert,
+                                                              dstPix);
+                // copy back original values from unprocessed channels
+                if (nComponents == 1) {
+                    if (!processA) {
+                        dstPix[0] = srcPix ? srcPix[0] : PIX();
+                    }
+                } else if (nComponents == 3 || nComponents == 4) {
+                    if (!processR) {
+                        dstPix[0] = srcPix ? srcPix[0] : PIX();
+                    }
+                    if (!processG) {
+                        dstPix[1] = srcPix ? srcPix[1] : PIX();
+                    }
+                    if (!processB) {
+                        dstPix[2] = srcPix ? srcPix[2] : PIX();
+                    }
+                    if (!processA && nComponents == 4) {
+                        dstPix[3] = srcPix ? srcPix[3] : PIX();
                     }
                 }
                 // increment the dst pixel
@@ -523,7 +530,8 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
         min = max + 1 - n;
     }
     // fetch the source images
-    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+                                        _srcClip->fetchImage(args.time) : 0);
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -558,8 +566,9 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
     // fetch the foreground mattes
     OptionalImagesHolder_RAII fgMImgs;
     for (int i = 0; i < n; ++i) {
-        const OFX::Image* mask = _fgMClip ? _fgMClip->fetchImage(min + i) : 0;
+        const OFX::Image* mask = (_fgMClip && _fgMClip->isConnected()) ? _fgMClip->fetchImage(min + i) : 0;
         if (mask) {
+            assert(_fgMClip->isConnected());
             if (mask->getRenderScale().x != args.renderScale.x ||
                 mask->getRenderScale().y != args.renderScale.y ||
                 mask->getField() != args.fieldToRender) {
@@ -570,7 +579,8 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
         fgMImgs.images.push_back(mask);
     }
     // fetch the mask
-    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? _maskClip->fetchImage(time) : 0);
+    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
+                                         _maskClip->fetchImage(time) : 0);
     // do we do masking
     if (getContext() != OFX::eContextFilter && _maskClip->isConnected()) {
         if (mask.get()) {
