@@ -90,7 +90,11 @@
 
 #define kPluginName "FrameBlendOFX"
 #define kPluginGrouping "Time"
-#define kPluginDescription "Blend frames of the input clip."
+#define kPluginDescription \
+"Blend frames of the input clip.\n" \
+"If a foreground matte is connected, only pixels with a negative or zero (<= 0) foreground value are taken into account.\n" \
+"The number of values used to compute each pixel can be output to the alpha channel."
+
 #define kPluginIdentifier "net.sf.openfx.FrameBlend"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -135,28 +139,30 @@
 #define kParamInputRangeLabel "Input Range"
 #define kParamInputRangeHint  "Set the frame range to the input range. This can be used, combined with a foreground matte, to produce a clean background plate."
 
+#define kParamInputRangeName  "inputRange"
+#define kParamInputRangeLabel "Input Range"
+#define kParamInputRangeHint  "Set the frame range to the input range. This can be used, combined with a foreground matte, to produce a clean background plate."
+
+#define kParamOutputCountName  "outputCount"
+#define kParamOutputCountLabel "Output Count to Alpha"
+#define kParamOutputCountHint  "Output image count at each pixel to alpha."
+
+#define kClipFgMName "FgM"
 
 using namespace OFX;
-
-
-namespace {
-    struct RGBAValues {
-        double r,g,b,a;
-        RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
-        RGBAValues() : r(0), g(0), b(0), a(0) {}
-    };
-}
 
 class FrameBlendProcessorBase : public OFX::ImageProcessor
 {
 protected:
     const OFX::Image *_srcImg;
+    std::vector<const OFX::Image*> _srcImgs;
+    std::vector<const OFX::Image*> _fgMImgs;
     const OFX::Image *_maskImg;
     bool _processR;
     bool _processG;
     bool _processB;
     bool _processA;
-    RGBAValues _value;
+    bool _outputCount;
     bool   _doMasking;
     double _mix;
     bool _maskInvert;
@@ -166,19 +172,22 @@ public:
     FrameBlendProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
+    , _srcImgs(0)
+    , _fgMImgs(0)
     , _maskImg(0)
     , _processR(true)
     , _processG(true)
     , _processB(true)
     , _processA(false)
-    , _value()
+    , _outputCount(false)
     , _doMasking(false)
     , _mix(1.)
     , _maskInvert(false)
     {
     }
 
-    void setSrcImg(const OFX::Image *v) {_srcImg = v;}
+    void setSrcImgs(const OFX::Image *src, const std::vector<const OFX::Image*> &v) {_srcImg = src; _srcImgs = v;}
+    void setFgMImgs(const std::vector<const OFX::Image*> &v) {_fgMImgs = v;}
 
     void setMaskImg(const OFX::Image *v, bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
 
@@ -188,14 +197,14 @@ public:
                    bool processG,
                    bool processB,
                    bool processA,
-                   const RGBAValues& value,
+                   bool outputCount,
                    double mix)
     {
         _processR = processR;
         _processG = processG;
         _processB = processB;
         _processA = processA;
-        _value = value;
+        _outputCount = outputCount;
         _mix = mix;
     }
 
@@ -309,8 +318,8 @@ private:
     {
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         assert(_dstImg);
-        float unpPix[4];
-        float tmpPix[4];
+        assert(_srcImgs.size() == _fgMImgs.size());
+        double tmpPix[nComponents];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -320,38 +329,54 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                for (int c = 0; c < 4; ++c) {
-                    unpPix[c] = srcPix[c]/(float)maxValue;
-                    if (processR && c == 0) {
-                        tmpPix[0] = unpPix[0] * (float)_value.r;
-                    } else if (processG && c == 1) {
-                        tmpPix[1] = unpPix[1] * (float)_value.g;
-                    } else if (processB && c == 2) {
-                        tmpPix[2] = unpPix[2] * (float)_value.b;
-                    } else if (processA && c == 3) {
-                        tmpPix[3] = unpPix[3] * (float)_value.a;
-                    } else {
-                        tmpPix[c] = unpPix[c];
+                int count = 0;
+                std::fill(tmpPix, tmpPix+nComponents, 0.);
+                // accumulate
+                for (unsigned i = 0; i < _srcImgs.size(); ++i) {
+                    const PIX *fgMPix = (const PIX *)  (_fgMImgs[i] ? _fgMImgs[i]->getPixelAddress(x, y) : 0);
+                    if (!fgMPix || *fgMPix <= 0) {
+                        const PIX *srcPixi = (const PIX *)  (_srcImgs[i] ? _srcImgs[i]->getPixelAddress(x, y) : 0);
+                        if (srcPixi) {
+                            for (int c = 0; c < nComponents; ++c) {
+                                tmpPix[c] += srcPixi[c];
+                            }
+                        }
+                        ++count;
                     }
-                    dstPix[c] = tmpPix[c]*maxValue;
                 }
                 // copy back original values from unprocessed channels
                 if (nComponents == 1) {
-                    if (!processA) {
-                        dstPix[0] = srcPix[0];
+                    if (_outputCount) {
+                        dstPix[0] = count;
+                    } else if (!processA) {
+                        dstPix[0] = srcPix ? srcPix[0] : PIX();
+                    } else {
+                        dstPix[0] = (PIX)(tmpPix[0] / count);
                     }
                 } else if (nComponents == 3 || nComponents == 4) {
-                    if (!processR) {
-                        dstPix[0] = srcPix[0];
+                    if (processR) {
+                        dstPix[0] = (PIX)(tmpPix[0] / count);
+                    } else {
+                        dstPix[0] = srcPix ? srcPix[0] : PIX();
                     }
-                    if (!processG) {
-                        dstPix[1] = srcPix[1];
+                    if (processG) {
+                        dstPix[1] = (PIX)(tmpPix[1] / count);
+                    } else {
+                        dstPix[1] = srcPix ? srcPix[1] : PIX();
                     }
-                    if (!processB) {
-                        dstPix[2] = srcPix[2];
+                    if (processB) {
+                        dstPix[2] = (PIX)(tmpPix[2] / count);
+                    } else {
+                        dstPix[2] = srcPix ? srcPix[2] : PIX();
                     }
-                    if (!processA && nComponents == 4) {
-                        dstPix[3] = srcPix[3];
+                    if (nComponents == 4) {
+                        if (_outputCount) {
+                            dstPix[3] = count;
+                        } else if (processA) {
+                            dstPix[3] = (PIX)(tmpPix[3] / count);
+                        } else {
+                            dstPix[3] = srcPix ? srcPix[3] : PIX();
+                        }
                     }
                 }
                 // increment the dst pixel
@@ -373,6 +398,7 @@ public:
     , _dstClip(0)
     , _srcClip(0)
     , _maskClip(0)
+    , _fgMClip(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
@@ -380,6 +406,8 @@ public:
         assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
         _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
+        _fgMClip = fetchClip(kClipFgMName);
+        assert(!_fgMClip || _fgMClip->getPixelComponents() == ePixelComponentAlpha);
         _processR = fetchBooleanParam(kParamProcessR);
         _processG = fetchBooleanParam(kParamProcessG);
         _processB = fetchBooleanParam(kParamProcessB);
@@ -387,9 +415,20 @@ public:
         assert(_processR && _processG && _processB && _processA);
         _value = fetchRGBAParam(kParamValueName);
         assert(_value);
+        _nbFrames = fetchIntParam(kParamNbFramesName);
+        _frameRange = fetchInt2DParam(kParamFrameRangeName);
+        _custom = fetchBooleanParam(kParamCustomName);
+        _inputRange = fetchPushButtonParam(kParamInputRangeName);
+        _outputCount = fetchBooleanParam(kParamOutputCountName);
+        assert(_nbFrames && _frameRange && _custom && _inputRange && _outputCount);
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
+
+        bool custom;
+        _custom->getValue(custom);
+        _nbFrames->setEnabled(!custom);
+        _frameRange->setEnabled(custom);
     }
 
 private:
@@ -401,16 +440,28 @@ private:
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
+    /** Override the get frames needed action */
+    virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
+
+    /** @brief called when a param has just had its value changed */
+    virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
     OFX::Clip *_maskClip;
+    OFX::Clip *_fgMClip;
     OFX::BooleanParam* _processR;
     OFX::BooleanParam* _processG;
     OFX::BooleanParam* _processB;
     OFX::BooleanParam* _processA;
     OFX::RGBAParam *_value;
+    IntParam* _nbFrames;
+    Int2DParam* _frameRange;
+    BooleanParam* _custom;
+    PushButtonParam* _inputRange;
+    BooleanParam* _outputCount;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
 };
@@ -422,11 +473,34 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
 
+namespace {
+// Since we cannot hold a std::auto_ptr in the vector we must hold a raw pointer.
+// To ensure that images are always freed even in case of exceptions, use a RAII class.
+struct OptionalImagesHolder_RAII
+{
+    std::vector<const OFX::Image*> images;
+    
+    OptionalImagesHolder_RAII()
+    : images()
+    {
+        
+    }
+    
+    ~OptionalImagesHolder_RAII()
+    {
+        for (unsigned int i = 0; i < images.size(); ++i) {
+            delete images[i];
+        }
+    }
+};
+}
+
 /* set up and run a processor */
 void
 FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
+    const double time = args.time;
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -443,6 +517,19 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+    // compute range
+    bool custom;
+    _custom->getValueAtTime(time, custom);
+    int n, min, max;
+    if (custom) {
+        _frameRange->getValueAtTime(time, min, max);
+        n = max + 1 - min;
+    } else {
+        _nbFrames->getValueAtTime(time, n);
+        max = (int)time;
+        min = max + 1 - n;
+    }
+    // fetch the source images
     std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
@@ -457,7 +544,40 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? _maskClip->fetchImage(args.time) : 0);
+    OptionalImagesHolder_RAII srcImgs;
+    for (int i = 0; i < n; ++i) {
+        const OFX::Image* src = _srcClip->fetchImage(min + i);
+        if (src) {
+            if (src->getRenderScale().x != args.renderScale.x ||
+                src->getRenderScale().y != args.renderScale.y ||
+                src->getField() != args.fieldToRender) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+            }
+            OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+            OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+            if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            }
+        }
+        srcImgs.images.push_back(src);
+    }
+    // fetch the foreground mattes
+    OptionalImagesHolder_RAII fgMImgs;
+    for (int i = 0; i < n; ++i) {
+        const OFX::Image* mask = _fgMClip ? _fgMClip->fetchImage(min + i) : 0;
+        if (mask) {
+            if (mask->getRenderScale().x != args.renderScale.x ||
+                mask->getRenderScale().y != args.renderScale.y ||
+                mask->getField() != args.fieldToRender) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+            }
+        }
+        fgMImgs.images.push_back(mask);
+    }
+    // fetch the mask
+    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? _maskClip->fetchImage(time) : 0);
     // do we do masking
     if (getContext() != OFX::eContextFilter && _maskClip->isConnected()) {
         if (mask.get()) {
@@ -469,28 +589,29 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
             }
         }
         bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        _maskInvert->getValueAtTime(time, maskInvert);
         processor.doMasking(true);
         processor.setMaskImg(mask.get(), maskInvert);
     }
 
     // set the images
     processor.setDstImg(dst.get());
-    processor.setSrcImg(src.get());
+    processor.setSrcImgs(src.get(), srcImgs.images);
+    processor.setFgMImgs(fgMImgs.images);
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
     bool processR, processG, processB, processA;
-    _processR->getValueAtTime(args.time, processR);
-    _processG->getValueAtTime(args.time, processG);
-    _processB->getValueAtTime(args.time, processB);
-    _processA->getValueAtTime(args.time, processA);
-    RGBAValues value;
-    _value->getValueAtTime(args.time, value.r, value.g, value.b, value.a);
+    _processR->getValueAtTime(time, processR);
+    _processG->getValueAtTime(time, processG);
+    _processB->getValueAtTime(time, processB);
+    _processA->getValueAtTime(time, processA);
+    bool outputCount;
+    _outputCount->getValueAtTime(time, outputCount);
     double mix;
-    _mix->getValueAtTime(args.time, mix);
+    _mix->getValueAtTime(time, mix);
     processor.setValues(processR, processG, processB, processA,
-                        value, mix);
+                        outputCount, mix);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -574,10 +695,11 @@ FrameBlendPlugin::render(const OFX::RenderArguments &args)
 
 
 bool
-FrameBlendPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
+FrameBlendPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
 {
+    const double time = args.time;
     double mix;
-    _mix->getValueAtTime(args.time, mix);
+    _mix->getValueAtTime(time, mix);
 
     if (mix == 0. /*|| (!processR && !processG && !processB && !processA)*/) {
         identityClip = _srcClip;
@@ -585,21 +707,111 @@ FrameBlendPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
     }
 
     bool processR, processG, processB, processA;
-    _processR->getValueAtTime(args.time, processR);
-    _processG->getValueAtTime(args.time, processG);
-    _processB->getValueAtTime(args.time, processB);
-    _processA->getValueAtTime(args.time, processA);
-    RGBAValues value;
-    _value->getValueAtTime(args.time, value.r, value.g, value.b, value.a);
-    if ((!processR || value.r == 1.) &&
-        (!processG || value.g == 1.) &&
-        (!processB || value.b == 1.) &&
-        (!processA || value.a == 1.)) {
+    _processR->getValueAtTime(time, processR);
+    _processG->getValueAtTime(time, processG);
+    _processB->getValueAtTime(time, processB);
+    _processA->getValueAtTime(time, processA);
+    if (!processR && !processG && !processB && !processA) {
         identityClip = _srcClip;
         return true;
     }
+
+    if (_fgMClip && _fgMClip->isConnected()) {
+        // FgM may contain anything
+        return false;
+    }
+
+    bool outputCount;
+    _outputCount->getValueAtTime(time, outputCount);
+    if (outputCount) {
+        return false;
+    }
+
+    bool custom;
+    _custom->getValueAtTime(time, custom);
+    OfxRangeD range;
+    if (custom) {
+        int min, max;
+        _frameRange->getValueAtTime(time, min, max);
+        range.min = min;
+        range.max = max;
+    } else {
+        int nbFrames;
+        _nbFrames->getValueAtTime(time, nbFrames);
+        range.min = time - (nbFrames - 1);
+        range.max = time;
+    }
+
+    if (range.min == range.max) {
+        identityClip = _srcClip;
+        identityTime = time;
+        return true;
+    }
+
     return false;
 }
+
+void
+FrameBlendPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
+                                   OFX::FramesNeededSetter &frames)
+{
+    const double time = args.time;
+    bool custom;
+    _custom->getValueAtTime(time, custom);
+    OfxRangeD range;
+    if (custom) {
+        int min, max;
+        _frameRange->getValueAtTime(time, min, max);
+        range.min = min;
+        range.max = max;
+    } else {
+        int nbFrames;
+        _nbFrames->getValueAtTime(time, nbFrames);
+        range.min = time - (nbFrames - 1);
+        range.max = time;
+    }
+    frames.setFramesNeeded(*_srcClip, range);
+}
+
+/** @brief called when a param has just had its value changed */
+void
+FrameBlendPlugin::changedParam(const InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kParamInputRangeName && args.reason == eChangeUserEdit) {
+        OfxRangeD range;
+        if ( _srcClip && _srcClip->isConnected() ) {
+            range = _srcClip->getFrameRange();
+        } else {
+            timeLineGetBounds(range.min, range.max);
+        }
+        _frameRange->setValue((int)range.min, (int)range.max);
+        _frameRange->setEnabled(true);
+        _custom->setValue(true);
+        _nbFrames->setEnabled(false);
+        _nbFrames->setValue((int)(range.max + 1 - range.min));
+    } else if (paramName == kParamCustomName && args.reason == eChangeUserEdit) {
+        bool custom;
+        _custom->getValueAtTime(args.time, custom);
+        _nbFrames->setEnabled(!custom);
+        _frameRange->setEnabled(custom);
+        if (custom) {
+            int nbFrames;
+            _nbFrames->getValueAtTime(args.time, nbFrames);
+            OfxRangeD range;
+            if ( _srcClip && _srcClip->isConnected() ) {
+                range = _srcClip->getFrameRange();
+            } else {
+                timeLineGetBounds(range.min, range.max);
+            }
+            _frameRange->setValue(range.min, range.min + nbFrames - 1);
+        }
+    } else if (paramName == kParamInputRangeName && args.reason == eChangeUserEdit) {
+        int min, max;
+        _frameRange->getValueAtTime(args.time, min, max);
+        _nbFrames->setValue(max + 1 - min);
+    }
+}
+
 
 mDeclarePluginFactory(FrameBlendPluginFactory, {}, {});
 
@@ -622,7 +834,7 @@ void FrameBlendPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setHostFrameThreading(false);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setSupportsTiles(kSupportsTiles);
-    desc.setTemporalClipAccess(false);
+    desc.setTemporalClipAccess(true);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
@@ -637,7 +849,7 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
-    srcClip->setTemporalClipAccess(false);
+    srcClip->setTemporalClipAccess(true);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
 
@@ -651,12 +863,19 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     if (context == eContextGeneral || context == eContextPaint) {
         ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
         maskClip->addSupportedComponent(ePixelComponentAlpha);
-        maskClip->setTemporalClipAccess(false);
+        maskClip->setTemporalClipAccess(true);
         if (context == eContextGeneral)
             maskClip->setOptional(true);
         maskClip->setSupportsTiles(kSupportsTiles);
         maskClip->setIsMask(true);
     }
+
+    ClipDescriptor *fgM = desc.defineClip(kClipFgMName);
+    fgM->addSupportedComponent(ePixelComponentAlpha);
+    fgM->setTemporalClipAccess(true);
+    fgM->setOptional(true);
+    fgM->setSupportsTiles(kSupportsTiles);
+    fgM->setIsMask(true);
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
@@ -700,6 +919,49 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setDefault(1.0, 1.0, 1.0, 1.0);
         param->setDisplayRange(0, 0, 0, 0, 4, 4, 4, 4);
         param->setAnimates(true); // can animate
+        page->addChild(*param);
+    }
+
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamNbFramesName);
+        param->setLabel(kParamNbFramesLabel);
+        param->setHint(kParamNbFramesHint);
+        param->setDefault(5);
+        param->setAnimates(true); // can animate
+        page->addChild(*param);
+    }
+
+    {
+        Int2DParamDescriptor *param = desc.defineInt2DParam(kParamFrameRangeName);
+        param->setLabel(kParamFrameRangeLabel);
+        param->setHint(kParamFrameRangeHint);
+        param->setDefault(-1, -1);
+        param->setAnimates(true); // can animate
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamCustomName);
+        param->setLabel(kParamCustomLabel);
+        param->setHint(kParamCustomHint);
+        param->setDefault(false);
+        param->setAnimates(true); // can animate
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        page->addChild(*param);
+    }
+
+    {
+        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamInputRangeName);
+        param->setLabel(kParamInputRangeLabel);
+        param->setHint(kParamInputRangeHint);
+        page->addChild(*param);
+    }
+
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOutputCountName);
+        param->setLabel(kParamOutputCountLabel);
+        param->setHint(kParamOutputCountHint);
         page->addChild(*param);
     }
 
