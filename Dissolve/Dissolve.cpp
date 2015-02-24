@@ -79,6 +79,7 @@
 #include "ofxsImageBlenderMasked.h"
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
+#include "ofxNatron.h"
 
 #define kPluginName "DissolveOFX"
 #define kPluginGrouping "Merge"
@@ -94,12 +95,11 @@
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
-#define kClipFrom "0"
-#define kClipTo "1"
-
 #define kParamWhich "which"
 #define kParamWhichLabel "Which"
-#define kParamWhichHint "Mix factor between the two inputs."
+#define kParamWhichHint "Mix factor between the inputs."
+
+#define kClipSourceCount 10
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -108,24 +108,29 @@ class DissolvePlugin
 {
 public:
     /** @brief ctor */
-    DissolvePlugin(OfxImageEffectHandle handle)
+    DissolvePlugin(OfxImageEffectHandle handle, bool numerousInputs)
         : ImageEffect(handle)
           , _dstClip(0)
-          , _fromClip(0)
-          , _toClip(0)
-          , _maskClip(0)
-          , _transition(0)
+          , _srcClip(numerousInputs ? kClipSourceCount : 2)
+          , _which(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha));
-        _fromClip = fetchClip(getContext() == OFX::eContextTransition ?  kOfxImageEffectTransitionSourceFromClipName : kClipFrom);
-        assert(_fromClip && (_fromClip->getPixelComponents() == OFX::ePixelComponentRGB || _fromClip->getPixelComponents() == OFX::ePixelComponentRGBA || _fromClip->getPixelComponents() == OFX::ePixelComponentAlpha));
-        _toClip   = fetchClip(getContext() == OFX::eContextTransition ? kOfxImageEffectTransitionSourceToClipName : kClipTo);
-        assert(_toClip && (_toClip->getPixelComponents() == OFX::ePixelComponentRGB || _toClip->getPixelComponents() == OFX::ePixelComponentRGBA || _toClip->getPixelComponents() == OFX::ePixelComponentAlpha));
+        for (unsigned i = 0; i < _srcClip.size(); ++i) {
+            if (getContext() == OFX::eContextTransition && i < 2) {
+                _srcClip[i] = fetchClip(i == 0 ? kOfxImageEffectTransitionSourceFromClipName : kOfxImageEffectTransitionSourceToClipName);
+            } else {
+                std::stringstream s;
+                s << i;
+                _srcClip[i] = fetchClip(s.str());
+            }
+            assert(_srcClip[i] && (_srcClip[i]->getPixelComponents() == OFX::ePixelComponentRGB || _srcClip[i]->getPixelComponents() == OFX::ePixelComponentRGBA || _srcClip[i]->getPixelComponents() == OFX::ePixelComponentAlpha));
+        }
+
         _maskClip = fetchClip("Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == OFX::ePixelComponentAlpha);
-        _transition = fetchDoubleParam(getContext() == OFX::eContextTransition ? kOfxImageEffectTransitionParamName : kParamWhich);
-        assert(_transition);
+        _which = fetchDoubleParam(getContext() == OFX::eContextTransition ? kOfxImageEffectTransitionParamName : kParamWhich);
+        assert(_which);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_maskInvert);
     }
@@ -137,6 +142,9 @@ public:
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+
+    /** @brief called when a clip has just been changed in some way (a rewire maybe) */
+    virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(OFX::ImageBlenderMaskedBase &, const OFX::RenderArguments &args);
@@ -151,10 +159,9 @@ private:
 
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
-    OFX::Clip *_fromClip;
-    OFX::Clip *_toClip;
+    std::vector<OFX::Clip *> _srcClip;
     OFX::Clip *_maskClip;
-    OFX::DoubleParam* _transition;
+    OFX::DoubleParam* _which;
     OFX::BooleanParam* _maskInvert;
 };
 
@@ -204,9 +211,14 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
+    // get the transition value
+    double which = std::max(0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size()-1));
+    int prev = (int)which;
+    int next = std::min((int)which+1,(int)_srcClip.size()-1);
+
     // fetch the two source images
-    std::auto_ptr<OFX::Image> fromImg(_fromClip->fetchImage(args.time));
-    std::auto_ptr<OFX::Image> toImg(_toClip->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> fromImg(_srcClip[prev]->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> toImg(_srcClip[next]->fetchImage(args.time));
 
     // make sure bit depths are sane
     if (fromImg.get()) {
@@ -246,8 +258,6 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
         processor.setMaskImg(mask.get(), maskInvert);
     }
 
-    // get the transition value
-    float blend = std::max(0.f, std::min((float)_transition->getValueAtTime(args.time), 1.f));
 
     // set the images
     processor.setDstImg( dst.get() );
@@ -258,7 +268,7 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
     processor.setRenderWindow(args.renderWindow);
 
     // set the scales
-    processor.setBlend(blend);
+    processor.setBlend(which - prev);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -271,10 +281,10 @@ DissolvePlugin::render(const OFX::RenderArguments &args)
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(kSupportsMultipleClipPARs   || _fromClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || _fromClip->getPixelDepth()       == _dstClip->getPixelDepth());
-    assert(kSupportsMultipleClipPARs   || _toClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || _toClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    for (unsigned i = 0; i < _srcClip.size(); ++i) {
+        assert(kSupportsMultipleClipPARs   || _srcClip[i]->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+        assert(kSupportsMultipleClipDepths || _srcClip[i]->getPixelDepth()       == _dstClip->getPixelDepth());
+    }
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderForComponents<4>(args);
@@ -330,22 +340,21 @@ DissolvePlugin::isIdentity(const OFX::IsIdentityArguments &args,
                            double &identityTime)
 {
     // get the transition value
-    float blend = (float)_transition->getValueAtTime(args.time);
+    double which = _which->getValueAtTime(args.time);
 
     identityTime = args.time;
 
     // at the start?
-    if (blend <= 0.0) {
-        identityClip = _fromClip;
+    if (which <= 0.0) {
+        identityClip = _srcClip[0];
         identityTime = args.time;
 
         return true;
     }
 
-    // at the end?
-    if (blend >= 1.0 &&
+    if ((which >= _srcClip.size() || ((int)which == which)) &&
         (!_maskClip || !_maskClip->isConnected())) {
-        identityClip = _toClip;
+        identityClip = _srcClip[(int)which];
         identityTime = args.time;
 
         return true;
@@ -359,25 +368,29 @@ bool
 DissolvePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     // get the transition value
-    float blend = (float)_transition->getValueAtTime(args.time);
+    double which = _which->getValueAtTime(args.time);
     // at the start?
-    if (blend <= 0.0 && _fromClip && _fromClip->isConnected()) {
-        rod = _fromClip->getRegionOfDefinition(args.time);
+    if (which <= 0.0 && _srcClip[0] && _srcClip[0]->isConnected()) {
+        rod = _srcClip[0]->getRegionOfDefinition(args.time);
 
         return true;
     }
 
+    int prev = std::min((size_t)which, _srcClip.size()-1);
     // at the end?
-    if (blend >= 1.0 && _toClip && _toClip->isConnected() &&
+    if ((which >= _srcClip.size() || (which == prev)) &&
+        _srcClip[prev] && _srcClip[prev]->isConnected() &&
         (!_maskClip || !_maskClip->isConnected())) {
-        rod = _toClip->getRegionOfDefinition(args.time);
+        rod = _srcClip[prev]->getRegionOfDefinition(args.time);
 
         return true;
     }
 
-    if (_fromClip && _fromClip->isConnected() && _toClip && _toClip->isConnected()) {
-        OfxRectD fromRoD = _fromClip->getRegionOfDefinition(args.time);
-        OfxRectD toRoD = _toClip->getRegionOfDefinition(args.time);
+    int next = prev + 1;
+
+    if (_srcClip[prev] && _srcClip[prev]->isConnected() && _srcClip[next] && _srcClip[next]->isConnected()) {
+        OfxRectD fromRoD = _srcClip[prev]->getRegionOfDefinition(args.time);
+        OfxRectD toRoD = _srcClip[next]->getRegionOfDefinition(args.time);
         rod.x1 = std::min(fromRoD.x1, toRoD.x1);
         rod.y1 = std::min(fromRoD.y1, toRoD.y1);
         rod.x2 = std::max(fromRoD.x2, toRoD.x2);
@@ -386,6 +399,18 @@ DissolvePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
         return true;
     }
     return false;
+}
+
+void
+DissolvePlugin::changedClip(const OFX::InstanceChangedArgs &/*args*/, const std::string &/*clipName*/)
+{
+    int maxconnected = 1;
+    for (unsigned i = 0; i < _srcClip.size(); ++i) {
+        if (_srcClip[i]->isConnected()) {
+            maxconnected = i;
+        }
+    }
+    _which->setDisplayRange(0, maxconnected);
 }
 
 mDeclarePluginFactory(DissolvePluginFactory, {}, {}
@@ -425,22 +450,34 @@ void
 DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
                                          ContextEnum context)
 {
-    // we are a transition, so define the sourceFrom input clip
-    ClipDescriptor *fromClip = desc.defineClip(context == OFX::eContextTransition ? kOfxImageEffectTransitionSourceFromClipName : kClipFrom);
+    //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
+    //more than 2 images
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kOfxNatronHostName ||
+                            (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
+                             OFX::getImageEffectHostDescription()->versionMajor >= 2));
 
-    fromClip->addSupportedComponent(ePixelComponentRGBA);
-    fromClip->addSupportedComponent(ePixelComponentRGB);
-    fromClip->addSupportedComponent(ePixelComponentAlpha);
-    fromClip->setTemporalClipAccess(false);
-    fromClip->setSupportsTiles(kSupportsTiles);
+    int clipSourceCount = numerousInputs ? kClipSourceCount : 2;
 
-    // we are a transition, so define the sourceTo input clip
-    ClipDescriptor *toClip = desc.defineClip(context == OFX::eContextTransition ? kOfxImageEffectTransitionSourceToClipName : kClipTo);
-    toClip->addSupportedComponent(ePixelComponentRGBA);
-    toClip->addSupportedComponent(ePixelComponentRGB);
-    toClip->addSupportedComponent(ePixelComponentAlpha);
-    toClip->setTemporalClipAccess(false);
-    toClip->setSupportsTiles(kSupportsTiles);
+    for (int i = 0; i < clipSourceCount; ++i) {
+        ClipDescriptor *srcClip;
+        if (context == eContextTransition && i < 2) {
+            // we are a transition, so define the sourceFrom/sourceTo input clip
+            srcClip = desc.defineClip(i == 0 ? kOfxImageEffectTransitionSourceFromClipName : kOfxImageEffectTransitionSourceToClipName);
+        } else {
+            std::stringstream s;
+            s << i;
+            srcClip = desc.defineClip(s.str());
+            srcClip->setOptional(true);
+        }
+        srcClip->addSupportedComponent(ePixelComponentNone);
+        srcClip->addSupportedComponent(ePixelComponentRGB);
+        srcClip->addSupportedComponent(ePixelComponentRGBA);
+        srcClip->addSupportedComponent(ePixelComponentAlpha);
+        srcClip->addSupportedComponent(ePixelComponentCustom);
+        srcClip->setTemporalClipAccess(false);
+        srcClip->setSupportsTiles(kSupportsTiles);
+        srcClip->setIsMask(false);
+    }
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
@@ -486,7 +523,13 @@ ImageEffect*
 DissolvePluginFactory::createInstance(OfxImageEffectHandle handle,
                                       ContextEnum /*context*/)
 {
-    return new DissolvePlugin(handle);
+    //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
+    //more than 2 images
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kOfxNatronHostName ||
+                            (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
+                             OFX::getImageEffectHostDescription()->versionMajor >= 2));
+
+    return new DissolvePlugin(handle, numerousInputs);
 }
 
 void

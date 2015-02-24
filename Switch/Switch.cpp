@@ -81,6 +81,7 @@
 #endif
 
 #include "ofxsMacros.h"
+#include "ofxNatron.h"
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
@@ -113,7 +114,7 @@ class SwitchPlugin : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
-    SwitchPlugin(OfxImageEffectHandle handle);
+    SwitchPlugin(OfxImageEffectHandle handle, bool numerousInputs);
 
 private:
     /* Override the render */
@@ -130,20 +131,21 @@ private:
 #endif
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
-    virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName);
+    virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_srcClip[kClipSourceCount];
+    std::vector<OFX::Clip *> _srcClip;
 
     OFX::IntParam *_which;
 };
 
-SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle)
+SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle, bool numerousInputs)
 : ImageEffect(handle)
+, _srcClip(numerousInputs ? kClipSourceCount : 2)
 , _which(0)
 {
-    for (int i = 0; i < kClipSourceCount; ++i) {
+    for (unsigned i = 0; i < _srcClip.size(); ++i) {
         if (getContext() == OFX::eContextFilter && i == 0) {
             _srcClip[i] = fetchClip(kOfxImageEffectSimpleSourceClipName);
         } else {
@@ -214,7 +216,7 @@ void
 SwitchPlugin::changedClip(const OFX::InstanceChangedArgs &/*args*/, const std::string &/*clipName*/)
 {
     int maxconnected = 1;
-    for (int i = 2; i < kClipSourceCount; ++i) {
+    for (unsigned i = 0; i < _srcClip.size(); ++i) {
         if (_srcClip[i]->isConnected()) {
             maxconnected = i;
         }
@@ -270,9 +272,18 @@ void SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
+    //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
+    //more than 2 images
+    //bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kOfxNatronHostName ||
+    //                        (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
+    //                         OFX::getImageEffectHostDescription()->versionMajor >= 2));
+    bool numerousInputs = true; // Natron 1.x was distributed with it
+
+    int clipSourceCount = numerousInputs ? kClipSourceCount : 2;
+
     // Source clip only in the filter context
     // create the mandated source clip
-    for (int i = 0; i < kClipSourceCount; ++i) {
+    for (int i = 0; i < clipSourceCount; ++i) {
         ClipDescriptor *srcClip;
         if (context == eContextFilter && i == 0) {
             srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -310,7 +321,7 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setLabel(kParamWhichLabel);
         param->setHint(kParamWhichHint);
         param->setDefault(0);
-        param->setRange(0, kClipSourceCount);
+        param->setRange(0, clipSourceCount);
         param->setDisplayRange(0, 1);
         param->setAnimates(true);
         page->addChild(*param);
@@ -325,7 +336,14 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 
 OFX::ImageEffect* SwitchPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
-    return new SwitchPlugin(handle);
+    //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
+    //more than 2 images
+    //bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kOfxNatronHostName ||
+    //                        (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
+    //                         OFX::getImageEffectHostDescription()->versionMajor >= 2));
+    bool numerousInputs = true; // Natron 1.x was distributed with it
+
+    return new SwitchPlugin(handle, numerousInputs);
 }
 
 void getSwitchPluginID(OFX::PluginFactoryArray &ids)
