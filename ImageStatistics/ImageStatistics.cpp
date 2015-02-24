@@ -991,24 +991,24 @@ private:
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(ImageStatisticsProcessorBase &processor, OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results &prevResults, Results *results);
+    void setupAndProcess(ImageStatisticsProcessorBase &processor, const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results &prevResults, Results *results);
 
     // compute computation window in srcImg
-    void computeWindow(OFX::Image* srcImg, double time, OfxRectI *analysisWindow);
+    void computeWindow(const OFX::Image* srcImg, double time, OfxRectI *analysisWindow);
 
     // update image statistics
-    void update(OFX::Image* srcImg, double time, const OfxRectI& analysisWindow);
-    void updateHSVL(OFX::Image* srcImg, double time, const OfxRectI& analysisWindow);
+    void update(const OFX::Image* srcImg, double time, const OfxRectI& analysisWindow);
+    void updateHSVL(const OFX::Image* srcImg, double time, const OfxRectI& analysisWindow);
 
     template <template<class PIX, int nComponents, int maxValue> class Processor, class PIX, int nComponents, int maxValue>
-    void updateSubComponentsDepth(OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results& prevResults, Results* results)
+    void updateSubComponentsDepth(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results& prevResults, Results* results)
     {
         Processor<PIX, nComponents, maxValue> fred(*this);
         setupAndProcess(fred, srcImg, time, analysisWindow, prevResults, results);
     }
 
     template <template<class PIX, int nComponents, int maxValue> class Processor, int nComponents>
-    void updateSubComponents(OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results& prevResults, Results* results)
+    void updateSubComponents(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results& prevResults, Results* results)
     {
         OFX::BitDepthEnum srcBitDepth = srcImg->getPixelDepth();
         switch (srcBitDepth) {
@@ -1030,7 +1030,7 @@ private:
     }
 
     template <template<class PIX, int nComponents, int maxValue> class Processor>
-    void updateSub(OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results& prevResults, Results* results)
+    void updateSub(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results& prevResults, Results* results)
     {
         OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
         assert(srcComponents == OFX::ePixelComponentAlpha ||srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA);
@@ -1102,7 +1102,8 @@ ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
     }
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<OFX::Image> src(_srcClip->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+                                        _srcClip->fetchImage(args.time) : 0);
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -1283,7 +1284,8 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
     }
     // RGBA analysis
     if ((doAnalyzeRGBA || doAnalyzeHSVL) && _srcClip && _srcClip->isConnected()) {
-        std::auto_ptr<OFX::Image> src(_srcClip->fetchImage(args.time));
+        std::auto_ptr<OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+                                      _srcClip->fetchImage(args.time) : 0);
         if (src.get()) {
             if (src->getRenderScale().x != args.renderScale.x ||
                 src->getRenderScale().y != args.renderScale.y/* ||
@@ -1310,7 +1312,8 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         int tmin = (int)std::ceil(range.min);
         int tmax = (int)std::floor(range.max);
         for (int t = tmin; t <= tmax; ++t) {
-            std::auto_ptr<OFX::Image> src(_srcClip->fetchImage(t));
+            std::auto_ptr<OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+                                          _srcClip->fetchImage(t) : 0);
             if (src.get()) {
                 if (src->getRenderScale().x != args.renderScale.x ||
                     src->getRenderScale().y != args.renderScale.y/* ||
@@ -1337,11 +1340,11 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 
 /* set up and run a processor */
 void
-ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor, OFX::Image* srcImg, double /*time*/, const OfxRectI &analysisWindow, const Results &prevResults, Results *results)
+ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor, const OFX::Image* srcImg, double /*time*/, const OfxRectI &analysisWindow, const Results &prevResults, Results *results)
 {
 
     // set the images
-    processor.setDstImg(srcImg); // not a bug: we only set dst
+    processor.setDstImg(const_cast<OFX::Image*>(srcImg)); // not a bug: we only set dst
 
     // set the render window
     processor.setRenderWindow(analysisWindow);
@@ -1357,7 +1360,7 @@ ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor, 
 }
 
 void
-ImageStatisticsPlugin::computeWindow(OFX::Image* srcImg, double time, OfxRectI *analysisWindow)
+ImageStatisticsPlugin::computeWindow(const OFX::Image* srcImg, double time, OfxRectI *analysisWindow)
 {
     OfxRectD regionOfInterest;
     bool restrictToRectangle;
@@ -1393,7 +1396,7 @@ ImageStatisticsPlugin::computeWindow(OFX::Image* srcImg, double time, OfxRectI *
 }
 // update image statistics
 void
-ImageStatisticsPlugin::update(OFX::Image* srcImg, double time, const OfxRectI &analysisWindow)
+ImageStatisticsPlugin::update(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow)
 {
     // TODO: CHECK if checkDoubleAnalysis param is true and analysisWindow is the same as btmLeft/sizeAnalysis
     Results results;
@@ -1421,7 +1424,7 @@ ImageStatisticsPlugin::update(OFX::Image* srcImg, double time, const OfxRectI &a
 }
 
 void
-ImageStatisticsPlugin::updateHSVL(OFX::Image* srcImg, double time, const OfxRectI &analysisWindow)
+ImageStatisticsPlugin::updateHSVL(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow)
 {
     Results results;
     if (!abort()) {
