@@ -446,6 +446,7 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
 #ifdef OFX_EXTENSIONS_NUKE
     //srcClip->addSupportedComponent(ePixelComponentMotionVectors);
     //srcClip->addSupportedComponent(ePixelComponentStereoDisparity);
+    srcClip->setCanTransform(true);
 #endif
     srcClip->addSupportedComponent(ePixelComponentCustom);
     srcClip->setTemporalClipAccess(false);
