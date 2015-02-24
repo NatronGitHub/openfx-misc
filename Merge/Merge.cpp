@@ -120,7 +120,7 @@
 
 #define kMaximumAInputs 10
 
-static bool gHostIsNatron2 = false;
+static bool gHostIsNatron1 = false;
 
 using namespace OFX;
 using namespace MergeImages2D;
@@ -281,7 +281,7 @@ public:
         _srcClipA = fetchClip(kClipA);
         assert(_srcClipA && (_srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentAlpha));
         
-        if (gHostIsNatron2) {
+        if (!gHostIsNatron1) {
             for (int i = 2; i <= kMaximumAInputs; ++i) {
                 std::stringstream ss;
                 ss << kClipA << i;
@@ -364,7 +364,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
 		case 0: //union
 		{
             rectBoundingBox(rodA, rodB, &rod);
-            if (gHostIsNatron2) {
+            if (!gHostIsNatron1) {
                 for (unsigned int i = 0; i < _optionalASrcClips.size(); ++i) {
                     OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(args.time);
                     rectBoundingBox(rodOptionalA, rod, &rod);
@@ -379,7 +379,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
                 setPersistentMessage(OFX::Message::eMessageError, "", "Input images intersection is empty.");
                 return false;
             }
-            if (gHostIsNatron2) {
+            if (!gHostIsNatron1) {
                 for (unsigned int i = 0; i < _optionalASrcClips.size(); ++i) {
                     OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(args.time);
                     interesect = rectIntersection(rodOptionalA, rod, &rod);
@@ -459,7 +459,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     std::auto_ptr<const OFX::Image> srcB(_srcClipB->fetchImage(args.time));
     
     OptionalImagesHolder_RAII optionalImages;
-    if (gHostIsNatron2) {
+    if (!gHostIsNatron1) {
         for (unsigned i = 0; i < _optionalASrcClips.size(); ++i) {
             const OFX::Image* optImg = _optionalASrcClips[i]->fetchImage(args.time);
             if (optImg) {
@@ -679,8 +679,8 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
     if (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
-        OFX::getImageEffectHostDescription()->versionMajor >= 2) {
-        gHostIsNatron2 = true;
+        OFX::getImageEffectHostDescription()->versionMajor == 1) {
+        gHostIsNatron1 = true;
     }
     
     OFX::ClipDescriptor* srcClipB = desc.defineClip(kClipB);
@@ -706,7 +706,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     srcClipA->setOptional(true);
     
     
-    if (gHostIsNatron2) {
+    if (!gHostIsNatron1) {
         
         for (int i = 2; i <= kMaximumAInputs; ++i) {
             std::stringstream ss;
