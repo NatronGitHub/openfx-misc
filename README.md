@@ -38,6 +38,7 @@ grouping).
 ### Time
 
 * Deinterlace: Deinterlace input stream.
+* FrameBlend: Blend frames.
 * RetimeOFX: Change the timing of the input clip.
 * TimeOffsetOFX: Move the input clip forward or backward in time.
 
