@@ -357,7 +357,8 @@ VectorToColorPlugin::setupAndProcess(VectorToColorProcessorBase &processor, cons
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+                                        _srcClip->fetchImage(args.time) : 0);
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||

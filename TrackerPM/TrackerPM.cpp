@@ -797,8 +797,10 @@ TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime, const OFX::Tr
     OfxRectD otherBounds;
     getOtherBounds(refCenterWithOffset, searchRect, &otherBounds);
 
-    std::auto_ptr<const OFX::Image> srcRef(_srcClip->fetchImage(refTime, refBounds));
-    std::auto_ptr<const OFX::Image> srcOther(_srcClip->fetchImage(otherTime, otherBounds));
+    std::auto_ptr<const OFX::Image> srcRef((_srcClip && _srcClip->isConnected()) ?
+                                           _srcClip->fetchImage(refTime, refBounds) : 0);
+    std::auto_ptr<const OFX::Image> srcOther((_srcClip && _srcClip->isConnected()) ?
+                                             _srcClip->fetchImage(otherTime, otherBounds) : 0);
     if (!srcRef.get() || !srcOther.get()) {
         return;
     }
@@ -829,7 +831,8 @@ TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime, const OFX::Tr
     OFX::BitDepthEnum srcBitDepth = srcRef->getPixelDepth();
     
     // auto ptr for the mask.
-    std::auto_ptr<OFX::Image> mask((getContext() != OFX::eContextFilter) ? _maskClip->fetchImage(refTime) : 0);
+    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
+                                         _maskClip->fetchImage(refTime) : 0);
     if (mask.get()) {
         if (mask->getRenderScale().x != args.renderScale.x ||
             mask->getRenderScale().y != args.renderScale.y/* ||

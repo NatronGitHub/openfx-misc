@@ -372,7 +372,8 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> srcA(_srcClipA->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> srcA((_srcClipA && _srcClipA->isConnected()) ?
+                                         _srcClipA->fetchImage(args.time) : 0);
     if (srcA.get()) {
         if (srcA->getRenderScale().x != args.renderScale.x ||
             srcA->getRenderScale().y != args.renderScale.y ||
@@ -386,7 +387,8 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<const OFX::Image> srcB(_srcClipB->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> srcB((_srcClipB && _srcClipB->isConnected()) ?
+                                         _srcClipB->fetchImage(args.time) : 0);
     if (srcB.get()) {
         if (srcB->getRenderScale().x != args.renderScale.x ||
             srcB->getRenderScale().y != args.renderScale.y ||
@@ -400,7 +402,8 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? _maskClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
+                                         _maskClip->fetchImage(args.time) : 0);
     if (mask.get()) {
         if (mask->getRenderScale().x != args.renderScale.x ||
             mask->getRenderScale().y != args.renderScale.y ||

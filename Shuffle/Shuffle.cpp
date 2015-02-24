@@ -543,8 +543,10 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> srcA(_srcClipA ? _srcClipA->fetchImage(args.time) : 0);
-    std::auto_ptr<const OFX::Image> srcB(_srcClipB ? _srcClipB->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> srcA((_srcClipA && _srcClipA->isConnected()) ?
+                                         _srcClipA->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> srcB((_srcClipB && _srcClipB->isConnected()) ?
+                                         _srcClipB->fetchImage(args.time) : 0);
     OFX::BitDepthEnum    srcBitDepth = eBitDepthNone;
     OFX::PixelComponentEnum srcComponents = ePixelComponentNone;
     if (srcA.get()) {

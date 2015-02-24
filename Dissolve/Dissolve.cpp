@@ -225,8 +225,10 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
     int next = std::min((int)which+1,(int)_srcClip.size()-1);
 
     // fetch the two source images
-    std::auto_ptr<OFX::Image> fromImg(_srcClip[prev]->fetchImage(args.time));
-    std::auto_ptr<OFX::Image> toImg(_srcClip[next]->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> fromImg((_srcClip[prev] && _srcClip[prev]->isConnected()) ?
+                                            _srcClip[prev]->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> toImg((_srcClip[next] && _srcClip[next]->isConnected()) ?
+                                          _srcClip[next]->fetchImage(args.time) : 0);
 
     // make sure bit depths are sane
     if (fromImg.get()) {
@@ -248,7 +250,8 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
 
-    std::auto_ptr<OFX::Image> mask(_maskClip->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
+                                         _maskClip->fetchImage(args.time) : 0);
     if (mask.get()) {
         if (mask->getRenderScale().x != args.renderScale.x ||
             mask->getRenderScale().y != args.renderScale.y ||

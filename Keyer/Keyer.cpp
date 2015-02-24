@@ -627,8 +627,10 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArg
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
-    std::auto_ptr<OFX::Image> bg(_bgClip->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+                                        _srcClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> bg((_bgClip && _bgClip->isConnected()) ?
+                                       _bgClip->fetchImage(args.time) : 0);
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -658,7 +660,8 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArg
     }
     
     // auto ptr for the masks.
-    std::auto_ptr<OFX::Image> inMask(_inMaskClip ? _inMaskClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> inMask((_inMaskClip && _inMaskClip->isConnected()) ?
+                                           _inMaskClip->fetchImage(args.time) : 0);
     if (inMask.get()) {
         if (inMask->getRenderScale().x != args.renderScale.x ||
             inMask->getRenderScale().y != args.renderScale.y ||
@@ -667,7 +670,8 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArg
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<OFX::Image> outMask(_outMaskClip ? _outMaskClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> outMask((_outMaskClip && _outMaskClip->isConnected()) ?
+                                            _outMaskClip->fetchImage(args.time) : 0);
     if (outMask.get()) {
         if (outMask->getRenderScale().x != args.renderScale.x ||
             outMask->getRenderScale().y != args.renderScale.y ||

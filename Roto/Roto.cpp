@@ -357,7 +357,8 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+                                        _srcClip->fetchImage(args.time) : 0);
     if (src.get() && dst.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -371,7 +372,8 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     }
     
     // auto ptr for the mask.
-    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? _rotoClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _rotoClip && _rotoClip->isConnected()) ?
+                                         _rotoClip->fetchImage(args.time) : 0);
     
     // do we do masking
     if (getContext() != OFX::eContextFilter && _rotoClip->isConnected()) {

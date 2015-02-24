@@ -291,7 +291,8 @@ ReConvergePlugin::setupAndProcess(TranslateBase &processor, const OFX::RenderArg
     }
 
     // fetch main input image
-    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+                                        _srcClip->fetchImage(args.time) : 0);
 
     // make sure bit depths are sane
     if (src.get()) {

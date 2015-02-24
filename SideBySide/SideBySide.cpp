@@ -268,8 +268,10 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
     view1_->getValueAtTime(args.time, view1);
     int view2;
     view2_->getValueAtTime(args.time, view2);
-    std::auto_ptr<const OFX::Image> src1(_srcClip->fetchStereoscopicImage(args.time,view1));
-    std::auto_ptr<const OFX::Image> src2(_srcClip->fetchStereoscopicImage(args.time,view2));
+    std::auto_ptr<const OFX::Image> src1((_srcClip && _srcClip->isConnected()) ?
+                                         _srcClip->fetchStereoscopicImage(args.time, view1) : 0);
+    std::auto_ptr<const OFX::Image> src2((_srcClip && _srcClip->isConnected()) ?
+                                         _srcClip->fetchStereoscopicImage(args.time, view2) : 0);
 
     // make sure bit depths are sane
     if (src1.get()) {

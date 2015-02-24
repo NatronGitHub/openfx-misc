@@ -580,7 +580,8 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     assert(_srcClip);
-    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+                                        _srcClip->fetchImage(args.time) : 0);
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -594,7 +595,8 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? _maskClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
+                                         _maskClip->fetchImage(args.time) : 0);
     if (getContext() != OFX::eContextFilter && _maskClip->isConnected()) {
         if (mask.get()) {
             if (mask->getRenderScale().x != args.renderScale.x ||

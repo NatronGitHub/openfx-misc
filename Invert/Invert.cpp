@@ -397,7 +397,8 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
     }
 
     // fetch main input image
-    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+                                        _srcClip->fetchImage(args.time) : 0);
 
     // make sure bit depths are sane
     if (src.get()) {
@@ -417,7 +418,8 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
     }
 
     // auto ptr for the mask.
-    std::auto_ptr<OFX::Image> mask((getContext() != OFX::eContextFilter) ? _maskClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
+                                         _maskClip->fetchImage(args.time) : 0);
 
     // do we do masking
     if (getContext() != OFX::eContextFilter && _maskClip->isConnected()) {

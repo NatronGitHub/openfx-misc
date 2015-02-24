@@ -262,8 +262,10 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor, const OFX::RenderA
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> srcA(_srcClipA->fetchImage(args.time));
-    std::auto_ptr<const OFX::Image> srcB(_srcClipB->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> srcA((_srcClipA && _srcClipA->isConnected()) ?
+                                         _srcClipA->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> srcB((_srcClipB && _srcClipB->isConnected()) ?
+                                         _srcClipB->fetchImage(args.time) : 0);
     if (srcA.get()) {
         if (srcA->getRenderScale().x != args.renderScale.x ||
             srcA->getRenderScale().y != args.renderScale.y ||

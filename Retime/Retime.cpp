@@ -272,8 +272,10 @@ RetimePlugin::setupAndProcess(OFX::ImageBlenderBase &processor, const OFX::Rende
     framesNeeded(sourceTime, args.fieldToRender, &fromTime, &toTime, &blend);
 
     // fetch the two source images
-    std::auto_ptr<OFX::Image> fromImg(_srcClip->fetchImage(fromTime));
-    std::auto_ptr<OFX::Image> toImg(_srcClip->fetchImage(toTime));
+    std::auto_ptr<OFX::Image> fromImg((_srcClip && _srcClip->isConnected()) ?
+                                      _srcClip->fetchImage(fromTime) : 0);
+    std::auto_ptr<OFX::Image> toImg((_srcClip && _srcClip->isConnected()) ?
+                                    _srcClip->fetchImage(toTime) : 0);
 
     // make sure bit depths are sane
     if (fromImg.get()) {

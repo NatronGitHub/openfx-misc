@@ -294,7 +294,8 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor, const OFX::RenderArgume
     }
 
     // fetch main input image
-    std::auto_ptr<const OFX::Image> srcLeft(_srcClip->fetchStereoscopicImage(args.time,0));
+    std::auto_ptr<const OFX::Image> srcLeft((_srcClip && _srcClip->isConnected()) ?
+                                            _srcClip->fetchStereoscopicImage(args.time, 0) : 0);
     if (srcLeft.get()) {
         if (srcLeft->getRenderScale().x != args.renderScale.x ||
             srcLeft->getRenderScale().y != args.renderScale.y ||
@@ -303,7 +304,8 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor, const OFX::RenderArgume
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    std::auto_ptr<const OFX::Image> srcRight(_srcClip->fetchStereoscopicImage(args.time,1));
+    std::auto_ptr<const OFX::Image> srcRight((_srcClip && _srcClip->isConnected()) ?
+                                             _srcClip->fetchStereoscopicImage(args.time, 1) : 0);
     if (srcRight.get()) {
         if (srcRight->getRenderScale().x != args.renderScale.x ||
             srcRight->getRenderScale().y != args.renderScale.y ||

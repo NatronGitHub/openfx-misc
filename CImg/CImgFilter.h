@@ -554,7 +554,8 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     const OFX::PixelComponentEnum dstPixelComponents  = dst->getPixelComponents();
     assert(dstBitDepth == OFX::eBitDepthFloat); // only float is supported for now (others are untested)
 
-    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(time));
+    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+                                        _srcClip->fetchImage(args.time) : 0);
     if (src.get()) {
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcPixelComponents = src->getPixelComponents();
@@ -671,7 +672,8 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         premult = false;
     }
 
-    std::auto_ptr<OFX::Image> mask(getContext() != OFX::eContextFilter ? _maskClip->fetchImage(time) : 0);
+    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
+                                         _maskClip->fetchImage(time) : 0);
     OfxRectI processWindow = renderWindow; //!< the window where pixels have to be computed (may be smaller than renderWindow if mask is zero on the borders)
 
     if (mix == 0.) {

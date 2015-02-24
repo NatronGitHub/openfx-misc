@@ -232,8 +232,10 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor, const OFX::RenderArgume
     }
 
     // fetch main input image
-    std::auto_ptr<const OFX::Image> srcLeft(_srcClip->fetchStereoscopicImage(args.time,0));
-    std::auto_ptr<const OFX::Image> srcRight(_srcClip->fetchStereoscopicImage(args.time,1));
+    std::auto_ptr<const OFX::Image> srcLeft((_srcClip && _srcClip->isConnected()) ?
+                                            _srcClip->fetchStereoscopicImage(args.time, 0) : 0);
+    std::auto_ptr<const OFX::Image> srcRight((_srcClip && _srcClip->isConnected()) ?
+                                             _srcClip->fetchStereoscopicImage(args.time,1) : 0);
 
     // make sure bit depths are sane
     if (srcLeft.get()) {

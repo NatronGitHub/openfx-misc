@@ -235,7 +235,8 @@ OneViewPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArguments
     int view;
     _view->getValueAtTime(args.time, view);
     // fetch main input image
-    std::auto_ptr<const OFX::Image> src(_srcClip->fetchStereoscopicImage(args.time,view));
+    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+                                        _srcClip->fetchStereoscopicImage(args.time, view) : 0);
 
     // make sure bit depths are sane
     if (src.get()) {

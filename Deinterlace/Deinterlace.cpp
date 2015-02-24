@@ -456,9 +456,12 @@ void DeinterlacePlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    std::auto_ptr<const OFX::Image> src(_srcClip->fetchImage(args.time)),
-                              srcp(_srcClip->fetchImage(args.time-1.0)),
-                              srcn(_srcClip->fetchImage(args.time+1.0));
+    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+                                        _srcClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> srcp((_srcClip && _srcClip->isConnected()) ?
+                                         _srcClip->fetchImage(args.time-1) : 0);
+    std::auto_ptr<const OFX::Image> srcn((_srcClip && _srcClip->isConnected()) ?
+                                         _srcClip->fetchImage(args.time+1) : 0);
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||

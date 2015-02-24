@@ -363,7 +363,8 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     const OFX::PixelComponentEnum dstPixelComponents  = dst->getPixelComponents();
     assert(dstBitDepth == OFX::eBitDepthFloat); // only float is supported for now (others are untested)
 
-    std::auto_ptr<const OFX::Image> srcA(_srcAClip->fetchImage(time));
+    std::auto_ptr<const OFX::Image> srcA((_srcAClip && _srcAClip->isConnected()) ?
+                                         _srcAClip->fetchImage(args.time) : 0);
     if (srcA.get()) {
         OFX::BitDepthEnum    srcABitDepth      = srcA->getPixelDepth();
         OFX::PixelComponentEnum srcAPixelComponents = srcA->getPixelComponents();
@@ -404,7 +405,8 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         srcARowBytes = srcA->getRowBytes();
     }
 
-    std::auto_ptr<const OFX::Image> srcB(_srcBClip->fetchImage(time));
+    std::auto_ptr<const OFX::Image> srcB((_srcBClip && _srcBClip->isConnected()) ?
+                                         _srcBClip->fetchImage(args.time) : 0);
     if (srcB.get()) {
         OFX::BitDepthEnum    srcBBitDepth      = srcB->getPixelDepth();
         OFX::PixelComponentEnum srcBPixelComponents = srcB->getPixelComponents();

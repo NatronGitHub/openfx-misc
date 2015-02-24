@@ -231,9 +231,11 @@ JoinViewsPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArgumen
     }
 
     // fetch main input image
-    std::auto_ptr<const OFX::Image> src(args.renderView == 0
-                                  ? _srcLeftClip->fetchStereoscopicImage(args.time,0)
-                                  : _srcRightClip->fetchStereoscopicImage(args.time,0));
+    std::auto_ptr<const OFX::Image> src(args.renderView == 0 ?
+                                        ((_srcLeftClip && _srcLeftClip->isConnected()) ?
+                                         _srcLeftClip->fetchStereoscopicImage(args.time,0) : 0) :
+                                        ((_srcRightClip && _srcRightClip->isConnected()) ?
+                                         _srcRightClip->fetchStereoscopicImage(args.time,0) : 0));
 
     // make sure bit depths are sane
     if (src.get()) {

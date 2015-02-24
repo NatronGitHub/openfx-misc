@@ -445,12 +445,16 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> srcA(_srcClipA->fetchImage(args.time));
-    std::auto_ptr<const OFX::Image> srcB(_srcClipB->fetchImage(args.time));
+    std::auto_ptr<const OFX::Image> srcA((_srcClipA && _srcClipA->isConnected()) ?
+                                         _srcClipA->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> srcB((_srcClipB && _srcClipB->isConnected()) ?
+                                         _srcClipB->fetchImage(args.time) : 0);
     
     OptionalImagesHolder_RAII optionalImages;
     for (unsigned i = 0; i < _optionalASrcClips.size(); ++i) {
-        const OFX::Image* optImg = _optionalASrcClips[i]->fetchImage(args.time);
+        optionalImages.images.push_back((_optionalASrcClips[i] && _optionalASrcClips[i]->isConnected()) ?
+                                        _optionalASrcClips[i]->fetchImage(args.time) : 0);
+        const OFX::Image* optImg = optionalImages.images.back();
         if (optImg) {
             if (optImg->getRenderScale().x != args.renderScale.x ||
                 optImg->getRenderScale().y != args.renderScale.y ||
@@ -464,7 +468,6 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
                 OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
-        optionalImages.images.push_back(optImg);
     }
 
     if (srcA.get()) {
@@ -496,7 +499,8 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     }
     
     // auto ptr for the mask.
-    std::auto_ptr<OFX::Image> mask((getContext() != OFX::eContextFilter) ? _maskClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
+                                         _maskClip->fetchImage(args.time) : 0);
     
     // do we do masking
     if (getContext() != OFX::eContextFilter && _maskClip->isConnected()) {
