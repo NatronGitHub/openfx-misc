@@ -675,7 +675,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
         param->setLabel(kParamRectangleInteractSizeLabel);
-        param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
+        param->setDoubleType(OFX::eDoubleTypeXY);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(1., 1.);
         param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);

@@ -838,6 +838,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
         param->setRange(0, 0, INT_MAX, INT_MAX);
         param->setDisplayRange(0, 0, 100, 100);
         param->setDefault(kParamSizeDefault, kParamSizeDefault);
+        param->setDoubleType(eDoubleTypeXY);
         param->setDigits(1);
         param->setIncrement(0.1);
         param->setLayoutHint(eLayoutHintNoNewLine);

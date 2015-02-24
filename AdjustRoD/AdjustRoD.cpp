@@ -375,6 +375,7 @@ void AdjustRoDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(0., 0.);
         param->setIncrement(1.);
         param->setDimensionLabels("w", "h");
+        param->setDoubleType(eDoubleTypeXY);
         param->setIncrement(1.);
         param->setDigits(0);
         page->addChild(*param);

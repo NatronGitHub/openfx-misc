@@ -1282,7 +1282,7 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         doAnalyzeHSVL = (k != -1);
     }
     // RGBA analysis
-    if (doAnalyzeRGBA || doAnalyzeHSVL) {
+    if ((doAnalyzeRGBA || doAnalyzeHSVL) && _srcClip && _srcClip->isConnected()) {
         std::auto_ptr<OFX::Image> src(_srcClip->fetchImage(args.time));
         if (src.get()) {
             if (src->getRenderScale().x != args.renderScale.x ||
@@ -1302,11 +1302,11 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
         }
     }
-    if (doAnalyzeSequenceRGBA || doAnalyzeSequenceHSVL) {
+    if ((doAnalyzeSequenceRGBA || doAnalyzeSequenceHSVL) && _srcClip && _srcClip->isConnected()) {
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
         progressStart("Analyzing sequence...");
-        OfxRangeD range;
-        timeLineGetBounds(range.min, range.max);
+        OfxRangeD range = _srcClip->getFrameRange();
+        //timeLineGetBounds(range.min, range.max); // wrong: we want the input frame range only
         int tmin = (int)std::ceil(range.min);
         int tmax = (int)std::floor(range.max);
         for (int t = tmin; t <= tmax; ++t) {
@@ -1600,7 +1600,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
         param->setLabel(kParamRectangleInteractSizeLabel);
-        param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
+        param->setDoubleType(OFX::eDoubleTypeXY);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(1., 1.);
         param->setIncrement(1.);

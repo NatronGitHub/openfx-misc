@@ -709,6 +709,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setRange(1, 1, INT_MAX, INT_MAX);
         param->setDisplayRange(0, 0, 100, 100);
         //param->setDefault(64, 64);
+        param->setDoubleType(eDoubleTypeXY);
         param->setAnimates(true); // can animate
         page->addChild(*param);
     }
