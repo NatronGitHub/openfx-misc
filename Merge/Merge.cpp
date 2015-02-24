@@ -118,6 +118,10 @@
 #define kClipA "A"
 #define kClipB "B"
 
+#define kMaximumAInputs 10
+
+static bool gHostIsNatron2 = false;
+
 using namespace OFX;
 using namespace MergeImages2D;
 
@@ -127,6 +131,7 @@ protected:
     const OFX::Image *_srcImgA;
     const OFX::Image *_srcImgB;
     const OFX::Image *_maskImg;
+    std::vector<const OFX::Image*> _optionalAImages;
     bool   _doMasking;
     MergingFunctionEnum _operation;
     int _bbox;
@@ -151,7 +156,12 @@ public:
         
     }
     
-    void setSrcImg(const OFX::Image *A, const OFX::Image *B) {_srcImgA = A; _srcImgB = B;}
+    void setSrcImg(const OFX::Image *A, const OFX::Image *B,
+                   const std::vector<const OFX::Image*>& optionalAImages) {
+        _srcImgA = A;
+        _srcImgB = B;
+        _optionalAImages = optionalAImages;
+    }
     
     void setMaskImg(const OFX::Image *v, bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
     
@@ -187,6 +197,7 @@ private:
         float tmpPix[nComponents];
         float tmpA[nComponents];
         float tmpB[nComponents];
+        
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if (_effect.abort()) {
                 break;
@@ -198,7 +209,10 @@ private:
                 
                 const PIX *srcPixA = (const PIX *)  (_srcImgA ? _srcImgA->getPixelAddress(x, y) : 0);
                 const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
-
+                
+                assert(_optionalAImages.size() == 0 || _optionalAImages.size() == (kMaximumAInputs - 1));
+                
+                
                 if (srcPixA || srcPixB) {
 
                     for (int c = 0; c < nComponents; ++c) {
@@ -208,17 +222,38 @@ private:
                     }
                     // work in float: clamping is done when mixing
                     mergePixel<float, nComponents, 1>(_operation, _alphaMasking, tmpA, tmpB, tmpPix);
-                    // denormalize
-                    for (int c = 0; c < nComponents; ++c) {
-                        tmpPix[c] *= maxValue;
-                    }
-                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPixB, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+    
+                    
                 } else {
                     // everything is black and transparent
                     for (int c = 0; c < nComponents; ++c) {
-                        dstPix[c] = 0;
+                        tmpPix[c] = 0;
                     }
                 }
+                
+                for (unsigned int i = 0; i < _optionalAImages.size(); ++i) {
+                    srcPixA = (const PIX *)  (_optionalAImages[i] ? _optionalAImages[i]->getPixelAddress(x, y) : 0);
+                    
+                    if (srcPixA) {
+                        
+                        for (int c = 0; c < nComponents; ++c) {
+                            // all images are supposed to be black and transparent outside o
+                            tmpA[c] = srcPixA ? ((float)srcPixA[c] / (float)maxValue) : 0.f;
+                            tmpB[c] = tmpPix[c];
+                        }
+                        // work in float: clamping is done when mixing
+                        mergePixel<float, nComponents, 1>(_operation, _alphaMasking, tmpA, tmpB, tmpPix);
+           
+                    }
+                }
+                
+                // denormalize
+                for (int c = 0; c < nComponents; ++c) {
+                    tmpPix[c] *= maxValue;
+                }
+                
+                ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPixB, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
+                
                 dstPix += nComponents;
             }
         }
@@ -239,12 +274,24 @@ public:
     , _srcClipA(0)
     , _srcClipB(0)
     , _maskClip(0)
-    
+    , _optionalASrcClips(kMaximumAInputs - 1)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));
         _srcClipA = fetchClip(kClipA);
         assert(_srcClipA && (_srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentAlpha));
+        
+        if (gHostIsNatron2) {
+            for (int i = 2; i <= kMaximumAInputs; ++i) {
+                std::stringstream ss;
+                ss << kClipA << i;
+                std::string clipName = ss.str();
+                OFX::Clip* clip = fetchClip(clipName);
+                assert(clip && (clip->getPixelComponents() == ePixelComponentRGB || clip->getPixelComponents() == ePixelComponentRGBA || clip->getPixelComponents() == ePixelComponentAlpha));
+                _optionalASrcClips[i - 2] = clip;
+            }
+        }
+        
         _srcClipB = fetchClip(kClipB);
         assert(_srcClipB && (_srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentAlpha));
         _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
@@ -279,6 +326,7 @@ private:
     OFX::Clip *_srcClipA;
     OFX::Clip *_srcClipB;
     OFX::Clip *_maskClip;
+    std::vector<OFX::Clip *> _optionalASrcClips;
     
     OFX::ChoiceParam *_operation;
     OFX::StringParam *_operationString;
@@ -293,8 +341,6 @@ private:
 bool
 MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
-    //OfxRectD srcRodA = translateRegion( _clipSrcA->getCanonicalRod( args.time ), params._offsetA );
-	//OfxRectD srcRodB = translateRegion( _clipSrcB->getCanonicalRod( args.time ), params._offsetB );
     if (!_srcClipA->isConnected() && !_srcClipB->isConnected()) {
         throwSuiteStatusException(kOfxStatFailed);
     }
@@ -318,14 +364,32 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
 		case 0: //union
 		{
             rectBoundingBox(rodA, rodB, &rod);
+            if (gHostIsNatron2) {
+                for (unsigned int i = 0; i < _optionalASrcClips.size(); ++i) {
+                    OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(args.time);
+                    rectBoundingBox(rodOptionalA, rod, &rod);
+                }
+            }
 			return true;
 		}
 		case 1: //intersection
 		{
             bool interesect = rectIntersection(rodA, rodB, &rod);
             if (!interesect) {
-                setPersistentMessage(OFX::Message::eMessageError, "", "The bounding boxes of the 2 images don't intersect.");
+                setPersistentMessage(OFX::Message::eMessageError, "", "Input images intersection is empty.");
                 return false;
+            }
+            if (gHostIsNatron2) {
+                for (unsigned int i = 0; i < _optionalASrcClips.size(); ++i) {
+                    OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(args.time);
+                    interesect = rectIntersection(rodOptionalA, rod, &rod);
+                    if (!interesect) {
+                        setPersistentMessage(OFX::Message::eMessageError, "",
+                                             "Input images intersection is empty. ");
+                        return false;
+                    }
+
+                }
             }
 			return true;
 		}
@@ -343,6 +407,26 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
 	return false;
 }
 
+
+// Since we cannot hold a std::auto_ptr in the vector we must hold a raw pointer.
+// To ensure that images are always freed even in case of exceptions, use a RAII class.
+struct OptionalImagesHolder_RAII
+{
+    std::vector<const OFX::Image*> images;
+    
+    OptionalImagesHolder_RAII()
+    : images()
+    {
+        
+    }
+    
+    ~OptionalImagesHolder_RAII()
+    {
+        for (unsigned int i = 0; i < images.size(); ++i) {
+            delete images[i];
+        }
+    }
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */
@@ -373,6 +457,28 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     }
     std::auto_ptr<const OFX::Image> srcA(_srcClipA->fetchImage(args.time));
     std::auto_ptr<const OFX::Image> srcB(_srcClipB->fetchImage(args.time));
+    
+    OptionalImagesHolder_RAII optionalImages;
+    if (gHostIsNatron2) {
+        for (unsigned i = 0; i < _optionalASrcClips.size(); ++i) {
+            const OFX::Image* optImg = _optionalASrcClips[i]->fetchImage(args.time);
+            if (optImg) {
+                if (optImg->getRenderScale().x != args.renderScale.x ||
+                    optImg->getRenderScale().y != args.renderScale.y ||
+                    optImg->getField() != args.fieldToRender) {
+                    setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                    OFX::throwSuiteStatusException(kOfxStatFailed);
+                }
+                OFX::BitDepthEnum    srcBitDepth      = optImg->getPixelDepth();
+                OFX::PixelComponentEnum srcComponents = optImg->getPixelComponents();
+                if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+                    OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+                }
+            }
+            optionalImages.images.push_back(optImg);
+        }
+    }
+    
     if (srcA.get()) {
         if (srcA->getRenderScale().x != args.renderScale.x ||
             srcA->getRenderScale().y != args.renderScale.y ||
@@ -426,7 +532,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     _mix->getValueAtTime(args.time, mix);
     processor.setValues((MergingFunctionEnum)operation, bboxChoice, alphaMasking, mix);
     processor.setDstImg(dst.get());
-    processor.setSrcImg(srcA.get(),srcB.get());
+    processor.setSrcImg(srcA.get(),srcB.get(),optionalImages.images);
     processor.setRenderWindow(args.renderWindow);
    
     processor.process();
@@ -569,6 +675,14 @@ void MergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
+    
+    //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
+    //more than 2 images
+    if (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
+        OFX::getImageEffectHostDescription()->versionMajor >= 2) {
+        gHostIsNatron2 = true;
+    }
+    
     OFX::ClipDescriptor* srcClipB = desc.defineClip(kClipB);
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGB );
@@ -590,6 +704,27 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     //Optional: If we want a render to be triggered even if one of the inputs is not connected
     //they need to be optional.
     srcClipA->setOptional(true);
+    
+    
+    if (gHostIsNatron2) {
+        
+        for (int i = 2; i <= kMaximumAInputs; ++i) {
+            std::stringstream ss;
+            ss << kClipA << i;
+            std::string clipName = ss.str();
+            
+            OFX::ClipDescriptor* optionalSrcClip = desc.defineClip(clipName);
+            optionalSrcClip->addSupportedComponent( OFX::ePixelComponentRGBA );
+            optionalSrcClip->addSupportedComponent( OFX::ePixelComponentRGB );
+            optionalSrcClip->addSupportedComponent( OFX::ePixelComponentAlpha );
+            optionalSrcClip->setTemporalClipAccess(false);
+            optionalSrcClip->setSupportsTiles(kSupportsTiles);
+            
+            //Optional: If we want a render to be triggered even if one of the inputs is not connected
+            //they need to be optional.
+            optionalSrcClip->setOptional(true);
+        }
+    }
 
     
     // create the mandated output clip
