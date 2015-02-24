@@ -119,10 +119,6 @@
 #define kParamProcessALabel "A"
 #define kParamProcessAHint  "Process alpha component"
 
-#define kParamValueName  "value"
-#define kParamValueLabel "Value"
-#define kParamValueHint  "Constant to multiply with the selected channels."
-
 #define kParamNbFramesName  "nbFrames"
 #define kParamNbFramesLabel "Number of Frames"
 #define kParamNbFramesHint  "Blend together nbFrames frames: the nbFrames-1 previous frames, and the current frame (when \"custom\" is not checked)."
@@ -351,21 +347,21 @@ private:
                     } else if (!processA) {
                         dstPix[0] = srcPix ? srcPix[0] : PIX();
                     } else {
-                        dstPix[0] = (PIX)(tmpPix[0] / count);
+                        dstPix[0] = count ? (PIX)(tmpPix[0] / count) : PIX();
                     }
                 } else if (nComponents == 3 || nComponents == 4) {
                     if (processR) {
-                        dstPix[0] = (PIX)(tmpPix[0] / count);
+                        dstPix[0] = count ? (PIX)(tmpPix[0] / count) : PIX();
                     } else {
                         dstPix[0] = srcPix ? srcPix[0] : PIX();
                     }
                     if (processG) {
-                        dstPix[1] = (PIX)(tmpPix[1] / count);
+                        dstPix[1] = count ? (PIX)(tmpPix[1] / count) : PIX();
                     } else {
                         dstPix[1] = srcPix ? srcPix[1] : PIX();
                     }
                     if (processB) {
-                        dstPix[2] = (PIX)(tmpPix[2] / count);
+                        dstPix[2] = count ? (PIX)(tmpPix[2] / count) : PIX();
                     } else {
                         dstPix[2] = srcPix ? srcPix[2] : PIX();
                     }
@@ -373,7 +369,7 @@ private:
                         if (_outputCount) {
                             dstPix[3] = count;
                         } else if (processA) {
-                            dstPix[3] = (PIX)(tmpPix[3] / count);
+                            dstPix[3] = count ? (PIX)(tmpPix[3] / count) : PIX();
                         } else {
                             dstPix[3] = srcPix ? srcPix[3] : PIX();
                         }
@@ -413,8 +409,6 @@ public:
         _processB = fetchBooleanParam(kParamProcessB);
         _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
-        _value = fetchRGBAParam(kParamValueName);
-        assert(_value);
         _nbFrames = fetchIntParam(kParamNbFramesName);
         _frameRange = fetchInt2DParam(kParamFrameRangeName);
         _custom = fetchBooleanParam(kParamCustomName);
@@ -456,7 +450,6 @@ private:
     OFX::BooleanParam* _processG;
     OFX::BooleanParam* _processB;
     OFX::BooleanParam* _processA;
-    OFX::RGBAParam *_value;
     IntParam* _nbFrames;
     Int2DParam* _frameRange;
     BooleanParam* _custom;
@@ -908,17 +901,7 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
-        param->setDefault(false);
-        page->addChild(*param);
-    }
-
-    {
-        RGBAParamDescriptor *param = desc.defineRGBAParam(kParamValueName);
-        param->setLabel(kParamValueLabel);
-        param->setHint(kParamValueHint);
-        param->setDefault(1.0, 1.0, 1.0, 1.0);
-        param->setDisplayRange(0, 0, 0, 0, 4, 4, 4, 4);
-        param->setAnimates(true); // can animate
+        param->setDefault(true);
         page->addChild(*param);
     }
 
