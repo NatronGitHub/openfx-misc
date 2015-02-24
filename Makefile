@@ -18,6 +18,7 @@ Crop \
 Deinterlace \
 Difference \
 Dissolve \
+FrameBlend \
 Gamma \
 GodRays \
 Grade \
