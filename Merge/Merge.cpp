@@ -381,7 +381,6 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
                                          "Input images intersection is empty. ");
                     return false;
                 }
-
             }
 			return true;
 		}
