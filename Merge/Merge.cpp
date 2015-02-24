@@ -120,8 +120,6 @@
 
 #define kMaximumAInputs 10
 
-static bool gHostIsNatron2 = false;
-
 using namespace OFX;
 using namespace MergeImages2D;
 
@@ -268,20 +266,21 @@ class MergePlugin : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
-    MergePlugin(OfxImageEffectHandle handle)
+    MergePlugin(OfxImageEffectHandle handle, bool numerousInputs)
     : ImageEffect(handle)
     , _dstClip(0)
     , _srcClipA(0)
     , _srcClipB(0)
     , _maskClip(0)
-    , _optionalASrcClips(kMaximumAInputs - 1)
+    , _optionalASrcClips(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));
         _srcClipA = fetchClip(kClipA);
         assert(_srcClipA && (_srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentAlpha));
         
-        if (gHostIsNatron2) {
+        if (numerousInputs) {
+            _optionalASrcClips.resize(kMaximumAInputs - 1);
             for (int i = 2; i <= kMaximumAInputs; ++i) {
                 std::stringstream ss;
                 ss << kClipA << i;
@@ -359,47 +358,38 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
     
     _bbox->getValueAtTime(args.time, bboxChoice);
     
-	switch (bboxChoice)
-	{
-		case 0: //union
-		{
+    switch (bboxChoice) {
+        case 0: { //union
             rectBoundingBox(rodA, rodB, &rod);
-            if (gHostIsNatron2) {
-                for (unsigned int i = 0; i < _optionalASrcClips.size(); ++i) {
-                    OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(args.time);
-                    rectBoundingBox(rodOptionalA, rod, &rod);
-                }
+            for (unsigned int i = 0; i < _optionalASrcClips.size(); ++i) {
+                OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(args.time);
+                rectBoundingBox(rodOptionalA, rod, &rod);
             }
 			return true;
 		}
-		case 1: //intersection
-		{
+        case 1: { //intersection
             bool interesect = rectIntersection(rodA, rodB, &rod);
             if (!interesect) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Input images intersection is empty.");
                 return false;
             }
-            if (gHostIsNatron2) {
-                for (unsigned int i = 0; i < _optionalASrcClips.size(); ++i) {
-                    OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(args.time);
-                    interesect = rectIntersection(rodOptionalA, rod, &rod);
-                    if (!interesect) {
-                        setPersistentMessage(OFX::Message::eMessageError, "",
-                                             "Input images intersection is empty. ");
-                        return false;
-                    }
-
+            for (unsigned int i = 0; i < _optionalASrcClips.size(); ++i) {
+                OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(args.time);
+                interesect = rectIntersection(rodOptionalA, rod, &rod);
+                if (!interesect) {
+                    setPersistentMessage(OFX::Message::eMessageError, "",
+                                         "Input images intersection is empty. ");
+                    return false;
                 }
+
             }
 			return true;
 		}
-		case 2: //A
-		{
+        case 2: { //A
 			rod = rodA;
 			return true;
 		}
-		case 3: //B
-		{
+        case 3: { //B
 			rod = rodB;
 			return true;
 		}
@@ -407,7 +397,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
 	return false;
 }
 
-
+namespace {
 // Since we cannot hold a std::auto_ptr in the vector we must hold a raw pointer.
 // To ensure that images are always freed even in case of exceptions, use a RAII class.
 struct OptionalImagesHolder_RAII
@@ -427,6 +417,7 @@ struct OptionalImagesHolder_RAII
         }
     }
 };
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */
@@ -459,26 +450,24 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     std::auto_ptr<const OFX::Image> srcB(_srcClipB->fetchImage(args.time));
     
     OptionalImagesHolder_RAII optionalImages;
-    if (gHostIsNatron2) {
-        for (unsigned i = 0; i < _optionalASrcClips.size(); ++i) {
-            const OFX::Image* optImg = _optionalASrcClips[i]->fetchImage(args.time);
-            if (optImg) {
-                if (optImg->getRenderScale().x != args.renderScale.x ||
-                    optImg->getRenderScale().y != args.renderScale.y ||
-                    optImg->getField() != args.fieldToRender) {
-                    setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                    OFX::throwSuiteStatusException(kOfxStatFailed);
-                }
-                OFX::BitDepthEnum    srcBitDepth      = optImg->getPixelDepth();
-                OFX::PixelComponentEnum srcComponents = optImg->getPixelComponents();
-                if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
-                    OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-                }
+    for (unsigned i = 0; i < _optionalASrcClips.size(); ++i) {
+        const OFX::Image* optImg = _optionalASrcClips[i]->fetchImage(args.time);
+        if (optImg) {
+            if (optImg->getRenderScale().x != args.renderScale.x ||
+                optImg->getRenderScale().y != args.renderScale.y ||
+                optImg->getField() != args.fieldToRender) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
             }
-            optionalImages.images.push_back(optImg);
+            OFX::BitDepthEnum    srcBitDepth      = optImg->getPixelDepth();
+            OFX::PixelComponentEnum srcComponents = optImg->getPixelComponents();
+            if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            }
         }
+        optionalImages.images.push_back(optImg);
     }
-    
+
     if (srcA.get()) {
         if (srcA->getRenderScale().x != args.renderScale.x ||
             srcA->getRenderScale().y != args.renderScale.y ||
@@ -532,7 +521,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     _mix->getValueAtTime(args.time, mix);
     processor.setValues((MergingFunctionEnum)operation, bboxChoice, alphaMasking, mix);
     processor.setDstImg(dst.get());
-    processor.setSrcImg(srcA.get(),srcB.get(),optionalImages.images);
+    processor.setSrcImg(srcA.get(), srcB.get(), optionalImages.images);
     processor.setRenderWindow(args.renderWindow);
    
     processor.process();
@@ -675,14 +664,12 @@ void MergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
-    
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    if (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
-        OFX::getImageEffectHostDescription()->versionMajor >= 2) {
-        gHostIsNatron2 = true;
-    }
-    
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kOfxNatronHostName ||
+                            (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
+                             OFX::getImageEffectHostDescription()->versionMajor >= 2));
+
     OFX::ClipDescriptor* srcClipB = desc.defineClip(kClipB);
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGB );
@@ -704,10 +691,8 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     //Optional: If we want a render to be triggered even if one of the inputs is not connected
     //they need to be optional.
     srcClipA->setOptional(true);
-    
-    
-    if (gHostIsNatron2) {
-        
+
+    if (numerousInputs) {
         for (int i = 2; i <= kMaximumAInputs; ++i) {
             std::stringstream ss;
             ss << kClipA << i;
@@ -867,7 +852,13 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
 
 OFX::ImageEffect* MergePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
-    return new MergePlugin(handle);
+    //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
+    //more than 2 images
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kOfxNatronHostName ||
+                            (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
+                             OFX::getImageEffectHostDescription()->versionMajor >= 2));
+
+    return new MergePlugin(handle, numerousInputs);
 }
 
 void getMergePluginID(OFX::PluginFactoryArray &ids)
