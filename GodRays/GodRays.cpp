@@ -403,7 +403,7 @@ private:
 #ifndef USE_STEPS
                     // compute mean and variance (unbiased)
                     for (int c = 0; c < nComponents; ++c) {
-                        mean[c] = accPix[c] / sample;
+                        mean[c] = sample ? accPix[c] / sample : 0;
                         if (sample <= 1) {
                             var[c] = (double)maxValue * maxValue;
                         } else {
@@ -429,7 +429,7 @@ private:
                 } else {
 #ifdef USE_STEPS
                     for (int c = 0; c < nComponents; ++c) {
-                        mean[c] = accPix[c] / sample;
+                        mean[c] = sample ? accPix[c] / sample : 0;
                     }
 #endif
                     for (int c = 0; c < nComponents; ++c) {
@@ -880,7 +880,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
                                          _maskClip->fetchImage(time) : 0);
 
     // do we do masking
-    if ( (getContext() != OFX::eContextFilter) && _maskClip->isConnected() ) {
+    if ( getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected() ) {
         bool maskInvert;
         _maskInvert->getValueAtTime(time, maskInvert);
 
@@ -1037,8 +1037,8 @@ GodRaysPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);

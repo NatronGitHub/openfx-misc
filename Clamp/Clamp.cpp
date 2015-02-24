@@ -587,7 +587,7 @@ ClampPlugin::setupAndProcess(ClampBase &processor, const OFX::RenderArguments &a
                                          _maskClip->fetchImage(args.time) : 0);
 
     // do we do masking
-    if (getContext() != OFX::eContextFilter && _maskClip->isConnected()) {
+    if (getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) {
         if (mask.get()) {
             if (mask->getRenderScale().x != args.renderScale.x ||
                 mask->getRenderScale().y != args.renderScale.y ||
@@ -657,8 +657,8 @@ ClampPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {

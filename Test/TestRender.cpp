@@ -351,7 +351,7 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
                                          _maskClip->fetchImage(args.time) : 0);
 
     // do we do masking
-    if (getContext() != OFX::eContextFilter && _maskClip->isConnected()) {
+    if (getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) {
         if (mask.get()) {
             if (mask->getRenderScale().x != args.renderScale.x ||
                 mask->getRenderScale().y != args.renderScale.y ||
@@ -393,8 +393,8 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::ren
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    assert(kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();

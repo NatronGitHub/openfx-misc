@@ -279,7 +279,7 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     //bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kOfxNatronHostName ||
     //                        (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
     //                         OFX::getImageEffectHostDescription()->versionMajor >= 2));
-    bool numerousInputs = true; // Natron 1.x was distributed with it
+    const bool numerousInputs = true; // Natron 1.x was distributed with it
 
     int clipSourceCount = numerousInputs ? kClipSourceCount : 2;
 
@@ -343,7 +343,7 @@ OFX::ImageEffect* SwitchPluginFactory::createInstance(OfxImageEffectHandle handl
     //bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kOfxNatronHostName ||
     //                        (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
     //                         OFX::getImageEffectHostDescription()->versionMajor >= 2));
-    bool numerousInputs = true; // Natron 1.x was distributed with it
+    const bool numerousInputs = true; // Natron 1.x was distributed with it
 
     return new SwitchPlugin(handle, numerousInputs);
 }

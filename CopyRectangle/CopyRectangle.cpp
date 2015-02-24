@@ -412,7 +412,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    if (getContext() != OFX::eContextFilter && _maskClip->isConnected()) {
+    if (getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         processor.doMasking(true);

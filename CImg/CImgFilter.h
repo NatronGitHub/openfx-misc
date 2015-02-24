@@ -505,7 +505,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::setupAndCopy(OFX::PixelProcesso
     if (isEmpty(renderWindow)) {
         return;
     }
-    if (getContext() != OFX::eContextFilter && _maskClip->isConnected()) {
+    if (getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) {
         processor.doMasking(true);
         processor.setMaskImg(mask, maskInvert);
     }
@@ -605,8 +605,8 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         srcPixelData = NULL;
         srcBounds.x1 = srcBounds.y1 = srcBounds.x2 = srcBounds.y2 = 0;
         srcRoD.x1 = srcRoD.y1 = srcRoD.x2 = srcRoD.y2 = 0;
-        srcPixelComponents = _srcClip->getPixelComponents();
-        srcBitDepth = _srcClip->getPixelDepth();
+        srcPixelComponents = _srcClip ? _srcClip->getPixelComponents() : OFX::ePixelComponentNone;
+        srcBitDepth = _srcClip ? _srcClip->getPixelDepth() : OFX::eBitDepthNone;
         //srcPixelBytes = getPixelBytes(srcPixelComponents, srcBitDepth);
         srcRowBytes = 0;
     } else {

@@ -449,7 +449,7 @@ AddPlugin::setupAndProcess(AddProcessorBase &processor, const OFX::RenderArgumen
     std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
                                          _maskClip->fetchImage(args.time) : 0);
     // do we do masking
-    if (getContext() != OFX::eContextFilter && _maskClip->isConnected()) {
+    if (getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         processor.doMasking(true);
@@ -491,8 +491,8 @@ AddPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     
-    assert(kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     assert(dstComponents == OFX::ePixelComponentAlpha ||dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentAlpha) {
         switch (dstBitDepth) {

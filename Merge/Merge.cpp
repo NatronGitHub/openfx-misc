@@ -215,8 +215,8 @@ private:
 
                     for (int c = 0; c < nComponents; ++c) {
                         // all images are supposed to be black and transparent outside o
-                        tmpA[c] = srcPixA ? ((float)srcPixA[c] / (float)maxValue) : 0.f;
-                        tmpB[c] = srcPixB ? ((float)srcPixB[c] / (float)maxValue) : 0.f;
+                        tmpA[c] = srcPixA ? ((float)srcPixA[c] / maxValue) : 0.f;
+                        tmpB[c] = srcPixB ? ((float)srcPixB[c] / maxValue) : 0.f;
                     }
                     // work in float: clamping is done when mixing
                     mergePixel<float, nComponents, 1>(_operation, _alphaMasking, tmpA, tmpB, tmpPix);
@@ -236,7 +236,7 @@ private:
                         
                         for (int c = 0; c < nComponents; ++c) {
                             // all images are supposed to be black and transparent outside o
-                            tmpA[c] = srcPixA ? ((float)srcPixA[c] / (float)maxValue) : 0.f;
+                            tmpA[c] = (float)srcPixA[c] / maxValue;
                             tmpB[c] = tmpPix[c];
                         }
                         // work in float: clamping is done when mixing
@@ -503,7 +503,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
                                          _maskClip->fetchImage(args.time) : 0);
     
     // do we do masking
-    if (getContext() != OFX::eContextFilter && _maskClip->isConnected()) {
+    if (getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
 
