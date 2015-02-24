@@ -171,6 +171,10 @@ SwitchPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &iden
 {
     int input;
     _which->getValueAtTime(args.time, input);
+    if (input >= (int)_srcClip.size()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Which parameter does not point to a valid input.");
+        return false;
+    }
     identityClip = _srcClip[input];
     return true;
 }
@@ -180,7 +184,10 @@ SwitchPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
 {
     int input;
     _which->getValueAtTime(args.time, input);
-
+    if (input >= (int)_srcClip.size()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Which parameter does not point to a valid input.");
+        return false;
+    }
     if (_srcClip[input] && _srcClip[input]->isConnected()) {
         rod = _srcClip[input]->getRegionOfDefinition(args.time);
 
@@ -197,6 +204,13 @@ SwitchPlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip * &tra
 {
     int input;
     _which->getValueAtTime(args.time, input);
+    
+    if (input >= (int)_srcClip.size()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Which parameter does not point to a valid input.");
+        return false;
+    }
+
+    
     transformClip = _srcClip[input];
 
     transformMatrix[0] = 1.;
@@ -321,7 +335,7 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setLabel(kParamWhichLabel);
         param->setHint(kParamWhichHint);
         param->setDefault(0);
-        param->setRange(0, clipSourceCount);
+        param->setRange(0, clipSourceCount - 1);
         param->setDisplayRange(0, 1);
         param->setAnimates(true);
         page->addChild(*param);
