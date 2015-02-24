@@ -133,6 +133,14 @@ public:
         assert(_which);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_maskInvert);
+
+        int maxconnected = 1;
+        for (unsigned i = 0; i < _srcClip.size(); ++i) {
+            if (_srcClip[i]->isConnected()) {
+                maxconnected = i;
+            }
+        }
+        _which->setDisplayRange(0, maxconnected);
     }
 
     /* Override the render */
@@ -340,7 +348,9 @@ DissolvePlugin::isIdentity(const OFX::IsIdentityArguments &args,
                            double &identityTime)
 {
     // get the transition value
-    double which = _which->getValueAtTime(args.time);
+    double which = std::max(0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size()-1));
+    int prev = (int)which;
+    //int next = std::min((int)which+1,(int)_srcClip.size()-1);
 
     identityTime = args.time;
 
@@ -352,9 +362,9 @@ DissolvePlugin::isIdentity(const OFX::IsIdentityArguments &args,
         return true;
     }
 
-    if ((which >= _srcClip.size() || ((int)which == which)) &&
+    if ((which >= _srcClip.size() || (prev == which)) &&
         (!_maskClip || !_maskClip->isConnected())) {
-        identityClip = _srcClip[(int)which];
+        identityClip = _srcClip[prev];
         identityTime = args.time;
 
         return true;
@@ -368,7 +378,10 @@ bool
 DissolvePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     // get the transition value
-    double which = _which->getValueAtTime(args.time);
+    double which = std::max(0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size()-1));
+    int prev = (int)which;
+    int next = std::min((int)which+1,(int)_srcClip.size()-1);
+
     // at the start?
     if (which <= 0.0 && _srcClip[0] && _srcClip[0]->isConnected()) {
         rod = _srcClip[0]->getRegionOfDefinition(args.time);
@@ -376,7 +389,6 @@ DissolvePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
         return true;
     }
 
-    int prev = std::min((size_t)which, _srcClip.size()-1);
     // at the end?
     if ((which >= _srcClip.size() || (which == prev)) &&
         _srcClip[prev] && _srcClip[prev]->isConnected() &&
@@ -385,8 +397,6 @@ DissolvePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
 
         return true;
     }
-
-    int next = prev + 1;
 
     if (_srcClip[prev] && _srcClip[prev]->isConnected() && _srcClip[next] && _srcClip[next]->isConnected()) {
         OfxRectD fromRoD = _srcClip[prev]->getRegionOfDefinition(args.time);
@@ -510,7 +520,7 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamWhich);
         param->setLabel(kParamWhichLabel);
         param->setHint(kParamWhichHint);
-        param->setRange(0., 1.);
+        param->setRange(0., clipSourceCount);
         param->setDisplayRange(0., 1.);
         page->addChild(*param);
     }
