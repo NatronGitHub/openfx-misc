@@ -274,7 +274,7 @@ public:
     , _srcClipA(0)
     , _srcClipB(0)
     , _maskClip(0)
-    , _optionalASrcClips(kMaximumAInputs - 1)
+    , _optionalASrcClips(gHostIsNatron1 ? 0 : kMaximumAInputs - 1)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));
