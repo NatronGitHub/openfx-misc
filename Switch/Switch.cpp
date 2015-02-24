@@ -171,10 +171,7 @@ SwitchPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &iden
 {
     int input;
     _which->getValueAtTime(args.time, input);
-    if (input >= (int)_srcClip.size()) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Which parameter does not point to a valid input.");
-        return false;
-    }
+    input = std::max(0, std::min(input, (int)_srcClip.size()-1));
     identityClip = _srcClip[input];
     return true;
 }
@@ -184,10 +181,7 @@ SwitchPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
 {
     int input;
     _which->getValueAtTime(args.time, input);
-    if (input >= (int)_srcClip.size()) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Which parameter does not point to a valid input.");
-        return false;
-    }
+    input = std::max(0, std::min(input, (int)_srcClip.size()-1));
     if (_srcClip[input] && _srcClip[input]->isConnected()) {
         rod = _srcClip[input]->getRegionOfDefinition(args.time);
 
@@ -204,13 +198,7 @@ SwitchPlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip * &tra
 {
     int input;
     _which->getValueAtTime(args.time, input);
-    
-    if (input >= (int)_srcClip.size()) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "Which parameter does not point to a valid input.");
-        return false;
-    }
-
-    
+    input = std::max(0, std::min(input, (int)_srcClip.size()-1));
     transformClip = _srcClip[input];
 
     transformMatrix[0] = 1.;
