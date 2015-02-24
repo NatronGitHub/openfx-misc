@@ -82,7 +82,12 @@
 
 #define kPluginName "GodRaysOFX"
 #define kPluginGrouping "Filter"
-#define kPluginDescription "God rays."
+#define kPluginDescription \
+"Average an image over a range of transforms.\n" \
+"This can be used to create crepuscular rays (also called God rays) by setting the scale and center parameters: scale governs the length of rays, and center should be set to the Sun or light position (which may be outside of the image).\n" \
+"Setting toColor to black and gamma to 1 causes an exponential decay which is very similar to the real crepuscular rays.\n" \
+"This can also be used to create directional blur using a fixed number of samples (as opposed to DirBlur, which uses an adaptive sampling method)."
+
 #define kPluginIdentifier "net.sf.openfx.GodRays"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -100,7 +105,7 @@
 
 #define kParamGamma "gamma"
 #define kParamGammaLabel "Gamma"
-#define kParamGammaHint "Gamma space in which the colors are interpolated. Higher values yield brighter intermediate images"
+#define kParamGammaHint "Gamma space in which the colors are interpolated. Higher values yield brighter intermediate images."
 
 #define USE_STEPS
 
