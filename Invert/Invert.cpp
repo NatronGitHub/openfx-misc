@@ -73,6 +73,7 @@
 
 #include "Invert.h"
 
+//#include <iostream>
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -377,21 +378,26 @@ class InvertPlugin : public OFX::ImageEffect
 void
 InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments &args)
 {
+    //std::cout << "setupAndProcess!\n";
     // get a dst image
     std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        //std::cout << "setupAndProcess! can' fetch dst\n";
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
     if (dstBitDepth != _dstClip->getPixelDepth() ||
         dstComponents != _dstClip->getPixelComponents()) {
+        //std::cout << "setupAndProcess! OFX Host gave image with wrong depth or components\n";
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
         dst->getRenderScale().y != args.renderScale.y ||
-        dst->getField() != args.fieldToRender) {
+        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+        //std::cout << "setupAndProcess! OFX Host gave image with wrong scale or field properties (dst)\n";
+        //std::cout << dst->getRenderScale().x <<',' << args.renderScale.x <<','<< dst->getRenderScale().y<<',' <<  args.renderScale.y <<',' <<dst->getField() <<',' << args.fieldToRender << '\n';
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -404,7 +410,7 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
-            src->getField() != args.fieldToRender) {
+            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -427,6 +433,7 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
             if (mask->getRenderScale().x != args.renderScale.x ||
                 mask->getRenderScale().y != args.renderScale.y ||
                 mask->getField() != args.fieldToRender) {
+                //std::cout << "setupAndProcess! OFX Host gave image with wrong scale or field properties (mask)\n";
                 setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
@@ -465,13 +472,16 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
     processor.setRenderWindow(args.renderWindow);
 
     // Call the base class process member, this will call the derived templated process code
+    //std::cout << "setupAndProcess! process\n";
     processor.process();
+    //std::cout << "setupAndProcess! OK\n";
 }
 
 // the overridden render function
 void
 InvertPlugin::render(const OFX::RenderArguments &args)
 {
+    //std::cout << "render!\n";
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
@@ -547,11 +557,13 @@ InvertPlugin::render(const OFX::RenderArguments &args)
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
+    //std::cout << "render! OK\n";
 }
 
 bool
 InvertPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
+    //std::cout << "isIdentity!\n";
     bool processR;
     bool processG;
     bool processB;
@@ -565,8 +577,10 @@ InvertPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, 
 
     if (mix == 0. || (!processR && !processG && !processB && !processA)) {
         identityClip = _srcClip;
+        //std::cout << "isIdentity! OK (yes)\n";
         return true;
     } else {
+        //std::cout << "isIdentity! OK (no)\n";
         return false;
     }
 }
@@ -574,6 +588,7 @@ InvertPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, 
 void
 InvertPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
+    //std::cout << "changedClip!\n";
     if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
@@ -587,6 +602,7 @@ InvertPlugin::changedClip(const InstanceChangedArgs &args, const std::string &cl
                 break;
         }
     }
+    //std::cout << "changedClip! OK\n";
 }
 
 mDeclarePluginFactory(InvertPluginFactory, {}, {});
@@ -594,6 +610,7 @@ mDeclarePluginFactory(InvertPluginFactory, {}, {});
 using namespace OFX;
 void InvertPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
+    //std::cout << "describe!\n";
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -619,11 +636,12 @@ void InvertPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-
+    //std::cout << "describe! OK\n";
 }
 
 void InvertPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
+    //std::cout << "describeincontext!" << (int)context << "\n";
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -689,6 +707,7 @@ void InvertPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
+    //std::cout << "describeincontext!" << (int)context << " OK\n";
 }
 
 OFX::ImageEffect* InvertPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

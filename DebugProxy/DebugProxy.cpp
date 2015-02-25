@@ -127,7 +127,7 @@
 #define BINARY_PATH "/usr/OFX/Plugins.disabled/Sapphire.ofx.bundle/Contents/FreeBSD-x86-64/Sapphire.ofx"
 #endif
 #if defined(__APPLE__)
-#define OFX_PATH "/Library/OFX/Plugins/"
+#define OFX_PATH "/iLibrary/OFX/Plugins/"
 #define BINARY_PATH "/Library/OFX/Plugins.disabled/Sapphire.ofx.bundle/Contents/MacOS/Sapphire.ofx"
 #endif
 #endif
