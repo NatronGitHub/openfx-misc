@@ -376,7 +376,7 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
                                          _rotoClip->fetchImage(args.time) : 0);
     
     // do we do masking
-    if (getContext() != OFX::eContextFilter && _rotoClip->isConnected()) {
+    if (getContext() != OFX::eContextFilter && _rotoClip && _rotoClip->isConnected()) {
         if (!mask.get()) {
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -430,7 +430,7 @@ RotoPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, 
 #else
     // if source is not connected, use the Mask RoD (i.e. the default RoD)
     // else use the union of Source and Mask RoD (Source is optional)
-    if (!_srcClip->isConnected()) {
+    if (!(_srcClip && _srcClip->isConnected())) {
         return false;
     } else {
         rod = _srcClip->getRegionOfDefinition(args.time);

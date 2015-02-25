@@ -547,7 +547,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
     }
     OptionalImagesHolder_RAII srcImgs;
     for (int i = 0; i < n; ++i) {
-        const OFX::Image* src = _srcClip->fetchImage(min + i);
+        const OFX::Image* src = _srcClip ? _srcClip->fetchImage(min + i) : 0;
         if (src) {
             if (src->getRenderScale().x != args.renderScale.x ||
                 src->getRenderScale().y != args.renderScale.y ||

@@ -308,7 +308,10 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
     OfxPointD size = getProjectSize();
 
     // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask
-    OfxRectD rod = _srcClip->getRegionOfDefinition(args.time);
+    OfxRectD rod = {0., 0., 0., 0.};
+    if (_srcClip) {
+        rod = _srcClip->getRegionOfDefinition(args.time);
+    }
 
     // clip to the project rect
     //rod.x1 = std::max(rod.x1,offset.x);
@@ -335,6 +338,9 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
 bool
 SideBySidePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
+    if (!_srcClip) {
+        return false;
+    }
     bool vertical = vertical_->getValueAtTime(args.time);
     OfxPointD offset = getProjectOffset();
     OfxPointD size = getProjectSize();
@@ -362,6 +368,9 @@ SideBySidePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
 void
 SideBySidePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
+    if (!_srcClip) {
+        return;
+    }
     bool vertical = vertical_->getValueAtTime(args.time);
 
     // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask

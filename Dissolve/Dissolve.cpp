@@ -262,7 +262,7 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
     }
     if (getContext() != OFX::eContextFilter &&
         getContext() != OFX::eContextTransition &&
-        _maskClip->isConnected()) {
+        _maskClip && _maskClip->isConnected()) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         processor.doMasking(true);
@@ -335,7 +335,7 @@ DissolvePlugin::renderForBitDepth(const OFX::RenderArguments &args)
 {
     if (getContext() != OFX::eContextFilter &&
         getContext() != OFX::eContextTransition &&
-        _maskClip->isConnected()) {
+        _maskClip && _maskClip->isConnected()) {
         OFX::ImageBlenderMasked<PIX, nComponents, maxValue, true> fred(*this);
         setupAndProcess(fred, args);
     } else {

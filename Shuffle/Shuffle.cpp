@@ -716,7 +716,7 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
 
     OFX::BitDepthEnum srcBitDepth = _srcClipA->getPixelDepth();
 
-    if (_srcClipB && _srcClipA->isConnected() && _srcClipB->isConnected()) {
+    if (_srcClipA && _srcClipA->isConnected() && _srcClipB && _srcClipB->isConnected()) {
         OFX::BitDepthEnum srcBBitDepth = _srcClipB->getPixelDepth();
         // both input must have the same bit depth
         if (srcBitDepth != srcBBitDepth) {
@@ -911,7 +911,7 @@ ShufflePlugin::changedClip(const InstanceChangedArgs &/*args*/, const std::strin
         // check that A and B are compatible if they're both connected
         OFX::BitDepthEnum srcBitDepth = _srcClipA->getPixelDepth();
 
-        if (_srcClipB && _srcClipA->isConnected() && _srcClipB->isConnected()) {
+        if (_srcClipA && _srcClipA->isConnected() && _srcClipB && _srcClipB->isConnected()) {
             OFX::BitDepthEnum srcBBitDepth = _srcClipB->getPixelDepth();
             // both input must have the same bit depth
             if (srcBitDepth != srcBBitDepth) {

@@ -379,7 +379,7 @@ CropPlugin::getCropRectangle_canonical(OfxTime time,bool useReformat,bool forceI
         cropRect.y2 += 1;
     }
     
-    if (intersect) {
+    if (intersect && _srcClip) {
         const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(time);
         MergeImages2D::rectIntersection(cropRect, srcRoD, &cropRect);
     }

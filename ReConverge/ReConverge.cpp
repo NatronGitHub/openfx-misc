@@ -346,7 +346,7 @@ void
 ReConvergePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
     // set the ROI of the disp clip to the tracked point position (rounded to the nearest pixel)
-    if (getContext() == OFX::eContextGeneral && _convergepoint && _dispClip) {
+    if (getContext() == OFX::eContextGeneral && _convergepoint && _srcClip && _dispClip) {
         OfxRectD roi;
         // since getRegionsOfInterest is not view-specific, return a full horizontal band
         roi = _srcClip->getRegionOfDefinition(args.time);

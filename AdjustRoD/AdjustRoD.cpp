@@ -203,6 +203,9 @@ AdjustRoDPlugin::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
 void
 AdjustRoDPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
+    if (!_srcClip) {
+        return;
+    }
     const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(args.time);
     double w,h;
     _size->getValueAtTime(args.time, w, h);

@@ -798,7 +798,7 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
     rod.y1 = btmLeft.y;
     rod.x2 = rod.x1 + size.x;
     rod.y2 = rod.y1 + size.y;
-    if (_srcClip->isConnected()) {
+    if (_srcClip && _srcClip->isConnected()) {
         // something has to be drawn outside of the rectangle: return union of input RoD and rectangle
         OfxRectD srcRoD = _srcClip->getRegionOfDefinition(args.time);
         rod.x1 = std::min(rod.x1, srcRoD.x1);
