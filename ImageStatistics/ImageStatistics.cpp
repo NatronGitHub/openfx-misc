@@ -1288,8 +1288,7 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                                       _srcClip->fetchImage(args.time) : 0);
         if (src.get()) {
             if (src->getRenderScale().x != args.renderScale.x ||
-                src->getRenderScale().y != args.renderScale.y/* ||
-                (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)*/) {
+                src->getRenderScale().y != args.renderScale.y) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
@@ -1316,8 +1315,7 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                                           _srcClip->fetchImage(t) : 0);
             if (src.get()) {
                 if (src->getRenderScale().x != args.renderScale.x ||
-                    src->getRenderScale().y != args.renderScale.y/* ||
-                    (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)*/) {
+                    src->getRenderScale().y != args.renderScale.y) {
                     setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                     OFX::throwSuiteStatusException(kOfxStatFailed);
                 }
