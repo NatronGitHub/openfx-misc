@@ -347,7 +347,6 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     const double time = args.time;
     const OfxPointD& renderScale = args.renderScale;
     const OfxRectI& renderWindow = args.renderWindow;
-    const OFX::FieldEnum fieldToRender = args.fieldToRender;
 
     std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
     if (!dst.get()) {
@@ -355,7 +354,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     }
     if (dst->getRenderScale().x != renderScale.x ||
         dst->getRenderScale().y != renderScale.y ||
-        dst->getField() != fieldToRender) {
+        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -373,7 +372,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         }
         if (srcA->getRenderScale().x != renderScale.x ||
             srcA->getRenderScale().y != renderScale.y ||
-            srcA->getField() != fieldToRender) {
+            (srcA->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcA->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -415,7 +414,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         }
         if (srcB->getRenderScale().x != renderScale.x ||
             srcB->getRenderScale().y != renderScale.y ||
-            srcB->getField() != fieldToRender) {
+            (srcB->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcB->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
