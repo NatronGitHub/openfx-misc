@@ -473,7 +473,7 @@ void DeinterlacePlugin::render(const OFX::RenderArguments &args)
     if (srcp.get()) {
         if (srcp->getRenderScale().x != args.renderScale.x ||
             srcp->getRenderScale().y != args.renderScale.y ||
-            srcp->getField() != args.fieldToRender) {
+            (srcp->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcp->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -481,7 +481,7 @@ void DeinterlacePlugin::render(const OFX::RenderArguments &args)
     if (srcn.get()) {
         if (srcn->getRenderScale().x != args.renderScale.x ||
             srcn->getRenderScale().y != args.renderScale.y ||
-            srcn->getField() != args.fieldToRender) {
+            (srcn->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcn->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -671,7 +671,6 @@ void DeinterlacePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-
 }
 
 void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
