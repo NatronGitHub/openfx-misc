@@ -1170,7 +1170,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     
     PageParamDescriptor* ranges = desc.definePageParam("Ranges");
 
-    {
+    if (OFX::getImageEffectHostDescription()->supportsParametricParameter) {
         OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamColorCorrectToneRanges);
         assert(param);
         param->setLabel(kParamColorCorrectToneRangesLabel);
