@@ -269,7 +269,7 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor, const OFX::RenderA
     if (srcA.get()) {
         if (srcA->getRenderScale().x != args.renderScale.x ||
             srcA->getRenderScale().y != args.renderScale.y ||
-            srcA->getField() != args.fieldToRender) {
+            (srcA->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcA->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -283,7 +283,7 @@ DifferencePlugin::setupAndProcess(DifferencerBase &processor, const OFX::RenderA
     if (srcB.get()) {
         if (srcB->getRenderScale().x != args.renderScale.x ||
             srcB->getRenderScale().y != args.renderScale.y ||
-            srcB->getField() != args.fieldToRender) {
+            (srcB->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcB->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }

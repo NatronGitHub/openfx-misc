@@ -806,16 +806,14 @@ TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime, const OFX::Tr
     }
     if (srcRef.get()) {
         if (srcRef->getRenderScale().x != args.renderScale.x ||
-            srcRef->getRenderScale().y != args.renderScale.y/* ||
-            srcRef->getField() != args.fieldToRender*/) {
+            srcRef->getRenderScale().y != args.renderScale.y) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
     if (srcOther.get()) {
         if (srcOther->getRenderScale().x != args.renderScale.x ||
-            srcOther->getRenderScale().y != args.renderScale.y/* ||
-            srcOther->getField() != args.fieldToRender*/) {
+            srcOther->getRenderScale().y != args.renderScale.y) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -835,8 +833,7 @@ TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime, const OFX::Tr
                                          _maskClip->fetchImage(refTime) : 0);
     if (mask.get()) {
         if (mask->getRenderScale().x != args.renderScale.x ||
-            mask->getRenderScale().y != args.renderScale.y/* ||
-            mask->getField() != args.fieldToRender*/) {
+            mask->getRenderScale().y != args.renderScale.y) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }

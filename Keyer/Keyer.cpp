@@ -648,7 +648,7 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArg
     if (bg.get()) {
         if (bg->getRenderScale().x != args.renderScale.x ||
             bg->getRenderScale().y != args.renderScale.y ||
-            bg->getField() != args.fieldToRender) {
+            (bg->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && bg->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -665,7 +665,7 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArg
     if (inMask.get()) {
         if (inMask->getRenderScale().x != args.renderScale.x ||
             inMask->getRenderScale().y != args.renderScale.y ||
-            inMask->getField() != args.fieldToRender) {
+            (inMask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && inMask->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -675,7 +675,7 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArg
     if (outMask.get()) {
         if (outMask->getRenderScale().x != args.renderScale.x ||
             outMask->getRenderScale().y != args.renderScale.y ||
-            outMask->getField() != args.fieldToRender) {
+            (outMask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && outMask->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }

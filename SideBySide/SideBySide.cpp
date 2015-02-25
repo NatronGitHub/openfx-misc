@@ -277,7 +277,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
     if (src1.get()) {
         if (src1->getRenderScale().x != args.renderScale.x ||
             src1->getRenderScale().y != args.renderScale.y ||
-            src1->getField() != args.fieldToRender) {
+            (src1->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src1->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -291,7 +291,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
     if (src2.get()) {
         if (src2->getRenderScale().x != args.renderScale.x ||
             src2->getRenderScale().y != args.renderScale.y ||
-            src2->getField() != args.fieldToRender) {
+            (src2->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src2->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
