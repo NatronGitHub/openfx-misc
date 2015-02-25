@@ -22,6 +22,7 @@ grouping).
 
 * CheckerBoardOFX: Generator for an image with a checkerboard color
 * ConstantOFX: Generator for an image with a uniform color
+* SolidOFX: Generator for an image with a uniform opaque color
 
 ### Draw
 
