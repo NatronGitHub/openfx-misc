@@ -162,6 +162,31 @@ static OfxImageEffectSuiteV1imageMemoryFree imageMemoryFreeNthFunc(int nth);
 static OfxImageEffectSuiteV1imageMemoryLock imageMemoryLockNthFunc(int nth);
 static OfxImageEffectSuiteV1imageMemoryUnlock imageMemoryUnlockNthFunc(int nth);
 
+
+#ifdef OFX_EXTENSIONS_NUKE
+//FnOfxImageEffectPlaneSuiteV2
+typedef OfxStatus (*FnOfxImageEffectPlaneSuiteV2clipGetImagePlane)(OfxImageClipHandle clip,
+                               OfxTime       time,
+                               int           view,
+                               const char   *plane,
+                               OfxRectD     *region,
+                               OfxPropertySetHandle   *imageHandle);
+typedef OfxStatus (*FnOfxImageEffectPlaneSuiteV2clipGetRegionOfDefinition)(OfxImageClipHandle clip,
+                                       OfxTime            time,
+                                       int                view,
+                                       OfxRectD           *bounds);
+typedef OfxStatus (*FnOfxImageEffectPlaneSuiteV2getViewName)(OfxImageEffectHandle effect,
+                         int                  view,
+                         char               **viewName);
+typedef OfxStatus (*FnOfxImageEffectPlaneSuiteV2getViewCount)(OfxImageEffectHandle effect,
+                          int                 *nViews);
+
+static FnOfxImageEffectPlaneSuiteV2clipGetImagePlane clipGetImagePlaneNthFunc(int nth);
+static FnOfxImageEffectPlaneSuiteV2clipGetRegionOfDefinition fnClipGetRegionOfDefinitionNthFunc(int nth);
+static FnOfxImageEffectPlaneSuiteV2getViewName getViewNameNthFunc(int nth);
+static FnOfxImageEffectPlaneSuiteV2getViewCount getViewCountNthFunc(int nth);
+#endif
+
 /** @brief A class that lists all the properties of a host */
 struct ImageEffectHostDescription {
  public:
@@ -223,6 +248,7 @@ static std::vector<OfxParametricParameterSuiteV1*>    gParametricParameterHost;
 static std::vector<NukeOfxCameraSuiteV1*>             gCameraHost;
 static std::vector<FnOfxImageEffectPlaneSuiteV1*>     gImageEffectPlaneHost;
 static std::vector<FnOfxImageEffectPlaneSuiteV2*>     gImageEffectPlaneV2Host;
+static std::vector<FnOfxImageEffectPlaneSuiteV2>     gImageEffectPlaneV2Proxy;
 #endif
 #ifdef OFX_EXTENSIONS_VEGAS
 static std::vector<OfxVegasProgressSuiteV1*>          gVegasProgressHost;
@@ -424,6 +450,11 @@ fetchHostSuites(int nth)
     gCameraHost[nth]                 = (NukeOfxCameraSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kNukeOfxCameraSuite, 1);
     gImageEffectPlaneHost[nth]       = (FnOfxImageEffectPlaneSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kFnOfxImageEffectPlaneSuite, 1);
     gImageEffectPlaneV2Host[nth]     = (FnOfxImageEffectPlaneSuiteV2 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kFnOfxImageEffectPlaneSuite, 2);
+    gImageEffectPlaneV2Proxy[nth] = *gImageEffectPlaneV2Host[nth];
+    gImageEffectPlaneV2Proxy[nth].clipGetImagePlane = clipGetImagePlaneNthFunc(nth);
+    gImageEffectPlaneV2Proxy[nth].clipGetRegionOfDefinition = fnClipGetRegionOfDefinitionNthFunc(nth);
+    gImageEffectPlaneV2Proxy[nth].getViewName = getViewNameNthFunc(nth);
+    gImageEffectPlaneV2Proxy[nth].getViewCount = getViewCountNthFunc(nth);
 #endif
 #ifdef OFX_EXTENSIONS_VEGAS
     gVegasProgressHost[nth]          = (OfxVegasProgressSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kOfxVegasProgressSuite, 1);
@@ -2146,6 +2177,169 @@ setHostNthFunc(int nth)
 }
 #undef NTHFUNC
 
+
+#ifdef OFX_EXTENSIONS_NUKE
+/////////////////////FnOfxImageEffectPlaneSuiteV2
+
+
+// clipGetImagePlane proxy
+
+template<int nth>
+static OfxStatus
+clipGetImagePlaneNth(OfxImageClipHandle clip,
+                     OfxTime       time,
+                     int           view,
+                     const char   *plane,
+                     OfxRectD     *region,
+                     OfxPropertySetHandle   *imageHandle)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gImageEffectPlaneV2Host[nth]->clipGetImagePlane(clip, time, view, plane, region, imageHandle);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetImagePlane(" << clip << ", " << time << ", " << view << ", " << plane << ", " << region << ", " << imageHandle << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetImagePlane(" << clip << ", " << time << ", " << view << ", " << plane << ")->" << OFX::StatStr(st) << ": (";
+    if (region) {
+        std::cout << "(" << region->x1 << "," << region->y1 << "," << region->x2 << "," << region->y2 << "), ";
+    }
+    std::cout << *imageHandle << ")" << std::endl;
+    return st;
+
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return clipGetImagePlaneNth<nth>
+
+static FnOfxImageEffectPlaneSuiteV2clipGetImagePlane
+clipGetImagePlaneNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create clipGetImagePlane for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
+
+// clipgetRegionOfDefinition (plane suite V2)
+
+template<int nth>
+static OfxStatus fnClipGetRegionOfDefinitionNth(OfxImageClipHandle clip,
+                                             OfxTime            time,
+                                             int                view,
+                                             OfxRectD           *bounds)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gImageEffectPlaneV2Host[nth]->clipGetRegionOfDefinition(clip, time, view, bounds);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetRegionOfDefinition(plane suite)(" << clip << ", " << time << ", " << view << ", " << bounds << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetRegionOfDefinition(plane suite)(" << clip << ", " << time << ", " << view << ")->" << OFX::StatStr(st);
+    if (bounds) {
+        std::cout << ": (" << bounds->x1 << "," << bounds->y1 << "," << bounds->x2 << "," << bounds->y2 << ")";
+    }
+    std::cout << std::endl;
+    return st;
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return fnClipGetRegionOfDefinitionNth<nth>
+
+static FnOfxImageEffectPlaneSuiteV2clipGetRegionOfDefinition
+fnClipGetRegionOfDefinitionNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create clipGetRegionOfDefinition (plane suite v2) for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
+
+// getViewName
+
+template<int nth>
+static OfxStatus getViewNameNth(OfxImageEffectHandle effect,
+                                int                  view,
+                                char               **viewName)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gImageEffectPlaneV2Host[nth]->getViewName(effect, view, viewName);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getViewName(" << effect << ", " << view << ", " << *viewName << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getViewName(" << effect << ", " << view << ", " << *viewName << ")->" << OFX::StatStr(st);
+    std::cout << std::endl;
+    return st;
+
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return getViewNameNth<nth>
+static FnOfxImageEffectPlaneSuiteV2getViewName
+getViewNameNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create getViewName for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
+
+template<int nth>
+static OfxStatus getViewCountNth(OfxImageEffectHandle effect,
+                                 int                 *nViews)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gImageEffectPlaneV2Host[nth]->getViewCount(effect, nViews);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getViewCount(" << effect << ", " << *nViews << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..getViewCount(" << effect << ", " << *nViews << ")->" << OFX::StatStr(st);
+    std::cout << std::endl;
+    return st;
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return getViewCountNth<nth>
+static FnOfxImageEffectPlaneSuiteV2getViewCount
+getViewCountNthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create getViewCount for plugin " << nth << std::endl;
+    return 0;
+
+}
+#undef NTHFUNC
+
+#endif
 
 // the two mandated functions
 EXPORT OfxPlugin *
