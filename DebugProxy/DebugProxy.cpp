@@ -127,7 +127,7 @@
 #define BINARY_PATH "/usr/OFX/Plugins.disabled/Sapphire.ofx.bundle/Contents/FreeBSD-x86-64/Sapphire.ofx"
 #endif
 #if defined(__APPLE__)
-#define OFX_PATH "/iLibrary/OFX/Plugins/"
+#define OFX_PATH "/Library/OFX/Plugins/"
 #define BINARY_PATH "/Library/OFX/Plugins.disabled/Sapphire.ofx.bundle/Contents/MacOS/Sapphire.ofx"
 #endif
 #endif
@@ -164,6 +164,15 @@ static OfxImageEffectSuiteV1imageMemoryUnlock imageMemoryUnlockNthFunc(int nth);
 
 
 #ifdef OFX_EXTENSIONS_NUKE
+//FnOfxImageEffectPlaneSuiteV1
+typedef OfxStatus (*FnOfxImageEffectPlaneSuiteV1clipGetImagePlane)(OfxImageClipHandle clip,
+                                                                   OfxTime       time,
+                                                                   const char   *plane,
+                                                                   OfxRectD     *region,
+                                                                   OfxPropertySetHandle   *imageHandle);
+
+static FnOfxImageEffectPlaneSuiteV1clipGetImagePlane clipGetImagePlaneV1NthFunc(int nth);
+
 //FnOfxImageEffectPlaneSuiteV2
 typedef OfxStatus (*FnOfxImageEffectPlaneSuiteV2clipGetImagePlane)(OfxImageClipHandle clip,
                                OfxTime       time,
@@ -246,9 +255,10 @@ static std::vector<OfxTimeLineSuiteV1*>               gTimeLineHost;
 static std::vector<OfxParametricParameterSuiteV1*>    gParametricParameterHost;
 #ifdef OFX_EXTENSIONS_NUKE
 static std::vector<NukeOfxCameraSuiteV1*>             gCameraHost;
-static std::vector<FnOfxImageEffectPlaneSuiteV1*>     gImageEffectPlaneHost;
+static std::vector<FnOfxImageEffectPlaneSuiteV1*>     gImageEffectPlaneV1Host;
+static std::vector<FnOfxImageEffectPlaneSuiteV1>      gImageEffectPlaneV1Proxy;
 static std::vector<FnOfxImageEffectPlaneSuiteV2*>     gImageEffectPlaneV2Host;
-static std::vector<FnOfxImageEffectPlaneSuiteV2>     gImageEffectPlaneV2Proxy;
+static std::vector<FnOfxImageEffectPlaneSuiteV2>      gImageEffectPlaneV2Proxy;
 #endif
 #ifdef OFX_EXTENSIONS_VEGAS
 static std::vector<OfxVegasProgressSuiteV1*>          gVegasProgressHost;
@@ -282,7 +292,7 @@ static std::vector<OfxSetHost*> gPluginsSetHost;
 static const char* help_string =
 "OFX DebugProxy Help:\n"
 "- Specify the PATH to the plugin to be debugged using the environment variable\n"
-"  OFX_DEBUGPROXY_PATH.\n"
+"  OFX_DEBUGPROXY_BINARY.\n"
 "  this can be done on Unix/Linux/FreeBSD/OSX using something like:\n"
 "  env OFX_DEBUGPROXY_BINARY=/path/to/plugindir/plugin.ofx /path/to/ofx/host/bin/host\n"
 "  the first path points to the plugin binary (ending in \".ofx\"), and the second\n"
@@ -312,7 +322,7 @@ static const char* help_string =
 "  the environment variable DYLD_LIBRARY_PATH\n"
 "  (add \"DYLD_LIBRARY_PATH=/path/to/plugindir after the \"env\" in the line above).\n"
 #endif
-"- If the value of OFX_DEBUGPROXY_PATH is changed, or if the plugin is modified\n"
+"- If the value of OFX_DEBUGPROXY_BINARY is changed, or if the plugin is modified\n"
 "  or recompiled, the OFX host may not take this into account, since the \n"
 "  DebugProxy plugin itself is unchanged. You have to either clean up the OFX\n"
 "  Plugin cache in the host, or modify the date of the DebugProxy binary.\n"
@@ -421,7 +431,8 @@ fetchHostSuites(int nth)
         gParametricParameterHost.resize(nth+1);
 #ifdef OFX_EXTENSIONS_NUKE
         gCameraHost.resize(nth+1);
-        gImageEffectPlaneHost.resize(nth+1);
+        gImageEffectPlaneV1Host.resize(nth+1);
+        gImageEffectPlaneV1Proxy.resize(nth+1);
         gImageEffectPlaneV2Host.resize(nth+1);
         gImageEffectPlaneV2Proxy.resize(nth+1);
 #endif
@@ -449,9 +460,11 @@ fetchHostSuites(int nth)
     gParametricParameterHost[nth]    = (OfxParametricParameterSuiteV1 *) gHost[nth]->fetchSuite(gHost[nth]->host, kOfxParametricParameterSuite, 1);
 #ifdef OFX_EXTENSIONS_NUKE
     gCameraHost[nth]                 = (NukeOfxCameraSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kNukeOfxCameraSuite, 1);
-    gImageEffectPlaneHost[nth]       = (FnOfxImageEffectPlaneSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kFnOfxImageEffectPlaneSuite, 1);
+    gImageEffectPlaneV1Host[nth]     = (FnOfxImageEffectPlaneSuiteV1 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kFnOfxImageEffectPlaneSuite, 1);
+    gImageEffectPlaneV1Proxy[nth]    = *gImageEffectPlaneV1Host[nth];
+    gImageEffectPlaneV1Proxy[nth].clipGetImagePlane = clipGetImagePlaneV1NthFunc(nth);
     gImageEffectPlaneV2Host[nth]     = (FnOfxImageEffectPlaneSuiteV2 *)   gHost[nth]->fetchSuite(gHost[nth]->host, kFnOfxImageEffectPlaneSuite, 2);
-    gImageEffectPlaneV2Proxy[nth] = *gImageEffectPlaneV2Host[nth];
+    gImageEffectPlaneV2Proxy[nth]    = *gImageEffectPlaneV2Host[nth];
     gImageEffectPlaneV2Proxy[nth].clipGetImagePlane = clipGetImagePlaneNthFunc(nth);
     gImageEffectPlaneV2Proxy[nth].clipGetRegionOfDefinition = fnClipGetRegionOfDefinitionNthFunc(nth);
     gImageEffectPlaneV2Proxy[nth].getViewName = getViewNameNthFunc(nth);
@@ -761,8 +774,8 @@ printHostDescription(int nth)
     if (gCameraHost[nth]) {
         std::cout << kNukeOfxCameraSuite << ',';
     }
-    if (gImageEffectPlaneHost[nth]) {
-        std::cout << kFnOfxImageEffectPlaneSuite << ',';
+    if (gImageEffectPlaneV1Host[nth]) {
+        std::cout << kFnOfxImageEffectPlaneSuite << "V1" << ',';
     }
     if (gImageEffectPlaneV2Host[nth]) {
         std::cout << kFnOfxImageEffectPlaneSuite << "V2" << ',';
@@ -1208,8 +1221,11 @@ pluginMain(int nth, const char *action, const void *handle, OfxPropertySetHandle
 #   endif
 #   ifdef OFX_EXTENSIONS_NUKE
       gPropHost[nth]->propGetInt(inArgs, kFnOfxImageEffectPropView, 0, &view);
+      // check if this is set on inArgs (this property is called kOfxImageEffectPropPlanesAvailable in the OFX 2.0 standards discussion)
+      //int ncomps = 0;
+      //gPropHost[nth]->propGetDimension(inArgs, kFnOfxImageEffectPropComponentsPresent, &ncomps);
+      //ss << "ncomps=" << ncomps;
 #   endif
-
       ss << "(" << handle << "," << time << "," << field << ",(" << renderWindow[0] << "," << renderWindow[1 ]<< "," << renderWindow[2] << "," << renderWindow[3] << "),(" << renderScale[0] << "," << renderScale[1] << ")," << sequentialrenderstatus << "," << interactiverenderstatus
 #     if defined(OFX_EXTENSIONS_VEGAS) || defined(OFX_EXTENSIONS_NUKE)
         <<","<<view
@@ -1669,6 +1685,14 @@ const void* fetchSuiteNth(OfxPropertySetHandle host, const char *suiteName, int 
     if (strcmp(suiteName, kOfxImageEffectSuite) == 0 && suiteVersion == 1) {
         assert(nth < gEffectHost.size() && suite == gEffectHost[nth]);
         return &gEffectProxy[nth];
+    }
+    if (strcmp(suiteName, kFnOfxImageEffectPlaneSuite) == 0 && suiteVersion == 1) {
+        assert(nth < gImageEffectPlaneV1Host.size() && suite == gImageEffectPlaneV1Host[nth]);
+        return &gImageEffectPlaneV1Proxy[nth];
+    }
+    if (strcmp(suiteName, kFnOfxImageEffectPlaneSuite) == 0 && suiteVersion == 2) {
+        assert(nth < gImageEffectPlaneV2Host.size() && suite == gImageEffectPlaneV2Host[nth]);
+        return &gImageEffectPlaneV2Proxy[nth];
     }
     return suite;
 }
@@ -2180,6 +2204,53 @@ setHostNthFunc(int nth)
 
 
 #ifdef OFX_EXTENSIONS_NUKE
+/////////////////////FnOfxImageEffectPlaneSuiteV1
+
+
+// clipGetImagePlane proxy
+
+template<int nth>
+static OfxStatus
+clipGetImagePlaneV1Nth(OfxImageClipHandle clip,
+                       OfxTime       time,
+                       const char   *plane,
+                       OfxRectD     *region,
+                       OfxPropertySetHandle   *imageHandle)
+{
+    OfxStatus st;
+    assert(nth < gHost.size() && nth < gPluginsSetHost.size());
+    try {
+        st = gImageEffectPlaneV1Host[nth]->clipGetImagePlane(clip, time, plane, region, imageHandle);
+    } catch (...) {
+        std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetImagePlane(" << clip << ", " << time << ", " << plane << ", " << region << ", " << imageHandle << "): host exception!" << std::endl;
+        throw;
+    }
+    std::cout << "OFX DebugProxy: " << gPlugins[nth].pluginIdentifier << "..clipGetImagePlane(" << clip << ", " << time << ", " << plane << ")->" << OFX::StatStr(st) << ": (";
+    if (region) {
+        std::cout << "(" << region->x1 << "," << region->y1 << "," << region->x2 << "," << region->y2 << "), ";
+    }
+    std::cout << *imageHandle << ")" << std::endl;
+    return st;
+
+}
+
+#define NTHFUNC(nth) \
+case nth: \
+return clipGetImagePlaneV1Nth<nth>
+
+static FnOfxImageEffectPlaneSuiteV1clipGetImagePlane
+clipGetImagePlaneV1NthFunc(int nth)
+{
+    switch (nth) {
+            NTHFUNC100(0);
+            NTHFUNC100(100);
+            NTHFUNC100(200);
+    }
+    std::cout << "OFX DebugProxy: Error: cannot create clipGetImagePlaneV1 for plugin " << nth << std::endl;
+    return 0;
+}
+#undef NTHFUNC
+
 /////////////////////FnOfxImageEffectPlaneSuiteV2
 
 
@@ -2408,7 +2479,8 @@ OfxGetNumberOfPlugins(void)
     gParametricParameterHost.reserve(gPluginsNb);
 #ifdef OFX_EXTENSIONS_NUKE
     gCameraHost.reserve(gPluginsNb);
-    gImageEffectPlaneHost.reserve(gPluginsNb);
+    gImageEffectPlaneV1Host.reserve(gPluginsNb);
+    gImageEffectPlaneV1Proxy.reserve(gPluginsNb);
     gImageEffectPlaneV2Host.reserve(gPluginsNb);
     gImageEffectPlaneV2Proxy.reserve(gPluginsNb);
 #endif
