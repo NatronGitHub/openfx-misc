@@ -73,6 +73,7 @@
 #include "ColorCorrect.h"
 
 #include <cmath>
+//#include <iostream>
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -462,16 +463,33 @@ public:
     : ColorCorrecterBase(instance,args)
     {
         // build the LUT
-        OFX::ParametricParam  *lookupTable = instance.fetchParametricParam(kParamColorCorrectToneRanges);
-        assert(lookupTable);
+        OFX::ParametricParam  *lookupTable = 0;
+        if (OFX::getImageEffectHostDescription()->supportsParametricParameter) {
+            lookupTable = instance.fetchParametricParam(kParamColorCorrectToneRanges);
+        }
         for (int curve = 0; curve < 2; ++curve) {
             for (int position = 0; position <= LUT_MAX_PRECISION; ++position) {
                 // position to evaluate the param at
                 double parametricPos = double(position)/LUT_MAX_PRECISION;
-                
+
                 // evaluate the parametric param
-                double value = lookupTable->getValue(curve, args.time, parametricPos);
-                
+                double value;
+                if (lookupTable) {
+                    value = lookupTable->getValue(curve, args.time, parametricPos);
+                } else if (curve == 0) {
+                    if (parametricPos < 0.09) {
+                        value = 1. - parametricPos/0.09;
+                    } else {
+                        value = 0.;
+                    }
+                } else {
+                    assert(curve == 1);
+                    if (parametricPos <= 0.5) {
+                        value = 0.;
+                    } else {
+                        value = (parametricPos - 0.5) / 0.5;
+                    }
+                }
                 // set that in the lut
                 _lookupTable[curve][position] = (float)clamp<PIX>(value, maxValue);
             }
@@ -610,6 +628,13 @@ private:
 
 namespace {
     struct ColorControlParamGroup {
+        ColorControlParamGroup()
+        : saturation(0)
+        , contrast(0)
+        , gamma(0)
+        , gain(0)
+        , offset(0) {}
+
         OFX::RGBAParam* saturation;
         OFX::RGBAParam* contrast;
         OFX::RGBAParam* gamma;
@@ -637,6 +662,17 @@ public:
     , _dstClip(0)
     , _srcClip(0)
     , _maskClip(0)
+    , _processR(0)
+    , _processG(0)
+    , _processB(0)
+    , _processA(0)
+    , _rangesParam(0)
+    , _clampBlack(0)
+    , _clampWhite(0)
+    , _premult(0)
+    , _premultChannel(0)
+    , _mix(0)
+    , _maskInvert(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
@@ -648,8 +684,10 @@ public:
         fetchColorControlGroup(kGroupShadows, &_shadowsParamsGroup);
         fetchColorControlGroup(kGroupMidtones, &_midtonesParamsGroup);
         fetchColorControlGroup(kGroupHighlights, &_highlightsParamsGroup);
-        _rangesParam = fetchParametricParam(kParamColorCorrectToneRanges);
-        assert(_rangesParam);
+        if (OFX::getImageEffectHostDescription()->supportsParametricParameter) {
+            _rangesParam = fetchParametricParam(kParamColorCorrectToneRanges);
+            assert(_rangesParam);
+        }
         _clampBlack = fetchBooleanParam(kParamClampBlack);
         _clampWhite = fetchBooleanParam(kParamClampWhite);
         assert(_clampBlack && _clampWhite);
@@ -765,7 +803,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
         dst->getRenderScale().y != args.renderScale.y ||
-        dst->getField() != args.fieldToRender) {
+        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -774,7 +812,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
-            src->getField() != args.fieldToRender) {
+            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -789,7 +827,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
     if (mask.get()) {
         if (mask->getRenderScale().x != args.renderScale.x ||
             mask->getRenderScale().y != args.renderScale.y ||
-            mask->getField() != args.fieldToRender) {
+            (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -835,7 +873,7 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
 void
 ColorCorrectPlugin::render(const OFX::RenderArguments &args)
 {
-    
+    //std::cout << "render!\n";
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
@@ -861,6 +899,7 @@ ColorCorrectPlugin::render(const OFX::RenderArguments &args)
                 break;
             }
             default:
+                //std::cout << "depth usupported\n";
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     } else {
@@ -882,9 +921,11 @@ ColorCorrectPlugin::render(const OFX::RenderArguments &args)
                 break;
             }
             default:
+                //std::cout << "components usupported\n";
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
+    //std::cout << "render! OK\n";
 }
 
 static bool
@@ -916,6 +957,7 @@ groupIsIdentity(const ColorControlGroup& group)
 bool
 ColorCorrectPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
+    //std::cout << "isIdentity!\n";
     double mix;
     _mix->getValueAtTime(args.time, mix);
 
@@ -954,14 +996,17 @@ ColorCorrectPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identity
         groupIsIdentity(midtoneValues) &&
         groupIsIdentity(highlightValues)) {
         identityClip = _srcClip;
+        //std::cout << "isIdentity! true\n";
         return true;
     }
+    //std::cout << "isIdentity! false\n";
     return false;
 }
 
 void
 ColorCorrectPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
+    //std::cout << "changedClip!\n";
     if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
@@ -975,6 +1020,7 @@ ColorCorrectPlugin::changedClip(const InstanceChangedArgs &args, const std::stri
                 break;
         }
     }
+    //std::cout << "changedClip OK!\n";
 }
 
 
@@ -982,6 +1028,7 @@ mDeclarePluginFactory(ColorCorrectPluginFactory, {}, {});
 
 void ColorCorrectPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
+    //std::cout << "describe!\n";
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -1004,7 +1051,7 @@ void ColorCorrectPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-    
+    //std::cout << "describe! OK\n";
 }
 
 static void
@@ -1052,6 +1099,7 @@ defineColorGroup(const std::string& groupName,
 
 void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
+    //std::cout << "describeInContext!\n";
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -1090,6 +1138,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setLayoutHint(eLayoutHintNoNewLine);
         page->addChild(*param);
     }
+    //std::cout << "describeInCotext! 3\n";
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
         param->setLabel(kParamProcessGLabel);
@@ -1121,7 +1170,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     
     PageParamDescriptor* ranges = desc.definePageParam("Ranges");
 
-    {
+    if (OFX::getImageEffectHostDescription()->supportsParametricParameter) {
         OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamColorCorrectToneRanges);
         assert(param);
         param->setLabel(kParamColorCorrectToneRangesLabel);
@@ -1173,6 +1222,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
 
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
+    //std::cout << "describeInCotext! OK\n";
 }
 
 OFX::ImageEffect* ColorCorrectPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

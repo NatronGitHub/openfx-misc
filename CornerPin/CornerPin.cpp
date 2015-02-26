@@ -526,14 +526,16 @@ static void copyPoint(OFX::Double2DParam* from, OFX::Double2DParam* to)
 void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
     if (paramName == kParamCopyInputRoD) {
-        const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(args.time);
-        beginEditBlock(kParamCopyInputRoD);
-        _from[0]->setValue(srcRoD.x1, srcRoD.y1);
-        _from[1]->setValue(srcRoD.x2, srcRoD.y1);
-        _from[2]->setValue(srcRoD.x2, srcRoD.y2);
-        _from[3]->setValue(srcRoD.x1, srcRoD.y2);
-        endEditBlock();
-        changedTransform(args);
+        if (_srcClip) {
+            const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(args.time);
+            beginEditBlock(kParamCopyInputRoD);
+            _from[0]->setValue(srcRoD.x1, srcRoD.y1);
+            _from[1]->setValue(srcRoD.x2, srcRoD.y1);
+            _from[2]->setValue(srcRoD.x2, srcRoD.y2);
+            _from[3]->setValue(srcRoD.x1, srcRoD.y2);
+            endEditBlock();
+            changedTransform(args);
+        }
     } else if (paramName == kParamCopyFrom) {
         beginEditBlock(kParamCopyFrom);
         for (int i=0; i<4; ++i) {

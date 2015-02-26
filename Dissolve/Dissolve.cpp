@@ -214,7 +214,7 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
         dst->getRenderScale().y != args.renderScale.y ||
-        dst->getField() != args.fieldToRender) {
+        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -234,7 +234,7 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
     if (fromImg.get()) {
         if (fromImg->getRenderScale().x != args.renderScale.x ||
             fromImg->getRenderScale().y != args.renderScale.y ||
-            fromImg->getField() != args.fieldToRender) {
+            (fromImg->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && fromImg->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -243,7 +243,7 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
     if (toImg.get()) {
         if (toImg->getRenderScale().x != args.renderScale.x ||
             toImg->getRenderScale().y != args.renderScale.y ||
-            toImg->getField() != args.fieldToRender) {
+            (toImg->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && toImg->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -255,14 +255,14 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
     if (mask.get()) {
         if (mask->getRenderScale().x != args.renderScale.x ||
             mask->getRenderScale().y != args.renderScale.y ||
-            mask->getField() != args.fieldToRender) {
+            (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
     if (getContext() != OFX::eContextFilter &&
         getContext() != OFX::eContextTransition &&
-        _maskClip->isConnected()) {
+        _maskClip && _maskClip->isConnected()) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         processor.doMasking(true);
@@ -335,7 +335,7 @@ DissolvePlugin::renderForBitDepth(const OFX::RenderArguments &args)
 {
     if (getContext() != OFX::eContextFilter &&
         getContext() != OFX::eContextTransition &&
-        _maskClip->isConnected()) {
+        _maskClip && _maskClip->isConnected()) {
         OFX::ImageBlenderMasked<PIX, nComponents, maxValue, true> fred(*this);
         setupAndProcess(fred, args);
     } else {

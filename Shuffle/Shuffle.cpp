@@ -539,7 +539,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
         dst->getRenderScale().y != args.renderScale.y ||
-        dst->getField() != args.fieldToRender) {
+        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -552,7 +552,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     if (srcA.get()) {
         if (srcA->getRenderScale().x != args.renderScale.x ||
             srcA->getRenderScale().y != args.renderScale.y ||
-            srcA->getField() != args.fieldToRender) {
+            (srcA->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcA->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -564,7 +564,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     if (srcB.get()) {
         if (srcB->getRenderScale().x != args.renderScale.x ||
             srcB->getRenderScale().y != args.renderScale.y ||
-            srcB->getField() != args.fieldToRender) {
+            (srcB->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcB->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -716,7 +716,7 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
 
     OFX::BitDepthEnum srcBitDepth = _srcClipA->getPixelDepth();
 
-    if (_srcClipB && _srcClipA->isConnected() && _srcClipB->isConnected()) {
+    if (_srcClipA && _srcClipA->isConnected() && _srcClipB && _srcClipB->isConnected()) {
         OFX::BitDepthEnum srcBBitDepth = _srcClipB->getPixelDepth();
         // both input must have the same bit depth
         if (srcBitDepth != srcBBitDepth) {
@@ -911,7 +911,7 @@ ShufflePlugin::changedClip(const InstanceChangedArgs &/*args*/, const std::strin
         // check that A and B are compatible if they're both connected
         OFX::BitDepthEnum srcBitDepth = _srcClipA->getPixelDepth();
 
-        if (_srcClipB && _srcClipA->isConnected() && _srcClipB->isConnected()) {
+        if (_srcClipA && _srcClipA->isConnected() && _srcClipB && _srcClipB->isConnected()) {
             OFX::BitDepthEnum srcBBitDepth = _srcClipB->getPixelDepth();
             // both input must have the same bit depth
             if (srcBitDepth != srcBBitDepth) {

@@ -258,7 +258,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
         dst->getRenderScale().y != args.renderScale.y ||
-        dst->getField() != args.fieldToRender) {
+        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -277,7 +277,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
     if (src1.get()) {
         if (src1->getRenderScale().x != args.renderScale.x ||
             src1->getRenderScale().y != args.renderScale.y ||
-            src1->getField() != args.fieldToRender) {
+            (src1->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src1->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -291,7 +291,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
     if (src2.get()) {
         if (src2->getRenderScale().x != args.renderScale.x ||
             src2->getRenderScale().y != args.renderScale.y ||
-            src2->getField() != args.fieldToRender) {
+            (src2->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src2->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -308,7 +308,10 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
     OfxPointD size = getProjectSize();
 
     // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask
-    OfxRectD rod = _srcClip->getRegionOfDefinition(args.time);
+    OfxRectD rod = {0., 0., 0., 0.};
+    if (_srcClip) {
+        rod = _srcClip->getRegionOfDefinition(args.time);
+    }
 
     // clip to the project rect
     //rod.x1 = std::max(rod.x1,offset.x);
@@ -335,6 +338,9 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
 bool
 SideBySidePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
+    if (!_srcClip) {
+        return false;
+    }
     bool vertical = vertical_->getValueAtTime(args.time);
     OfxPointD offset = getProjectOffset();
     OfxPointD size = getProjectSize();
@@ -362,6 +368,9 @@ SideBySidePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
 void
 SideBySidePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
+    if (!_srcClip) {
+        return;
+    }
     bool vertical = vertical_->getValueAtTime(args.time);
 
     // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask

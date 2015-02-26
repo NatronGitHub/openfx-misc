@@ -788,7 +788,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
     }
     if ( (dst->getRenderScale().x != args.renderScale.x) ||
         ( dst->getRenderScale().y != args.renderScale.y) ||
-        ( dst->getField() != args.fieldToRender) ) {
+        ( (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }

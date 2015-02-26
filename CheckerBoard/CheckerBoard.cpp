@@ -454,7 +454,7 @@ CheckerBoardPlugin::setupAndProcess(CheckerBoardProcessorBase &processor, const 
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
         dst->getRenderScale().y != args.renderScale.y ||
-        dst->getField() != args.fieldToRender) {
+        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -705,11 +705,11 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamBoxSize);
         param->setLabel(kParamBoxSizeLabel);
         param->setHint(kParamBoxSizeHint);
-        param->setDefault(64, 64);
         param->setRange(1, 1, INT_MAX, INT_MAX);
         param->setDisplayRange(0, 0, 100, 100);
-        //param->setDefault(64, 64);
         param->setDoubleType(eDoubleTypeXY);
+        param->setDefault(64, 64);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical);
         param->setAnimates(true); // can animate
         page->addChild(*param);
     }

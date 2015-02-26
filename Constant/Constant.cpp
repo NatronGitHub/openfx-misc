@@ -87,6 +87,9 @@
 #define kPluginGrouping "Image"
 #define kPluginDescription "Generate an image with a constant color. A frame range may be specified for operators that need it."
 #define kPluginIdentifier "net.sf.openfx.ConstantPlugin"
+#define kPluginSolidName "SolidOFX"
+#define kPluginSolidDescription "Generate an image with a constant opaque color. A frame range may be specified for operators that need it."
+#define kPluginSolidIdentifier "net.sf.openfx.Solid"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -218,15 +221,19 @@ class ConstantPlugin : public GeneratorPlugin
 {
 public:
     /** @brief ctor */
-    ConstantPlugin(OfxImageEffectHandle handle)
+    ConstantPlugin(OfxImageEffectHandle handle, bool solid)
     : GeneratorPlugin(handle)
     , _color(0)
+    , _colorRGB(0)
     , _range(0)
     {
-        
-        _color   = fetchRGBAParam(kParamColor);
+        if (solid) {
+            _colorRGB   = fetchRGBParam(kParamColor);
+        } else {
+            _color   = fetchRGBAParam(kParamColor);
+        }
         _range   = fetchInt2DParam(kParamRange);
-        assert(_color && _range);
+        assert((_color || _colorRGB) && _range);
     }
 
 private:
@@ -243,8 +250,11 @@ private:
                                OFX::Clip * &identityClip,
                                double &identityTime) OVERRIDE FINAL;
 
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+
 private:
     OFX::RGBAParam  *_color;
+    OFX::RGBParam *_colorRGB;
     OFX::Int2DParam  *_range;
 };
 
@@ -274,7 +284,7 @@ ConstantPlugin::setupAndProcess(ConstantProcessorBase &processor, const OFX::Ren
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
         dst->getRenderScale().y != args.renderScale.y ||
-        dst->getField() != args.fieldToRender) {
+        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -286,7 +296,12 @@ ConstantPlugin::setupAndProcess(ConstantProcessorBase &processor, const OFX::Ren
     processor.setRenderWindow(args.renderWindow);
 
     OfxRGBAColourD color;
-    _color->getValueAtTime(args.time, color.r, color.g, color.b, color.a);
+    if (_colorRGB) {
+        _colorRGB->getValueAtTime(args.time, color.r, color.g, color.b);
+        color.a = 1.;
+    } else {
+        _color->getValueAtTime(args.time, color.r, color.g, color.b, color.a);
+    }
 
     processor.setColor(color);
 
@@ -407,7 +422,8 @@ ConstantPlugin::isIdentity(const OFX::IsIdentityArguments &args,
         int type_i;
         _type->getValue(type_i);
         GeneratorTypeEnum type = (GeneratorTypeEnum)type_i;
-        bool paramsNotAnimated = (_color->getNumKeys() == 0);
+        bool paramsNotAnimated = ((_color && _color->getNumKeys() == 0) ||
+                                  (_colorRGB && _colorRGB->getNumKeys() == 0));
         if (type == eGeneratorTypeSize) {
             ///If not animated and different than 'min' time, return identity on the min time.
             ///We need to check more parameters
@@ -431,16 +447,36 @@ ConstantPlugin::isIdentity(const OFX::IsIdentityArguments &args,
     return false;
 }
 
+void
+ConstantPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    GeneratorPlugin::getClipPreferences(clipPreferences);
+    clipPreferences.setOutputPremultiplication(_colorRGB ? OFX::eImageOpaque : OFX::eImagePreMultiplied);
+}
+
 using namespace OFX;
 
-mDeclarePluginFactory(ConstantPluginFactory, {}, {});
-
-void ConstantPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+template<bool solid>
+class ConstantPluginFactory : public OFX::PluginFactoryHelper<ConstantPluginFactory<solid> >
 {
-    desc.setLabel(kPluginName);
-    desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+public:
+    ConstantPluginFactory(const std::string& id, unsigned int verMaj, unsigned int verMin):OFX::PluginFactoryHelper<ConstantPluginFactory>(id, verMaj, verMin){}
+    virtual void describe(OFX::ImageEffectDescriptor &desc);
+    virtual void describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
+    virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context);
+};
 
+template<bool solid>
+void ConstantPluginFactory<solid>::describe(OFX::ImageEffectDescriptor &desc)
+{
+    if (solid) {
+        desc.setLabel(kPluginSolidName);
+        desc.setPluginDescription(kPluginSolidDescription);
+    } else {
+        desc.setLabel(kPluginName);
+        desc.setPluginDescription(kPluginDescription);
+    }
+    desc.setPluginGrouping(kPluginGrouping);
     desc.addSupportedContext(eContextGenerator);
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedBitDepth(eBitDepthUByte);
@@ -462,7 +498,8 @@ void ConstantPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     generatorDescribeInteract(desc);
 }
 
-void ConstantPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
+template<bool solid>
+void ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
     gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName);
     
@@ -485,11 +522,20 @@ void ConstantPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     generatorDescribeInContext(page, desc, *dstClip, context);
 
     // color
-    {
+    if (solid) {
+        RGBParamDescriptor* param = desc.defineRGBParam(kParamColor);
+        param->setLabel(kParamColorLabel);
+        param->setHint(kParamColorHint);
+        param->setDefault(0.0, 0.0, 0.0);
+        param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX);
+        param->setDisplayRange(0, 0, 0, 1, 1, 1);
+        param->setAnimates(true); // can animate
+        page->addChild(*param);
+    } else {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor);
         param->setLabel(kParamColorLabel);
         param->setHint(kParamColorHint);
-        param->setDefault(0.0, 0.0, 0.0, 1.0);
+        param->setDefault(0.0, 0.0, 0.0, 0.0);
         param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
@@ -508,13 +554,21 @@ void ConstantPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     }
 }
 
-ImageEffect* ConstantPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+template<bool solid>
+ImageEffect*
+ConstantPluginFactory<solid>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new ConstantPlugin(handle);
+    return new ConstantPlugin(handle, solid);
 }
 
 void getConstantPluginID(OFX::PluginFactoryArray &ids)
 {
-    static ConstantPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
+    {
+        static ConstantPluginFactory<false> p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static ConstantPluginFactory<true> p(kPluginSolidIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
 }

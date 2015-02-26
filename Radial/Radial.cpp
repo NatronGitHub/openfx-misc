@@ -567,7 +567,7 @@ RadialPlugin::setupAndProcess(RadialProcessorBase &processor, const OFX::RenderA
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
         dst->getRenderScale().y != args.renderScale.y ||
-        dst->getField() != args.fieldToRender) {
+        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -577,7 +577,7 @@ RadialPlugin::setupAndProcess(RadialProcessorBase &processor, const OFX::RenderA
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
-            src->getField() != args.fieldToRender) {
+            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -593,7 +593,7 @@ RadialPlugin::setupAndProcess(RadialProcessorBase &processor, const OFX::RenderA
         if (mask.get()) {
             if (mask->getRenderScale().x != args.renderScale.x ||
                 mask->getRenderScale().y != args.renderScale.y ||
-                mask->getField() != args.fieldToRender) {
+                (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
@@ -798,7 +798,7 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
     rod.y1 = btmLeft.y;
     rod.x2 = rod.x1 + size.x;
     rod.y2 = rod.y1 + size.y;
-    if (_srcClip->isConnected()) {
+    if (_srcClip && _srcClip->isConnected()) {
         // something has to be drawn outside of the rectangle: return union of input RoD and rectangle
         OfxRectD srcRoD = _srcClip->getRegionOfDefinition(args.time);
         rod.x1 = std::min(rod.x1, srcRoD.x1);

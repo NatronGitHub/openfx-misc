@@ -347,7 +347,6 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     const double time = args.time;
     const OfxPointD& renderScale = args.renderScale;
     const OfxRectI& renderWindow = args.renderWindow;
-    const OFX::FieldEnum fieldToRender = args.fieldToRender;
 
     std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
     if (!dst.get()) {
@@ -355,7 +354,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     }
     if (dst->getRenderScale().x != renderScale.x ||
         dst->getRenderScale().y != renderScale.y ||
-        dst->getField() != fieldToRender) {
+        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -373,7 +372,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         }
         if (srcA->getRenderScale().x != renderScale.x ||
             srcA->getRenderScale().y != renderScale.y ||
-            srcA->getField() != fieldToRender) {
+            (srcA->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcA->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -390,8 +389,8 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         srcAPixelData = NULL;
         srcABounds.x1 = srcABounds.y1 = srcABounds.x2 = srcABounds.y2 = 0;
         srcARoD.x1 = srcARoD.y1 = srcARoD.x2 = srcARoD.y2 = 0;
-        srcAPixelComponents = _srcAClip->getPixelComponents();
-        srcABitDepth = _srcAClip->getPixelDepth();
+        srcAPixelComponents = _srcAClip ? _srcAClip->getPixelComponents() : OFX::ePixelComponentNone;
+        srcABitDepth = _srcAClip ? _srcAClip->getPixelDepth() : OFX::eBitDepthNone;
         //srcAPixelBytes = getPixelBytes(srcAPixelComponents, srcABitDepth);
         srcARowBytes = 0;
     } else {
@@ -415,7 +414,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         }
         if (srcB->getRenderScale().x != renderScale.x ||
             srcB->getRenderScale().y != renderScale.y ||
-            srcB->getField() != fieldToRender) {
+            (srcB->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcB->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -432,8 +431,8 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         srcBPixelData = NULL;
         srcBBounds.x1 = srcBBounds.y1 = srcBBounds.x2 = srcBBounds.y2 = 0;
         srcBRoD.x1 = srcBRoD.y1 = srcBRoD.x2 = srcBRoD.y2 = 0;
-        srcBPixelComponents = _srcBClip->getPixelComponents();
-        srcBBitDepth = _srcBClip->getPixelDepth();
+        srcBPixelComponents = _srcBClip ? _srcBClip->getPixelComponents() : OFX::ePixelComponentNone;
+        srcBBitDepth = _srcBClip ? _srcBClip->getPixelDepth() : OFX::eBitDepthNone;
         //srcPixelBytes = getPixelBytes(srcPixelComponents, srcBitDepth);
         srcBRowBytes = 0;
     } else {

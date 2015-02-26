@@ -226,7 +226,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor, const OFX::RenderArgume
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
         dst->getRenderScale().y != args.renderScale.y ||
-        dst->getField() != args.fieldToRender) {
+        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -241,7 +241,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor, const OFX::RenderArgume
     if (srcLeft.get()) {
         if (srcLeft->getRenderScale().x != args.renderScale.x ||
             srcLeft->getRenderScale().y != args.renderScale.y ||
-            srcLeft->getField() != args.fieldToRender) {
+            (srcLeft->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcLeft->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -255,7 +255,7 @@ MixViewsPlugin::setupAndProcess(MixViewsBase &processor, const OFX::RenderArgume
     if (srcRight.get()) {
         if (srcRight->getRenderScale().x != args.renderScale.x ||
             srcRight->getRenderScale().y != args.renderScale.y ||
-            srcRight->getField() != args.fieldToRender) {
+            (srcRight->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcRight->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
