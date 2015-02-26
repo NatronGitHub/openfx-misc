@@ -423,6 +423,7 @@ fetchHostSuites(int nth)
         gCameraHost.resize(nth+1);
         gImageEffectPlaneHost.resize(nth+1);
         gImageEffectPlaneV2Host.resize(nth+1);
+        gImageEffectPlaneV2Proxy.resize(nth+1);
 #endif
 #ifdef OFX_EXTENSIONS_VEGAS
         gVegasProgressHost.resize(nth+1);
@@ -2409,6 +2410,7 @@ OfxGetNumberOfPlugins(void)
     gCameraHost.reserve(gPluginsNb);
     gImageEffectPlaneHost.reserve(gPluginsNb);
     gImageEffectPlaneV2Host.reserve(gPluginsNb);
+    gImageEffectPlaneV2Proxy.reserve(gPluginsNb);
 #endif
 #ifdef OX_EXTENSIONS_VEGAS
     gVegasProgressHost.reserve(gPluginsNb);
