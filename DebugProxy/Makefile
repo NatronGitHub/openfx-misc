@@ -6,4 +6,4 @@ VPATH=$(PATHTOROOT)/../HostSupport/src
 
 include $(PATHTOROOT)/Makefile.master
 
-CXXFLAGS += -I$(PATHTOROOT)/../HostSupport/include
+CXXFLAGS += -I$(PATHTOROOT)/../HostSupport/include -DOFX_EXTENSIONS_VEGAS -DOFX_EXTENSIONS_NUKE

@@ -1686,6 +1686,7 @@ const void* fetchSuiteNth(OfxPropertySetHandle host, const char *suiteName, int 
         assert(nth < gEffectHost.size() && suite == gEffectHost[nth]);
         return &gEffectProxy[nth];
     }
+# ifdef OFX_EXTENSIONS_NUKE
     if (strcmp(suiteName, kFnOfxImageEffectPlaneSuite) == 0 && suiteVersion == 1) {
         assert(nth < gImageEffectPlaneV1Host.size() && suite == gImageEffectPlaneV1Host[nth]);
         return &gImageEffectPlaneV1Proxy[nth];
@@ -1694,6 +1695,7 @@ const void* fetchSuiteNth(OfxPropertySetHandle host, const char *suiteName, int 
         assert(nth < gImageEffectPlaneV2Host.size() && suite == gImageEffectPlaneV2Host[nth]);
         return &gImageEffectPlaneV2Proxy[nth];
     }
+# endif
     return suite;
 }
 /////////////// getPropertySet proxy
@@ -2411,7 +2413,7 @@ getViewCountNthFunc(int nth)
 }
 #undef NTHFUNC
 
-#endif
+#endif // OFX_EXTENSIONS_NUKE
 
 // the two mandated functions
 EXPORT OfxPlugin *
