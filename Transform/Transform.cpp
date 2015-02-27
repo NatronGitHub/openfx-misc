@@ -329,6 +329,123 @@ TransformPlugin::changedClip(const InstanceChangedArgs &args, const std::string 
 }
 
 
+#define kPluginMirrorName "MirrorOFX"
+#define kPluginMirrorGrouping "Transform"
+#define kPluginMirrorDescription "Flip (vertical mirror) or flop (horizontal mirror) an image."
+#define kPluginMirrorIdentifier "net.sf.openfx.Mirror"
+
+#define kParamMirrorFlip "flip"
+#define kParamMirrorFlipLabel "Vertical (flip)"
+#define kParamMirrorFlipHint "Upside-down (swap top and bottom)."
+
+#define kParamMirrorFlop "flop"
+#define kParamMirrorFlopLabel "Horizontal (flop)"
+#define kParamMirrorFlopHint "Mirror image (swap left and right)"
+
+////////////////////////////////////////////////////////////////////////////////
+/** @brief The plugin that does our work */
+class MirrorPlugin : public Transform3x3Plugin
+{
+public:
+    /** @brief ctor */
+    MirrorPlugin(OfxImageEffectHandle handle)
+    : Transform3x3Plugin(handle, /*masked=*/false, false)
+    , _flip(0)
+    , _flop(0)
+    {
+        // NON-GENERIC
+        _flip = fetchBooleanParam(kParamMirrorFlip);
+        _flop = fetchBooleanParam(kParamMirrorFlop);
+        assert(_flip && _flop);
+    }
+
+private:
+    virtual bool isIdentity(double time) OVERRIDE FINAL;
+
+    virtual bool getInverseTransformCanonical(double time, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
+
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
+
+    // NON-GENERIC
+    BooleanParam* _flip;
+    BooleanParam* _flop;
+};
+
+// overridden is identity
+bool
+MirrorPlugin::isIdentity(double time)
+{
+    bool flip;
+    bool flop;
+    _flip->getValueAtTime(time, flip);
+    _flop->getValueAtTime(time, flop);
+
+    if (!flip && !flop) {
+        return true;
+    }
+
+    return false;
+}
+
+bool
+MirrorPlugin::getInverseTransformCanonical(double time, double /*amount*/, bool /*invert*/, OFX::Matrix3x3* invtransform) const
+{
+    bool flip;
+    bool flop;
+    _flip->getValueAtTime(time, flip);
+    _flop->getValueAtTime(time, flop);
+    if (!flip && !flop) {
+        // identity
+        invtransform->a = 1.;
+        invtransform->b = 0.;
+        invtransform->c = 0.;
+        invtransform->d = 0.;
+        invtransform->e = 1.;
+        invtransform->f = 0.;
+        invtransform->g = 0.;
+        invtransform->h = 0.;
+        invtransform->i = 1.;
+        return true;
+    }
+    OfxRectD rod = _srcClip->getRegionOfDefinition(time);
+    if (flop) {
+        invtransform->a = -1.;
+        invtransform->b = 0.;
+        invtransform->c = rod.x1 + rod.x2;
+    } else {
+        invtransform->a = 1.;
+        invtransform->b = 0.;
+        invtransform->c = 0.;
+    }
+    if (flip) {
+        invtransform->d = 0.;
+        invtransform->e = -1.;
+        invtransform->f = rod.y1 + rod.y2;
+    } else {
+        invtransform->d = 0.;
+        invtransform->e = 1.;
+        invtransform->f = 0.;
+    }
+    invtransform->g = 0.;
+    invtransform->h = 0.;
+    invtransform->i = 1.;
+    
+    return true;
+}
+
+void
+MirrorPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kParamMirrorFlip ||
+        paramName == kParamMirrorFlop) {
+        changedTransform(args);
+    } else {
+        Transform3x3Plugin::changedParam(args, paramName);
+    }
+}
+
+
 
 using namespace OFX;
 
@@ -560,6 +677,57 @@ OFX::ImageEffect* DirBlurPluginFactory::createInstance(OfxImageEffectHandle hand
     return new TransformPlugin(handle, true, true);
 }
 
+
+
+mDeclarePluginFactory(MirrorPluginFactory, {}, {});
+
+void MirrorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+{
+    // basic labels
+    desc.setLabel(kPluginMirrorName);
+    desc.setPluginGrouping(kPluginMirrorGrouping);
+    desc.setPluginDescription(kPluginMirrorDescription);
+
+    Transform3x3Describe(desc, false);
+}
+
+void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+{
+    // make some pages and to things in
+    PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, false);
+
+    // flip
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMirrorFlip);
+        param->setLabel(kParamMirrorFlipLabel);
+        param->setHint(kParamMirrorFlipHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    // flop
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMirrorFlop);
+        param->setLabel(kParamMirrorFlopLabel);
+        param->setHint(kParamMirrorFlopHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    //Transform3x3DescribeInContextEnd(desc, context, page, false);
+}
+
+OFX::ImageEffect*
+MirrorPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+{
+    return new MirrorPlugin(handle);
+}
+
+
+
+
+
 void getTransformPluginIDs(OFX::PluginFactoryArray &ids)
 {
     {
@@ -572,6 +740,10 @@ void getTransformPluginIDs(OFX::PluginFactoryArray &ids)
     }
     {
         static DirBlurPluginFactory p(kPluginDirBlurIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static MirrorPluginFactory p(kPluginMirrorIdentifier, kPluginVersionMajor, kPluginVersionMinor);
         ids.push_back(&p);
     }
 }
