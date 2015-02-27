@@ -346,7 +346,9 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         param->setHint(kParamRangeHint);
         param->setDefault(0., 1.);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigma);
@@ -357,7 +359,9 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         param->setDefault(kParamSigmaDefault);
         param->setIncrement(0.005);
         param->setDigits(3);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamExponent);
@@ -366,7 +370,9 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         param->setRange(1, 100);
         param->setDisplayRange(1, 10);
         param->setDefault(kParamExponentDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
@@ -379,7 +385,9 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         //assert(param->getNOptions() == eBoundaryPeriodic && param->getNOptions() == 2);
         //param->appendOption(kParamBoundaryOptionPeriodic, kParamBoundaryOptionPeriodicHint);
         param->setDefault((int)kParamBoundaryDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 #if cimg_version >= 153
     {
@@ -391,7 +399,9 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         assert(param->getNOptions() == eFilterGaussian && param->getNOptions() == 1);
         param->appendOption(kParamFilterOptionGaussian, kParamFilterOptionGaussianHint);
         param->setDefault((int)kParamFilterDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 #endif
 

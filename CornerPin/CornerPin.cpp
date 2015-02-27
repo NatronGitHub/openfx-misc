@@ -1013,7 +1013,9 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
         param->setDimensionLabels("x", "y");
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
         param->setParent(*group);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // enable
@@ -1024,7 +1026,9 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
         param->setAnimates(true);
         param->setHint(kParamEnableHint);
         param->setParent(*group);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 
@@ -1089,7 +1093,9 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
             page->addChild(*param);
         }
 
-        page->addChild(*group);
+        if (page) {
+            page->addChild(*group);
+        }
     }
 
     // fromPoints
@@ -1122,7 +1128,9 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
             page->addChild(*param);
         }
         
-        page->addChild(*group);
+        if (page) {
+            page->addChild(*group);
+        }
     }
     
     // extraMatrix
@@ -1136,7 +1144,9 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
         defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow2, 0, 1, 0);
         defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow3, 0, 0, 1);
 
-        page->addChild(*group);
+        if (page) {
+            page->addChild(*group);
+        }
     }
 
     // overlayPoints
@@ -1148,7 +1158,9 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
         param->appendOption("From");
         param->setDefault(0);
         param->setEvaluateOnChange(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // interactive
@@ -1157,7 +1169,9 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
         param->setLabel(kParamTransformInteractiveLabel);
         param->setHint(kParamTransformInteractiveHint);
         param->setEvaluateOnChange(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

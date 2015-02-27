@@ -777,7 +777,9 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setHint(kParamRangeHint);
         param->setDefault(0., 1.);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamLookupTable);
@@ -825,8 +827,9 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
          }
          */
         param->setIdentity();
-
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamSource);
@@ -835,7 +838,9 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setDisplayRange(0., 0., 0., 0., 4., 4., 4., 4.);
         param->setEvaluateOnChange(false);
         param->setIsPersistant(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTarget);
@@ -844,47 +849,61 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setDisplayRange(0., 0., 0., 0., 4., 4., 4., 4.);
         param->setEvaluateOnChange(false);
         param->setIsPersistant(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetMaster);
         param->setLabel(kParamSetMasterLabel);
         param->setHint(kParamSetMasterHint);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetRGB);
         param->setLabel(kParamSetRGBLabel);
         param->setHint(kParamSetRGBHint);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetRGBA);
         param->setLabel(kParamSetRGBALabel);
         param->setHint(kParamSetRGBAHint);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetA);
         param->setLabel(kParamSetALabel);
         param->setHint(kParamSetAHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 #ifdef COLORLOOKUP_ADD
     {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamAddCtrlPts);
         param->setLabel(kParamAddCtrlPtsLabel, kParamAddCtrlPtsLabel, kParamAddCtrlPtsLabel);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 #endif
 #ifdef COLORLOOKUP_RESET
     {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamResetCtrlPts);
         param->setLabel(kParamResetCtrlPtsLabel, kParamResetCtrlPtsLabel, kParamResetCtrlPtsLabel);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 #endif
     {
@@ -893,7 +912,9 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setHint(kParamClampBlackHint);
         param->setDefault(false);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampWhite);
@@ -901,7 +922,9 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setHint(kParamClampWhiteHint);
         param->setDefault(false);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     ofxsPremultDescribeParams(desc, page);

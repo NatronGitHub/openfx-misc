@@ -451,7 +451,9 @@ void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setDisplayRange(0., 1.);
         param->setDoubleType(eDoubleTypeScale);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

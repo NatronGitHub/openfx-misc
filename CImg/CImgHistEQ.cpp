@@ -237,7 +237,9 @@ void CImgHistEQPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setLabel(kParamNbLevelsLabel);
         param->setHint(kParamNbLevelsHint);
         param->setDefault(kParamNbLevelsDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     CImgHistEQPlugin::describeInContextEnd(desc, context, page);

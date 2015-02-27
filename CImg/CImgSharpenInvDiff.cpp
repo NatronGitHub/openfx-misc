@@ -235,7 +235,9 @@ void CImgSharpenInvDiffPluginFactory::describeInContext(OFX::ImageEffectDescript
         param->setDisplayRange(0, 1.2 /*300/255*/);
         param->setDefault(kParamAmplitudeDefault);
         param->setIncrement(0.01);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
@@ -244,7 +246,9 @@ void CImgSharpenInvDiffPluginFactory::describeInContext(OFX::ImageEffectDescript
         param->setRange(0, 10);
         param->setDisplayRange(0, 10);
         param->setDefault(kParamIterationsDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     CImgSharpenInvDiffPlugin::describeInContextEnd(desc, context, page);

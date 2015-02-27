@@ -665,7 +665,9 @@ ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescri
         }
         param->setLayoutHint(eLayoutHintNoNewLine);
         desc.addClipPreferencesSlaveParam(*param);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         // not yet implemented, for future use (whenever deep compositing is supported)
@@ -678,7 +680,9 @@ ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescri
         param->appendOption(kParamPremultChannelA, kParamPremultChannelAHint);
         param->setDefault(3); // alpha
         param->setIsSecret(true); // not yet implemented
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

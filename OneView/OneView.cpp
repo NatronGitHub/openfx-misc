@@ -431,7 +431,9 @@ void OneViewPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         param->appendOption(kParamViewOptionRight);
         param->setDefault(0);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

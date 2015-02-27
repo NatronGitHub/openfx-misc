@@ -305,7 +305,9 @@ void CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& d
         param->setDisplayRange(0.0, 10.);
         param->setDefault(kParamSigmaSDefault);
         param->setIncrement(0.1);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
@@ -315,7 +317,9 @@ void CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& d
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamSigmaRDefault);
         param->setIncrement(0.005);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     CImgBilateralPlugin::describeInContextEnd(desc, context, page);
@@ -375,7 +379,9 @@ void CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescrip
         param->setDisplayRange(0.0, 10.);
         param->setDefault(kParamSigmaSDefault);
         param->setIncrement(0.1);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
@@ -385,7 +391,9 @@ void CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescrip
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamSigmaRDefault);
         param->setIncrement(0.005);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     CImgBilateralGuidedPlugin::describeInContextEnd(desc, context, page);

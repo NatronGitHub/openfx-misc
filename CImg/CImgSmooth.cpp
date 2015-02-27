@@ -324,7 +324,9 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setDisplayRange(0., 100.);
         param->setDefault(kParamAmplitudeDefault);
         param->setIncrement(1);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSharpness);
@@ -333,7 +335,9 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamSharpnessDefault);
         param->setIncrement(0.05);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAnisotropy);
@@ -343,7 +347,9 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamAnisotropyDefault);
         param->setIncrement(0.05);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAlpha);
@@ -352,7 +358,9 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamAlphaDefault);
         param->setIncrement(0.05);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigma);
@@ -362,7 +370,9 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setDisplayRange(0., 3.);
         param->setDefault(kParamSigmaDefault);
         param->setIncrement(0.05);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDl);
@@ -372,7 +382,9 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setDisplayRange(0., 1.);
         param->setDefault(kParamDlDefault);
         param->setIncrement(0.05);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDa);
@@ -382,7 +394,9 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setDisplayRange(0., 90.);
         param->setDefault(kParamDaDefault);
         param->setIncrement(0.5);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamGaussPrec);
@@ -392,7 +406,9 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setDisplayRange(0., 5.);
         param->setDefault(kParamGaussPrecDefault);
         param->setIncrement(0.05);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamInterp);
@@ -405,14 +421,18 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         assert(param->getNOptions() == eInterpRungeKutta && param->getNOptions() == 2);
         param->appendOption(kParamInterpOptionRungeKutta, kParamInterpOptionRungeKuttaHint);
         param->setDefault((int)kParamInterpDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamFastApprox);
         param->setLabel(kParamFastApproxLabel);
         param->setHint(kParamFastApproxHint);
         param->setDefault(kParamFastApproxDafault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     CImgSmoothPlugin::describeInContextEnd(desc, context, page);

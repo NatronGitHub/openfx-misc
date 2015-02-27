@@ -252,7 +252,9 @@ void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setDefault(kParamAlphaDefault);
         param->setIncrement(kParamAlphaIncrement);
         param->setDigits(4);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBeta);
@@ -263,7 +265,9 @@ void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setDefault(kParamBetaDefault);
         param->setIncrement(kParamBetaIncrement);
         param->setDigits(2);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamScale);
@@ -272,7 +276,9 @@ void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setRange(kParamScaleMin, kParamScaleMax);
         param->setDisplayRange(kParamScaleMin, kParamScaleMax);
         param->setDefault(kParamScaleDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     CImgPlasmaPlugin::describeInContextEnd(desc, context, page);

@@ -901,7 +901,9 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
@@ -909,7 +911,9 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
@@ -917,14 +921,18 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     
     // btmLeft
@@ -937,7 +945,9 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setIncrement(1.);
         param->setHint("Coordinates of the bottom left corner of the effect rectangle.");
         param->setDigits(0);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // size
@@ -951,7 +961,9 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
         param->setHint("Width and height of the effect rectangle.");
         param->setDigits(0);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // interactive
@@ -960,7 +972,9 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamRectangleInteractInteractiveLabel);
         param->setHint(kParamRectangleInteractInteractiveHint);
         param->setEvaluateOnChange(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // softness
@@ -973,7 +987,9 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setRange(0., INT_MAX);
         param->setDisplayRange(0., 100.);
         param->setDigits(2);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // color0
@@ -981,7 +997,9 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor0);
         param->setLabel(kParamColor0Label);
         param->setDefault(0, 0, 0, 0);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // color1
@@ -989,7 +1007,9 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor1);
         param->setLabel(kParamColor1Label);
         param->setDefault(1., 1., 1., 1. );
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // expandRoD
@@ -998,7 +1018,9 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamExpandRoDLabel);
         param->setHint(kParamExpandRoDHint);
         param->setDefault(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // blackOutside
@@ -1008,7 +1030,9 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(true);
         param->setAnimates(true);
         param->setHint(kParamBlackOutsideHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     ofxsMaskMixDescribeParams(desc, page);

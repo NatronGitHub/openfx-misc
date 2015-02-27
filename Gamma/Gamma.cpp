@@ -692,7 +692,9 @@ void GammaPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
@@ -700,7 +702,9 @@ void GammaPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
@@ -708,14 +712,18 @@ void GammaPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -725,7 +733,9 @@ void GammaPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setDefault(1.0, 1.0, 1.0, 1.0);
         param->setDisplayRange(0, 0, 0, 0, 4, 4, 4, 4);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     ofxsPremultDescribeParams(desc, page);

@@ -922,7 +922,9 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setRange(kmin, kmin, kmin, kmax, kmax, kmax);
         param->setDisplayRange(0., 0., 0., 1., 1., 1.);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // acceptance angle
@@ -935,7 +937,9 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setDisplayRange(0., 180.);
         param->setDefault(120.);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // suppression angle
@@ -948,7 +952,9 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setDisplayRange(0., 180.);
         param->setDefault(40.);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // key lift
@@ -962,7 +968,9 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setDefault(0.);
         param->setDigits(4);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // key gain
@@ -976,7 +984,9 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setDefault(1.);
         param->setDigits(4);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // output mode
@@ -995,7 +1005,9 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setDefault((int)eOutputModeComposite);
         param->setAnimates(true);
         desc.addClipPreferencesSlaveParam(*param);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // source alpha
@@ -1011,7 +1023,9 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->appendOption(kSourceAlphaNormalOption, kParamSourceAlphaOptionNormalHint);
         param->setDefault((int)eSourceAlphaIgnore);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

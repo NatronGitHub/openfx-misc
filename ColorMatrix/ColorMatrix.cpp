@@ -752,7 +752,9 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
@@ -760,7 +762,9 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
@@ -768,14 +772,18 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -784,7 +792,9 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setHint(kParamOutputRedHint);
         param->setDefault(1.0, 0.0, 0.0, 0.0);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         RGBAParamDescriptor *param = desc.defineRGBAParam(kParamOutputGreenName);
@@ -792,7 +802,9 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setHint(kParamOutputGreenHint);
         param->setDefault(0.0, 1.0, 0.0, 0.0);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         RGBAParamDescriptor *param = desc.defineRGBAParam(kParamOutputBlueName);
@@ -800,7 +812,9 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setHint(kParamOutputBlueHint);
         param->setDefault(0.0, 0.0, 1.0, 0.0);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         RGBAParamDescriptor *param = desc.defineRGBAParam(kParamOutputAlphaName);
@@ -808,7 +822,9 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setHint(kParamOutputAlphaHint);
         param->setDefault(0.0, 0.0, 0.0, 1.0);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampBlack);
@@ -816,7 +832,9 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setHint(kParamClampBlackHint);
         param->setDefault(true);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampWhite);
@@ -824,7 +842,9 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setHint(kParamClampWhiteHint);
         param->setDefault(false);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     ofxsPremultDescribeParams(desc, page);

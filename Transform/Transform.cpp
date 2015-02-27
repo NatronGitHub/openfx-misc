@@ -349,7 +349,9 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         //param->setDimensionLabels("x","y");
         param->setDefault(0, 0);
         param->setIncrement(10.);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // rotate
@@ -361,7 +363,9 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         //param->setRange(-180, 180); // the angle may be -infinity..+infinity
         param->setDisplayRange(-180, 180);
         param->setIncrement(0.1);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // scale
@@ -375,7 +379,9 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         param->setDisplayRange(0.1, 0.1, 10, 10);
         param->setIncrement(0.01);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // scaleUniform
@@ -386,7 +392,9 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         // don't check it by default: it is easy to obtain Uniform scaling using the slider or the interact
         param->setDefault(false);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // skewX
@@ -396,7 +404,9 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         param->setDefault(0);
         param->setDisplayRange(-1,1);
         param->setIncrement(0.01);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // skewY
@@ -406,7 +416,9 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         param->setDefault(0);
         param->setDisplayRange(-1,1);
         param->setIncrement(0.01);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // skewOrder
@@ -417,7 +429,9 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         param->appendOption("XY");
         param->appendOption("YX");
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // center
@@ -431,7 +445,9 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         param->setDefault(0.5, 0.5);
         param->setIncrement(1.);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // resetcenter
@@ -439,7 +455,9 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamTransformResetCenter);
         param->setLabel(kParamTransformResetCenterLabel);
         param->setHint(kParamTransformResetCenterHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // interactive
@@ -448,7 +466,9 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         param->setLabel(kParamTransformInteractiveLabel);
         param->setHint(kParamTransformInteractiveHint);
         param->setEvaluateOnChange(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

@@ -938,7 +938,9 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setRange(kmin, kmin, kmin, kmax, kmax, kmax);
         param->setDisplayRange(0., 0., 0., 1., 1., 1.);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // keyer mode
@@ -955,7 +957,9 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         assert(param->getNOptions() == (int)eKeyerModeNone);
         param->appendOption(kParamKeyerModeOptionNone, kParamKeyerModeOptionNoneHint);
         param->setDefault((int)kParamKeyerModeDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // softness (lower)
@@ -968,7 +972,9 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setDigits(5);
         param->setDefault(-0.5);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // tolerance (lower)
@@ -981,7 +987,9 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setDigits(5);
         param->setDefault(0.);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // center
@@ -994,7 +1002,9 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setDigits(5);
         param->setDefault(1.);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // tolerance (upper)
@@ -1007,7 +1017,9 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setDigits(5);
         param->setDefault(0.);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // softness (upper)
@@ -1020,7 +1032,9 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setDigits(5);
         param->setDefault(0.5);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // despill
@@ -1032,7 +1046,9 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setDisplayRange(0.,2.);
         param->setDefault(1.);
         param->setEnabled((kParamKeyerModeDefault == eKeyerModeScreen) || (kParamKeyerModeDefault == eKeyerModeNone));
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // output mode
@@ -1051,7 +1067,9 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setDefault((int)eOutputModeIntermediate);
         param->setAnimates(true);
         desc.addClipPreferencesSlaveParam(*param);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // source alpha
@@ -1067,7 +1085,9 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->appendOption(kSourceAlphaNormalOption, kParamSourceAlphaOptionNormalHint);
         param->setDefault((int)eSourceAlphaIgnore);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

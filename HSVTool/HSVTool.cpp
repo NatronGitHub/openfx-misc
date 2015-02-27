@@ -1084,7 +1084,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setParent(*group);
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
         }
-        page->addChild(*group);
+        if (page) {
+            page->addChild(*group);
+        }
     }
 
     {
@@ -1124,7 +1126,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
         }
 
-        page->addChild(*group);
+        if (page) {
+            page->addChild(*group);
+        }
     }
 
     {
@@ -1160,7 +1164,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
         }
 
-        page->addChild(*group);
+        if (page) {
+            page->addChild(*group);
+        }
     }
 
     {
@@ -1196,7 +1202,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
         }
 
-        page->addChild(*group);
+        if (page) {
+            page->addChild(*group);
+        }
     }
 
     {
@@ -1205,7 +1213,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
         param->setHint(kParamClampBlackHint);
         param->setDefault(true);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampWhite);
@@ -1213,7 +1223,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
         param->setHint(kParamClampWhiteHint);
         param->setDefault(false);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -1237,7 +1249,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
         assert(param->getNOptions() == (int)eOutputAlphaAll);
         param->appendOption(kParamOutputAlphaOptionAll, kParamOutputAlphaOptionAllHint);
         param->setDefault((int)eOutputAlphaHue);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     ofxsPremultDescribeParams(desc, page);

@@ -471,7 +471,9 @@ void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setDisplayRange(0., 1.);
         param->setDoubleType(eDoubleTypeScale);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamSwap);
@@ -479,7 +481,9 @@ void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setDefault(false);
         param->setHint(kParamSwapHint);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamOffset);
@@ -489,7 +493,9 @@ void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setRange(-1000, 1000);
         param->setDisplayRange(-100, 100);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

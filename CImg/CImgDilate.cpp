@@ -228,7 +228,9 @@ void CImgDilatePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setRange(-1000, -1000, 1000, 1000);
         param->setDisplayRange(-100, -100, 100, 100);
         param->setDefault(kParamSizeDefault, kParamSizeDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     CImgDilatePlugin::describeInContextEnd(desc, context, page);

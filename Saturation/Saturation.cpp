@@ -755,7 +755,9 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
@@ -763,7 +765,9 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
@@ -771,14 +775,18 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -787,7 +795,9 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamSaturationHint);
         param->setDisplayRange(0., 4.);
         param->setDefault(1.);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamLuminanceMath);
@@ -801,7 +811,9 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->appendOption(kParamLuminanceMathOptionAverage, kParamLuminanceMathOptionAverageHint);
         assert(param->getNOptions() == eLuminanceMathMaximum);
         param->appendOption(kParamLuminanceMathOptionMaximum, kParamLuminanceMathOptionMaximumHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -810,7 +822,9 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamClampBlackHint);
         param->setDefault(true);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampWhite);
@@ -818,7 +832,9 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamClampWhiteHint);
         param->setDefault(false);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     
     ofxsPremultDescribeParams(desc, page);

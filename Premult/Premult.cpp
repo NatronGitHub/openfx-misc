@@ -699,7 +699,9 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
         desc.addClipPreferencesSlaveParam(*param);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -709,7 +711,9 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
         desc.addClipPreferencesSlaveParam(*param);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -719,7 +723,9 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
         desc.addClipPreferencesSlaveParam(*param);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -729,7 +735,9 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         param->setDefault(false);
         param->setLayoutHint(eLayoutHintNoNewLine);
         desc.addClipPreferencesSlaveParam(*param);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -748,7 +756,9 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         param->appendOption(kParamPremultOptionA, kParamPremultOptionAHint);
         param->setDefault((int)eInputChannelA);
         desc.addClipPreferencesSlaveParam(*param);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {

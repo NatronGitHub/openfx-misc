@@ -1580,7 +1580,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setHint(kParamRestrictToRectangleHint);
         param->setDefault(true);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // btmLeft
@@ -1594,7 +1596,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setHint(kParamRectangleInteractBtmLeftHint);
         param->setDigits(0);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // size
@@ -1610,7 +1614,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setDigits(0);
         param->setEvaluateOnChange(false);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // autoUpdate
@@ -1620,7 +1626,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setHint(kParamAutoUpdateHint);
         param->setDefault(true);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // interactive
@@ -1629,7 +1637,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setLabel(kParamRectangleInteractInteractiveLabel);
         param->setHint(kParamRectangleInteractInteractiveHint);
         param->setEvaluateOnChange(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {

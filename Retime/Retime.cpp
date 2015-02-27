@@ -510,7 +510,9 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         PageParamDescriptor *page = desc.definePageParam("Controls");
 
         // add our speed param into it
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
 
         // If we are a general context, we can change the duration of the effect, so have a param to do that
         // We need a separate param as it is impossible to derive this from a speed param and the input clip

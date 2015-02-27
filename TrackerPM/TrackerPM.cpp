@@ -922,7 +922,9 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         assert(param->getNOptions() == eTrackerZNCC);
         param->appendOption(kParamScoreOptionZNCC, kParamScoreOptionZNCCHint);
         param->setDefault((int)eTrackerSAD);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

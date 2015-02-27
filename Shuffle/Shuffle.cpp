@@ -1139,7 +1139,9 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         param->setDefault(0);
         param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // ouputBitDepth
@@ -1171,7 +1173,9 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         param->setIsSecret(true); // always secret
 #endif
         desc.addClipPreferencesSlaveParam(*param);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     if (gSupportsRGB || gSupportsRGBA) {
@@ -1208,7 +1212,9 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         param->setLabel(kParamOutputALabel);
         param->setHint(kParamOutputAHint);
         addInputChannelOtions(param, eInputChannelAA, context);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // clipInfo
@@ -1216,7 +1222,9 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
         param->setLabel(kParamClipInfoLabel);
         param->setHint(kParamClipInfoHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

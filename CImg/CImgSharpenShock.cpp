@@ -263,7 +263,9 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
         param->setDisplayRange(0, 1.5 /*400/255*/);
         param->setDefault(kParamAmplitudeDefault);
         param->setIncrement(0.01);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeThreshold);
@@ -272,7 +274,9 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
         param->setDisplayRange(0, 0.7);
         param->setDefault(kParamEdgeThresholdDefault);
         param->setIncrement(0.01);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamGradientSmoothness);
@@ -281,7 +285,9 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
         param->setDisplayRange(0, 10.);
         param->setDefault(kParamGradientSmoothnessDefault);
         param->setIncrement(0.01);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTensorSmoothness);
@@ -290,7 +296,9 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
         param->setDisplayRange(0, 10.);
         param->setDefault(kParamTensorSmoothnessDefault);
         param->setIncrement(0.01);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
@@ -299,7 +307,9 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
         param->setRange(0, 10);
         param->setDisplayRange(0, 10);
         param->setDefault(kParamIterationsDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     CImgSharpenShockPlugin::describeInContextEnd(desc, context, page);

@@ -889,7 +889,9 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
@@ -897,7 +899,9 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
@@ -905,14 +909,18 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -921,7 +929,9 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setHint(kParamNbFramesHint);
         param->setDefault(5);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -931,7 +941,9 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setDefault(-1, -1);
         param->setAnimates(true); // can animate
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -941,21 +953,27 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setDefault(false);
         param->setAnimates(true); // can animate
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
         PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamInputRangeName);
         param->setLabel(kParamInputRangeLabel);
         param->setHint(kParamInputRangeHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOutputCountName);
         param->setLabel(kParamOutputCountLabel);
         param->setHint(kParamOutputCountHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     ofxsMaskMixDescribeParams(desc, page);

@@ -222,7 +222,9 @@ public:
             param->setDefault(processRGB);
             param->setIsSecret(processIsSecret);
             param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
         {
             OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
@@ -231,7 +233,9 @@ public:
             param->setDefault(processRGB);
             param->setIsSecret(processIsSecret);
             param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
         {
             OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
@@ -240,7 +244,9 @@ public:
             param->setDefault(processRGB);
             param->setIsSecret(processIsSecret);
             param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
         {
             OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
@@ -248,7 +254,9 @@ public:
             param->setHint(kParamProcessAHint);
             param->setDefault(processAlpha);
             param->setIsSecret(processIsSecret);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         return page;

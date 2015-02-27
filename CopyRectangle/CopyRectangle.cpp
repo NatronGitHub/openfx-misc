@@ -671,7 +671,9 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
         param->setIncrement(1.);
         param->setHint(kParamRectangleInteractBtmLeftHint);
         param->setDigits(0);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // size
@@ -685,7 +687,9 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
         param->setHint(kParamRectangleInteractSizeHint);
         param->setIncrement(1.);
         param->setDigits(0);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     
     // interactive
@@ -694,7 +698,9 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
         param->setLabel(kParamRectangleInteractInteractiveLabel);
         param->setHint(kParamRectangleInteractInteractiveHint);
         param->setEvaluateOnChange(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     defineComponentParam(desc, page, kParamRed, kParamRedLabel,false);
@@ -711,7 +717,9 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
         param->setDisplayRange(0., 100.);
         param->setIncrement(1.);
         param->setHint(kParamSoftnessHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     ofxsMaskMixDescribeParams(desc, page);

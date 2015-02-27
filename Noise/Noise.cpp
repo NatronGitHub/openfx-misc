@@ -80,7 +80,10 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 
+//#define USE_RANDOMGENERATOR // randomGenerator is more than 10 times slower than our pseudo-random hash
+#ifdef USE_RANDOMGENERATOR
 #include "randomGenerator.H"
+#endif
 
 #define kPluginName "NoiseOFX"
 #define kPluginGrouping "Draw"
@@ -162,7 +165,9 @@ public:
         float noiseLevel = _noiseLevel;
 
         // set up a random number generator and set the seed
-        RandomGenerator randy;;
+#ifdef USE_RANDOMGENERATOR
+        RandomGenerator randy;
+#endif
 
         // push pixels
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
@@ -174,10 +179,16 @@ public:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 // for a given x,y position, the output should always be the same.
+#ifdef USE_RANDOMGENERATOR
                 randy.reseed(hash(x + 0x10000*_seed) + y);
+#endif
                 for (int c = 0; c < nComponents; c++) {
                     // get the random value out of it, scale up by the pixel max level and the noise level
+#ifdef USE_RANDOMGENERATOR
                     double randValue = _mean + max * noiseLevel * (randy.random()-0.5);
+#else
+                    double randValue = _mean + max * noiseLevel * (hash(hash(hash(_seed^x)^y)^c)/((double)0x100000000ULL) - 0.5);
+#endif
 
                     if (max == 1) // implies floating point, so don't clamp
                         dstPix[c] = PIX(randValue);
@@ -276,7 +287,7 @@ NoisePlugin::setupAndProcess(NoiseGeneratorBase &processor, const OFX::RenderArg
     processor.setNoiseMean((float)(noise / 2.));
 
     // set the seed based on the current time, and double it we get difference seeds on different fields
-    processor.setSeed(uint32_t(args.time * 2.0f + _seed->getValueAtTime(args.time)));
+    processor.setSeed(hash((unsigned)(args.time)^_seed->getValueAtTime(args.time)));
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -404,7 +415,9 @@ void NoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
         param->setDisplayRange(0, 1);
         param->setAnimates(true); // can animate
         param->setDoubleType(eDoubleTypeScale);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // seed
@@ -414,7 +427,9 @@ void NoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
         param->setHint(kParamSeedHint);
         param->setDefault(2000);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

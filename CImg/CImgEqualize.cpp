@@ -233,7 +233,9 @@ void CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& de
         param->setLabel(kParamNbLevelsLabel);
         param->setHint(kParamNbLevelsHint);
         param->setDefault(kParamNbLevelsDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamMin);
@@ -241,7 +243,9 @@ void CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& de
         param->setHint(kParamMinHint);
         param->setDefault(kParamMinDefault);
         param->setIncrement(0.001);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamMax);
@@ -249,7 +253,9 @@ void CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& de
         param->setHint(kParamMaxHint);
         param->setDefault(kParamMaxDefault);
         param->setIncrement(0.001);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     CImgEqualizePlugin::describeInContextEnd(desc, context, page);

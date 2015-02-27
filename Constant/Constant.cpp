@@ -530,7 +530,9 @@ void ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor 
         param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX);
         param->setDisplayRange(0, 0, 0, 1, 1, 1);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     } else {
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor);
         param->setLabel(kParamColorLabel);
@@ -539,7 +541,9 @@ void ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor 
         param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // range
@@ -550,7 +554,9 @@ void ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor 
         param->setDefault(1, 1);
         param->setDimensionLabels("min", "max");
         param->setAnimates(false); // can not animate, because it defines the time domain
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

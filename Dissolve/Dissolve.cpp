@@ -525,7 +525,9 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamWhichHint);
         param->setRange(0., clipSourceCount);
         param->setDisplayRange(0., 1.);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // don't define the mix param

@@ -234,7 +234,9 @@ void CImgGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setRange(0, 100);
         param->setDisplayRange(1, 10);
         param->setDefault(kParamRadiusDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEpsilon);
@@ -244,7 +246,9 @@ void CImgGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setDisplayRange(0., 0.4);
         param->setDefault(kParamEpsilonDefault);
         param->setIncrement(0.005);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     CImgGuidedPlugin::describeInContextEnd(desc, context, page);

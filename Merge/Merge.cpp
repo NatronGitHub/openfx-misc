@@ -743,7 +743,9 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setIsPersistant(true);
         param->setEvaluateOnChange(false);
         param->setDefault(getOperationString(eMergeOver));
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // operation
@@ -822,7 +824,9 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setDefault(eMergeOver);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // boundingBox
@@ -836,7 +840,9 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->appendOption("B");
         param->setAnimates(true);
         param->setDefault(0);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // alphaMasking
@@ -847,7 +853,9 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setDefault(false);
         param->setEnabled(MergeImages2D::isMaskable(eMergeOver));
         param->setHint(kParamAlphaMaskingHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     ofxsMaskMixDescribeParams(desc, page);

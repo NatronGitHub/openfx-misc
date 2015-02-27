@@ -1218,7 +1218,9 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
@@ -1226,7 +1228,9 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
@@ -1234,14 +1238,18 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     
     // point0
@@ -1251,7 +1259,9 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesCanonical);
         param->setDefault(100., 100.);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     
     
@@ -1260,7 +1270,9 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor0);
         param->setLabel(kParamColor0Label);
         param->setDefault(0, 0, 0, 0);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // point1
@@ -1270,7 +1282,9 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesCanonical);
         param->setDefault(100., 200.);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // color1
@@ -1278,7 +1292,9 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor1);
         param->setLabel(kParamColor1Label);
         param->setDefault(1., 1., 1., 1. );
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     
     // type
@@ -1292,7 +1308,9 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->appendOption("Smooth");
         param->setDefault(eRampTypeLinear);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // interactive
@@ -1301,7 +1319,9 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setLabel(kParamInteractiveLabel);
         param->setHint(kParamInteractiveHint);
         param->setEvaluateOnChange(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     ofxsMaskMixDescribeParams(desc, page);

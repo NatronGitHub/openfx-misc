@@ -1069,7 +1069,9 @@ void GodRaysPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Conte
         //param->setDimensionLabels("x","y");
         param->setDefault(0, 0);
         param->setIncrement(10.);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // rotate
@@ -1081,7 +1083,9 @@ void GodRaysPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Conte
         //param->setRange(-180, 180); // the angle may be -infinity..+infinity
         param->setDisplayRange(-180, 180);
         param->setIncrement(0.1);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // scale
@@ -1095,7 +1099,9 @@ void GodRaysPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Conte
         param->setDisplayRange(0.1, 0.1, 10, 10);
         param->setIncrement(0.01);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // scaleUniform
@@ -1106,7 +1112,9 @@ void GodRaysPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Conte
         // don't check it by default: it is easy to obtain Uniform scaling using the slider or the interact
         param->setDefault(false);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // skewX
@@ -1116,7 +1124,9 @@ void GodRaysPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Conte
         param->setDefault(0);
         param->setDisplayRange(-1,1);
         param->setIncrement(0.01);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // skewY
@@ -1126,7 +1136,9 @@ void GodRaysPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Conte
         param->setDefault(0);
         param->setDisplayRange(-1,1);
         param->setIncrement(0.01);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // skewOrder
@@ -1137,7 +1149,9 @@ void GodRaysPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Conte
         param->appendOption("XY");
         param->appendOption("YX");
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // center
@@ -1151,7 +1165,9 @@ void GodRaysPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Conte
         param->setDefault(0.5, 0.5);
         param->setIncrement(1.);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // resetcenter
@@ -1159,7 +1175,9 @@ void GodRaysPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Conte
         PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamTransformResetCenter);
         param->setLabel(kParamTransformResetCenterLabel);
         param->setHint(kParamTransformResetCenterHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // interactive
@@ -1168,7 +1186,9 @@ void GodRaysPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Conte
         param->setLabel(kParamTransformInteractiveLabel);
         param->setHint(kParamTransformInteractiveHint);
         param->setEvaluateOnChange(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 
@@ -1198,7 +1218,9 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         param->setHint(kParamTransform3x3InvertHint);
         param->setDefault(false);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     // GENERIC PARAMETERS
     //
@@ -1211,7 +1233,9 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         param->setLabel(kParamFromColorLabel);
         param->setHint(kParamFromColorHint);
         param->setDefault(1.,1.,1.,1.);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // toColor
@@ -1220,7 +1244,9 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         param->setLabel(kParamToColorLabel);
         param->setHint(kParamToColorHint);
         param->setDefault(1.,1.,1.,1.);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // gamma
@@ -1230,7 +1256,9 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         param->setHint(kParamGammaHint);
         param->setDefault(1.,1.,1.,1.);
         param->setDisplayRange(0.2, 0.2, 0.2, 0.2, 5., 5., 5., 5.);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
 #ifdef USE_STEPS
@@ -1241,7 +1269,9 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         param->setHint(kParamStepsHint);
         param->setDefault(5);
         param->setDisplayRange(0, 10);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 #else
     // motionBlur
@@ -1253,7 +1283,9 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         param->setRange(0., 100.);
         param->setIncrement(0.01);
         param->setDisplayRange(0., 4.);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 #endif
 
@@ -1263,7 +1295,9 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         param->setLabel(kParamMaxLabel);
         param->setHint(kParamMaxHint);
         param->setDefault(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     ofxsMaskMixDescribeParams(desc, page);

@@ -711,7 +711,9 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setDefault(64, 64);
         param->setDefaultCoordinateSystem(eCoordinatesCanonical);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // color0
@@ -723,7 +725,9 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // color1
@@ -735,7 +739,9 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // color2
@@ -747,7 +753,9 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // color3
@@ -759,7 +767,9 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
 
@@ -772,7 +782,9 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // lineWidth
@@ -784,7 +796,9 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setRange(0., INT_MAX);
         param->setDisplayRange(0, 10);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
 
@@ -797,7 +811,9 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // centerlineWidth
@@ -809,7 +825,9 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setRange(0., INT_MAX);
         param->setDisplayRange(0, 10);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // range
@@ -820,7 +838,9 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setDefault(1, 1);
         param->setDimensionLabels("min", "max");
         param->setAnimates(false); // can not animate, because it defines the time domain
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

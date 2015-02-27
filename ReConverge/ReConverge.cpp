@@ -543,7 +543,9 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setRange(-1000, 1000);
         param->setDisplayRange(-100, 100);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // convergemode
@@ -555,7 +557,9 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->appendOption(kParamConvergeModeOptionShiftLeft);
         param->appendOption(kParamConvergeModeOptionShiftBoth);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

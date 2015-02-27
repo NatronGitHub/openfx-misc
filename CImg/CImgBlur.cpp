@@ -842,14 +842,18 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
         param->setDigits(1);
         param->setIncrement(0.1);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamUniform);
         param->setLabel(kParamUniformLabel);
         param->setHint(kParamUniformHint);
         param->setDefault(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamOrderX);
@@ -857,7 +861,9 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
         param->setHint(kParamOrderXHint);
         param->setRange(0, 2);
         param->setDisplayRange(0, 2);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamOrderY);
@@ -865,7 +871,9 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
         param->setHint(kParamOrderYHint);
         param->setRange(0, 2);
         param->setDisplayRange(0, 2);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
@@ -878,7 +886,9 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
         //assert(param->getNOptions() == eBoundaryPeriodic && param->getNOptions() == 2);
         //param->appendOption(kParamBoundaryOptionPeriodic, kParamBoundaryOptionPeriodicHint);
         param->setDefault((int)kParamBoundaryDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFilter);
@@ -895,14 +905,18 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
         assert(param->getNOptions() == eFilterQuadratic && param->getNOptions() == 4);
         param->appendOption(kParamFilterOptionQuadratic, kParamFilterOptionQuadraticHint);
         param->setDefault((int)kParamFilterDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
         param->setLabel(kParamExpandRoDLabel);
         param->setHint(kParamExpandRoDHint);
         param->setDefault(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     CImgBlurPlugin::describeInContextEnd(desc, context, page);

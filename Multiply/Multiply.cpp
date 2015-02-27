@@ -686,7 +686,9 @@ void MultiplyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
@@ -694,7 +696,9 @@ void MultiplyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
@@ -702,14 +706,18 @@ void MultiplyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -719,7 +727,9 @@ void MultiplyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setDefault(1.0, 1.0, 1.0, 1.0);
         param->setDisplayRange(0, 0, 0, 0, 4, 4, 4, 4);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     ofxsPremultDescribeParams(desc, page);

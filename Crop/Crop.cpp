@@ -699,7 +699,9 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setIncrement(1.);
         param->setHint("Coordinates of the bottom left corner of the crop rectangle.");
         param->setDigits(0);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // size
@@ -714,7 +716,9 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setHint("Width and height of the crop rectangle.");
         param->setIncrement(1.);
         param->setDigits(0);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // interactive
@@ -723,7 +727,9 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setLabel(kParamRectangleInteractInteractiveLabel);
         param->setHint(kParamRectangleInteractInteractiveHint);
         param->setEvaluateOnChange(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // softness
@@ -735,7 +741,9 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setDisplayRange(0., 100.);
         param->setIncrement(1.);
         param->setHint(kParamSoftnessHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // reformat
@@ -746,7 +754,9 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setDefault(false);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // intersect
@@ -757,7 +767,9 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
         param->setDefault(false);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // blackOutside
@@ -767,7 +779,9 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setDefault(false);
         param->setAnimates(true);
         param->setHint(kParamBlackOutsideHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

@@ -554,7 +554,9 @@ void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setHint(kParamVerticalHint);
         param->setLabel(kParamVerticalLabel);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // view1
@@ -566,7 +568,9 @@ void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->appendOption(kParamViewOptionRight);
         param->setDefault(0);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // view2
@@ -578,7 +582,9 @@ void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->appendOption(kParamViewOptionRight);
         param->setDefault(1);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

@@ -326,7 +326,9 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setRange(0, clipSourceCount - 1);
         param->setDisplayRange(0, 1);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
 #ifdef OFX_EXTENSIONS_NUKE

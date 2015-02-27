@@ -718,7 +718,9 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setDefault(int(eDeinterlaceModeYadif));
         param->setAnimates(true); // can animate
         param->setIsSecret(true); // Not yet implemented!
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFieldOrder);
@@ -732,7 +734,9 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->appendOption(kParamFieldOrderOptionAuto);
         param->setDefault(int(eFieldOrderAuto));
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -745,7 +749,9 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->appendOption(kParamParityOptionUpper);
         param->setDefault(int(eParityLower));
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -758,7 +764,9 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->appendOption(kParamYadifModeOptionTemporal, kParamYadifModeOptionTemporalHint);
         param->setDefault(eYadifModeTemporalSpatial);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -766,7 +774,9 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setLabel(kParamDoubleFramerateLabel);
         param->setHint(kParamDoubleFramerateHint);
         param->setIsSecret(true); // Not yet implemented!
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

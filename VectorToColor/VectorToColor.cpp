@@ -497,7 +497,9 @@ VectorToColorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamXChannelLabel);
         param->setHint(kParamXChannelHint);
         addInputChannelOtions(param, eInputChannelR, context);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // yChannel
@@ -506,7 +508,9 @@ VectorToColorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamYChannelLabel);
         param->setHint(kParamYChannelHint);
         addInputChannelOtions(param, eInputChannelG, context);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // opposite
@@ -514,7 +518,9 @@ VectorToColorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOpposite);
         param->setLabel(kParamOppositeLabel);
         param->setHint(kParamOppositeHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // inverseY
@@ -523,7 +529,9 @@ VectorToColorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamInverseYLabel);
         param->setHint(kParamInverseYHint);
         param->setDefault(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // modulateV
@@ -531,7 +539,9 @@ VectorToColorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamModulateV);
         param->setLabel(kParamModulateVLabel);
         param->setHint(kParamModulateVHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // hsvOutput
@@ -539,7 +549,9 @@ VectorToColorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamHSVOutput);
         param->setLabel(kParamHSVOutputLabel);
         param->setHint(kParamHSVOutputHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

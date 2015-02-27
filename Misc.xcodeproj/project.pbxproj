@@ -543,8 +543,6 @@
 		1EC1B4F81A964209001D7020 /* ofxsTransformInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EC1B4F61A964209001D7020 /* ofxsTransformInteract.cpp */; };
 		1EC1B4F91A964209001D7020 /* ofxsTransformInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EC1B4F61A964209001D7020 /* ofxsTransformInteract.cpp */; };
 		1EC1B5011A9656CA001D7020 /* GodRays.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EC1B4FB1A9656CA001D7020 /* GodRays.cpp */; };
-		1EC1B5021A9656CA001D7020 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = 1EC1B4FE1A9656CA001D7020 /* Makefile */; };
-		1EC1B5031A9656CA001D7020 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = 1EC1B4FE1A9656CA001D7020 /* Makefile */; };
 		1EC1B5091A9656F9001D7020 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7349E8B18E7766F0097DB1D /* PluginRegistration.cpp */; };
 		1EC1B50A1A9656F9001D7020 /* ofxsTransformInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EC1B4F61A964209001D7020 /* ofxsTransformInteract.cpp */; };
 		1EC1B50B1A9656F9001D7020 /* ofxsTransform3x3.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F57198A51840095C8AA /* ofxsTransform3x3.cpp */; };
@@ -5235,7 +5233,6 @@
 				D730310419518B560024BCA4 /* CopyRectangle.cpp in Sources */,
 				D7257D5F192E91510040CD9C /* CornerPin.cpp in Sources */,
 				1ED12E521A4B318400ABA348 /* ClipTest.cpp in Sources */,
-				1EC1B5031A9656CA001D7020 /* Makefile in Sources */,
 				D7B4C97818D9DBE70004137D /* ColorCorrect.cpp in Sources */,
 				1E8B5D6818B76F8700C31FDC /* ColorLookup.cpp in Sources */,
 				D74A80C719405A14007C3E1C /* Crop.cpp in Sources */,
@@ -5812,7 +5809,6 @@
 				D7349E9718E7767D0097DB1D /* ofxsMultiThread.cpp in Sources */,
 				D7349E9818E7767D0097DB1D /* ofxsParams.cpp in Sources */,
 				D7349E9918E7767D0097DB1D /* ofxsProperty.cpp in Sources */,
-				1EC1B5021A9656CA001D7020 /* Makefile in Sources */,
 				D7349E9A18E7767D0097DB1D /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

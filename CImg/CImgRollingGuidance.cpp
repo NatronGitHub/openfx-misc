@@ -260,7 +260,9 @@ void CImgRollingGuidancePluginFactory::describeInContext(OFX::ImageEffectDescrip
         param->setDisplayRange(0, 25);
         param->setDefault(kParamSigmaSDefault);
         param->setIncrement(0.1);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
@@ -270,7 +272,9 @@ void CImgRollingGuidancePluginFactory::describeInContext(OFX::ImageEffectDescrip
         param->setDisplayRange(0, 0.5);
         param->setDefault(kParamSigmaRDefault);
         param->setIncrement(0.005);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
@@ -279,7 +283,9 @@ void CImgRollingGuidancePluginFactory::describeInContext(OFX::ImageEffectDescrip
         param->setRange(0, 10);
         param->setDisplayRange(0, 10);
         param->setDefault(kParamIterationsDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     CImgRollingGuidancePlugin::describeInContextEnd(desc, context, page);

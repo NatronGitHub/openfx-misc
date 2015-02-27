@@ -873,7 +873,9 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
@@ -881,7 +883,9 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
@@ -889,14 +893,18 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -905,14 +913,18 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamMinimumHint);
         param->setDefault(0., 0., 0., 0.);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMinimumEnable);
         param->setLabel(kParamMinimumEnableLabel);
         param->setHint(kParamMinimumEnableHint);
         param->setDefault(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamMaximum);
@@ -920,14 +932,18 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamMaximumHint);
         param->setDefault(1., 1., 1., 1.);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMaximumEnable);
         param->setLabel(kParamMaximumEnableLabel);
         param->setHint(kParamMaximumEnableHint);
         param->setDefault(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamMinClampTo);
@@ -935,14 +951,18 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamMinClampToHint);
         param->setDefault(0., 0., 0., 0.);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMinClampToEnable);
         param->setLabel(kParamMinClampToEnableLabel);
         param->setHint(kParamMinClampToEnableHint);
         param->setDefault(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamMaxClampTo);
@@ -950,14 +970,18 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setHint(kParamMaxClampToHint);
         param->setDefault(1., 1., 1., 1.);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMaxClampToEnable);
         param->setLabel(kParamMaxClampToEnableLabel);
         param->setHint(kParamMaxClampToEnableHint);
         param->setDefault(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     ofxsPremultDescribeParams(desc, page);

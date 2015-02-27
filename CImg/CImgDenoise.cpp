@@ -271,7 +271,9 @@ void CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
         param->setDisplayRange(0, 25);
         param->setDefault(kParamSigmaSDefault);
         param->setIncrement(0.1);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaR);
@@ -281,7 +283,9 @@ void CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
         param->setDisplayRange(0, 0.5);
         param->setDefault(kParamSigmaRDefault);
         param->setIncrement(0.005);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamPatchSize);
@@ -290,7 +294,9 @@ void CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
         param->setRange(0, 1000);
         param->setDisplayRange(0, 25);
         param->setDefault(kParamPatchSizeDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamLookupSize);
@@ -299,7 +305,9 @@ void CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
         param->setRange(0, 1000);
         param->setDisplayRange(0, 25);
         param->setDefault(kParamLookupSizeDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSmoothness);
@@ -308,14 +316,18 @@ void CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
         param->setRange(0, 1000);
         param->setDisplayRange(0, 25);
         param->setDefault(kParamSmoothnessDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamFastApprox);
         param->setLabel(kParamFastApproxLabel);
         param->setHint(kParamFastApproxHint);
         param->setDefault(kParamFastApproxDafault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     CImgDenoisePlugin::describeInContextEnd(desc, context, page);

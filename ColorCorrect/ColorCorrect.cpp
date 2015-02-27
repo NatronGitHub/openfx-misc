@@ -1073,7 +1073,9 @@ defineRGBAScaleParam(OFX::ImageEffectDescriptor &desc,
     if (parent) {
         param->setParent(*parent);
     }
-    page->addChild(*param);
+    if (page) {
+        page->addChild(*param);
+    }
 }
 
 static void
@@ -1083,19 +1085,20 @@ defineColorGroup(const std::string& groupName,
                  OFX::ImageEffectDescriptor &desc,
                  bool open)
  {
-    GroupParamDescriptor* groupDesc = 0;
-    groupDesc = desc.defineGroupParam(groupName);
-    groupDesc->setLabel(groupName);
-    groupDesc->setHint(hint);
-    groupDesc->setOpen(open);
-    
-    defineRGBAScaleParam(desc, groupName + kParamSaturation, kParamSaturation, hint, groupDesc, page, 1, 0, 4);
-    defineRGBAScaleParam(desc, groupName + kParamContrast, kParamContrast, hint, groupDesc, page, 1, 0, 4);
-    defineRGBAScaleParam(desc, groupName + kParamGamma, kParamGamma, hint, groupDesc, page, 1, 0.2, 5);
-    defineRGBAScaleParam(desc, groupName + kParamGain, kParamGain, hint, groupDesc, page, 1, 0, 4);
-    defineRGBAScaleParam(desc, groupName + kParamOffset, kParamOffset, hint, groupDesc, page, 0, -1, 1);
-     page->addChild(*groupDesc);
-}
+     GroupParamDescriptor* param = desc.defineGroupParam(groupName);
+     param->setLabel(groupName);
+     param->setHint(hint);
+     param->setOpen(open);
+
+     defineRGBAScaleParam(desc, groupName + kParamSaturation, kParamSaturation, hint, param, page, 1, 0, 4);
+     defineRGBAScaleParam(desc, groupName + kParamContrast, kParamContrast, hint, param, page, 1, 0, 4);
+     defineRGBAScaleParam(desc, groupName + kParamGamma, kParamGamma, hint, param, page, 1, 0.2, 5);
+     defineRGBAScaleParam(desc, groupName + kParamGain, kParamGain, hint, param, page, 1, 0, 4);
+     defineRGBAScaleParam(desc, groupName + kParamOffset, kParamOffset, hint, param, page, 0, -1, 1);
+     if (page) {
+         page->addChild(*param);
+     }
+ }
 
 void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
@@ -1136,7 +1139,9 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     //std::cout << "describeInCotext! 3\n";
     {
@@ -1145,7 +1150,9 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
@@ -1153,14 +1160,18 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     
     defineColorGroup(kGroupMaster, "", page, desc, true);
@@ -1209,7 +1220,9 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setHint(kParamClampBlackHint);
         param->setDefault(true);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClampWhite);
@@ -1217,7 +1230,9 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setHint(kParamClampWhiteHint);
         param->setDefault(false);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     ofxsPremultDescribeParams(desc, page);

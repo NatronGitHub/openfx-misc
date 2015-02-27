@@ -896,7 +896,9 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
@@ -904,7 +906,9 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
@@ -912,14 +916,18 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
         param->setLabel(kParamProcessALabel);
         param->setHint(kParamProcessAHint);
         param->setDefault(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     
     // btmLeft
@@ -932,7 +940,9 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setIncrement(1.);
         param->setHint("Coordinates of the bottom left corner of the effect rectangle.");
         param->setDigits(0);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // size
@@ -946,7 +956,9 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
         param->setHint("Width and height of the effect rectangle.");
         param->setDigits(0);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // interactive
@@ -955,7 +967,9 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setLabel(kParamRectangleInteractInteractiveLabel);
         param->setHint(kParamRectangleInteractInteractiveHint);
         param->setEvaluateOnChange(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // softness
@@ -969,7 +983,9 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setDisplayRange(0., 1.);
         param->setDigits(2);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // plinear
@@ -977,7 +993,9 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPLinear);
         param->setLabel(kParamPLinearLabel);
         param->setHint(kParamPLinearHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // color0
@@ -985,7 +1003,9 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor0);
         param->setLabel(kParamColor0Label);
         param->setDefault(0, 0, 0, 0);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // color1
@@ -993,7 +1013,9 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor1);
         param->setLabel(kParamColor1Label);
         param->setDefault(1., 1., 1., 1. );
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // expandRoD
@@ -1002,7 +1024,9 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setLabel(kParamExpandRoDLabel);
         param->setHint(kParamExpandRoDHint);
         param->setDefault(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     ofxsMaskMixDescribeParams(desc, page);

@@ -382,7 +382,9 @@ void AdjustRoDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDoubleType(eDoubleTypeXY);
         param->setIncrement(1.);
         param->setDigits(0);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
 }

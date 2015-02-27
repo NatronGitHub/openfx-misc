@@ -258,7 +258,9 @@ void CImgNoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         param->setDisplayRange(0., 1.);
         param->setIncrement(0.005);
         param->setDefault(kParamSigmaDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     {
@@ -276,7 +278,9 @@ void CImgNoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
         assert(param->getNOptions() == eTypeRice && param->getNOptions() == 4);
         param->appendOption(kParamTypeOptionRice, kParamTypeOptionRiceHint);
         param->setDefault((int)kParamTypeDefault);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     CImgNoisePlugin::describeInContextEnd(desc, context, page);

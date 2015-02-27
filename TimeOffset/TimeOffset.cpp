@@ -297,7 +297,9 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         // no display range
         // param->setDisplayRange(0, 0);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // reverse_input
@@ -307,7 +309,9 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setHint(kParamReverseInputHint);
         param->setLabel(kParamReverseInputLabel);
         param->setAnimates(true);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

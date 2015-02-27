@@ -448,7 +448,9 @@ void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setDefault(0.);
         param->setIncrement(0.005);
         param->setDisplayRange(0., 1.);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // gain
@@ -460,7 +462,9 @@ void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setIncrement(0.005);
         param->setDisplayRange(0., 1.);
         param->setDoubleType(eDoubleTypeScale);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 
