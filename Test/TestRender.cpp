@@ -802,7 +802,13 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     }
 
     // make some pages and to things in
+#define DEBUG_PAGE
+#ifdef DEBUG_PAGE
+#pragma message WARN("WARNING: debugging code turned on")
+    PageParamDescriptor *page = NULL;
+#else
     PageParamDescriptor *page = desc.definePageParam("Controls");
+#endif
 
     // color0
     {
@@ -811,7 +817,9 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
         param->setHint(kParamColor0Hint);
         param->setDefault(0.0, 1.0, 1.0, 1.0);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // color1
@@ -821,7 +829,9 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
         param->setHint(kParamColor1Hint);
         param->setDefault(1.0, 0.0, 1.0, 1.0);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // color2
@@ -831,7 +841,9 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
         param->setHint(kParamColor2Hint);
         param->setDefault(1.0, 1.0, 0.0, 1.0);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // color3
@@ -841,7 +853,9 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
         param->setHint(kParamColor3Hint);
         param->setDefault(1.0, 0.0, 0.0, 1.0);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // color4
@@ -851,7 +865,9 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
         param->setHint(kParamColor4Hint);
         param->setDefault(0.0, 1.0, 0.0, 1.0);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // color5
@@ -861,7 +877,9 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
         param->setHint(kParamColor5Hint);
         param->setDefault(0.0, 0.0, 1.0, 1.0);
         param->setAnimates(true); // can animate
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // identityEven
@@ -871,7 +889,9 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
         param->setHint(kParamIdentityEvenHint);
         param->setDefault(false);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // identityOdd
@@ -881,7 +901,9 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
         param->setHint(kParamIdentityOddHint);
         param->setDefault(false);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // forceCopy
@@ -891,7 +913,9 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
         param->setHint(kParamForceCopyHint);
         param->setDefault(false);
         param->setAnimates(false);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // clipInfo
@@ -899,9 +923,108 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
         PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
         param->setLabel(kParamClipInfoLabel);
         param->setHint(kParamClipInfoHint);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
+#ifdef DEBUG_PAGE
+    // Groups
+    OFX::GroupParamDescriptor* formatGroup = desc.defineGroupParam( "kParamFormatGroup" );
+    OFX::GroupParamDescriptor* videoGroup  = desc.defineGroupParam( "kParamVideoGroup" );
+    formatGroup->setLabel( "Format" );
+    videoGroup->setLabel( "Video" );
+
+    formatGroup->setAsTab( );
+    videoGroup->setAsTab( );
+
+    /// FORMAT PARAMETERS
+    //avtranscoder::FormatContext formatContext( AV_OPT_FLAG_DECODING_PARAM );
+    //avtranscoder::OptionArray formatOptions = formatContext.getOptions();
+    //common::addOptionsToGroup( desc, formatGroup, formatOptions, common::kPrefixFormat );
+    {
+        OFX::ParamDescriptor* param = NULL;
+        OFX::BooleanParamDescriptor* boolParam = desc.defineBooleanParam( "opt1" );
+        boolParam->setDefault( true );
+        param = boolParam;
+        param->setLabel( "Opt1" );
+        param->setHint( "Opt1 help" );
+        param->setParent( *formatGroup );
+    }
+
+    {
+        OFX::ParamDescriptor* param = NULL;
+        OFX::IntParamDescriptor* intParam = desc.defineIntParam( "int" );
+        param = intParam;
+        param->setLabel( "Int1" );
+        param->setHint( "Int1 help" );
+        param->setParent( *formatGroup );
+    }
+    
+    OFX::GroupParamDescriptor* formatDetailledGroup = desc.defineGroupParam( "kParamFormatDetailledGroup" );
+    formatDetailledGroup->setLabel( "Detailled" );
+    formatDetailledGroup->setAsTab( );
+    formatDetailledGroup->setParent( *formatGroup );
+
+    //avtranscoder::OptionArrayMap formatDetailledGroupOptions = avtranscoder::getOutputFormatOptions();
+    //common::addOptionsToGroup( desc, formatDetailledGroup, formatDetailledGroupOptions, common::kPrefixFormat );
+    {
+        OFX::ParamDescriptor* param = NULL;
+        OFX::BooleanParamDescriptor* boolParam = desc.defineBooleanParam( "opt2" );
+        boolParam->setDefault( true );
+        param = boolParam;
+        param->setLabel( "Opt2" );
+        param->setHint( "Opt2 help" );
+        param->setParent( *formatDetailledGroup );
+    }
+
+    /// VIDEO PARAMETERS
+    OFX::BooleanParamDescriptor* useCustomSAR = desc.defineBooleanParam( "kParamUseCustomSAR" );
+    useCustomSAR->setLabel( "Override SAR" );
+    useCustomSAR->setDefault( false );
+    useCustomSAR->setHint( "Override the file SAR (Storage Aspect Ratio) with a custom SAR value." );
+    useCustomSAR->setParent( *videoGroup );
+
+    OFX::DoubleParamDescriptor* customSAR = desc.defineDoubleParam( "kParamCustomSAR" );
+    customSAR->setLabel( "Custom SAR" );
+    customSAR->setDefault( 1.0 );
+    customSAR->setDisplayRange( 0., 3. );
+    customSAR->setRange( 0., 10. );
+    customSAR->setHint( "Choose a custom value to override the file SAR (Storage Aspect Ratio). Maximum value: 10." );
+    customSAR->setParent( *videoGroup );
+
+    OFX::IntParamDescriptor* streamIndex = desc.defineIntParam( "kParamVideoStreamIndex" );
+    streamIndex->setLabel( "kParamVideoStreamIndexLabel" );
+    streamIndex->setDefault( 0 );
+    streamIndex->setDisplayRange( 0., 16. );
+    streamIndex->setRange( 0., 100. );
+    streamIndex->setHint( "Choose a custom value to decode the video stream you want. Maximum value: 100." );
+    streamIndex->setParent( *videoGroup );
+
+    OFX::GroupParamDescriptor* videoDetailledGroup  = desc.defineGroupParam( "kParamVideoDetailledGroup" );
+    videoDetailledGroup->setLabel( "Detailled" );
+    videoDetailledGroup->setAsTab( );
+    videoDetailledGroup->setParent( *videoGroup );
+
+    //avtranscoder::OptionArrayMap videoDetailledGroupOptions =  avtranscoder::getVideoCodecOptions();
+    //common::addOptionsToGroup( desc, videoDetailledGroup, videoDetailledGroupOptions, common::kPrefixVideo );
+    {
+        OFX::ParamDescriptor* param = NULL;
+        OFX::BooleanParamDescriptor* boolParam = desc.defineBooleanParam( "opt3" );
+        boolParam->setDefault( true );
+        param = boolParam;
+        param->setLabel( "Op3" );
+        param->setHint( "Opt3 help" );
+        param->setParent( *videoDetailledGroup );
+    }
+
+    /// VERBOSE
+    OFX::BooleanParamDescriptor* useVerbose = desc.defineBooleanParam( "kParamVerbose" );
+    useVerbose->setLabel( "Set to verbose" );
+    useVerbose->setDefault( false );
+    useVerbose->setHint( "Set plugin to verbose to get debug informations." );
+
+#endif
     ofxsMaskMixDescribeParams(desc, page);
 }
 
