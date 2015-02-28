@@ -1,8 +1,8 @@
 /*
- OFX Transform, DirBlur & Mirror plugins.
-
- Copyright (C) 2014-2015 INRIA
-
+ OFX Position plugin.
+ 
+ Copyright (C) 2015 INRIA
+ 
  Redistribution and use in source and binary forms, with or without modification,
  are permitted provided that the following conditions are met:
  
@@ -34,11 +34,11 @@
  78153 Le Chesnay Cedex - France
 */
 
-#ifndef Misc_Transform_h
-#define Misc_Transform_h
+#ifndef Misc_Position_h
+#define Misc_Position_h
 
 #include "ofxsImageEffect.h"
 
-void getTransformPluginIDs(OFX::PluginFactoryArray &ids);
+void getPositionPluginID(OFX::PluginFactoryArray &ids);
 
-#endif // Misc_Transform_h
+#endif // Misc_Position_h

@@ -34,6 +34,7 @@ MixViews \
 Noise \
 NoOp \
 OneView \
+Position \
 Premult \
 Radial \
 Ramp \

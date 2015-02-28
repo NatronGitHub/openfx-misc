@@ -31,6 +31,7 @@ Multiply.o \
 Noise.o \
 NoOp.o \
 OneView.o \
+Position.o \
 Premult.o \
 Radial.o \
 Ramp.o \
@@ -189,6 +190,7 @@ VPATH += \
 ../Noise \
 ../NoOp \
 ../OneView \
+../Position \
 ../Premult \
 ../Radial \
 ../Ramp \
@@ -244,6 +246,7 @@ CXXFLAGS += \
 -I../Noise \
 -I../NoOp \
 -I../OneView \
+-I../Position \
 -I../Premult \
 -I../Radial \
 -I../Ramp \
