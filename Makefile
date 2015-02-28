@@ -29,6 +29,7 @@ Invert \
 JoinViews \
 Keyer \
 Merge \
+Mirror \
 Multiply \
 MixViews \
 Noise \

@@ -25,6 +25,7 @@
 #include "JoinViews.h"
 #include "Keyer.h"
 #include "Merge.h"
+#include "Mirror.h"
 #include "MixViews.h"
 #include "Multiply.h"
 #include "Noise.h"
@@ -81,6 +82,7 @@ namespace OFX
             getJoinViewsPluginID(ids);
             getKeyerPluginID(ids);
             getMergePluginID(ids);
+            getMirrorPluginID(ids);
             getMixViewsPluginID(ids);
             getMultiplyPluginID(ids);
             getNoisePluginID(ids);

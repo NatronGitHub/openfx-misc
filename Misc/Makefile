@@ -26,6 +26,7 @@ Invert.o \
 JoinViews.o \
 Keyer.o \
 Merge.o \
+Mirror.o \
 MixViews.o \
 Multiply.o \
 Noise.o \
@@ -185,6 +186,7 @@ VPATH += \
 ../JoinViews \
 ../Keyer \
 ../Merge \
+../Mirror \
 ../MixViews \
 ../Multiply \
 ../Noise \
@@ -241,6 +243,7 @@ CXXFLAGS += \
 -I../JoinViews \
 -I../Keyer \
 -I../Merge \
+-I../Mirror \
 -I../Multiply \
 -I../MixViews \
 -I../Noise \
