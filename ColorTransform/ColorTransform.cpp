@@ -114,7 +114,7 @@
 #define kPluginRGBToYCbCrDescription "Convert from RGB to YCbCr color model (ITU.BT-709). For strict standards conformance, RGB should be nonlinear (gamma-compressed)."
 #define kPluginRGBToYCbCrIdentifier "net.sf.openfx.RGBToYCbCrPlugin"
 
-#define kPluginYCbCrToRGBName "YCbCroRGBOFX"
+#define kPluginYCbCrToRGBName "YCbCrToRGBOFX"
 #define kPluginYCbCrToRGBDescription "Convert from YCbCr color model (ITU.BT-709) to RGB. RGB on output is nonlinear (gamma-compressed)."
 #define kPluginYCbCrToRGBIdentifier "net.sf.openfx.YCbCrToRGBPlugin"
 
