@@ -83,10 +83,10 @@
 #include "ofxsCopier.h"
 #include "ofxsPositionInteract.h"
 
-#define kPluginPositionName "PositionOFX"
-#define kPluginPositionGrouping "Transform"
-#define kPluginPositionDescription "Translate an image by an integer number of pixels."
-#define kPluginPositionIdentifier "net.sf.openfx.Position"
+#define kPluginName "PositionOFX"
+#define kPluginGrouping "Transform"
+#define kPluginDescription "Translate an image by an integer number of pixels."
+#define kPluginIdentifier "net.sf.openfx.Position"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -97,9 +97,9 @@
 #define kSupportsMultipleClipDepths true
 #define kRenderThreadSafety eRenderFullySafe
 
-#define kParamPositionTranslate "translate"
-#define kParamPositionTranslateLabel "Translate"
-#define kParamPositionTranslateHint "New position of the bottom-left pixel. Rounded to the closest pixel."
+#define kParamTranslate "translate"
+#define kParamTranslateLabel "Translate"
+#define kParamTranslateHint "New position of the bottom-left pixel. Rounded to the closest pixel."
 
 #define kParamInteractive "interactive"
 #define kParamInteractiveLabel "Interactive"
@@ -127,7 +127,7 @@ public:
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
-        _translate = fetchDouble2DParam(kParamPositionTranslate);
+        _translate = fetchDouble2DParam(kParamTranslate);
         assert(_translate);
     }
 
@@ -301,7 +301,7 @@ mDeclarePluginFactory(PositionPluginFactory, {}, {});
 
 namespace {
     struct PositionInteractParam {
-        static const char *name() { return kParamPositionTranslate; }
+        static const char *name() { return kParamTranslate; }
         static const char *interactiveName() { return kParamInteractive; }
     };
 }
@@ -309,9 +309,9 @@ namespace {
 void PositionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabel(kPluginPositionName);
-    desc.setPluginGrouping(kPluginPositionGrouping);
-    desc.setPluginDescription(kPluginPositionDescription);
+    desc.setLabel(kPluginName);
+    desc.setPluginGrouping(kPluginGrouping);
+    desc.setPluginDescription(kPluginDescription);
 
     // add the supported contexts, only filter at the moment
     desc.addSupportedContext(eContextFilter);
@@ -380,9 +380,9 @@ void PositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     bool hostHasNativeOverlayForPosition;
     // translate
     {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamPositionTranslate);
-        param->setLabel(kParamPositionTranslateLabel);
-        param->setHint(kParamPositionTranslateHint);
+        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTranslate);
+        param->setLabel(kParamTranslateLabel);
+        param->setHint(kParamTranslateHint);
         param->setDoubleType(eDoubleTypeXYAbsolute);
         hostHasNativeOverlayForPosition = param->getHostHasNativeOverlayHandle();
         if (hostHasNativeOverlayForPosition) {
@@ -417,7 +417,7 @@ PositionPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextE
 void getPositionPluginID(OFX::PluginFactoryArray &ids)
 {
     {
-        static PositionPluginFactory p(kPluginPositionIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        static PositionPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
         ids.push_back(&p);
     }
 }
