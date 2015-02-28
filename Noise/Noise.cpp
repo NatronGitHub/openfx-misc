@@ -83,6 +83,12 @@
 //#define USE_RANDOMGENERATOR // randomGenerator is more than 10 times slower than our pseudo-random hash
 #ifdef USE_RANDOMGENERATOR
 #include "randomGenerator.H"
+#else
+#ifdef _WINDOWS
+#define uint32_t unsigned int
+#else
+#include <stdint.h> // for uint32_t
+#endif
 #endif
 
 #define kPluginName "NoiseOFX"
