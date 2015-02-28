@@ -53,7 +53,7 @@ VectorToColor
 
 ifneq ($(DEBUGFLAG),-O3)
   # DebugProxy is only useful to debug the communication between a host and a plugin
-  SUBDIRS += DebugProxy
+  SUBDIRS += DebugProxy Test
 endif
 
 HAVE_CIMG ?= 1
