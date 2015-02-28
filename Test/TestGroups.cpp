@@ -174,7 +174,7 @@ TestGroupsPlugin::render(const OFX::RenderArguments &args)
 }
 
 bool
-TestGroupsPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
+TestGroupsPlugin::isIdentity(const IsIdentityArguments &/*args*/, Clip * &identityClip, double &/*identityTime*/)
 {
     bool forceCopy;
     _forceCopy->getValue(forceCopy);
