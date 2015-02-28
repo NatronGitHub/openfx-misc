@@ -207,6 +207,10 @@ PositionPlugin::render(const OFX::RenderArguments &args)
     // rounding is done by going to pixels, and back to Canonical
     t_pixel.x = (int)std::floor(t_canonical.x * args.renderScale.x / par + 0.5);
     t_pixel.y = (int)std::floor(t_canonical.y * args.renderScale.y + 0.5);
+    if (args.fieldToRender == eFieldBoth) {
+        // round to an even y
+        t_pixel.y = t_pixel.y - (t_pixel.y & 1);
+    }
 
     // translate srcBounds
     srcBounds.x1 += t_pixel.x;
@@ -231,6 +235,10 @@ PositionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
     // rounding is done by going to pixels, and back to Canonical
     t_pixel.x = (int)std::floor(t_canonical.x * args.renderScale.x / par + 0.5);
     t_pixel.y = (int)std::floor(t_canonical.y * args.renderScale.y + 0.5);
+    if (_srcClip->getFieldOrder() == eFieldBoth) {
+        // round to an even y
+        t_pixel.y = t_pixel.y - (t_pixel.y & 1);
+    }
     if (t_pixel.x == 0 && t_pixel.y == 0) {
         return false;
     }
@@ -258,6 +266,10 @@ PositionPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args
     // rounding is done by going to pixels, and back to Canonical
     t_pixel.x = (int)std::floor(t_canonical.x * args.renderScale.x / par + 0.5);
     t_pixel.y = (int)std::floor(t_canonical.y * args.renderScale.y + 0.5);
+    if (_srcClip->getFieldOrder() == eFieldBoth) {
+        // round to an even y
+        t_pixel.y = t_pixel.y - (t_pixel.y & 1);
+    }
     if (t_pixel.x == 0 && t_pixel.y == 0) {
         return;
     }
@@ -287,6 +299,10 @@ PositionPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip
     // rounding is done by going to pixels, and back to Canonical
     t_pixel.x = (int)std::floor(t_canonical.x * args.renderScale.x / par + 0.5);
     t_pixel.y = (int)std::floor(t_canonical.y * args.renderScale.y + 0.5);
+    if (args.fieldToRender == eFieldBoth) {
+        // round to an even y
+        t_pixel.y = t_pixel.y - (t_pixel.y & 1);
+    }
     if (t_pixel.x == 0 && t_pixel.y == 0) {
         identityClip = _srcClip;
         return true;
