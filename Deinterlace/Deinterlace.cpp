@@ -72,7 +72,7 @@
 
 #include "Deinterlace.h"
 
-#include <cstring>
+#include <cstring> // for memcpy
 #include <cmath>
 #include <algorithm>
 #include "ofxsImageEffect.h"
@@ -403,7 +403,7 @@ static void filter_plane(int mode, Comp *dst, int dst_stride,
                                            parity ^ tff, mode2);
             }
         } else {
-            memcpy(&dst[y * dst_stride],
+            std::memcpy(&dst[y * dst_stride],
                    &cur0[y * refs], w * ch * sizeof(Comp)); // copy original
         }
     }
@@ -515,7 +515,7 @@ void DeinterlacePlugin::render(const OFX::RenderArguments &args)
         // Video of less than 3 columns or lines is not supported
         // just copy sc to dst
         for (int y=0; y<height; y++) {
-            memcpy(dst->getPixelAddress(0,y),src->getPixelAddress(0,y),abs(src->getRowBytes()));
+            std::memcpy(dst->getPixelAddress(0,y),src->getPixelAddress(0,y),abs(src->getRowBytes()));
         }
     } else {
         if (dstComponents == OFX::ePixelComponentRGBA) {

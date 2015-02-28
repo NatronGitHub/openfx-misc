@@ -72,6 +72,7 @@
 
 #include "Mirror.h"
 
+#include <cstring> // for memcpy
 #include <cmath>
 #include <iostream>
 #ifdef _WINDOWS
