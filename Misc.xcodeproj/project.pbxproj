@@ -517,6 +517,9 @@
 		1EAD4AF01A0A691700AF834D /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1EAD4AF61A0A695500AF834D /* AdjustRoD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */; };
 		1EAD4AF71A0A695800AF834D /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = ACC8477D1A0A3F6400B3FAFE /* PluginRegistration.cpp */; };
+		1EB0A4401AA1EDB100F9C93E /* TestPosition.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0A43E1AA1EDB100F9C93E /* TestPosition.cpp */; };
+		1EB0A4431AA1F03C00F9C93E /* TestGroups.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0A4411AA1F03C00F9C93E /* TestGroups.cpp */; };
+		1EB0A4441AA2002700F9C93E /* ofxsTransform3x3.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F57198A51840095C8AA /* ofxsTransform3x3.cpp */; };
 		1EB9C073196DD64E003C1849 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EB9C074196DD64E003C1849 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1EB9C075196DD64E003C1849 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -2227,6 +2230,10 @@
 		1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AdjustRoD.cpp; sourceTree = "<group>"; };
 		1EAD4AE11A0A68FD00AF834D /* AdjustRoD.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AdjustRoD.h; sourceTree = "<group>"; };
 		1EAD4AF41A0A691700AF834D /* AdjustRoD.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AdjustRoD.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EB0A43E1AA1EDB100F9C93E /* TestPosition.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestPosition.cpp; sourceTree = "<group>"; };
+		1EB0A43F1AA1EDB100F9C93E /* TestPosition.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestPosition.h; sourceTree = "<group>"; };
+		1EB0A4411AA1F03C00F9C93E /* TestGroups.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestGroups.cpp; sourceTree = "<group>"; };
+		1EB0A4421AA1F03C00F9C93E /* TestGroups.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestGroups.h; sourceTree = "<group>"; };
 		1EB0C41E180DCAB500C25D1E /* ColorLookup.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ColorLookup.cpp; sourceTree = "<group>"; };
 		1EB9C080196DD64E003C1849 /* NoOp.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NoOp.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EB9C082196DD697003C1849 /* NoOp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NoOp.cpp; sourceTree = "<group>"; };
@@ -3497,6 +3504,10 @@
 		1EBAEFCA199A81790037B3E6 /* Test */ = {
 			isa = PBXGroup;
 			children = (
+				1EB0A4411AA1F03C00F9C93E /* TestGroups.cpp */,
+				1EB0A4421AA1F03C00F9C93E /* TestGroups.h */,
+				1EB0A43E1AA1EDB100F9C93E /* TestPosition.cpp */,
+				1EB0A43F1AA1EDB100F9C93E /* TestPosition.h */,
 				1EBAEFCE199A81AA0037B3E6 /* TestRender.cpp */,
 				1EBAEFCF199A81AA0037B3E6 /* TestRender.h */,
 				1EBAEFCB199A81AA0037B3E6 /* Info.plist */,
@@ -5373,9 +5384,12 @@
 				1EBAEFE3199A820B0037B3E6 /* TestRender.cpp in Sources */,
 				1EBAEFE5199A82110037B3E6 /* PluginRegistration.cpp in Sources */,
 				1EBAEFD4199A81DB0037B3E6 /* ofxsCore.cpp in Sources */,
+				1EB0A4431AA1F03C00F9C93E /* TestGroups.cpp in Sources */,
 				1EBAEFD5199A81DB0037B3E6 /* ofxsImageEffect.cpp in Sources */,
 				1EBAEFD6199A81DB0037B3E6 /* ofxsInteract.cpp in Sources */,
 				1EBAEFD7199A81DB0037B3E6 /* ofxsLog.cpp in Sources */,
+				1EB0A4401AA1EDB100F9C93E /* TestPosition.cpp in Sources */,
+				1EB0A4441AA2002700F9C93E /* ofxsTransform3x3.cpp in Sources */,
 				1EBAEFD8199A81DB0037B3E6 /* ofxsMultiThread.cpp in Sources */,
 				1EBAEFD9199A81DB0037B3E6 /* ofxsParams.cpp in Sources */,
 				1EBAEFDA199A81DB0037B3E6 /* ofxsProperty.cpp in Sources */,
