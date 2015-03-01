@@ -103,6 +103,8 @@ RESOURCES = \
 ../Difference/net.sf.openfx.DifferencePlugin.svg \
 ../Dissolve/net.sf.openfx.DissolvePlugin.png \
 ../Dissolve/net.sf.openfx.DissolvePlugin.svg \
+../FrameBlend/net.sf.openfx.FrameBlend.png \
+../FrameBlend/net.sf.openfx.FrameBlend.svg \
 ../Grade/net.sf.openfx.GradePlugin.png \
 ../Grade/net.sf.openfx.GradePlugin.svg \
 ../HSVTool/net.sf.openfx.HSVToolPlugin.png \
