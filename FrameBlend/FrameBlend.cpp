@@ -135,6 +135,30 @@
 #define kParamFrameIntervalLabel "Frame Interval"
 #define kParamFrameIntervalHint  "Interval (in frames) between frames to process. 1 means to process every frame in the range. The first frame processed is the lower bound of the range. Can be used to reduce processing time or memory usage."
 
+#define kParamOperation "operation"
+#define kParamOperationLabel "Operation"
+#define kParamOperationHint \
+"The operation used to compute the output image."
+#define kParamOperationOptionAverage "Average"
+#define kParamOperationOptionAverageHint "Output is the average of selected frames."
+#define kParamOperationOptionMin "Min"
+#define kParamOperationOptionMinHint "Output is the minimum of selected frames."
+#define kParamOperationOptionMax "Max"
+#define kParamOperationOptionMaxHint "Output is the maximum of selected frames."
+#define kParamOperationOptionSum "Sum"
+#define kParamOperationOptionSumHint "Output is the sum/addition of selected frames."
+#define kParamOperationOptionProduct "Product"
+#define kParamOperationOptionProductHint "Output is the product/multiplication of selected frames."
+#define kParamOperationDefault eOperationAverage
+enum OperationEnum {
+    eOperationAverage,
+    eOperationMin,
+    eOperationMax,
+    eOperationSum,
+    eOperationProduct,
+};
+
+
 #define kParamOutputCountName  "outputCount"
 #define kParamOutputCountLabel "Output Count to Alpha"
 #define kParamOutputCountHint  "Output image count at each pixel to alpha."
@@ -205,7 +229,7 @@ private:
 
 
 
-template <class PIX, int nComponents, int maxValue>
+template <class PIX, int nComponents, int maxValue, OperationEnum operation>
 class FrameBlendProcessor : public FrameBlendProcessorBase
 {
 public:
@@ -319,10 +343,29 @@ private:
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
+            float initVal = 0.;
+            switch (operation) {
+                case eOperationAverage:
+                    initVal = 0.;
+                    break;
+                case eOperationMin:
+                    initVal = std::numeric_limits<float>::infinity();
+                    break;
+                case eOperationMax:
+                    initVal = -std::numeric_limits<float>::infinity();
+                    break;
+                case eOperationSum:
+                    initVal = 0.;
+                    break;
+                case eOperationProduct:
+                    initVal = 1.;
+                    break;
+            }
+
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 int count = 0;
-                std::fill(tmpPix, tmpPix+nComponents, 0.);
+                std::fill(tmpPix, tmpPix+nComponents, initVal);
                 // accumulate
                 for (unsigned i = 0; i < _srcImgs.size(); ++i) {
                     const PIX *fgMPix = (const PIX *)  (_fgMImgs[i] ? _fgMImgs[i]->getPixelAddress(x, y) : 0);
@@ -330,7 +373,23 @@ private:
                         const PIX *srcPixi = (const PIX *)  (_srcImgs[i] ? _srcImgs[i]->getPixelAddress(x, y) : 0);
                         if (srcPixi) {
                             for (int c = 0; c < nComponents; ++c) {
-                                tmpPix[c] += srcPixi[c];
+                                switch (operation) {
+                                    case eOperationAverage:
+                                        tmpPix[c] += srcPixi[c];
+                                        break;
+                                    case eOperationMin:
+                                        tmpPix[c] = std::min(tmpPix[c], (float)srcPixi[c]);
+                                        break;
+                                    case eOperationMax:
+                                        tmpPix[c] = std::max(tmpPix[c], (float)srcPixi[c]);
+                                        break;
+                                    case eOperationSum:
+                                        tmpPix[c] += srcPixi[c];
+                                        break;
+                                    case eOperationProduct:
+                                        tmpPix[c] *= srcPixi[c];
+                                        break;
+                                }
                             }
                         }
                         ++count;
@@ -341,17 +400,17 @@ private:
                     if (_outputCount) {
                         tmpPix[0] = count;
                     } else {
-                        tmpPix[0] = count ? (tmpPix[0] / count) : 0;
+                        tmpPix[0] = (operation == eOperationAverage) ? (count ? (tmpPix[0] / count) : 0) : tmpPix[0];
                     }
                 } else if (nComponents == 3 || nComponents == 4) {
-                    tmpPix[0] = count ? (tmpPix[0] / count) : 0;
-                    tmpPix[1] = count ? (tmpPix[1] / count) : 0;
-                    tmpPix[2] = count ? (tmpPix[2] / count) : 0;
+                    tmpPix[0] = (operation == eOperationAverage) ? (count ? (tmpPix[0] / count) : 0) : tmpPix[0];
+                    tmpPix[1] = (operation == eOperationAverage) ? (count ? (tmpPix[1] / count) : 0) : tmpPix[1];
+                    tmpPix[2] = (operation == eOperationAverage) ? (count ? (tmpPix[2] / count) : 0) : tmpPix[2];
                     if (nComponents == 4) {
                         if (_outputCount) {
                             tmpPix[3] = count;
                         } else {
-                            tmpPix[3] = count ? (tmpPix[3] / count) : 0;
+                            tmpPix[3] = (operation == eOperationAverage) ? (count ? (tmpPix[3] / count) : 0) : tmpPix[3];
                         }
                     }
                 }
@@ -406,6 +465,7 @@ public:
     , _absolute(0)
     , _inputRange(0)
     , _frameInterval(0)
+    , _operation(0)
     , _outputCount(0)
     , _mix(0)
     , _maskInvert(0)
@@ -427,8 +487,9 @@ public:
         _absolute = fetchBooleanParam(kParamAbsoluteName);
         _inputRange = fetchPushButtonParam(kParamInputRangeName);
         _frameInterval = fetchIntParam(kParamFrameIntervalName);
+        _operation = fetchChoiceParam(kParamOperation);
         _outputCount = fetchBooleanParam(kParamOutputCountName);
-        assert(_frameRange && _absolute && _inputRange && _outputCount);
+        assert(_frameRange && _absolute && _inputRange && _operation && _outputCount);
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
@@ -450,6 +511,13 @@ private:
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
 private:
+
+    template<int nComponents>
+    void renderForComponents(const OFX::RenderArguments &args);
+
+    template <class PIX, int nComponents, int maxValue>
+    void renderForBitDepth(const OFX::RenderArguments &args);
+
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
@@ -463,6 +531,7 @@ private:
     BooleanParam* _absolute;
     PushButtonParam* _inputRange;
     IntParam* _frameInterval;
+    ChoiceParam* _operation;
     BooleanParam* _outputCount;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
@@ -637,78 +706,79 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
 void
 FrameBlendPlugin::render(const OFX::RenderArguments &args)
 {
-
-    // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                FrameBlendProcessor<unsigned char, 4, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                FrameBlendProcessor<unsigned short, 4, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                FrameBlendProcessor<float, 4, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderForComponents<4>(args);
     } else if (dstComponents == OFX::ePixelComponentAlpha) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                FrameBlendProcessor<unsigned char, 1, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                FrameBlendProcessor<unsigned short, 1, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                FrameBlendProcessor<float, 1, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderForComponents<1>(args);
     } else {
         assert(dstComponents == OFX::ePixelComponentRGB);
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                FrameBlendProcessor<unsigned char, 3, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                FrameBlendProcessor<unsigned short, 3, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                FrameBlendProcessor<float, 3, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderForComponents<3>(args);
     }
 }
 
+template<int nComponents>
+void
+FrameBlendPlugin::renderForComponents(const OFX::RenderArguments &args)
+{
+    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+    switch (dstBitDepth) {
+        case OFX::eBitDepthUByte:
+            renderForBitDepth<unsigned char, nComponents, 255>(args);
+            break;
+
+        case OFX::eBitDepthUShort:
+            renderForBitDepth<unsigned short, nComponents, 65535>(args);
+            break;
+
+        case OFX::eBitDepthFloat:
+            renderForBitDepth<float, nComponents, 1>(args);
+            break;
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
+template <class PIX, int nComponents, int maxValue>
+void
+FrameBlendPlugin::renderForBitDepth(const OFX::RenderArguments &args)
+{
+    int operation_i;
+    _operation->getValueAtTime(args.time, operation_i);
+    OperationEnum operation = (OperationEnum)operation_i;
+
+    switch (operation) {
+        case eOperationAverage: {
+            FrameBlendProcessor<PIX, nComponents, maxValue, eOperationAverage> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case eOperationMin: {
+            FrameBlendProcessor<PIX, nComponents, maxValue, eOperationMin> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case eOperationMax: {
+            FrameBlendProcessor<PIX, nComponents, maxValue, eOperationMax> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case eOperationSum: {
+            FrameBlendProcessor<PIX, nComponents, maxValue, eOperationSum> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case eOperationProduct: {
+            FrameBlendProcessor<PIX, nComponents, maxValue, eOperationProduct> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+    }
+}
 
 bool
 FrameBlendPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
@@ -961,6 +1031,26 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setDisplayRange(1, 10);
         param->setDefault(1);
         param->setAnimates(true); // can animate
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOperation);
+        param->setLabel(kParamOperationLabel);
+        param->setHint(kParamOperationHint);
+        assert(param->getNOptions() == (int)eOperationAverage);
+        param->appendOption(kParamOperationOptionAverage, kParamOperationOptionAverageHint);
+        assert(param->getNOptions() == (int)eOperationMin);
+        param->appendOption(kParamOperationOptionMin, kParamOperationOptionMinHint);
+        assert(param->getNOptions() == (int)eOperationMax);
+        param->appendOption(kParamOperationOptionMax, kParamOperationOptionMaxHint);
+        assert(param->getNOptions() == (int)eOperationSum);
+        param->appendOption(kParamOperationOptionSum, kParamOperationOptionSumHint);
+        assert(param->getNOptions() == (int)eOperationProduct);
+        param->appendOption(kParamOperationOptionProduct, kParamOperationOptionProductHint);
+        param->setDefault((int)kParamOperationDefault);
         if (page) {
             page->addChild(*param);
         }
