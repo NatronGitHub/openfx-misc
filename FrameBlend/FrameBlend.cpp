@@ -78,7 +78,7 @@
 #include "FrameBlend.h"
 
 #include <cmath> // for floor
-#include <cfloat> // for FLT_MAX
+#include <climits> // for INT_MAX
 #include <cassert>
 
 #include "ofxsImageEffect.h"
