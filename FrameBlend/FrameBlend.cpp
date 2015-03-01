@@ -119,25 +119,21 @@
 #define kParamProcessALabel "A"
 #define kParamProcessAHint  "Process alpha component"
 
-#define kParamNbFramesName  "nbFrames"
-#define kParamNbFramesLabel "Number of Frames"
-#define kParamNbFramesHint  "Blend together nbFrames frames: the nbFrames-1 previous frames, and the current frame (when \"custom\" is not checked)."
-
 #define kParamFrameRangeName  "frameRange"
 #define kParamFrameRangeLabel "Frame Range"
-#define kParamFrameRangeHint  "Range of frames which are to be blended together (when \"custom\" is checked)."
+#define kParamFrameRangeHint  "Range of frames which are to be blended together. Frame range is absolute if \"absolute\" is checked, else relative."
 
-#define kParamCustomName  "custom"
-#define kParamCustomLabel "Custom"
-#define kParamCustomHint  "Use a custom frame range. If the frame range is not animated or is not an expression, then all output images will be the same."
-
-#define kParamInputRangeName  "inputRange"
-#define kParamInputRangeLabel "Input Range"
-#define kParamInputRangeHint  "Set the frame range to the input range. This can be used, combined with a foreground matte, to produce a clean background plate."
+#define kParamAbsoluteName  "absolute"
+#define kParamAbsoluteLabel "Absolute"
+#define kParamAbsoluteHint  "Use an absolute frame range. If the frame range is not animated or is not an expression, then all output images will be the same."
 
 #define kParamInputRangeName  "inputRange"
 #define kParamInputRangeLabel "Input Range"
 #define kParamInputRangeHint  "Set the frame range to the input range. This can be used, combined with a foreground matte, to produce a clean background plate."
+
+#define kParamFrameIntervalName  "frameInterval"
+#define kParamFrameIntervalLabel "Frame Interval"
+#define kParamFrameIntervalHint  "Interval (in frames) between frames to process. 1 means to process every frame in the range. The first frame processed is the lower bound of the range. Can be used to reduce processing time or memory usage."
 
 #define kParamOutputCountName  "outputCount"
 #define kParamOutputCountLabel "Output Count to Alpha"
@@ -402,6 +398,17 @@ public:
     , _srcClip(0)
     , _maskClip(0)
     , _fgMClip(0)
+    , _processR(0)
+    , _processG(0)
+    , _processB(0)
+    , _processA(0)
+    , _frameRange(0)
+    , _absolute(0)
+    , _inputRange(0)
+    , _frameInterval(0)
+    , _outputCount(0)
+    , _mix(0)
+    , _maskInvert(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
@@ -416,20 +423,15 @@ public:
         _processB = fetchBooleanParam(kParamProcessB);
         _processA = fetchBooleanParam(kParamProcessA);
         assert(_processR && _processG && _processB && _processA);
-        _nbFrames = fetchIntParam(kParamNbFramesName);
         _frameRange = fetchInt2DParam(kParamFrameRangeName);
-        _custom = fetchBooleanParam(kParamCustomName);
+        _absolute = fetchBooleanParam(kParamAbsoluteName);
         _inputRange = fetchPushButtonParam(kParamInputRangeName);
+        _frameInterval = fetchIntParam(kParamFrameIntervalName);
         _outputCount = fetchBooleanParam(kParamOutputCountName);
-        assert(_nbFrames && _frameRange && _custom && _inputRange && _outputCount);
+        assert(_frameRange && _absolute && _inputRange && _outputCount);
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
-
-        bool custom;
-        _custom->getValue(custom);
-        _nbFrames->setEnabled(!custom);
-        _frameRange->setEnabled(custom);
     }
 
 private:
@@ -457,10 +459,10 @@ private:
     OFX::BooleanParam* _processG;
     OFX::BooleanParam* _processB;
     OFX::BooleanParam* _processA;
-    IntParam* _nbFrames;
     Int2DParam* _frameRange;
-    BooleanParam* _custom;
+    BooleanParam* _absolute;
     PushButtonParam* _inputRange;
+    IntParam* _frameInterval;
     BooleanParam* _outputCount;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
@@ -518,16 +520,21 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     // compute range
-    bool custom;
-    _custom->getValueAtTime(time, custom);
-    int n, min, max;
-    if (custom) {
-        _frameRange->getValueAtTime(time, min, max);
-        n = max + 1 - min;
-    } else {
-        _nbFrames->getValueAtTime(time, n);
-        max = (int)time;
-        min = max + 1 - n;
+    bool absolute;
+    _absolute->getValueAtTime(time, absolute);
+    int min, max;
+    _frameRange->getValueAtTime(time, min, max);
+    if (min > max) {
+        std::swap(min, max);
+    }
+    int interval;
+    _frameInterval->getValueAtTime(time, interval);
+    interval = std::max(1,interval);
+
+    int n = (max + 1 - min) / interval;
+    if (!absolute) {
+        min += time;
+        max += time;
     }
     // fetch the source images
     std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
@@ -547,7 +554,10 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
     }
     OptionalImagesHolder_RAII srcImgs;
     for (int i = 0; i < n; ++i) {
-        const OFX::Image* src = _srcClip ? _srcClip->fetchImage(min + i) : 0;
+        if (abort()) {
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+        const OFX::Image* src = _srcClip ? _srcClip->fetchImage(min + i*interval) : 0;
         if (src) {
             if (src->getRenderScale().x != args.renderScale.x ||
                 src->getRenderScale().y != args.renderScale.y ||
@@ -566,7 +576,10 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
     // fetch the foreground mattes
     OptionalImagesHolder_RAII fgMImgs;
     for (int i = 0; i < n; ++i) {
-        const OFX::Image* mask = (_fgMClip && _fgMClip->isConnected()) ? _fgMClip->fetchImage(min + i) : 0;
+        if (abort()) {
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+        const OFX::Image* mask = (_fgMClip && _fgMClip->isConnected()) ? _fgMClip->fetchImage(min + i*interval) : 0;
         if (mask) {
             assert(_fgMClip->isConnected());
             if (mask->getRenderScale().x != args.renderScale.x ||
@@ -730,20 +743,17 @@ FrameBlendPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
         return false;
     }
 
-    bool custom;
-    _custom->getValueAtTime(time, custom);
+    bool absolute;
+    _absolute->getValueAtTime(time, absolute);
     OfxRangeD range;
-    if (custom) {
-        int min, max;
-        _frameRange->getValueAtTime(time, min, max);
-        range.min = min;
-        range.max = max;
-    } else {
-        int nbFrames;
-        _nbFrames->getValueAtTime(time, nbFrames);
-        range.min = time - (nbFrames - 1);
-        range.max = time;
+    int min, max;
+    _frameRange->getValueAtTime(time, min, max);
+    if (!absolute) {
+        min += time;
+        max += time;
     }
+    range.min = min;
+    range.max = max;
 
     if (range.min == range.max) {
         identityClip = _srcClip;
@@ -759,21 +769,30 @@ FrameBlendPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
                                    OFX::FramesNeededSetter &frames)
 {
     const double time = args.time;
-    bool custom;
-    _custom->getValueAtTime(time, custom);
+    bool absolute;
+    _absolute->getValueAtTime(time, absolute);
     OfxRangeD range;
-    if (custom) {
-        int min, max;
-        _frameRange->getValueAtTime(time, min, max);
+    int min, max;
+    _frameRange->getValueAtTime(time, min, max);
+    if (min > max) {
+        std::swap(min, max);
+    }
+    if (!absolute) {
+        min += time;
+        max += time;
+    }
+    int interval;
+    _frameInterval->getValueAtTime(time, interval);
+    if (interval <= 1) {
         range.min = min;
         range.max = max;
+        frames.setFramesNeeded(*_srcClip, range);
     } else {
-        int nbFrames;
-        _nbFrames->getValueAtTime(time, nbFrames);
-        range.min = time - (nbFrames - 1);
-        range.max = time;
+        for (int i = min; i <= max; i += interval) {
+            range.min = range.max = i;
+            frames.setFramesNeeded(*_srcClip, range);
+        }
     }
-    frames.setFramesNeeded(*_srcClip, range);
 }
 
 /** @brief called when a param has just had its value changed */
@@ -788,30 +807,7 @@ FrameBlendPlugin::changedParam(const InstanceChangedArgs &args, const std::strin
             timeLineGetBounds(range.min, range.max);
         }
         _frameRange->setValue((int)range.min, (int)range.max);
-        _frameRange->setEnabled(true);
-        _custom->setValue(true);
-        _nbFrames->setEnabled(false);
-        _nbFrames->setValue((int)(range.max + 1 - range.min));
-    } else if (paramName == kParamCustomName && args.reason == eChangeUserEdit) {
-        bool custom;
-        _custom->getValueAtTime(args.time, custom);
-        _nbFrames->setEnabled(!custom);
-        _frameRange->setEnabled(custom);
-        if (custom) {
-            int nbFrames;
-            _nbFrames->getValueAtTime(args.time, nbFrames);
-            OfxRangeD range;
-            if ( _srcClip && _srcClip->isConnected() ) {
-                range = _srcClip->getFrameRange();
-            } else {
-                timeLineGetBounds(range.min, range.max);
-            }
-            _frameRange->setValue(range.min, range.min + nbFrames - 1);
-        }
-    } else if (paramName == kParamInputRangeName && args.reason == eChangeUserEdit) {
-        int min, max;
-        _frameRange->getValueAtTime(args.time, min, max);
-        _nbFrames->setValue(max + 1 - min);
+        _absolute->setValue(true);
     }
 }
 
@@ -924,21 +920,11 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     }
 
     {
-        IntParamDescriptor *param = desc.defineIntParam(kParamNbFramesName);
-        param->setLabel(kParamNbFramesLabel);
-        param->setHint(kParamNbFramesHint);
-        param->setDefault(5);
-        param->setAnimates(true); // can animate
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    {
         Int2DParamDescriptor *param = desc.defineInt2DParam(kParamFrameRangeName);
         param->setLabel(kParamFrameRangeLabel);
         param->setHint(kParamFrameRangeHint);
-        param->setDefault(-1, -1);
+        param->setDimensionLabels("min", "max");
+        param->setDefault(-5, 0);
         param->setAnimates(true); // can animate
         param->setLayoutHint(eLayoutHintNoNewLine);
         if (page) {
@@ -947,9 +933,9 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     }
 
     {
-        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamCustomName);
-        param->setLabel(kParamCustomLabel);
-        param->setHint(kParamCustomHint);
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAbsoluteName);
+        param->setLabel(kParamAbsoluteLabel);
+        param->setHint(kParamAbsoluteHint);
         param->setDefault(false);
         param->setAnimates(true); // can animate
         param->setLayoutHint(eLayoutHintNoNewLine);
@@ -962,6 +948,19 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamInputRangeName);
         param->setLabel(kParamInputRangeLabel);
         param->setHint(kParamInputRangeHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        IntParamDescriptor *param = desc.defineIntParam(kParamFrameIntervalName);
+        param->setLabel(kParamFrameIntervalLabel);
+        param->setHint(kParamFrameIntervalHint);
+        param->setRange(1, INT_MAX);
+        param->setDisplayRange(1, 10);
+        param->setDefault(1);
+        param->setAnimates(true); // can animate
         if (page) {
             page->addChild(*param);
         }
