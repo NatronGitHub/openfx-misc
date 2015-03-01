@@ -62,11 +62,11 @@ using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class PositionPlugin : public Transform3x3Plugin
+class TestPositionPlugin : public Transform3x3Plugin
 {
 public:
     /** @brief ctor */
-    PositionPlugin(OfxImageEffectHandle handle)
+    TestPositionPlugin(OfxImageEffectHandle handle)
     : Transform3x3Plugin(handle, /*masked=*/true, false) // plugin is masked because it cannot be composed downwards
     , _translate(0)
     {
@@ -89,7 +89,7 @@ private:
 
 // overridden is identity
 bool
-PositionPlugin::isIdentity(double time)
+TestPositionPlugin::isIdentity(double time)
 {
     double x, y;
     _translate->getValueAtTime(time, x, y);
@@ -102,7 +102,7 @@ PositionPlugin::isIdentity(double time)
 }
 
 bool
-PositionPlugin::getInverseTransformCanonical(double time, double /*amount*/, bool invert, OFX::Matrix3x3* invtransform) const
+TestPositionPlugin::getInverseTransformCanonical(double time, double /*amount*/, bool invert, OFX::Matrix3x3* invtransform) const
 {
     double x, y;
     _translate->getValueAtTime(time, x, y);
@@ -121,7 +121,7 @@ PositionPlugin::getInverseTransformCanonical(double time, double /*amount*/, boo
 }
 
 void
-PositionPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+TestPositionPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
     if (paramName == kParamPositionTranslate) {
         changedTransform(args);
@@ -135,9 +135,9 @@ PositionPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::st
 
 
 
-mDeclarePluginFactory(PositionPluginFactory, {}, {});
+mDeclarePluginFactory(TestPositionPluginFactory, {}, {});
 
-void PositionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void TestPositionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginPositionName);
@@ -147,7 +147,7 @@ void PositionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     Transform3x3Describe(desc, /*masked=*/true);
 }
 
-void PositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void TestPositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, /*masked=*/true);
@@ -172,9 +172,9 @@ void PositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 }
 
 OFX::ImageEffect*
-PositionPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+TestPositionPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
-    return new PositionPlugin(handle);
+    return new TestPositionPlugin(handle);
 }
 
 
@@ -183,7 +183,7 @@ PositionPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextE
 void getTestPositionPluginID(OFX::PluginFactoryArray &ids)
 {
     {
-        static PositionPluginFactory p(kPluginPositionIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        static TestPositionPluginFactory p(kPluginPositionIdentifier, kPluginVersionMajor, kPluginVersionMinor);
         ids.push_back(&p);
     }
 }

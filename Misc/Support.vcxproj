@@ -63,6 +63,7 @@
     <ClInclude Include="..\SupportExt\ofxsTracking.h" />
     <ClInclude Include="..\SupportExt\ofxsTransform3x3.h" />
     <ClInclude Include="..\SupportExt\ofxsTransform3x3Processor.h" />
+    <ClInclude Include="..\SupportExt\ofxsTransformInteract.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\openfx\Support\Library\ofxsCore.cpp" />
@@ -80,6 +81,7 @@
     <ClCompile Include="..\SupportExt\ofxsRectangleInteract.cpp" />
     <ClCompile Include="..\SupportExt\ofxsTracking.cpp" />
     <ClCompile Include="..\SupportExt\ofxsTransform3x3.cpp" />
+    <ClCompile Include="..\SupportExt\ofxsTransformInteract.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C54931D1-1BF8-44E1-8028-C3C85441880B}</ProjectGuid>

@@ -588,7 +588,6 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     <ClCompile Include="..\Saturation\Saturation.cpp" />
     <ClCompile Include="..\Shuffle\Shuffle.cpp" />
     <ClCompile Include="..\SideBySide\SideBySide.cpp" />
-    <ClCompile Include="..\SupportExt\ofxsTransformInteract.cpp" />
     <ClCompile Include="..\Switch\Switch.cpp" />
     <ClCompile Include="..\Test\TestGroups.cpp" />
     <ClCompile Include="..\Test\TestPosition.cpp" />
@@ -646,7 +645,6 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     <ClInclude Include="..\Saturation\Saturation.h" />
     <ClInclude Include="..\Shuffle\Shuffle.h" />
     <ClInclude Include="..\SideBySide\SideBySide.h" />
-    <ClInclude Include="..\SupportExt\ofxsTransformInteract.h" />
     <ClInclude Include="..\Switch\Switch.h" />
     <ClInclude Include="..\Test\TestGroups.h" />
     <ClInclude Include="..\Test\TestPosition.h" />
