@@ -105,6 +105,8 @@ RESOURCES = \
 ../Dissolve/net.sf.openfx.DissolvePlugin.svg \
 ../FrameBlend/net.sf.openfx.FrameBlend.png \
 ../FrameBlend/net.sf.openfx.FrameBlend.svg \
+../GodRays/net.sf.openfx.GodRays.png \
+../GodRays/net.sf.openfx.GodRays.svg \
 ../Grade/net.sf.openfx.GradePlugin.png \
 ../Grade/net.sf.openfx.GradePlugin.svg \
 ../HSVTool/net.sf.openfx.HSVToolPlugin.png \

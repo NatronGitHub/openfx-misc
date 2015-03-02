@@ -589,10 +589,6 @@
 		1EC1B5141A9656F9001D7020 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1EC1B5161A9656F9001D7020 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1EC1B5181A9656F9001D7020 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		1EC1B51A1A9656F9001D7020 /* net.sf.openfx.TransformPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A8AB19C6EF0300E6E3AE /* net.sf.openfx.TransformPlugin.png */; };
-		1EC1B51B1A9656F9001D7020 /* net.sf.openfx.TransformPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CBD19C9836400C2C668 /* net.sf.openfx.TransformPlugin.svg */; };
-		1EC1B51C1A9656F9001D7020 /* net.sf.openfx.TransformMaskedPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A8AA19C6EF0300E6E3AE /* net.sf.openfx.TransformMaskedPlugin.png */; };
-		1EC1B51D1A9656F9001D7020 /* net.sf.openfx.TransformMaskedPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CBC19C9836400C2C668 /* net.sf.openfx.TransformMaskedPlugin.svg */; };
 		1EC1B5BB1A9C994C001D7020 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EC1B5BC1A9C994C001D7020 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1EC1B5BD1A9C994C001D7020 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -752,6 +748,10 @@
 		1EDE1BD9182D8941002392CB /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1EDE1BDB182D8941002392CB /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1EDE1BE3182D8977002392CB /* MixViews.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDE1BE2182D8977002392CB /* MixViews.cpp */; };
+		1EDF56871AA463AA00E57882 /* net.sf.openfx.GodRays.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56851AA4639000E57882 /* net.sf.openfx.GodRays.png */; };
+		1EDF56881AA463AA00E57882 /* net.sf.openfx.GodRays.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56861AA4639000E57882 /* net.sf.openfx.GodRays.svg */; };
+		1EDF56891AA4744800E57882 /* net.sf.openfx.GodRays.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56851AA4639000E57882 /* net.sf.openfx.GodRays.png */; };
+		1EDF568A1AA4744800E57882 /* net.sf.openfx.GodRays.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56861AA4639000E57882 /* net.sf.openfx.GodRays.svg */; };
 		1EE1F7811A506181002BE24B /* CImgSharpenInvDiff.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE1F77F1A506181002BE24B /* CImgSharpenInvDiff.cpp */; };
 		1EE1F7841A506E14002BE24B /* CImgSharpenShock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE1F7821A506E14002BE24B /* CImgSharpenShock.cpp */; };
 		1EE4A87019C6EC7300E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A86E19C6EC4200E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png */; };
@@ -1557,10 +1557,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
-				1EC1B51A1A9656F9001D7020 /* net.sf.openfx.TransformPlugin.png in CopyFiles */,
-				1EC1B51B1A9656F9001D7020 /* net.sf.openfx.TransformPlugin.svg in CopyFiles */,
-				1EC1B51C1A9656F9001D7020 /* net.sf.openfx.TransformMaskedPlugin.png in CopyFiles */,
-				1EC1B51D1A9656F9001D7020 /* net.sf.openfx.TransformMaskedPlugin.svg in CopyFiles */,
+				1EDF56871AA463AA00E57882 /* net.sf.openfx.GodRays.png in CopyFiles */,
+				1EDF56881AA463AA00E57882 /* net.sf.openfx.GodRays.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1868,6 +1866,8 @@
 				1E814CC719C9839200C2C668 /* net.sf.openfx.DissolvePlugin.svg in CopyFiles */,
 				1E92E8EA1AA354CB0070E494 /* net.sf.openfx.FrameBlend.png in CopyFiles */,
 				1E92E8EB1AA354CB0070E494 /* net.sf.openfx.FrameBlend.svg in CopyFiles */,
+				1EDF56891AA4744800E57882 /* net.sf.openfx.GodRays.png in CopyFiles */,
+				1EDF568A1AA4744800E57882 /* net.sf.openfx.GodRays.svg in CopyFiles */,
 				1EE4A8B919C6EF5A00E6E3AE /* net.sf.openfx.GradePlugin.png in CopyFiles */,
 				1E814CC819C9839500C2C668 /* net.sf.openfx.GradePlugin.svg in CopyFiles */,
 				ACC5D25E1A2C714600DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png in CopyFiles */,
@@ -2406,6 +2406,8 @@
 		1EDE1BE4182D8983002392CB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EDE1BE5182D8983002392CB /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EDE1BE8182D8B18002392CB /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EDF56851AA4639000E57882 /* net.sf.openfx.GodRays.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.GodRays.png; sourceTree = "<group>"; };
+		1EDF56861AA4639000E57882 /* net.sf.openfx.GodRays.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.GodRays.svg; sourceTree = "<group>"; };
 		1EE1F77F1A506181002BE24B /* CImgSharpenInvDiff.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgSharpenInvDiff.cpp; sourceTree = "<group>"; };
 		1EE1F7801A506181002BE24B /* CImgSharpenInvDiff.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgSharpenInvDiff.h; sourceTree = "<group>"; };
 		1EE1F7821A506E14002BE24B /* CImgSharpenShock.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgSharpenShock.cpp; sourceTree = "<group>"; };
@@ -3627,6 +3629,8 @@
 			children = (
 				1EC1B4FB1A9656CA001D7020 /* GodRays.cpp */,
 				1EC1B4FC1A9656CA001D7020 /* GodRays.h */,
+				1EDF56851AA4639000E57882 /* net.sf.openfx.GodRays.png */,
+				1EDF56861AA4639000E57882 /* net.sf.openfx.GodRays.svg */,
 				1EC1B4FD1A9656CA001D7020 /* Info.plist */,
 				1EC1B4FE1A9656CA001D7020 /* Makefile */,
 				1EC1B4FF1A9656CA001D7020 /* PluginRegistration.cpp */,

@@ -1,5 +1,5 @@
 PLUGINOBJECTS = GodRays.o PluginRegistration.o ofxsTransform3x3.o ofxsTransformInteract.o
 PLUGINNAME = GodRays
-#RESOURCES = net.sf.openfx.GodRaysPlugin.png net.sf.openfx.GodRaysPlugin.svg
+RESOURCES = net.sf.openfx.GodRays.png net.sf.openfx.GodRays.svg
 
 include ../Makefile.master
