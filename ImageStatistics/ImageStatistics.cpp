@@ -1654,7 +1654,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // statMax
@@ -1665,7 +1667,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // statMean
@@ -1676,7 +1680,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // statSDev
@@ -1687,7 +1693,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // statSkewness
@@ -1698,7 +1706,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // statKurtosis
@@ -1709,7 +1719,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // analyzeFrame
@@ -1719,7 +1731,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setHint(kParamAnalyzeFrameHint);
             param->setLayoutHint(eLayoutHintNoNewLine);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // analyzeSequence
@@ -1728,7 +1742,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setLabel(kParamAnalyzeSequenceLabel);
             param->setHint(kParamAnalyzeSequenceHint);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // clearFrame
@@ -1738,7 +1754,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setHint(kParamClearFrameHint);
             param->setLayoutHint(eLayoutHintNoNewLine);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // clearSequence
@@ -1747,7 +1765,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setLabel(kParamClearSequenceLabel);
             param->setHint(kParamClearSequenceHint);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
 
@@ -1764,7 +1784,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // statHSVLMax
@@ -1776,7 +1798,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // statHSVLMean
@@ -1788,7 +1812,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // statHSVLSDev
@@ -1800,7 +1826,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // statHSVLSkewness
@@ -1812,7 +1840,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // statHSVLKurtosis
@@ -1824,7 +1854,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // analyzeFrameHSVL
@@ -1834,7 +1866,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setHint(kParamAnalyzeFrameHSVLHint);
             param->setLayoutHint(eLayoutHintNoNewLine);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // analyzeSequenceHSVL
@@ -1843,7 +1877,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setLabel(kParamAnalyzeSequenceHSVLLabel);
             param->setHint(kParamAnalyzeSequenceHSVLHint);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // clearFrameHSVL
@@ -1853,7 +1889,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setHint(kParamClearFrameHSVLHint);
             param->setLayoutHint(eLayoutHintNoNewLine);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // clearSequenceHSVL
@@ -1862,7 +1900,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setLabel(kParamClearSequenceHSVLLabel);
             param->setHint(kParamClearSequenceHSVLHint);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
 }

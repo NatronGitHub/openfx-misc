@@ -788,7 +788,7 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
     }
     bool expandRoD;
     _expandRoD->getValueAtTime(args.time, expandRoD);
-    if (_srcClip->isConnected() && !expandRoD) {
+    if (_srcClip && _srcClip->isConnected() && !expandRoD) {
         return false;
     }
     OfxPointD btmLeft, size;

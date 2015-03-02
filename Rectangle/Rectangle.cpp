@@ -791,7 +791,7 @@ RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     }
     bool expandRoD;
     _expandRoD->getValueAtTime(time, expandRoD);
-    if (_srcClip->isConnected() && !expandRoD) {
+    if (_srcClip && _srcClip->isConnected() && !expandRoD) {
         return false;
     }
     OfxPointD btmLeft, size;
@@ -803,7 +803,7 @@ RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     rod.y1 = btmLeft.y - (int)blackOutside;
     rod.x2 = btmLeft.x + size.x + (int)blackOutside;
     rod.y2 = btmLeft.y + size.y + (int)blackOutside;
-    if (_srcClip->isConnected()) {
+    if (_srcClip && _srcClip->isConnected()) {
         // something has to be drawn outside of the rectangle: return union of input RoD and rectangle
         OfxRectD srcRoD = _srcClip->getRegionOfDefinition(time);
         rod.x1 = std::min(rod.x1, srcRoD.x1);

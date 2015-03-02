@@ -1073,16 +1073,20 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             RGBParamDescriptor *param = desc.defineRGBParam(kParamSrcColor);
             param->setLabel(kParamSrcColorLabel);
             param->setHint(kParamSrcColorHint);
-            page->addChild(*param);
             param->setParent(*group);
+            if (page) {
+                page->addChild(*param);
+            }
         }
         {
             RGBParamDescriptor *param = desc.defineRGBParam(kParamDstColor);
             param->setLabel(kParamDstColorLabel);
             param->setHint(kParamDstColorHint);
-            page->addChild(*param);
             param->setParent(*group);
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
+            if (page) {
+                page->addChild(*param);
+            }
         }
         if (page) {
             page->addChild(*group);
@@ -1102,8 +1106,10 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setDefault(0., 360.);
             param->setDisplayRange(0., 0., 360., 360.);
             param->setDoubleType(eDoubleTypeAngle);
-            page->addChild(*param);
             param->setParent(*group);
+            if (page) {
+                page->addChild(*param);
+            }
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamHueRotation);
@@ -1111,8 +1117,10 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setHint(kParamHueRotationHint);
             param->setDisplayRange(-180., 180.);
             param->setDoubleType(eDoubleTypeAngle);
-            page->addChild(*param);
             param->setParent(*group);
+            if (page) {
+                page->addChild(*param);
+            }
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamHueRangeRolloff);
@@ -1121,9 +1129,11 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setRange(0., 180.);
             param->setDisplayRange(0., 180.);
             param->setDoubleType(eDoubleTypeAngle);
-            page->addChild(*param);
             param->setParent(*group);
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         if (page) {
@@ -1143,25 +1153,31 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
             param->setDefault(0., 1.);
             param->setDisplayRange(0., 0., 1, 1);
-            page->addChild(*param);
             param->setParent(*group);
+            if (page) {
+                page->addChild(*param);
+            }
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSaturationAdjustment);
             param->setLabel(kParamSaturationAdjustmentLabel);
             param->setHint(kParamSaturationAdjustmentHint);
             param->setDisplayRange(0., 1.);
-            page->addChild(*param);
             param->setParent(*group);
+            if (page) {
+                page->addChild(*param);
+            }
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSaturationRangeRolloff);
             param->setLabel(kParamSaturationRangeRolloffLabel);
             param->setHint(kParamSaturationRangeRolloffHint);
             param->setDisplayRange(0., 1.);
-            page->addChild(*param);
             param->setParent(*group);
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         if (page) {
@@ -1181,25 +1197,31 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
             param->setDefault(0., 1.);
             param->setDisplayRange(0., 0., 1, 1);
-            page->addChild(*param);
             param->setParent(*group);
+            if (page) {
+                page->addChild(*param);
+            }
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBrightnessAdjustment);
             param->setLabel(kParamBrightnessAdjustmentLabel);
             param->setHint(kParamBrightnessAdjustmentHint);
             param->setDisplayRange(0., 1.);
-            page->addChild(*param);
             param->setParent(*group);
+            if (page) {
+                page->addChild(*param);
+            }
         }
         {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBrightnessRangeRolloff);
             param->setLabel(kParamBrightnessRangeRolloffLabel);
             param->setHint(kParamBrightnessRangeRolloffHint);
             param->setDisplayRange(0., 1.);
-            page->addChild(*param);
             param->setParent(*group);
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         if (page) {

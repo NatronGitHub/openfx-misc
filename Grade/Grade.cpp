@@ -779,7 +779,9 @@ void defineRGBAScaleParam(OFX::ImageEffectDescriptor &desc,
     param->setHint(hint);
     param->setDefault(def,def,def,def);
     param->setDisplayRange(min,min,min,min,max,max,max,max);
-    page->addChild(*param);
+    if (page) {
+        page->addChild(*param);
+    }
 }
 
 

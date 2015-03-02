@@ -523,14 +523,18 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
             param->setDefault(0.5, 0.5);
             param->setIncrement(1.);
             param->setAnimates(true);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
         {
             BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
             param->setLabel(kParamInteractiveLabel);
             param->setHint(kParamInteractiveHint);
             param->setAnimates(false);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
 

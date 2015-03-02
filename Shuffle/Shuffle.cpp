@@ -714,7 +714,7 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-    OFX::BitDepthEnum srcBitDepth = _srcClipA->getPixelDepth();
+    OFX::BitDepthEnum srcBitDepth = _srcClipA ? _srcClipA->getPixelDepth() : eBitDepthNone;
 
     if (_srcClipA && _srcClipA->isConnected() && _srcClipB && _srcClipB->isConnected()) {
         OFX::BitDepthEnum srcBBitDepth = _srcClipB->getPixelDepth();
@@ -909,12 +909,11 @@ ShufflePlugin::changedClip(const InstanceChangedArgs &/*args*/, const std::strin
     if (getContext() == eContextGeneral &&
         (clipName == kClipA || clipName == kClipB)) {
         // check that A and B are compatible if they're both connected
-        OFX::BitDepthEnum srcBitDepth = _srcClipA->getPixelDepth();
-
         if (_srcClipA && _srcClipA->isConnected() && _srcClipB && _srcClipB->isConnected()) {
+            OFX::BitDepthEnum srcABitDepth = _srcClipA->getPixelDepth();
             OFX::BitDepthEnum srcBBitDepth = _srcClipB->getPixelDepth();
             // both input must have the same bit depth
-            if (srcBitDepth != srcBBitDepth) {
+            if (srcABitDepth != srcBBitDepth) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Shuffle: both inputs must have the same bit depth");
                 OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
             }
@@ -1185,7 +1184,9 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
             param->setLabel(kParamOutputRLabel);
             param->setHint(kParamOutputRHint);
             addInputChannelOtions(param, eInputChannelAR, context);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // outputG
@@ -1194,7 +1195,9 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
             param->setLabel(kParamOutputGLabel);
             param->setHint(kParamOutputGHint);
             addInputChannelOtions(param, eInputChannelAG, context);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // outputB
@@ -1203,7 +1206,9 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
             param->setLabel(kParamOutputBLabel);
             param->setHint(kParamOutputBHint);
             addInputChannelOtions(param, eInputChannelAB, context);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
     // ouputA

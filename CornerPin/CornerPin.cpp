@@ -1048,7 +1048,9 @@ static void defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
     param->setIncrement(1.);
     param->setDimensionLabels("x", "y");
     param->setParent(*group);
-    page->addChild(*param);
+    if (page) {
+        page->addChild(*param);
+    }
 }
 
 static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
@@ -1065,7 +1067,9 @@ static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
     param->setDefault(x,y,z);
     param->setIncrement(0.01);
     param->setParent(*group);
-    page->addChild(*param);
+    if (page) {
+        page->addChild(*param);
+    }
 }
 
 static void
@@ -1090,7 +1094,9 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
             param->setLabel(kParamCopyFromLabel);
             param->setHint(kParamCopyFromHint);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         if (page) {
@@ -1116,7 +1122,9 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
             param->setHint(kParamCopyInputRoDHint);
             param->setLayoutHint(OFX::eLayoutHintNoNewLine);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // copyTo
@@ -1125,7 +1133,9 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
             param->setLabel(kParamCopyToLabel);
             param->setHint(kParamCopyToHint);
             param->setParent(*group);
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
         
         if (page) {

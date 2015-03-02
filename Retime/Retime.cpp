@@ -530,7 +530,9 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
             param->setDoubleType(eDoubleTypeScale);
 
             // add param to page
-            page->addChild(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
 }

@@ -762,10 +762,12 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
     }
 
     {
-    PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
-    param->setLabel(kParamClipInfoLabel);
-    param->setHint(kParamClipInfoHint);
-    page->addChild(*param);
+        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
+        param->setLabel(kParamClipInfoLabel);
+        param->setHint(kParamClipInfoHint);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 }
 

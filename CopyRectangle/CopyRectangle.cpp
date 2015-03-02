@@ -617,7 +617,9 @@ static void defineComponentParam(OFX::ImageEffectDescriptor &desc,PageParamDescr
     param->setDefault(true);
     param->setHint("Copy " + name);
     param->setLayoutHint(!newLine ? OFX::eLayoutHintNoNewLine : OFX::eLayoutHintNormal);
-    page->addChild(*param);
+    if (page) {
+        page->addChild(*param);
+    }
 }
 
 void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)

@@ -347,7 +347,10 @@ private:
             }
 
             PIX *dstPix = (PIX *) getDstPixelAddress(procWindow.x1, y);
-
+            assert(dstPix);
+            if (!dstPix) {
+                continue;
+            }
             float initVal = 0.;
             switch (operation) {
                 case eOperationAverage:
