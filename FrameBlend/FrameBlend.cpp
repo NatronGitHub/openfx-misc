@@ -75,6 +75,11 @@
 
  */
 
+// TODO:
+// - fetch Images and process them one by one
+// - compute count only if necessary (i.e. it is asked on output or operation is average)
+// - show progress
+
 #include "FrameBlend.h"
 
 #include <cmath> // for floor
@@ -84,7 +89,7 @@
 #include "ofxsImageEffect.h"
 #include "ofxsMultiThread.h"
 
-#include "ofxsProcessing.H"
+#include "ofxsPixelProcessor.h"
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
 
@@ -167,7 +172,7 @@ enum OperationEnum {
 
 using namespace OFX;
 
-class FrameBlendProcessorBase : public OFX::ImageProcessor
+class FrameBlendProcessorBase : public OFX::PixelProcessor
 {
 protected:
     const OFX::Image *_srcImg;
@@ -186,7 +191,7 @@ protected:
 public:
 
     FrameBlendProcessorBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
+    : OFX::PixelProcessor(instance)
     , _srcImg(0)
     , _srcImgs(0)
     , _fgMImgs(0)
@@ -333,7 +338,7 @@ private:
     void process(const OfxRectI& procWindow)
     {
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
-        assert(_dstImg);
+        assert(_dstPixelData);
         assert(_srcImgs.size() == _fgMImgs.size());
         float tmpPix[nComponents];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
@@ -341,7 +346,7 @@ private:
                 break;
             }
 
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+            PIX *dstPix = (PIX *) getDstPixelAddress(procWindow.x1, y);
 
             float initVal = 0.;
             switch (operation) {
@@ -397,20 +402,22 @@ private:
                 }
                 // copy back original values from unprocessed channels
                 if (nComponents == 1) {
+                    int c = 0;
                     if (_outputCount) {
-                        tmpPix[0] = count;
+                        tmpPix[c] = count;
                     } else {
-                        tmpPix[0] = (operation == eOperationAverage) ? (count ? (tmpPix[0] / count) : 0) : tmpPix[0];
+                        tmpPix[c] = (operation == eOperationAverage) ? (count ? (tmpPix[c] / count) : 0) : tmpPix[c];
                     }
-                } else if (nComponents == 3 || nComponents == 4) {
-                    tmpPix[0] = (operation == eOperationAverage) ? (count ? (tmpPix[0] / count) : 0) : tmpPix[0];
-                    tmpPix[1] = (operation == eOperationAverage) ? (count ? (tmpPix[1] / count) : 0) : tmpPix[1];
-                    tmpPix[2] = (operation == eOperationAverage) ? (count ? (tmpPix[2] / count) : 0) : tmpPix[2];
-                    if (nComponents == 4) {
+                } else if (3 <= nComponents && nComponents <= 4) {
+                    for (int c = 0; c < 3; ++c) {
+                        tmpPix[c] = (operation == eOperationAverage) ? (count ? (tmpPix[c] / count) : 0) : tmpPix[c];
+                    }
+                    if (nComponents >= 4) {
+                        int c = nComponents - 1;
                         if (_outputCount) {
-                            tmpPix[3] = count;
+                            tmpPix[c] = count;
                         } else {
-                            tmpPix[3] = (operation == eOperationAverage) ? (count ? (tmpPix[3] / count) : 0) : tmpPix[3];
+                            tmpPix[c] = (operation == eOperationAverage) ? (count ? (tmpPix[c] / count) : 0) : tmpPix[c];
                         }
                     }
                 }
@@ -517,6 +524,9 @@ private:
 
     template <class PIX, int nComponents, int maxValue>
     void renderForBitDepth(const OFX::RenderArguments &args);
+
+    template <class PIX, int nComponents, int maxValue, OperationEnum operation>
+    void renderForOperation(const OFX::RenderArguments &args);
 
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -778,6 +788,14 @@ FrameBlendPlugin::renderForBitDepth(const OFX::RenderArguments &args)
             break;
         }
     }
+}
+
+template <class PIX, int nComponents, int maxValue, OperationEnum operation>
+void
+FrameBlendPlugin::renderForOperation(const OFX::RenderArguments &args)
+{
+    FrameBlendProcessor<PIX, nComponents, maxValue, eOperationAverage> fred(*this);
+    setupAndProcess(fred, args);
 }
 
 bool
