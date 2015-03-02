@@ -65,6 +65,7 @@ PLUGINNAME = Misc
 
 # ls */*.png */*.svg|sort|sed -e 's!^!../!' -e 's!$! \\!' | fgrep -v net.sf.cimg
 RESOURCES = \
+../Add/net.sf.openfx.AddPlugin.png \
 ../Anaglyph/net.sf.openfx.anaglyphPlugin.png \
 ../Anaglyph/net.sf.openfx.anaglyphPlugin.svg \
 ../CheckerBoard/net.sf.openfx.CheckerBoardPlugin.png \
@@ -105,6 +106,7 @@ RESOURCES = \
 ../Dissolve/net.sf.openfx.DissolvePlugin.svg \
 ../FrameBlend/net.sf.openfx.FrameBlend.png \
 ../FrameBlend/net.sf.openfx.FrameBlend.svg \
+../Gamma/net.sf.openfx.GammaPlugin.png \
 ../GodRays/net.sf.openfx.GodRays.png \
 ../GodRays/net.sf.openfx.GodRays.svg \
 ../Grade/net.sf.openfx.GradePlugin.png \
@@ -123,6 +125,7 @@ RESOURCES = \
 ../Merge/net.sf.openfx.MergePlugin.svg \
 ../MixViews/net.sf.openfx.mixViewsPlugin.png \
 ../MixViews/net.sf.openfx.mixViewsPlugin.svg \
+../Multiply/net.sf.openfx.MultiplyPlugin.png \
 ../NoOp/net.sf.openfx.NoOpPlugin.png \
 ../NoOp/net.sf.openfx.NoOpPlugin.svg \
 ../Noise/net.sf.openfx.Noise.png \
@@ -155,12 +158,15 @@ RESOURCES = \
 ../TimeOffset/net.sf.openfx.timeOffset.svg \
 ../TrackerPM/net.sf.openfx.TrackerPM.png \
 ../TrackerPM/net.sf.openfx.TrackerPM.svg \
+../Transform/net.sf.openfx.DirBlur.png \
+../Transform/net.sf.openfx.DirBlur.svg \
 ../Transform/net.sf.openfx.TransformMaskedPlugin.png \
 ../Transform/net.sf.openfx.TransformMaskedPlugin.svg \
 ../Transform/net.sf.openfx.TransformPlugin.png \
 ../Transform/net.sf.openfx.TransformPlugin.svg \
 ../VectorToColor/net.sf.openfx.VectorToColorPlugin.png \
 ../VectorToColor/net.sf.openfx.VectorToColorPlugin.svg \
+
 
 VPATH += \
 ../Add \

@@ -752,6 +752,16 @@
 		1EDF56881AA463AA00E57882 /* net.sf.openfx.GodRays.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56861AA4639000E57882 /* net.sf.openfx.GodRays.svg */; };
 		1EDF56891AA4744800E57882 /* net.sf.openfx.GodRays.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56851AA4639000E57882 /* net.sf.openfx.GodRays.png */; };
 		1EDF568A1AA4744800E57882 /* net.sf.openfx.GodRays.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56861AA4639000E57882 /* net.sf.openfx.GodRays.svg */; };
+		1EDF56A11AA4AEA300E57882 /* net.sf.openfx.GammaPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56A01AA4AE9E00E57882 /* net.sf.openfx.GammaPlugin.png */; };
+		1EDF56A21AA4AEB700E57882 /* net.sf.openfx.GammaPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56A01AA4AE9E00E57882 /* net.sf.openfx.GammaPlugin.png */; };
+		1EDF56A41AA4AF2800E57882 /* net.sf.openfx.AddPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56A31AA4AF2400E57882 /* net.sf.openfx.AddPlugin.png */; };
+		1EDF56A61AA4AF3D00E57882 /* net.sf.openfx.AddPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56A31AA4AF2400E57882 /* net.sf.openfx.AddPlugin.png */; };
+		1EDF56A81AA4AFA300E57882 /* net.sf.openfx.MultiplyPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56A71AA4AF9600E57882 /* net.sf.openfx.MultiplyPlugin.png */; };
+		1EDF56A91AA4AFAE00E57882 /* net.sf.openfx.MultiplyPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56A71AA4AF9600E57882 /* net.sf.openfx.MultiplyPlugin.png */; };
+		1EDF56AC1AA4B00900E57882 /* net.sf.openfx.DirBlur.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56AA1AA4AFFD00E57882 /* net.sf.openfx.DirBlur.png */; };
+		1EDF56AD1AA4B00900E57882 /* net.sf.openfx.DirBlur.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56AB1AA4AFFD00E57882 /* net.sf.openfx.DirBlur.svg */; };
+		1EDF56AE1AA4B01200E57882 /* net.sf.openfx.DirBlur.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56AA1AA4AFFD00E57882 /* net.sf.openfx.DirBlur.png */; };
+		1EDF56AF1AA4B01200E57882 /* net.sf.openfx.DirBlur.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56AB1AA4AFFD00E57882 /* net.sf.openfx.DirBlur.svg */; };
 		1EE1F7811A506181002BE24B /* CImgSharpenInvDiff.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE1F77F1A506181002BE24B /* CImgSharpenInvDiff.cpp */; };
 		1EE1F7841A506E14002BE24B /* CImgSharpenShock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE1F7821A506E14002BE24B /* CImgSharpenShock.cpp */; };
 		1EE4A87019C6EC7300E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A86E19C6EC4200E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png */; };
@@ -1601,6 +1611,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				1EDF56A11AA4AEA300E57882 /* net.sf.openfx.GammaPlugin.png in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1610,6 +1621,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				1EDF56A81AA4AFA300E57882 /* net.sf.openfx.MultiplyPlugin.png in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1825,6 +1837,8 @@
 				1E814CBE19C9836D00C2C668 /* net.sf.openfx.TransformPlugin.svg in CopyFiles */,
 				1EE4A8AE19C6EF1000E6E3AE /* net.sf.openfx.TransformMaskedPlugin.png in CopyFiles */,
 				1E814CBF19C9836F00C2C668 /* net.sf.openfx.TransformMaskedPlugin.svg in CopyFiles */,
+				1EDF56AC1AA4B00900E57882 /* net.sf.openfx.DirBlur.png in CopyFiles */,
+				1EDF56AD1AA4B00900E57882 /* net.sf.openfx.DirBlur.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1834,6 +1848,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				1EDF56A61AA4AF3D00E57882 /* net.sf.openfx.AddPlugin.png in CopyFiles */,
 				AC6486DC1A41A57B0088844F /* net.sf.openfx.anaglyphPlugin.png in CopyFiles */,
 				1E3284B91A41C54200C9A4E4 /* net.sf.openfx.anaglyphPlugin.svg in CopyFiles */,
 				1E75A0881A88E2D0005BAA36 /* net.sf.openfx.CheckerBoardPlugin.png in CopyFiles */,
@@ -1862,10 +1877,13 @@
 				1E3284B71A41C50D00C9A4E4 /* net.sf.openfx.Deinterlace.svg in CopyFiles */,
 				1EE4A8B719C6EF5200E6E3AE /* net.sf.openfx.DifferencePlugin.png in CopyFiles */,
 				1E814CC619C9838F00C2C668 /* net.sf.openfx.DifferencePlugin.svg in CopyFiles */,
+				1EDF56AE1AA4B01200E57882 /* net.sf.openfx.DirBlur.png in CopyFiles */,
+				1EDF56AF1AA4B01200E57882 /* net.sf.openfx.DirBlur.svg in CopyFiles */,
 				1EE4A8B819C6EF5600E6E3AE /* net.sf.openfx.DissolvePlugin.png in CopyFiles */,
 				1E814CC719C9839200C2C668 /* net.sf.openfx.DissolvePlugin.svg in CopyFiles */,
 				1E92E8EA1AA354CB0070E494 /* net.sf.openfx.FrameBlend.png in CopyFiles */,
 				1E92E8EB1AA354CB0070E494 /* net.sf.openfx.FrameBlend.svg in CopyFiles */,
+				1EDF56A21AA4AEB700E57882 /* net.sf.openfx.GammaPlugin.png in CopyFiles */,
 				1EDF56891AA4744800E57882 /* net.sf.openfx.GodRays.png in CopyFiles */,
 				1EDF568A1AA4744800E57882 /* net.sf.openfx.GodRays.svg in CopyFiles */,
 				1EE4A8B919C6EF5A00E6E3AE /* net.sf.openfx.GradePlugin.png in CopyFiles */,
@@ -1888,6 +1906,7 @@
 				1E814CCA19C9839E00C2C668 /* net.sf.openfx.MergePlugin.svg in CopyFiles */,
 				AC6486DF1A41A5BA0088844F /* net.sf.openfx.mixViewsPlugin.png in CopyFiles */,
 				1E3284B11A41C4E900C9A4E4 /* net.sf.openfx.mixViewsPlugin.svg in CopyFiles */,
+				1EDF56A91AA4AFAE00E57882 /* net.sf.openfx.MultiplyPlugin.png in CopyFiles */,
 				AC6486E01A41A5BF0088844F /* net.sf.openfx.Noise.png in CopyFiles */,
 				1E3284B01A41C4E300C9A4E4 /* net.sf.openfx.Noise.svg in CopyFiles */,
 				AC6486E11A41A5C40088844F /* net.sf.openfx.NoOpPlugin.png in CopyFiles */,
@@ -1945,6 +1964,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				1EDF56A41AA4AF2800E57882 /* net.sf.openfx.AddPlugin.png in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2408,6 +2428,11 @@
 		1EDE1BE8182D8B18002392CB /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EDF56851AA4639000E57882 /* net.sf.openfx.GodRays.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.GodRays.png; sourceTree = "<group>"; };
 		1EDF56861AA4639000E57882 /* net.sf.openfx.GodRays.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.GodRays.svg; sourceTree = "<group>"; };
+		1EDF56A01AA4AE9E00E57882 /* net.sf.openfx.GammaPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.GammaPlugin.png; sourceTree = "<group>"; };
+		1EDF56A31AA4AF2400E57882 /* net.sf.openfx.AddPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.AddPlugin.png; sourceTree = "<group>"; };
+		1EDF56A71AA4AF9600E57882 /* net.sf.openfx.MultiplyPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.MultiplyPlugin.png; sourceTree = "<group>"; };
+		1EDF56AA1AA4AFFD00E57882 /* net.sf.openfx.DirBlur.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.DirBlur.png; sourceTree = "<group>"; };
+		1EDF56AB1AA4AFFD00E57882 /* net.sf.openfx.DirBlur.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.DirBlur.svg; sourceTree = "<group>"; };
 		1EE1F77F1A506181002BE24B /* CImgSharpenInvDiff.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgSharpenInvDiff.cpp; sourceTree = "<group>"; };
 		1EE1F7801A506181002BE24B /* CImgSharpenInvDiff.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgSharpenInvDiff.h; sourceTree = "<group>"; };
 		1EE1F7821A506E14002BE24B /* CImgSharpenShock.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgSharpenShock.cpp; sourceTree = "<group>"; };
@@ -3802,6 +3827,7 @@
 			children = (
 				1ED12E451A4B316900ABA348 /* Add.cpp */,
 				1ED12E461A4B316900ABA348 /* Add.h */,
+				1EDF56A31AA4AF2400E57882 /* net.sf.openfx.AddPlugin.png */,
 				1ED12E471A4B316900ABA348 /* Info.plist */,
 				1ED12E481A4B316900ABA348 /* Makefile */,
 				1ED12E491A4B316900ABA348 /* PluginRegistration.cpp */,
@@ -3826,10 +3852,11 @@
 		1EE9B0901A4B2FD900869861 /* Multiply */ = {
 			isa = PBXGroup;
 			children = (
-				1ED12E551A4B319400ABA348 /* Info.plist */,
-				1ED12E561A4B319400ABA348 /* Makefile */,
 				1ED12E571A4B319400ABA348 /* Multiply.cpp */,
 				1ED12E581A4B319400ABA348 /* Multiply.h */,
+				1EDF56A71AA4AF9600E57882 /* net.sf.openfx.MultiplyPlugin.png */,
+				1ED12E551A4B319400ABA348 /* Info.plist */,
+				1ED12E561A4B319400ABA348 /* Makefile */,
 				1ED12E591A4B319400ABA348 /* PluginRegistration.cpp */,
 			);
 			path = Multiply;
@@ -3840,6 +3867,7 @@
 			children = (
 				1ED12E5D1A4B31A800ABA348 /* Gamma.cpp */,
 				1ED12E5E1A4B31A800ABA348 /* Gamma.h */,
+				1EDF56A01AA4AE9E00E57882 /* net.sf.openfx.GammaPlugin.png */,
 				1ED12E5F1A4B31A800ABA348 /* Info.plist */,
 				1ED12E601A4B31A800ABA348 /* Makefile */,
 				1ED12E611A4B31A800ABA348 /* PluginRegistration.cpp */,
@@ -3995,6 +4023,8 @@
 				1E814CBD19C9836400C2C668 /* net.sf.openfx.TransformPlugin.svg */,
 				1EE4A8AA19C6EF0300E6E3AE /* net.sf.openfx.TransformMaskedPlugin.png */,
 				1E814CBC19C9836400C2C668 /* net.sf.openfx.TransformMaskedPlugin.svg */,
+				1EDF56AA1AA4AFFD00E57882 /* net.sf.openfx.DirBlur.png */,
+				1EDF56AB1AA4AFFD00E57882 /* net.sf.openfx.DirBlur.svg */,
 				D7349E8A18E7766F0097DB1D /* Makefile */,
 				D7349E8B18E7766F0097DB1D /* PluginRegistration.cpp */,
 			);
