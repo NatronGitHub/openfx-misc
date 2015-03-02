@@ -449,6 +449,22 @@ MirrorPlugin::render(const OFX::RenderArguments &args)
     if (flip) {
         yoff = srcRoD.y1 + srcRoD.y2 - 1;
     }
+
+    const OfxRectI& renderWindow = args.renderWindow;
+    // these things should never happens
+    if (!src.get() ||
+        (flip  &&
+         !(srcBounds.y1 <= (yoff + 1 - renderWindow.y2) && renderWindow.y1 <= renderWindow.y2 && (yoff + 1 - renderWindow.y1) <= srcBounds.y2)) ||
+        (!flip &&
+         !(srcBounds.y1 <= renderWindow.y1 && renderWindow.y1 <= renderWindow.y2 && renderWindow.y2 <= srcBounds.y2)) ||
+        (flop  &&
+         !(srcBounds.x1 <= (xoff + 1 - renderWindow.x2) && renderWindow.x1 <= renderWindow.x2 && (xoff + 1 - renderWindow.x1) <= srcBounds.x2)) ||
+        (!flop &&
+         !(srcBounds.x1 <= renderWindow.x1 && renderWindow.x1 <= renderWindow.x2 && renderWindow.x2 <= srcBounds.x2))) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave source image with wrong dimensions");
+        throwSuiteStatusException(kOfxStatFailed);
+    }
+    clearPersistentMessage();
     mirrorPixels(*this, args.renderWindow, srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes, dstPixelData, dstBounds, dstComponents, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
 }
 
