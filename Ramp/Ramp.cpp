@@ -831,7 +831,9 @@ public:
      any other interact that may share the viewer.
      */
     virtual bool penUp(const PenArgs &args) OVERRIDE FINAL;
-  
+
+    virtual void loseFocus(const FocusArgs &args) OVERRIDE FINAL;
+
 };
 
 //static void intersectToRoD(const OfxRectD& rod,const OfxPointD& p0)
@@ -1125,6 +1127,14 @@ RampInteract::penUp(const PenArgs &args)
     _state = eInteractStateIdle;
     
     return didSomething;
+}
+
+/** @brief Called when the interact is loses input focus */
+void
+RampInteract::loseFocus(const FocusArgs &/*args*/)
+{
+    _interactiveDrag = false;
+    _state = eInteractStateIdle;
 }
 
 class RampOverlayDescriptor : public DefaultEffectOverlayDescriptor<RampOverlayDescriptor, RampInteract> {};

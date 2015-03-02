@@ -630,12 +630,13 @@ public:
     }
 
     // overridden functions from OFX::Interact to do things
-    virtual bool draw(const OFX::DrawArgs &args);
-    virtual bool penMotion(const OFX::PenArgs &args);
-    virtual bool penDown(const OFX::PenArgs &args);
-    virtual bool penUp(const OFX::PenArgs &args);
-    //virtual bool keyDown(const OFX::KeyArgs &args);
-    //virtual bool keyUp(const OFX::KeyArgs &args);
+    virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL;
+    virtual bool penMotion(const OFX::PenArgs &args) OVERRIDE FINAL;
+    virtual bool penDown(const OFX::PenArgs &args) OVERRIDE FINAL;
+    virtual bool penUp(const OFX::PenArgs &args) OVERRIDE FINAL;
+    //virtual bool keyDown(const OFX::KeyArgs &args) OVERRIDE FINAL;
+    //virtual bool keyUp(const OFX::KeyArgs &args) OVERRIDE FINAL;
+    virtual void loseFocus(const FocusArgs &args) OVERRIDE FINAL;
 
 private:
     
@@ -988,6 +989,15 @@ bool CornerPinTransformInteract::penUp(const OFX::PenArgs &/*args*/)
     _dragging = -1;
 
     return didSomething;
+}
+
+/** @brief Called when the interact is loses input focus */
+void
+CornerPinTransformInteract::loseFocus(const FocusArgs &/*args*/)
+{
+    _dragging = -1;
+    _hovering = -1;
+    _interactiveDrag = false;
 }
 
 using namespace OFX;
