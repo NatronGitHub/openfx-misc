@@ -390,8 +390,11 @@ private:
 void
 MirrorPlugin::render(const OFX::RenderArguments &args)
 {
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    if (!_srcClip || !_dstClip) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+    assert(kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
 
     // do the rendering
     std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
@@ -411,7 +414,7 @@ MirrorPlugin::render(const OFX::RenderArguments &args)
     int dstRowBytes;
     getImageData(dst.get(), &dstPixelData, &dstBounds, &dstComponents, &dstBitDepth, &dstRowBytes);
 
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+    std::auto_ptr<const OFX::Image> src(_srcClip->isConnected() ?
                                         _srcClip->fetchImage(args.time) : 0);
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||

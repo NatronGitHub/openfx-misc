@@ -428,8 +428,8 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     }
 
     // make some pages and to things in
-    PageParamDescriptor *page = NULL;
-    //PageParamDescriptor *page = desc.definePageParam("Controls");
+    //PageParamDescriptor *page = NULL;
+    PageParamDescriptor *page = desc.definePageParam("Controls");
 
     // color0
     {

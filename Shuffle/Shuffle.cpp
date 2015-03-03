@@ -685,6 +685,9 @@ ShufflePlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnu
 void
 ShufflePlugin::render(const OFX::RenderArguments &args)
 {
+    if (!_srcClipA || !_srcClipB || !_dstClip) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
@@ -714,9 +717,9 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-    OFX::BitDepthEnum srcBitDepth = _srcClipA ? _srcClipA->getPixelDepth() : eBitDepthNone;
+    OFX::BitDepthEnum srcBitDepth = _srcClipA->getPixelDepth();
 
-    if (_srcClipA && _srcClipA->isConnected() && _srcClipB && _srcClipB->isConnected()) {
+    if (_srcClipA->isConnected() && _srcClipB->isConnected()) {
         OFX::BitDepthEnum srcBBitDepth = _srcClipB->getPixelDepth();
         // both input must have the same bit depth
         if (srcBitDepth != srcBBitDepth) {
