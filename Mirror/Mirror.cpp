@@ -237,27 +237,27 @@ mirrorPixelsForDepthAndComponents(OFX::ImageEffect &instance,
 
     if (flip) {
         if (flop) {
-            mirrorPixelsForDepthAndComponentsFlipFlop<PIX,4,true,true>(instance, renderWindow,
-                                                                       (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
-                                                                       (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
-                                                                       xoff, yoff);
+            mirrorPixelsForDepthAndComponentsFlipFlop<PIX,nComponents,true,true>(instance, renderWindow,
+                                                                                 (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
+                                                                                 (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
+                                                                                 xoff, yoff);
         } else {
-            mirrorPixelsForDepthAndComponentsFlipFlop<PIX,4,true,false>(instance, renderWindow,
-                                                                       (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
-                                                                       (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
-                                                                       xoff, yoff);
+            mirrorPixelsForDepthAndComponentsFlipFlop<PIX,nComponents,true,false>(instance, renderWindow,
+                                                                                  (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
+                                                                                  (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
+                                                                                  xoff, yoff);
         }
     } else {
         if (flop) {
-            mirrorPixelsForDepthAndComponentsFlipFlop<PIX,4,false,true>(instance, renderWindow,
-                                                                       (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
-                                                                       (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
-                                                                       xoff, yoff);
+            mirrorPixelsForDepthAndComponentsFlipFlop<PIX,nComponents,false,true>(instance, renderWindow,
+                                                                                  (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
+                                                                                  (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
+                                                                                  xoff, yoff);
         } else {
-            mirrorPixelsForDepthAndComponentsFlipFlop<PIX,4,false,false>(instance, renderWindow,
-                                                                        (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
-                                                                        (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
-                                                                        xoff, yoff);
+            mirrorPixelsForDepthAndComponentsFlipFlop<PIX,nComponents,false,false>(instance, renderWindow,
+                                                                                   (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes,
+                                                                                   (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
+                                                                                   xoff, yoff);
         }
     }
 }
