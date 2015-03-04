@@ -393,9 +393,8 @@ private:
             // the whole column is within the mask
             const float *p = reinterpret_cast<const float*>(mask->getPixelAddress(x, y1));
             assert(p);
-            for (int y = y1; y < y2; ++y) {
-                const float *p = reinterpret_cast<const float*>(mask->getPixelAddress(x, y));
-                if (p && *p != 1.) {
+            for (int y = y1; y < y2; ++y,  p += rowElems) {
+                if (*p != 1.) {
                     return false;
                 }
             }
