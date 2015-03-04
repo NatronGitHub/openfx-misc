@@ -300,8 +300,15 @@ private:
                 } else {
                     double fx = transformed.z != 0 ? transformed.x / transformed.z : transformed.x;
                     double fy = transformed.z != 0 ? transformed.y / transformed.z : transformed.y;
-
-                    ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
+                    if (filter == eFilterImpulse) {
+                        ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
+                    } else {
+                        double Jxx = (H.a*transformed.z - transformed.x*H.g)/(transformed.z*transformed.z);
+                        double Jxy = (H.b*transformed.z - transformed.x*H.h)/(transformed.z*transformed.z);
+                        double Jyx = (H.d*transformed.z - transformed.y*H.g)/(transformed.z*transformed.z);
+                        double Jyy = (H.e*transformed.z - transformed.y*H.h)/(transformed.z*transformed.z);
+                        ofxsFilterInterpolate2DSuper<PIX,nComponents,filter,clamp>(fx, fy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
+                    }
                 }
 
                 ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImg, _domask, _maskImg, (float)_mix, _maskInvert, dstPix);
@@ -376,7 +383,8 @@ private:
                         // the coordinates of the center of the pixel in canonical coordinates
                         // see http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#CanonicalCoordinates
                         canonicalCoords.x = (double)x + 0.5;
-                        OFX::Point3D transformed = _invtransform[t] * canonicalCoords;
+                        const OFX::Matrix3x3& H = _invtransform[t];
+                        OFX::Point3D transformed = H * canonicalCoords;
                         if ( !_srcImg || (transformed.z == 0.) ) {
                             // the back-transformed point is at infinity
                             for (int c = 0; c < nComponents; ++c) {
@@ -385,8 +393,15 @@ private:
                         } else {
                             double fx = transformed.z != 0 ? transformed.x / transformed.z : transformed.x;
                             double fy = transformed.z != 0 ? transformed.y / transformed.z : transformed.y;
-
-                            ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
+                            if (filter == eFilterImpulse) {
+                                ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
+                            } else {
+                                double Jxx = (H.a*transformed.z - transformed.x*H.g)/(transformed.z*transformed.z);
+                                double Jxy = (H.b*transformed.z - transformed.x*H.h)/(transformed.z*transformed.z);
+                                double Jyx = (H.d*transformed.z - transformed.y*H.g)/(transformed.z*transformed.z);
+                                double Jyy = (H.e*transformed.z - transformed.y*H.h)/(transformed.z*transformed.z);
+                                ofxsFilterInterpolate2DSuper<PIX,nComponents,filter,clamp>(fx, fy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
+                            }
                         }
                         for (int c = 0; c < nComponents; ++c) {
                             // multiply by color
