@@ -738,6 +738,7 @@ public:
         } else {
             assert(false);
         }
+        return false;
     };
 
     virtual bool getRoD(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* dstRoD) OVERRIDE FINAL;
