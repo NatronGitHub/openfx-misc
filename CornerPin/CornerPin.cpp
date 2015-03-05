@@ -1,5 +1,5 @@
 /*
- OFX Roto plugin.
+ OFX CornerPin plugin.
  
  Copyright (C) 2014 INRIA
  

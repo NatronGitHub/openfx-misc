@@ -1,5 +1,5 @@
 /*
- OFX Roto plugin.
+ OFX CornerPin plugin.
  
  Copyright (C) 2014 INRIA
  
@@ -34,11 +34,11 @@
  78153 Le Chesnay Cedex - France
 */
 
-#ifndef MISC_CORNER_PIN_H
-#define MISC_CORNER_PIN_H
+#ifndef Misc_CornerPin_h
+#define Misc_CornerPin_h
 
 #include "ofxsImageEffect.h"
 
 void getCornerPinPluginIDs(OFX::PluginFactoryArray &ids);
 
-#endif // MISC_CORNER_PIN_H
+#endif // Misc_CornerPin_h
