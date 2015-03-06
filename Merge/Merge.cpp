@@ -695,13 +695,23 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     //they need to be optional.
     srcClipA->setOptional(true);
 
+    if (context == eContextGeneral || context == eContextPaint) {
+        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
+        maskClip->addSupportedComponent(ePixelComponentAlpha);
+        maskClip->setTemporalClipAccess(false);
+        if (context == eContextGeneral)
+            maskClip->setOptional(true);
+        maskClip->setSupportsTiles(kSupportsTiles);
+        maskClip->setIsMask(true);
+    }
+
     if (numerousInputs) {
         for (int i = 2; i <= kMaximumAInputs; ++i) {
-            std::stringstream ss;
-            ss << kClipA << i;
-            std::string clipName = ss.str();
-            
-            OFX::ClipDescriptor* optionalSrcClip = desc.defineClip(clipName);
+            assert(i < 100);
+            char name[4] = { 'A', 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
+            name[1] = (i < 10) ? ('0' + i) : ('0' + i / 10);
+            name[2] = (i < 10) ?         0 : ('0' + i % 10);
+            OFX::ClipDescriptor* optionalSrcClip = desc.defineClip(name);
             optionalSrcClip->addSupportedComponent( OFX::ePixelComponentRGBA );
             optionalSrcClip->addSupportedComponent( OFX::ePixelComponentRGB );
             optionalSrcClip->addSupportedComponent( OFX::ePixelComponentAlpha );
@@ -722,15 +732,6 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
-    if (context == eContextGeneral || context == eContextPaint) {
-        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
-        maskClip->addSupportedComponent(ePixelComponentAlpha);
-        maskClip->setTemporalClipAccess(false);
-        if (context == eContextGeneral)
-            maskClip->setOptional(true);
-        maskClip->setSupportsTiles(kSupportsTiles);
-        maskClip->setIsMask(true);
-    }
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");

@@ -149,9 +149,10 @@ SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle, bool numerousInputs)
         if (getContext() == OFX::eContextFilter && i == 0) {
             _srcClip[i] = fetchClip(kOfxImageEffectSimpleSourceClipName);
         } else {
-            std::stringstream s;
-            s << i;
-            _srcClip[i] = fetchClip(s.str());
+            char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
+            name[0] = (i < 10) ? ('0' + i) : ('0' + i / 10);
+            name[1] = (i < 10) ?         0 : ('0' + i % 10);
+            _srcClip[i] = fetchClip(name);
         }
         assert(_srcClip[i]);
     }
@@ -285,14 +286,12 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 
     // Source clip only in the filter context
     // create the mandated source clip
-    for (int i = 0; i < clipSourceCount; ++i) {
+    {
         ClipDescriptor *srcClip;
-        if (context == eContextFilter && i == 0) {
+        if (context == eContextFilter) {
             srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
         } else {
-            std::stringstream s;
-            s << i;
-            srcClip = desc.defineClip(s.str());
+            srcClip = desc.defineClip("0");
             srcClip->setOptional(true);
         }
         srcClip->addSupportedComponent(ePixelComponentNone);
@@ -303,6 +302,38 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);
+    }
+    {
+        ClipDescriptor *srcClip;
+        srcClip = desc.defineClip("1");
+        srcClip->setOptional(true);
+        srcClip->addSupportedComponent(ePixelComponentNone);
+        srcClip->addSupportedComponent(ePixelComponentRGB);
+        srcClip->addSupportedComponent(ePixelComponentRGBA);
+        srcClip->addSupportedComponent(ePixelComponentAlpha);
+        srcClip->addSupportedComponent(ePixelComponentCustom);
+        srcClip->setTemporalClipAccess(false);
+        srcClip->setSupportsTiles(kSupportsTiles);
+        srcClip->setIsMask(false);
+    }
+
+    if (numerousInputs) {
+        for (int i = 0; i < clipSourceCount; ++i) {
+            assert(i < 100);
+            ClipDescriptor *srcClip;
+            char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
+            name[0] = (i < 10) ? ('0' + i) : ('0' + i / 10);
+            name[1] = (i < 10) ?         0 : ('0' + i % 10);
+            srcClip->setOptional(true);
+            srcClip->addSupportedComponent(ePixelComponentNone);
+            srcClip->addSupportedComponent(ePixelComponentRGB);
+            srcClip->addSupportedComponent(ePixelComponentRGBA);
+            srcClip->addSupportedComponent(ePixelComponentAlpha);
+            srcClip->addSupportedComponent(ePixelComponentCustom);
+            srcClip->setTemporalClipAccess(false);
+            srcClip->setSupportsTiles(kSupportsTiles);
+            srcClip->setIsMask(false);
+        }
     }
 
     // create the mandated output clip

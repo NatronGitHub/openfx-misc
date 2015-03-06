@@ -86,7 +86,6 @@
 
 #include <cmath>
 #include <iostream>
-#include <sstream>
 #include <vector>
 
 #ifdef __APPLE__

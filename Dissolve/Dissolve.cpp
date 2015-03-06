@@ -120,9 +120,10 @@ public:
             if (getContext() == OFX::eContextTransition && i < 2) {
                 _srcClip[i] = fetchClip(i == 0 ? kOfxImageEffectTransitionSourceFromClipName : kOfxImageEffectTransitionSourceToClipName);
             } else {
-                std::stringstream s;
-                s << i;
-                _srcClip[i] = fetchClip(s.str());
+                char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
+                name[0] = (i < 10) ? ('0' + i) : ('0' + i / 10);
+                name[1] = (i < 10) ?         0 : ('0' + i % 10);
+                _srcClip[i] = fetchClip(name);
             }
             assert(_srcClip[i] && (_srcClip[i]->getPixelComponents() == OFX::ePixelComponentRGB || _srcClip[i]->getPixelComponents() == OFX::ePixelComponentRGBA || _srcClip[i]->getPixelComponents() == OFX::ePixelComponentAlpha));
         }
@@ -471,15 +472,31 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     int clipSourceCount = numerousInputs ? kClipSourceCount : 2;
 
-    for (int i = 0; i < clipSourceCount; ++i) {
+    {
         ClipDescriptor *srcClip;
-        if (context == eContextTransition && i < 2) {
+        if (context == eContextTransition) {
             // we are a transition, so define the sourceFrom/sourceTo input clip
-            srcClip = desc.defineClip(i == 0 ? kOfxImageEffectTransitionSourceFromClipName : kOfxImageEffectTransitionSourceToClipName);
+            srcClip = desc.defineClip(kOfxImageEffectTransitionSourceFromClipName);
         } else {
-            std::stringstream s;
-            s << i;
-            srcClip = desc.defineClip(s.str());
+            srcClip = desc.defineClip("0");
+            srcClip->setOptional(true);
+        }
+        srcClip->addSupportedComponent(ePixelComponentNone);
+        srcClip->addSupportedComponent(ePixelComponentRGB);
+        srcClip->addSupportedComponent(ePixelComponentRGBA);
+        srcClip->addSupportedComponent(ePixelComponentAlpha);
+        srcClip->addSupportedComponent(ePixelComponentCustom);
+        srcClip->setTemporalClipAccess(false);
+        srcClip->setSupportsTiles(kSupportsTiles);
+        srcClip->setIsMask(false);
+    }
+    {
+        ClipDescriptor *srcClip;
+        if (context == eContextTransition) {
+            // we are a transition, so define the sourceFrom/sourceTo input clip
+            srcClip = desc.defineClip(kOfxImageEffectTransitionSourceToClipName);
+        } else {
+            srcClip = desc.defineClip("1");
             srcClip->setOptional(true);
         }
         srcClip->addSupportedComponent(ePixelComponentNone);
@@ -492,13 +509,6 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         srcClip->setIsMask(false);
     }
 
-    // create the mandated output clip
-    ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
-    dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
-    dstClip->addSupportedComponent(ePixelComponentAlpha);
-    dstClip->setSupportsTiles(kSupportsTiles);
-
     ClipDescriptor *maskClip = desc.defineClip("Mask");
     maskClip->addSupportedComponent(ePixelComponentAlpha);
     maskClip->setTemporalClipAccess(false);
@@ -507,6 +517,34 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
     maskClip->setSupportsTiles(kSupportsTiles);
     maskClip->setIsMask(true);
+
+    if (numerousInputs) {
+        for (int i = 2; i < clipSourceCount; ++i) {
+            assert(i < 100);
+            ClipDescriptor *srcClip;
+            char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
+            name[0] = (i < 10) ? ('0' + i) : ('0' + i / 10);
+            name[1] = (i < 10) ?         0 : ('0' + i % 10);
+            srcClip = desc.defineClip(name);
+            srcClip->setOptional(true);
+            srcClip->addSupportedComponent(ePixelComponentNone);
+            srcClip->addSupportedComponent(ePixelComponentRGB);
+            srcClip->addSupportedComponent(ePixelComponentRGBA);
+            srcClip->addSupportedComponent(ePixelComponentAlpha);
+            srcClip->addSupportedComponent(ePixelComponentCustom);
+            srcClip->setTemporalClipAccess(false);
+            srcClip->setSupportsTiles(kSupportsTiles);
+            srcClip->setIsMask(false);
+        }
+    }
+
+    // create the mandated output clip
+    ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
+    dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentAlpha);
+    dstClip->setSupportsTiles(kSupportsTiles);
+
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
