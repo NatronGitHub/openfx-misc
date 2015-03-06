@@ -96,6 +96,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsImageBlender.H"
+#include "ofxsCopier.h"
 #include "ofxsMacros.h"
 
 #define kPluginName "RetimeOFX"
@@ -111,6 +112,10 @@
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
+
+#define kParamReverseInput "reverseInput"
+#define kParamReverseInputLabel "Reverse input"
+#define kParamReverseInputHint "Reverse the order of the input frames so that last one is first"
 
 #define kParamSpeed "speed"
 #define kParamSpeedLabel "Speed"
@@ -132,6 +137,7 @@ protected:
     OFX::Clip *_dstClip;            /**< @brief Mandated output clips */
     OFX::Clip *_srcClip;            /**< @brief Mandated input clips */
 
+    OFX::BooleanParam  *_reverse_input;
     OFX::DoubleParam  *_sourceTime; /**< @brief mandated parameter, only used in the retimer context. */
     OFX::DoubleParam  *_speed;      /**< @brief only used in the filter context. */
     OFX::DoubleParam  *_duration;   /**< @brief how long the output should be as a proportion of input. General context only  */
@@ -156,6 +162,7 @@ public:
             assert(_sourceTime);
         } else { // context == OFX::eContextFilter || context == OFX::eContextGeneral
             // filter context means we are in charge of how to retime, and our example is using a speed curve to do that
+            _reverse_input = fetchBooleanParam(kParamReverseInput);
             _speed = fetchDoubleParam(kParamSpeed);
             assert(_speed);
         }
@@ -172,11 +179,13 @@ public:
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
 
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+
     /* override the time domain action, only for the general context */
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(OFX::ImageBlenderBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(OFX::ImageBlenderBase &, const OFX::RenderArguments &args, double sourceTime);
 };
 
 
@@ -234,10 +243,11 @@ static void framesNeeded(double sourceTime, OFX::FieldEnum fieldToRender, double
 
 /* set up and run a processor */
 void
-RetimePlugin::setupAndProcess(OFX::ImageBlenderBase &processor, const OFX::RenderArguments &args)
+RetimePlugin::setupAndProcess(OFX::ImageBlenderBase &processor, const OFX::RenderArguments &args, double sourceTime)
 {
+    const double time = args.time;
     // get a dst image
-    std::auto_ptr<OFX::Image>  dst(_dstClip->fetchImage(args.time));
+    std::auto_ptr<OFX::Image>  dst(_dstClip->fetchImage(time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -255,15 +265,24 @@ RetimePlugin::setupAndProcess(OFX::ImageBlenderBase &processor, const OFX::Rende
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    // figure the frame we should be retiming from
-    double sourceTime;
-
-    if (getContext() == OFX::eContextRetimer) {
-        // the host is specifying it, so fetch it from the kOfxImageEffectRetimerParamName pseudo-param
-        sourceTime = _sourceTime->getValueAtTime(args.time);
-    } else {
-        // we have our own param, which is a speed, so we integrate it to get the time we want
-        sourceTime = _speed->integrate(0, args.time);
+    if (sourceTime == (int)sourceTime) {
+        std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+                                            _srcClip->fetchImage(sourceTime) : 0);
+        if (src.get()) {
+            if (src->getRenderScale().x != args.renderScale.x ||
+                src->getRenderScale().y != args.renderScale.y ||
+                (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+            }
+            OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+            OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+            if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            }
+        }
+        copyPixels(*this, args.renderWindow, src.get(), dst.get());
+        return;
     }
 
     // figure the two images we are blending between
@@ -316,16 +335,65 @@ void
 RetimePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
                                OFX::FramesNeededSetter &frames)
 {
-    // figure the two images we are blending between
-    double fromTime, toTime;
-    double blend;
-    // whatever the rendered field is, the frames are the same
-    framesNeeded(args.time, OFX::eFieldNone, &fromTime, &toTime, &blend);
+    const double time = args.time;
+    double sourceTime;
+    if (getContext() == OFX::eContextRetimer) {
+        // the host is specifying it, so fetch it from the kOfxImageEffectRetimerParamName pseudo-param
+        sourceTime = _sourceTime->getValueAtTime(time);
+    } else {
+        bool reverse_input;
+        OfxRangeD srcRange = _srcClip->getFrameRange();
+        _reverse_input->getValueAtTime(time, reverse_input);
+        // we have our own param, which is a speed, so we integrate it to get the time we want
+        if (reverse_input) {
+            sourceTime = srcRange.max - _speed->integrate(srcRange.min, time);
+        } else {
+            sourceTime = srcRange.min + _speed->integrate(srcRange.min, time);
+        }
+    }
     OfxRangeD range;
-    range.min = fromTime;
-    range.max = toTime;
+    if (sourceTime == (int)sourceTime) {
+        range.min = sourceTime;
+        range.max = sourceTime;
+    } else {
+        // figure the two images we are blending between
+        double fromTime, toTime;
+        double blend;
+        // whatever the rendered field is, the frames are the same
+        framesNeeded(sourceTime, OFX::eFieldNone, &fromTime, &toTime, &blend);
+        range.min = fromTime;
+        range.max = toTime;
+    }
     frames.setFramesNeeded(*_srcClip, range);
 }
+
+bool
+RetimePlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime)
+{
+    const double time = args.time;
+    double sourceTime;
+    if (getContext() == OFX::eContextRetimer) {
+        // the host is specifying it, so fetch it from the kOfxImageEffectRetimerParamName pseudo-param
+        sourceTime = _sourceTime->getValueAtTime(time);
+    } else {
+        bool reverse_input;
+        OfxRangeD srcRange = _srcClip->getFrameRange();
+        _reverse_input->getValueAtTime(time, reverse_input);
+        // we have our own param, which is a speed, so we integrate it to get the time we want
+        if (reverse_input) {
+            sourceTime = srcRange.max - _speed->integrate(srcRange.min, time);
+        } else {
+            sourceTime = srcRange.min + _speed->integrate(srcRange.min, time);
+        }
+    }
+    if (sourceTime == (int)sourceTime) {
+        identityClip = _srcClip;
+        identityTime = sourceTime;
+        return true;
+    }
+    return false;
+}
+
 
 /* override the time domain action, only for the general context */
 bool
@@ -353,28 +421,54 @@ RetimePlugin::getTimeDomain(OfxRangeD &range)
 void
 RetimePlugin::render(const OFX::RenderArguments &args)
 {
+    const double time = args.time;
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+
+    // figure the frame we should be retiming from
+    double sourceTime;
+
+    if (getContext() == OFX::eContextRetimer) {
+        // the host is specifying it, so fetch it from the kOfxImageEffectRetimerParamName pseudo-param
+        sourceTime = _sourceTime->getValueAtTime(time);
+    } else {
+        bool reverse_input;
+        OfxRangeD srcRange = _srcClip->getFrameRange();
+        _reverse_input->getValueAtTime(time, reverse_input);
+        // we have our own param, which is a speed, so we integrate it to get the time we want
+        if (reverse_input) {
+            sourceTime = srcRange.max - _speed->integrate(srcRange.min, time);
+        } else {
+            sourceTime = srcRange.min + _speed->integrate(srcRange.min, time);
+        }
+    }
+
+    if (sourceTime == (int)sourceTime) {
+        // should be caught by isIdentity!
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host should not render");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+    }
+
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
             case OFX::eBitDepthUByte: {
                 OFX::ImageBlender<unsigned char, 4> fred(*this);
-                setupAndProcess(fred, args);
+                setupAndProcess(fred, args, sourceTime);
             }   break;
 
             case OFX::eBitDepthUShort: {
                 OFX::ImageBlender<unsigned short, 4> fred(*this);
-                setupAndProcess(fred, args);
+                setupAndProcess(fred, args, sourceTime);
             }   break;
 
             case OFX::eBitDepthFloat: {
                 OFX::ImageBlender<float, 4> fred(*this);
-                setupAndProcess(fred, args);
+                setupAndProcess(fred, args, sourceTime);
             }   break;
             default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
@@ -383,17 +477,17 @@ RetimePlugin::render(const OFX::RenderArguments &args)
         switch (dstBitDepth) {
             case OFX::eBitDepthUByte: {
                 OFX::ImageBlender<unsigned char, 3> fred(*this);
-                setupAndProcess(fred, args);
+                setupAndProcess(fred, args, sourceTime);
             }   break;
 
             case OFX::eBitDepthUShort: {
                 OFX::ImageBlender<unsigned short, 3> fred(*this);
-                setupAndProcess(fred, args);
+                setupAndProcess(fred, args, sourceTime);
             }   break;
 
             case OFX::eBitDepthFloat: {
                 OFX::ImageBlender<float, 3> fred(*this);
-                setupAndProcess(fred, args);
+                setupAndProcess(fred, args, sourceTime);
             }   break;
             default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
@@ -403,17 +497,17 @@ RetimePlugin::render(const OFX::RenderArguments &args)
         switch(dstBitDepth) {
             case OFX::eBitDepthUByte: {
                 OFX::ImageBlender<unsigned char, 1> fred(*this);
-                setupAndProcess(fred, args);
+                setupAndProcess(fred, args, sourceTime);
             }   break;
 
             case OFX::eBitDepthUShort: {
                 OFX::ImageBlender<unsigned short, 1> fred(*this);
-                setupAndProcess(fred, args);
+                setupAndProcess(fred, args, sourceTime);
             }   break;
 
             case OFX::eBitDepthFloat: {
                 OFX::ImageBlender<float, 1> fred(*this);
-                setupAndProcess(fred, args);
+                setupAndProcess(fred, args, sourceTime);
             }   break;
             default:
                 OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
@@ -496,22 +590,33 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         (void)param;
     }  else {
         // We are a general or filter context, define a speed param and a page of controls to put that in
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSpeed);
-        param->setLabel(kParamSpeedLabel);
-        param->setHint(kParamSpeedHint);
-        param->setDefault(1);
-        param->setRange(-FLT_MAX, FLT_MAX);
-        param->setIncrement(0.05);
-        param->setDisplayRange(0.1, 10.);
-        param->setAnimates(true); // can animate
-        param->setDoubleType(eDoubleTypeScale);
-
         // make a page to put it in
         PageParamDescriptor *page = desc.definePageParam("Controls");
+        // reverse_input
+        {
+            BooleanParamDescriptor *param = desc.defineBooleanParam(kParamReverseInput);
+            param->setDefault(false);
+            param->setHint(kParamReverseInputHint);
+            param->setLabel(kParamReverseInputLabel);
+            param->setAnimates(true);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
 
-        // add our speed param into it
-        if (page) {
-            page->addChild(*param);
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSpeed);
+            param->setLabel(kParamSpeedLabel);
+            param->setHint(kParamSpeedHint);
+            param->setDefault(1);
+            param->setRange(-FLT_MAX, FLT_MAX);
+            param->setIncrement(0.05);
+            param->setDisplayRange(0.1, 10.);
+            param->setAnimates(true); // can animate
+            param->setDoubleType(eDoubleTypeScale);
+            if (page) {
+                page->addChild(*param);
+            }
         }
 
         // If we are a general context, we can change the duration of the effect, so have a param to do that
