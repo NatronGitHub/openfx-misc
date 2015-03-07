@@ -501,7 +501,7 @@ void ConstantPluginFactory<solid>::describe(OFX::ImageEffectDescriptor &desc)
 template<bool solid>
 void ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
-    gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName);
+    gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
     
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip( kOfxImageEffectSimpleSourceClipName );

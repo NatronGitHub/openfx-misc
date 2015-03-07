@@ -296,7 +296,7 @@ public:
         _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _operation = fetchChoiceParam(kParamOperation);
-        _operationString = fetchStringParam(kOfxParamStringSublabelName);
+        _operationString = fetchStringParam(kNatronOfxParamStringSublabelName);
         _bbox = fetchChoiceParam(kParamBbox);
         _alphaMasking = fetchBooleanParam(kParamAlphaMasking);
         assert(_operation && _operationString && _bbox && _alphaMasking);
@@ -669,8 +669,8 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kOfxNatronHostName ||
-                            (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kNatronOfxHostName ||
+                            (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName &&
                              OFX::getImageEffectHostDescription()->versionMajor >= 2));
 
     OFX::ClipDescriptor* srcClipB = desc.defineClip(kClipB);
@@ -738,7 +738,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
 
     // operationString
     {
-        StringParamDescriptor* param = desc.defineStringParam(kOfxParamStringSublabelName);
+        StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
         param->setIsSecret(true); // always secret
         param->setEnabled(false);
         param->setIsPersistant(true);
@@ -866,8 +866,8 @@ OFX::ImageEffect* MergePluginFactory::createInstance(OfxImageEffectHandle handle
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kOfxNatronHostName ||
-                            (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kNatronOfxHostName ||
+                            (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName &&
                              OFX::getImageEffectHostDescription()->versionMajor >= 2));
 
     return new MergePlugin(handle, numerousInputs);

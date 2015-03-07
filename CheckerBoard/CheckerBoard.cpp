@@ -676,7 +676,7 @@ void CheckerBoardPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
-    gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName);
+    gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
     
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip( kOfxImageEffectSimpleSourceClipName );

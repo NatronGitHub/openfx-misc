@@ -277,8 +277,8 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    //bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kOfxNatronHostName ||
-    //                        (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
+    //bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kNatronOfxHostName ||
+    //                        (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName &&
     //                         OFX::getImageEffectHostDescription()->versionMajor >= 2));
     const bool numerousInputs = true; // Natron 1.x was distributed with it
 
@@ -373,8 +373,8 @@ OFX::ImageEffect* SwitchPluginFactory::createInstance(OfxImageEffectHandle handl
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    //bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kOfxNatronHostName ||
-    //                        (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
+    //bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kNatronOfxHostName ||
+    //                        (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName &&
     //                         OFX::getImageEffectHostDescription()->versionMajor >= 2));
     const bool numerousInputs = true; // Natron 1.x was distributed with it
 

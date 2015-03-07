@@ -466,8 +466,8 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kOfxNatronHostName ||
-                            (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kNatronOfxHostName ||
+                            (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName &&
                              OFX::getImageEffectHostDescription()->versionMajor >= 2));
 
     int clipSourceCount = numerousInputs ? kClipSourceCount : 2;
@@ -578,8 +578,8 @@ DissolvePluginFactory::createInstance(OfxImageEffectHandle handle,
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kOfxNatronHostName ||
-                            (OFX::getImageEffectHostDescription()->hostName == kOfxNatronHostName &&
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kNatronOfxHostName ||
+                            (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName &&
                              OFX::getImageEffectHostDescription()->versionMajor >= 2));
 
     return new DissolvePlugin(handle, numerousInputs);
