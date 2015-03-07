@@ -459,12 +459,12 @@ class ColorCorrecter : public ColorCorrecterBase
 {
     
 public:
-    ColorCorrecter(OFX::ImageEffect &instance,const OFX::RenderArguments &args)
+    ColorCorrecter(OFX::ImageEffect &instance, const OFX::RenderArguments &args, bool supportsParametricParameter)
     : ColorCorrecterBase(instance,args)
     {
         // build the LUT
         OFX::ParametricParam  *lookupTable = 0;
-        if (OFX::getImageEffectHostDescription()->supportsParametricParameter) {
+        if (supportsParametricParameter) {
             lookupTable = instance.fetchParametricParam(kParamColorCorrectToneRanges);
         }
         for (int curve = 0; curve < 2; ++curve) {
@@ -657,8 +657,9 @@ public:
     };
     
     /** @brief ctor */
-    ColorCorrectPlugin(OfxImageEffectHandle handle)
+    ColorCorrectPlugin(OfxImageEffectHandle handle, bool supportsParametricParameter)
     : ImageEffect(handle)
+    , _supportsParametricParameter(supportsParametricParameter)
     , _dstClip(0)
     , _srcClip(0)
     , _maskClip(0)
@@ -684,7 +685,7 @@ public:
         fetchColorControlGroup(kGroupShadows, &_shadowsParamsGroup);
         fetchColorControlGroup(kGroupMidtones, &_midtonesParamsGroup);
         fetchColorControlGroup(kGroupHighlights, &_highlightsParamsGroup);
-        if (OFX::getImageEffectHostDescription()->supportsParametricParameter) {
+        if (_supportsParametricParameter) {
             _rangesParam = fetchParametricParam(kParamColorCorrectToneRanges);
             assert(_rangesParam);
         }
@@ -747,6 +748,7 @@ private:
     }
 
 private:
+    bool _supportsParametricParameter;
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
@@ -884,17 +886,17 @@ ColorCorrectPlugin::render(const OFX::RenderArguments &args)
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
             case OFX::eBitDepthUByte: {
-                ColorCorrecter<unsigned char, 4, 255> fred(*this,args);
+                ColorCorrecter<unsigned char, 4, 255> fred(*this, args, _supportsParametricParameter);
                 setupAndProcess(fred, args);
                 break;
             }
             case OFX::eBitDepthUShort: {
-                ColorCorrecter<unsigned short, 4, 65535> fred(*this,args);
+                ColorCorrecter<unsigned short, 4, 65535> fred(*this, args, _supportsParametricParameter);
                 setupAndProcess(fred, args);
                 break;
             }
             case OFX::eBitDepthFloat: {
-                ColorCorrecter<float, 4, 1> fred(*this,args);
+                ColorCorrecter<float, 4, 1> fred(*this, args, _supportsParametricParameter);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -906,17 +908,17 @@ ColorCorrectPlugin::render(const OFX::RenderArguments &args)
         assert(dstComponents == OFX::ePixelComponentRGB);
         switch (dstBitDepth) {
             case OFX::eBitDepthUByte: {
-                ColorCorrecter<unsigned char, 3, 255> fred(*this,args);
+                ColorCorrecter<unsigned char, 3, 255> fred(*this, args, _supportsParametricParameter);
                 setupAndProcess(fred, args);
                 break;
             }
             case OFX::eBitDepthUShort: {
-                ColorCorrecter<unsigned short, 3, 65535> fred(*this,args);
+                ColorCorrecter<unsigned short, 3, 65535> fred(*this, args, _supportsParametricParameter);
                 setupAndProcess(fred, args);
                 break;
             }
             case OFX::eBitDepthFloat: {
-                ColorCorrecter<float, 3, 1> fred(*this,args);
+                ColorCorrecter<float, 3, 1> fred(*this, args, _supportsParametricParameter);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -1128,7 +1130,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         maskClip->setSupportsTiles(kSupportsTiles);
         maskClip->setIsMask(true);
     }
-    
+
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
@@ -1181,7 +1183,11 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     
     PageParamDescriptor* ranges = desc.definePageParam("Ranges");
 
-    if (OFX::getImageEffectHostDescription()->supportsParametricParameter) {
+    const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+    const bool supportsParametricParameter = (gHostDescription.supportsParametricParameter &&
+                                              !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
+                                                (gHostDescription.versionMajor == 8 || gHostDescription.versionMajor == 9))); // Nuke 8 and 9 are known to *not* support Parametric
+    if (supportsParametricParameter) {
         OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamColorCorrectToneRanges);
         assert(param);
         param->setLabel(kParamColorCorrectToneRangesLabel);
@@ -1242,7 +1248,11 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
 
 OFX::ImageEffect* ColorCorrectPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
-    return new ColorCorrectPlugin(handle);
+    const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+    const bool supportsParametricParameter = (gHostDescription.supportsParametricParameter &&
+                                              !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
+                                                (gHostDescription.versionMajor == 8 || gHostDescription.versionMajor == 9)));
+    return new ColorCorrectPlugin(handle, supportsParametricParameter);
 }
 
 void getColorCorrectPluginID(OFX::PluginFactoryArray &ids)

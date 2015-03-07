@@ -163,16 +163,22 @@ A sample implementation of the three methods is given in [Mesa 3D](http://mesa3d
 
 If you use the Roto plugin in any other host than [Natron](http://natron.inria.fr), you will notice that it doesn't do much. Its role is just to provide an entry point for a host-based rotoscoping tool, which provides a roto mask to this plugin.
 
-### ColorLookup and ColorCorrect do not work on Nuke 8/9
+### ColorLookup does not work on Nuke 8/9, DaVinci Resolve...
 
-The plugins using parametric parameters (ColorLookup, ColorCorrect) don't work in Nuke 8 or Nuke 9 on OS X, and maybe on other platforms. The plugins cannot be instanciated, nothing seems to happen, and the following message appears on the console:
+Although Nuke 8 & 9 claim via OpenFX that they support parametric parameters (i.e. adjustable parametric curves), these don't work (at least on OS X, and maybe on other platforms). The plugins cannot be instanciated, nothing seems to happen, and the following message appears on the console:
 
     Exception thrown
       basic_string::_S_construct NULL not valid
 
 The same happens with other plugins using parametric parameters, such as [TuttleHistogramKeyer](http://www.tuttleofx.org/).
 
-Parametric parameters seem to work in older versions of Nuke (at least up to Nuke 6).
+Parametric parameters work in older versions of Nuke (at least in Nuke 6 & 7).
+
+DaVinci Resolve does not support parametric parameters.
+
+Please [file an issue](https://github.com/devernay/openfx-misc/issues) if you think openfx-misc is doing something wrong, or you know of other hosts which have problems with parametric paremeters.
+
+Although ColorCorrect uses parametric parameters, it can still be instanciated on Nuke 8 & 9 and on DaVinci Resolve, but the curve ranges are not adjustable (shadows are decreasing linearly from 0 to 0.09, and highlights are increasing linearly from 0.5 to 1.0).
 
 Installation
 ------------
