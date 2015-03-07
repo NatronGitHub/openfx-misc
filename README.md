@@ -165,7 +165,7 @@ If you use the Roto plugin in any other host than [Natron](http://natron.inria.f
 
 ### ColorLookup does not work on Nuke 8/9, DaVinci Resolve...
 
-Although Nuke 8 & 9 claim via OpenFX that they support parametric parameters (i.e. adjustable parametric curves), these don't work (at least on OS X, and maybe on other platforms). The plugins cannot be instanciated, nothing seems to happen, and the following message appears on the console:
+Although Nuke 8 & 9 claim via OpenFX that they support parametric parameters (i.e. adjustable parametric curves), these don't work (at least on OS X, and maybe on other platforms). The plugin appears in the plugin list, but cannot be instanciated. Nothing seems to happen, and the following message appears on the console (on OS X):
 
     Exception thrown
       basic_string::_S_construct NULL not valid
