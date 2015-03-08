@@ -432,8 +432,9 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *uvPix = (const PIX *)  (_uvImg ? _uvImg->getPixelAddress(x, y) : 0);
-                double fx = x + ((uImg ? (uvPix ? uvPix[uComp] : PIX()) : uComp) - _uOffset) * _uScale;
-                double fy = x + ((vImg ? (uvPix ? uvPix[vComp] : PIX()) : vComp) - _vOffset) * _vScale;
+                // add 0.5 to get the canonical coords of the pixel center
+                double fx = (x + 0.5) + ((uImg ? (uvPix ? uvPix[uComp] : PIX()) : uComp) - _uOffset) * _uScale;
+                double fy = (y + 0.5) + ((vImg ? (uvPix ? uvPix[vComp] : PIX()) : vComp) - _vOffset) * _vScale;
                 // TODO: ofxsFilterInterpolate2DSuper
                 ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
                 ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImg, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
@@ -653,7 +654,7 @@ IDistortPlugin::setupAndProcess(IDistortProcessorBase &processor, const OFX::Ren
     double mix;
     _mix->getValueAtTime(time, mix);
     processor.setValues(processR, processG, processB, processA,
-                        uChannel, vChannel, uOffset, vOffset, uScale, vScale, blackOutside, mix);
+                        uChannel, vChannel, uOffset, vOffset, uScale * args.renderScale.x, vScale * args.renderScale.y, blackOutside, mix);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
