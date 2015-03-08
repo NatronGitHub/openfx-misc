@@ -318,12 +318,13 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     }
 
     if (numerousInputs) {
-        for (int i = 0; i < clipSourceCount; ++i) {
+        for (int i = 2; i < clipSourceCount; ++i) {
             assert(i < 100);
             ClipDescriptor *srcClip;
             char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
             name[0] = (i < 10) ? ('0' + i) : ('0' + i / 10);
             name[1] = (i < 10) ?         0 : ('0' + i % 10);
+            srcClip = desc.defineClip(name);
             srcClip->setOptional(true);
             srcClip->addSupportedComponent(ePixelComponentNone);
             srcClip->addSupportedComponent(ePixelComponentRGB);
