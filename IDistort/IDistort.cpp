@@ -110,9 +110,22 @@
 "The U and V channels give the offset in pixels in the destination image to the pixel where the color is taken. " \
 "For example, if at pixel (45,12) the UV value is (-1.5,3.2), then the color at this pixel is taken from (43.5,15.2) in the source image. " \
 "This plugin concatenates transforms upstream, so that if the nodes upstream output a 3x3 transform " \
-"(e.g. Transform, CornerPin, Dot, NoOp, Switch), the image is sampled only once." \
+"(e.g. Transform, CornerPin, Dot, NoOp, Switch), the original image is sampled only once." \
 
 #define kPluginIdentifier "net.sf.openfx.IDistort"
+
+#define kPluginSTMapName "STMapOFX"
+#define kPluginSTMapGrouping "Transform"
+#define kPluginSTMapDescription \
+"Move pixels around an image, based on a UVmap.\n" \
+"The U and V channels give, for each pixel in the destination image, the normalized position of the pixel where the color is taken. " \
+"(0,0) is the bottom left corner of the input image, while (1,1) is the top right corner. " \
+"This plugin concatenates transforms upstream, so that if the nodes upstream output a 3x3 transform " \
+"(e.g. Transform, CornerPin, Dot, NoOp, Switch), the original image is sampled only once." \
+
+#define kPluginSTMapIdentifier "net.sf.openfx.STMap"
+
+
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -260,7 +273,7 @@ private:
 
 // The "filter" and "clamp" template parameters allow filter-specific optimization
 // by the compiler, using the same generic code for all filters.
-template <class PIX, int nComponents, int maxValue, FilterEnum filter, bool clamp>
+template <class PIX, int nComponents, int maxValue, bool isSTMap, FilterEnum filter, bool clamp>
 class IDistortProcessor : public IDistortProcessorBase
 {
 public:
@@ -421,7 +434,19 @@ private:
         int vComp = 0;
         compFromChannel(_uChannel, &uImg, &uComp);
         compFromChannel(_vChannel, &vImg, &vComp);
-
+        double transform[9]; // transform to apply to the source image, in pixel coordinates, from source to destination
+        bool transformIsIdentity = _srcImg->getTransformIsIdentity();
+        if (!transformIsIdentity) {
+            _srcImg->getTransform(transform);
+        }
+        int srcx1 = 0, srcx2 = 1, srcy1 = 0, srcy2 = 0;
+        if (_srcImg) {
+            const OfxRectI& srcBounds = _srcImg->getBounds();
+            srcx1 = srcBounds.x1;
+            srcx2 = srcBounds.x2;
+            srcy1 = srcBounds.y1;
+            srcy2 = srcBounds.y2;
+        }
         float tmpPix[4];
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
@@ -432,9 +457,30 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *uvPix = (const PIX *)  (_uvImg ? _uvImg->getPixelAddress(x, y) : 0);
-                // add 0.5 to get the canonical coords of the pixel center
-                double fx = (x + 0.5) + ((uImg ? (uvPix ? uvPix[uComp] : PIX()) : uComp) - _uOffset) * _uScale;
-                double fy = (y + 0.5) + ((vImg ? (uvPix ? uvPix[vComp] : PIX()) : vComp) - _vOffset) * _vScale;
+                double sx, sy;
+                if (isSTMap) {
+                    sx = srcx1 + ((uImg ? (uvPix ? uvPix[uComp] : PIX()) : uComp) - _uOffset) * _uScale * (srcx2 - srcx1);
+                    sy = srcy1 + ((vImg ? (uvPix ? uvPix[vComp] : PIX()) : vComp) - _vOffset) * _vScale * (srcy2 - srcy1);
+                } else {
+                    sx = x + ((uImg ? (uvPix ? uvPix[uComp] : PIX()) : uComp) - _uOffset) * _uScale;
+                    sy = y + ((vImg ? (uvPix ? uvPix[vComp] : PIX()) : vComp) - _vOffset) * _vScale;
+                }
+                // add 0.5 to get the coords of the pixel center
+                double fx, fy;
+                if (transformIsIdentity) {
+                    fx = sx + 0.5;
+                    fy = sy + 0.5;
+                } else {
+                    double fz = transform[6]*sx + transform[7]*sy + transform[8];
+                    if (fz == 0) {
+                        fx = std::numeric_limits<double>::infinity();
+                        fy = std::numeric_limits<double>::infinity();
+                    } else {
+                        fx = (transform[0]*sx + transform[1]*sy + transform[2])/fz + 0.5;
+                        fy = (transform[3]*sx + transform[4]*sy + transform[5])/fz + 0.5;
+                    }
+                }
+
                 // TODO: ofxsFilterInterpolate2DSuper
                 ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
                 ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImg, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
@@ -476,12 +522,26 @@ class IDistortPlugin : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
-    IDistortPlugin(OfxImageEffectHandle handle)
+    IDistortPlugin(OfxImageEffectHandle handle, bool isSTMap)
     : ImageEffect(handle)
     , _dstClip(0)
     , _srcClip(0)
     , _uvClip(0)
     , _maskClip(0)
+    , _processR(0)
+    , _processG(0)
+    , _processB(0)
+    , _processA(0)
+    , _uChannel(0)
+    , _vChannel(0)
+    , _uvOffset(0)
+    , _uvScale(0)
+    , _filter(0)
+    , _clamp(0)
+    , _blackOutside(0)
+    , _mix(0)
+    , _maskInvert(0)
+    , _isSTMap(isSTMap)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));
@@ -520,10 +580,10 @@ private:
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     /* internal render function */
-    template <class PIX, int nComponents, int maxValue>
+    template <class PIX, int nComponents, int maxValue, bool isSTMap>
     void renderInternalForBitDepth(const OFX::RenderArguments &args);
 
-    template <int nComponents>
+    template <int nComponents, bool isSTMap>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
     
     /* set up and run a processor */
@@ -550,6 +610,7 @@ private:
     OFX::BooleanParam* _blackOutside;
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskInvert;
+    bool _isSTMap;
 };
 
 
@@ -660,7 +721,7 @@ IDistortPlugin::setupAndProcess(IDistortProcessorBase &processor, const OFX::Ren
     processor.process();
 }
 
-template <class PIX, int nComponents, int maxValue>
+template <class PIX, int nComponents, int maxValue, bool isSTMap>
 void
 IDistortPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
 {
@@ -678,63 +739,63 @@ IDistortPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
     // "clamped" by construction.
     switch ( (FilterEnum)filter ) {
         case eFilterImpulse: {
-            IDistortProcessor<PIX, nComponents, maxValue, eFilterImpulse, false> fred(*this);
+            IDistortProcessor<PIX, nComponents, maxValue, isSTMap, eFilterImpulse, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         case eFilterBilinear: {
-            IDistortProcessor<PIX, nComponents, maxValue, eFilterBilinear, false> fred(*this);
+            IDistortProcessor<PIX, nComponents, maxValue, isSTMap, eFilterBilinear, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         case eFilterCubic: {
-            IDistortProcessor<PIX, nComponents, maxValue, eFilterCubic, false> fred(*this);
+            IDistortProcessor<PIX, nComponents, maxValue, isSTMap, eFilterCubic, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         case eFilterKeys:
             if (clamp) {
-                IDistortProcessor<PIX, nComponents, maxValue, eFilterKeys, true> fred(*this);
+                IDistortProcessor<PIX, nComponents, maxValue, isSTMap, eFilterKeys, true> fred(*this);
                 setupAndProcess(fred, args);
             } else {
-                IDistortProcessor<PIX, nComponents, maxValue, eFilterKeys, false> fred(*this);
+                IDistortProcessor<PIX, nComponents, maxValue, isSTMap, eFilterKeys, false> fred(*this);
                 setupAndProcess(fred, args);
             }
             break;
         case eFilterSimon:
             if (clamp) {
-                IDistortProcessor<PIX, nComponents, maxValue, eFilterSimon, true> fred(*this);
+                IDistortProcessor<PIX, nComponents, maxValue, isSTMap, eFilterSimon, true> fred(*this);
                 setupAndProcess(fred, args);
             } else {
-                IDistortProcessor<PIX, nComponents, maxValue, eFilterSimon, false> fred(*this);
+                IDistortProcessor<PIX, nComponents, maxValue, isSTMap, eFilterSimon, false> fred(*this);
                 setupAndProcess(fred, args);
             }
             break;
         case eFilterRifman:
             if (clamp) {
-                IDistortProcessor<PIX, nComponents, maxValue, eFilterRifman, true> fred(*this);
+                IDistortProcessor<PIX, nComponents, maxValue, isSTMap, eFilterRifman, true> fred(*this);
                 setupAndProcess(fred, args);
             } else {
-                IDistortProcessor<PIX, nComponents, maxValue, eFilterRifman, false> fred(*this);
+                IDistortProcessor<PIX, nComponents, maxValue, isSTMap, eFilterRifman, false> fred(*this);
                 setupAndProcess(fred, args);
             }
             break;
         case eFilterMitchell:
             if (clamp) {
-                IDistortProcessor<PIX, nComponents, maxValue, eFilterMitchell, true> fred(*this);
+                IDistortProcessor<PIX, nComponents, maxValue, isSTMap, eFilterMitchell, true> fred(*this);
                 setupAndProcess(fred, args);
             } else {
-                IDistortProcessor<PIX, nComponents, maxValue, eFilterMitchell, false> fred(*this);
+                IDistortProcessor<PIX, nComponents, maxValue, isSTMap, eFilterMitchell, false> fred(*this);
                 setupAndProcess(fred, args);
             }
             break;
         case eFilterParzen: {
-            IDistortProcessor<PIX, nComponents, maxValue, eFilterParzen, false> fred(*this);
+            IDistortProcessor<PIX, nComponents, maxValue, isSTMap, eFilterParzen, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         case eFilterNotch: {
-            IDistortProcessor<PIX, nComponents, maxValue, eFilterNotch, false> fred(*this);
+            IDistortProcessor<PIX, nComponents, maxValue, isSTMap, eFilterNotch, false> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
@@ -742,20 +803,20 @@ IDistortPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
 } // renderInternalForBitDepth
 
 // the internal render function
-template <int nComponents>
+template <int nComponents, bool isSTMap>
 void
 IDistortPlugin::renderInternal(const OFX::RenderArguments &args,
                                    OFX::BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
         case OFX::eBitDepthUByte:
-            renderInternalForBitDepth<unsigned char, nComponents, 255>(args);
+            renderInternalForBitDepth<unsigned char, nComponents, 255, isSTMap>(args);
             break;
         case OFX::eBitDepthUShort:
-            renderInternalForBitDepth<unsigned short, nComponents, 65535>(args);
+            renderInternalForBitDepth<unsigned short, nComponents, 65535, isSTMap>(args);
             break;
         case OFX::eBitDepthFloat:
-            renderInternalForBitDepth<float, nComponents, 1>(args);
+            renderInternalForBitDepth<float, nComponents, 1, isSTMap>(args);
             break;
         default:
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
@@ -775,12 +836,24 @@ IDistortPlugin::render(const OFX::RenderArguments &args)
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
-        renderInternal<4>(args, dstBitDepth);
+        if (_isSTMap) {
+            renderInternal<4, true>(args, dstBitDepth);
+        } else {
+            renderInternal<4, false>(args, dstBitDepth);
+        }
     } else if (dstComponents == OFX::ePixelComponentRGB) {
-        renderInternal<3>(args, dstBitDepth);
+        if (_isSTMap) {
+            renderInternal<3, true>(args, dstBitDepth);
+        } else {
+            renderInternal<3, false>(args, dstBitDepth);
+        }
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        renderInternal<1>(args, dstBitDepth);
+        if (_isSTMap) {
+            renderInternal<1, true>(args, dstBitDepth);
+        } else {
+            renderInternal<1, false>(args, dstBitDepth);
+        }
     }
 }
 
@@ -847,14 +920,30 @@ IDistortPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
     return true;
 }
 
-mDeclarePluginFactory(IDistortPluginFactory, {}, {});
+//mDeclarePluginFactory(IDistortPluginFactory, {}, {});
+template<bool isSTMap>
+class IDistortPluginFactory : public OFX::PluginFactoryHelper<IDistortPluginFactory<isSTMap> >
+{
+public:
+    IDistortPluginFactory<isSTMap>(const std::string& id, unsigned int verMaj, unsigned int verMin):OFX::PluginFactoryHelper<IDistortPluginFactory>(id, verMaj, verMin){}
+    virtual void describe(OFX::ImageEffectDescriptor &desc);
+    virtual void describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
+    virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context);
+};
 
-void IDistortPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+template<bool isSTMap>
+void IDistortPluginFactory<isSTMap>::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabel(kPluginName);
-    desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+    if (isSTMap) {
+        desc.setLabel(kPluginSTMapName);
+        desc.setPluginGrouping(kPluginSTMapGrouping);
+        desc.setPluginDescription(kPluginSTMapDescription);
+    } else {
+        desc.setLabel(kPluginName);
+        desc.setPluginGrouping(kPluginGrouping);
+        desc.setPluginDescription(kPluginDescription);
+    }
 
     //desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -893,7 +982,8 @@ addInputChannelOtions(ChoiceParamDescriptor* channel, InputChannelEnum def)
     channel->setDefault(def);
 }
 
-void IDistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+template<bool isSTMap>
+void IDistortPluginFactory<isSTMap>::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -902,6 +992,7 @@ void IDistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
+    srcClip->setCanTransform(true);
     srcClip->setIsMask(false);
 
     // create the uv clip
@@ -1016,13 +1107,20 @@ void IDistortPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     ofxsMaskMixDescribeParams(desc, page);
 }
 
-OFX::ImageEffect* IDistortPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+template<bool isSTMap>
+OFX::ImageEffect* IDistortPluginFactory<isSTMap>::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
-    return new IDistortPlugin(handle);
+    return new IDistortPlugin(handle, isSTMap);
 }
 
 void getIDistortPluginID(OFX::PluginFactoryArray &ids)
 {
-    static IDistortPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
+    {
+        static IDistortPluginFactory<false> p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static IDistortPluginFactory<true> p(kPluginSTMapIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
 }
