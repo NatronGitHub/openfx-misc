@@ -101,6 +101,7 @@
 #include "ofxsMerging.h"
 #include "ofxsMaskMix.h"
 #include "ofxsFilter.h"
+#include "ofxsMatrix2D.h"
 #include "ofxsMacros.h"
 
 #define kPluginName "IDistortOFX"
@@ -201,6 +202,8 @@ protected:
     bool _processG;
     bool _processB;
     bool _processA;
+    bool _transformIsIdentity;
+    OFX::Matrix3x3 _srcTransformInverse;
     InputChannelEnum _uChannel;
     InputChannelEnum _vChannel;
     double _uOffset;
@@ -222,6 +225,8 @@ public:
     , _processG(true)
     , _processB(true)
     , _processA(false)
+    , _transformIsIdentity(true)
+    , _srcTransformInverse()
     , _uOffset(0.)
     , _vOffset(0.)
     , _uScale(1.)
@@ -243,6 +248,8 @@ public:
                    bool processG,
                    bool processB,
                    bool processA,
+                   bool transformIsIdentity,
+                   const OFX::Matrix3x3 &srcTransformInverse,
                    InputChannelEnum uChannel,
                    InputChannelEnum vChannel,
                    double uOffset,
@@ -256,6 +263,8 @@ public:
         _processG = processG;
         _processB = processB;
         _processA = processA;
+        _transformIsIdentity = transformIsIdentity;
+        _srcTransformInverse = srcTransformInverse;
         _uChannel = uChannel;
         _vChannel = vChannel;
         _uOffset = uOffset;
@@ -434,13 +443,8 @@ private:
         int vComp = 0;
         compFromChannel(_uChannel, &uImg, &uComp);
         compFromChannel(_vChannel, &vImg, &vComp);
-        double transform[9]; // transform to apply to the source image, in pixel coordinates, from source to destination
-        bool transformIsIdentity = _srcImg->getTransformIsIdentity();
-        if (!transformIsIdentity) {
-            _srcImg->getTransform(transform);
-        }
         int srcx1 = 0, srcx2 = 1, srcy1 = 0, srcy2 = 0;
-        if (_srcImg) {
+        if (isSTMap && _srcImg) {
             const OfxRectI& srcBounds = _srcImg->getBounds();
             srcx1 = srcBounds.x1;
             srcx2 = srcBounds.x2;
@@ -467,17 +471,17 @@ private:
                 }
                 // add 0.5 to get the coords of the pixel center
                 double fx, fy;
-                if (transformIsIdentity) {
+                if (_transformIsIdentity) {
                     fx = sx + 0.5;
                     fy = sy + 0.5;
                 } else {
-                    double fz = transform[6]*sx + transform[7]*sy + transform[8];
+                    double fz = _srcTransformInverse.g*sx + _srcTransformInverse.h*sy + _srcTransformInverse.i;
                     if (fz == 0) {
                         fx = std::numeric_limits<double>::infinity();
                         fy = std::numeric_limits<double>::infinity();
                     } else {
-                        fx = (transform[0]*sx + transform[1]*sy + transform[2])/fz + 0.5;
-                        fy = (transform[3]*sx + transform[4]*sy + transform[5])/fz + 0.5;
+                        fx = (_srcTransformInverse.a*sx + _srcTransformInverse.b*sy + _srcTransformInverse.c)/fz + 0.5;
+                        fy = (_srcTransformInverse.d*sx + _srcTransformInverse.e*sy + _srcTransformInverse.f)/fz + 0.5;
                     }
                 }
 
@@ -714,7 +718,32 @@ IDistortPlugin::setupAndProcess(IDistortProcessorBase &processor, const OFX::Ren
     _blackOutside->getValueAtTime(time, blackOutside);
     double mix;
     _mix->getValueAtTime(time, mix);
+
+    bool transformIsIdentity = src->getTransformIsIdentity();
+    OFX::Matrix3x3 srcTransformInverse;
+    if (!transformIsIdentity) {
+        double srcTransform[9]; // transform to apply to the source image, in pixel coordinates, from source to destination
+        src->getTransform(srcTransform);
+        OFX::Matrix3x3 srcTransformMat;
+        srcTransformMat.a = srcTransform[0];
+        srcTransformMat.b = srcTransform[1];
+        srcTransformMat.c = srcTransform[2];
+        srcTransformMat.d = srcTransform[3];
+        srcTransformMat.e = srcTransform[4];
+        srcTransformMat.f = srcTransform[5];
+        srcTransformMat.g = srcTransform[6];
+        srcTransformMat.h = srcTransform[7];
+        srcTransformMat.i = srcTransform[8];
+        // invert it
+        double det = ofxsMatDeterminant(srcTransformMat);
+        if (det != 0.) {
+            srcTransformInverse = ofxsMatInverse(srcTransformMat, det);
+        } else {
+            transformIsIdentity = true; // no transform
+        }
+    }
     processor.setValues(processR, processG, processB, processA,
+                        transformIsIdentity, srcTransformInverse,
                         uChannel, vChannel, uOffset, vOffset, uScale * args.renderScale.x, vScale * args.renderScale.y, blackOutside, mix);
 
     // Call the base class process member, this will call the derived templated process code
@@ -1087,6 +1116,8 @@ void IDistortPluginFactory<isSTMap>::describeInContext(OFX::ImageEffectDescripto
         Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamUVOffset);
         param->setLabel(kParamUVOffsetLabel);
         param->setHint(kParamUVOffsetHint);
+        param->setDefault(0., 0.);
+        param->setDisplayRange(0., 0., 1., 1.);
         param->setDimensionLabels("U", "V");
         if (page) {
             page->addChild(*param);
@@ -1096,7 +1127,9 @@ void IDistortPluginFactory<isSTMap>::describeInContext(OFX::ImageEffectDescripto
         Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamUVScale);
         param->setLabel(kParamUVScaleLabel);
         param->setHint(kParamUVScaleHint);
+        param->setDoubleType(eDoubleTypeScale);
         param->setDefault(1., 1.);
+        param->setDisplayRange(0., 0., 100., 100.);
         param->setDimensionLabels("U", "V");
         if (page) {
             page->addChild(*param);
