@@ -20,6 +20,7 @@
 #include "GodRays.h"
 #include "Grade.h"
 #include "HSVTool.h"
+#include "IDistort.h"
 #include "ImageStatistics.h"
 #include "Invert.h"
 #include "JoinViews.h"
@@ -77,6 +78,7 @@ namespace OFX
             getGodRaysPluginID(ids);
             getGradePluginID(ids);
             getHSVToolPluginID(ids);
+            getIDistortPluginID(ids);
             getImageStatisticsPluginID(ids);
             getInvertPluginID(ids);
             getJoinViewsPluginID(ids);

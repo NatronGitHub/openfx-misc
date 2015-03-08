@@ -24,6 +24,7 @@ GodRays \
 Grade \
 ColorTransform \
 HSVTool \
+IDistort \
 ImageStatistics \
 Invert \
 JoinViews \
