@@ -102,18 +102,19 @@
 #include "ofxsMaskMix.h"
 #include "ofxsFilter.h"
 #include "ofxsMatrix2D.h"
+#include "ofxsCopier.h"
 #include "ofxsMacros.h"
 
-#define kPluginName "IDistortOFX"
-#define kPluginGrouping "Transform"
-#define kPluginDescription \
+#define kPluginIDistortName "IDistortOFX"
+#define kPluginIDistortGrouping "Transform"
+#define kPluginIDistortDescription \
 "Distort an image, based on UV channels.\n" \
 "The U and V channels give the offset in pixels in the destination image to the pixel where the color is taken. " \
 "For example, if at pixel (45,12) the UV value is (-1.5,3.2), then the color at this pixel is taken from (43.5,15.2) in the source image. " \
 "This plugin concatenates transforms upstream, so that if the nodes upstream output a 3x3 transform " \
 "(e.g. Transform, CornerPin, Dot, NoOp, Switch), the original image is sampled only once." \
 
-#define kPluginIdentifier "net.sf.openfx.IDistort"
+#define kPluginIDistortIdentifier "net.sf.openfx.IDistort"
 
 #define kPluginSTMapName "STMapOFX"
 #define kPluginSTMapGrouping "Transform"
@@ -463,8 +464,8 @@ private:
                 const PIX *uvPix = (const PIX *)  (_uvImg ? _uvImg->getPixelAddress(x, y) : 0);
                 double sx, sy;
                 if (isSTMap) {
-                    sx = srcx1 + ((uImg ? (uvPix ? uvPix[uComp] : PIX()) : uComp) - _uOffset) * _uScale * (srcx2 - srcx1);
-                    sy = srcy1 + ((vImg ? (uvPix ? uvPix[vComp] : PIX()) : vComp) - _vOffset) * _vScale * (srcy2 - srcy1);
+                    sx = srcx1 + ((uImg ? (uvPix ? uvPix[uComp] : PIX()) : uComp) - _uOffset) * _uScale * (srcx2 - srcx1) - 0.5;
+                    sy = srcy1 + ((vImg ? (uvPix ? uvPix[vComp] : PIX()) : vComp) - _vOffset) * _vScale * (srcy2 - srcy1) - 0.5;
                 } else {
                     sx = x + ((uImg ? (uvPix ? uvPix[uComp] : PIX()) : uComp) - _uOffset) * _uScale;
                     sy = y + ((vImg ? (uvPix ? uvPix[vComp] : PIX()) : vComp) - _vOffset) * _vScale;
@@ -661,6 +662,7 @@ IDistortPlugin::setupAndProcess(IDistortProcessorBase &processor, const OFX::Ren
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+
     std::auto_ptr<const OFX::Image> uv((_uvClip && _uvClip->isConnected()) ?
                                         _uvClip->fetchImage(time) : 0);
     if (uv.get()) {
@@ -719,7 +721,7 @@ IDistortPlugin::setupAndProcess(IDistortProcessorBase &processor, const OFX::Ren
     double mix;
     _mix->getValueAtTime(time, mix);
 
-    bool transformIsIdentity = src->getTransformIsIdentity();
+    bool transformIsIdentity = src.get() ? src->getTransformIsIdentity() : true;
     OFX::Matrix3x3 srcTransformInverse;
     if (!transformIsIdentity) {
         double srcTransform[9]; // transform to apply to the source image, in pixel coordinates, from source to destination
@@ -742,9 +744,16 @@ IDistortPlugin::setupAndProcess(IDistortProcessorBase &processor, const OFX::Ren
             transformIsIdentity = true; // no transform
         }
     }
+    if (!_isSTMap) {
+        uScale *= args.renderScale.x;
+        vScale *= args.renderScale.y;
+    }
     processor.setValues(processR, processG, processB, processA,
                         transformIsIdentity, srcTransformInverse,
-                        uChannel, vChannel, uOffset, vOffset, uScale * args.renderScale.x, vScale * args.renderScale.y, blackOutside, mix);
+                        uChannel, vChannel,
+                        uOffset, vOffset,
+                        uScale, vScale,
+                        blackOutside, mix);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -943,10 +952,20 @@ bool
 IDistortPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     const double time = args.time;
-    // RoD is the same as srcClip
-    rod = _srcClip->getRegionOfDefinition(time);
-
-    return true;
+    if (_isSTMap) {
+        if (_uvClip) {
+            // IDistort: RoD is the same as uv map
+            rod = _uvClip->getRegionOfDefinition(time);
+            return true;
+        }
+    } else {
+        if (_srcClip) {
+            // IDistort: RoD is the same as srcClip
+            rod = _srcClip->getRegionOfDefinition(time);
+            return true;
+        }
+    }
+    return false;
 }
 
 //mDeclarePluginFactory(IDistortPluginFactory, {}, {});
@@ -969,9 +988,9 @@ void IDistortPluginFactory<isSTMap>::describe(OFX::ImageEffectDescriptor &desc)
         desc.setPluginGrouping(kPluginSTMapGrouping);
         desc.setPluginDescription(kPluginSTMapDescription);
     } else {
-        desc.setLabel(kPluginName);
-        desc.setPluginGrouping(kPluginGrouping);
-        desc.setPluginDescription(kPluginDescription);
+        desc.setLabel(kPluginIDistortName);
+        desc.setPluginGrouping(kPluginIDistortGrouping);
+        desc.setPluginDescription(kPluginIDistortDescription);
     }
 
     //desc.addSupportedContext(eContextFilter);
@@ -1149,7 +1168,7 @@ OFX::ImageEffect* IDistortPluginFactory<isSTMap>::createInstance(OfxImageEffectH
 void getIDistortPluginID(OFX::PluginFactoryArray &ids)
 {
     {
-        static IDistortPluginFactory<false> p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        static IDistortPluginFactory<false> p(kPluginIDistortIdentifier, kPluginVersionMajor, kPluginVersionMinor);
         ids.push_back(&p);
     }
     {
