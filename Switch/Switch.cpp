@@ -123,6 +123,9 @@ private:
     /* override is identity */
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
+    // override the roi call
+    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
+
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 #ifdef OFX_EXTENSIONS_NUKE
@@ -175,6 +178,23 @@ SwitchPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &iden
     input = std::max(0, std::min(input, (int)_srcClip.size()-1));
     identityClip = _srcClip[input];
     return true;
+}
+
+// override the roi call
+// Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
+// (this is the case here)
+void
+SwitchPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+{
+    int input;
+    _which->getValueAtTime(args.time, input);
+    input = std::max(0, std::min(input, (int)_srcClip.size()-1));
+    const OfxRectD emptyRoI = {0., 0., 0., 0.};
+    for (unsigned i = 0; i < _srcClip.size(); ++i) {
+        if (i != (unsigned)input) {
+            rois.setRegionOfInterest(*_srcClip[i], emptyRoI);
+        }
+    }
 }
 
 bool

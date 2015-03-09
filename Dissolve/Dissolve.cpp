@@ -72,12 +72,15 @@
 
 #include "Dissolve.h"
 
+#include <cmath>
+
 #include "ofxsImageEffect.h"
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
 #include "ofxsImageBlenderMasked.h"
 #include "ofxsMaskMix.h"
+#include "ofxsCopier.h"
 #include "ofxsMacros.h"
 #include "ofxNatron.h"
 
@@ -149,6 +152,9 @@ public:
 
     /* override is identity */
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+
+    // override the roi call
+    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
 
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
@@ -222,8 +228,28 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
 
     // get the transition value
     double which = std::max(0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size()-1));
-    int prev = (int)which;
-    int next = std::min((int)which+1,(int)_srcClip.size()-1);
+    int prev = std::floor(which);
+    int next = std::ceil(which);
+
+    if (prev == next) {
+        std::auto_ptr<const OFX::Image> src((_srcClip[prev] && _srcClip[prev]->isConnected()) ?
+                                            _srcClip[prev]->fetchImage(args.time) : 0);
+        if (src.get()) {
+            if (src->getRenderScale().x != args.renderScale.x ||
+                src->getRenderScale().y != args.renderScale.y ||
+                (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+            }
+            OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+            OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+            if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            }
+        }
+        copyPixels(*this, args.renderWindow, src.get(), dst.get());
+        return;
+    }
 
     // fetch the two source images
     std::auto_ptr<const OFX::Image> fromImg((_srcClip[prev] && _srcClip[prev]->isConnected()) ?
@@ -376,6 +402,23 @@ DissolvePlugin::isIdentity(const OFX::IsIdentityArguments &args,
 
     // nope, identity we isnt
     return false;
+}
+
+// override the roi call
+// Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
+// (this is the case here)
+void
+DissolvePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+{
+    double which = std::max(0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size()-1));
+    unsigned prev = std::floor(which);
+    unsigned next = std::ceil(which);
+    const OfxRectD emptyRoI = {0., 0., 0., 0.};
+    for (unsigned i = 0; i < _srcClip.size(); ++i) {
+        if (i != prev && i != next) {
+            rois.setRegionOfInterest(*_srcClip[i], emptyRoI);
+        }
+    }
 }
 
 bool
