@@ -189,6 +189,9 @@ public:
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    
+    /** @brief get the frame/views needed for input clips*/
+    virtual void getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(CopierBase &, const OFX::RenderArguments &args);
@@ -201,6 +204,18 @@ private:
     OFX::ChoiceParam     *_view;
 };
 
+
+void
+OneViewPlugin::getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews)
+{
+    int view;
+    _view->getValueAtTime(args.time, view);
+    
+    OfxRangeD range;
+    range.min = range.max = args.time;
+    
+    frameViews.addFrameViewsNeeded(*_srcClip,range , view);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */
@@ -390,6 +405,15 @@ void OneViewPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
+    //We only render color plane
+    desc.setIsMultiPlanar(false);
+    
+    //We're using the view calls (i.e: getFrameViewsNeeded)
+    desc.setIsViewAware(true);
+    
+    //We render the same thing on all views
+    desc.setIsViewInvariant(true);
+    
     // returning an error here crashes Nuke
     //if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
     //  throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
@@ -398,8 +422,10 @@ void OneViewPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void OneViewPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
-    if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
-        throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+    
+    if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) &&
+        !OFX::fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true)) {
+        throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
     }
 
     // Source clip only in the filter context

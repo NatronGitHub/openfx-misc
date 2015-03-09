@@ -188,6 +188,9 @@ public:
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
+    
+    /** @brief get the frame/views needed for input clips*/
+    virtual void getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(CopierBase &, const OFX::RenderArguments &args);
@@ -199,6 +202,17 @@ private:
     OFX::Clip *_srcRightClip;
 };
 
+
+void
+JoinViewsPlugin::getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews)
+{
+    OfxRangeD range;
+    range.min = range.max = args.time;
+    
+    //Always fetch the view 0 on source clips
+    frameViews.addFrameViewsNeeded(*_srcLeftClip, range, 0);
+    frameViews.addFrameViewsNeeded(*_srcRightClip, range, 0);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */
@@ -391,6 +405,16 @@ void JoinViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
+    //We only render color plane
+    desc.setIsMultiPlanar(false);
+    
+    //We're using the view calls (i.e: getFrameViewsNeeded)
+    desc.setIsViewAware(true);
+    
+    //We do not render the same thing on all views
+    desc.setIsViewInvariant(true);
+
+    
     // returning an error here crashes Nuke
     //if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
     //  throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
@@ -399,8 +423,9 @@ void JoinViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void JoinViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
-    if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
-        throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+    if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true) &&
+        !OFX::fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true)) {
+        throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
     }
 
     // create the source clips from the rightmost one (in Nuke's GUI) to the leftmost
