@@ -181,6 +181,27 @@ enum InputChannelEnum {
     eInputChannel1,
 };
 
+#define kParamWrapU "wrapU"
+#define kParamWrapULabel "U Wrap Mode"
+#define kParamWrapUHint "Wrap mode for U coordinate."
+
+#define kParamWrapV "wrapV"
+#define kParamWrapVLabel "V Wrap Mode"
+#define kParamWrapVHint "Wrap mode for V coordinate."
+
+#define kParamWrapOptionClamp "Clamp"
+#define kParamWrapOptionClampHint "Texture edges are stretched indefinitely."
+#define kParamWrapOptionRepeat "Repeat"
+#define kParamWrapOptionRepeatHint "Texture is repeated."
+#define kParamWrapOptionMirror "Mirror"
+#define kParamWrapOptionMirrorHint "Texture is mirrored alternatively."
+
+enum WrapEnum {
+    eWrapClamp = 0,
+    eWrapRepeat,
+    eWrapMirror,
+};
+
 #define kClipUV "UV"
 
 #define kParamUVOffset "uvOffset"
@@ -211,6 +232,8 @@ protected:
     double _vOffset;
     double _uScale;
     double _vScale;
+    WrapEnum _uWrap;
+    WrapEnum _vWrap;
     bool _blackOutside;
     bool _doMasking;
     double _mix;
@@ -232,6 +255,8 @@ public:
     , _vOffset(0.)
     , _uScale(1.)
     , _vScale(1.)
+    , _uWrap(eWrapClamp)
+    , _vWrap(eWrapClamp)
     , _blackOutside(false)
     , _doMasking(false)
     , _mix(1.)
@@ -257,6 +282,8 @@ public:
                    double vOffset,
                    double uScale,
                    double vScale,
+                   WrapEnum uWrap,
+                   WrapEnum vWrap,
                    bool blackOutside,
                    double mix)
     {
@@ -272,6 +299,8 @@ public:
         _vOffset = vOffset;
         _uScale = uScale;
         _vScale = vScale;
+        _uWrap = uWrap;
+        _vWrap = vWrap;
         _blackOutside = blackOutside;
         _mix = mix;
     }
@@ -433,6 +462,20 @@ private:
         }
     }
 
+    static inline double wrap(double x, WrapEnum wrap)
+    {
+        switch(wrap) {
+            case eWrapClamp:
+                return x;
+            case eWrapRepeat:
+                return x - std::floor(x);
+            case eWrapMirror: {
+                double x2 = x/2 - std::floor(x/2);
+                return (x2 <= 0.5) ? (2 * x2) : (2 - 2 * x2);
+            }
+        }
+    }
+
     template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow)
     {
@@ -464,8 +507,15 @@ private:
                 const PIX *uvPix = (const PIX *)  (_uvImg ? _uvImg->getPixelAddress(x, y) : 0);
                 double sx, sy;
                 if (isSTMap) {
-                    sx = srcx1 + ((uImg ? (uvPix ? uvPix[uComp] : PIX()) : uComp) - _uOffset) * _uScale * (srcx2 - srcx1) - 0.5;
-                    sy = srcy1 + ((vImg ? (uvPix ? uvPix[vComp] : PIX()) : vComp) - _vOffset) * _vScale * (srcy2 - srcy1) - 0.5;
+                    double u = ((uImg ? (uvPix ? uvPix[uComp] : PIX()) : uComp) - _uOffset) * _uScale;
+                    double v = ((vImg ? (uvPix ? uvPix[vComp] : PIX()) : vComp) - _vOffset) * _vScale;
+                    // TODO: compute gradients before wrapping, scale gradients by (srcx2 - srcx1)
+                    // for each gradient, take the smallest of the left and right derivatives
+
+                    u = wrap(u, _uWrap);
+                    v = wrap(v, _vWrap);
+                    sx = srcx1 + u * (srcx2 - srcx1) - 0.5;
+                    sy = srcy1 + v * (srcy2 - srcy1) - 0.5;
                 } else {
                     sx = x + ((uImg ? (uvPix ? uvPix[uComp] : PIX()) : uComp) - _uOffset) * _uScale;
                     sy = y + ((vImg ? (uvPix ? uvPix[vComp] : PIX()) : vComp) - _vOffset) * _vScale;
@@ -541,6 +591,8 @@ public:
     , _vChannel(0)
     , _uvOffset(0)
     , _uvScale(0)
+    , _uWrap(0)
+    , _vWrap(0)
     , _filter(0)
     , _clamp(0)
     , _blackOutside(0)
@@ -566,6 +618,11 @@ public:
         _uvOffset = fetchDouble2DParam(kParamUVOffset);
         _uvScale = fetchDouble2DParam(kParamUVScale);
         assert(_uChannel && _vChannel && _uvOffset && _uvScale);
+        if (_isSTMap) {
+            _uWrap = fetchChoiceParam(kParamWrapU);
+            _vWrap = fetchChoiceParam(kParamWrapV);
+            assert(_uWrap && _vWrap);
+        }
         _filter = fetchChoiceParam(kParamFilterType);
         _clamp = fetchBooleanParam(kParamFilterClamp);
         _blackOutside = fetchBooleanParam(kParamFilterBlackOutside);
@@ -610,6 +667,8 @@ private:
     OFX::ChoiceParam* _vChannel;
     OFX::Double2DParam *_uvOffset;
     OFX::Double2DParam *_uvScale;
+    OFX::ChoiceParam* _uWrap;
+    OFX::ChoiceParam* _vWrap;
     OFX::ChoiceParam* _filter;
     OFX::BooleanParam* _clamp;
     OFX::BooleanParam* _blackOutside;
@@ -716,6 +775,12 @@ IDistortPlugin::setupAndProcess(IDistortProcessorBase &processor, const OFX::Ren
     _uvOffset->getValueAtTime(time, uOffset, vOffset);
     double uScale, vScale;
     _uvScale->getValueAtTime(time, uScale, vScale);
+    int uWrap_i;
+    _uWrap->getValueAtTime(time, uWrap_i);
+    WrapEnum uWrap = (WrapEnum)uWrap_i;
+    int vWrap_i;
+    _vWrap->getValueAtTime(time, vWrap_i);
+    WrapEnum vWrap = (WrapEnum)vWrap_i;
     bool blackOutside;
     _blackOutside->getValueAtTime(time, blackOutside);
     double mix;
@@ -753,6 +818,7 @@ IDistortPlugin::setupAndProcess(IDistortProcessorBase &processor, const OFX::Ren
                         uChannel, vChannel,
                         uOffset, vOffset,
                         uScale, vScale,
+                        uWrap, vWrap,
                         blackOutside, mix);
 
     // Call the base class process member, this will call the derived templated process code
@@ -1013,20 +1079,32 @@ void IDistortPluginFactory<isSTMap>::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 static void
-addInputChannelOtions(ChoiceParamDescriptor* channel, InputChannelEnum def)
+addInputChannelOptions(ChoiceParamDescriptor* channel, InputChannelEnum def)
 {
     assert(channel->getNOptions() == eInputChannelR);
-    channel->appendOption(kParamChannelOptionR,kParamChannelOptionRHint);
+    channel->appendOption(kParamChannelOptionR, kParamChannelOptionRHint);
     assert(channel->getNOptions() == eInputChannelG);
-    channel->appendOption(kParamChannelOptionG,kParamChannelOptionGHint);
+    channel->appendOption(kParamChannelOptionG, kParamChannelOptionGHint);
     assert(channel->getNOptions() == eInputChannelB);
-    channel->appendOption(kParamChannelOptionB,kParamChannelOptionBHint);
+    channel->appendOption(kParamChannelOptionB, kParamChannelOptionBHint);
     assert(channel->getNOptions() == eInputChannelA);
-    channel->appendOption(kParamChannelOptionA,kParamChannelOptionAHint);
+    channel->appendOption(kParamChannelOptionA, kParamChannelOptionAHint);
     assert(channel->getNOptions() == eInputChannel0);
-    channel->appendOption(kParamChannelOption0,kParamChannelOption0Hint);
+    channel->appendOption(kParamChannelOption0, kParamChannelOption0Hint);
     assert(channel->getNOptions() == eInputChannel1);
-    channel->appendOption(kParamChannelOption1,kParamChannelOption1Hint);
+    channel->appendOption(kParamChannelOption1, kParamChannelOption1Hint);
+    channel->setDefault(def);
+}
+
+static void
+addWrapOptions(ChoiceParamDescriptor* channel, WrapEnum def)
+{
+    assert(channel->getNOptions() == eWrapClamp);
+    channel->appendOption(kParamWrapOptionClamp, kParamWrapOptionClampHint);
+    assert(channel->getNOptions() == eWrapRepeat);
+    channel->appendOption(kParamWrapOptionRepeat, kParamWrapOptionRepeatHint);
+    assert(channel->getNOptions() == eWrapMirror);
+    channel->appendOption(kParamWrapOptionMirror, kParamWrapOptionMirrorHint);
     channel->setDefault(def);
 }
 
@@ -1116,7 +1194,8 @@ void IDistortPluginFactory<isSTMap>::describeInContext(OFX::ImageEffectDescripto
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelU);
         param->setLabel(kParamChannelULabel);
         param->setHint(kParamChannelUHint);
-        addInputChannelOtions(param, eInputChannelR);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        addInputChannelOptions(param, eInputChannelR);
         if (page) {
             page->addChild(*param);
         }
@@ -1125,7 +1204,7 @@ void IDistortPluginFactory<isSTMap>::describeInContext(OFX::ImageEffectDescripto
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelV);
         param->setLabel(kParamChannelVLabel);
         param->setHint(kParamChannelVHint);
-        addInputChannelOtions(param, eInputChannelG);
+        addInputChannelOptions(param, eInputChannelG);
         if (page) {
             page->addChild(*param);
         }
@@ -1152,6 +1231,28 @@ void IDistortPluginFactory<isSTMap>::describeInContext(OFX::ImageEffectDescripto
         param->setDimensionLabels("U", "V");
         if (page) {
             page->addChild(*param);
+        }
+    }
+
+    if (isSTMap) {
+        {
+            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamWrapU);
+            param->setLabel(kParamWrapULabel);
+            param->setHint(kParamWrapUHint);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            addWrapOptions(param, eWrapClamp);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamWrapV);
+            param->setLabel(kParamWrapVLabel);
+            param->setHint(kParamWrapVHint);
+            addWrapOptions(param, eWrapClamp);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
 
