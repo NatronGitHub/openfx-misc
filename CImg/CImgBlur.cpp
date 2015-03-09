@@ -734,7 +734,7 @@ public:
             float sigmay = (float)(args.renderScale.y * params.sizey / 2.4);
             return (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0);
         } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
-            return (args.renderScale.x * params.sizex <= 1 && args.renderScale.y * params.sizey <= 1 && params.orderX == 0 && params.orderY == 0);
+            return (args.renderScale.x * params.sizex / par <= 1 && args.renderScale.y * params.sizey <= 1 && params.orderX == 0 && params.orderY == 0);
         } else {
             assert(false);
         }
@@ -767,15 +767,27 @@ private:
 bool
 CImgBlurPlugin::getRoD(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* dstRoD)
 {
+    double par = _srcClip->getPixelAspectRatio();
+    if (par == 0.) {
+        par = 1.;
+    }
     if (params.expandRoD && !isEmpty(srcRoD)) {
         if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
-            int delta_pixX = std::max(3, (int)std::ceil((params.sizex * 1.5) * renderScale.x));
+            float sigmax = (float)(renderScale.x * params.sizex / 2.4 / par);
+            float sigmay = (float)(renderScale.y * params.sizey / 2.4);
+            if (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0) {
+                return false; // identity
+            }
+            int delta_pixX = std::max(3, (int)std::ceil((params.sizex * 1.5) * renderScale.x / par));
             int delta_pixY = std::max(3, (int)std::ceil((params.sizey * 1.5) * renderScale.y));
             dstRoD->x1 = srcRoD.x1 - delta_pixX - params.orderX;
             dstRoD->x2 = srcRoD.x2 + delta_pixX + params.orderX;
             dstRoD->y1 = srcRoD.y1 - delta_pixY - params.orderY;
             dstRoD->y2 = srcRoD.y2 + delta_pixY + params.orderY;
         } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
+            if (renderScale.x * params.sizex / par <= 1 && renderScale.y * params.sizey <= 1 && params.orderX == 0 && params.orderY == 0) {
+                return false; // identity
+            }
             int iter = (params.filter == eFilterBox ? 1 :
                         (params.filter == eFilterTriangle ? 2 : 3));
             int delta_pixX = iter * (std::floor((renderScale.x * params.sizex-1)/ 2) + 1);
