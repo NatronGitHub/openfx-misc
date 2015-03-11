@@ -341,7 +341,7 @@ bool
 MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!_srcClipA->isConnected() && !_srcClipB->isConnected()) {
-        throwSuiteStatusException(kOfxStatFailed);
+        return false;
     }
     
     OfxRectD rodA = _srcClipA->getRegionOfDefinition(args.time);
