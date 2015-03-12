@@ -659,12 +659,12 @@ static void extractChannelsFromComponentString(const std::string& comp,
         *pairedLayer = kShuffleDisparityRightPlaneName;
         channels->push_back("x");
         channels->push_back("y");
+#ifdef OFX_EXTENSIONS_NATRON
     } else {
-        try {
-            OFX::ImageBase::ofxCustomCompToNatronComp(comp, layer, channels);
-        } catch (const std::exception & /*e*/) {
-            //unrecognized components, ignore it.
-        }
+        bool supported = OFX::ImageBase::ofxCustomCompToNatronComp(comp, layer, channels);
+        // ignore unsupported components
+        (void)supported;
+#endif
     }
 }
 
@@ -854,6 +854,7 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
         }
         *ofxComponents = kFnOfxImageComponentMotionVectors;
         *ofxPlane = kFnOfxImagePlaneForwardMotionVector;
+#ifdef OFX_EXTENSIONS_NATRON
     } else {
         //Find in aComponents or bComponents a layer matching the name of the layer
         for (std::list<std::string>::const_iterator it = aComponents.begin(); it!=aComponents.end(); ++it) {
@@ -861,9 +862,8 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
                 //We found a matching layer
                 std::string realLayerName;
                 std::vector<std::string> channels;
-                try {
-                    OFX::ImageBase::ofxCustomCompToNatronComp(*it, &realLayerName, &channels);
-                } catch (...) {
+                bool supported = OFX::ImageBase::ofxCustomCompToNatronComp(*it, &realLayerName, &channels);
+                if (!supported) {
                     // ignore it
                     continue;
                 }
@@ -886,9 +886,8 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
                 //We found a matching layer
                 std::string realLayerName;
                 std::vector<std::string> channels;
-                try {
-                    OFX::ImageBase::ofxCustomCompToNatronComp(*it, &realLayerName, &channels);
-                } catch (...) {
+                bool supported = OFX::ImageBase::ofxCustomCompToNatronComp(*it, &realLayerName, &channels);
+                if (!supported) {
                     // ignore it
                     continue;
                 }
@@ -905,6 +904,7 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
                 return true;
             }
         }
+#endif // OFX_EXTENSIONS_NATRON
     }
     return false;
 }
