@@ -554,21 +554,27 @@ private:
                                 // wrap u and v
                                 u = wrap(u, _uWrap);
                                 v = wrap(v, _vWrap);
-                                sx = srcx1 + u * (srcx2 - srcx1) - 0.5;
-                                sy = srcy1 + v * (srcy2 - srcy1) - 0.5;
+                                sx = srcx1 + u * (srcx2 - srcx1);
+                                sy = srcy1 + v * (srcy2 - srcy1); // 0,0 corresponds to the lower left corner of the first pixel
                                 // scale gradients by (srcx2 - srcx1)
-                                sxx = ux * (srcx2 - srcx1);
-                                sxy = uy * (srcx2 - srcx1);
-                                syx = vx * (srcy2 - srcy1);
-                                syy = vy * (srcy2 - srcy1);
+                                if (filter != eFilterImpulse) {
+                                    sxx = ux * (srcx2 - srcx1);
+                                    sxy = uy * (srcx2 - srcx1);
+                                    syx = vx * (srcy2 - srcy1);
+                                    syy = vy * (srcy2 - srcy1);
+                                }
                                 break;
                             case eDistortionPluginIDistort:
-                                sx = x + u;
-                                sy = y + v;
-                                sxx = 1 + ux;
-                                sxy = uy;
-                                syx = vx;
-                                syy = 1 + vy;
+                                // 0,0 corresponds to the lower left corner of the first pixel, so we have to add 0.5
+                                // (x,y) = (0,0) and (u,v) = (0,0) means to pick color at (0.5,0.5)
+                                sx = x + u + 0.5;
+                                sy = y + v + 0.5;
+                                if (filter != eFilterImpulse) {
+                                    sxx = 1 + ux;
+                                    sxy = uy;
+                                    syx = vx;
+                                    syy = 1 + vy;
+                                }
                                 break;
                             default:
                                 assert(false);
@@ -577,29 +583,39 @@ private:
                     }
                         break;
                 }
-                // add 0.5 to get the coords of the pixel center
-                double fx, fy, fxx, fxy, fyx, fyy;
+                double Jxx = 0., Jxy = 0., Jyx = 0., Jyy = 0.;
                 if (_transformIsIdentity) {
-                    fx = sx + 0.5;
-                    fy = sy + 0.5;
-                    fxx = sxx;
-                    fxy = sxy;
-                    fyx = syx;
-                    fyy = syy;
+                    if (filter != eFilterImpulse) {
+                        Jxx = sxx;
+                        Jxy = sxy;
+                        Jyx = syx;
+                        Jyy = syy;
+                    }
                 } else {
-                    double fz = _srcTransformInverse.g*sx + _srcTransformInverse.h*sy + _srcTransformInverse.i;
-                    if (fz == 0) {
-                        fx = fy = std::numeric_limits<double>::infinity();
-                        fxx = fxy = fyx = fyy = 0.;
+                    const OFX::Matrix3x3 & H = _srcTransformInverse;
+                    double transformedx = H.a*sx + H.b*sy + H.c;
+                    double transformedy = H.d*sx + H.e*sy + H.f;
+                    double transformedz = H.g*sx + H.h*sy + H.i;
+                    if (transformedz == 0) {
+                        sx = sy = std::numeric_limits<double>::infinity();
                     } else {
-                        fx = (_srcTransformInverse.a*sx + _srcTransformInverse.b*sy + _srcTransformInverse.c)/fz + 0.5;
-                        fy = (_srcTransformInverse.d*sx + _srcTransformInverse.e*sy + _srcTransformInverse.f)/fz + 0.5;
-                        // TODO!
+                        sx = transformedx/transformedz;
+                        sy = transformedy/transformedz;
+                        if (filter != eFilterImpulse) {
+                            Jxx = (H.a*transformedz - transformedx*H.g)/(transformedz*transformedz);
+                            Jxy = (H.b*transformedz - transformedx*H.h)/(transformedz*transformedz);
+                            Jyx = (H.d*transformedz - transformedy*H.g)/(transformedz*transformedz);
+                            Jyy = (H.e*transformedz - transformedy*H.h)/(transformedz*transformedz);
+                        }
                     }
                 }
 
                 // TODO: ofxsFilterInterpolate2DSuper
-                ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(fx, fy, _srcImg, _blackOutside, tmpPix);
+                if (filter == eFilterImpulse) {
+                    ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(sx, sy, _srcImg, _blackOutside, tmpPix);
+                } else {
+                    ofxsFilterInterpolate2DSuper<PIX,nComponents,filter,clamp>(sx, sy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
+                }
                 ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImg, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // copy back original values from unprocessed channels
                 if (nComponents == 1) {
@@ -830,21 +846,29 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
     _processG->getValueAtTime(time, processG);
     _processB->getValueAtTime(time, processB);
     _processA->getValueAtTime(time, processA);
-    int uChannel_i, vChannel_i;
-    _uChannel->getValueAtTime(time, uChannel_i);
-    _vChannel->getValueAtTime(time, vChannel_i);
-    InputChannelEnum uChannel = (InputChannelEnum)uChannel_i;
-    InputChannelEnum vChannel = (InputChannelEnum)vChannel_i;
-    double uOffset, vOffset;
-    _uvOffset->getValueAtTime(time, uOffset, vOffset);
-    double uScale, vScale;
-    _uvScale->getValueAtTime(time, uScale, vScale);
-    int uWrap_i;
-    _uWrap->getValueAtTime(time, uWrap_i);
-    WrapEnum uWrap = (WrapEnum)uWrap_i;
-    int vWrap_i;
-    _vWrap->getValueAtTime(time, vWrap_i);
-    WrapEnum vWrap = (WrapEnum)vWrap_i;
+    InputChannelEnum uChannel = eInputChannelR;
+    InputChannelEnum vChannel = eInputChannelG;
+    double uScale = 1., vScale = 1.;
+    double uOffset = 0., vOffset = 0.;
+    WrapEnum uWrap = eWrapClamp;
+    WrapEnum vWrap = eWrapClamp;
+    if (_plugin == eDistortionPluginIDistort || _plugin == eDistortionPluginSTMap) {
+        int uChannel_i, vChannel_i;
+        _uChannel->getValueAtTime(time, uChannel_i);
+        _vChannel->getValueAtTime(time, vChannel_i);
+        uChannel = (InputChannelEnum)uChannel_i;
+        vChannel = (InputChannelEnum)vChannel_i;
+        _uvOffset->getValueAtTime(time, uOffset, vOffset);
+        _uvScale->getValueAtTime(time, uScale, vScale);
+        if (_plugin == eDistortionPluginSTMap) {
+            int uWrap_i = 0;
+            int vWrap_i = 0;
+            _uWrap->getValueAtTime(time, uWrap_i);
+            uWrap = (WrapEnum)uWrap_i;
+            _vWrap->getValueAtTime(time, vWrap_i);
+            vWrap = (WrapEnum)vWrap_i;
+        }
+    }
     bool blackOutside;
     _blackOutside->getValueAtTime(time, blackOutside);
     double mix;
@@ -1209,7 +1233,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
-    srcClip->setCanTransform(true);
+    srcClip->setCanTransform(true); // we can concatenate transforms upwards on srcClip only
     srcClip->setIsMask(false);
     if (plugin == eDistortionPluginIDistort) {
         // create the uv clip
@@ -1351,7 +1375,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
         }
     }
 
-    ofxsFilterDescribeParamsInterpolate2D(desc, page, plugin);
+    ofxsFilterDescribeParamsInterpolate2D(desc, page, (plugin == eDistortionPluginSTMap));
     ofxsMaskMixDescribeParams(desc, page);
 }
 
