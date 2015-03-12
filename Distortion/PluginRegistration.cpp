@@ -1,4 +1,4 @@
-#include "IDistort.h"
+#include "Distortion.h"
 
 namespace OFX
 {
@@ -6,7 +6,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            getIDistortPluginID(ids);
+            getDistortionPluginIDs(ids);
         }
     }
 }
