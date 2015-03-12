@@ -562,11 +562,11 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         if (!srcA.get()) {
             // no src, fill with black & transparent
             if (dstPixelComponents == OFX::ePixelComponentRGBA) {
-                fred.reset(new OFX::BlackFiller<float, 4>(*this));
+                fred.reset(new OFX::BlackFiller<float>(*this, 4));
             } else if (dstPixelComponents == OFX::ePixelComponentRGB) {
-                fred.reset(new OFX::BlackFiller<float, 3>(*this));
+                fred.reset(new OFX::BlackFiller<float>(*this, 3));
             }  else if (dstPixelComponents == OFX::ePixelComponentAlpha) {
-                fred.reset(new OFX::BlackFiller<float, 1>(*this));
+                fred.reset(new OFX::BlackFiller<float>(*this, 1));
             }
         } else {
             if (dstPixelComponents == OFX::ePixelComponentRGBA) {
@@ -593,11 +593,11 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         if (!srcB.get()) {
             // no src, fill with black & transparent
             if (dstPixelComponents == OFX::ePixelComponentRGBA) {
-                fred.reset(new OFX::BlackFiller<float, 4>(*this));
+                fred.reset(new OFX::BlackFiller<float>(*this, 4));
             } else if (dstPixelComponents == OFX::ePixelComponentRGB) {
-                fred.reset(new OFX::BlackFiller<float, 3>(*this));
+                fred.reset(new OFX::BlackFiller<float>(*this, 3));
             }  else if (dstPixelComponents == OFX::ePixelComponentAlpha) {
-                fred.reset(new OFX::BlackFiller<float, 1>(*this));
+                fred.reset(new OFX::BlackFiller<float>(*this, 1));
             }
         } else {
             if (dstPixelComponents == OFX::ePixelComponentRGBA) {
