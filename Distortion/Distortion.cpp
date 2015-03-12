@@ -1,5 +1,5 @@
 /*
- OFX Distortion plugin.
+ OFX Distortion plugins.
  
  Copyright (C) 2014 INRIA
  
