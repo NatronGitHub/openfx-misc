@@ -1,5 +1,5 @@
 /*
- OFX IDistort plugin.
+ OFX Distortion plugins.
  
  Copyright (C) 2015 INRIA
  
@@ -34,11 +34,11 @@
  78153 Le Chesnay Cedex - France
 */
 
-#ifndef Misc_IDistort_h
-#define Misc_IDistort_h
+#ifndef Misc_Distortion_h
+#define Misc_Distortion_h
 
 #include "ofxsImageEffect.h"
 
-void getIDistortPluginID(OFX::PluginFactoryArray &ids);
+void getDistortionPluginIDs(OFX::PluginFactoryArray &ids);
 
-#endif // Misc_IDistort_h
+#endif // Misc_Distortion_h

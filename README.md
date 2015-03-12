@@ -116,9 +116,10 @@ alpha (or another channel).
 * CornerPinOFX and CornerPinMaskedOFX: Fit an image to another in
   translation, rotation, scale, and shear
 * CropOFX: Remove everything outside from the image of a rectangle.
-* IDistortOFX: Distort an image, based on UV channels.
+* IDistortOFX: Distort an image, based on a displacement map.
 * MirrorOFX: Flip or flop the image.
 * PositionOFX: Translate image by an integer number of pixels.
+* STMapOFX: Move pixels around an image, based on a UVmap.
 * TrackerPM: Point tracker based on pattern matching using an exhaustive search within an image region.
 * TransformOFX and TransformMaskedOFX: Translate / Rotate / Scale a 2D 
   image. 

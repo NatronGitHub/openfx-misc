@@ -21,7 +21,7 @@ GodRays.o \
 Grade.o \
 ColorTransform.o \
 HSVTool.o \
-IDistort.o \
+Distortion.o \
 ImageStatistics.o \
 Invert.o \
 JoinViews.o \
@@ -192,7 +192,7 @@ VPATH += \
 ../Grade \
 ../ColorTransform \
 ../HSVTool \
-../IDistort \
+../Distortion \
 ../ImageStatistics \
 ../Invert \
 ../JoinViews \
@@ -250,7 +250,7 @@ CXXFLAGS += \
 -I../Grade \
 -I../ColorTransform \
 -I../HSVTool \
--I../IDistort \
+-I../Distortion \
 -I../ImageStatistics \
 -I../Invert \
 -I../JoinViews \
