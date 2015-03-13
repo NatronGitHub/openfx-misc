@@ -95,7 +95,7 @@
 #define kSupportsMultipleClipDepths true // can convert depth
 #define kRenderThreadSafety eRenderFullySafe
 
-#define kEnableMultiPlanar false
+#define kEnableMultiPlanar true
 
 #define kParamOutputComponents "outputComponents"
 #define kParamOutputComponentsLabel "Output Components"
@@ -568,6 +568,9 @@ public:
     }
 
 private:
+    
+    void setChannelsFromRed();
+    
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
@@ -636,29 +639,29 @@ static void extractChannelsFromComponentString(const std::string& comp,
                                                std::vector<std::string>* channels)
 {
     if (comp == kOfxImageComponentAlpha) {
-        *layer = kShuffleColorPlaneName;
-        channels->push_back("a");
+        //*layer = kShuffleColorPlaneName;
+        channels->push_back("A");
     } else if (comp == kOfxImageComponentRGB) {
-        *layer = kShuffleColorPlaneName;
-        channels->push_back("r");
-        channels->push_back("g");
-        channels->push_back("b");
+        //*layer = kShuffleColorPlaneName;
+        channels->push_back("R");
+        channels->push_back("G");
+        channels->push_back("B");
     } else if (comp == kOfxImageComponentRGBA) {
-        *layer = kShuffleColorPlaneName;
-        channels->push_back("r");
-        channels->push_back("g");
-        channels->push_back("b");
-        channels->push_back("a");
+        //*layer = kShuffleColorPlaneName;
+        channels->push_back("R");
+        channels->push_back("G");
+        channels->push_back("B");
+        channels->push_back("A");
     } else if (comp == kFnOfxImageComponentMotionVectors) {
         *layer = kShuffleMotionBackwardPlaneName;
         *pairedLayer = kShuffleMotionForwardPlaneName;
-        channels->push_back("u");
-        channels->push_back("v");
+        channels->push_back("U");
+        channels->push_back("V");
     } else if (comp == kFnOfxImageComponentStereoDisparity) {
         *layer = kShuffleDisparityLeftPlaneName;
         *pairedLayer = kShuffleDisparityRightPlaneName;
-        channels->push_back("x");
-        channels->push_back("y");
+        channels->push_back("X");
+        channels->push_back("Y");
 #ifdef OFX_EXTENSIONS_NATRON
     } else {
         bool supported = OFX::ImageBase::ofxCustomCompToNatronComp(comp, layer, channels);
@@ -672,11 +675,17 @@ static void appendComponents(const std::string& clipName,
                              const std::list<std::string>& components,
                              OFX::ChoiceParam** params)
 {
+    
+    
     for (std::list<std::string>::const_iterator it = components.begin(); it!=components.end(); ++it) {
         std::string layer,secondLayer;
         std::vector<std::string> channels;
         extractChannelsFromComponentString(*it, &layer, &secondLayer, &channels);
-        if (layer.empty() || channels.empty()) {
+        if (channels.empty()) {
+            continue;
+        }
+        if (layer.empty()) {
+            //Ignore color plane
             continue;
         }
         for (std::size_t i = 0; i < channels.size(); ++i) {
@@ -691,8 +700,6 @@ static void appendComponents(const std::string& clipName,
                 params[j]->appendOption(opt);
             }
         }
-        
-        
         
         if (!secondLayer.empty()) {
             for (std::size_t i = 0; i < channels.size(); ++i) {
@@ -722,12 +729,34 @@ ShufflePlugin::buildChannelMenus()
     _b->resetOptions();
     _a->resetOptions();
     
+    //Always add RGBA channels for color plane
+    std::vector<std::string> channels;
+    channels.push_back("R");
+    channels.push_back("G");
+    channels.push_back("B");
+    channels.push_back("A");
+    
     OFX::ChoiceParam* params[4] = {_r, _g, _b, _a};
-    appendComponents(kClipA, componentsA, params);
+
+    for (std::size_t i = 0; i < channels.size(); ++i) {
+        std::string opt = kClipA ".";
+        opt.append(channels[i]);
+        for (int j = 0; j < 4; ++j) {
+            params[j]->appendOption(opt);
+        }
+    }
     for (int i = 0; i < 4; ++i) {
         params[i]->appendOption(kParamOutputOption0,kParamOutputOption0Hint);
         params[i]->appendOption(kParamOutputOption1,kParamOutputOption1Hint);
     }
+    for (std::size_t i = 0; i < channels.size(); ++i) {
+        std::string opt = kClipB ".";
+        opt.append(channels[i]);
+        for (int j = 0; j < 4; ++j) {
+            params[j]->appendOption(opt);
+        }
+    }
+    appendComponents(kClipA, componentsA, params);
     appendComponents(kClipB, componentsB, params);
 }
 
@@ -795,15 +824,15 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
         layerName.push_back(channelEncoded[i]);
     }
     
-    if (layerName == kShuffleColorPlaneName) {
+    if (layerName == kShuffleColorPlaneName || layerName.empty()) {
         std::string comp = (*clip)->getPixelComponentsProperty();
-        if (chanName == "r") {
+        if (chanName == "r" || chanName == "R") {
             *channelIndexInPlane = 0;
-        } else if (chanName == "g") {
+        } else if (chanName == "g" || chanName == "G") {
             *channelIndexInPlane = 1;
-        } else if (chanName == "b") {
+        } else if (chanName == "b" || chanName == "B") {
             *channelIndexInPlane = 2;
-        } else if (chanName == "a") {
+        } else if (chanName == "a" || chanName == "A") {
             assert(comp == kOfxImageComponentAlpha || comp == kOfxImageComponentRGBA);
             *channelIndexInPlane = comp == kOfxImageComponentAlpha ? 0 : 3;
         } else {
@@ -813,9 +842,9 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
         *ofxPlane = kFnOfxImagePlaneColour;
         return true;
     } else if (layerName == kShuffleDisparityLeftPlaneName) {
-        if (chanName == "x") {
+        if (chanName == "x" || chanName == "X") {
             *channelIndexInPlane = 0;
-        } else if (chanName == "y") {
+        } else if (chanName == "y" || chanName == "Y") {
             *channelIndexInPlane = 1;
         } else {
             assert(false);
@@ -824,9 +853,9 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
         *ofxPlane = kFnOfxImagePlaneStereoDisparityLeft;
         return true;
     } else if (layerName == kShuffleDisparityRightPlaneName) {
-        if (chanName == "x") {
+        if (chanName == "x" || chanName == "X") {
             *channelIndexInPlane = 0;
-        } else if (chanName == "y") {
+        } else if (chanName == "y" || chanName == "Y") {
             *channelIndexInPlane = 1;
         } else {
             assert(false);
@@ -835,9 +864,9 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
         *ofxPlane =  kFnOfxImagePlaneStereoDisparityRight;
         return true;
     } else if (layerName == kShuffleMotionBackwardPlaneName) {
-        if (chanName == "u") {
+        if (chanName == "u" || chanName == "U") {
             *channelIndexInPlane = 0;
-        } else if (chanName == "v") {
+        } else if (chanName == "v" || chanName == "V") {
             *channelIndexInPlane = 1;
         } else {
             assert(false);
@@ -845,9 +874,9 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
         *ofxComponents = kFnOfxImageComponentMotionVectors;
         *ofxPlane = kFnOfxImagePlaneBackwardMotionVector;
     } else if (layerName == kShuffleMotionForwardPlaneName) {
-        if (chanName == "u") {
+        if (chanName == "u" || chanName == "V") {
             *channelIndexInPlane = 0;
-        } else if (chanName == "v") {
+        } else if (chanName == "v" || chanName == "V") {
             *channelIndexInPlane = 1;
         } else {
             assert(false);
@@ -876,6 +905,7 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
                 }
                 assert(foundChannel != -1);
                 *ofxPlane = *it;
+                *channelIndexInPlane = foundChannel;
                 *ofxComponents = *it;
                 return true;
             }
@@ -900,6 +930,7 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
                 }
                 assert(foundChannel != -1);
                 *ofxPlane = *it;
+                *channelIndexInPlane = foundChannel;
                 *ofxComponents = *it;
                 return true;
             }
@@ -999,7 +1030,10 @@ ShufflePlugin::isIdentityInternal(OFX::Clip*& identityClip)
             std::string plane;
             bool ok = getPlaneNeededForParam(componentsA, componentsB, params[i], &data[i].clip, &plane, &data[i].components, &data[i].index);
             assert(ok);
-            
+            if (!plane.empty()) {
+                //This is not the color plane, no identity
+                return false;
+            }
             if (i > 0) {
                 if (data[i].index != expectedIndex || data[i].components != data[0].components ||
                     data[i].clip != data[0].clip) {
@@ -1233,7 +1267,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
         OFX::Clip* clip = 0;
         std::string plane,ofxComp;
         bool ok = getPlaneNeededForParam(componentsA, componentsB, params[i], &clip, &plane, &ofxComp, &p.channelIndex);
-        assert(ok && clip);
+        assert(ok);
         
         p.img = 0;
         if (ofxComp == kParamOutputOption0) {
@@ -1270,6 +1304,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
                 }
             }
         }
+        planes.push_back(p);
     }
     
     int outputComponents_i;
@@ -1486,6 +1521,66 @@ imageFormatString(PixelComponentEnum components, BitDepthEnum bitDepth)
     return s;
 }
 
+static bool endsWith(const std::string &str, const std::string &suffix)
+{
+    return ((str.size() >= suffix.size()) &&
+            (str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0));
+}
+
+void
+ShufflePlugin::setChannelsFromRed()
+{
+    int r_i;
+    _r->getValue(r_i);
+    std::string rChannel;
+    _r->getOption(r_i, rChannel);
+    
+    if (endsWith(rChannel, ".R") || endsWith(rChannel, ".r")) {
+        std::string base = rChannel.substr(0,rChannel.size() - 2);
+        
+        bool gSet = false;
+        bool bSet = false;
+        bool aSet = false;
+        
+        int nOpt = _g->getNOptions();
+        
+        int indexOf0 = -1;
+        int indexOf1 = -1;
+        
+        for (int i = 0; i < nOpt; ++i) {
+            std::string opt;
+            _r->getOption(i, opt);
+            
+            if (opt == kParamOutputOption0) {
+                indexOf0 = i;
+            } else if (opt == kParamOutputOption1) {
+                indexOf1 = i;
+            } else if (opt.substr(0,base.size()) == base) {
+                if (endsWith(opt, ".G") || endsWith(opt, ".g")) {
+                    _g->setValue(i);
+                    gSet = true;
+                } else if (endsWith(opt, ".B") || endsWith(opt, ".b")) {
+                    _b->setValue(i);
+                    bSet = true;
+                } else if (endsWith(opt, ".A") || endsWith(opt, ".a")) {
+                    _a->setValue(i);
+                    aSet = true;
+                }
+            }
+        }
+        assert(indexOf0 != -1 && indexOf1 != -1);
+        if (!gSet) {
+            _g->setValue(indexOf0);
+        }
+        if (!bSet) {
+            _b->setValue(indexOf0);
+        }
+        if (!aSet) {
+            _a->setValue(indexOf1);
+        }
+    }
+}
+
 void
 ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
@@ -1518,6 +1613,11 @@ ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::str
         msg += "\n";
         sendMessage(OFX::Message::eMessageMessage, "", msg);
     }
+#ifdef OFX_EXTENSIONS_NATRON
+    else if (paramName == kParamOutputR) {
+        setChannelsFromRed();
+    }
+#endif
 }
 
 void
@@ -1830,9 +1930,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
             ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputR);
             param->setLabel(kParamOutputRLabel);
             param->setHint(kParamOutputRHint);
-            if (!gSupportsDynamicChoices) {
-                addInputChannelOtions(param, eInputChannelAR, context);
-            }
+            addInputChannelOtions(param, eInputChannelAR, context);
             if (page) {
                 page->addChild(*param);
             }
@@ -1843,9 +1941,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
             ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputG);
             param->setLabel(kParamOutputGLabel);
             param->setHint(kParamOutputGHint);
-            if (!gSupportsDynamicChoices) {
-                addInputChannelOtions(param, eInputChannelAG, context);
-            }
+            addInputChannelOtions(param, eInputChannelAG, context);
             if (page) {
                 page->addChild(*param);
             }
@@ -1856,9 +1952,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
             ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputB);
             param->setLabel(kParamOutputBLabel);
             param->setHint(kParamOutputBHint);
-            if (!gSupportsDynamicChoices) {
-                addInputChannelOtions(param, eInputChannelAB, context);
-            }
+            addInputChannelOtions(param, eInputChannelAB, context);
             if (page) {
                 page->addChild(*param);
             }
@@ -1869,9 +1963,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputA);
         param->setLabel(kParamOutputALabel);
         param->setHint(kParamOutputAHint);
-        if (!gSupportsDynamicChoices) {
-            addInputChannelOtions(param, eInputChannelAA, context);
-        }
+        addInputChannelOtions(param, eInputChannelAA, context);
         if (page) {
             page->addChild(*param);
         }
