@@ -676,7 +676,7 @@ static void appendComponents(const std::string& clipName,
                              OFX::ChoiceParam** params)
 {
     
-    
+    std::list<std::string> usedComps;
     for (std::list<std::string>::const_iterator it = components.begin(); it!=components.end(); ++it) {
         std::string layer,secondLayer;
         std::vector<std::string> channels;
@@ -696,21 +696,28 @@ static void appendComponents(const std::string& clipName,
             }
             opt.append(channels[i]);
             
-            for (int j = 0; j < 4; ++j) {
-                params[j]->appendOption(opt);
+            if (std::find(usedComps.begin(), usedComps.end(), opt) == usedComps.end()) {
+                usedComps.push_back(opt);
+                for (int j = 0; j < 4; ++j) {
+                    params[j]->appendOption(opt);
+                }
             }
+            
         }
         
         if (!secondLayer.empty()) {
             for (std::size_t i = 0; i < channels.size(); ++i) {
                 std::string opt = clipName + ".";
                 if (!secondLayer.empty()) {
-                    opt.append(layer);
+                    opt.append(secondLayer);
                     opt.push_back('.');
                 }
                 opt.append(channels[i]);
-                for (int j = 0; j < 4; ++j) {
-                    params[j]->appendOption(opt);
+                if (std::find(usedComps.begin(), usedComps.end(), opt) == usedComps.end()) {
+                    usedComps.push_back(opt);
+                    for (int j = 0; j < 4; ++j) {
+                        params[j]->appendOption(opt);
+                    }
                 }
             }
         }
@@ -880,7 +887,7 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
         *ofxComponents = kFnOfxImageComponentMotionVectors;
         *ofxPlane = kFnOfxImagePlaneBackwardMotionVector;
     } else if (layerName == kShuffleMotionForwardPlaneName) {
-        if (chanName == "u" || chanName == "V") {
+        if (chanName == "u" || chanName == "U") {
             *channelIndexInPlane = 0;
         } else if (chanName == "v" || chanName == "V") {
             *channelIndexInPlane = 1;
