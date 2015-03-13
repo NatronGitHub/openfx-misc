@@ -833,8 +833,14 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
         } else if (chanName == "b" || chanName == "B") {
             *channelIndexInPlane = 2;
         } else if (chanName == "a" || chanName == "A") {
-            assert(comp == kOfxImageComponentAlpha || comp == kOfxImageComponentRGBA);
-            *channelIndexInPlane = comp == kOfxImageComponentAlpha ? 0 : 3;
+            if (comp == kOfxImageComponentAlpha) {
+                *channelIndexInPlane = 0;
+            } else if (comp == kOfxImageComponentRGBA) {
+                *channelIndexInPlane = 3;
+            } else if (comp == kOfxImageComponentRGB) {
+                *ofxComponents = kParamOutputOption0;
+                return true;
+            }
         } else {
             assert(false);
         }
