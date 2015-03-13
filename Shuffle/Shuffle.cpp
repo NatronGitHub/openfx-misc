@@ -886,6 +886,7 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
         }
         *ofxComponents = kFnOfxImageComponentMotionVectors;
         *ofxPlane = kFnOfxImagePlaneBackwardMotionVector;
+        return true;
     } else if (layerName == kShuffleMotionForwardPlaneName) {
         if (chanName == "u" || chanName == "U") {
             *channelIndexInPlane = 0;
@@ -896,6 +897,7 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
         }
         *ofxComponents = kFnOfxImageComponentMotionVectors;
         *ofxPlane = kFnOfxImagePlaneForwardMotionVector;
+        return true;
 #ifdef OFX_EXTENSIONS_NATRON
     } else {
         //Find in aComponents or bComponents a layer matching the name of the layer
