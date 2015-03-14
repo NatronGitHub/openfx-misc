@@ -77,6 +77,7 @@
 #include <windows.h>
 #endif
 #include <set>
+#include <algorithm>
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
