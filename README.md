@@ -117,6 +117,7 @@ alpha (or another channel).
   translation, rotation, scale, and shear
 * CropOFX: Remove everything outside from the image of a rectangle.
 * IDistortOFX: Distort an image, based on a displacement map.
+* LensDistortionOFX: Apply nonlinear lens distortion.
 * MirrorOFX: Flip or flop the image.
 * PositionOFX: Translate image by an integer number of pixels.
 * STMapOFX: Move pixels around an image, based on a UVmap.

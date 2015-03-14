@@ -134,6 +134,12 @@
 
 #define kPluginLensDistortionIdentifier "net.sf.openfx.LensDistortion"
 
+/* LensDistortion TODO:
+ - cache the STmap for a set of input parameter and input image size
+ - output the STmap (which is not frame-varying even if the input changes, so isIdentity should use this on Natron if no parameter is animated)
+ - compute the inverse map and undistort
+ - implement other distortion models (PFBarrel, OpenCV)
+*/
 
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
