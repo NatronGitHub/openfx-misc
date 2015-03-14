@@ -133,18 +133,31 @@
 
 #define kParamType "type"
 #define kParamTypeLabel "Type"
+#define kParamTypeHint "The type of interpolation used to generate the ramp"
+#define kParamTypeOptionLinear "Linear"
+#define kParamTypeOptionLinearHint "Linear ramp."
+#define kParamTypeOptionPLinear "PLinear"
+#define kParamTypeOptionPLinearHint "Perceptually linear ramp in Rec.709."
+#define kParamTypeOptionEaseIn "Ease-in"
+#define kParamTypeOptionEaseInHint "Catmull-Rom spline, smooth start, linear end (a.k.a. smooth0)."
+#define kParamTypeOptionEaseOut "Ease-out"
+#define kParamTypeOptionEaseOutHint "Catmull-Rom spline, linear start, smooth end (a.k.a. smooth1)."
+#define kParamTypeOptionSmooth "Smooth"
+#define kParamTypeOptionSmoothHint "Traditional smoothstep ramp."
+
+enum RampTypeEnum
+{
+    eRampTypeLinear = 0,
+    eRampTypePLinear,
+    eRampTypeEaseIn,
+    eRampTypeEaseOut,
+    eRampTypeSmooth
+};
 
 #define kParamInteractive "interactive"
 #define kParamInteractiveLabel "Interactive Update"
 #define kParamInteractiveHint "If checked, update the parameter values during interaction with the image viewer, else update the values when pen is released."
 
-enum RampTypeEnum
-{
-    eRampTypeLinear = 0,
-    eRampTypeEaseIn,
-    eRampTypeEaseOut,
-    eRampTypeSmooth
-};
 
 namespace {
     struct RGBAValues {
@@ -354,6 +367,9 @@ private:
             case eRampTypeLinear:
                 processForType<processR,processG,processB,processA,eRampTypeLinear>(procWindow);
                 break;
+            case eRampTypePLinear:
+                processForType<processR,processG,processB,processA,eRampTypePLinear>(procWindow);
+                break;
             case eRampTypeEaseIn:
                 processForType<processR,processG,processB,processA,eRampTypeEaseIn>(procWindow);
                 break;
@@ -405,14 +421,36 @@ private:
                     tmpPix[3] = (float)_color1.a;
 
                 } else {
+                    // from http://www.comp-fu.com/2012/01/nukes-smooth-ramp-functions/
+                    // linear
+                    //y = x
+                    // plinear: perceptually linear in rec709
+                    //y = pow(x, 3)
+                    // smooth: traditional smoothstep
+                    //y = x*x*(3 - 2*x)
+                    // smooth0: Catmull-Rom spline, smooth start, linear end
+                    //y = x*x*(2 - x)
+                    // smooth1: Catmull-Rom spline, linear start, smooth end
+                    //y = x*(1 + x*(1 - x))
                     switch (type) {
+                        case eRampTypeLinear:
+                            break;
+                        case eRampTypePLinear:
+                            // plinear: perceptually linear in rec709
+                            t = t*t*t;
+                            break;
                         case eRampTypeEaseIn:
-                            t *= t;
+                            //t *= t; // old version, end of curve is too sharp
+                            // smooth0: Catmull-Rom spline, smooth start, linear end
+                            t = t*t*(2-t);
                             break;
                         case eRampTypeEaseOut:
-                            t = - t * (t - 2);
+                            //t = - t * (t - 2); // old version, start of curve is too sharp
+                            // smooth1: Catmull-Rom spline, linear start, smooth end
+                            t = t*(1 + t*(1 - t));
                             break;
                         case eRampTypeSmooth:
+                            /*
                             t *= 2.;
                             if (t < 1) {
                                 t = t * t / (2.);
@@ -420,6 +458,9 @@ private:
                                 --t;
                                 t =  -0.5 * (t * (t - 2) - 1);
                             }
+                            */
+                            // smooth: traditional smoothstep
+                            t = t*t*(3 - 2*t);
                         default:
                             break;
                     }
@@ -1311,11 +1352,17 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     {
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamType);
         param->setLabel(kParamTypeLabel);
-        param->setHint("The type of interpolation used to generate the ramp");
-        param->appendOption("Linear");
-        param->appendOption("Ease-in");
-        param->appendOption("Ease-out");
-        param->appendOption("Smooth");
+        param->setHint(kParamTypeHint);
+        assert(param->getNOptions() == eRampTypeLinear);
+        param->appendOption(kParamTypeOptionLinear, kParamTypeOptionLinearHint);
+        assert(param->getNOptions() == eRampTypePLinear);
+        param->appendOption(kParamTypeOptionPLinear, kParamTypeOptionPLinearHint);
+        assert(param->getNOptions() == eRampTypeEaseIn);
+        param->appendOption(kParamTypeOptionEaseIn, kParamTypeOptionEaseInHint);
+        assert(param->getNOptions() == eRampTypeEaseOut);
+        param->appendOption(kParamTypeOptionEaseOut, kParamTypeOptionEaseOutHint);
+        assert(param->getNOptions() == eRampTypeSmooth);
+        param->appendOption(kParamTypeOptionSmooth, kParamTypeOptionSmoothHint);
         param->setDefault(eRampTypeLinear);
         param->setAnimates(true);
         if (page) {
