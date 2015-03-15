@@ -38,6 +38,7 @@
 
 #include "FrameRange.h"
 
+#include <algorithm> // for std::max
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -179,7 +180,7 @@ FrameRangePlugin::getTimeDomain(OfxRangeD &range)
     int min, max;
     _frameRange->getValue(min, max);
     range.min = min;
-    range.max = max;
+    range.max = std::max(min, max);
     return true;
 }
 
