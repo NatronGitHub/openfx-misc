@@ -38,9 +38,11 @@ grouping).
 
 ### Time
 
+* AppendClipOFX: Put one clip after another.
 * Deinterlace: Deinterlace input stream.
-* FrameBlend: Blend frames.
-* FrameHold: Hold a frame, or subsample the input frames.
+* FrameBlendOFX: Blend frames.
+* FrameHoldOFX: Hold a frame, or subsample the input frames.
+* FrameRangeOFX: Change the frame range of a clip. Useful with AppendClip
 * RetimeOFX: Change the timing of the input clip.
 * TimeOffsetOFX: Move the input clip forward or backward in time.
 

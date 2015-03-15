@@ -2,6 +2,7 @@ PLUGINOBJECTS = \
 Add.o \
 AdjustRoD.o \
 Anaglyph.o \
+AppendClip.o \
 CheckerBoard.o \
 ChromaKeyer.o \
 Clamp.o \
@@ -17,6 +18,7 @@ Difference.o \
 Dissolve.o \
 FrameBlend.o \
 FrameHold.o \
+FrameRange.o \
 Gamma.o \
 GodRays.o \
 Grade.o \
@@ -174,6 +176,7 @@ VPATH += \
 ../Add \
 ../AdjustRoD \
 ../Anaglyph \
+../AppendClip \
 ../CheckerBoard \
 ../ChromaKeyer \
 ../Clamp \
@@ -189,6 +192,7 @@ VPATH += \
 ../Dissolve \
 ../FrameBlend \
 ../FrameHold \
+../FrameRange \
 ../Gamma \
 ../GodRays \
 ../Grade \
@@ -232,6 +236,7 @@ CXXFLAGS += \
 -I../Add \
 -I../AdjustRoD \
 -I../Anaglyph \
+-I../AppendClip \
 -I../CheckerBoard \
 -I../ChromaKeyer \
 -I../Clamp \
@@ -248,6 +253,7 @@ CXXFLAGS += \
 -I../Dissolve \
 -I../FrameBlend \
 -I../FrameHold \
+-I../FrameRange \
 -I../Gamma \
 -I../GodRays \
 -I../Grade \

@@ -7,6 +7,9 @@ AdjustRoD/PluginRegistration.cpp
 Anaglyph/Anaglyph.cpp
 Anaglyph/Anaglyph.h
 Anaglyph/PluginRegistration.cpp
+AppendClip/AppendClip.cpp
+AppendClip/AppendClip.h
+AppendClip/PluginRegistration.cpp
 CheckerBoard/CheckerBoard.cpp
 CheckerBoard/CheckerBoard.h
 CheckerBoard/PluginRegistration.cpp
@@ -96,6 +99,9 @@ FrameBlend/PluginRegistration.cpp
 FrameHold/FrameHold.cpp
 FrameHold/FrameHold.h
 FrameHold/PluginRegistration.cpp
+FrameRange/FrameRange.cpp
+FrameRange/FrameRange.h
+FrameRange/PluginRegistration.cpp
 Gamma/Gamma.cpp
 Gamma/Gamma.h
 Gamma/PluginRegistration.cpp
