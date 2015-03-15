@@ -314,6 +314,7 @@ protected:
     WrapEnum _uWrap;
     WrapEnum _vWrap;
     DistortionModelEnum _distortionModel;
+    double _par;
     double _k1;
     double _k2;
     double _k3;
@@ -348,6 +349,7 @@ public:
     , _uWrap(eWrapClamp)
     , _vWrap(eWrapClamp)
     , _distortionModel(eDistortionModelNuke)
+    , _par(1.)
     , _k1(0.)
     , _k2(0.)
     , _k3(0.)
@@ -386,6 +388,7 @@ public:
                    WrapEnum uWrap,
                    WrapEnum vWrap,
                    DistortionModelEnum distortionModel,
+                   double par,
                    double k1, double k2, double k3,
                    double p1, double p2,
                    double cx, double cy,
@@ -409,6 +412,7 @@ public:
         _uWrap = uWrap;
         _vWrap = vWrap;
         _distortionModel = distortionModel;
+        _par = par;
         _k1 = k1;
         _k2 = k2;
         _k3 = k3;
@@ -571,7 +575,7 @@ private:
         compFromChannel(_uChannel, &uImg, &uComp);
         compFromChannel(_vChannel, &vImg, &vComp);
         int srcx1 = 0, srcx2 = 1, srcy1 = 0, srcy2 = 0;
-        double f = 0;//, cx = 0, cy = 0;
+        double f = 0, par = 1.;
         if ((plugin == eDistortionPluginSTMap || plugin == eDistortionPluginLensDistortion) && _srcImg) {
             const OfxRectI& srcBounds = _srcImg->getBounds();
             srcx1 = srcBounds.x1;
@@ -582,8 +586,6 @@ private:
                 double fx = (srcBounds.x2-srcBounds.x1)/2.;
                 double fy = (srcBounds.y2-srcBounds.y1)/2.;
                 f = std::max(fx, fy); // TODO: distortion scaling param for LensDistortion?
-                //cx = (_cx * fx) / f;
-                //cy = (_cy * fy) / f;
             }
         }
         float tmpPix[4];
@@ -671,11 +673,12 @@ private:
                     case eDistortionPluginLensDistortion: {
                         switch (_distortionModel) {
                             case eDistortionModelNuke: {
-                                double xu = (x + 0.5 - (srcx2+srcx1)/2.)/f;
+                                double xu = _par * (x + 0.5 - (srcx2+srcx1)/2.)/f;
                                 double yu = (y + 0.5 - (srcy2+srcy1)/2.)/f;
                                 distort_nuke(xu, yu,
-                                             _k1, _k2, _cx, _cy, _squeeze, _ax, _ay,
+                                             _k1, _k2, _cx/par, _cy, _squeeze, _ax, _ay,
                                              &sx, &sy);
+                                sx /= _par;
                             }
                                 break;
                         }
@@ -717,7 +720,6 @@ private:
                     }
                 }
 
-                // TODO: ofxsFilterInterpolate2DSuper
                 if (filter == eFilterImpulse) {
                     ofxsFilterInterpolate2D<PIX,nComponents,filter,clamp>(sx, sy, _srcImg, _blackOutside, tmpPix);
                 } else {
@@ -1074,13 +1076,14 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
         vScale *= args.renderScale.y;
     }
     DistortionModelEnum distortionModel = eDistortionModelNuke;
-    double k1 = 0., k2 = 0., k3 = 0., p1 = 0., p2 = 0., cx = 0., cy = 0., squeeze = 1., ax = 0., ay = 0.;
+    double par = 1., k1 = 0., k2 = 0., k3 = 0., p1 = 0., p2 = 0., cx = 0., cy = 0., squeeze = 1., ax = 0., ay = 0.;
     if (_plugin == eDistortionPluginLensDistortion) {
         int distortionModel_i;
         _distortionModel->getValue(distortionModel_i);
         distortionModel = (DistortionModelEnum)distortionModel_i;
         switch (distortionModel) {
             case eDistortionModelNuke:
+                par = _srcClip->getPixelAspectRatio();
                 _k1->getValueAtTime(time, k1);
                 _k2->getValueAtTime(time, k2);
                 //_k3->getValueAtTime(time, k3);
@@ -1099,7 +1102,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
                         uOffset, vOffset,
                         uScale, vScale,
                         uWrap, vWrap,
-                        distortionModel, k1, k2, k3, p1, p2, cx, cy, squeeze, ax, ay,
+                        distortionModel, par, k1, k2, k3, p1, p2, cx, cy, squeeze, ax, ay,
                         blackOutside, mix);
 
     // Call the base class process member, this will call the derived templated process code
