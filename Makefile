@@ -19,6 +19,7 @@ Deinterlace \
 Difference \
 Dissolve \
 FrameBlend \
+FrameHold \
 Gamma \
 GodRays \
 Grade \

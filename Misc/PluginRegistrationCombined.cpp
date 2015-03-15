@@ -16,6 +16,7 @@
 #include "Difference.h"
 #include "Dissolve.h"
 #include "FrameBlend.h"
+#include "FrameHold.h"
 #include "Gamma.h"
 #include "GodRays.h"
 #include "Grade.h"
@@ -74,6 +75,7 @@ namespace OFX
             getDifferencePluginID(ids);
             getDissolvePluginID(ids);
             getFrameBlendPluginID(ids);
+            getFrameHoldPluginID(ids);
             getGammaPluginID(ids);
             getGodRaysPluginID(ids);
             getGradePluginID(ids);

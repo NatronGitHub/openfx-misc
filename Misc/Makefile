@@ -16,6 +16,7 @@ Deinterlace.o \
 Difference.o \
 Dissolve.o \
 FrameBlend.o \
+FrameHold.o \
 Gamma.o \
 GodRays.o \
 Grade.o \
@@ -187,6 +188,7 @@ VPATH += \
 ../Difference \
 ../Dissolve \
 ../FrameBlend \
+../FrameHold \
 ../Gamma \
 ../GodRays \
 ../Grade \
@@ -245,6 +247,7 @@ CXXFLAGS += \
 -I../Difference \
 -I../Dissolve \
 -I../FrameBlend \
+-I../FrameHold \
 -I../Gamma \
 -I../GodRays \
 -I../Grade \

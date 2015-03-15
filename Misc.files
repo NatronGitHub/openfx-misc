@@ -93,6 +93,9 @@ Distortion/PluginRegistration.cpp
 FrameBlend/FrameBlend.cpp
 FrameBlend/FrameBlend.h
 FrameBlend/PluginRegistration.cpp
+FrameHold/FrameHold.cpp
+FrameHold/FrameHold.h
+FrameHold/PluginRegistration.cpp
 Gamma/Gamma.cpp
 Gamma/Gamma.h
 Gamma/PluginRegistration.cpp
