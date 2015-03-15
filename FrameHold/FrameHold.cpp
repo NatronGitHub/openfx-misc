@@ -74,6 +74,11 @@
 #include "FrameHold.h"
 
 #include <cmath>
+#include <stdio.h> // for snprintf & _snprintf
+#ifdef _WINDOWS
+#include <windows.h>
+#define snprintf _snprintf
+#endif
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
