@@ -52,7 +52,7 @@
 
 #define kPluginName "FrameRangeOFX"
 #define kPluginGrouping "Time"
-#define kPluginDescription "Set the frame range for a clip. Useful in conjunction with AppenClip."
+#define kPluginDescription "Set the frame range for a clip. Useful in conjunction with AppendClipOFX."
 #define kPluginIdentifier "net.sf.openfx.FrameRange"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
