@@ -80,6 +80,7 @@
 #include <algorithm>
 
 #include "ofxsProcessing.H"
+#include "ofxsPixelProcessor.h"
 #include "ofxsMacros.h"
 
 #define kPluginName "ShuffleOFX"
@@ -1265,6 +1266,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
     }
     
     
+    int nDstComponents = getNComponents(dstComponents);
     
     std::list<std::string> componentsA = _srcClipA->getComponentsPresent();
     std::list<std::string> componentsB = _srcClipB->getComponentsPresent();
@@ -1277,7 +1279,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
     std::map<std::string,OFX::Image*> fetchedPlanes;
     
     std::vector<InputPlaneChannel> planes;
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < nDstComponents; ++i) {
         
         InputPlaneChannel p;
         OFX::Clip* clip = 0;
