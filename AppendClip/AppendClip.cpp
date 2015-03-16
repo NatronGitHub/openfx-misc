@@ -164,6 +164,7 @@ public:
         assert(_fadeIn && _fadeOut && _crossDissolve && _firstFrame && _lastFrame);
     }
 
+private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
@@ -180,9 +181,12 @@ public:
 
     /* override the time domain action, only for the general context */
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
-    
+
+private:
     /* set up and run a processor */
     void setupAndProcess(OFX::ImageBlenderBase &, const OFX::RenderArguments &args);
+
+    void getSources(double time, int *clip0, double *t0, int *clip1, double *t1, double blend);
 
 private:
 
@@ -222,6 +226,17 @@ checkComponents(const OFX::Image &src,
     if ( ( srcBitDepth != dstBitDepth) || ( srcComponents != dstComponents) ) {
         throw int(1); // HACK!! need to throw an sensible exception here!
     }
+}
+
+void
+AppendClipPlugin::getSources(double time,
+                             int *clip0,
+                             double *t0,
+                             int *clip1,
+                             double *t1,
+                             double blend)
+{
+    // if fadeIn = 0 return first frame of first connected clip if time <= firstFrame, else return back
 }
 
 /* set up and run a processor */
@@ -462,15 +477,17 @@ void
 AppendClipPlugin::changedClip(const OFX::InstanceChangedArgs &/*args*/, const std::string &/*clipName*/)
 {
     // TODO: set lastFrame
-#if 0
-    int maxconnected = 1;
+    int t;
+    _firstFrame->getValue(t);
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
         if (_srcClip[i]->isConnected()) {
-            maxconnected = i;
+            OfxRangeD r = _srcClip[i]->getFrameRange();
+            if (r.max >= r.min) {
+                t += 1 + (int)r.max - (int)r.min;
+            }
         }
     }
-    _which->setDisplayRange(0, maxconnected);
-#endif
+    _lastFrame->setValue(t - 1);
 }
 
 /* override the time domain action, only for the general context */
@@ -479,21 +496,20 @@ AppendClipPlugin::getTimeDomain(OfxRangeD &range)
 {
     // this should only be called in the general context, ever!
     assert (getContext() == OFX::eContextGeneral);
-#if 0
-        // If we are a general context, we can changed the duration of the effect, so have a param to do that
-        // We need a separate param as it is impossible to derive this from a speed param and the input clip
-        // duration (the speed may be animating or wired to an expression).
-        double duration = _duration->getValue(); //don't animate
+    int t;
+    _firstFrame->getValue(t);
+    range.min = t;
+    for (unsigned i = 0; i < _srcClip.size(); ++i) {
+        if (_srcClip[i]->isConnected()) {
+            OfxRangeD r = _srcClip[i]->getFrameRange();
+            if (r.max >= r.min) {
+                t += 1 + (int)r.max - (int)r.min;
+            }
+        }
+    }
+    range.max = t - 1;
 
-        // how many frames on the input clip
-        OfxRangeD srcRange = _srcClip->getFrameRange();
-
-        range.min = 0;
-        range.max = srcRange.max * duration;
-        return true;
-#endif
-
-    return false;
+    return true;
 }
 
 mDeclarePluginFactory(AppendClipPluginFactory, {}, {}
@@ -618,21 +634,6 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-#define kParamCrossDissolve "crossDissolve"
-#define kParamCrossDissolveLabel "Cross Dissolve"
-#define kParamCrossDissolveHint "Number of frames to cross-dissolve between clips."
-
-#define kParamCrossDissolve "crossDissolve"
-#define kParamCrossDissolveLabel "Cross Dissolve"
-#define kParamCrossDissolveHint "Number of frames to cross-dissolve between clips."
-
-#define kParamFirstFrame "firstFrame"
-#define kParamFirstFrameLabel "First Frame"
-#define kParamFirstFrameHint "Frame to start the first clip at."
-
-#define kParamLastFrame "lastFrame"
-#define kParamLastFrameLabel "Last Frame"
-#define kParamLastFrameHint "Last frame of the assembled clip (read-only)."
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamFadeIn);
         param->setLabel(kParamFadeInLabel);
