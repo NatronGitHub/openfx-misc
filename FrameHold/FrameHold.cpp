@@ -131,7 +131,7 @@ public:
         _firstFrame = fetchIntParam(kParamFirstFrame);
         _increment = fetchIntParam(kParamIncrement);
         _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
-        assert(_firstFrame && _increment);
+        assert(_firstFrame && _increment && _sublabel);
     }
 
 private:
