@@ -356,7 +356,6 @@ static void _cimg_recursive_apply(T *data, const double filter[], const int N, c
  \param order the order of the filter 0,1,2,3
  \param axis  Axis along which the filter is computed. Can be <tt>{ 'x' | 'y' | 'z' | 'c' }</tt>.
  \param boundary_conditions Boundary conditions. Can be <tt>{ 0=dirichlet | 1=neumann }</tt>.
- \note dirichlet boundary condition has a strange behavior
 
  I.T. Young, L.J. van Vliet, M. van Ginkel, Recursive Gabor filtering.
  IEEE Trans. Sig. Proc., vol. 50, pp. 2799-2805, 2002.
@@ -438,7 +437,7 @@ T get_data(T *data, const int N, const unsigned long off, const bool boundary_co
     return data[x*off];
 }
 
-// [internal] Apply a recursive filter (used by CImg<T>::vanvliet()).
+// [internal] Apply a box/triangle/quadratic filter (used by CImg<T>::box()).
 /**
  \param ptr the pointer of the data
  \param N size of the data
@@ -527,24 +526,13 @@ static void _cimg_box_apply(T *data, const double width, const int N, const unsi
     }
 }
 
-//! Van Vliet recursive Gaussian filter.
+//! Box/Triangle/Quadratic filter.
 /**
  \param width width of the box filter
  \param iter number of iterations (1 = box, 2 = triangle, 3 = quadratic)
  \param order the order of the filter 0,1,2,3
  \param axis  Axis along which the filter is computed. Can be <tt>{ 'x' | 'y' | 'z' | 'c' }</tt>.
  \param boundary_conditions Boundary conditions. Can be <tt>{ 0=dirichlet | 1=neumann }</tt>.
- \note dirichlet boundary condition has a strange behavior
-
- I.T. Young, L.J. van Vliet, M. van Ginkel, Recursive Gabor filtering.
- IEEE Trans. Sig. Proc., vol. 50, pp. 2799-2805, 2002.
-
- (this is an improvement over Young-Van Vliet, Sig. Proc. 44, 1995)
-
- Boundary conditions (only for order 0) using Triggs matrix, from
- B. Triggs and M. Sdika. Boundary conditions for Young-van Vliet
- recursive filtering. IEEE Trans. Signal Processing,
- vol. 54, pp. 2365-2367, 2006.
  **/
 static void
 box(CImg<T>& img, const float width, const int iter, const int order, const char axis='x', const bool boundary_conditions=true)
