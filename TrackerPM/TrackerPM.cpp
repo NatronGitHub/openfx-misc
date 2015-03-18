@@ -897,11 +897,11 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     genericTrackerDescribePointParameters(desc, page);
 
     // this tracker can be masked
-    if (context == eContextGeneral || context == eContextPaint) {
-        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
+    if (context == eContextGeneral || context == eContextPaint || context == eContextTracker) {
+        ClipDescriptor *maskClip = (context == eContextGeneral || context == eContextTracker) ? desc.defineClip("Mask") : desc.defineClip("Brush");
         maskClip->addSupportedComponent(ePixelComponentAlpha);
         maskClip->setTemporalClipAccess(false);
-        if (context == eContextGeneral) {
+        if (context == eContextGeneral  || context == eContextTracker) {
             maskClip->setOptional(true);
         }
         maskClip->setSupportsTiles(kSupportsTiles);
