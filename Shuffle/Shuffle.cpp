@@ -1285,7 +1285,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
         OFX::Clip* clip = 0;
         std::string plane,ofxComp;
         bool ok = getPlaneNeededForParam(componentsA, componentsB, params[i], &clip, &plane, &ofxComp, &p.channelIndex);
-        assert(ok && clip);
+        assert(ok);
         
         p.img = 0;
         if (ofxComp == kParamOutputOption0) {
