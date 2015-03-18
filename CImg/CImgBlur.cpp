@@ -484,15 +484,18 @@ public:
             // 57ffb8393314e5102c00e5f9f8fa3dcace179608 Thu Dec 11 10:57:13 2014 +0100
             if (params.filter == eFilterGaussian) {
                 cimg.vanvliet(sigmax, params.orderX, 'x', (bool)params.boundary_i);
+                if (abort()) { return; }
                 cimg.vanvliet(sigmay, params.orderY, 'y', (bool)params.boundary_i);
             } else {
                 cimg.deriche(sigmax, params.orderX, 'x', (bool)params.boundary_i);
+                if (abort()) { return; }
                 cimg.deriche(sigmay, params.orderY, 'y', (bool)params.boundary_i);
             }
         } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
             int iter = (params.filter == eFilterBox ? 1 :
                         (params.filter == eFilterTriangle ? 2 : 3));
             box(cimg, sx, iter, params.orderX, 'x', (bool)params.boundary_i);
+            if (abort()) { return; }
             box(cimg, sy, iter, params.orderY, 'y', (bool)params.boundary_i);
         } else {
             assert(false);

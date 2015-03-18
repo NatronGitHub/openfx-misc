@@ -510,6 +510,7 @@ public:
 
             cimg.mul(denom);
 
+            if (abort()) { return; }
             // almost the same code as in CImgBlur.cpp, except we smooth both cimg and denom
             if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
                 float sigmax = (float)(sx / 2.4);
@@ -519,28 +520,39 @@ public:
                 }
                 if (params.filter == eFilterGaussian) {
                     cimg.vanvliet(sigmax, 0, 'x', (bool)params.boundary_i);
+                    if (abort()) { return; }
                     cimg.vanvliet(sigmay, 0, 'y', (bool)params.boundary_i);
+                    if (abort()) { return; }
                     denom.vanvliet(sigmax, 0, 'x', (bool)params.boundary_i);
+                    if (abort()) { return; }
                     denom.vanvliet(sigmay, 0, 'y', (bool)params.boundary_i);
                 } else {
                     cimg.deriche(sigmax, 0, 'x', (bool)params.boundary_i);
+                    if (abort()) { return; }
                     cimg.deriche(sigmay, 0, 'y', (bool)params.boundary_i);
+                    if (abort()) { return; }
                     denom.deriche(sigmax, 0, 'x', (bool)params.boundary_i);
+                    if (abort()) { return; }
                     denom.deriche(sigmay, 0, 'y', (bool)params.boundary_i);
                 }
             } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
                 int iter = (params.filter == eFilterBox ? 1 :
                             (params.filter == eFilterTriangle ? 2 : 3));
                 box(cimg, sx, iter, 0, 'x', (bool)params.boundary_i);
+                if (abort()) { return; }
                 box(cimg, sy, iter, 0, 'y', (bool)params.boundary_i);
+                if (abort()) { return; }
                 box(denom, sx, iter, 0, 'x', (bool)params.boundary_i);
+                if (abort()) { return; }
                 box(denom, sy, iter, 0, 'y', (bool)params.boundary_i);
             } else {
                 assert(false);
             }
+            if (abort()) { return; }
 
             assert(cimg.width() == denom.width() && cimg.height() == denom.height() && cimg.depth() == denom.depth() && cimg.spectrum() == denom.spectrum());
             cimg.div(denom);
+            if (abort()) { return; }
         }
 
         // scale to [rmin,rmax]
