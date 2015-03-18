@@ -88,7 +88,9 @@
 
 #include "CImgFilter.h"
 
-#if cimg_version >= 157
+#if cimg_version < 161
+#error "This plugin requires CImg 1.6.1, please upgrade CImg."
+#endif
 
 #define kPluginName          "RollingGuidanceCImg"
 #define kPluginGrouping      "Filter"
@@ -302,11 +304,3 @@ void getCImgRollingGuidancePluginID(OFX::PluginFactoryArray &ids)
     static CImgRollingGuidancePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
-
-#else // cimg_version < 157
-#pragma message WARN("CImg RollingGuidance filter not available with CImg < 1.5.7, please upgrade CImg")
-
-void getCImgRollingGuidancePluginID(OFX::PluginFactoryArray &ids)
-{
-}
-#endif

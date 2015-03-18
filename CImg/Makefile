@@ -38,7 +38,8 @@ CXXFLAGS += -I$(CIMG_INCLUDE)
 # commit 57ffb8393314e5102c00e5f9f8fa3dcace179608 from Thu Dec 11 10:57:13 2014 +0100 fixes vanvliet
 # commit c52e49eee959b4c59881a0c7a960c4592f1a03a9 from Fri Dec 12 09:47:13 2014 +0100 enhances get_displacement
 # commit cc874bf2c6c9940d75dd40becc234b5369f3fb30 from Sun Dec 28 12:01:19 2014 +0100 fixes LabToXYZ
-CIMGVERSION=cc874bf2c6c9940d75dd40becc234b5369f3fb30
+# commit f99ec436e44134d4974340a862cdfb159b0961f5 from Mon Mar 16 22:11:34 2015 +0100 is CImg 1.6.1.0
+CIMGVERSION=f99ec436e44134d4974340a862cdfb159b0961f5
 CImg.h:
 	git archive --remote=git://git.code.sf.net/p/gmic/source $(CIMGVERSION):src CImg.h | tar xf -
 

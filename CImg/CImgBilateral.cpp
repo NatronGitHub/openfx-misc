@@ -88,6 +88,10 @@
 #include "CImgFilter.h"
 #include "CImgOperator.h"
 
+#if cimg_version < 160
+#error "The bilateral filter before CImg 1.6.0 produces incorrect results, please upgrade CImg."
+#endif
+
 #define kPluginName          "BilateralCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
@@ -179,14 +183,7 @@ public:
         if (params.sigma_s == 0.) {
             return;
         }
-#if cimg_version < 160
-#pragma message WARN("The bilateral filter before CImg 1.6.0 produces incorrect results, please upgrade CImg.")
-#endif
-#if cimg_version >= 157
         cimg.blur_bilateral(cimg, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r);
-#else
-        cimg.blur_bilateral((float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r);
-#endif
     }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgBilateralParams& params) OVERRIDE FINAL
@@ -237,12 +234,6 @@ public:
         if (params.sigma_s == 0.) {
             return;
         }
-#if cimg_version < 160
-#pragma message WARN("The bilateral filter before CImg 1.6.0 produces incorrect results, please upgrade CImg.")
-#endif
-#if cimg_version < 157
-#error "BilateralGuided requires CImg >= 1.57"
-#endif
         dst = srcA.get_blur_bilateral(srcB, (float)(params.sigma_s * args.renderScale.x), (float)params.sigma_r);
     }
 

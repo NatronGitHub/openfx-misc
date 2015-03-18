@@ -87,6 +87,10 @@
 
 #include "CImgFilter.h"
 
+#if cimg_version < 161
+#error "This plugin requires CImg 1.6.1, please upgrade CImg."
+#endif
+
 #define kPluginName          "GuidedCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
@@ -125,8 +129,6 @@
 #define kParamEpsilonDefault 0.2
 
 using namespace OFX;
-
-#if cimg_version >= 160
 
 /// Guided plugin
 struct CImgGuidedParams
@@ -265,5 +267,3 @@ void getCImgGuidedPluginID(OFX::PluginFactoryArray &ids)
     static CImgGuidedPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
-
-#endif
