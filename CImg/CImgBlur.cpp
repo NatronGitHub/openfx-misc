@@ -341,7 +341,7 @@ using namespace OFX;
 /// Blur plugin
 struct CImgBlurParams
 {
-    double sizex, sizey;
+    double sizex, sizey; // sizex takes PixelAspectRatio intor account
     int orderX;
     int orderY;
     int boundary_i;
@@ -396,20 +396,60 @@ public:
         _expandRoD->getValueAtTime(time, params.expandRoD);
     }
 
+    bool getRoD(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* dstRoD) OVERRIDE FINAL
+    {
+        double sx = renderScale.x * params.sizex;
+        double sy = renderScale.y * params.sizey;
+        if (params.expandRoD && !isEmpty(srcRoD)) {
+            if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
+                float sigmax = (float)(sx / 2.4);
+                float sigmay = (float)(sy / 2.4);
+                if (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0) {
+                    return false; // identity
+                }
+                int delta_pixX = std::max(3, (int)std::ceil(sx * 1.5));
+                int delta_pixY = std::max(3, (int)std::ceil(sy * 1.5));
+                dstRoD->x1 = srcRoD.x1 - delta_pixX - params.orderX;
+                dstRoD->x2 = srcRoD.x2 + delta_pixX + params.orderX;
+                dstRoD->y1 = srcRoD.y1 - delta_pixY - params.orderY;
+                dstRoD->y2 = srcRoD.y2 + delta_pixY + params.orderY;
+            } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
+                if (sx <= 1 && sy <= 1 && params.orderX == 0 && params.orderY == 0) {
+                    return false; // identity
+                }
+                int iter = (params.filter == eFilterBox ? 1 :
+                            (params.filter == eFilterTriangle ? 2 : 3));
+                int delta_pixX = iter * std::ceil((sx-1)/ 2);
+                int delta_pixY = iter * std::ceil((sy-1)/ 2);
+                dstRoD->x1 = srcRoD.x1 - delta_pixX - (params.orderX > 0);
+                dstRoD->x2 = srcRoD.x2 + delta_pixX + (params.orderX > 0);
+                dstRoD->y1 = srcRoD.y1 - delta_pixY - (params.orderY > 0);
+                dstRoD->y2 = srcRoD.y2 + delta_pixY + (params.orderY > 0);
+            } else {
+                assert(false);
+            }
+            return true;
+        }
+        
+        return false;
+    }
+
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
+        double sx = renderScale.x * params.sizex;
+        double sy = renderScale.y * params.sizey;
         if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
-            float sigmax = (float)(renderScale.x * params.sizex / 2.4);
-            float sigmay = (float)(renderScale.y * params.sizey / 2.4);
+            float sigmax = (float)(sx / 2.4);
+            float sigmay = (float)(sy / 2.4);
             if (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0) {
                 *roi = rect;
                 return;
             }
 
-            int delta_pixX = std::max(3, (int)std::ceil((params.sizex * 1.5) * renderScale.x));
-            int delta_pixY = std::max(3, (int)std::ceil((params.sizey * 1.5) * renderScale.y));
+            int delta_pixX = std::max(3, (int)std::ceil(sx * 1.5));
+            int delta_pixY = std::max(3, (int)std::ceil(sy * 1.5));
             roi->x1 = rect.x1 - delta_pixX - params.orderX;
             roi->x2 = rect.x2 + delta_pixX + params.orderX;
             roi->y1 = rect.y1 - delta_pixY - params.orderY;
@@ -417,8 +457,8 @@ public:
         } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
             int iter = (params.filter == eFilterBox ? 1 :
                         (params.filter == eFilterTriangle ? 2 : 3));
-            int delta_pixX = iter * (std::floor((renderScale.x * params.sizex-1)/ 2) + 1);
-            int delta_pixY = iter * (std::floor((renderScale.y * params.sizey-1)/ 2) + 1);
+            int delta_pixX = iter * (std::floor((sx-1)/ 2) + 1);
+            int delta_pixY = iter * (std::floor((sy-1)/ 2) + 1);
             roi->x1 = rect.x1 - delta_pixX - (params.orderX > 0);
             roi->x2 = rect.x2 + delta_pixX + (params.orderX > 0);
             roi->y1 = rect.y1 - delta_pixY - (params.orderY > 0);
@@ -432,16 +472,16 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
+        double sx = args.renderScale.x * params.sizex;
+        double sy = args.renderScale.y * params.sizey;
         if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
-            float sigmax = (float)(args.renderScale.x * params.sizex / 2.4);
-            float sigmay = (float)(args.renderScale.y * params.sizey / 2.4);
+            float sigmax = (float)(sx / 2.4);
+            float sigmay = (float)(sy / 2.4);
             if (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0) {
                 return;
             }
-#if       cimg_version >= 160
-            //if (params.orderX == 0 && params.orderY == 0) {
-            //    cimg.blur(sigma, (bool)params.boundary_i, params.filter == eFilterGaussian);
-            //} else {
+            // VanVliet filter was inexistent before 1.53, and buggy before CImg.h from
+            // 57ffb8393314e5102c00e5f9f8fa3dcace179608 Thu Dec 11 10:57:13 2014 +0100
             if (params.filter == eFilterGaussian) {
                 cimg.vanvliet(sigmax, params.orderX, 'x', (bool)params.boundary_i);
                 cimg.vanvliet(sigmay, params.orderY, 'y', (bool)params.boundary_i);
@@ -449,23 +489,11 @@ public:
                 cimg.deriche(sigmax, params.orderX, 'x', (bool)params.boundary_i);
                 cimg.deriche(sigmay, params.orderY, 'y', (bool)params.boundary_i);
             }
-            //}
-#         else
-            // VanVliet filter was inexistent before 1.53, and buggy before CImg.h from
-            // 57ffb8393314e5102c00e5f9f8fa3dcace179608 Thu Dec 11 10:57:13 2014 +0100
-            if (params.filter == eFilterGaussian) {
-                vanvliet(cimg,/*cimg.vanvliet(*/sigmax, params.orderX, 'x', (bool)params.boundary_i);
-                vanvliet(cimg,/*cimg.vanvliet(*/sigmay, params.orderY, 'y', (bool)params.boundary_i);
-            } else {
-                cimg.deriche(sigmax, params.orderX, 'x', (bool)params.boundary_i);
-                cimg.deriche(sigmay, params.orderY, 'y', (bool)params.boundary_i);
-            }
-#         endif
         } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
             int iter = (params.filter == eFilterBox ? 1 :
                         (params.filter == eFilterTriangle ? 2 : 3));
-            box(cimg, args.renderScale.x * params.sizex, iter, params.orderX, 'x', (bool)params.boundary_i);
-            box(cimg, args.renderScale.y * params.sizey, iter, params.orderY, 'y', (bool)params.boundary_i);
+            box(cimg, sx, iter, params.orderX, 'x', (bool)params.boundary_i);
+            box(cimg, sy, iter, params.orderY, 'y', (bool)params.boundary_i);
         } else {
             assert(false);
         }
@@ -473,13 +501,11 @@ public:
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgBlurParams& params) OVERRIDE FINAL
     {
-        double par = _srcClip->getPixelAspectRatio();
-        if (par == 0.) {
-            par = 1.;
-        }
+        double sx = args.renderScale.x * params.sizex;
+        double sy = args.renderScale.y * params.sizey;
         if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
-            float sigmax = (float)(args.renderScale.x * params.sizex / 2.4 / par);
-            float sigmay = (float)(args.renderScale.y * params.sizey / 2.4);
+            float sigmax = (float)(sx / 2.4);
+            float sigmay = (float)(sy / 2.4);
             return (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0);
         } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
             return (sx <= 1 && sy <= 1 && params.orderX == 0 && params.orderY == 0);
@@ -488,8 +514,6 @@ public:
         }
         return false;
     };
-
-    virtual bool getRoD(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* dstRoD) OVERRIDE FINAL;
 
     // 0: Black/Dirichlet, 1: Nearest/Neumann, 2: Repeat/Periodic
     virtual int getBoundary(const CImgBlurParams& params)  OVERRIDE FINAL { return params.boundary_i; }
@@ -512,46 +536,6 @@ private:
     OFX::BooleanParam *_expandRoD;
 };
 
-bool
-CImgBlurPlugin::getRoD(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* dstRoD)
-{
-    double par = _srcClip->getPixelAspectRatio();
-    if (par == 0.) {
-        par = 1.;
-    }
-    if (params.expandRoD && !isEmpty(srcRoD)) {
-        if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
-            float sigmax = (float)(renderScale.x * params.sizex / 2.4 / par);
-            float sigmay = (float)(renderScale.y * params.sizey / 2.4);
-            if (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0) {
-                return false; // identity
-            }
-            int delta_pixX = std::max(3, (int)std::ceil((params.sizex * 1.5) * renderScale.x / par));
-            int delta_pixY = std::max(3, (int)std::ceil((params.sizey * 1.5) * renderScale.y));
-            dstRoD->x1 = srcRoD.x1 - delta_pixX - params.orderX;
-            dstRoD->x2 = srcRoD.x2 + delta_pixX + params.orderX;
-            dstRoD->y1 = srcRoD.y1 - delta_pixY - params.orderY;
-            dstRoD->y2 = srcRoD.y2 + delta_pixY + params.orderY;
-        } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
-            if (renderScale.x * params.sizex / par <= 1 && renderScale.y * params.sizey <= 1 && params.orderX == 0 && params.orderY == 0) {
-                return false; // identity
-            }
-            int iter = (params.filter == eFilterBox ? 1 :
-                        (params.filter == eFilterTriangle ? 2 : 3));
-            int delta_pixX = iter * (std::floor((renderScale.x * params.sizex-1)/ 2) + 1);
-            int delta_pixY = iter * (std::floor((renderScale.y * params.sizey-1)/ 2) + 1);
-            dstRoD->x1 = srcRoD.x1 - delta_pixX - (params.orderX > 0);
-            dstRoD->x2 = srcRoD.x2 + delta_pixX + (params.orderX > 0);
-            dstRoD->y1 = srcRoD.y1 - delta_pixY - (params.orderY > 0);
-            dstRoD->y2 = srcRoD.y2 + delta_pixY + (params.orderY > 0);
-        } else {
-            assert(false);
-        }
-        return true;
-    }
-
-    return false;
-}
 
 void
 CImgBlurPlugin::describe(OFX::ImageEffectDescriptor& desc, int /*majorVersion*/, int /*minorVersion*/)
