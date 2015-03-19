@@ -102,7 +102,7 @@
 #define kParamWhichLabel "Which"
 #define kParamWhichHint "Mix factor between the inputs."
 
-#define kClipSourceCount 10
+#define kClipSourceCount 16
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */

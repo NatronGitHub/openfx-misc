@@ -107,7 +107,7 @@
 #define kParamWhichHint \
 "The input to display. Each input is displayed at the value corresponding to the number of the input. For example, setting which to 4 displays the image from input 4."
 
-#define kClipSourceCount 10
+#define kClipSourceCount 16
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */

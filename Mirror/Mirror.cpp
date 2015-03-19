@@ -390,6 +390,7 @@ private:
 void
 MirrorPlugin::render(const OFX::RenderArguments &args)
 {
+    assert (_srcClip && _dstClip);
     if (!_srcClip || !_dstClip) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }

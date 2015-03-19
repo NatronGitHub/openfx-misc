@@ -148,6 +148,7 @@ public:
     : ImageEffect(handle)
     , _dstClip(0)
     , _srcClip(0)
+    , _reverse_input(0)
     , _sourceTime(0)
     , _speed(0)
     , _duration(0)

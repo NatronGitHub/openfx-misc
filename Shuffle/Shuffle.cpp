@@ -1423,6 +1423,7 @@ ShufflePlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnu
 void
 ShufflePlugin::render(const OFX::RenderArguments &args)
 {
+    assert (_srcClipA && _srcClipB && _dstClip);
     if (!_srcClipA || !_srcClipB || !_dstClip) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
