@@ -650,6 +650,7 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSize);
         param->setLabel(kParamSizeLabel);
         param->setHint(kParamSizeHint);
+        param->setRange(-1000, -1000, 1000, 1000);
         param->setDisplayRange(-100, -100, 100, 100);
         param->setDefault(kParamSizeDefault, kParamSizeDefault);
         param->setDoubleType(eDoubleTypeXY);

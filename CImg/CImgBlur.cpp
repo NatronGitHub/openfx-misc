@@ -583,7 +583,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
         OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSize);
         param->setLabel(kParamSizeLabel);
         param->setHint(kParamSizeHint);
-        param->setRange(0, 0, INT_MAX, INT_MAX);
+        param->setRange(0, 0, 1000, 1000);
         param->setDisplayRange(0, 0, 100, 100);
         param->setDefault(kParamSizeDefault, kParamSizeDefault);
         param->setDoubleType(eDoubleTypeXY);

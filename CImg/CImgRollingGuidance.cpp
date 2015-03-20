@@ -166,7 +166,7 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgRollingGuidanceParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = (int)std::ceil((params.sigma_s * 4.) * renderScale.x);
+        int delta_pix = (int)std::ceil((params.sigma_s * 3.6) * renderScale.x);
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;

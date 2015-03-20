@@ -169,7 +169,7 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgBilateralParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = (int)std::ceil((params.sigma_s * 4.) * renderScale.x);
+        int delta_pix = (int)std::ceil((params.sigma_s * 3.6) * renderScale.x);
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
@@ -220,7 +220,7 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgBilateralParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = (int)std::ceil((params.sigma_s * 4.) * renderScale.x);
+        int delta_pix = (int)std::ceil((params.sigma_s * 3.6) * renderScale.x);
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
@@ -292,7 +292,7 @@ void CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& d
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
         param->setLabel(kParamSigmaSLabel);
         param->setHint(kParamSigmaSHint);
-        param->setRange(0, 100000.);
+        param->setRange(0, 1000.);
         param->setDisplayRange(0.0, 10.);
         param->setDefault(kParamSigmaSDefault);
         param->setIncrement(0.1);
@@ -366,7 +366,7 @@ void CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescrip
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
         param->setLabel(kParamSigmaSLabel);
         param->setHint(kParamSigmaSHint);
-        param->setRange(0, 100000.);
+        param->setRange(0, 1000.);
         param->setDisplayRange(0.0, 10.);
         param->setDefault(kParamSigmaSDefault);
         param->setIncrement(0.1);
