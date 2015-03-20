@@ -270,6 +270,7 @@ void FrameRangePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setHint(kParamFrameRangeHint);
         param->setDefault(1,1);
         param->setAnimates(false);
+        param->setDimensionLabels("first", "last");
         param->setLayoutHint(eLayoutHintNoNewLine);
         if (page) {
             page->addChild(*param);
