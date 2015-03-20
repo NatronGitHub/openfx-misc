@@ -836,7 +836,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     const OFX::BitDepthEnum tmpBitDepth = OFX::eBitDepthFloat;
     const int tmpWidth = tmpBounds.x2 - tmpBounds.x1;
     const int tmpHeight = tmpBounds.y2 - tmpBounds.y1;
-    const int tmpRowBytes = getPixelBytes(tmpPixelComponents, tmpBitDepth) * tmpWidth;
+    const size_t tmpRowBytes = (size_t)getPixelBytes(tmpPixelComponents, tmpBitDepth) * tmpWidth;
     size_t tmpSize = tmpRowBytes * tmpHeight;
 
     assert(tmpSize > 0);
