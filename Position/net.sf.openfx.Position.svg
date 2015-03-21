@@ -1,0 +1,16 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:1.41421;">
+    <g id="Tr Position">
+        <g>
+            <path d="M15.5,65.9219L15.5,62.0509L12.589,63.9859L15.5,65.9219ZM21.5,52.9799L21.5,74.9929L4.946,63.9859L21.5,52.9799Z" style="fill:#e6e6e6;fill-rule:nonzero;"/>
+            <path d="M24,79.6574L0.430695,63.9858L24,48.3156L24,79.6574ZM19,70.3284L19,57.6442L18,58.309L18,69.6635L19,70.3284Z" style="fill:#e6e6e6;"/>
+            <path d="M112.5,62.0508L112.5,65.9218L115.411,63.9868L112.5,62.0508ZM106.5,74.9928L106.5,52.9798L123.054,63.9868L106.5,74.9928Z" style="fill:#e6e6e6;fill-rule:nonzero;"/>
+            <path d="M104,79.657L104,48.3153L127.569,63.9869L104,79.657ZM109,70.3285L110,69.6637L110,58.3092L109,57.6443L109,70.3285Z" style="fill:#e6e6e6;"/>
+            <path d="M62.1084,15.5L65.8924,15.5L64.0004,12.589L62.1084,15.5ZM74.7574,21.5L53.2434,21.5L64.0004,4.946L74.7574,21.5Z" style="fill:#e6e6e6;fill-rule:nonzero;"/>
+            <path d="M48.6374,24L64.0004,0.357817L79.3634,24L48.6374,24ZM57.8494,19L70.1514,19L69.5016,18L58.4992,18L57.8494,19Z" style="fill:#e6e6e6;"/>
+            <path d="M65.8921,112.5L62.1081,112.5L64.0001,115.411L65.8921,112.5ZM53.2441,106.5L74.7571,106.5L64.0001,123.054L53.2441,106.5Z" style="fill:#e6e6e6;fill-rule:nonzero;"/>
+            <path d="M58.4996,110L69.5013,110L70.1511,109L57.8499,109L58.4996,110ZM64,127.642L48.6383,104L79.3631,104L64,127.642Z" style="fill:#e6e6e6;"/>
+        </g>
+    </g>
+</svg>

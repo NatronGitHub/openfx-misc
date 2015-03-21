@@ -91,6 +91,7 @@
     </Link>
     <PostBuildEvent>
       <Command>xcopy $(SolutionDir)..\Add\net.sf.openfx.AddPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+          xcopy $(SolutionDir)..\AdjustRoD\net.sf.openfx.AdjustRoDPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Anaglyph\net.sf.openfx.anaglyphPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\ChromaKeyer\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -129,7 +130,13 @@ xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToXYZPlugin.png $(OutDir)
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.LABToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.XYZToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\Distortion\net.sf.openfx.IDistort.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Distortion\net.sf.openfx.STMap.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Distortion\net.sf.openfx.LensDistortion.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
 xcopy $(SolutionDir)..\FrameBlend\net.sf.openfx.FrameBlend.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\FrameHold\net.sf.openfx.FrameHold.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\FrameRange\net.sf.openfx.FrameRange.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ImageStatistics\net.sf.openfx.ImageStatistics.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Invert\net.sf.openfx.Invert.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
@@ -138,6 +145,7 @@ xcopy $(SolutionDir)..\JoinViews\net.sf.openfx.joinViewsPlugin.png $(OutDir)$(Pr
 xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Merge\net.sf.openfx.MergePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Mirror\net.sf.openfx.Mirror.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\MixViews\net.sf.openfx.mixViewsPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -151,6 +159,7 @@ xcopy $(SolutionDir)..\NoOp\net.sf.openfx.NoOpPlugin.png $(OutDir)$(ProjectName)
 
 xcopy $(SolutionDir)..\OneView\net.sf.openfx.oneViewPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\Position\net.sf.openfx.Position.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Premult\net.sf.openfx.Premult.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
@@ -194,6 +203,7 @@ xcopy $(SolutionDir)..\Transform\net.sf.openfx.TransformMaskedPlugin.png $(OutDi
 xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
+
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -212,6 +222,8 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     </Link>
     <PostBuildEvent>
       <Command>xcopy $(SolutionDir)..\Add\net.sf.openfx.AddPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+          xcopy $(SolutionDir)..\AdjustRoD\net.sf.openfx.AdjustRoDPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
 xcopy $(SolutionDir)..\Anaglyph\net.sf.openfx.anaglyphPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\ChromaKeyer\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -249,8 +261,12 @@ xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToLABPlugin.png $(OutDir)
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToXYZPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.LABToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.XYZToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+xcopy $(SolutionDir)..\Distortion\net.sf.openfx.IDistort.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Distortion\net.sf.openfx.STMap.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Distortion\net.sf.openfx.LensDistortion.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\FrameBlend\net.sf.openfx.FrameBlend.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\FrameHold\net.sf.openfx.FrameHold.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\FrameRange\net.sf.openfx.FrameRange.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ImageStatistics\net.sf.openfx.ImageStatistics.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Invert\net.sf.openfx.Invert.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
@@ -259,6 +275,7 @@ xcopy $(SolutionDir)..\JoinViews\net.sf.openfx.joinViewsPlugin.png $(OutDir)$(Pr
 xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Merge\net.sf.openfx.MergePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Mirror\net.sf.openfx.Mirror.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\MixViews\net.sf.openfx.mixViewsPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -272,6 +289,7 @@ xcopy $(SolutionDir)..\NoOp\net.sf.openfx.NoOpPlugin.png $(OutDir)$(ProjectName)
 
 xcopy $(SolutionDir)..\OneView\net.sf.openfx.oneViewPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\Position\net.sf.openfx.Position.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Premult\net.sf.openfx.Premult.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
@@ -338,6 +356,8 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     </Link>
     <PostBuildEvent>
       <Command>xcopy $(SolutionDir)..\Add\net.sf.openfx.AddPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+          xcopy $(SolutionDir)..\AdjustRoD\net.sf.openfx.AdjustRoDPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
 xcopy $(SolutionDir)..\Anaglyph\net.sf.openfx.anaglyphPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\ChromaKeyer\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -375,8 +395,12 @@ xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToLABPlugin.png $(OutDir)
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToXYZPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.LABToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.XYZToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+xcopy $(SolutionDir)..\Distortion\net.sf.openfx.IDistort.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Distortion\net.sf.openfx.STMap.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Distortion\net.sf.openfx.LensDistortion.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\FrameBlend\net.sf.openfx.FrameBlend.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\FrameHold\net.sf.openfx.FrameHold.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\FrameRange\net.sf.openfx.FrameRange.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ImageStatistics\net.sf.openfx.ImageStatistics.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Invert\net.sf.openfx.Invert.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
@@ -385,6 +409,7 @@ xcopy $(SolutionDir)..\JoinViews\net.sf.openfx.joinViewsPlugin.png $(OutDir)$(Pr
 xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Merge\net.sf.openfx.MergePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Mirror\net.sf.openfx.Mirror.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\MixViews\net.sf.openfx.mixViewsPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -398,6 +423,7 @@ xcopy $(SolutionDir)..\NoOp\net.sf.openfx.NoOpPlugin.png $(OutDir)$(ProjectName)
 
 xcopy $(SolutionDir)..\OneView\net.sf.openfx.oneViewPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\Position\net.sf.openfx.Position.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Premult\net.sf.openfx.Premult.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
@@ -464,6 +490,8 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     </Link>
     <PostBuildEvent>
       <Command>xcopy $(SolutionDir)..\Add\net.sf.openfx.AddPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+          xcopy $(SolutionDir)..\AdjustRoD\net.sf.openfx.AdjustRoDPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+
 xcopy $(SolutionDir)..\Anaglyph\net.sf.openfx.anaglyphPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\ChromaKeyer\net.sf.openfx.ChromaKeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -501,8 +529,12 @@ xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToLABPlugin.png $(OutDir)
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.RGBToXYZPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.LABToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ColorTransform\net.sf.openfx.XYZToRGBPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-
+xcopy $(SolutionDir)..\Distortion\net.sf.openfx.IDistort.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Distortion\net.sf.openfx.STMap.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Distortion\net.sf.openfx.LensDistortion.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\FrameBlend\net.sf.openfx.FrameBlend.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\FrameHold\net.sf.openfx.FrameHold.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\FrameRange\net.sf.openfx.FrameRange.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\ImageStatistics\net.sf.openfx.ImageStatistics.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\Invert\net.sf.openfx.Invert.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
@@ -511,6 +543,7 @@ xcopy $(SolutionDir)..\JoinViews\net.sf.openfx.joinViewsPlugin.png $(OutDir)$(Pr
 xcopy $(SolutionDir)..\Keyer\net.sf.openfx.KeyerPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Merge\net.sf.openfx.MergePlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
+xcopy $(SolutionDir)..\Mirror\net.sf.openfx.Mirror.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 
 xcopy $(SolutionDir)..\MixViews\net.sf.openfx.mixViewsPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -524,6 +557,7 @@ xcopy $(SolutionDir)..\NoOp\net.sf.openfx.NoOpPlugin.png $(OutDir)$(ProjectName)
 
 xcopy $(SolutionDir)..\OneView\net.sf.openfx.oneViewPlugin.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
+xcopy $(SolutionDir)..\Position\net.sf.openfx.Position.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 
 xcopy $(SolutionDir)..\Premult\net.sf.openfx.Premult.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 

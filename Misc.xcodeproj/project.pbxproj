@@ -943,6 +943,18 @@
 		1EFBC9981A23A22D00086E7A /* VectorToColor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFBC9961A23A22D00086E7A /* VectorToColor.cpp */; };
 		1EFBC9991A23A23C00086E7A /* VectorToColor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EFBC9961A23A22D00086E7A /* VectorToColor.cpp */; };
 		1EFC1700180DCE6500AD7B86 /* ColorLookup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0C41E180DCAB500C25D1E /* ColorLookup.cpp */; };
+		AC06266C1ABDC2EB00B3D105 /* net.sf.openfx.AdjustRoDPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06266A1ABDC2D500B3D105 /* net.sf.openfx.AdjustRoDPlugin.png */; };
+		AC06266D1ABDC2EB00B3D105 /* net.sf.openfx.AdjustRoDPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06266B1ABDC2D500B3D105 /* net.sf.openfx.AdjustRoDPlugin.svg */; };
+		AC0626741ABDC56100B3D105 /* net.sf.openfx.Position.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626721ABDC54E00B3D105 /* net.sf.openfx.Position.png */; };
+		AC0626751ABDC56500B3D105 /* net.sf.openfx.Position.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626731ABDC54E00B3D105 /* net.sf.openfx.Position.svg */; };
+		AC06267C1ABDC66700B3D105 /* net.sf.openfx.IDistort.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626761ABDC65800B3D105 /* net.sf.openfx.IDistort.png */; };
+		AC06267D1ABDC66700B3D105 /* net.sf.openfx.IDistort.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626771ABDC65800B3D105 /* net.sf.openfx.IDistort.svg */; };
+		AC06267E1ABDC66700B3D105 /* net.sf.openfx.LensDistortion.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626781ABDC65800B3D105 /* net.sf.openfx.LensDistortion.png */; };
+		AC06267F1ABDC66700B3D105 /* net.sf.openfx.LensDistortion.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626791ABDC65800B3D105 /* net.sf.openfx.LensDistortion.svg */; };
+		AC0626801ABDC66700B3D105 /* net.sf.openfx.STMap.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06267A1ABDC65800B3D105 /* net.sf.openfx.STMap.png */; };
+		AC0626811ABDC66700B3D105 /* net.sf.openfx.STMap.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06267B1ABDC65800B3D105 /* net.sf.openfx.STMap.svg */; };
+		AC0626841ABDC70500B3D105 /* net.sf.openfx.Mirror.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626821ABDC6F500B3D105 /* net.sf.openfx.Mirror.png */; };
+		AC0626851ABDC70500B3D105 /* net.sf.openfx.Mirror.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626831ABDC6F500B3D105 /* net.sf.openfx.Mirror.svg */; };
 		AC0EAC3D1A358A2000449A77 /* net.sf.openfx.SaturationPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0EAC3C1A358A0C00449A77 /* net.sf.openfx.SaturationPlugin.png */; };
 		AC0EAC3F1A358B7E00449A77 /* net.sf.openfx.KeyerPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0EAC3E1A358B6E00449A77 /* net.sf.openfx.KeyerPlugin.png */; };
 		AC4774E51A25B8E9008A2B57 /* net.sf.openfx.Deinterlace.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774E41A25B8E7008A2B57 /* net.sf.openfx.Deinterlace.png */; };
@@ -1988,6 +2000,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				AC06266C1ABDC2EB00B3D105 /* net.sf.openfx.AdjustRoDPlugin.png in CopyFiles */,
+				AC06266D1ABDC2EB00B3D105 /* net.sf.openfx.AdjustRoDPlugin.svg in CopyFiles */,
 				1EDF56A61AA4AF3D00E57882 /* net.sf.openfx.AddPlugin.png in CopyFiles */,
 				AC6486DC1A41A57B0088844F /* net.sf.openfx.anaglyphPlugin.png in CopyFiles */,
 				1E3284B91A41C54200C9A4E4 /* net.sf.openfx.anaglyphPlugin.svg in CopyFiles */,
@@ -2019,6 +2033,12 @@
 				1E814CC619C9838F00C2C668 /* net.sf.openfx.DifferencePlugin.svg in CopyFiles */,
 				1EDF56AE1AA4B01200E57882 /* net.sf.openfx.DirBlur.png in CopyFiles */,
 				1EDF56AF1AA4B01200E57882 /* net.sf.openfx.DirBlur.svg in CopyFiles */,
+				AC06267C1ABDC66700B3D105 /* net.sf.openfx.IDistort.png in CopyFiles */,
+				AC06267D1ABDC66700B3D105 /* net.sf.openfx.IDistort.svg in CopyFiles */,
+				AC06267E1ABDC66700B3D105 /* net.sf.openfx.LensDistortion.png in CopyFiles */,
+				AC06267F1ABDC66700B3D105 /* net.sf.openfx.LensDistortion.svg in CopyFiles */,
+				AC0626801ABDC66700B3D105 /* net.sf.openfx.STMap.png in CopyFiles */,
+				AC0626811ABDC66700B3D105 /* net.sf.openfx.STMap.svg in CopyFiles */,
 				1EE4A8B819C6EF5600E6E3AE /* net.sf.openfx.DissolvePlugin.png in CopyFiles */,
 				1E814CC719C9839200C2C668 /* net.sf.openfx.DissolvePlugin.svg in CopyFiles */,
 				1E92E8EA1AA354CB0070E494 /* net.sf.openfx.FrameBlend.png in CopyFiles */,
@@ -2046,6 +2066,8 @@
 				1E814CCA19C9839E00C2C668 /* net.sf.openfx.MergePlugin.svg in CopyFiles */,
 				AC6486DF1A41A5BA0088844F /* net.sf.openfx.mixViewsPlugin.png in CopyFiles */,
 				1E3284B11A41C4E900C9A4E4 /* net.sf.openfx.mixViewsPlugin.svg in CopyFiles */,
+				AC0626841ABDC70500B3D105 /* net.sf.openfx.Mirror.png in CopyFiles */,
+				AC0626851ABDC70500B3D105 /* net.sf.openfx.Mirror.svg in CopyFiles */,
 				1EDF56A91AA4AFAE00E57882 /* net.sf.openfx.MultiplyPlugin.png in CopyFiles */,
 				AC6486E01A41A5BF0088844F /* net.sf.openfx.Noise.png in CopyFiles */,
 				1E3284B01A41C4E300C9A4E4 /* net.sf.openfx.Noise.svg in CopyFiles */,
@@ -2053,6 +2075,8 @@
 				1E3284AF1A41C4DF00C9A4E4 /* net.sf.openfx.NoOpPlugin.svg in CopyFiles */,
 				AC6486E21A41A5C90088844F /* net.sf.openfx.oneViewPlugin.png in CopyFiles */,
 				1E3284AD1A41C4D200C9A4E4 /* net.sf.openfx.oneViewPlugin.svg in CopyFiles */,
+				AC0626741ABDC56100B3D105 /* net.sf.openfx.Position.png in CopyFiles */,
+				AC0626751ABDC56500B3D105 /* net.sf.openfx.Position.svg in CopyFiles */,
 				1EE4A8BC19C6EF6900E6E3AE /* net.sf.openfx.Premult.png in CopyFiles */,
 				1E814CCB19C983A500C2C668 /* net.sf.openfx.Premult.svg in CopyFiles */,
 				AC6486E31A41A5CC0088844F /* net.sf.openfx.Radial.png in CopyFiles */,
@@ -2666,6 +2690,18 @@
 		1EFBC99A1A23A24600086E7A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EFBC99B1A23A24600086E7A /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EFBC99C1A23A24600086E7A /* VectorToColor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VectorToColor.h; sourceTree = "<group>"; };
+		AC06266A1ABDC2D500B3D105 /* net.sf.openfx.AdjustRoDPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.AdjustRoDPlugin.png; sourceTree = "<group>"; };
+		AC06266B1ABDC2D500B3D105 /* net.sf.openfx.AdjustRoDPlugin.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = net.sf.openfx.AdjustRoDPlugin.svg; sourceTree = "<group>"; };
+		AC0626721ABDC54E00B3D105 /* net.sf.openfx.Position.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.Position.png; sourceTree = "<group>"; };
+		AC0626731ABDC54E00B3D105 /* net.sf.openfx.Position.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = net.sf.openfx.Position.svg; sourceTree = "<group>"; };
+		AC0626761ABDC65800B3D105 /* net.sf.openfx.IDistort.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.IDistort.png; sourceTree = "<group>"; };
+		AC0626771ABDC65800B3D105 /* net.sf.openfx.IDistort.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = net.sf.openfx.IDistort.svg; sourceTree = "<group>"; };
+		AC0626781ABDC65800B3D105 /* net.sf.openfx.LensDistortion.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.LensDistortion.png; sourceTree = "<group>"; };
+		AC0626791ABDC65800B3D105 /* net.sf.openfx.LensDistortion.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = net.sf.openfx.LensDistortion.svg; sourceTree = "<group>"; };
+		AC06267A1ABDC65800B3D105 /* net.sf.openfx.STMap.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.STMap.png; sourceTree = "<group>"; };
+		AC06267B1ABDC65800B3D105 /* net.sf.openfx.STMap.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = net.sf.openfx.STMap.svg; sourceTree = "<group>"; };
+		AC0626821ABDC6F500B3D105 /* net.sf.openfx.Mirror.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.Mirror.png; sourceTree = "<group>"; };
+		AC0626831ABDC6F500B3D105 /* net.sf.openfx.Mirror.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = net.sf.openfx.Mirror.svg; sourceTree = "<group>"; };
 		AC0EAC3C1A358A0C00449A77 /* net.sf.openfx.SaturationPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.SaturationPlugin.png; sourceTree = "<group>"; };
 		AC0EAC3E1A358B6E00449A77 /* net.sf.openfx.KeyerPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.KeyerPlugin.png; sourceTree = "<group>"; };
 		AC4774DC1A25B811008A2B57 /* net.sf.cimg.CImgBlur.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgBlur.png; sourceTree = "<group>"; };
@@ -3853,6 +3889,8 @@
 				1EB0A45B1AA202DF00F9C93E /* Info.plist */,
 				1EB0A45C1AA202DF00F9C93E /* Makefile */,
 				1EB0A45D1AA202DF00F9C93E /* PluginRegistration.cpp */,
+				AC0626721ABDC54E00B3D105 /* net.sf.openfx.Position.png */,
+				AC0626731ABDC54E00B3D105 /* net.sf.openfx.Position.svg */,
 				1EB0A45E1AA202DF00F9C93E /* Position.cpp */,
 				1EB0A45F1AA202DF00F9C93E /* Position.h */,
 			);
@@ -3864,6 +3902,8 @@
 			children = (
 				1EB0A4801AA21AF100F9C93E /* Mirror.cpp */,
 				1EB0A4811AA21AF100F9C93E /* Mirror.h */,
+				AC0626821ABDC6F500B3D105 /* net.sf.openfx.Mirror.png */,
+				AC0626831ABDC6F500B3D105 /* net.sf.openfx.Mirror.svg */,
 				1EB0A47E1AA21AF100F9C93E /* Info.plist */,
 				1EB0A47F1AA21AF100F9C93E /* Makefile */,
 				1EB0A4821AA21AF100F9C93E /* PluginRegistration.cpp */,
@@ -4024,6 +4064,12 @@
 				1ED851391AAB6229003F65A3 /* Distortion.cpp */,
 				1ED8513A1AAB6229003F65A3 /* Distortion.h */,
 				1ED8513B1AAB6229003F65A3 /* Info.plist */,
+				AC0626761ABDC65800B3D105 /* net.sf.openfx.IDistort.png */,
+				AC0626771ABDC65800B3D105 /* net.sf.openfx.IDistort.svg */,
+				AC0626781ABDC65800B3D105 /* net.sf.openfx.LensDistortion.png */,
+				AC0626791ABDC65800B3D105 /* net.sf.openfx.LensDistortion.svg */,
+				AC06267A1ABDC65800B3D105 /* net.sf.openfx.STMap.png */,
+				AC06267B1ABDC65800B3D105 /* net.sf.openfx.STMap.svg */,
 				1ED8513C1AAB6229003F65A3 /* Makefile */,
 				1ED8513D1AAB6229003F65A3 /* PluginRegistration.cpp */,
 			);
@@ -4214,6 +4260,8 @@
 			children = (
 				1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */,
 				1EAD4AE11A0A68FD00AF834D /* AdjustRoD.h */,
+				AC06266A1ABDC2D500B3D105 /* net.sf.openfx.AdjustRoDPlugin.png */,
+				AC06266B1ABDC2D500B3D105 /* net.sf.openfx.AdjustRoDPlugin.svg */,
 				ACC8477B1A0A3F6400B3FAFE /* Info.plist */,
 				ACC8477C1A0A3F6400B3FAFE /* Makefile */,
 				ACC8477D1A0A3F6400B3FAFE /* PluginRegistration.cpp */,

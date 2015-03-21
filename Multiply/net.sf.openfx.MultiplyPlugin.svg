@@ -1,9 +1,7 @@
 <?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:1.41421;">
-    <g id="Me Dissolve">
-        <rect x="40.4322" y="5.5" width="8" height="118" style="fill:#666;"/>
-        <path d="M20.1601,56.4508L20.1601,31.8895L68.1601,31.8895L68.1601,56.4508L20.1601,56.4508Z" style="fill:#c8c8c8;fill-rule:nonzero;"/>
-        <path d="M101.899,123.5L115.699,5.5L88.0988,5.5L101.899,123.5Z" style="fill:#666;"/>
+    <g id="Co Multiply">
+        <path d="M27.775,86.681L50.456,64L27.775,41.319L41.319,27.775L64,50.456L86.681,27.775L100.225,41.319L77.544,64L100.225,86.681L86.681,100.225L64,77.544L41.319,100.225L27.775,86.681Z" style="fill:#c8c8c8;fill-rule:nonzero;"/>
     </g>
 </svg>

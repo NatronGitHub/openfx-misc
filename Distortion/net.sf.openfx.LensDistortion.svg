@@ -1,9 +1,7 @@
 <?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:1.41421;">
-    <g id="Me Dissolve">
-        <rect x="40.4322" y="5.5" width="8" height="118" style="fill:#666;"/>
-        <path d="M20.1601,56.4508L20.1601,31.8895L68.1601,31.8895L68.1601,56.4508L20.1601,56.4508Z" style="fill:#c8c8c8;fill-rule:nonzero;"/>
-        <path d="M101.899,123.5L115.699,5.5L88.0988,5.5L101.899,123.5Z" style="fill:#666;"/>
+    <g id="Tr LensDisto">
+        <path d="M64,10.7178C49.2865,19.5982 37.3589,40.4062 37.3589,64C37.3589,87.5938 49.2865,108.402 64,117.282C78.7135,108.402 90.6411,87.5938 90.6411,64C90.6411,40.4062 78.7135,19.5982 64,10.7178Z" style="fill:#666;"/>
     </g>
 </svg>

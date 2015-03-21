@@ -70,6 +70,8 @@ PLUGINNAME = Misc
 # ls */*.png */*.svg|sort|sed -e 's!^!../!' -e 's!$! \\!' | fgrep -v net.sf.cimg
 RESOURCES = \
 ../Add/net.sf.openfx.AddPlugin.png \
+../AdjustRoD/net.sf.openfx.AdjustRoDPlugin.png \
+../AdjustRoD/net.sf.openfx.AdjustRoDPlugin.svg \
 ../Anaglyph/net.sf.openfx.anaglyphPlugin.png \
 ../Anaglyph/net.sf.openfx.anaglyphPlugin.svg \
 ../CheckerBoard/net.sf.openfx.CheckerBoardPlugin.png \
@@ -108,8 +110,18 @@ RESOURCES = \
 ../Difference/net.sf.openfx.DifferencePlugin.svg \
 ../Dissolve/net.sf.openfx.DissolvePlugin.png \
 ../Dissolve/net.sf.openfx.DissolvePlugin.svg \
+../Distortion/net.sf.openfx.IDistort.png \
+../Distortion/net.sf.openfx.IDistort.svg \
+../Distortion/net.sf.openfx.STMap.png \
+../Distortion/net.sf.openfx.STMap.svg \
+../Distortion/net.sf.openfx.LensDistortion.png \
+../Distortion/net.sf.openfx.LensDistortion.svg \
 ../FrameBlend/net.sf.openfx.FrameBlend.png \
 ../FrameBlend/net.sf.openfx.FrameBlend.svg \
+../FrameHold/net.sf.openfx.FrameHold.png \
+../FrameHold/net.sf.openfx.FrameHold.svg \
+../FrameRange/net.sf.openfx.FrameRange.png \
+../FrameRange/net.sf.openfx.FrameRange.svg \
 ../Gamma/net.sf.openfx.GammaPlugin.png \
 ../GodRays/net.sf.openfx.GodRays.png \
 ../GodRays/net.sf.openfx.GodRays.svg \
@@ -127,6 +139,8 @@ RESOURCES = \
 ../Keyer/net.sf.openfx.KeyerPlugin.svg \
 ../Merge/net.sf.openfx.MergePlugin.png \
 ../Merge/net.sf.openfx.MergePlugin.svg \
+../Mirror/net.sf.openfx.Mirror.png \
+../Mirror/net.sf.openfx.Mirror.svg \
 ../MixViews/net.sf.openfx.mixViewsPlugin.png \
 ../MixViews/net.sf.openfx.mixViewsPlugin.svg \
 ../Multiply/net.sf.openfx.MultiplyPlugin.png \
@@ -136,6 +150,8 @@ RESOURCES = \
 ../Noise/net.sf.openfx.Noise.svg \
 ../OneView/net.sf.openfx.oneViewPlugin.png \
 ../OneView/net.sf.openfx.oneViewPlugin.svg \
+../Position/net.sf.openfx.Position.png \
+../Position/net.sf.openfx.Position.svg \
 ../Premult/net.sf.openfx.Premult.png \
 ../Premult/net.sf.openfx.Premult.svg \
 ../Premult/net.sf.openfx.Unpremult.png \

@@ -1,18 +1,18 @@
-<?xml version="1.0" encoding="iso-8859-1"?>
-<!-- Generator: Adobe Illustrator 16.0.3, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="484px"
-	 height="484px" viewBox="0 0 484 484" style="enable-background:new 0 0 484 484;" xml:space="preserve">
-<g id="Tracker">
-	
-		<line style="fill:none;stroke:#C8C8C8;stroke-width:40;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;" x1="297" y1="243" x2="185" y2="243"/>
-	
-		<line style="fill:none;stroke:#C8C8C8;stroke-width:40;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;" x1="243" y1="185" x2="243" y2="297"/>
-	
-		<rect x="20" y="20" style="fill:none;stroke:#C8C8C8;stroke-width:40;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;" width="444" height="444"/>
-	
-		<rect x="103" y="103" style="fill:none;stroke:#C8C8C8;stroke-width:40;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;" width="278" height="278"/>
-</g>
-<g id="Layer_1">
-</g>
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;">
+    <g id="Tr Tracker">
+        <path d="M78,64L50,64" style="fill:none;stroke-width:6px;stroke:#c8c8c8;"/>
+        <path d="M64,50L64,78" style="fill:none;stroke-width:6px;stroke:#c8c8c8;"/>
+        <rect x="8" y="9" width="111" height="111" style="fill:none;stroke-width:6px;stroke:#c8c8c8;"/>
+        <rect x="29" y="29" width="70" height="70" style="fill:none;stroke-width:6px;stroke:#c8c8c8;"/>
+        <path d="M124,64L120,64" style="fill:none;stroke-width:6px;stroke:#c8c8c8;"/>
+        <path d="M8,64L4,64" style="fill:none;stroke-width:6px;stroke:#c8c8c8;"/>
+        <path d="M64,4L64,8" style="fill:none;stroke-width:6px;stroke:#c8c8c8;"/>
+        <path d="M64,120L64,124" style="fill:none;stroke-width:6px;stroke:#c8c8c8;"/>
+        <path d="M28,64L24,64" style="fill:none;stroke-width:6px;stroke:#c8c8c8;"/>
+        <path d="M104,64L100,64" style="fill:none;stroke-width:6px;stroke:#c8c8c8;"/>
+        <path d="M64,24L64,28" style="fill:none;stroke-width:6px;stroke:#c8c8c8;"/>
+        <path d="M64,100L64,104" style="fill:none;stroke-width:6px;stroke:#c8c8c8;"/>
+    </g>
 </svg>
