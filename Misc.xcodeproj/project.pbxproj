@@ -328,6 +328,22 @@
 		1E52FFCF1955CE720000FB79 /* Premult.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E52FFCD1955CE720000FB79 /* Premult.cpp */; };
 		1E52FFD01955CE720000FB79 /* Premult.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E52FFCD1955CE720000FB79 /* Premult.cpp */; };
 		1E52FFD21955CE7C0000FB79 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E52FFD11955CE7C0000FB79 /* PluginRegistration.cpp */; };
+		1E57FC8F1ABEC65200AC4EB7 /* net.sf.openfx.AdjustRoDPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06266A1ABDC2D500B3D105 /* net.sf.openfx.AdjustRoDPlugin.png */; };
+		1E57FC901ABEC65200AC4EB7 /* net.sf.openfx.AdjustRoDPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06266B1ABDC2D500B3D105 /* net.sf.openfx.AdjustRoDPlugin.svg */; };
+		1E57FC911ABEC71100AC4EB7 /* net.sf.openfx.IDistort.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626761ABDC65800B3D105 /* net.sf.openfx.IDistort.png */; };
+		1E57FC921ABEC71100AC4EB7 /* net.sf.openfx.IDistort.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626771ABDC65800B3D105 /* net.sf.openfx.IDistort.svg */; };
+		1E57FC931ABEC71100AC4EB7 /* net.sf.openfx.LensDistortion.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626781ABDC65800B3D105 /* net.sf.openfx.LensDistortion.png */; };
+		1E57FC941ABEC71100AC4EB7 /* net.sf.openfx.LensDistortion.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626791ABDC65800B3D105 /* net.sf.openfx.LensDistortion.svg */; };
+		1E57FC951ABEC71100AC4EB7 /* net.sf.openfx.STMap.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06267A1ABDC65800B3D105 /* net.sf.openfx.STMap.png */; };
+		1E57FC961ABEC71100AC4EB7 /* net.sf.openfx.STMap.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06267B1ABDC65800B3D105 /* net.sf.openfx.STMap.svg */; };
+		1E57FC971ABEC73100AC4EB7 /* net.sf.openfx.FrameHold.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06269B1ABDC95000B3D105 /* net.sf.openfx.FrameHold.png */; };
+		1E57FC981ABEC73100AC4EB7 /* net.sf.openfx.FrameHold.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06269C1ABDC95000B3D105 /* net.sf.openfx.FrameHold.svg */; };
+		1E57FC991ABEC73900AC4EB7 /* net.sf.openfx.FrameRange.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06269D1ABDC95A00B3D105 /* net.sf.openfx.FrameRange.png */; };
+		1E57FC9A1ABEC73900AC4EB7 /* net.sf.openfx.FrameRange.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06269E1ABDC95A00B3D105 /* net.sf.openfx.FrameRange.svg */; };
+		1E57FC9B1ABEC75E00AC4EB7 /* net.sf.openfx.Mirror.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626821ABDC6F500B3D105 /* net.sf.openfx.Mirror.png */; };
+		1E57FC9C1ABEC75E00AC4EB7 /* net.sf.openfx.Mirror.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626831ABDC6F500B3D105 /* net.sf.openfx.Mirror.svg */; };
+		1E57FC9D1ABEC77000AC4EB7 /* net.sf.openfx.Position.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626721ABDC54E00B3D105 /* net.sf.openfx.Position.png */; };
+		1E57FC9E1ABEC77000AC4EB7 /* net.sf.openfx.Position.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626731ABDC54E00B3D105 /* net.sf.openfx.Position.svg */; };
 		1E593370194A0C6300804448 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E593371194A0C6300804448 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E593372194A0C6300804448 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -1619,12 +1635,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1E57FC8E1ABEC64B00AC4EB7 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1E57FC8F1ABEC65200AC4EB7 /* net.sf.openfx.AdjustRoDPlugin.png in CopyFiles */,
+				1E57FC901ABEC65200AC4EB7 /* net.sf.openfx.AdjustRoDPlugin.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E5D547A1AB58CFA00B7B1BE /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				1E57FC971ABEC73100AC4EB7 /* net.sf.openfx.FrameHold.png in CopyFiles */,
+				1E57FC981ABEC73100AC4EB7 /* net.sf.openfx.FrameHold.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1643,6 +1672,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				1E57FC991ABEC73900AC4EB7 /* net.sf.openfx.FrameRange.png in CopyFiles */,
+				1E57FC9A1ABEC73900AC4EB7 /* net.sf.openfx.FrameRange.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1696,6 +1727,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				1E57FC9D1ABEC77000AC4EB7 /* net.sf.openfx.Position.png in CopyFiles */,
+				1E57FC9E1ABEC77000AC4EB7 /* net.sf.openfx.Position.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1705,6 +1738,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				1E57FC9B1ABEC75E00AC4EB7 /* net.sf.openfx.Mirror.png in CopyFiles */,
+				1E57FC9C1ABEC75E00AC4EB7 /* net.sf.openfx.Mirror.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1778,6 +1813,12 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
+				1E57FC911ABEC71100AC4EB7 /* net.sf.openfx.IDistort.png in CopyFiles */,
+				1E57FC921ABEC71100AC4EB7 /* net.sf.openfx.IDistort.svg in CopyFiles */,
+				1E57FC931ABEC71100AC4EB7 /* net.sf.openfx.LensDistortion.png in CopyFiles */,
+				1E57FC941ABEC71100AC4EB7 /* net.sf.openfx.LensDistortion.svg in CopyFiles */,
+				1E57FC951ABEC71100AC4EB7 /* net.sf.openfx.STMap.png in CopyFiles */,
+				1E57FC961ABEC71100AC4EB7 /* net.sf.openfx.STMap.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3647,9 +3688,9 @@
 				ACC847781A0A3F6400B3FAFE /* AdjustRoD */,
 				1EDE1B8E182D0511002392CB /* Anaglyph */,
 				1E5D548F1AB5A9BC00B7B1BE /* AppendClip */,
-				1E31940919D998450027D0E2 /* CImg */,
 				1E759FFF1A879F50005BAA36 /* CheckerBoard */,
 				1E3451E0190695070080D699 /* ChromaKeyer */,
+				1E31940919D998450027D0E2 /* CImg */,
 				1E92571E19EC1D940018F19A /* Clamp */,
 				1EE9B08F1A4B2FCC00869861 /* ClipTest */,
 				D7B4C95D18D9DA410004137D /* ColorCorrect */,
@@ -4832,6 +4873,7 @@
 			buildPhases = (
 				1EAD4AE41A0A691700AF834D /* Sources */,
 				1EAD4AEF1A0A691700AF834D /* Frameworks */,
+				1E57FC8E1ABEC64B00AC4EB7 /* CopyFiles */,
 			);
 			buildRules = (
 			);
