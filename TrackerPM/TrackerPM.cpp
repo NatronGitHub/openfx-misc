@@ -131,11 +131,25 @@ public:
     TrackerPMPlugin(OfxImageEffectHandle handle)
     : GenericTrackerPlugin(handle)
     , _score(0)
+    , _center(0)
+    , _offset(0)
+    , _innerBtmLeft(0)
+    , _innerTopRight(0)
+    , _outerBtmLeft(0)
+    , _outerTopRight(0)
     {
         _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _score = fetchChoiceParam(kParamScore);
         assert(_score);
+        
+        _center = fetchDouble2DParam(kParamTrackingCenterPoint);
+        _offset = fetchDouble2DParam(kParamTrackingOffset);
+        _innerBtmLeft = fetchDouble2DParam(kParamTrackingPatternBoxBtmLeft);
+        _innerTopRight = fetchDouble2DParam(kParamTrackingPatternBoxTopRight);
+        _outerBtmLeft = fetchDouble2DParam(kParamTrackingSearchBoxBtmLeft);
+        _outerTopRight = fetchDouble2DParam(kParamTrackingSearchBoxTopRight);
+        assert(_center && _offset && _innerTopRight && _innerBtmLeft && _outerTopRight && _outerBtmLeft);
     }
     
     
@@ -176,6 +190,13 @@ private:
 
     OFX::Clip *_maskClip;
     ChoiceParam* _score;
+    
+    OFX::Double2DParam* _center;
+    OFX::Double2DParam* _offset;
+    OFX::Double2DParam* _innerBtmLeft;
+    OFX::Double2DParam* _innerTopRight;
+    OFX::Double2DParam* _outerBtmLeft;
+    OFX::Double2DParam* _outerTopRight;
 };
 
 
@@ -892,9 +913,116 @@ void TrackerPMPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     PageParamDescriptor* page = genericTrackerDescribeInContextBegin(desc, context);
-
+    
+    
     // description common to all trackers
     genericTrackerDescribePointParameters(desc, page);
+    // center
+    {
+        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingCenterPoint);
+        param->setLabel(kParamTrackingCenterPointLabel);
+        param->setHint(kParamTrackingCenterPointHint);
+        param->setInstanceSpecific(true);
+        param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        param->setDefault(0.5, 0.5);
+        param->setIncrement(1.);
+        param->setEvaluateOnChange(false); // The tracker is identity always
+        param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    
+    // offset
+    {
+        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingOffset);
+        param->setLabel(kParamTrackingOffsetLabel);
+        param->setHint(kParamTrackingOffsetHint);
+        param->setInstanceSpecific(true);
+        param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical);
+        param->setDefault(0, 0);
+        param->setIncrement(1.);
+        param->setEvaluateOnChange(false); // The tracker is identity always
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    
+    // innerBtmLeft
+    {
+        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingPatternBoxBtmLeft);
+        param->setLabel(kParamTrackingPatternBoxBtmLeftLabel);
+        param->setHint(kParamTrackingPatternBoxBtmLeftHint);
+        param->setDoubleType(eDoubleTypeXY);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical);
+        param->setDefault(-15,-15);
+        param->setDisplayRange(-50., -50., 50., 50.);
+        param->setIncrement(1.);
+        //param->setIsSecret(true);
+        param->setEvaluateOnChange(false); // The tracker is identity always
+        param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    
+    // innerTopRight
+    {
+        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingPatternBoxTopRight);
+        param->setLabel(kParamTrackingPatternBoxTopRightLabel);
+        param->setHint(kParamTrackingPatternBoxTopRightHint);
+        param->setDoubleType(eDoubleTypeXY);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical);
+        param->setDefault(15, 15);
+        param->setDisplayRange(-50., -50., 50., 50.);
+        param->setIncrement(1.);
+        //innerTopRight->setIsSecret(true);
+        param->setEvaluateOnChange(false); // The tracker is identity always
+        param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    
+    // outerBtmLeft
+    {
+        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingSearchBoxBtmLeft);
+        param->setLabel(kParamTrackingSearchBoxBtmLeftLabel);
+        param->setHint(kParamTrackingSearchBoxBtmLeftHint);
+        param->setDoubleType(eDoubleTypeXY);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical);
+        param->setDefault(-25,-25);
+        param->setDisplayRange(-100., -100., 100., 100.);
+        param->setIncrement(1.);
+        //param->setIsSecret(true);
+        param->setEvaluateOnChange(false); // The tracker is identity always
+        param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    
+    // outerTopRight
+    {
+        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTrackingSearchBoxTopRight);
+        param->setLabel(kParamTrackingSearchBoxTopRightLabel);
+        param->setHint(kParamTrackingSearchBoxBtmLeftHint);
+        param->setDoubleType(eDoubleTypeXY);
+        param->setDefaultCoordinateSystem(eCoordinatesCanonical);
+        param->setDefault(25, 25);
+        param->setDisplayRange(-100., -100., 100., 100.);
+        param->setIncrement(1.);
+        //param->setIsSecret(true);
+        param->setEvaluateOnChange(false); // The tracker is identity always
+        param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+
 
     // this tracker can be masked
     if (context == eContextGeneral || context == eContextPaint || context == eContextTracker) {
