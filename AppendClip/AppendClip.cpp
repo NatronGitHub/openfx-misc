@@ -121,7 +121,11 @@
 #define kParamLastFrameLabel "Last Frame"
 #define kParamLastFrameHint "Last frame of the assembled clip (read-only)."
 
-#define kClipSourceCount 10
+#define kParamUpdateLastFrame "updateLastFrame"
+#define kParamUpdateLastFrameLabel "Update"
+#define kParamUpdateLastFrameHint "Update lastFrame."
+
+#define kClipSourceCount 16
 #define kClipSourceOffset 1 // clip numbers start
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -179,14 +183,30 @@ private:
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
     /* override the time domain action, only for the general context */
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
+
+    /** Override the get frames needed action */
+    virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
 
 private:
     /* set up and run a processor */
     void setupAndProcess(OFX::ImageBlenderBase &, const OFX::RenderArguments &args);
 
-    void getSources(double time, int *clip0, double *t0, int *clip1, double *t1, double blend);
+    void getSources(int firstFrame,
+                    int fadeIn,
+                    int fadeOut,
+                    int crossDissolve,
+                    double time,
+                    int *clip0,
+                    double *t0,
+                    double *alpha0,
+                    int *clip1,
+                    double *t1,
+                    double *alpha1,
+                    int *lastFrame = NULL); // if non-NULL, this is the only returned value, and time is not taken into account
 
 private:
 
@@ -224,25 +244,280 @@ checkComponents(const OFX::Image &src,
 
     // see if they have the same depths and bytes and all
     if ( ( srcBitDepth != dstBitDepth) || ( srcComponents != dstComponents) ) {
-        throw int(1); // HACK!! need to throw an sensible exception here!
+        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
     }
 }
 
 void
-AppendClipPlugin::getSources(double time,
-                             int *clip0,
-                             double *t0,
-                             int *clip1,
-                             double *t1,
-                             double blend)
+AppendClipPlugin::getSources(int firstFrame,
+                             int fadeIn,
+                             int fadeOut,
+                             int crossDissolve,
+                             double time,
+                             int *clip0_p,
+                             double *t0_p,
+                             double *alpha0_p,
+                             int *clip1_p,
+                             double *t1_p,
+                             double *alpha1_p,
+                             int *lastFrame) // if non-NULL, this is the only returned value, and time is not taken into account
 {
+    if (lastFrame) {
+        assert(!clip0_p && !t0_p && !alpha0_p && !clip1_p && !t1_p && !alpha1_p);
+    }
     // if fadeIn = 0 return first frame of first connected clip if time <= firstFrame, else return back
+    int clip0 = -1;
+    double t0 = -1;
+    double alpha0 = 0;
+    int clip1 = -1;
+    double t1 = -1;
+    double alpha1 = 0.;
+    // find the clips where we are (clip0 and clip1)
+    int clip0Min = -1;
+    int clip0Max = -1;
+    int clip0OutMin = firstFrame;
+    int clip0OutMax = firstFrame - 1;
+    int clip1Min = -1;
+    int clip1Max = -1;
+    int clip1OutMin = firstFrame;
+    int clip1OutMax = firstFrame - 1;
+    int lastClip = _srcClip.size() - 1;
+    while (lastClip >= 0 && !_srcClip[lastClip]->isConnected()) {
+        --lastClip;
+    }
+    if (lastClip < 0) {
+        // no clip, just be black, and lastFrame = firstFrame-1
+        if (clip0_p) { *clip0_p = clip0; }
+        if (t0_p) { *t0_p = t0; }
+        if (alpha0_p) { *alpha0_p = alpha0; }
+        if (clip1_p) { *clip1_p = clip1; }
+        if (t1_p) { *t1_p = t1; }
+        if (alpha1_p) { *alpha1_p = alpha1; }
+        if (lastFrame) { *lastFrame = clip1OutMax; }
+        return;
+    }
+    int firstClip = 0;
+    while (firstClip < (int)_srcClip.size() && !_srcClip[firstClip]->isConnected()) {
+        ++firstClip;
+    }
+    assert(firstClip < (int)_srcClip.size()); // there is at least one connected clip
+    for (int i = firstClip; i <= lastClip; ++i) {
+        // loop invariants:
+        // *clip0 contains the index of last visited connected clip
+        // clip0Min contains the first frame of the last visited and connected clip
+        // clip0Max contains the last frame of the last visited and connected clip
+        // clip0OutMin contains the output frame corresponding to clip0Min
+        // clip0OutMax contains the output frame corresponding to clip0Max
+        if (_srcClip[i]->isConnected()) {
+            OfxRangeD r = _srcClip[i]->getFrameRange();
+            // if this is the first connected clip, and time is before this clip,
+            // return either black or this clip (no clip1), depending on fadeIn
+            if (clip1 == -1) {
+                if (!lastFrame && (time < firstFrame)) {
+                    // before the first clip, the solution is trivial
+                    clip0 = i;
+                    // render clip0
+                    t0 = r.min + (time - firstFrame);
+                    alpha0 =  (fadeIn == 0);
+                    if (clip0_p) { *clip0_p = clip0; }
+                    if (t0_p) { *t0_p = t0; }
+                    if (alpha0_p) { *alpha0_p = alpha0; }
+                    if (clip1_p) { *clip1_p = clip1; }
+                    if (t1_p) { *t1_p = t1; }
+                    if (alpha1_p) { *alpha1_p = alpha1; }
+                    assert(!lastFrame);
+
+                    return;
+                }
+                clip1 = i;
+                clip1Min = r.min;
+                clip1Max = r.max;
+                clip1OutMin = firstFrame;
+                clip1OutMax = firstFrame + (int)(r.max - r.min);
+
+                continue; // proceed to extract clip1 etc.
+            }
+            // get info for this clip
+            int clip2 = i;
+            int clip2Min = r.min;
+            int clip2Max = r.max;
+            assert(clip1OutMax >= clip0OutMax);
+            int clip2OutMin = std::max(clip0OutMax + 1, // next clip must start after end of the forelast Clip (never more than 2 clips at the same time)
+                                       clip1OutMax + 1 - crossDissolve);
+            int clip2OutMax = std::max(clip1OutMax, // clip end should be at least the end of the previous clip
+                                       clip2OutMin + (clip2Max - clip2Min));
+
+            // if time is before this clip, we're done
+            if (!lastFrame && time < clip2OutMin) {
+                break;
+            }
+
+            // shift clip0 <- clip1 <- clip2
+            clip0 = clip1;
+            clip0Min = clip1Min;
+            clip0Max = clip1Max;
+            clip0OutMin = clip1OutMin;
+            clip0OutMax = clip1OutMax;
+
+            clip1 = clip2;
+            clip1Min = clip2Min;
+            clip1Max = clip2Max;
+            clip1OutMin = clip2OutMin;
+            clip1OutMax = clip2OutMax;
+        }
+    }
+    // at this point, either:
+    // - there is no clip connected: *clip0 == -1, *clip1 == -1 -> this case was treated before
+    // - there is only one clip connected, or we are before the second clip: *clip0 == -1, *clip1 != -1
+    // - general case: *clip0 != -1, *clip1 != -1: compute blend
+
+    if (lastFrame) {
+        // set last frame and exit (used in getFrameRange and changedClip/changedParam)
+        *lastFrame = clip1OutMax;
+        return;
+    }
+
+    // clips should be ordered
+    assert(clip0 == -1|| clip1 == -1 || (clip0OutMin <= clip1OutMin && clip0OutMax <= clip1OutMax));
+
+    if (clip0 == -1 && clip1 == -1) {
+        assert(false); // treated above, should never happen!
+        // no clip, just be black, and lastFrame = firstFrame-1
+        if (clip0_p) { *clip0_p = clip0; }
+        if (t0_p) { *t0_p = t0; }
+        if (alpha0_p) { *alpha0_p = alpha0; }
+        if (clip1_p) { *clip1_p = clip1; }
+        if (t1_p) { *t1_p = t1; }
+        if (alpha1_p) { *alpha1_p = alpha1; }
+        return;
+    }
+    assert(clip1 != -1);
+    if ((clip0 == -1) &&
+        (clip1 != -1) && time < clip1OutMin) {
+        assert(false); // treated above, should never happen!
+        // before the first clip, the solution is trivial
+        clip0 = clip1;
+        clip0Min = clip1Min;
+        clip0Max = clip1Max;
+        clip0OutMin = clip1OutMin;
+        clip0OutMax = clip1OutMax;
+
+        clip1 = -1;
+        clip1Min = -1;
+        clip1Max = -1;
+        clip1OutMin = firstFrame;
+        clip1OutMax = firstFrame - 1;
+        // render clip0
+        t0 = clip1Min + (time - clip1OutMin);
+        alpha0 = (fadeIn == 0);
+        t1 = -1;
+        alpha1 = 0.;
+    } else if ((clip0 != -1) && clip0OutMin <= time && time <= clip0OutMax &&
+               (clip1 != -1) && clip1OutMin <= time && time <= clip1OutMax) {
+        // clip0 and clip1: cross-dissolve
+        assert(clip1OutMin + crossDissolve - 1 >= clip0OutMax);
+        t0 = clip0Min + (time - clip0OutMin);
+        alpha0 = 1. - (time + 1 - clip1OutMin)/(double)(crossDissolve+1);
+        assert(0 < alpha0 && alpha0 < 1.);
+        t1 = clip1Min + (time - clip1OutMin);
+        alpha1 = std::max(0., 1.-alpha0);
+    } else if ((clip0 != -1) && clip0OutMin <= time && time <= clip0OutMax) {
+        // clip0 only
+        t0 = clip0Min + (time - clip0OutMin);
+        alpha0 = 1.;
+        clip1 = -1;
+        t1 = 0.;
+        alpha1 = 0.;
+    } else if ((clip1 != -1) && clip1OutMin <= time && time <= clip1OutMax) {
+        // clip1 only
+        clip0 = clip1;
+        clip0Min = clip1Min;
+        clip0Max = clip1Max;
+        clip0OutMin = clip1OutMin;
+        clip0OutMax = clip1OutMax;
+
+        clip1 = -1;
+        clip1Min = -1;
+        clip1Max = -1;
+        clip1OutMin = firstFrame;
+        clip1OutMax = firstFrame - 1;
+
+        t0 = clip0Min + (time - clip0OutMin);
+        alpha0 = 1.;
+        t1 = -1;
+        alpha1 = 0.;
+    } else if ((clip1 != -1) && clip1OutMax < time) {
+        // after the last clip, the solution is trivial
+        clip0 = clip1;
+        clip0Min = clip1Min;
+        clip0Max = clip1Max;
+        clip0OutMin = clip1OutMin;
+        clip0OutMax = clip1OutMax;
+
+        clip1 = -1;
+        clip1Min = -1;
+        clip1Max = -1;
+        clip1OutMin = firstFrame;
+        clip1OutMax = firstFrame - 1;
+
+        t0 = clip0Min + (time - clip0OutMin);
+        alpha0 = (fadeOut == 0);
+        t1 = -1;
+        alpha1 = 0.;
+    } else {
+        assert(false);
+    }
+
+    // now, check for fade in/fade out
+    if (fadeIn != 0) {
+        if (clip0 == firstClip && clip0OutMin <= time) {
+            assert(clip0OutMin == firstFrame);
+            // fadeIn = x means that the first x frames are modified
+            if ((time - firstFrame) < fadeIn) {
+                // fade in
+                assert(alpha0 > 0.);
+                alpha0 *= (time - firstFrame + 1)/(fadeIn+1);
+                alpha1 *= (time - firstFrame + 1)/(fadeIn+1);
+            }
+        }
+    }
+    if (fadeOut != 0) {
+        if (clip0 == lastClip && time <= clip0OutMax) {
+            assert(clip1 == -1);
+            // fadeOut = x means that the last x frames are modified
+            if ((clip0OutMax - time) < fadeOut) {
+                // fade out
+                assert(alpha0 > 0.);
+                alpha0 *= (clip0OutMax - time + 1)/(fadeOut+1);
+                alpha1 *= (clip0OutMax - time + 1)/(fadeOut+1);
+            }
+        }
+        if (clip1 == lastClip && time <= clip1OutMax) {
+            assert(clip0 != lastClip);
+            // fadeOut = x means that the last x frames are modified
+            if ((clip1OutMax - time) < fadeOut) {
+                // fade out
+                assert(alpha0 > 0.);
+                alpha0 *= (clip1OutMax - time + 1)/(fadeOut+1);
+                alpha1 *= (clip1OutMax - time + 1)/(fadeOut+1);
+            }
+        }
+    }
+    assert(0 <= alpha0 && alpha0 <=1);
+    assert(0 <= alpha1 && alpha1 <1);
+
+    if (clip0_p) { *clip0_p = clip0; }
+    if (t0_p) { *t0_p = t0; }
+    if (alpha0_p) { *alpha0_p = alpha0; }
+    if (clip1_p) { *clip1_p = clip1; }
+    if (t1_p) { *t1_p = t1; }
+    if (alpha1_p) { *alpha1_p = alpha1; }
 }
 
 /* set up and run a processor */
 void
 AppendClipPlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
-                                const OFX::RenderArguments &args)
+                                  const OFX::RenderArguments &args)
 {
     // get a dst image
     std::auto_ptr<OFX::Image>  dst( _dstClip->fetchImage(args.time) );
@@ -263,15 +538,34 @@ AppendClipPlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-#if 0
-    // get the transition value
-    double which = std::max(0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size()-1));
-    int prev = std::floor(which);
-    int next = std::ceil(which);
+    const double time = args.time;
+    int firstFrame;
+    _firstFrame->getValue(firstFrame);
+    int fadeIn;
+    _fadeIn->getValue(fadeIn);
+    int fadeOut;
+    _fadeOut->getValue(fadeOut);
+    int crossDissolve;
+    _crossDissolve->getValue(crossDissolve);
+    int clip0;
+    double t0;
+    double alpha0;
+    int clip1;
+    double t1;
+    double alpha1;
+    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, &alpha0, &clip1, &t1, &alpha1, NULL);
 
-    if (prev == next) {
-        std::auto_ptr<const OFX::Image> src((_srcClip[prev] && _srcClip[prev]->isConnected()) ?
-                                            _srcClip[prev]->fetchImage(args.time) : 0);
+    if ((clip0 == -1 && clip1 == -1) || (alpha0 == 0. && alpha1 == 0.)) {
+        // no clip, just fill with black
+        fillBlack(*this, args.renderWindow, dst.get());
+        return;
+    }
+    assert(clip0 != clip1);
+    if (clip1 == -1 && alpha0 == 1.) {
+        // should never happen, since it's identity
+        assert(0);
+        std::auto_ptr<const OFX::Image> src((_srcClip[clip0] && _srcClip[clip0]->isConnected()) ?
+                                            _srcClip[clip0]->fetchImage(t0) : 0);
         if (src.get()) {
             if (src->getRenderScale().x != args.renderScale.x ||
                 src->getRenderScale().y != args.renderScale.y ||
@@ -290,10 +584,10 @@ AppendClipPlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
     }
 
     // fetch the two source images
-    std::auto_ptr<const OFX::Image> fromImg((_srcClip[prev] && _srcClip[prev]->isConnected()) ?
-                                            _srcClip[prev]->fetchImage(args.time) : 0);
-    std::auto_ptr<const OFX::Image> toImg((_srcClip[next] && _srcClip[next]->isConnected()) ?
-                                          _srcClip[next]->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> fromImg((clip0 != -1 && _srcClip[clip0] && _srcClip[clip0]->isConnected()) ?
+                                            _srcClip[clip0]->fetchImage(t0) : 0);
+    std::auto_ptr<const OFX::Image> toImg((clip1 != -1 && _srcClip[clip1] && _srcClip[clip1]->isConnected()) ?
+                                          _srcClip[clip1]->fetchImage(t1) : 0);
 
     // make sure bit depths are sane
     if (fromImg.get()) {
@@ -324,11 +618,13 @@ AppendClipPlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
     processor.setRenderWindow(args.renderWindow);
 
     // set the scales
-    processor.setBlend(which - prev);
+    assert(0 < alpha0 && alpha0 <= 1 && 0 <= alpha1 && alpha1 < 1);
+    assert(toImg.get() || (alpha1 == 0));
+    assert(fromImg.get());
+    processor.setBlend(1. - alpha0);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
-#endif
 }
 
 // the overridden render function
@@ -386,32 +682,29 @@ AppendClipPlugin::renderForBitDepth(const OFX::RenderArguments &args)
 // overridden is identity
 bool
 AppendClipPlugin::isIdentity(const OFX::IsIdentityArguments &args,
-                           OFX::Clip * &identityClip,
-                           double &identityTime)
+                             OFX::Clip * &identityClip,
+                             double &identityTime)
 {
-#if 0
-    // get the transition value
-    double which = std::max(0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size()-1));
-    int prev = (int)which;
-    //int next = std::min((int)which+1,(int)_srcClip.size()-1);
-
-    identityTime = args.time;
-
-    // at the start?
-    if (which <= 0.0) {
-        identityClip = _srcClip[0];
-        identityTime = args.time;
-
-        return true;
-    }
-
-    if ((which >= _srcClip.size() || (prev == which))) {
-        identityClip = _srcClip[prev];
-        identityTime = args.time;
+    const double time = args.time;
+    int firstFrame;
+    _firstFrame->getValue(firstFrame);
+    int fadeIn;
+    _fadeIn->getValue(fadeIn);
+    int fadeOut;
+    _fadeOut->getValue(fadeOut);
+    int crossDissolve;
+    _crossDissolve->getValue(crossDissolve);
+    int clip0;
+    double t0;
+    double alpha0;
+    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, &alpha0, NULL, NULL, NULL, NULL);
+    assert(clip0 >= -1 && clip0 < (int)_srcClip.size());
+    if (clip0 >= 0 && clip0 < (int)_srcClip.size() && alpha0 == 1.) {
+        identityClip = _srcClip[clip0];
+        identityTime = t0;
 
         return true;
     }
-#endif
     // nope, identity we isnt
     return false;
 }
@@ -420,74 +713,116 @@ AppendClipPlugin::isIdentity(const OFX::IsIdentityArguments &args,
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
 void
-AppendClipPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+AppendClipPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
+                                       OFX::RegionOfInterestSetter &rois)
 {
-#if 0
-    double which = std::max(0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size()-1));
-    unsigned prev = std::floor(which);
-    unsigned next = std::ceil(which);
+    const double time = args.time;
+    int firstFrame;
+    _firstFrame->getValue(firstFrame);
+    int fadeIn;
+    _fadeIn->getValue(fadeIn);
+    int fadeOut;
+    _fadeOut->getValue(fadeOut);
+    int crossDissolve;
+    _crossDissolve->getValue(crossDissolve);
+    int clip0, clip1;
+    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, NULL, NULL, &clip1, NULL, NULL, NULL);
     const OfxRectD emptyRoI = {0., 0., 0., 0.};
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
-        if (i != prev && i != next) {
+        if ((int)i != clip0 && (int)i != clip1) {
             rois.setRegionOfInterest(*_srcClip[i], emptyRoI);
         }
     }
-#endif
+}
+
+void
+AppendClipPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
+                                  OFX::FramesNeededSetter &frames)
+{
+    const double time = args.time;
+    int firstFrame;
+    _firstFrame->getValue(firstFrame);
+    int fadeIn;
+    _fadeIn->getValue(fadeIn);
+    int fadeOut;
+    _fadeOut->getValue(fadeOut);
+    int crossDissolve;
+    _crossDissolve->getValue(crossDissolve);
+    int clip0, clip1;
+    double t0, t1;
+    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, NULL, &clip1, &t1, NULL, NULL);
+    for (unsigned i = 0; i < _srcClip.size(); ++i) {
+        OfxRangeD range;
+        if (i == (unsigned)clip0) {
+            range.min = t0;
+            range.max = t0;
+        } else if (i == (unsigned)clip1) {
+            range.min = t1;
+            range.max = t1;
+        } else {
+            // empty range
+            range.min = firstFrame;
+            range.max = firstFrame - 1;
+        }
+        frames.setFramesNeeded(*_srcClip[i], range);
+    }
 }
 
 bool
 AppendClipPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
-#if 0
-    // get the transition value
-    double which = std::max(0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size()-1));
-    int prev = (int)which;
-    int next = std::min((int)which+1,(int)_srcClip.size()-1);
-
-    // at the start?
-    if (which <= 0.0 && _srcClip[0] && _srcClip[0]->isConnected()) {
-        rod = _srcClip[0]->getRegionOfDefinition(args.time);
-
+    const double time = args.time;
+    int firstFrame;
+    _firstFrame->getValue(firstFrame);
+    int fadeIn;
+    _fadeIn->getValue(fadeIn);
+    int fadeOut;
+    _fadeOut->getValue(fadeOut);
+    int crossDissolve;
+    _crossDissolve->getValue(crossDissolve);
+    int clip0;
+    double t0;
+    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, NULL, NULL, NULL, NULL, NULL);
+    assert(clip0 >= -1 && clip0 < (int)_srcClip.size());
+    if (clip0 >= 0 && clip0 < (int)_srcClip.size()) {
+        rod = _srcClip[clip0]->getRegionOfDefinition(t0);
         return true;
     }
-
-    // at the end?
-    if ((which >= _srcClip.size() || (which == prev)) &&
-        _srcClip[prev] && _srcClip[prev]->isConnected()) {
-        rod = _srcClip[prev]->getRegionOfDefinition(args.time);
-
-        return true;
-    }
-
-    if (_srcClip[prev] && _srcClip[prev]->isConnected() && _srcClip[next] && _srcClip[next]->isConnected()) {
-        OfxRectD fromRoD = _srcClip[prev]->getRegionOfDefinition(args.time);
-        OfxRectD toRoD = _srcClip[next]->getRegionOfDefinition(args.time);
-        rod.x1 = std::min(fromRoD.x1, toRoD.x1);
-        rod.y1 = std::min(fromRoD.y1, toRoD.y1);
-        rod.x2 = std::max(fromRoD.x2, toRoD.x2);
-        rod.y2 = std::max(fromRoD.y2, toRoD.y2);
-
-        return true;
-    }
-#endif
     return false;
 }
 
 void
 AppendClipPlugin::changedClip(const OFX::InstanceChangedArgs &/*args*/, const std::string &/*clipName*/)
 {
-    // TODO: set lastFrame
-    int t;
-    _firstFrame->getValue(t);
-    for (unsigned i = 0; i < _srcClip.size(); ++i) {
-        if (_srcClip[i]->isConnected()) {
-            OfxRangeD r = _srcClip[i]->getFrameRange();
-            if (r.max >= r.min) {
-                t += 1 + (int)r.max - (int)r.min;
-            }
-        }
+    int firstFrame;
+    _firstFrame->getValue(firstFrame);
+    int fadeIn;
+    _fadeIn->getValue(fadeIn);
+    int fadeOut;
+    _fadeOut->getValue(fadeOut);
+    int crossDissolve;
+    _crossDissolve->getValue(crossDissolve);
+    int lastFrame;
+    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, -1, NULL, NULL, NULL, NULL, NULL, NULL, &lastFrame);
+    _lastFrame->setValue(lastFrame);
+}
+
+void
+AppendClipPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName != kParamLastFrame && args.reason == OFX::eChangeUserEdit) {
+        int firstFrame;
+        _firstFrame->getValue(firstFrame);
+        int fadeIn;
+        _fadeIn->getValue(fadeIn);
+        int fadeOut;
+        _fadeOut->getValue(fadeOut);
+        int crossDissolve;
+        _crossDissolve->getValue(crossDissolve);
+        int lastFrame;
+        getSources(firstFrame, fadeIn, fadeOut, crossDissolve, -1, NULL, NULL, NULL, NULL, NULL, NULL, &lastFrame);
+        _lastFrame->setValue(lastFrame);
     }
-    _lastFrame->setValue(t - 1);
 }
 
 /* override the time domain action, only for the general context */
@@ -496,18 +831,21 @@ AppendClipPlugin::getTimeDomain(OfxRangeD &range)
 {
     // this should only be called in the general context, ever!
     assert (getContext() == OFX::eContextGeneral);
-    int t;
-    _firstFrame->getValue(t);
-    range.min = t;
-    for (unsigned i = 0; i < _srcClip.size(); ++i) {
-        if (_srcClip[i]->isConnected()) {
-            OfxRangeD r = _srcClip[i]->getFrameRange();
-            if (r.max >= r.min) {
-                t += 1 + (int)r.max - (int)r.min;
-            }
-        }
+    int firstFrame;
+    _firstFrame->getValue(firstFrame);
+    int fadeIn;
+    _fadeIn->getValue(fadeIn);
+    int fadeOut;
+    _fadeOut->getValue(fadeOut);
+    int crossDissolve;
+    _crossDissolve->getValue(crossDissolve);
+    int lastFrame;
+    getSources(firstFrame, fadeIn, fadeOut, crossDissolve, -1, NULL, NULL, NULL, NULL, NULL, NULL, &lastFrame);
+    if (lastFrame < firstFrame) {
+        return false;
     }
-    range.max = t - 1;
+    range.min = firstFrame;
+    range.max = lastFrame;
 
     return true;
 }
@@ -536,7 +874,7 @@ AppendClipPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setHostFrameThreading(false);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setSupportsTiles(kSupportsTiles);
-    desc.setTemporalClipAccess(false);
+    desc.setTemporalClipAccess(true);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
@@ -574,7 +912,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
         srcClip->addSupportedComponent(ePixelComponentCustom);
-        srcClip->setTemporalClipAccess(false);
+        srcClip->setTemporalClipAccess(true);
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);
     }
@@ -597,7 +935,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
         srcClip->addSupportedComponent(ePixelComponentCustom);
-        srcClip->setTemporalClipAccess(false);
+        srcClip->setTemporalClipAccess(true);
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);
     }
@@ -617,7 +955,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             srcClip->addSupportedComponent(ePixelComponentRGBA);
             srcClip->addSupportedComponent(ePixelComponentAlpha);
             srcClip->addSupportedComponent(ePixelComponentCustom);
-            srcClip->setTemporalClipAccess(false);
+            srcClip->setTemporalClipAccess(true );
             srcClip->setSupportsTiles(kSupportsTiles);
             srcClip->setIsMask(false);
         }
@@ -665,6 +1003,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         IntParamDescriptor *param = desc.defineIntParam(kParamFirstFrame);
         param->setLabel(kParamFirstFrameLabel);
         param->setHint(kParamFirstFrameHint);
+        param->setDefault(1);
         if (page) {
             page->addChild(*param);
         }
@@ -673,7 +1012,17 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         IntParamDescriptor *param = desc.defineIntParam(kParamLastFrame);
         param->setLabel(kParamLastFrameLabel);
         param->setHint(kParamLastFrameHint);
+        param->setDefault(0);
         param->setEnabled(false);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamUpdateLastFrame);
+        param->setLabel(kParamUpdateLastFrameLabel);
+        param->setHint(kParamUpdateLastFrameHint);
         if (page) {
             page->addChild(*param);
         }
@@ -697,9 +1046,9 @@ void
 getAppendClipPluginID(OFX::PluginFactoryArray &ids)
 {
     {
-        //static AppendClipPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        static AppendClipPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 
-        //ids.push_back(&p);
+        ids.push_back(&p);
     }
 }
 
