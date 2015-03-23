@@ -1583,16 +1583,21 @@ ShufflePlugin::setChannelsFromRed()
             } else if (opt == kParamOutputOption1) {
                 indexOf1 = i;
             } else if (opt.substr(0,base.size()) == base) {
-                if (endsWith(opt, ".G") || endsWith(opt, ".g")) {
+                std::string chan = opt.substr(base.size());
+                if (chan == ".G" || chan == ".g") {
                     _g->setValue(i);
                     gSet = true;
-                } else if (endsWith(opt, ".B") || endsWith(opt, ".b")) {
+                } else if (chan == ".B" || chan == ".b") {
                     _b->setValue(i);
                     bSet = true;
-                } else if (endsWith(opt, ".A") || endsWith(opt, ".a")) {
+                } else if (chan == ".A" || chan == ".a") {
                     _a->setValue(i);
                     aSet = true;
                 }
+            }
+            if (gSet && bSet && aSet) {
+                // we're done
+                break;
             }
         }
         assert(indexOf0 != -1 && indexOf1 != -1);
