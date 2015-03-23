@@ -125,6 +125,13 @@
 #define kParamDurationLabel "Duration"
 #define kParamDurationHint "How long the output clip should be, as a proportion of the input clip's length."
 
+#define kPageTimeWarp "timeWarp"
+#define kPageTimeWarpLabel "Time Warp"
+
+#define kParamWarp "warp"
+#define kParamWarpLabel "Warp"
+#define kParamWarpHint "Curve that maps input range (after applying speed) to the output range. A low positive slope slows down the input clip, and a negative slope plays it backwards."
+
 namespace OFX {
     extern ImageEffectHostDescription gHostDescription;
 }
@@ -139,18 +146,20 @@ protected:
 
     OFX::BooleanParam  *_reverse_input;
     OFX::DoubleParam  *_sourceTime; /**< @brief mandated parameter, only used in the retimer context. */
-    OFX::DoubleParam  *_speed;      /**< @brief only used in the filter context. */
+    OFX::DoubleParam  *_speed;      /**< @brief only used in the filter or general context. */
+    OFX::ParametricParam  *_warp;      /**< @brief only used in the filter or general context. */
     OFX::DoubleParam  *_duration;   /**< @brief how long the output should be as a proportion of input. General context only  */
 
 public:
     /** @brief ctor */
-    RetimePlugin(OfxImageEffectHandle handle)
+    RetimePlugin(OfxImageEffectHandle handle, bool supportsParametricParameter)
     : ImageEffect(handle)
     , _dstClip(0)
     , _srcClip(0)
     , _reverse_input(0)
     , _sourceTime(0)
     , _speed(0)
+    , _warp(0)
     , _duration(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -166,11 +175,14 @@ public:
             _reverse_input = fetchBooleanParam(kParamReverseInput);
             _speed = fetchDoubleParam(kParamSpeed);
             assert(_speed);
-        }
-        // fetch duration param for general context
-        if (getContext() == OFX::eContextGeneral) {
-            _duration = fetchDoubleParam(kParamDuration);
-            assert(_duration);
+            if (supportsParametricParameter) {
+                _warp = fetchParametricParam(kParamWarp);
+                assert(_warp);
+            } else if (getContext() == OFX::eContextGeneral) {
+                // fetch duration param for general context
+                _duration = fetchDoubleParam(kParamDuration);
+                assert(_duration);
+            }
         }
     }
 
@@ -351,6 +363,9 @@ RetimePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
         } else {
             sourceTime = srcRange.min + _speed->integrate(srcRange.min, time);
         }
+        if (_warp) {
+            sourceTime = srcRange.min + (srcRange.max - srcRange.min) * _warp->getValue(0, time, (sourceTime-srcRange.min)/(srcRange.max - srcRange.min));
+        }
     }
     OfxRangeD range;
     if (sourceTime == (int)sourceTime) {
@@ -386,6 +401,9 @@ RetimePlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &iden
         } else {
             sourceTime = srcRange.min + _speed->integrate(srcRange.min, time);
         }
+        if (_warp) {
+            sourceTime = srcRange.min + (srcRange.max - srcRange.min) * _warp->getValue(0, time, (sourceTime-srcRange.min)/(srcRange.max - srcRange.min));
+        }
     }
     if (sourceTime == (int)sourceTime) {
         identityClip = _srcClip;
@@ -401,7 +419,8 @@ bool
 RetimePlugin::getTimeDomain(OfxRangeD &range)
 {
     // this should only be called in the general context, ever!
-    if (getContext() == OFX::eContextGeneral) {
+    if (getContext() == OFX::eContextGeneral && _duration) {
+        assert(!_warp);
         // If we are a general context, we can changed the duration of the effect, so have a param to do that
         // We need a separate param as it is impossible to derive this from a speed param and the input clip
         // duration (the speed may be animating or wired to an expression).
@@ -410,11 +429,14 @@ RetimePlugin::getTimeDomain(OfxRangeD &range)
         // how many frames on the input clip
         OfxRangeD srcRange = _srcClip->getFrameRange();
 
-        range.min = 0;
-        range.max = srcRange.max * duration;
+        range.min = srcRange.min;
+        range.max = srcRange.min + (srcRange.max-srcRange.min) * duration;
+
         return true;
     }
 
+    // If there's a warp curve, the time domain could be determined from the intersections of the warp curve with y=0 and y=1.
+    // for now, we prefer returning the input time domain.
     return false;
 }
 
@@ -445,6 +467,9 @@ RetimePlugin::render(const OFX::RenderArguments &args)
             sourceTime = srcRange.max - _speed->integrate(srcRange.min, time);
         } else {
             sourceTime = srcRange.min + _speed->integrate(srcRange.min, time);
+        }
+        if (_warp) {
+            sourceTime = srcRange.min + (srcRange.max - srcRange.min) * _warp->getValue(0, time, (sourceTime-srcRange.min)/(srcRange.max - srcRange.min));
         }
     }
 
@@ -620,10 +645,43 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
             }
         }
 
-        // If we are a general context, we can change the duration of the effect, so have a param to do that
-        // We need a separate param as it is impossible to derive this from a speed param and the input clip
-        // duration (the speed may be animating or wired to an expression).
-        if (context == OFX::eContextGeneral) {
+        const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+        const bool supportsParametricParameter = (gHostDescription.supportsParametricParameter &&
+                                                  !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
+                                                    (gHostDescription.versionMajor == 8 || gHostDescription.versionMajor == 9))); // Nuke 8 and 9 are known to *not* support Parametric
+        if (supportsParametricParameter) {
+            OFX::PageParamDescriptor* page = desc.definePageParam(kPageTimeWarp);
+            page->setLabel(kPageTimeWarpLabel);
+            {
+                OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamWarp);
+                assert(param);
+                param->setLabel(kParamWarpLabel);
+                param->setHint(kParamWarpHint);
+
+                // define it as one dimensional
+                param->setDimension(1);
+                param->setDimensionLabel(kParamWarp, 0);
+
+                const OfxRGBColourD blue  = {0.5, 0.5, 1};		//set blue color to blue curve
+                param->setUIColour( 0, blue );
+
+                // set the min/max parametric range to 0..1
+                param->setRange(0.0, 1.0);
+
+                param->setIdentity(0);
+
+                // add param to page
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+        } else if (context == OFX::eContextGeneral) {
+            // If we are a general context, we can change the duration of the effect, so have a param to do that
+            // We need a separate param as it is impossible to derive this from a speed param and the input clip
+            // duration (the speed may be animating or wired to an expression).
+
+            // This is not possible if there's a warp curve.
+
             // We are a general or filter context, define a speed param and a page of controls to put that in
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDuration);
             param->setLabel(kParamDurationLabel);
@@ -646,7 +704,11 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
 ImageEffect* RetimePluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new RetimePlugin(handle);
+    const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+    const bool supportsParametricParameter = (gHostDescription.supportsParametricParameter &&
+                                              !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
+                                                (gHostDescription.versionMajor == 8 || gHostDescription.versionMajor == 9)));
+    return new RetimePlugin(handle, supportsParametricParameter);
 }
 
 void getRetimePluginID(OFX::PluginFactoryArray &ids)
