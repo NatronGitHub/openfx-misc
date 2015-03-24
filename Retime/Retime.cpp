@@ -365,9 +365,8 @@ RetimePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
         }
         if (_warp) {
             double r = srcRange.max - srcRange.min;
-            sourceTime = srcRange.min;
             if (r != 0.) {
-                sourceTime += r * _warp->getValue(0, time, (sourceTime-srcRange.min)/r);
+                sourceTime = srcRange.min + r * _warp->getValue(0, time, (sourceTime-srcRange.min)/r);
             }
         }
     }
@@ -407,9 +406,8 @@ RetimePlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &iden
         }
         if (_warp) {
             double r = srcRange.max - srcRange.min;
-            sourceTime = srcRange.min;
             if (r != 0.) {
-                sourceTime += r * _warp->getValue(0, time, (sourceTime-srcRange.min)/r);
+                sourceTime = srcRange.min + r * _warp->getValue(0, time, (sourceTime-srcRange.min)/r);
             }
         }
     }
@@ -477,7 +475,10 @@ RetimePlugin::render(const OFX::RenderArguments &args)
             sourceTime = srcRange.min + _speed->integrate(srcRange.min, time);
         }
         if (_warp) {
-            sourceTime = srcRange.min + (srcRange.max - srcRange.min) * _warp->getValue(0, time, (sourceTime-srcRange.min)/(srcRange.max - srcRange.min));
+            double r = srcRange.max - srcRange.min;
+            if (r != 0.) {
+                sourceTime = srcRange.min + r * _warp->getValue(0, time, (sourceTime-srcRange.min)/r);
+            }
         }
     }
 
