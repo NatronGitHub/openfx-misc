@@ -364,7 +364,11 @@ RetimePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
             sourceTime = srcRange.min + _speed->integrate(srcRange.min, time);
         }
         if (_warp) {
-            sourceTime = srcRange.min + (srcRange.max - srcRange.min) * _warp->getValue(0, time, (sourceTime-srcRange.min)/(srcRange.max - srcRange.min));
+            double r = srcRange.max - srcRange.min;
+            sourceTime = srcRange.min;
+            if (r != 0.) {
+                sourceTime += r * _warp->getValue(0, time, (sourceTime-srcRange.min)/r);
+            }
         }
     }
     OfxRangeD range;
@@ -402,7 +406,11 @@ RetimePlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &iden
             sourceTime = srcRange.min + _speed->integrate(srcRange.min, time);
         }
         if (_warp) {
-            sourceTime = srcRange.min + (srcRange.max - srcRange.min) * _warp->getValue(0, time, (sourceTime-srcRange.min)/(srcRange.max - srcRange.min));
+            double r = srcRange.max - srcRange.min;
+            sourceTime = srcRange.min;
+            if (r != 0.) {
+                sourceTime += r * _warp->getValue(0, time, (sourceTime-srcRange.min)/r);
+            }
         }
     }
     if (sourceTime == (int)sourceTime) {
