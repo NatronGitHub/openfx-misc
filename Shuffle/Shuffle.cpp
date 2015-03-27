@@ -1276,7 +1276,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
     }
     
     
-    int nDstComponents = getNComponents(dstComponents);
+    int nDstComponents = dst->getPixelComponentCount();
     
     std::list<std::string> componentsA = _srcClipA->getComponentsPresent();
     std::list<std::string> componentsB = _srcClipB->getComponentsPresent();
@@ -1826,7 +1826,7 @@ void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
         // We are pass-through in output, meaning another shuffle below could very well
         // access all planes again. Note that for multi-planar effects this is mandatory to be called
         // since default is false.
-        desc.setIsPassThroughForNotProcessedPlanes(true);
+        desc.setPassThroughForNotProcessedPlanes(ePassThroughLevelPassThroughNonRenderedPlanes);
     }
 #else 
     gIsMultiPlanar = false;

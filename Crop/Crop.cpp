@@ -652,7 +652,10 @@ void CropPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setOverlayInteractDescriptor(new CropOverlayDescriptor);
-
+#ifdef OFX_EXTENSIONS_NUKE
+    // ask the host to render all planes
+    desc.setPassThroughForNotProcessedPlanes(ePassThroughLevelRenderAllRequestedPlanes);
+#endif
 }
 
 

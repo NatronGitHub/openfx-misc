@@ -332,7 +332,10 @@ void AdjustRoDPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // and scale the transform appropriately.
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
-
+#ifdef OFX_EXTENSIONS_NUKE
+    // ask the host to render all planes
+    desc.setPassThroughForNotProcessedPlanes(ePassThroughLevelRenderAllRequestedPlanes);
+#endif
 }
 
 

@@ -432,6 +432,8 @@ void NoOpPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // Enable transform by the host.
     // It is only possible for transforms which can be represented as a 3x3 matrix.
     desc.setCanTransform(true);
+    // ask the host to render all planes
+    desc.setPassThroughForNotProcessedPlanes(ePassThroughLevelRenderAllRequestedPlanes);
 #endif
 }
 
@@ -449,7 +451,6 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     //srcClip->addSupportedComponent(ePixelComponentStereoDisparity);
     srcClip->setCanTransform(true);
 #endif
-    srcClip->addSupportedComponent(ePixelComponentCustom);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
@@ -464,7 +465,6 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     //dstClip->addSupportedComponent(ePixelComponentMotionVectors); // crashes Nuke
     //dstClip->addSupportedComponent(ePixelComponentStereoDisparity);
 #endif
-    dstClip->addSupportedComponent(ePixelComponentCustom);
     dstClip->setSupportsTiles(kSupportsTiles);
     
     // make some pages and to things in 

@@ -363,7 +363,6 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
-        srcClip->addSupportedComponent(ePixelComponentCustom);
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);
@@ -376,7 +375,6 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
-        srcClip->addSupportedComponent(ePixelComponentCustom);
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);
@@ -395,7 +393,6 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
             srcClip->addSupportedComponent(ePixelComponentRGB);
             srcClip->addSupportedComponent(ePixelComponentRGBA);
             srcClip->addSupportedComponent(ePixelComponentAlpha);
-            srcClip->addSupportedComponent(ePixelComponentCustom);
             srcClip->setTemporalClipAccess(false);
             srcClip->setSupportsTiles(kSupportsTiles);
             srcClip->setIsMask(false);
@@ -408,7 +405,6 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
-    dstClip->addSupportedComponent(ePixelComponentCustom);
     dstClip->setSupportsTiles(kSupportsTiles);
 
     // make some pages and to things in

@@ -213,6 +213,7 @@ private:
                  void *dstPixelData,
                  const OfxRectI& dstBounds,
                  OFX::PixelComponentEnum dstPixelComponents,
+                 int dstPixelComponentCount,
                  OFX::BitDepthEnum dstPixelDepth,
                  int dstRowBytes);
 
@@ -223,12 +224,14 @@ private:
                  const void *srcPixelData,
                  const OfxRectI& srcBounds,
                  OFX::PixelComponentEnum srcPixelComponents,
+                 int srcPixelComponentCount,
                  OFX::BitDepthEnum srcBitDepth,
                  int srcRowBytes,
                  int srcBoundary,
                  void *dstPixelData,
                  const OfxRectI& dstBounds,
                  OFX::PixelComponentEnum dstPixelComponents,
+                 int dstPixelComponentCount,
                  OFX::BitDepthEnum dstPixelDepth,
                  int dstRowBytes,
                  bool premult,
@@ -262,18 +265,19 @@ private:
 template <class Params>
 void
 CImgOperatorPluginHelper<Params>::setupAndFill(OFX::PixelProcessorFilterBase & processor,
-                                                              const OfxRectI &renderWindow,
-                                                              void *dstPixelData,
-                                                              const OfxRectI& dstBounds,
-                                                              OFX::PixelComponentEnum dstPixelComponents,
-                                                              OFX::BitDepthEnum dstPixelDepth,
-                                                              int dstRowBytes)
+                                               const OfxRectI &renderWindow,
+                                               void *dstPixelData,
+                                               const OfxRectI& dstBounds,
+                                               OFX::PixelComponentEnum dstPixelComponents,
+                                               int dstPixelComponentCount,
+                                               OFX::BitDepthEnum dstPixelDepth,
+                                               int dstRowBytes)
 {
     assert(dstPixelData &&
            dstBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= dstBounds.x2 &&
            dstBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= dstBounds.y2);
     // set the images
-    processor.setDstImg(dstPixelData, dstBounds, dstPixelComponents, dstPixelDepth, dstRowBytes);
+    processor.setDstImg(dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstPixelDepth, dstRowBytes);
 
     // set the render window
     processor.setRenderWindow(renderWindow);
@@ -287,21 +291,23 @@ CImgOperatorPluginHelper<Params>::setupAndFill(OFX::PixelProcessorFilterBase & p
 template <class Params>
 void
 CImgOperatorPluginHelper<Params>::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
-                                                              double /*time*/,
-                                                              const OfxRectI &renderWindow,
-                                                              const void *srcPixelData,
-                                                              const OfxRectI& srcBounds,
-                                                              OFX::PixelComponentEnum srcPixelComponents,
-                                                              OFX::BitDepthEnum srcBitDepth,
-                                                              int srcRowBytes,
-                                                              int srcBoundary,
-                                                              void *dstPixelData,
-                                                              const OfxRectI& dstBounds,
-                                                              OFX::PixelComponentEnum dstPixelComponents,
-                                                              OFX::BitDepthEnum dstPixelDepth,
-                                                              int dstRowBytes,
-                                                              bool premult,
-                                                              int premultChannel)
+                                               double /*time*/,
+                                               const OfxRectI &renderWindow,
+                                               const void *srcPixelData,
+                                               const OfxRectI& srcBounds,
+                                               OFX::PixelComponentEnum srcPixelComponents,
+                                               int srcPixelComponentCount,
+                                               OFX::BitDepthEnum srcBitDepth,
+                                               int srcRowBytes,
+                                               int srcBoundary,
+                                               void *dstPixelData,
+                                               const OfxRectI& dstBounds,
+                                               OFX::PixelComponentEnum dstPixelComponents,
+                                               int dstPixelComponentCount,
+                                               OFX::BitDepthEnum dstPixelDepth,
+                                               int dstRowBytes,
+                                               bool premult,
+                                               int premultChannel)
 {
     // src may not be valid over the renderWindow
     //assert(srcPixelData &&
@@ -322,9 +328,9 @@ CImgOperatorPluginHelper<Params>::setupAndCopy(OFX::PixelProcessorFilterBase & p
 
     // set the images
     assert(dstPixelData);
-    processor.setDstImg(dstPixelData, dstBounds, dstPixelComponents, dstPixelDepth, dstRowBytes);
+    processor.setDstImg(dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstPixelDepth, dstRowBytes);
     assert(0 <= srcBoundary && srcBoundary <= 2);
-    processor.setSrcImg(srcPixelData, srcBounds, srcPixelComponents, srcBitDepth, srcRowBytes, srcBoundary);
+    processor.setSrcImg(srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, srcBoundary);
 
     // set the render window
     processor.setRenderWindow(renderWindow);
@@ -360,6 +366,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     }
     const OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     const OFX::PixelComponentEnum dstPixelComponents  = dst->getPixelComponents();
+    const int dstPixelComponentCount = dst->getPixelComponentCount();
     assert(dstBitDepth == OFX::eBitDepthFloat); // only float is supported for now (others are untested)
 
     std::auto_ptr<const OFX::Image> srcA((_srcAClip && _srcAClip->isConnected()) ?
@@ -382,16 +389,16 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     OfxRectI srcABounds;
     OfxRectI srcARoD;
     OFX::PixelComponentEnum srcAPixelComponents;
+    int srcAPixelComponentCount;
     OFX::BitDepthEnum srcABitDepth;
-    //srcAPixelBytes = getPixelBytes(srcPixelComponents, srcBitDepth);
     int srcARowBytes;
     if (!srcA.get()) {
         srcAPixelData = NULL;
         srcABounds.x1 = srcABounds.y1 = srcABounds.x2 = srcABounds.y2 = 0;
         srcARoD.x1 = srcARoD.y1 = srcARoD.x2 = srcARoD.y2 = 0;
         srcAPixelComponents = _srcAClip ? _srcAClip->getPixelComponents() : OFX::ePixelComponentNone;
+        srcAPixelComponentCount = 0;
         srcABitDepth = _srcAClip ? _srcAClip->getPixelDepth() : OFX::eBitDepthNone;
-        //srcAPixelBytes = getPixelBytes(srcAPixelComponents, srcABitDepth);
         srcARowBytes = 0;
     } else {
         srcAPixelData = srcA->getPixelData();
@@ -399,8 +406,8 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         // = src->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
         OFX::MergeImages2D::toPixelEnclosing(_srcAClip->getRegionOfDefinition(time), args.renderScale, _srcAClip->getPixelAspectRatio(), &srcARoD);
         srcAPixelComponents = srcA->getPixelComponents();
+        srcAPixelComponentCount = srcA->getPixelComponentCount();
         srcABitDepth = srcA->getPixelDepth();
-        //srcAPixelBytes = getPixelBytes(srcAPixelComponents, srcABitDepth);
         srcARowBytes = srcA->getRowBytes();
     }
 
@@ -424,16 +431,16 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     OfxRectI srcBBounds;
     OfxRectI srcBRoD;
     OFX::PixelComponentEnum srcBPixelComponents;
+    int srcBPixelComponentCount;
     OFX::BitDepthEnum srcBBitDepth;
-    //srcBPixelBytes = getPixelBytes(srcPixelComponents, srcBitDepth);
     int srcBRowBytes;
     if (!srcB.get()) {
         srcBPixelData = NULL;
         srcBBounds.x1 = srcBBounds.y1 = srcBBounds.x2 = srcBBounds.y2 = 0;
         srcBRoD.x1 = srcBRoD.y1 = srcBRoD.x2 = srcBRoD.y2 = 0;
         srcBPixelComponents = _srcBClip ? _srcBClip->getPixelComponents() : OFX::ePixelComponentNone;
+        srcBPixelComponentCount = 0;
         srcBBitDepth = _srcBClip ? _srcBClip->getPixelDepth() : OFX::eBitDepthNone;
-        //srcPixelBytes = getPixelBytes(srcPixelComponents, srcBitDepth);
         srcBRowBytes = 0;
     } else {
         srcBPixelData = srcB->getPixelData();
@@ -441,8 +448,8 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         // = srcB->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
         OFX::MergeImages2D::toPixelEnclosing(_srcBClip->getRegionOfDefinition(time), args.renderScale, _srcBClip->getPixelAspectRatio(), &srcBRoD);
         srcBPixelComponents = srcB->getPixelComponents();
+        srcBPixelComponentCount = srcB->getPixelComponentCount();
         srcBBitDepth = srcB->getPixelDepth();
-        //srcPixelBytes = getPixelBytes(srcPixelComponents, srcBitDepth);
         srcBRowBytes = srcB->getRowBytes();
     }
 
@@ -452,7 +459,6 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     OFX::MergeImages2D::toPixelEnclosing(_dstClip->getRegionOfDefinition(time), args.renderScale, _dstClip->getPixelAspectRatio(), &dstRoD);
     //const OFX::PixelComponentEnum dstPixelComponents = dst->getPixelComponents();
     //const OFX::BitDepthEnum dstBitDepth = dst->getPixelDepth();
-    //dstPixelBytes = getPixelBytes(dstPixelComponents, dstBitDepth);
     const int dstRowBytes = dst->getRowBytes();
 
     if (!_supportsTiles) {
@@ -547,10 +553,11 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
 
     const OfxRectI tmpBounds = srcRoI;
     const OFX::PixelComponentEnum tmpPixelComponents = dstPixelComponents;
+    const int tmpPixelComponentCount = dstPixelComponentCount;
     const OFX::BitDepthEnum tmpBitDepth = OFX::eBitDepthFloat;
     const int tmpWidth = tmpBounds.x2 - tmpBounds.x1;
     const int tmpHeight = tmpBounds.y2 - tmpBounds.y1;
-    const int tmpRowBytes = getPixelBytes(tmpPixelComponents, tmpBitDepth) * tmpWidth;
+    const int tmpRowBytes = tmpPixelComponentCount * getComponentBytes(tmpBitDepth) * tmpWidth;
     size_t tmpSize = tmpRowBytes * tmpHeight;
 
     assert(tmpSize > 0);
@@ -561,27 +568,27 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         std::auto_ptr<OFX::PixelProcessorFilterBase> fred;
         if (!srcA.get()) {
             // no src, fill with black & transparent
-            if (dstPixelComponents == OFX::ePixelComponentRGBA) {
-                fred.reset(new OFX::BlackFiller<float>(*this, 4));
-            } else if (dstPixelComponents == OFX::ePixelComponentRGB) {
-                fred.reset(new OFX::BlackFiller<float>(*this, 3));
-            }  else if (dstPixelComponents == OFX::ePixelComponentAlpha) {
-                fred.reset(new OFX::BlackFiller<float>(*this, 1));
-            }
+                fred.reset(new OFX::BlackFiller<float>(*this, dstPixelComponentCount));
         } else {
             if (dstPixelComponents == OFX::ePixelComponentRGBA) {
                 fred.reset(new OFX::PixelCopierUnPremult<float, 4, 1, float, 4, 1>(*this));
-            } else if (dstPixelComponents == OFX::ePixelComponentRGB) {
+            } else if (dstPixelComponentCount == 4) {
+                // just copy, no premult
+                fred.reset(new OFX::PixelCopier<float, 4>(*this));
+            } else if (dstPixelComponentCount == 3) {
                 // just copy, no premult
                 fred.reset(new OFX::PixelCopier<float, 3>(*this));
-            }  else if (dstPixelComponents == OFX::ePixelComponentAlpha) {
+            } else if (dstPixelComponentCount == 2) {
+                // just copy, no premult
+                fred.reset(new OFX::PixelCopier<float, 2>(*this));
+            }  else if (dstPixelComponentCount == 1) {
                 // just copy, no premult
                 fred.reset(new OFX::PixelCopier<float, 1>(*this));
             }
         }
         setupAndCopy(*fred, time, srcRoI,
-                     srcAPixelData, srcABounds, srcAPixelComponents, srcABitDepth, srcARowBytes, srcBoundary,
-                     tmpAPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
+                     srcAPixelData, srcABounds, srcAPixelComponents, srcAPixelComponentCount, srcABitDepth, srcARowBytes, srcBoundary,
+                     tmpAPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes,
                      premult, premultChannel);
     }
     
@@ -592,27 +599,35 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         std::auto_ptr<OFX::PixelProcessorFilterBase> fred;
         if (!srcB.get()) {
             // no src, fill with black & transparent
-            if (dstPixelComponents == OFX::ePixelComponentRGBA) {
+            if (dstPixelComponentCount == 4) {
                 fred.reset(new OFX::BlackFiller<float>(*this, 4));
-            } else if (dstPixelComponents == OFX::ePixelComponentRGB) {
+            } else if (dstPixelComponentCount == 3) {
                 fred.reset(new OFX::BlackFiller<float>(*this, 3));
-            }  else if (dstPixelComponents == OFX::ePixelComponentAlpha) {
+            } else if (dstPixelComponentCount == 2) {
+                fred.reset(new OFX::BlackFiller<float>(*this, 2));
+            } else if (dstPixelComponentCount == 1) {
                 fred.reset(new OFX::BlackFiller<float>(*this, 1));
             }
         } else {
             if (dstPixelComponents == OFX::ePixelComponentRGBA) {
                 fred.reset(new OFX::PixelCopierUnPremult<float, 4, 1, float, 4, 1>(*this));
-            } else if (dstPixelComponents == OFX::ePixelComponentRGB) {
+            } else if (dstPixelComponentCount == 4) {
+                // just copy, no premult
+                fred.reset(new OFX::PixelCopier<float, 4>(*this));
+           } else if (dstPixelComponentCount == 3) {
                 // just copy, no premult
                 fred.reset(new OFX::PixelCopier<float, 3>(*this));
-            }  else if (dstPixelComponents == OFX::ePixelComponentAlpha) {
+            } else if (dstPixelComponentCount == 2) {
+                // just copy, no premult
+                fred.reset(new OFX::PixelCopier<float, 2>(*this));
+            }  else if (dstPixelComponentCount == 1) {
                 // just copy, no premult
                 fred.reset(new OFX::PixelCopier<float, 1>(*this));
             }
         }
         setupAndCopy(*fred, time, srcRoI,
-                     srcBPixelData, srcBBounds, srcBPixelComponents, srcBBitDepth, srcBRowBytes, srcBoundary,
-                     tmpBPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes,
+                     srcBPixelData, srcBBounds, srcBPixelComponents, srcBPixelComponentCount, srcBBitDepth, srcBRowBytes, srcBoundary,
+                     tmpBPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes,
                      premult, premultChannel);
     }
 
@@ -683,17 +698,22 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         std::auto_ptr<OFX::PixelProcessorFilterBase> fred;
         if (dstPixelComponents == OFX::ePixelComponentRGBA) {
             fred.reset(new OFX::PixelCopierPremult<float, 4, 1, float, 4, 1>(*this));
-        } else if (dstPixelComponents == OFX::ePixelComponentRGB) {
+        } else if (dstPixelComponentCount == 4) {
+            // just copy, no premult
+            fred.reset(new OFX::PixelCopier<float, 4>(*this));
+        } else if (dstPixelComponentCount == 3) {
             // just copy, no premult
             fred.reset(new OFX::PixelCopier<float, 3>(*this));
-        }  else if (dstPixelComponents == OFX::ePixelComponentAlpha) {
+        } else if (dstPixelComponentCount == 2) {
             // just copy, no premult
-            assert(srcAPixelComponents == OFX::ePixelComponentAlpha);
+            fred.reset(new OFX::PixelCopier<float, 2>(*this));
+        } else if (dstPixelComponentCount == 1) {
+            // just copy, no premult
             fred.reset(new OFX::PixelCopier<float, 1>(*this));
         }
         setupAndCopy(*fred, time, renderWindow,
-                     tmpPixelData, tmpBounds, tmpPixelComponents, tmpBitDepth, tmpRowBytes, 0,
-                     dstPixelData, dstBounds, dstPixelComponents, dstBitDepth, dstRowBytes,
+                     tmpPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes, 0,
+                     dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
                      premult, premultChannel);
     }
 

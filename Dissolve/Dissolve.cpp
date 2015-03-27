@@ -528,7 +528,6 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
-        srcClip->addSupportedComponent(ePixelComponentCustom);
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);
@@ -546,7 +545,6 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
-        srcClip->addSupportedComponent(ePixelComponentCustom);
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);
@@ -574,7 +572,6 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             srcClip->addSupportedComponent(ePixelComponentRGB);
             srcClip->addSupportedComponent(ePixelComponentRGBA);
             srcClip->addSupportedComponent(ePixelComponentAlpha);
-            srcClip->addSupportedComponent(ePixelComponentCustom);
             srcClip->setTemporalClipAccess(false);
             srcClip->setSupportsTiles(kSupportsTiles);
             srcClip->setIsMask(false);
