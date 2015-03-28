@@ -192,30 +192,15 @@ static OFX::BitDepthEnum gOutputBitDepthMap[4];
 
 using namespace OFX;
 
-
-static int nComps(PixelComponentEnum e)
-{
-    switch (e) {
-        case OFX::ePixelComponentRGBA:
-            return 4;
-        case OFX::ePixelComponentRGB:
-            return 3;
-        case OFX::ePixelComponentAlpha:
-            return 1;
-        default:
-            return 0;
-    }
-}
-
 class ShufflerBase : public OFX::ImageProcessor
 {
 protected:
     const OFX::Image *_srcImgA;
     const OFX::Image *_srcImgB;
     PixelComponentEnum _outputComponents;
+    int _outputComponentCount;
     BitDepthEnum _outputBitDepth;
-    int _nComponentsDst;
-    InputChannelEnum _channelMap[4];
+    std::vector<InputChannelEnum> _channelMap;
 
     public:
     ShufflerBase(OFX::ImageEffect &instance)
@@ -223,26 +208,24 @@ protected:
     , _srcImgA(0)
     , _srcImgB(0)
     , _outputComponents(ePixelComponentNone)
+    , _outputComponentCount(0)
     , _outputBitDepth(eBitDepthNone)
-    , _nComponentsDst(0)
+    , _channelMap()
     {
-        for (int c = 0; c < 4; ++c) {
-            _channelMap[c] = eInputChannel0;
-        }
     }
 
     void setSrcImg(const OFX::Image *A, const OFX::Image *B) {_srcImgA = A; _srcImgB = B;}
 
     void setValues(PixelComponentEnum outputComponents,
+                   int outputComponentCount,
                    BitDepthEnum outputBitDepth,
-                   InputChannelEnum *channelMap)
+                   const std::vector<InputChannelEnum> &channelMap)
     {
         _outputComponents = outputComponents,
+        _outputComponentCount = outputComponentCount,
         _outputBitDepth = outputBitDepth;
-        _nComponentsDst = nComps(outputComponents);
-        for (int c = 0; c < _nComponentsDst; ++c) {
-            _channelMap[c] = channelMap[c];
-        }
+        assert(_outputComponentCount == (int)channelMap.size());
+        _channelMap = channelMap;
     }
 };
 
@@ -464,6 +447,7 @@ class MultiPlaneShufflerBase : public OFX::ImageProcessor
 protected:
     
     PixelComponentEnum _outputComponents;
+    int _outputComponentCount;
     BitDepthEnum _outputBitDepth;
     int _nComponentsDst;
     std::vector<InputPlaneChannel> _inputPlanes;
@@ -472,6 +456,7 @@ public:
     MultiPlaneShufflerBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _outputComponents(ePixelComponentNone)
+    , _outputComponentCount(0)
     , _outputBitDepth(eBitDepthNone)
     , _nComponentsDst(0)
     , _inputPlanes(_nComponentsDst)
@@ -479,12 +464,13 @@ public:
     }
 
     void setValues(PixelComponentEnum outputComponents,
+                   int outputComponentCount,
                    BitDepthEnum outputBitDepth,
                    const std::vector<InputPlaneChannel>& planes)
     {
         _outputComponents = outputComponents,
+        _outputComponentCount = outputComponentCount,
         _outputBitDepth = outputBitDepth;
-        _nComponentsDst = nComps(outputComponents);
         _inputPlanes = planes;
 
     }
@@ -1133,7 +1119,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     
     InputChannelEnum r,g,b,a;
     // compute the components mapping tables
-    InputChannelEnum channelMap[4];
+    std::vector<InputChannelEnum> channelMap;
     
     std::auto_ptr<const OFX::Image> srcA((_srcClipA && _srcClipA->isConnected()) ?
                                          _srcClipA->fetchImage(args.time) : 0);
@@ -1186,28 +1172,29 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     
     switch (dstComponents) {
         case OFX::ePixelComponentRGBA:
+            channelMap.resize(4);
             channelMap[0] = r;
             channelMap[1] = g;
             channelMap[2] = b;
             channelMap[3] = a;
             break;
+        case OFX::ePixelComponentXY:
+            channelMap.resize(2);
+            channelMap[0] = r;
+            channelMap[1] = g;
+            break;
         case OFX::ePixelComponentRGB:
+            channelMap.resize(3);
             channelMap[0] = r;
             channelMap[1] = g;
             channelMap[2] = b;
-            channelMap[3] = eInputChannel0;
             break;
         case OFX::ePixelComponentAlpha:
+            channelMap.resize(1);
             channelMap[0] = a;
-            channelMap[1] = eInputChannel0;
-            channelMap[2] = eInputChannel0;
-            channelMap[3] = eInputChannel0;
             break;
         default:
-            channelMap[0] = eInputChannel0;
-            channelMap[1] = eInputChannel0;
-            channelMap[2] = eInputChannel0;
-            channelMap[3] = eInputChannel0;
+            channelMap.resize(0);
             break;
     }
     processor.setSrcImg(srcA.get(),srcB.get());
@@ -1215,14 +1202,17 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     int outputComponents_i;
     _outputComponents->getValue(outputComponents_i);
     PixelComponentEnum outputComponents = gOutputComponentsMap[outputComponents_i];
+    assert(dstComponents == outputComponents);
     BitDepthEnum outputBitDepth = srcBitDepth;
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         int outputBitDepth_i;
         _outputBitDepth->getValue(outputBitDepth_i);
         outputBitDepth = gOutputBitDepthMap[outputBitDepth_i];
     }
-    
-    processor.setValues(outputComponents, outputBitDepth, channelMap);
+    assert(outputBitDepth == dstBitDepth);
+    int outputComponentCount = dst->getPixelComponentCount();
+
+    processor.setValues(outputComponents, outputComponentCount, outputBitDepth, channelMap);
     
     processor.setDstImg(dst.get());
     processor.setRenderWindow(args.renderWindow);
@@ -1346,15 +1336,18 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
     int outputComponents_i;
     _outputComponents->getValue(outputComponents_i);
     PixelComponentEnum outputComponents = gOutputComponentsMap[outputComponents_i];
+    assert(dstComponents == outputComponents);
     BitDepthEnum outputBitDepth = srcBitDepth;
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         int outputBitDepth_i;
         _outputBitDepth->getValue(outputBitDepth_i);
         outputBitDepth = gOutputBitDepthMap[outputBitDepth_i];
     }
+    assert(outputBitDepth == dstBitDepth);
+    int outputComponentCount = dst->getPixelComponentCount();
 
-    processor.setValues(outputComponents, outputBitDepth, planes);
-    
+    processor.setValues(outputComponents, outputComponentCount, outputBitDepth, planes);
+
     processor.setDstImg(dst.get());
     processor.setRenderWindow(args.renderWindow);
     

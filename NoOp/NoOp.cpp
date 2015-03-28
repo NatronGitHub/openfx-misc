@@ -88,9 +88,7 @@ public:
     , _forceCopy(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
         _forceCopy = fetchBooleanParam(kParamForceCopy);
         assert(_forceCopy);
     }
@@ -446,9 +444,10 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
+#ifdef OFX_EXTENSIONS_NATRON
+    srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
 #ifdef OFX_EXTENSIONS_NUKE
-    //srcClip->addSupportedComponent(ePixelComponentMotionVectors);
-    //srcClip->addSupportedComponent(ePixelComponentStereoDisparity);
     srcClip->setCanTransform(true);
 #endif
     srcClip->setTemporalClipAccess(false);
@@ -461,9 +460,8 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
-#ifdef OFX_EXTENSIONS_NUKE
-    //dstClip->addSupportedComponent(ePixelComponentMotionVectors); // crashes Nuke
-    //dstClip->addSupportedComponent(ePixelComponentStereoDisparity);
+#ifdef OFX_EXTENSIONS_NATRON
+    dstClip->addSupportedComponent(ePixelComponentXY);
 #endif
     dstClip->setSupportsTiles(kSupportsTiles);
     
