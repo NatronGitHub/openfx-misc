@@ -105,6 +105,9 @@
 #define kParamOutputComponentsOptionRGBA "RGBA"
 #define kParamOutputComponentsOptionRGB "RGB"
 #define kParamOutputComponentsOptionAlpha "Alpha"
+#ifdef OFX_EXTENSIONS_NATRON
+#define kParamOutputComponentsOptionXY "XY"
+#endif
 
 #define kParamOutputBitDepth "outputBitDepth"
 #define kParamOutputBitDepthLabel "Output Bit Depth"
@@ -184,6 +187,9 @@ static bool gSupportsFloats = false;
 static bool gSupportsRGBA   = false;
 static bool gSupportsRGB    = false;
 static bool gSupportsAlpha  = false;
+#ifdef OFX_EXTENSIONS_NATRON
+static bool gSupportsXY     = false;
+#endif
 static bool gSupportsDynamicChoices = false;
 static bool gIsMultiPlanar = false;
 
@@ -344,6 +350,14 @@ private:
                 srcMapComp[2] = -1;
                 srcMapComp[3] = 0;
                 break;
+#ifdef OFX_EXTENSIONS_NATRON
+            case OFX::ePixelComponentXY:
+                srcMapComp[0] = 0;
+                srcMapComp[1] = 1;
+                srcMapComp[2] = -1;
+                srcMapComp[3] = -1;
+                break;
+#endif
             default:
                 srcMapComp[0] = -1;
                 srcMapComp[1] = -1;
@@ -537,12 +551,12 @@ public:
     , _a(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));
+        assert(_dstClip && (1 <= _dstClip->getPixelComponentCount() && _dstClip->getPixelComponentCount() <= 4));
         _srcClipA = fetchClip(context == eContextGeneral ? kClipA : kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClipA && (_srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentAlpha));
+        assert(_srcClipA && (1 <= _srcClipA->getPixelComponentCount() && _srcClipA->getPixelComponentCount() <= 4));
         if (context == eContextGeneral) {
             _srcClipB = fetchClip(kClipB);
-            assert(_srcClipB && (_srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentAlpha));
+            assert(_srcClipB && (1 <= _srcClipB->getPixelComponentCount() && _srcClipB->getPixelComponentCount() <= 4));
         }
         _outputComponents = fetchChoiceParam(kParamOutputComponents);
         if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
@@ -651,6 +665,9 @@ static void extractChannelsFromComponentString(const std::string& comp,
         channels->push_back("X");
         channels->push_back("Y");
 #ifdef OFX_EXTENSIONS_NATRON
+    } else if (comp == kNatronOfxImageComponentXY) {
+        channels->push_back("X");
+        channels->push_back("Y");
     } else {
         std::vector<std::string> layerChannels = mapPixelComponentCustomToLayerChannels(comp);
         if (layerChannels.size() >= 1) {
@@ -755,8 +772,6 @@ ShufflePlugin::buildChannelMenus()
     _a->resetOptions();
 
     //Always add RGBA channels for color plane
-
-
     addInputChannelOptionsRGBA(_r, getContext());
     addInputChannelOptionsRGBA(_g, getContext());
     addInputChannelOptionsRGBA(_b, getContext());
@@ -833,18 +848,18 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
     
     if (layerName == kShuffleColorPlaneName || layerName.empty()) {
         std::string comp = (*clip)->getPixelComponentsProperty();
-        if (chanName == "r" || chanName == "R") {
+        if (chanName == "r" || chanName == "R" || chanName == "x" || chanName == "X") {
             *channelIndexInPlane = 0;
-        } else if (chanName == "g" || chanName == "G") {
+        } else if (chanName == "g" || chanName == "G" || chanName == "y" || chanName == "Y") {
             *channelIndexInPlane = 1;
-        } else if (chanName == "b" || chanName == "B") {
+        } else if (chanName == "b" || chanName == "B" || chanName == "z" || chanName == "Z") {
             *channelIndexInPlane = 2;
-        } else if (chanName == "a" || chanName == "A") {
+        } else if (chanName == "a" || chanName == "A" || chanName == "w" || chanName == "W") {
             if (comp == kOfxImageComponentAlpha) {
                 *channelIndexInPlane = 0;
             } else if (comp == kOfxImageComponentRGBA) {
                 *channelIndexInPlane = 3;
-            } else if (comp == kOfxImageComponentRGB) {
+            } else {
                 *ofxComponents = kParamOutputOption0;
                 return true;
             }
@@ -1437,7 +1452,8 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
-    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == ePixelComponentAlpha);
+    int dstComponentCount  = _dstClip->getPixelComponentCount();
+    assert(1 <= dstComponentCount && dstComponentCount <= 4);
 
     assert(kSupportsMultipleClipPARs   || _srcClipA->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth());
@@ -1474,13 +1490,19 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-    if (dstComponents == OFX::ePixelComponentRGBA) {
+    switch (dstComponentCount) {
+        case 4:
             renderInternal<4>(args, srcBitDepth, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
+            break;
+        case 3:
             renderInternal<3>(args, srcBitDepth, dstBitDepth);
-    } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
+            break;
+        case 2:
+            renderInternal<2>(args, srcBitDepth, dstBitDepth);
+            break;
+        case 1:
             renderInternal<1>(args, srcBitDepth, dstBitDepth);
+            break;
     }
 }
 
@@ -1522,6 +1544,19 @@ imageFormatString(PixelComponentEnum components, BitDepthEnum bitDepth)
         case OFX::ePixelComponentAlpha:
             s += "Alpha";
             break;
+#ifdef OFX_EXTENSIONS_NUKE
+        case OFX::ePixelComponentMotionVectors:
+            s += "MotionVectors";
+            break;
+        case OFX::ePixelComponentStereoDisparity:
+            s += "StereoDisparity";
+            break;
+#endif
+#ifdef OFX_EXTENSIONS_NATRON
+        case OFX::ePixelComponentXY:
+            s += "XY";
+            break;
+#endif
         case OFX::ePixelComponentCustom:
             s += "Custom";
             break;
@@ -1548,6 +1583,17 @@ imageFormatString(PixelComponentEnum components, BitDepthEnum bitDepth)
         case OFX::eBitDepthNone:
             s += "0";
             break;
+#ifdef OFX_EXTENSIONS_VEGAS
+        case OFX::eBitDepthUByteBGRA:
+            s += "8uBGRA";
+            break;
+        case OFX::eBitDepthUShortBGRA:
+            s += "16uBGRA";
+            break;
+        case OFX::eBitDepthFloatBGRA:
+            s += "32fBGRA";
+            break;
+#endif
         default:
             s += "[unknown bit depth]";
             break;
@@ -1701,6 +1747,23 @@ ShufflePlugin::enableComponents(void)
             _b->setEnabled(false);
             _a->setEnabled(true);
             break;
+#ifdef OFX_EXTENSIONS_NUKE
+        case ePixelComponentMotionVectors:
+        case ePixelComponentStereoDisparity:
+            _r->setEnabled(true);
+            _g->setEnabled(true);
+            _b->setEnabled(false);
+            _a->setEnabled(false);
+            break;
+#endif
+#ifdef OFX_EXTENSIONS_NATRON
+        case ePixelComponentXY:
+            _r->setEnabled(true);
+            _g->setEnabled(true);
+            _b->setEnabled(false);
+            _a->setEnabled(false);
+            break;
+#endif
         default:
             assert(0);
             break;
@@ -1772,6 +1835,11 @@ void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
             case ePixelComponentAlpha:
                 gSupportsAlpha = true;
                 break;
+#ifdef OFX_EXTENSIONS_NATRON
+            case ePixelComponentXY:
+                gSupportsXY = true;
+                break;
+#endif
             default:
                 // other components are not supported by this plugin
                 break;
@@ -1791,6 +1859,12 @@ void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
             gOutputComponentsMap[i] = ePixelComponentAlpha;
             ++i;
         }
+#ifdef OFX_EXTENSIONS_NATRON
+        if (gSupportsXY) {
+            gOutputComponentsMap[i] = ePixelComponentXY;
+            ++i;
+        }
+#endif
         gOutputComponentsMap[i] = ePixelComponentNone;
     }
 
@@ -1851,6 +1925,9 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         srcClipB->addSupportedComponent(ePixelComponentRGBA);
         srcClipB->addSupportedComponent(ePixelComponentRGB);
         srcClipB->addSupportedComponent(ePixelComponentAlpha);
+#ifdef OFX_EXTENSIONS_NATRON
+        srcClipB->addSupportedComponent(ePixelComponentXY);
+#endif
         srcClipB->setTemporalClipAccess(false);
         srcClipB->setSupportsTiles(kSupportsTiles);
         srcClipB->setOptional(true);
@@ -1859,6 +1936,9 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         srcClipA->addSupportedComponent(ePixelComponentRGBA);
         srcClipA->addSupportedComponent(ePixelComponentRGB);
         srcClipA->addSupportedComponent(ePixelComponentAlpha);
+#ifdef OFX_EXTENSIONS_NATRON
+        srcClipA->addSupportedComponent(ePixelComponentXY);
+#endif
         srcClipA->setTemporalClipAccess(false);
         srcClipA->setSupportsTiles(kSupportsTiles);
         srcClipA->setOptional(false);
@@ -1867,6 +1947,9 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
+#ifdef OFX_EXTENSIONS_NATRON
+        srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
     }
@@ -1876,6 +1959,9 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         dstClip->addSupportedComponent(ePixelComponentRGBA);
         dstClip->addSupportedComponent(ePixelComponentRGB);
         dstClip->addSupportedComponent(ePixelComponentAlpha);
+#ifdef OFX_EXTENSIONS_NATRON
+        dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
         dstClip->setSupportsTiles(kSupportsTiles);
     }
 
@@ -1900,6 +1986,12 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
             assert(gOutputComponentsMap[param->getNOptions()] == ePixelComponentAlpha);
             param->appendOption(kParamOutputComponentsOptionAlpha);
         }
+#ifdef OFX_EXTENSIONS_NATRON
+        if (gSupportsXY) {
+            assert(gOutputComponentsMap[param->getNOptions()] == ePixelComponentXY);
+            param->appendOption(kParamOutputComponentsOptionXY);
+        }
+#endif
         param->setDefault(0);
         param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
