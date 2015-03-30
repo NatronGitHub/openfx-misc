@@ -645,6 +645,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         // = src->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
         OFX::MergeImages2D::toPixelEnclosing(_srcClip->getRegionOfDefinition(time), args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoD);
         srcPixelComponents = src->getPixelComponents();
+        srcPixelComponentCount = src->getPixelComponentCount();
         srcBitDepth = src->getPixelDepth();
         srcRowBytes = src->getRowBytes();
     }
