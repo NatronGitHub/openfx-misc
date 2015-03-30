@@ -652,9 +652,11 @@ static void extractChannelsFromComponentString(const std::string& comp,
         channels->push_back("Y");
 #ifdef OFX_EXTENSIONS_NATRON
     } else {
-        bool supported = OFX::ImageBase::ofxCustomCompToNatronComp(comp, layer, channels);
-        // ignore unsupported components
-        (void)supported;
+        std::vector<std::string> layerChannels = mapPixelComponentCustomToLayerChannels(comp);
+        if (layerChannels.size() >= 1) {
+            *layer = layerChannels[0];
+            channels->assign(layerChannels.begin() + 1, layerChannels.end());
+        }
 #endif
     }
 }
@@ -904,11 +906,12 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
                 //We found a matching layer
                 std::string realLayerName;
                 std::vector<std::string> channels;
-                bool supported = OFX::ImageBase::ofxCustomCompToNatronComp(*it, &realLayerName, &channels);
-                if (!supported) {
+                std::vector<std::string> layerChannels = mapPixelComponentCustomToLayerChannels(*it);
+                if (layerChannels.empty()) {
                     // ignore it
                     continue;
                 }
+                channels.assign(layerChannels.begin() + 1, layerChannels.end());
                 int foundChannel = -1;
                 for (std::size_t i = 0; i < channels.size(); ++i) {
                     if (channels[i] == chanName) {
@@ -929,11 +932,12 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
                 //We found a matching layer
                 std::string realLayerName;
                 std::vector<std::string> channels;
-                bool supported = OFX::ImageBase::ofxCustomCompToNatronComp(*it, &realLayerName, &channels);
-                if (!supported) {
+                std::vector<std::string> layerChannels = mapPixelComponentCustomToLayerChannels(*it);
+                if (layerChannels.empty()) {
                     // ignore it
                     continue;
                 }
+                channels.assign(layerChannels.begin() + 1, layerChannels.end());
                 int foundChannel = -1;
                 for (std::size_t i = 0; i < channels.size(); ++i) {
                     if (channels[i] == chanName) {
