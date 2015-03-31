@@ -379,7 +379,8 @@ AppendClipPlugin::getSources(int firstFrame,
 
     // clips should be ordered
     assert(clip0 == -1|| clip1 == -1 || (clip0OutMin <= clip1OutMin && clip0OutMax <= clip1OutMax));
-
+    assert(clip0 == -1|| (clip0Min < clip0Max && clip0OutMin < clip0OutMax));
+    assert(clip1 == -1|| (clip1Min < clip1Max && clip1OutMin < clip1OutMax));
     if (clip0 == -1 && clip1 == -1) {
         assert(false); // treated above, should never happen!
         // no clip, just be black, and lastFrame = firstFrame-1
@@ -467,6 +468,10 @@ AppendClipPlugin::getSources(int firstFrame,
     } else {
         assert(false);
     }
+    // clips should be ordered
+    assert(clip0 == -1|| clip1 == -1 || (clip0OutMin <= clip1OutMin && clip0OutMax <= clip1OutMax));
+    assert(clip0 == -1|| (clip0Min < clip0Max && clip0OutMin < clip0OutMax));
+    assert(clip1 == -1|| (clip1Min < clip1Max && clip1OutMin < clip1OutMax));
 
     // now, check for fade in/fade out
     if (fadeIn != 0) {
@@ -902,8 +907,8 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
             int i = 0;
             int clipNumber = i + kClipSourceOffset;
-            name[0] = (clipNumber < 10) ? ('0' + clipNumber) : ('0' + clipNumber / 10);
-            name[1] = (clipNumber < 10) ?                  0 : ('0' + clipNumber % 10);
+            name[0] = '0' + clipNumber;
+            name[1] = 0;
             srcClip = desc.defineClip(name);
             srcClip->setOptional(true);
         }
@@ -911,6 +916,9 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
+#ifdef OFX_EXTENSIONS_NATRON
+        srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
         srcClip->setTemporalClipAccess(true);
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);
@@ -924,8 +932,8 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
             int i = 1;
             int clipNumber = i + kClipSourceOffset;
-            name[0] = (clipNumber < 10) ? ('0' + clipNumber) : ('0' + clipNumber / 10);
-            name[1] = (clipNumber < 10) ?                  0 : ('0' + clipNumber % 10);
+            name[0] = '0' + clipNumber;
+            name[1] = 0;
             srcClip = desc.defineClip(name);
             srcClip->setOptional(true);
         }
@@ -933,6 +941,9 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
+#ifdef OFX_EXTENSIONS_NATRON
+        srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
         srcClip->setTemporalClipAccess(true);
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);
@@ -952,6 +963,9 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             srcClip->addSupportedComponent(ePixelComponentRGB);
             srcClip->addSupportedComponent(ePixelComponentRGBA);
             srcClip->addSupportedComponent(ePixelComponentAlpha);
+#ifdef OFX_EXTENSIONS_NATRON
+            srcClip->addSupportedComponent(ePixelComponentXY);
+#endif
             srcClip->setTemporalClipAccess(true );
             srcClip->setSupportsTiles(kSupportsTiles);
             srcClip->setIsMask(false);
@@ -963,6 +977,9 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
+#ifdef OFX_EXTENSIONS_NATRON
+    dstClip->addSupportedComponent(ePixelComponentXY);
+#endif
     dstClip->setSupportsTiles(kSupportsTiles);
 
 

@@ -193,8 +193,8 @@ static bool gSupportsXY     = false;
 static bool gSupportsDynamicChoices = false;
 static bool gIsMultiPlanar = false;
 
-static OFX::PixelComponentEnum gOutputComponentsMap[4];
-static OFX::BitDepthEnum gOutputBitDepthMap[4];
+static OFX::PixelComponentEnum gOutputComponentsMap[5]; // 4 components + a sentinel at the end with ePixelComponentNone
+static OFX::BitDepthEnum gOutputBitDepthMap[4]; // 3 possible bit depths + a sentinel
 
 using namespace OFX;
 
@@ -1808,6 +1808,7 @@ void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     }
     {
         int i = 0;
+        // Note: gOutputBitDepthMap must have size # of bit depths + 1 !
         if (gSupportsFloats) {
             gOutputBitDepthMap[i] = eBitDepthFloat;
             ++i;
@@ -1820,6 +1821,7 @@ void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
             gOutputBitDepthMap[i] = eBitDepthUByte;
             ++i;
         }
+        assert(sizeof(gOutputBitDepthMap) >= sizeof(gOutputBitDepthMap[0])*(i+1));
         gOutputBitDepthMap[i] = eBitDepthNone;
     }
     for (ImageEffectHostDescription::PixelComponentArray::const_iterator it = getImageEffectHostDescription()->_supportedComponents.begin();
@@ -1847,6 +1849,7 @@ void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     }
     {
         int i = 0;
+        // Note: gOutputComponentsMap must have size # of component types + 1 !
         if (gSupportsRGBA) {
             gOutputComponentsMap[i] = ePixelComponentRGBA;
             ++i;
@@ -1865,6 +1868,7 @@ void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
             ++i;
         }
 #endif
+        assert(sizeof(gOutputComponentsMap) >= sizeof(gOutputComponentsMap[0])*(i+1));
         gOutputComponentsMap[i] = ePixelComponentNone;
     }
 

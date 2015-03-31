@@ -660,7 +660,9 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
                                                     (gHostDescription.versionMajor == 8 || gHostDescription.versionMajor == 9))); // Nuke 8 and 9 are known to *not* support Parametric
         if (supportsParametricParameter) {
             OFX::PageParamDescriptor* page = desc.definePageParam(kPageTimeWarp);
-            page->setLabel(kPageTimeWarpLabel);
+            if (page) {
+                page->setLabel(kPageTimeWarpLabel);
+            }
             {
                 OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamWarp);
                 assert(param);

@@ -321,7 +321,7 @@ private:
                     // normalize/denormalize properly
                     for (int c = 0; c < nComponents; ++c) {
                         tmpPix[c] = (float)interpolate(c, srcPix ? (srcPix[c] / (float)maxValue) : 0.f) * maxValue;
-                        assert(!isnan(srcPix[c]) && !isnan(srcPix[c]) &&
+                        assert((!srcPix || (!isnan(srcPix[c]) && !isnan(srcPix[c]))) &&
                                !isnan(tmpPix[c]) && !isnan(tmpPix[c]));
                     }
                     // ofxsMaskMix expects denormalized input
