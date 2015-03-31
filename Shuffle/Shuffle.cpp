@@ -1648,7 +1648,7 @@ ShufflePlugin::setChannelsFromRed()
                     aSet = true;
                 }
             }
-            if (gSet && bSet && aSet) {
+            if (gSet && bSet && aSet && indexOf0 != -1 && indexOf1 != -1) {
                 // we're done
                 break;
             }
