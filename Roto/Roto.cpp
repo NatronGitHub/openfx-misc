@@ -96,23 +96,6 @@
 #define kParamPremultLabel "Premultiply"
 #define kParamPremultHint "Premultiply the red, green and blue channels with the alpha channel produced by the mask."
 
-#define kParamOutputComponents "outputComponents"
-#define kParamOutputComponentsLabel "Output components"
-#define kParamOutputComponentsOptionAlpha "Alpha"
-#define kParamOutputComponentsOptionRGBA "RGBA"
-
-#define kParamProcessR      "r"
-#define kParamProcessRLabel "R"
-#define kParamProcessRHint  "Process red component"
-#define kParamProcessG      "g"
-#define kParamProcessGLabel "G"
-#define kParamProcessGHint  "Process green component"
-#define kParamProcessB      "b"
-#define kParamProcessBLabel "B"
-#define kParamProcessBHint  "Process blue component"
-#define kParamProcessA      "a"
-#define kParamProcessALabel "A"
-#define kParamProcessAHint  "Process alpha component"
 
 using namespace OFX;
 
@@ -122,10 +105,6 @@ protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_roto;
     PixelComponentEnum _srcComponents;
-    bool _processR;
-    bool _processG;
-    bool _processB;
-    bool _processA;
 
 public:
     RotoProcessorBase(OFX::ImageEffect &instance)
@@ -133,10 +112,6 @@ public:
     , _srcImg(0)
     , _roto(0)
     , _srcComponents(ePixelComponentNone)
-    , _processR(false)
-    , _processG(false)
-    , _processB(false)
-    , _processA(false)
     {
     }
 
@@ -150,13 +125,6 @@ public:
     /** @brief set the optional mask image */
     void setRotoImg(const OFX::Image *v) {_roto = v;}
 
-    void setValues(bool processR, bool processG, bool processB, bool processA)
-    {
-        _processR = processR;
-        _processG = processG;
-        _processB = processB;
-        _processA = processA;
-    }
 };
 
 
@@ -174,23 +142,11 @@ public:
 private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        bool proc[dstNComponents];
-        if (dstNComponents == 1) {
-            proc[0] = _processA;
-        } else if (dstNComponents == 3) {
-            proc[0] = _processR;
-            proc[1] = _processG;
-            proc[2] = _processB;
-        } else if (dstNComponents == 4) {
-            proc[0] = _processR;
-            proc[1] = _processG;
-            proc[2] = _processB;
-            proc[3] = _processA;
-        }
 
         // roto and dst should have the same number of components
         assert(!_roto ||
                (_roto->getPixelComponents() == ePixelComponentAlpha && dstNComponents == 1) ||
+               (_roto->getPixelComponents() == ePixelComponentXY && dstNComponents == 2) ||
                (_roto->getPixelComponents() == ePixelComponentRGB && dstNComponents == 3) ||
                (_roto->getPixelComponents() == ePixelComponentRGBA && dstNComponents == 4));
         //assert(filter == _filter);
@@ -209,14 +165,22 @@ private:
                 PIX srcAlpha = PIX();
                 if (srcPix) {
                     if (srcNComponents == 1) {
-                            srcAlpha = srcPix[0];
-                    } else if (srcNComponents == 3) {
-                            srcAlpha = PIX();
+                        srcAlpha = srcPix[0];
+                    } else if (srcNComponents == 3 || srcNComponents == 2) {
+                        srcAlpha = 0;
                     } else if (srcNComponents == 4) {
-                            srcAlpha = srcPix[3];
+                        srcAlpha = srcPix[3];
                     }
                 }
-                PIX maskAlpha = maskPix ? maskPix[dstNComponents-1] : PIX();
+                PIX maskAlpha;
+                if (dstNComponents == 1) {
+                    maskAlpha = maskPix ? maskPix[0] : 0;
+                } else if (dstNComponents == 4) {
+                    maskAlpha = maskPix ? maskPix[dstNComponents-1] : 0;
+                } else {
+                    maskAlpha = 1;
+                }
+                
 
                 PIX srcVal[dstNComponents];
                 // fill srcVal (hopefully the compiler will optimize this)
@@ -226,6 +190,16 @@ private:
                     }
                 } else if (dstNComponents == 1) {
                     srcVal[0] = srcAlpha;
+                } else if (dstNComponents == 2) {
+                    if (srcNComponents == 1) {
+                        for (int c = 0; c < dstNComponents; ++c) {
+                            srcVal[c] = 0;
+                        }
+                    } else {
+                        for (int c = 0; c < dstNComponents; ++c) {
+                            srcVal[c] = srcPix[c];
+                        }
+                    }
                 } else if (dstNComponents == 3) {
                     if (srcNComponents == 1) {
                         for (int c = 0; c < dstNComponents; ++c) {
@@ -257,7 +231,7 @@ private:
 
                 // merge/over
                 for (int c = 0; c < dstNComponents; ++c) {
-                    dstPix[c] = proc[c] ? OFX::MergeImages2D::overFunctor<PIX,maxValue>(maskPix ? maskPix[c] : PIX(), srcVal[c], maskAlpha, srcAlpha) : srcVal[c];
+                    dstPix[c] = OFX::MergeImages2D::overFunctor<PIX,maxValue>(maskPix ? maskPix[c] : PIX(), srcVal[c], maskAlpha, srcAlpha);
                 }
             }
         }
@@ -287,13 +261,6 @@ public:
         // name of mask clip depends on the context
         _rotoClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Roto");
         assert(_rotoClip && (_rotoClip->getPixelComponents() == ePixelComponentAlpha || _rotoClip->getPixelComponents() == ePixelComponentRGBA));
-        _outputComps = fetchChoiceParam(kParamOutputComponents);
-        assert(_outputComps);
-        _processR = fetchBooleanParam(kParamProcessR);
-        _processG = fetchBooleanParam(kParamProcessG);
-        _processB = fetchBooleanParam(kParamProcessB);
-        _processA = fetchBooleanParam(kParamProcessA);
-        assert(_processR && _processG && _processB && _processA);
     }
     
 private:
@@ -314,18 +281,11 @@ private:
     /* set up and run a processor */
     void setupAndProcess(RotoProcessorBase &, const OFX::RenderArguments &args);
 
-    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
     OFX::Clip *_rotoClip;
-    OFX::BooleanParam* _processR;
-    OFX::BooleanParam* _processG;
-    OFX::BooleanParam* _processB;
-    OFX::BooleanParam* _processA;
-    ChoiceParam* _outputComps;
 };
 
 
@@ -388,7 +348,8 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
         }
-        assert(mask->getPixelComponents() == OFX::ePixelComponentRGBA || mask->getPixelComponents() == OFX::ePixelComponentAlpha);
+        assert(mask->getPixelComponents() == OFX::ePixelComponentRGBA || mask->getPixelComponents() == OFX::ePixelComponentAlpha
+               || mask->getPixelComponents() == OFX::ePixelComponentRGB || mask->getPixelComponents() == OFX::ePixelComponentXY);
         if (mask->getPixelComponents() != dst->getPixelComponents()) {
             OFX::throwSuiteStatusException(kOfxStatErrFormat);
         }
@@ -396,12 +357,6 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
         processor.setRotoImg(mask.get());
     }
 
-    bool processR, processG, processB, processA;
-    _processR->getValue(processR);
-    _processG->getValue(processG);
-    _processB->getValue(processB);
-    _processA->getValue(processA);
-    processor.setValues(processR, processG, processB, processA);
 
     // set the images
     processor.setDstImg(dst.get());
@@ -512,11 +467,13 @@ RotoPlugin::render(const OFX::RenderArguments &args)
 
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
-    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentXY);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderInternalNComponents<4>(args, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
         renderInternalNComponents<3>(args, dstBitDepth);
+    } else if (dstComponents == OFX::ePixelComponentXY) {
+        renderInternalNComponents<2>(args, dstBitDepth);
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderInternalNComponents<1>(args, dstBitDepth);
@@ -526,58 +483,12 @@ RotoPlugin::render(const OFX::RenderArguments &args)
 void
 RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
-    int index;
-    _outputComps->getValue(index);
-    PixelComponentEnum outputComponents;
-    switch (index) {
-        case 0:
-            outputComponents = ePixelComponentAlpha;
-            break;
-        case 1:
-            outputComponents = ePixelComponentRGBA;
-            break;
-            
-        default:
-            assert(false);
-            break;
-    }
-    clipPreferences.setClipComponents(*_rotoClip, outputComponents);
-    clipPreferences.setClipComponents(*_dstClip, outputComponents);
-
     PreMultiplicationEnum srcPremult = _srcClip->getPreMultiplication();
-    bool processA;
-    _processA->getValue(processA);
-    if (srcPremult == eImageOpaque && processA) {
+
+    if (srcPremult == eImageOpaque) {
         // we're changing alpha, the image becomes UnPremultiplied
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }
-}
-
-bool
-RotoPlugin::isIdentity(const IsIdentityArguments &/*args*/, Clip * &identityClip, double &/*identityTime*/)
-{
-    OFX::PixelComponentEnum srcComponents  = _srcClip->getPixelComponents();
-    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
-    if (srcComponents != dstComponents) {
-        return false;
-    }
-
-    bool processA;
-    _processA->getValue(processA);
-
-    if (srcComponents == ePixelComponentAlpha && !processA) {
-        identityClip = _srcClip;
-        return true;
-    }
-    bool processR, processG, processB;
-    _processR->getValue(processR);
-    _processG->getValue(processG);
-    _processB->getValue(processB);
-    if (srcComponents == ePixelComponentRGBA && !processR && !processG && !processB && !processA) {
-        identityClip = _srcClip;
-        return true;
-    }
-    return false;
 }
 
 using namespace OFX;
@@ -650,7 +561,9 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
         maskClip->setTemporalClipAccess(false);
         maskClip->addSupportedComponent(ePixelComponentAlpha);
         if (context == eContextGeneral) {
-            maskClip->addSupportedComponent(ePixelComponentRGBA); //< our brush can output RGBA
+            maskClip->addSupportedComponent(ePixelComponentRGBA);
+            maskClip->addSupportedComponent(ePixelComponentXY);
+            maskClip->addSupportedComponent(ePixelComponentRGB);
             maskClip->setOptional(false);
         }
         maskClip->setSupportsTiles(kSupportsTiles);
@@ -661,77 +574,12 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
 
-    // make some pages and to things in
-    PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    // outputComps
-    {
-        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputComponents);
-        param->setLabel(kParamOutputComponentsLabel);
-        param->setAnimates(false);
-        param->appendOption(kParamOutputComponentsOptionAlpha);
-        param->appendOption(kParamOutputComponentsOptionRGBA);
-        param->setDefault(1);
-        desc.addClipPreferencesSlaveParam(*param);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // processR
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setLabel(kParamProcessRLabel);
-        param->setHint(kParamProcessRHint);
-        param->setAnimates(false);
-        param->setDefault(false);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // processG
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setLabel(kParamProcessGLabel);
-        param->setHint(kParamProcessGHint);
-        param->setAnimates(false);
-        param->setDefault(false);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // processB
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
-        param->setLabel(kParamProcessBLabel);
-        param->setHint(kParamProcessBHint);
-        param->setAnimates(false);
-        param->setDefault(false);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // processA
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
-        param->setLabel(kParamProcessALabel);
-        param->setHint(kParamProcessAHint);
-        param->setAnimates(false);
-        param->setDefault(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
 }
 
 void getRotoPluginID(OFX::PluginFactoryArray &ids)
