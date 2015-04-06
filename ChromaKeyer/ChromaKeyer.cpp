@@ -768,49 +768,32 @@ ChromaKeyerPlugin::render(const OFX::RenderArguments &args)
     
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
-    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
 
-    if (dstComponents == OFX::ePixelComponentRGBA) {
-        switch (dstBitDepth) {
+    assert(dstComponents == OFX::ePixelComponentRGBA);
+    if (dstComponents != OFX::ePixelComponentRGBA) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host dit not take into account output components");
+        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        return;
+    }
+
+    switch (dstBitDepth) {
             //case OFX::eBitDepthUByte: {
             //    ChromaKeyerProcessor<unsigned char, 4, 255> fred(*this);
             //    setupAndProcess(fred, args);
             //    break;
             //}
-            case OFX::eBitDepthUShort: {
-                ChromaKeyerProcessor<unsigned short, 4, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                ChromaKeyerProcessor<float, 4, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        case OFX::eBitDepthUShort: {
+            ChromaKeyerProcessor<unsigned short, 4, 65535> fred(*this);
+            setupAndProcess(fred, args);
+            break;
         }
-    } else {
-        assert(dstComponents == OFX::ePixelComponentRGB);
-        switch (dstBitDepth) {
-            //case OFX::eBitDepthUByte: {
-            //    ChromaKeyerProcessor<unsigned char, 3, 255> fred(*this);
-            //    setupAndProcess(fred, args);
-            //    break;
-            //}
-            case OFX::eBitDepthUShort: {
-                ChromaKeyerProcessor<unsigned short, 3, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                ChromaKeyerProcessor<float, 3, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        case OFX::eBitDepthFloat: {
+            ChromaKeyerProcessor<float, 4, 1> fred(*this);
+            setupAndProcess(fred, args);
+            break;
         }
+        default :
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
@@ -903,7 +886,6 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->setSupportsTiles(kSupportsTiles);
 
 
