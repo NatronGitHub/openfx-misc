@@ -778,6 +778,14 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
     int outputAlpha_i;
     _outputAlpha->getValueAtTime(args.time, outputAlpha_i);
     OutputAlphaEnum outputAlpha = (OutputAlphaEnum)outputAlpha_i;
+    if (outputAlpha != eOutputAlphaSource) {
+        if (dstComponents != OFX::ePixelComponentRGBA) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host dit not take into account output components");
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            return;
+        }
+    }
+
     bool premult;
     int premultChannel;
     _premult->getValueAtTime(args.time, premult);
