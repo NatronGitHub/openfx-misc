@@ -753,7 +753,11 @@ RadialPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     // set the premultiplication of _dstClip if alpha is affected and source is Opaque
     bool alpha;
-    _processA->getValue(alpha);
+    if (!gHostHasNativeRGBACheckbox) {
+        _processA->getValue(alpha);
+    } else {
+        alpha = true;
+    }
     if (alpha && _srcClip->getPreMultiplication() == eImageOpaque) {
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }
