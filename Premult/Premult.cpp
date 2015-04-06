@@ -150,6 +150,9 @@ enum InputChannelEnum {
     eInputChannelA,
 };
 
+//RGBA checkbox are host side if true
+static bool gHostHasNativeRGBACheckbox;
+
 using namespace OFX;
 
 // Base class for the RGBA and the Alpha processor
@@ -341,17 +344,19 @@ class PremultPlugin : public OFX::ImageEffect
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA || _srcClip->getPixelComponents() == ePixelComponentAlpha));
-        _processR = fetchBooleanParam(kParamProcessR);
-        _processG = fetchBooleanParam(kParamProcessG);
-        _processB = fetchBooleanParam(kParamProcessB);
-        _processA = fetchBooleanParam(kParamProcessA);
+        if (!gHostHasNativeRGBACheckbox) {
+            _processR = fetchBooleanParam(kParamProcessR);
+            _processG = fetchBooleanParam(kParamProcessG);
+            _processB = fetchBooleanParam(kParamProcessB);
+            _processA = fetchBooleanParam(kParamProcessA);
+        }
         _premult = fetchChoiceParam(kParamPremultName);
     }
-
-  private:
+    
+private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
+    
     /* set up and run a processor */
     void setupAndProcess(PremultBase &, const OFX::RenderArguments &args);
 
@@ -429,21 +434,25 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor, const OFX::Ren
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-
+    
     bool processR, processG, processB, processA;
     int premult_i;
-    _processR->getValueAtTime(args.time, processR);
-    _processG->getValueAtTime(args.time, processG);
-    _processB->getValueAtTime(args.time, processB);
-    _processA->getValueAtTime(args.time, processA);
+    if (!gHostHasNativeRGBACheckbox) {
+        _processR->getValueAtTime(args.time, processR);
+        _processG->getValueAtTime(args.time, processG);
+        _processB->getValueAtTime(args.time, processB);
+        _processA->getValueAtTime(args.time, processA);
+    } else {
+        processR = processG = processB = processA = true;
+    }
     _premult->getValue(premult_i);
     InputChannelEnum premult = InputChannelEnum(premult_i);
     processor.setValues(processR, processG, processB, processA, premult);
-
+    
     // set the images
     processor.setDstImg(dst.get());
     processor.setSrcImg(src.get());
-
+    
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
@@ -502,13 +511,17 @@ PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args, Clip * &id
     }
     bool processR, processG, processB, processA;
     int premult_i;
-    _processR->getValueAtTime(args.time, processR);
-    _processG->getValueAtTime(args.time, processG);
-    _processB->getValueAtTime(args.time, processB);
-    _processA->getValueAtTime(args.time, processA);
+    if (!gHostHasNativeRGBACheckbox) {
+        _processR->getValueAtTime(args.time, processR);
+        _processG->getValueAtTime(args.time, processG);
+        _processB->getValueAtTime(args.time, processB);
+        _processA->getValueAtTime(args.time, processA);
+    } else {
+        processR = processB = processG = processA = true;
+    }
     _premult->getValueAtTime(args.time, premult_i);
     InputChannelEnum premult = InputChannelEnum(premult_i);
-
+    
     if (premult == eInputChannelNone || (!processR && !processG && !processB && !processA)) {
         // no processing: identity
         identityClip = _srcClip;
@@ -529,13 +542,17 @@ PremultPlugin<isPremult>::getClipPreferences(OFX::ClipPreferencesSetter &clipPre
     // set the premultiplication of _dstClip
     bool processR, processG, processB, processA;
     int premult_i;
-    _processR->getValue(processR);
-    _processG->getValue(processG);
-    _processB->getValue(processB);
-    _processA->getValue(processA);
+    if (!gHostHasNativeRGBACheckbox) {
+        _processR->getValue(processR);
+        _processG->getValue(processG);
+        _processB->getValue(processB);
+        _processA->getValue(processA);
+    } else {
+        processR = processG = processB = processA = true;
+    }
     _premult->getValue(premult_i);
     InputChannelEnum premult = InputChannelEnum(premult_i);
-
+    
     if (premult == eInputChannelA && processR && processG && processB && !processA) {
         clipPreferences.setOutputPremultiplication(isPremult ? eImagePreMultiplied : eImageUnPreMultiplied);
     }
@@ -595,10 +612,12 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std
                 if (isPremult) {
                     //_premult->setValue(eInputChannelNone);
                 } else {
-                    _processR->setValue(true);
-                    _processG->setValue(true);
-                    _processB->setValue(true);
-                    _processA->setValue(false);
+                    if (!gHostHasNativeRGBACheckbox) {
+                        _processR->setValue(true);
+                        _processG->setValue(true);
+                        _processB->setValue(true);
+                        _processA->setValue(false);
+                    }
                     _premult->setValue(eInputChannelA);
                 }
                 break;
@@ -606,10 +625,12 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std
                 if (!isPremult) {
                     //_premult->setValue(eInputChannelNone);
                 } else {
-                    _processR->setValue(true);
-                    _processG->setValue(true);
-                    _processB->setValue(true);
-                    _processA->setValue(false);
+                    if (!gHostHasNativeRGBACheckbox) {
+                        _processR->setValue(true);
+                        _processG->setValue(true);
+                        _processB->setValue(true);
+                        _processA->setValue(false);
+                    }
                     _premult->setValue(eInputChannelA);
                 }
                 break;
@@ -666,6 +687,15 @@ void PremultPluginFactory<isPremult>::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+#ifdef OFX_EXTENSIONS_NATRON
+    if (OFX::getImageEffectHostDescription()->isNatron) {
+        gHostHasNativeRGBACheckbox = true;
+    } else {
+        gHostHasNativeRGBACheckbox = false;
+    }
+#else
+    gHostHasNativeRGBACheckbox = false;
+#endif
 }
 
 template<bool isPremult>
@@ -692,54 +722,56 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     const std::string premultString = isPremult ? "Multiply " : "Divide ";
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setLabel(kParamProcessRLabel);
-        param->setHint(premultString+kParamProcessRHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        desc.addClipPreferencesSlaveParam(*param);
-        if (page) {
-            page->addChild(*param);
+    if (!gHostHasNativeRGBACheckbox) {
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+            param->setLabel(kParamProcessRLabel);
+            param->setHint(premultString+kParamProcessRHint);
+            param->setDefault(true);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+            param->setLabel(kParamProcessGLabel);
+            param->setHint(premultString+kParamProcessGHint);
+            param->setDefault(true);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
+            param->setLabel(kParamProcessBLabel);
+            param->setHint(premultString+kParamProcessBHint);
+            param->setDefault(true);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
+            param->setLabel(kParamProcessALabel);
+            param->setHint(premultString+kParamProcessAHint);
+            param->setDefault(false);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
-
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setLabel(kParamProcessGLabel);
-        param->setHint(premultString+kParamProcessGHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        desc.addClipPreferencesSlaveParam(*param);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
-        param->setLabel(kParamProcessBLabel);
-        param->setHint(premultString+kParamProcessBHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        desc.addClipPreferencesSlaveParam(*param);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
-        param->setLabel(kParamProcessALabel);
-        param->setHint(premultString+kParamProcessAHint);
-        param->setDefault(false);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        desc.addClipPreferencesSlaveParam(*param);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
+    
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamPremultName);
         param->setLabel(kParamPremultLabel);
