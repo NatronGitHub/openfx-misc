@@ -108,6 +108,8 @@
 #define kParamAlpha "alpha"
 #define kParamAlphaLabel "Alpha"
 
+//RGBA checkbox are host side if true
+static bool gHostHasNativeRGBACheckbox;
 
 using namespace OFX;
 
@@ -283,15 +285,18 @@ public:
         assert(_srcClipB && (_srcClipB->getPixelComponents() == ePixelComponentAlpha || _srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA));
         _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
-
+        
         _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
         _size = fetchDouble2DParam(kParamRectangleInteractSize);
         _softness = fetchDoubleParam(kParamSoftness);
-        _processR = fetchBooleanParam(kParamRed);
-        _processG = fetchBooleanParam(kParamGreen);
-        _processB = fetchBooleanParam(kParamBlue);
-        _processA = fetchBooleanParam(kParamAlpha);
-        assert(_btmLeft && _size && _softness && _processR && _processG && _processB && _processA);
+        if (!gHostHasNativeRGBACheckbox) {
+            _processR = fetchBooleanParam(kParamRed);
+            _processG = fetchBooleanParam(kParamGreen);
+            _processB = fetchBooleanParam(kParamBlue);
+            _processA = fetchBooleanParam(kParamAlpha);
+            assert(_processR && _processG && _processB && _processA);
+        }
+        assert(_btmLeft && _size && _softness);
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
@@ -439,15 +444,19 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     const OfxRectD& dstRoD = _dstClip->getRegionOfDefinition(args.time);
     OfxRectI dstRoDPix;
     MergeImages2D::toPixelEnclosing(dstRoD, args.renderScale, par, &dstRoDPix);
-   
+    
     bool processR;
     bool processG;
     bool processB;
     bool processA;
-    _processR->getValueAtTime(args.time, processR);
-    _processG->getValueAtTime(args.time, processG);
-    _processB->getValueAtTime(args.time, processB);
-    _processA->getValueAtTime(args.time, processA);
+    if (!gHostHasNativeRGBACheckbox) {
+        _processR->getValueAtTime(args.time, processR);
+        _processG->getValueAtTime(args.time, processG);
+        _processB->getValueAtTime(args.time, processB);
+        _processA->getValueAtTime(args.time, processA);
+    } else {
+        processR = processG = processB = processA = true;
+    }
     
     double mix;
     _mix->getValueAtTime(args.time, mix);
@@ -598,7 +607,16 @@ void CopyRectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setOverlayInteractDescriptor(new RectangleOverlayDescriptor);
-
+    
+#ifdef OFX_EXTENSIONS_NATRON
+    if (OFX::getImageEffectHostDescription()->isNatron) {
+        gHostHasNativeRGBACheckbox = true;
+    } else {
+        gHostHasNativeRGBACheckbox = false;
+    }
+#else
+    gHostHasNativeRGBACheckbox = false;
+#endif
 }
 
 
@@ -704,11 +722,13 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
             page->addChild(*param);
         }
     }
-
-    defineComponentParam(desc, page, kParamRed, kParamRedLabel,false);
-    defineComponentParam(desc, page, kParamGreen, kParamGreenLabel,false);
-    defineComponentParam(desc, page, kParamBlue, kParamBlueLabel,false);
-    defineComponentParam(desc, page, kParamAlpha, kParamAlphaLabel,true);
+    
+    if (!gHostHasNativeRGBACheckbox) {
+        defineComponentParam(desc, page, kParamRed, kParamRedLabel,false);
+        defineComponentParam(desc, page, kParamGreen, kParamGreenLabel,false);
+        defineComponentParam(desc, page, kParamBlue, kParamBlueLabel,false);
+        defineComponentParam(desc, page, kParamAlpha, kParamAlphaLabel,true);
+    }
     
     // softness
     {

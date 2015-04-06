@@ -113,6 +113,9 @@
 #define kParamProcessALabel "A"
 #define kParamProcessAHint  "Invert alpha component"
 
+//RGBA checkbox are host side if true
+static bool gHostHasNativeRGBACheckbox;
+
 using namespace OFX;
 
 // Base class for the RGBA and the Alpha processor
@@ -325,11 +328,13 @@ class InvertPlugin : public OFX::ImageEffect
         assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA || _srcClip->getPixelComponents() == ePixelComponentAlpha));
         _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
-        _processR = fetchBooleanParam(kParamProcessR);
-        _processG = fetchBooleanParam(kParamProcessG);
-        _processB = fetchBooleanParam(kParamProcessB);
-        _processA = fetchBooleanParam(kParamProcessA);
-        assert(_processR && _processG && _processB && _processA);
+        if (!gHostHasNativeRGBACheckbox) {
+            _processR = fetchBooleanParam(kParamProcessR);
+            _processG = fetchBooleanParam(kParamProcessG);
+            _processB = fetchBooleanParam(kParamProcessB);
+            _processA = fetchBooleanParam(kParamProcessA);
+            assert(_processR && _processG && _processB && _processA);
+        }
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
@@ -447,15 +452,19 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
         // Set it in the processor
         processor.setMaskImg(mask.get(), maskInvert);
     }
-
+    
     bool processR;
     bool processG;
     bool processB;
     bool processA;
-    _processR->getValueAtTime(args.time, processR);
-    _processG->getValueAtTime(args.time, processG);
-    _processB->getValueAtTime(args.time, processB);
-    _processA->getValueAtTime(args.time, processA);
+    if (!gHostHasNativeRGBACheckbox) {
+        _processR->getValueAtTime(args.time, processR);
+        _processG->getValueAtTime(args.time, processG);
+        _processB->getValueAtTime(args.time, processB);
+        _processA->getValueAtTime(args.time, processA);
+    } else {
+        processR = processG = processB = processA = true;
+    }
     bool premult;
     int premultChannel;
     _premult->getValueAtTime(args.time, premult);
@@ -463,7 +472,7 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
     double mix;
     _mix->getValueAtTime(args.time, mix);
     processor.setValues(processR, processG, processB, processA, premult, premultChannel, mix);
-
+    
     // set the images
     processor.setDstImg(dst.get());
     processor.setSrcImg(src.get());
@@ -568,13 +577,17 @@ InvertPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, 
     bool processG;
     bool processB;
     bool processA;
-    _processR->getValueAtTime(args.time, processR);
-    _processG->getValueAtTime(args.time, processG);
-    _processB->getValueAtTime(args.time, processB);
-    _processA->getValueAtTime(args.time, processA);
+    if (!gHostHasNativeRGBACheckbox) {
+        _processR->getValueAtTime(args.time, processR);
+        _processG->getValueAtTime(args.time, processG);
+        _processB->getValueAtTime(args.time, processB);
+        _processA->getValueAtTime(args.time, processA);
+    } else {
+        processR = processG = processB = processA = true;
+    }
     double mix;
     _mix->getValueAtTime(args.time, mix);
-
+    
     if (mix == 0. || (!processR && !processG && !processB && !processA)) {
         identityClip = _srcClip;
         //std::cout << "isIdentity! OK (yes)\n";
@@ -637,6 +650,15 @@ void InvertPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     //std::cout << "describe! OK\n";
+#ifdef OFX_EXTENSIONS_NATRON
+    if (OFX::getImageEffectHostDescription()->isNatron) {
+        gHostHasNativeRGBACheckbox = true;
+    } else {
+        gHostHasNativeRGBACheckbox = false;
+    }
+#else
+    gHostHasNativeRGBACheckbox = false;
+#endif
 }
 
 void InvertPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
@@ -673,43 +695,45 @@ void InvertPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setLabel(kParamProcessRLabel);
-        param->setHint(kParamProcessRHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
+    if (!gHostHasNativeRGBACheckbox) {
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+            param->setLabel(kParamProcessRLabel);
+            param->setHint(kParamProcessRHint);
+            param->setDefault(true);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
+            }
         }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setLabel(kParamProcessGLabel);
-        param->setHint(kParamProcessGHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+            param->setLabel(kParamProcessGLabel);
+            param->setHint(kParamProcessGHint);
+            param->setDefault(true);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
+            }
         }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
-        param->setLabel(kParamProcessBLabel);
-        param->setHint(kParamProcessBHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
+            param->setLabel(kParamProcessBLabel);
+            param->setHint(kParamProcessBHint);
+            param->setDefault(true);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
+            }
         }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
-        param->setLabel(kParamProcessALabel);
-        param->setHint(kParamProcessAHint);
-        param->setDefault(true);
-        if (page) {
-            page->addChild(*param);
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
+            param->setLabel(kParamProcessALabel);
+            param->setHint(kParamProcessAHint);
+            param->setDefault(true);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
 

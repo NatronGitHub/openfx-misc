@@ -291,6 +291,10 @@ enum DistortionModelEnum {
 #define kParamAsymmetricLabel "Asymmetric"
 #define kParamAsymmetricHint "Asymmetric distortion (only for anamorphic lens)."
 
+//RGBA checkbox are host side if true
+static bool gHostHasNativeRGBACheckbox;
+
+
 using namespace OFX;
 
 class DistortionProcessorBase : public OFX::ImageProcessor
@@ -809,11 +813,13 @@ public:
         }
         _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
-        _processR = fetchBooleanParam(kParamProcessR);
-        _processG = fetchBooleanParam(kParamProcessG);
-        _processB = fetchBooleanParam(kParamProcessB);
-        _processA = fetchBooleanParam(kParamProcessA);
-        assert(_processR && _processG && _processB && _processA);
+        if (!gHostHasNativeRGBACheckbox) {
+            _processR = fetchBooleanParam(kParamProcessR);
+            _processG = fetchBooleanParam(kParamProcessG);
+            _processB = fetchBooleanParam(kParamProcessB);
+            _processA = fetchBooleanParam(kParamProcessA);
+            assert(_processR && _processG && _processB && _processA);
+        }
         if (plugin == eDistortionPluginIDistort || plugin == eDistortionPluginSTMap) {
             _uChannel = fetchChoiceParam(kParamChannelU);
             _vChannel = fetchChoiceParam(kParamChannelV);
@@ -1016,12 +1022,16 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
     processor.setSrcImgs(src.get(), uv.get());
     // set the render window
     processor.setRenderWindow(args.renderWindow);
-
+    
     bool processR, processG, processB, processA;
-    _processR->getValueAtTime(time, processR);
-    _processG->getValueAtTime(time, processG);
-    _processB->getValueAtTime(time, processB);
-    _processA->getValueAtTime(time, processA);
+    if (!gHostHasNativeRGBACheckbox) {
+        _processR->getValueAtTime(time, processR);
+        _processG->getValueAtTime(time, processG);
+        _processB->getValueAtTime(time, processB);
+        _processA->getValueAtTime(time, processA);
+    } else {
+        processR = processG = processB = processA = true;
+    }
     InputChannelEnum uChannel = eInputChannelR;
     InputChannelEnum vChannel = eInputChannelG;
     double uScale = 1., vScale = 1.;
@@ -1285,17 +1295,19 @@ DistortionPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
         identityClip = _srcClip;
         return true;
     }
-
-    bool processR, processG, processB, processA;
-    _processR->getValueAtTime(time, processR);
-    _processG->getValueAtTime(time, processG);
-    _processB->getValueAtTime(time, processB);
-    _processA->getValueAtTime(time, processA);
-    if (!processR && !processG && !processB && !processA) {
-        identityClip = _srcClip;
-        return true;
+    
+    if (!gHostHasNativeRGBACheckbox) {
+        bool processR, processG, processB, processA;
+        _processR->getValueAtTime(time, processR);
+        _processG->getValueAtTime(time, processG);
+        _processB->getValueAtTime(time, processB);
+        _processA->getValueAtTime(time, processA);
+        if (!processR && !processG && !processB && !processA) {
+            identityClip = _srcClip;
+            return true;
+        }
     }
-
+    
     return false;
 }
 
@@ -1402,6 +1414,16 @@ void DistortionPluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
     // ask the host to render all planes
     desc.setPassThroughForNotProcessedPlanes(ePassThroughLevelRenderAllRequestedPlanes);
 #endif
+    
+#ifdef OFX_EXTENSIONS_NATRON
+    if (OFX::getImageEffectHostDescription()->isNatron) {
+        gHostHasNativeRGBACheckbox = true;
+    } else {
+        gHostHasNativeRGBACheckbox = false;
+    }
+#else
+    gHostHasNativeRGBACheckbox = false;
+#endif
 }
 
 static void
@@ -1487,44 +1509,46 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setLabel(kParamProcessRLabel);
-        param->setHint(kParamProcessRHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
+    
+    if (!gHostHasNativeRGBACheckbox) {
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+            param->setLabel(kParamProcessRLabel);
+            param->setHint(kParamProcessRHint);
+            param->setDefault(true);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
+            }
         }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setLabel(kParamProcessGLabel);
-        param->setHint(kParamProcessGHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+            param->setLabel(kParamProcessGLabel);
+            param->setHint(kParamProcessGHint);
+            param->setDefault(true);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
+            }
         }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
-        param->setLabel(kParamProcessBLabel);
-        param->setHint(kParamProcessBHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+            param->setLabel(kParamProcessBLabel);
+            param->setHint(kParamProcessBHint);
+            param->setDefault(true);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
+            }
         }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
-        param->setLabel(kParamProcessALabel);
-        param->setHint(kParamProcessAHint);
-        param->setDefault(true);
-        if (page) {
-            page->addChild(*param);
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+            param->setLabel(kParamProcessALabel);
+            param->setHint(kParamProcessAHint);
+            param->setDefault(true);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
 

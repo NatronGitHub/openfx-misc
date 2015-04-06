@@ -116,6 +116,8 @@
 #define kParamUpperLabel "Upper"
 #define kParamUpperHint  "Highlight pixels higher than this value."
 
+//RGBA checkbox are host side if true
+static bool gHostHasNativeRGBACheckbox;
 
 using namespace OFX;
 
@@ -383,11 +385,13 @@ public:
         assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
         _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
-        _processR = fetchBooleanParam(kParamProcessR);
-        _processG = fetchBooleanParam(kParamProcessG);
-        _processB = fetchBooleanParam(kParamProcessB);
-        _processA = fetchBooleanParam(kParamProcessA);
-        assert(_processR && _processG && _processB && _processA);
+        if (!gHostHasNativeRGBACheckbox) {
+            _processR = fetchBooleanParam(kParamProcessR);
+            _processG = fetchBooleanParam(kParamProcessG);
+            _processB = fetchBooleanParam(kParamProcessB);
+            _processA = fetchBooleanParam(kParamProcessA);
+            assert(_processR && _processG && _processB && _processA);
+        }
         _lower = fetchRGBAParam(kParamLowerName);
         _upper = fetchRGBAParam(kParamUpperName);
         assert(_lower && _upper);
@@ -496,10 +500,14 @@ ClipTestPlugin::setupAndProcess(ClipTestProcessorBase &processor, const OFX::Ren
     processor.setRenderWindow(args.renderWindow);
     
     bool processR, processG, processB, processA;
-    _processR->getValueAtTime(args.time, processR);
-    _processG->getValueAtTime(args.time, processG);
-    _processB->getValueAtTime(args.time, processB);
-    _processA->getValueAtTime(args.time, processA);
+    if (!gHostHasNativeRGBACheckbox) {
+        _processR->getValueAtTime(args.time, processR);
+        _processG->getValueAtTime(args.time, processG);
+        _processB->getValueAtTime(args.time, processB);
+        _processA->getValueAtTime(args.time, processA);
+    } else {
+        processR = processG = processB = processA = true;
+    }
     RGBAValues lower, upper;
     _lower->getValueAtTime(args.time, lower.r, lower.g, lower.b, lower.a);
     _upper->getValueAtTime(args.time, upper.r, upper.g, upper.b, upper.a);
@@ -603,18 +611,20 @@ ClipTestPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip
         identityClip = _srcClip;
         return true;
     }
-
-    bool processR, processG, processB, processA;
-    _processR->getValueAtTime(args.time, processR);
-    _processG->getValueAtTime(args.time, processG);
-    _processB->getValueAtTime(args.time, processB);
-    _processA->getValueAtTime(args.time, processA);
-    if ((!processR) &&
-        (!processG) &&
-        (!processB) &&
-        (!processA)) {
-        identityClip = _srcClip;
-        return true;
+    
+    if (!gHostHasNativeRGBACheckbox) {
+        bool processR, processG, processB, processA;
+        _processR->getValueAtTime(args.time, processR);
+        _processG->getValueAtTime(args.time, processG);
+        _processB->getValueAtTime(args.time, processB);
+        _processA->getValueAtTime(args.time, processA);
+        if ((!processR) &&
+            (!processG) &&
+            (!processB) &&
+            (!processA)) {
+            identityClip = _srcClip;
+            return true;
+        }
     }
     return false;
 }
@@ -634,27 +644,29 @@ ClipTestPlugin::changedClip(const InstanceChangedArgs &args, const std::string &
                 _premult->setValue(false);
                 break;
         }
-        switch (_srcClip->getPixelComponents()) {
-            case OFX::ePixelComponentAlpha:
-                _processR->setValue(false);
-                _processG->setValue(false);
-                _processB->setValue(false);
-                _processA->setValue(true);
-                break;
-            case OFX::ePixelComponentRGB:
-                _processR->setValue(true);
-                _processG->setValue(true);
-                _processB->setValue(true);
-                _processA->setValue(false);
-                break;
-            case OFX::ePixelComponentRGBA:
-                _processR->setValue(true);
-                _processG->setValue(true);
-                _processB->setValue(true);
-                _processA->setValue(true);
-                break;
-            default:
-                break;
+        if (!gHostHasNativeRGBACheckbox) {
+            switch (_srcClip->getPixelComponents()) {
+                case OFX::ePixelComponentAlpha:
+                    _processR->setValue(false);
+                    _processG->setValue(false);
+                    _processB->setValue(false);
+                    _processA->setValue(true);
+                    break;
+                case OFX::ePixelComponentRGB:
+                    _processR->setValue(true);
+                    _processG->setValue(true);
+                    _processB->setValue(true);
+                    _processA->setValue(false);
+                    break;
+                case OFX::ePixelComponentRGBA:
+                    _processR->setValue(true);
+                    _processG->setValue(true);
+                    _processB->setValue(true);
+                    _processA->setValue(true);
+                    break;
+                default:
+                    break;
+            }
         }
     }
 }
@@ -686,6 +698,16 @@ void ClipTestPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+    
+#ifdef OFX_EXTENSIONS_NATRON
+    if (OFX::getImageEffectHostDescription()->isNatron) {
+        gHostHasNativeRGBACheckbox = true;
+    } else {
+        gHostHasNativeRGBACheckbox = false;
+    }
+#else
+    gHostHasNativeRGBACheckbox = false;
+#endif
 }
 
 void ClipTestPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
@@ -720,46 +742,47 @@ void ClipTestPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setLabel(kParamProcessRLabel);
-        param->setHint(kParamProcessRHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
+    if (!gHostHasNativeRGBACheckbox) {
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+            param->setLabel(kParamProcessRLabel);
+            param->setHint(kParamProcessRHint);
+            param->setDefault(true);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+            param->setLabel(kParamProcessGLabel);
+            param->setHint(kParamProcessGHint);
+            param->setDefault(true);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+            param->setLabel(kParamProcessBLabel);
+            param->setHint(kParamProcessBHint);
+            param->setDefault(true);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+            param->setLabel(kParamProcessALabel);
+            param->setHint(kParamProcessAHint);
+            param->setDefault(false);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setLabel(kParamProcessGLabel);
-        param->setHint(kParamProcessGHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
-        param->setLabel(kParamProcessBLabel);
-        param->setHint(kParamProcessBHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
-        param->setLabel(kParamProcessALabel);
-        param->setHint(kParamProcessAHint);
-        param->setDefault(false);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
     {
         RGBAParamDescriptor *param = desc.defineRGBAParam(kParamLowerName);
         param->setLabel(kParamLowerLabel);

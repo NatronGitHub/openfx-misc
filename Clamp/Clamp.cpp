@@ -477,8 +477,8 @@ class ClampPlugin : public OFX::ImageEffect
             _processG = fetchBooleanParam(kParamProcessG);
             _processB = fetchBooleanParam(kParamProcessB);
             _processA = fetchBooleanParam(kParamProcessA);
+            assert(_processR && _processG && _processB && _processA);
         }
-        assert(_processR && _processG && _processB && _processA);
         _minimum = fetchRGBAParam(kParamMinimum);
         _minimumEnable = fetchBooleanParam(kParamMinimumEnable);
         assert(_minimum && _minimumEnable);

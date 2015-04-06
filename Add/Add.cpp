@@ -373,8 +373,8 @@ public:
             _processG = fetchBooleanParam(kParamProcessG);
             _processB = fetchBooleanParam(kParamProcessB);
             _processA = fetchBooleanParam(kParamProcessA);
+            assert(_processR && _processG && _processB && _processA);
         }
-        assert(_processR && _processG && _processB && _processA);
         _value = fetchRGBAParam(kParamValueName);
         assert(_value);
         _premult = fetchBooleanParam(kParamPremult);
