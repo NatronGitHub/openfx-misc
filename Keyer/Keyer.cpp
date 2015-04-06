@@ -541,7 +541,7 @@ public:
     , _sourceAlpha(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGBA));
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
         _bgClip = fetchClip(kClipBg);
@@ -723,48 +723,31 @@ KeyerPlugin::render(const OFX::RenderArguments &args)
     
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
-    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
-    if (dstComponents == OFX::ePixelComponentRGBA) {
-        switch (dstBitDepth) {
+    assert(dstComponents == OFX::ePixelComponentRGBA);
+    if (dstComponents != OFX::ePixelComponentRGBA) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host dit not take into account output components");
+        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        return;
+    }
+
+    switch (dstBitDepth) {
             //case OFX::eBitDepthUByte: {
             //    KeyerProcessor<unsigned char, 4, 255> fred(*this);
             //    setupAndProcess(fred, args);
             //    break;
             //}
-            case OFX::eBitDepthUShort: {
-                KeyerProcessor<unsigned short, 4, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                KeyerProcessor<float, 4, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        case OFX::eBitDepthUShort: {
+            KeyerProcessor<unsigned short, 4, 65535> fred(*this);
+            setupAndProcess(fred, args);
+            break;
         }
-    } else {
-        assert(dstComponents == OFX::ePixelComponentRGB);
-        switch (dstBitDepth) {
-            //case OFX::eBitDepthUByte: {
-            //    KeyerProcessor<unsigned char, 3, 255> fred(*this);
-            //    setupAndProcess(fred, args);
-            //    break;
-            //}
-            case OFX::eBitDepthUShort: {
-                KeyerProcessor<unsigned short, 3, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                KeyerProcessor<float, 3, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        case OFX::eBitDepthFloat: {
+            KeyerProcessor<float, 4, 1> fred(*this);
+            setupAndProcess(fred, args);
+            break;
         }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
@@ -919,7 +902,6 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->setSupportsTiles(kSupportsTiles);
 
 
