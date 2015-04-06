@@ -47,6 +47,9 @@ CLANG_DIAG_ON(shorten-64-to-32)
 #define kParamProcessALabel "A"
 #define kParamProcessAHint  "Process alpha component"
 
+//RGBA checkbox are host side if true
+static bool gHostHasNativeRGBACheckbox;
+
 template <class Params, bool sourceIsOptional>
 class CImgFilterPluginHelper : public OFX::ImageEffect
 {
@@ -82,12 +85,14 @@ public:
         assert(_srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA));
         _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == OFX::ePixelComponentAlpha);
-
-        _processR = fetchBooleanParam(kParamProcessR);
-        _processG = fetchBooleanParam(kParamProcessG);
-        _processB = fetchBooleanParam(kParamProcessB);
-        _processA = fetchBooleanParam(kParamProcessA);
-        assert(_processR && _processG && _processB && _processA);
+        
+        if (!gHostHasNativeRGBACheckbox) {
+            _processR = fetchBooleanParam(kParamProcessR);
+            _processG = fetchBooleanParam(kParamProcessG);
+            _processB = fetchBooleanParam(kParamProcessB);
+            _processA = fetchBooleanParam(kParamProcessA);
+            assert(_processR && _processG && _processB && _processA);
+        }
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
@@ -122,23 +127,25 @@ public:
                         break;
                 }
             }
-            switch (_srcClip->getPixelComponents()) {
-                case OFX::ePixelComponentAlpha:
-                    _processR->setValue(false);
-                    _processG->setValue(false);
-                    _processB->setValue(false);
-                    _processA->setValue(true);
-                    break;
-                case OFX::ePixelComponentRGBA:
-                case OFX::ePixelComponentRGB:
-                    // Alpha is not processed by default on RGBA images
-                    _processR->setValue(true);
-                    _processG->setValue(true);
-                    _processB->setValue(true);
-                    _processA->setValue(_defaultProcessAlphaOnRGBA);
-                    break;
-                default:
-                    break;
+            if (!gHostHasNativeRGBACheckbox) {
+                switch (_srcClip->getPixelComponents()) {
+                    case OFX::ePixelComponentAlpha:
+                        _processR->setValue(false);
+                        _processG->setValue(false);
+                        _processB->setValue(false);
+                        _processA->setValue(true);
+                        break;
+                    case OFX::ePixelComponentRGBA:
+                    case OFX::ePixelComponentRGB:
+                        // Alpha is not processed by default on RGBA images
+                        _processR->setValue(true);
+                        _processG->setValue(true);
+                        _processB->setValue(true);
+                        _processA->setValue(_defaultProcessAlphaOnRGBA);
+                        break;
+                    default:
+                        break;
+                }
             }
         }
     }
@@ -172,6 +179,17 @@ public:
                            bool processAlpha = false,
                            bool processIsSecret = false)
     {
+        
+#ifdef OFX_EXTENSIONS_NATRON
+        if (OFX::getImageEffectHostDescription()->isNatron) {
+            gHostHasNativeRGBACheckbox = true;
+        } else {
+            gHostHasNativeRGBACheckbox = false;
+        }
+#else
+        gHostHasNativeRGBACheckbox = false;
+#endif
+        
         OFX::ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
         if (supportsRGBA) {
             srcClip->addSupportedComponent(OFX::ePixelComponentRGBA);
@@ -214,51 +232,53 @@ public:
 
         // create the params
         OFX::PageParamDescriptor *page = desc.definePageParam("Controls");
-
-        {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-            param->setLabel(kParamProcessRLabel);
-            param->setHint(kParamProcessRHint);
-            param->setDefault(processRGB);
-            param->setIsSecret(processIsSecret);
-            param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-            if (page) {
-                page->addChild(*param);
+        
+        if (!gHostHasNativeRGBACheckbox) {
+            {
+                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+                param->setLabel(kParamProcessRLabel);
+                param->setHint(kParamProcessRHint);
+                param->setDefault(processRGB);
+                param->setIsSecret(processIsSecret);
+                param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+            {
+                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+                param->setLabel(kParamProcessGLabel);
+                param->setHint(kParamProcessGHint);
+                param->setDefault(processRGB);
+                param->setIsSecret(processIsSecret);
+                param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+            {
+                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
+                param->setLabel(kParamProcessBLabel);
+                param->setHint(kParamProcessBHint);
+                param->setDefault(processRGB);
+                param->setIsSecret(processIsSecret);
+                param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+            {
+                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
+                param->setLabel(kParamProcessALabel);
+                param->setHint(kParamProcessAHint);
+                param->setDefault(processAlpha);
+                param->setIsSecret(processIsSecret);
+                if (page) {
+                    page->addChild(*param);
+                }
             }
         }
-        {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-            param->setLabel(kParamProcessGLabel);
-            param->setHint(kParamProcessGHint);
-            param->setDefault(processRGB);
-            param->setIsSecret(processIsSecret);
-            param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
-            param->setLabel(kParamProcessBLabel);
-            param->setHint(kParamProcessBHint);
-            param->setDefault(processRGB);
-            param->setIsSecret(processIsSecret);
-            param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-        {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
-            param->setLabel(kParamProcessALabel);
-            param->setHint(kParamProcessAHint);
-            param->setDefault(processAlpha);
-            param->setIsSecret(processIsSecret);
-            if (page) {
-                page->addChild(*param);
-            }
-        }
-
+        
         return page;
     }
 
@@ -682,12 +702,16 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         assert(srcRoD.y1 == dstRoD.y1);
         assert(srcRoD.y2 == dstRoD.y2); // crashes on Natron if kSupportsMultiResolution=0
     }
-
+    
     bool processR, processG, processB, processA;
-    _processR->getValueAtTime(time, processR);
-    _processG->getValueAtTime(time, processG);
-    _processB->getValueAtTime(time, processB);
-    _processA->getValueAtTime(time, processA);
+    if (!gHostHasNativeRGBACheckbox) {
+        _processR->getValueAtTime(time, processR);
+        _processG->getValueAtTime(time, processG);
+        _processB->getValueAtTime(time, processB);
+        _processA->getValueAtTime(time, processA);
+    } else {
+        processR = processG = processB = processA = true;
+    }
     bool premult;
     int premultChannel;
     _premult->getValueAtTime(time, premult);
@@ -1117,20 +1141,22 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::isIdentity(const OFX::IsIdentit
         identityClip = _srcClip;
         return true;
     }
-
-    bool processR;
-    bool processG;
-    bool processB;
-    bool processA;
-    _processR->getValueAtTime(args.time, processR);
-    _processG->getValueAtTime(args.time, processG);
-    _processB->getValueAtTime(args.time, processB);
-    _processA->getValueAtTime(args.time, processA);
-    if (!processR && !processG && !processB && !processA) {
-        identityClip = _srcClip;
-        return true;
+    
+    if (!gHostHasNativeRGBACheckbox) {
+        bool processR;
+        bool processG;
+        bool processB;
+        bool processA;
+        _processR->getValueAtTime(args.time, processR);
+        _processG->getValueAtTime(args.time, processG);
+        _processB->getValueAtTime(args.time, processB);
+        _processA->getValueAtTime(args.time, processA);
+        if (!processR && !processG && !processB && !processA) {
+            identityClip = _srcClip;
+            return true;
+        }
     }
-
+    
     Params params;
     getValuesAtTime(time, params);
     if (isIdentity(args, params)) {
