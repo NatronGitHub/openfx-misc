@@ -155,7 +155,7 @@
 using namespace OFX;
 
 //RGBA checkbox are host side if true
-static bool gHostSupportsHostProcessComponents;
+static bool gHostHasNativeRGBACheckbox;
 
 namespace {
     struct RGBAValues {
@@ -478,7 +478,7 @@ public:
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
         
-        if (!gHostSupportsHostProcessComponents) {
+        if (!gHostHasNativeRGBACheckbox) {
             _processR = fetchBooleanParam(kParamProcessR);
             _processG = fetchBooleanParam(kParamProcessG);
             _processB = fetchBooleanParam(kParamProcessB);
@@ -607,7 +607,7 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     _mix->getValueAtTime(args.time, mix);
     
     bool processR, processG, processB, processA;
-    if (!gHostSupportsHostProcessComponents) {
+    if (!gHostHasNativeRGBACheckbox) {
         _processR->getValue(processR);
         _processG->getValue(processG);
         _processB->getValue(processB);
@@ -689,7 +689,7 @@ GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
         return true;
     }
     
-    if (!gHostSupportsHostProcessComponents) {
+    if (!gHostHasNativeRGBACheckbox) {
         bool processR;
         bool processG;
         bool processB;
@@ -779,12 +779,12 @@ GradePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     
 #ifdef OFX_EXTENSIONS_NATRON
     if (OFX::getImageEffectHostDescription()->isNatron) {
-        gHostSupportsHostProcessComponents = true;
+        gHostHasNativeRGBACheckbox = true;
     } else {
-        gHostSupportsHostProcessComponents = false;
+        gHostHasNativeRGBACheckbox = false;
     }
 #else
-    gHostSupportsHostProcessComponents = false;
+    gHostHasNativeRGBACheckbox = false;
 #endif
     
 }
@@ -836,7 +836,7 @@ GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    if (!gHostSupportsHostProcessComponents) {
+    if (!gHostHasNativeRGBACheckbox) {
         {
             OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
             param->setLabel(kParamProcessRLabel);
