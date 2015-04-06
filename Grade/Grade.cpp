@@ -154,6 +154,8 @@
 
 using namespace OFX;
 
+//RGBA checkbox are host side if true
+static bool gHostSupportsHostProcessComponents;
 
 namespace {
     struct RGBAValues {
@@ -476,12 +478,14 @@ public:
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
         
-        _processR = fetchBooleanParam(kParamProcessR);
-        _processG = fetchBooleanParam(kParamProcessG);
-        _processB = fetchBooleanParam(kParamProcessB);
-        _processA = fetchBooleanParam(kParamProcessA);
-        assert(_processR && _processG && _processB && _processA);
-
+        if (!gHostSupportsHostProcessComponents) {
+            _processR = fetchBooleanParam(kParamProcessR);
+            _processG = fetchBooleanParam(kParamProcessG);
+            _processB = fetchBooleanParam(kParamProcessB);
+            _processA = fetchBooleanParam(kParamProcessA);
+            assert(_processR && _processG && _processB && _processA);
+        }
+        
     }
     
 private:
@@ -603,10 +607,14 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     _mix->getValueAtTime(args.time, mix);
     
     bool processR, processG, processB, processA;
-    _processR->getValue(processR);
-    _processG->getValue(processG);
-    _processB->getValue(processB);
-    _processA->getValue(processA);
+    if (!gHostSupportsHostProcessComponents) {
+        _processR->getValue(processR);
+        _processG->getValue(processG);
+        _processB->getValue(processB);
+        _processA->getValue(processA);
+    } else {
+        processR = processG = processB = processA = true;
+    }
     
     processor.setValues(blackPoint, whitePoint, black, white, multiply, offset, gamma,
                         clampBlack, clampWhite, premult, premultChannel, mix,
@@ -680,18 +688,20 @@ GradePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
         identityClip = _srcClip;
         return true;
     }
-
-    bool processR;
-    bool processG;
-    bool processB;
-    bool processA;
-    _processR->getValueAtTime(args.time, processR);
-    _processG->getValueAtTime(args.time, processG);
-    _processB->getValueAtTime(args.time, processB);
-    _processA->getValueAtTime(args.time, processA);
-    if (!processR && !processG && !processB && !processA) {
-        identityClip = _srcClip;
-        return true;
+    
+    if (!gHostSupportsHostProcessComponents) {
+        bool processR;
+        bool processG;
+        bool processB;
+        bool processA;
+        _processR->getValueAtTime(args.time, processR);
+        _processG->getValueAtTime(args.time, processG);
+        _processB->getValueAtTime(args.time, processB);
+        _processA->getValueAtTime(args.time, processA);
+        if (!processR && !processG && !processB && !processA) {
+            identityClip = _srcClip;
+            return true;
+        }
     }
 
     bool clampBlack,clampWhite;
@@ -767,6 +777,16 @@ GradePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     
+#ifdef OFX_EXTENSIONS_NATRON
+    if (OFX::getImageEffectHostDescription()->isNatron) {
+        gHostSupportsHostProcessComponents = true;
+    } else {
+        gHostSupportsHostProcessComponents = false;
+    }
+#else
+    gHostSupportsHostProcessComponents = false;
+#endif
+    
 }
 
 static
@@ -816,43 +836,45 @@ GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-        param->setLabel(kParamProcessRLabel);
-        param->setHint(kParamProcessRHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
+    if (!gHostSupportsHostProcessComponents) {
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
+            param->setLabel(kParamProcessRLabel);
+            param->setHint(kParamProcessRHint);
+            param->setDefault(true);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
+            }
         }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-        param->setLabel(kParamProcessGLabel);
-        param->setHint(kParamProcessGHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
+            param->setLabel(kParamProcessGLabel);
+            param->setHint(kParamProcessGHint);
+            param->setDefault(true);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
+            }
         }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
-        param->setLabel(kParamProcessBLabel);
-        param->setHint(kParamProcessBHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
+            param->setLabel(kParamProcessBLabel);
+            param->setHint(kParamProcessBHint);
+            param->setDefault(true);
+            param->setLayoutHint(eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
+            }
         }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
-        param->setLabel(kParamProcessALabel);
-        param->setHint(kParamProcessAHint);
-        param->setDefault(false);
-        if (page) {
-            page->addChild(*param);
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
+            param->setLabel(kParamProcessALabel);
+            param->setHint(kParamProcessAHint);
+            param->setDefault(false);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
     
