@@ -671,7 +671,7 @@ void CheckerBoardPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderTwiceAlways(false);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     
-    generatorDescribeInteract(desc);
+    generatorDescribe(desc);
 }
 
 void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)

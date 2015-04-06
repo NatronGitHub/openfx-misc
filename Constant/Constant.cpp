@@ -495,7 +495,7 @@ void ConstantPluginFactory<solid>::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderTwiceAlways(false);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     
-    generatorDescribeInteract(desc);
+    generatorDescribe(desc);
 }
 
 template<bool solid>
