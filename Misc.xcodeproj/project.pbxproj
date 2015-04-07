@@ -538,6 +538,11 @@
 		1E92E8E91AA354B90070E494 /* net.sf.openfx.FrameBlend.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E92E8E71AA354AC0070E494 /* net.sf.openfx.FrameBlend.svg */; };
 		1E92E8EA1AA354CB0070E494 /* net.sf.openfx.FrameBlend.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E92E8E61AA354AC0070E494 /* net.sf.openfx.FrameBlend.png */; };
 		1E92E8EB1AA354CB0070E494 /* net.sf.openfx.FrameBlend.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E92E8E71AA354AC0070E494 /* net.sf.openfx.FrameBlend.svg */; };
+		1E9328A71AD400B5004B0D91 /* net.sf.cimg.CImgLaplacian.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E9328A21AD40088004B0D91 /* net.sf.cimg.CImgLaplacian.png */; };
+		1E9328A81AD400B5004B0D91 /* net.sf.cimg.CImgLaplacian.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E9328A31AD40088004B0D91 /* net.sf.cimg.CImgLaplacian.svg */; };
+		1E9328A91AD400BE004B0D91 /* net.sf.cimg.CImgSharpenInvDiff.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E9328A41AD40088004B0D91 /* net.sf.cimg.CImgSharpenInvDiff.png */; };
+		1E9328AA1AD400BE004B0D91 /* net.sf.cimg.CImgSharpenInvDiff.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E9328A51AD40088004B0D91 /* net.sf.cimg.CImgSharpenInvDiff.svg */; };
+		1E9328AB1AD400BE004B0D91 /* net.sf.cimg.CImgSharpenShock.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E9328A61AD40088004B0D91 /* net.sf.cimg.CImgSharpenShock.png */; };
 		1E9B5F5B198A51CC0095C8AA /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
 		1E9B5F5C198A51D40095C8AA /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
 		1E9B5F5D198A51E20095C8AA /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
@@ -2234,12 +2239,17 @@
 				1E3284C71A41C6F300C9A4E4 /* net.sf.cimg.CImgErodeSmooth.svg in CopyFiles */,
 				1E3284C81A41C6F300C9A4E4 /* net.sf.cimg.CImgGuided.png in CopyFiles */,
 				1E3284C91A41C6F300C9A4E4 /* net.sf.cimg.CImgGuided.svg in CopyFiles */,
+				1E9328A71AD400B5004B0D91 /* net.sf.cimg.CImgLaplacian.png in CopyFiles */,
+				1E9328A81AD400B5004B0D91 /* net.sf.cimg.CImgLaplacian.svg in CopyFiles */,
 				1E3284CA1A41C6F300C9A4E4 /* net.sf.cimg.CImgNoise.png in CopyFiles */,
 				1E3284CB1A41C6F300C9A4E4 /* net.sf.cimg.CImgNoise.svg in CopyFiles */,
 				1E3284CC1A41C6F400C9A4E4 /* net.sf.cimg.CImgPlasma.png in CopyFiles */,
 				1E3284CD1A41C6F400C9A4E4 /* net.sf.cimg.CImgPlasma.svg in CopyFiles */,
 				1E3284CE1A41C6F400C9A4E4 /* net.sf.cimg.CImgRollingGuidance.png in CopyFiles */,
 				1E3284CF1A41C6F400C9A4E4 /* net.sf.cimg.CImgRollingGuidance.svg in CopyFiles */,
+				1E9328A91AD400BE004B0D91 /* net.sf.cimg.CImgSharpenInvDiff.png in CopyFiles */,
+				1E9328AA1AD400BE004B0D91 /* net.sf.cimg.CImgSharpenInvDiff.svg in CopyFiles */,
+				1E9328AB1AD400BE004B0D91 /* net.sf.cimg.CImgSharpenShock.png in CopyFiles */,
 				1E3284D01A41C6F400C9A4E4 /* net.sf.cimg.CImgSmooth.png in CopyFiles */,
 				1E3284D11A41C6F400C9A4E4 /* net.sf.cimg.CImgSmooth.svg in CopyFiles */,
 			);
@@ -2492,6 +2502,11 @@
 		1E92575019ECF38A0018F19A /* CImgRollingGuidance.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgRollingGuidance.h; sourceTree = "<group>"; };
 		1E92E8E61AA354AC0070E494 /* net.sf.openfx.FrameBlend.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.FrameBlend.png; sourceTree = "<group>"; };
 		1E92E8E71AA354AC0070E494 /* net.sf.openfx.FrameBlend.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.FrameBlend.svg; sourceTree = "<group>"; };
+		1E9328A21AD40088004B0D91 /* net.sf.cimg.CImgLaplacian.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgLaplacian.png; sourceTree = "<group>"; };
+		1E9328A31AD40088004B0D91 /* net.sf.cimg.CImgLaplacian.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgLaplacian.svg; sourceTree = "<group>"; };
+		1E9328A41AD40088004B0D91 /* net.sf.cimg.CImgSharpenInvDiff.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgSharpenInvDiff.png; sourceTree = "<group>"; };
+		1E9328A51AD40088004B0D91 /* net.sf.cimg.CImgSharpenInvDiff.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgSharpenInvDiff.svg; sourceTree = "<group>"; };
+		1E9328A61AD40088004B0D91 /* net.sf.cimg.CImgSharpenShock.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgSharpenShock.png; sourceTree = "<group>"; };
 		1E9B5F47198A51840095C8AA /* ofxsCopier.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsCopier.h; sourceTree = "<group>"; };
 		1E9B5F48198A51840095C8AA /* ofxsFilter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsFilter.h; sourceTree = "<group>"; };
 		1E9B5F49198A51840095C8AA /* ofxsFormatResolution.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsFormatResolution.h; sourceTree = "<group>"; };
@@ -3468,12 +3483,17 @@
 				AC64870B1A41BE9D0088844F /* net.sf.cimg.CImgErodeSmooth.svg */,
 				AC6487121A41C0F00088844F /* net.sf.cimg.CImgGuided.png */,
 				AC6487131A41C0F00088844F /* net.sf.cimg.CImgGuided.svg */,
+				1E9328A21AD40088004B0D91 /* net.sf.cimg.CImgLaplacian.png */,
+				1E9328A31AD40088004B0D91 /* net.sf.cimg.CImgLaplacian.svg */,
 				AC6486D01A41A4A90088844F /* net.sf.cimg.CImgNoise.png */,
 				1E3284671A41C0E500C9A4E4 /* net.sf.cimg.CImgNoise.svg */,
 				AC6486D11A41A4A90088844F /* net.sf.cimg.CImgPlasma.png */,
 				1E3284681A41C0E500C9A4E4 /* net.sf.cimg.CImgPlasma.svg */,
 				AC64870F1A41C0640088844F /* net.sf.cimg.CImgRollingGuidance.png */,
 				AC6487101A41C0650088844F /* net.sf.cimg.CImgRollingGuidance.svg */,
+				1E9328A41AD40088004B0D91 /* net.sf.cimg.CImgSharpenInvDiff.png */,
+				1E9328A51AD40088004B0D91 /* net.sf.cimg.CImgSharpenInvDiff.svg */,
+				1E9328A61AD40088004B0D91 /* net.sf.cimg.CImgSharpenShock.png */,
 				AC6486D21A41A4A90088844F /* net.sf.cimg.CImgSmooth.png */,
 				1E3284691A41C0E500C9A4E4 /* net.sf.cimg.CImgSmooth.svg */,
 				1E31940E19D9987F0027D0E2 /* PluginRegistration.cpp */,

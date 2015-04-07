@@ -17,6 +17,8 @@ net.sf.cimg.CImgErodeSmooth.png \
 net.sf.cimg.CImgErodeSmooth.svg \
 net.sf.cimg.CImgGuided.png \
 net.sf.cimg.CImgGuided.svg \
+net.sf.cimg.CImgLaplacian.png \
+net.sf.cimg.CImgLaplacian.svg \
 net.sf.cimg.CImgNoise.png \
 net.sf.cimg.CImgNoise.svg \
 net.sf.cimg.CImgPlasma.png \
