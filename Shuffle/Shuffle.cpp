@@ -1585,7 +1585,7 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
     // Follow the OpênFX spec:
     // check that dstComponents is consistent with the result of getClipPreferences
     // (@see getClipPreferences).
-    if (!gIsMultiPlanar || gSupportsDynamicChoices) {
+    if (!gIsMultiPlanar || !gSupportsDynamicChoices) {
         // set the components of _dstClip
         int outputComponents_i;
         _outputComponents->getValue(outputComponents_i);
