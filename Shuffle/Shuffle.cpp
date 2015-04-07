@@ -1369,6 +1369,35 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
     std::list<std::string> outputComponents = _dstClip->getComponentsPresent();
     getPlaneNeededInOutput(outputComponents, _outputComponents, &dstOfxPlane, &dstOfxComp);
     
+#ifdef DEBUG
+    // Follow the OpênFX spec:
+    // check that dstComponents is consistent with the result of getClipPreferences
+    // (@see getClipPreferences).
+    OFX::PixelComponentEnum pixelComps = mapStrToPixelComponentEnum(dstOfxComp);
+    OFX::PixelComponentEnum dstClipComps = _dstClip->getPixelComponents();
+    if (pixelComps != OFX::ePixelComponentCustom) {
+        assert(dstClipComps == pixelComps);
+    } else {
+        int nComps = std::max((int)mapPixelComponentCustomToLayerChannels(dstOfxComp).size() - 1, 0);
+        switch (nComps) {
+            case 1:
+                pixelComps = OFX::ePixelComponentAlpha;
+                break;
+            case 2:
+                pixelComps = OFX::ePixelComponentXY;
+                break;
+            case 3:
+                pixelComps = OFX::ePixelComponentRGB;
+                break;
+            case 4:
+                pixelComps = OFX::ePixelComponentRGBA;
+            default:
+                break;
+        }
+        assert(dstClipComps == pixelComps);
+    }
+#endif
+    
     std::auto_ptr<OFX::Image> dst(_dstClip->fetchImagePlane(args.time, args.renderView, dstOfxPlane.c_str()));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -1556,35 +1585,7 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
     // Follow the OpênFX spec:
     // check that dstComponents is consistent with the result of getClipPreferences
     // (@see getClipPreferences).
-    if (gIsMultiPlanar && gSupportsDynamicChoices) {
-        std::list<std::string> outputComponents = _dstClip->getComponentsPresent();
-        buildChannelMenus(outputComponents);
-        std::string ofxPlane,ofxComponents;
-        getPlaneNeededInOutput(outputComponents, _outputComponents, &ofxPlane, &ofxComponents);
-
-        OFX::PixelComponentEnum pixelComps = mapStrToPixelComponentEnum(ofxComponents);
-        if (pixelComps != OFX::ePixelComponentCustom) {
-            assert(dstComponents == pixelComps);
-        } else {
-            int nComps = std::max((int)mapPixelComponentCustomToLayerChannels(ofxComponents).size() - 1, 0);
-            switch (nComps) {
-                case 1:
-                    pixelComps = OFX::ePixelComponentAlpha;
-                    break;
-                case 2:
-                    pixelComps = OFX::ePixelComponentXY;
-                    break;
-                case 3:
-                    pixelComps = OFX::ePixelComponentRGB;
-                    break;
-                case 4:
-                    pixelComps = OFX::ePixelComponentRGBA;
-                default:
-                    break;
-            }
-            assert(dstComponents == pixelComps);
-        }
-    } else {
+    if (!gIsMultiPlanar || gSupportsDynamicChoices) {
         // set the components of _dstClip
         int outputComponents_i;
         _outputComponents->getValue(outputComponents_i);
