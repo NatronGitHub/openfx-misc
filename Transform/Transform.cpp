@@ -347,6 +347,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         param->setLabel(kParamTransformTranslateLabel);
         //param->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
         param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
         //param->setDimensionLabels("x","y");
         param->setDefault(0, 0);
         param->setIncrement(10.);

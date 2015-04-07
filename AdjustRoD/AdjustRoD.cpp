@@ -379,12 +379,11 @@ void AdjustRoDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamAddPixels);
         param->setLabel(kParamAddPixelsLabel);
         param->setHint(kParamAddPixelsHint);
-        param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+        param->setDoubleType(eDoubleTypeXY);
+        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
         param->setDefault(0., 0.);
         param->setIncrement(1.);
         param->setDimensionLabels("w", "h");
-        param->setDoubleType(eDoubleTypeXY);
         param->setIncrement(1.);
         param->setDigits(0);
         if (page) {

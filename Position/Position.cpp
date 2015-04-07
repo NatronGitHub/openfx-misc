@@ -400,6 +400,8 @@ void PositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamTranslateLabel);
         param->setHint(kParamTranslateHint);
         param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        param->setDefault(0., 0.);
         hostHasNativeOverlayForPosition = param->getHostHasNativeOverlayHandle();
         if (hostHasNativeOverlayForPosition) {
             param->setUseHostOverlayHandle(true);

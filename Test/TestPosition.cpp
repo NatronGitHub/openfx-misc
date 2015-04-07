@@ -158,6 +158,8 @@ void TestPositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setLabel(kParamPositionTranslateLabel);
         param->setHint(kParamPositionTranslateHint);
         param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        param->setDefault(0., 0.);
         if (param->getHostHasNativeOverlayHandle()) {
             param->setUseHostOverlayHandle(true);
         }

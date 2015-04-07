@@ -882,7 +882,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
 
     const OfxRectI tmpBounds = srcRoI;
     const OFX::PixelComponentEnum tmpPixelComponents = srcPixelComponents;
-    const int tmpPixelComponentCount = srcPixelComponentCount;
+    const int tmpPixelComponentCount = srcNComponents; // don't use srcPixelComponentCount, which may be zero
     const OFX::BitDepthEnum tmpBitDepth = OFX::eBitDepthFloat;
     const int tmpWidth = tmpBounds.x2 - tmpBounds.x1;
     const int tmpHeight = tmpBounds.y2 - tmpBounds.y1;
