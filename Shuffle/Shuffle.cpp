@@ -1446,21 +1446,15 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
         } else if (ofxComp == kParamOutputOption1) {
             p.fillZero = false;
         } else {
-            std::map<OFX::Clip*,std::map<std::string,OFX::Image*> >::iterator foundClip = fetchedPlanes.find(clip);
-            if (foundClip == fetchedPlanes.end()) {
+            std::map<std::string,OFX::Image*>& clipPlanes = fetchedPlanes[clip];
+            std::map<std::string,OFX::Image*>::iterator foundPlane = clipPlanes.find(plane);
+            if (foundPlane != clipPlanes.end()) {
+                p.img = foundPlane->second;
+            } else {
                 p.img = clip->fetchImagePlane(args.time, args.renderView, plane.c_str());
                 if (p.img) {
-                    std::map<std::string,OFX::Image*> planes;
-                    planes.insert(std::make_pair(plane, p.img));
-                    fetchedPlanes.insert(std::make_pair(clip, planes));
+                    clipPlanes.insert(std::make_pair(plane, p.img));
                     imagesHolder.appendImage(p.img);
-                }
-            } else {
-                std::map<std::string,OFX::Image*>::iterator foundPlane = foundClip->second.find(plane);
-                if (foundPlane == foundClip->second.end()) {
-                    foundClip->second.insert(std::make_pair(plane, p.img));
-                } else {
-                    p.img = foundPlane->second;
                 }
 
             }
