@@ -1576,10 +1576,36 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 #ifdef DEBUG
-    // Follow the OpênFX spec:
+    // Follow the OpenFX spec:
     // check that dstComponents is consistent with the result of getClipPreferences
     // (@see getClipPreferences).
-    if (!gIsMultiPlanar || !gSupportsDynamicChoices) {
+    if (gIsMultiPlanar && gSupportsDynamicChoices) {
+        std::list<std::string> outputComponents = _dstClip->getComponentsPresent();
+        //buildChannelMenus(outputComponents);
+        std::string ofxPlane,ofxComponents;
+        getPlaneNeededInOutput(outputComponents, _outputComponents, &ofxPlane, &ofxComponents);
+
+        OFX::PixelComponentEnum pixelComps = mapStrToPixelComponentEnum(ofxComponents);
+        if (pixelComps == OFX::ePixelComponentCustom) {
+            int nComps = std::max((int)mapPixelComponentCustomToLayerChannels(ofxComponents).size() - 1, 0);
+            switch (nComps) {
+                case 1:
+                    pixelComps = OFX::ePixelComponentAlpha;
+                    break;
+                case 2:
+                    pixelComps = OFX::ePixelComponentXY;
+                    break;
+                case 3:
+                    pixelComps = OFX::ePixelComponentRGB;
+                    break;
+                case 4:
+                    pixelComps = OFX::ePixelComponentRGBA;
+                default:
+                    break;
+            }
+        }
+        assert(dstComponents == pixelComps);
+    } else {
         // set the components of _dstClip
         int outputComponents_i;
         _outputComponents->getValue(outputComponents_i);
