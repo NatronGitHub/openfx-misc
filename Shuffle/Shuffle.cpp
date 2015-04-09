@@ -109,7 +109,7 @@
 #define kParamOutputComponentsOptionXY "XY"
 #endif
 
-#define kParamOutputChannels "outputChannels"
+#define kParamOutputChannels kNatronOfxParamOutputChannels
 #define kParamOutputChannelsLabel "Channels"
 #define kParamOutputChannelsHint "The channels that will be written to in output"
 
@@ -2289,11 +2289,11 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
             page->addChild(*param);
         }
     } else {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputChannels);
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kNatronOfxParamOutputChannels);
         param->setLabel(kParamOutputChannelsLabel);
         param->setHint(kParamOutputChannelsHint);
 #ifdef OFX_EXTENSIONS_NATRON
-        param->setUserCanAddNewChoice(true);
+        param->setHostCanAddOptions(true);
 #endif
         param->appendOption(kShuffleColorPlaneName);
         param->appendOption(kShuffleMotionForwardPlaneName);

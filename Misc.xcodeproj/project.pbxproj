@@ -2388,6 +2388,7 @@
 		1E52FFD41955CE890000FB79 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E551F5A179950EC00A4135C /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		1E55FCE619F104C70093F33B /* CImg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImg.h; sourceTree = "<group>"; };
+		1E58F9321AD6740D00E00CAE /* ofxNatron.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ofxNatron.h; path = openfx/include/ofxNatron.h; sourceTree = SOURCE_ROOT; };
 		1E59337D194A0C6300804448 /* Constant.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Constant.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E59337F194A0CF400804448 /* Constant.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Constant.cpp; sourceTree = "<group>"; };
 		1E593380194A0CF400804448 /* Constant.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Constant.h; sourceTree = "<group>"; };
@@ -3566,6 +3567,7 @@
 		1E3E3D30179960F9005F2132 /* Headers */ = {
 			isa = PBXGroup;
 			children = (
+				1E58F9321AD6740D00E00CAE /* ofxNatron.h */,
 				1E009D5F17F44D70003071CC /* ofxCore.h */,
 				1EC7C7F918BF4F85002A246F /* ofxDialog.h */,
 				1E009D6017F44D70003071CC /* ofxImageEffect.h */,
