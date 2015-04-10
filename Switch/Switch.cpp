@@ -131,13 +131,28 @@ private:
 
 #ifdef OFX_EXTENSIONS_NUKE
     /** @brief recover a transform matrix from an effect */
-    virtual bool getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9]);
+    virtual bool getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9]) OVERRIDE FINAL;
 #endif
+
+    /** @brief get the clip preferences */
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
 private:
+
+    void updateRange()
+    {
+        int maxconnected = 1;
+        for (unsigned i = 2; i < _srcClip.size(); ++i) {
+            if (_srcClip[i]->isConnected()) {
+                maxconnected = i;
+            }
+        }
+        _which->setDisplayRange(0, maxconnected);
+    }
+
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip* _dstClip;
     std::vector<OFX::Clip *> _srcClip;
@@ -166,6 +181,8 @@ SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle, bool numerousInputs)
     }
     _which  = fetchIntParam(kParamWhich);
     assert(_which);
+
+    updateRange();
 }
 
 void
@@ -280,16 +297,17 @@ SwitchPlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip * &tra
 }
 #endif
 
+/* Override the clip preferences */
+void
+SwitchPlugin::getClipPreferences(OFX::ClipPreferencesSetter &/*clipPreferences*/)
+{
+    updateRange();
+}
+
 void
 SwitchPlugin::changedClip(const OFX::InstanceChangedArgs &/*args*/, const std::string &/*clipName*/)
 {
-    int maxconnected = 1;
-    for (unsigned i = 0; i < _srcClip.size(); ++i) {
-        if (_srcClip[i]->isConnected()) {
-            maxconnected = i;
-        }
-    }
-    _which->setDisplayRange(0, maxconnected);
+    updateRange();
 }
 
 
@@ -417,7 +435,7 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setHint(kParamWhichHint);
         param->setDefault(0);
         param->setRange(0, clipSourceCount - 1);
-        param->setDisplayRange(0, 1);
+        param->setDisplayRange(0, clipSourceCount - 1);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);

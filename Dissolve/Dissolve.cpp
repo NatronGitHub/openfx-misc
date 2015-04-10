@@ -138,13 +138,7 @@ public:
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_maskInvert);
 
-        int maxconnected = 1;
-        for (unsigned i = 0; i < _srcClip.size(); ++i) {
-            if (_srcClip[i]->isConnected()) {
-                maxconnected = i;
-            }
-        }
-        _which->setDisplayRange(0, maxconnected);
+        updateRange();
     }
 
     /* Override the render */
@@ -158,6 +152,9 @@ public:
 
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
+    /** @brief get the clip preferences */
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
@@ -165,6 +162,17 @@ public:
     void setupAndProcess(OFX::ImageBlenderMaskedBase &, const OFX::RenderArguments &args);
 
 private:
+
+    void updateRange()
+    {
+        int maxconnected = 1;
+        for (unsigned i = 2; i < _srcClip.size(); ++i) {
+            if (_srcClip[i]->isConnected()) {
+                maxconnected = i;
+            }
+        }
+        _which->setDisplayRange(0, maxconnected);
+    }
 
     template<int nComponents>
     void renderForComponents(const OFX::RenderArguments &args);
@@ -458,16 +466,17 @@ DissolvePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
     return false;
 }
 
+/* Override the clip preferences */
+void
+DissolvePlugin::getClipPreferences(OFX::ClipPreferencesSetter &/*clipPreferences*/)
+{
+    updateRange();
+}
+
 void
 DissolvePlugin::changedClip(const OFX::InstanceChangedArgs &/*args*/, const std::string &/*clipName*/)
 {
-    int maxconnected = 1;
-    for (unsigned i = 0; i < _srcClip.size(); ++i) {
-        if (_srcClip[i]->isConnected()) {
-            maxconnected = i;
-        }
-    }
-    _which->setDisplayRange(0, maxconnected);
+    updateRange();
 }
 
 mDeclarePluginFactory(DissolvePluginFactory, {}, {}
@@ -601,8 +610,8 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamWhich);
         param->setLabel(kParamWhichLabel);
         param->setHint(kParamWhichHint);
-        param->setRange(0., clipSourceCount);
-        param->setDisplayRange(0., 1.);
+        param->setRange(0, clipSourceCount - 1);
+        param->setDisplayRange(0, clipSourceCount - 1);
         if (page) {
             page->addChild(*param);
         }
