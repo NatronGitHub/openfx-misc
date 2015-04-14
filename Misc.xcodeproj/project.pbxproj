@@ -4621,6 +4621,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1E31941D19D9B2270027D0E2 /* Build configuration list for PBXNativeTarget "CImg.ofx" */;
 			buildPhases = (
+				1E931A891ADD7BC000488B2D /* ShellScript */,
 				1E31941019D9B2270027D0E2 /* Sources */,
 				1E31941B19D9B2270027D0E2 /* Frameworks */,
 				AC4774E61A25B8F3008A2B57 /* CopyFiles */,
@@ -5547,6 +5548,22 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		1E931A891ADD7BC000488B2D /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "make -C CImg CImg.h";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		1E0072D21A40417F00E77042 /* Sources */ = {
