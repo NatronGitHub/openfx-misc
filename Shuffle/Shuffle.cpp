@@ -110,7 +110,7 @@
 #endif
 
 #define kParamOutputChannels kNatronOfxParamOutputChannels
-#define kParamOutputChannelsLabel "Channels"
+#define kParamOutputChannelsLabel "Output Channels"
 #define kParamOutputChannelsHint "The channels that will be written to in output"
 
 
