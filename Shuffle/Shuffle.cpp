@@ -616,7 +616,10 @@ private:
     
     void buildChannelMenus(const std::list<std::string> &outputComponents);
     
-    void enableComponents();
+    void enableComponents(OFX::PixelComponentEnum outputComponents);
+    
+    void enableComponentsWithDstClipComponents();
+    
 
     /* internal render function */
     template <class DSTPIX, int nComponentsDst>
@@ -1683,41 +1686,45 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
 void
 ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
+    PixelComponentEnum dstPixelComps;
     if (gIsMultiPlanar && gSupportsDynamicChoices) {
         std::list<std::string> outputComponents = _dstClip->getComponentsPresent();
         buildChannelMenus(outputComponents);
         std::string ofxPlane,ofxComponents;
         getPlaneNeededInOutput(outputComponents, _outputComponents, &ofxPlane, &ofxComponents);
         
-        OFX::PixelComponentEnum pixelComps = mapStrToPixelComponentEnum(ofxComponents);
-        if (pixelComps != OFX::ePixelComponentCustom) {
-            clipPreferences.setClipComponents(*_dstClip, pixelComps);
+        dstPixelComps = mapStrToPixelComponentEnum(ofxComponents);
+        if (dstPixelComps != OFX::ePixelComponentCustom) {
         } else {
             int nComps = std::max((int)mapPixelComponentCustomToLayerChannels(ofxComponents).size() - 1, 0);
             switch (nComps) {
                 case 1:
-                    pixelComps = OFX::ePixelComponentAlpha;
+                    dstPixelComps = OFX::ePixelComponentAlpha;
                     break;
                 case 2:
-                    pixelComps = OFX::ePixelComponentXY;
+                    dstPixelComps = OFX::ePixelComponentXY;
                     break;
                 case 3:
-                    pixelComps = OFX::ePixelComponentRGB;
+                    dstPixelComps = OFX::ePixelComponentRGB;
                     break;
                 case 4:
-                    pixelComps = OFX::ePixelComponentRGBA;
+                    dstPixelComps = OFX::ePixelComponentRGBA;
                 default:
                     break;
             }
-            clipPreferences.setClipComponents(*_dstClip, pixelComps);
         }
     } else {
         // set the components of _dstClip
         int outputComponents_i;
         _outputComponents->getValue(outputComponents_i);
-        PixelComponentEnum outputComponents = gOutputComponentsMap[outputComponents_i];
-        clipPreferences.setClipComponents(*_dstClip, outputComponents);
+        dstPixelComps = gOutputComponentsMap[outputComponents_i];
     }
+    
+    clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
+
+    
+    //Enable components according to the new dstPixelComps
+    enableComponents(dstPixelComps);
 
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         // set the bitDepth of _dstClip
@@ -1867,9 +1874,11 @@ ShufflePlugin::setChannelsFromRed()
 void
 ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
-    if (paramName == kParamOutputComponents || paramName == kParamOutputChannels) {
+    //Commented out as it cannot be done here: enableComponents() relies on the clip components but the clip
+    //components might not yet be set if the user changed a clip pref slaved param. Instead we have to move it into the getClipPreferences
+    /*if (paramName == kParamOutputComponents || paramName == kParamOutputChannels) {
         enableComponents();
-    } else if (paramName == kParamClipInfo && args.reason == eChangeUserEdit) {
+    } else*/ if (paramName == kParamClipInfo && args.reason == eChangeUserEdit) {
         std::string msg;
         msg += "Input A: ";
         if (!_srcClipA) {
@@ -1922,7 +1931,13 @@ ShufflePlugin::changedClip(const InstanceChangedArgs &/*args*/, const std::strin
 }
 
 void
-ShufflePlugin::enableComponents()
+ShufflePlugin::enableComponentsWithDstClipComponents()
+{
+    enableComponents(_dstClip->getPixelComponents());
+}
+
+void
+ShufflePlugin::enableComponents(PixelComponentEnum outputComponents)
 {
     if (!gIsMultiPlanar) {
         int outputComponents_i;
@@ -1973,17 +1988,17 @@ ShufflePlugin::enableComponents()
         getPlaneNeededInOutput(components, _outputComponents, &ofxPlane, &ofxComp);
         std::vector<std::string> compNames;
         if (ofxPlane == kFnOfxImagePlaneColour || ofxPlane.empty()) {
-            std::string comp = _dstClip->getPixelComponentsProperty();
-            if (comp == kOfxImageComponentRGB) {
+            //std::string comp = _dstClip->getPixelComponentsProperty();
+            if (outputComponents == OFX::ePixelComponentRGB) {
                 compNames.push_back("R");
                 compNames.push_back("G");
                 compNames.push_back("B");
-            } else if (comp == kOfxImageComponentRGBA) {
+            } else if (outputComponents == OFX::ePixelComponentRGBA) {
                 compNames.push_back("R");
                 compNames.push_back("G");
                 compNames.push_back("B");
                 compNames.push_back("A");
-            } else if (comp == kOfxImageComponentAlpha) {
+            } else if (outputComponents == OFX::ePixelComponentAlpha) {
                 compNames.push_back("Alpha");
             }
 
