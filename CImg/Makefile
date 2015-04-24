@@ -35,15 +35,15 @@ include ../Makefile.master
 CIMG_INCLUDE ?= /opt/local/include
 CXXFLAGS += -I$(CIMG_INCLUDE)
 
-# commit 9b52016cab3368744ea9f3cc20a3e9b4f0c66eb3 from Fri Oct 17 09:12:00 2014 +0200 fixes blur_bilateral
-# commit ca9df234b937aba77e4d820b70e128e5d60230eb from Thu Oct 30 11:47:06 2014 +0100 adds blur_guided
-# commit 57ffb8393314e5102c00e5f9f8fa3dcace179608 from Thu Dec 11 10:57:13 2014 +0100 fixes vanvliet
-# commit c52e49eee959b4c59881a0c7a960c4592f1a03a9 from Fri Dec 12 09:47:13 2014 +0100 enhances get_displacement
-# commit cc874bf2c6c9940d75dd40becc234b5369f3fb30 from Sun Dec 28 12:01:19 2014 +0100 fixes LabToXYZ
-# commit f99ec436e44134d4974340a862cdfb159b0961f5 from Mon Mar 16 22:11:34 2015 +0100 is CImg 1.6.1.0
-CIMGVERSION=f99ec436e44134d4974340a862cdfb159b0961f5
+# For CImg.h versions,
+# see http://sourceforge.net/p/cimg/source/ci/master/log/?path=/CImg.h
+#
+# commit 36807b7ece2e2c196bd05f0a212a75dc8379a493 from 2015-04-15 07:27:02  is CImg 1.6.2.0
+CIMGVERSION=36807b7ece2e2c196bd05f0a212a75dc8379a493
 CImg.h:
-	git archive --remote=git://git.code.sf.net/p/gmic/source $(CIMGVERSION):src CImg.h | tar xf -
+	curl -o $@ http://sourceforge.net/p/cimg/source/ci/$(CIMGVERSION)/tree/CImg.h?format=raw
+
+#git archive --remote=git://git.code.sf.net/p/gmic/source $(CIMGVERSION):src CImg.h | tar xf -
 
 $(OBJECTPATH)/CImgBilateral.o: CImgBilateral.cpp CImg.h
 
