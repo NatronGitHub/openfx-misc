@@ -428,6 +428,18 @@ public:
     , _dstClip(0)
     , _srcClip(0)
     , _maskClip(0)
+    , _processR(0)
+    , _processG(0)
+    , _processB(0)
+    , _processA(0)
+    , _saturation(0)
+    , _luminanceMath(0)
+    , _clampBlack(0)
+    , _clampWhite(0)
+    , _premult(0)
+    , _premultChannel(0)
+    , _mix(0)
+    , _maskInvert(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));

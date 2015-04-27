@@ -336,9 +336,14 @@ class PremultPlugin : public OFX::ImageEffect
   public:
     /** @brief ctor */
     PremultPlugin(OfxImageEffectHandle handle)
-            : ImageEffect(handle)
-            , _dstClip(0)
-            , _srcClip(0)
+    : ImageEffect(handle)
+    , _dstClip(0)
+    , _srcClip(0)
+    , _processR(0)
+    , _processG(0)
+    , _processB(0)
+    , _processA(0)
+    , _premult(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));

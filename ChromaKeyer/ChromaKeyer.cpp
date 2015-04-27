@@ -769,7 +769,6 @@ ChromaKeyerPlugin::render(const OFX::RenderArguments &args)
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
 
-    assert(dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents != OFX::ePixelComponentRGBA) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host dit not take into account output components");
         OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
