@@ -586,10 +586,13 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
                 fred.reset(new OFX::PixelCopier<float, 1>(*this));
             }
         }
-        setupAndCopy(*fred, time, srcRoI,
-                     srcAPixelData, srcABounds, srcAPixelComponents, srcAPixelComponentCount, srcABitDepth, srcARowBytes, srcBoundary,
-                     tmpAPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes,
-                     premult, premultChannel);
+        assert(fred.get());
+        if (fred.get()) {
+            setupAndCopy(*fred, time, srcRoI,
+                         srcAPixelData, srcABounds, srcAPixelComponents, srcAPixelComponentCount, srcABitDepth, srcARowBytes, srcBoundary,
+                         tmpAPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes,
+                         premult, premultChannel);
+        }
     }
     
     std::auto_ptr<OFX::ImageMemory> tmpBData(new OFX::ImageMemory(tmpSize, this));
@@ -625,10 +628,13 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
                 fred.reset(new OFX::PixelCopier<float, 1>(*this));
             }
         }
-        setupAndCopy(*fred, time, srcRoI,
-                     srcBPixelData, srcBBounds, srcBPixelComponents, srcBPixelComponentCount, srcBBitDepth, srcBRowBytes, srcBoundary,
-                     tmpBPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes,
-                     premult, premultChannel);
+        assert(fred.get());
+        if (fred.get()) {
+            setupAndCopy(*fred, time, srcRoI,
+                         srcBPixelData, srcBBounds, srcBPixelComponents, srcBPixelComponentCount, srcBBitDepth, srcBRowBytes, srcBoundary,
+                         tmpBPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes,
+                         premult, premultChannel);
+        }
     }
 
     std::auto_ptr<OFX::ImageMemory> tmpData(new OFX::ImageMemory(tmpSize, this));
@@ -711,10 +717,13 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
             // just copy, no premult
             fred.reset(new OFX::PixelCopier<float, 1>(*this));
         }
-        setupAndCopy(*fred, time, renderWindow,
-                     tmpPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes, 0,
-                     dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
-                     premult, premultChannel);
+        assert(fred.get());
+        if (fred.get()) {
+            setupAndCopy(*fred, time, renderWindow,
+                         tmpPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes, 0,
+                         dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
+                         premult, premultChannel);
+        }
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////
