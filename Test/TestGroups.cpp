@@ -174,7 +174,7 @@ TestGroupsPlugin::render(const OFX::RenderArguments &args)
 }
 
 bool
-TestGroupsPlugin::isIdentity(const IsIdentityArguments &/*args*/, Clip * &identityClip, double &/*identityTime*/)
+TestGroupsPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
     bool forceCopy;
     _forceCopy->getValue(forceCopy);
@@ -182,9 +182,31 @@ TestGroupsPlugin::isIdentity(const IsIdentityArguments &/*args*/, Clip * &identi
     if (!forceCopy) {
         identityClip = _srcClip;
         return true;
-    } else {
-        return false;
     }
+
+    double mix;
+    _mix->getValueAtTime(args.time, mix);
+
+    if (mix == 0.) {
+        identityClip = _srcClip;
+        return true;
+    }
+
+    if (_maskClip && _maskClip->isConnected()) {
+        bool maskInvert;
+        _maskInvert->getValueAtTime(args.time, maskInvert);
+        if (!maskInvert) {
+            OfxRectI maskRoD;
+            OFX::MergeImages2D::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            // effect is identity if the renderWindow doesn't intersect the mask RoD
+            if (!OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+                identityClip = _srcClip;
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 
