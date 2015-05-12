@@ -271,7 +271,9 @@ private:
     
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-    
+
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+
     template <int srcNComponents, int dstNComponents>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
@@ -478,6 +480,23 @@ RotoPlugin::render(const OFX::RenderArguments &args)
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderInternalNComponents<1>(args, dstBitDepth);
     }
+}
+
+
+bool
+RotoPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
+{
+    if (_rotoClip && _rotoClip->isConnected()) {
+        OfxRectI rotoRoD;
+        OFX::MergeImages2D::toPixelEnclosing(_rotoClip->getRegionOfDefinition(args.time), args.renderScale, _rotoClip->getPixelAspectRatio(), &rotoRoD);
+        // effect is identity if the renderWindow doesn't intersect the roto RoD
+        if (!OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, rotoRoD, 0)) {
+            identityClip = _srcClip;
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void
