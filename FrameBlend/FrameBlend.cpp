@@ -623,7 +623,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
     int n = (max + 1 - min) / interval;
     if (!absolute) {
         min += time;
-        max += time;
+        //max += time; // max is not used anymore
     }
     // fetch the source images
     std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?

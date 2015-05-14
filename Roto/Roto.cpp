@@ -462,13 +462,16 @@ RotoPlugin::renderInternalNComponents(const OFX::RenderArguments &args, OFX::Bit
 void
 RotoPlugin::render(const OFX::RenderArguments &args)
 {
-    
+    assert(_srcClip && _dstClip);
+    if (!_srcClip || !_dstClip) {
+        throwSuiteStatusException(kOfxStatErrBadHandle);
+    }
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert(kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
+    assert(kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentXY);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderInternalNComponents<4>(args, dstBitDepth);
