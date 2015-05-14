@@ -520,7 +520,25 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     getRoI(renderWindow, renderScale, params, &srcRoI);
 
     // intersect against the destination RoD
-    OFX::MergeImages2D::rectIntersection(srcRoI, dstRoD, &srcRoI);
+    bool intersect = OFX::MergeImages2D::rectIntersection(srcRoI, dstRoD, &srcRoI);
+    if (!intersect) {
+        srcA.reset(0);
+        srcAPixelData = NULL;
+        srcABounds.x1 = srcABounds.y1 = srcABounds.x2 = srcABounds.y2 = 0;
+        srcARoD.x1 = srcARoD.y1 = srcARoD.x2 = srcARoD.y2 = 0;
+        srcAPixelComponents = _srcAClip ? _srcAClip->getPixelComponents() : OFX::ePixelComponentNone;
+        srcAPixelComponentCount = 0;
+        srcABitDepth = _srcAClip ? _srcAClip->getPixelDepth() : OFX::eBitDepthNone;
+        srcARowBytes = 0;
+        srcB.reset(0);
+        srcBPixelData = NULL;
+        srcBBounds.x1 = srcBBounds.y1 = srcBBounds.x2 = srcBBounds.y2 = 0;
+        srcBRoD.x1 = srcBRoD.y1 = srcBRoD.x2 = srcBRoD.y2 = 0;
+        srcBPixelComponents = _srcBClip ? _srcBClip->getPixelComponents() : OFX::ePixelComponentNone;
+        srcBPixelComponentCount = 0;
+        srcBBitDepth = _srcBClip ? _srcBClip->getPixelDepth() : OFX::eBitDepthNone;
+        srcBRowBytes = 0;
+    }
 
     // The following checks may be wrong, because the srcRoI may be outside of the region of definition of src.
     // It is not an error: areas outside of srcRoD should be considered black and transparent.

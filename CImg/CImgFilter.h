@@ -842,7 +842,17 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     getRoI(processWindow, renderScale, params, &srcRoI);
 
     // intersect against the destination RoD
-    OFX::MergeImages2D::rectIntersection(srcRoI, dstRoD, &srcRoI);
+    bool intersect = OFX::MergeImages2D::rectIntersection(srcRoI, dstRoD, &srcRoI);
+    if (!intersect) {
+        src.reset(0);
+        srcPixelData = NULL;
+        srcBounds.x1 = srcBounds.y1 = srcBounds.x2 = srcBounds.y2 = 0;
+        srcRoD.x1 = srcRoD.y1 = srcRoD.x2 = srcRoD.y2 = 0;
+        srcPixelComponents = _srcClip ? _srcClip->getPixelComponents() : OFX::ePixelComponentNone;
+        srcPixelComponentCount = 0;
+        srcBitDepth = _srcClip ? _srcClip->getPixelDepth() : OFX::eBitDepthNone;
+        srcRowBytes = 0;
+    }
 
     // The following checks may be wrong, because the srcRoI may be outside of the region of definition of src.
     // It is not an error: areas outside of srcRoD should be considered black and transparent.

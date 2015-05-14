@@ -700,8 +700,12 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
     OFX::MergeImages2D::toPixelSub(refCenterWithOffset, rsOne, par, &refCenterPixelSub);
 
     //Clip the refRectPixel to the bounds of the ref image
-    MergeImages2D::rectIntersection(refRectPixel, refImg->getBounds(), &refRectPixel);
+    bool intersect = MergeImages2D::rectIntersection(refRectPixel, refImg->getBounds(), &refRectPixel);
     
+    if (!intersect) {
+        // can't track: erase any existing track
+        _center->deleteKeyAtTime(otherTime);
+    }
     refRectPixel.x1 -= refCenterI.x;
     refRectPixel.x2 -= refCenterI.x;
     refRectPixel.y1 -= refCenterI.y;

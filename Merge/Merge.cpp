@@ -248,7 +248,8 @@ private:
                         }
                         if (nComponents != 4) {
                             // set alpha (1 inside, 0 outside)
-                            tmpA[3] = srcPixA ? 1. : 0.;
+                            assert(srcPixA);
+                            tmpA[3] = 1.;
                         }
                         for (int c = 0; c < 4; ++c) {
                             tmpB[c] = tmpPix[c];

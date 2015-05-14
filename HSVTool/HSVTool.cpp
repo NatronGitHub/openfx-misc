@@ -881,6 +881,7 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip,
             _brightnessRange->getValueAtTime(args.time, valMin, valMax);
             bool alphaVal = (valMin != 0. || valMax != 1.);
             switch(outputAlpha) {
+                // coverity[dead_error_begin]
                 case eOutputAlphaSource:
                     break;
                 case eOutputAlphaHue:

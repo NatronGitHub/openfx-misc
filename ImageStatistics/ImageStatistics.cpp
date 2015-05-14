@@ -994,7 +994,7 @@ private:
     void setupAndProcess(ImageStatisticsProcessorBase &processor, const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results &prevResults, Results *results);
 
     // compute computation window in srcImg
-    void computeWindow(const OFX::Image* srcImg, double time, OfxRectI *analysisWindow);
+    bool computeWindow(const OFX::Image* srcImg, double time, OfxRectI *analysisWindow);
 
     // update image statistics
     void update(const OFX::Image* srcImg, double time, const OfxRectI& analysisWindow);
@@ -1128,13 +1128,15 @@ ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
             // check if there is already a Keyframe, if yes update it
             int k = _statMean->getKeyIndex(args.time, eKeySearchNear);
             OfxRectI analysisWindow;
-            computeWindow(src.get(), args.time, &analysisWindow);
-            if (k != -1) {
-                update(src.get(), args.time, analysisWindow);
-            }
-            k = _statHSVLMean->getKeyIndex(args.time, eKeySearchNear);
-            if (k != -1) {
-                updateHSVL(src.get(), args.time, analysisWindow);
+            bool intersect = computeWindow(src.get(), args.time, &analysisWindow);
+            if (intersect) {
+                if (k != -1) {
+                    update(src.get(), args.time, analysisWindow);
+                }
+                k = _statHSVLMean->getKeyIndex(args.time, eKeySearchNear);
+                if (k != -1) {
+                    updateHSVL(src.get(), args.time, analysisWindow);
+                }
             }
         }
     }
@@ -1292,15 +1294,17 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                 setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
-            computeWindow(src.get(), args.time, &analysisWindow);
-            getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
-            if (doAnalyzeRGBA) {
-                update(src.get(), args.time, analysisWindow);
+            bool intersect = computeWindow(src.get(), args.time, &analysisWindow);
+            if (intersect) {
+                getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
+                if (doAnalyzeRGBA) {
+                    update(src.get(), args.time, analysisWindow);
+                }
+                if (doAnalyzeHSVL) {
+                    updateHSVL(src.get(), args.time, analysisWindow);
+                }
+                getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
             }
-            if (doAnalyzeHSVL) {
-                updateHSVL(src.get(), args.time, analysisWindow);
-            }
-            getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
         }
     }
     if ((doAnalyzeSequenceRGBA || doAnalyzeSequenceHSVL) && _srcClip && _srcClip->isConnected()) {
@@ -1319,12 +1323,14 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                     setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                     OFX::throwSuiteStatusException(kOfxStatFailed);
                 }
-                computeWindow(src.get(), t, &analysisWindow);
-                if (doAnalyzeSequenceRGBA) {
-                    update(src.get(), t, analysisWindow);
-                }
-                if (doAnalyzeSequenceHSVL) {
-                    updateHSVL(src.get(), t, analysisWindow);
+                bool intersect = computeWindow(src.get(), t, &analysisWindow);
+                if (intersect) {
+                    if (doAnalyzeSequenceRGBA) {
+                        update(src.get(), t, analysisWindow);
+                    }
+                    if (doAnalyzeSequenceHSVL) {
+                        updateHSVL(src.get(), t, analysisWindow);
+                    }
                 }
             }
             if (tmax != tmin) {
@@ -1357,7 +1363,7 @@ ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor, 
     }
 }
 
-void
+bool
 ImageStatisticsPlugin::computeWindow(const OFX::Image* srcImg, double time, OfxRectI *analysisWindow)
 {
     OfxRectD regionOfInterest;
@@ -1390,7 +1396,7 @@ ImageStatisticsPlugin::computeWindow(const OFX::Image* srcImg, double time, OfxR
                                     srcImg->getRenderScale(),
                                     srcImg->getPixelAspectRatio(),
                                     analysisWindow);
-    MergeImages2D::rectIntersection(*analysisWindow, srcImg->getBounds(), analysisWindow);
+    return MergeImages2D::rectIntersection(*analysisWindow, srcImg->getBounds(), analysisWindow);
 }
 // update image statistics
 void
