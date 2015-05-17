@@ -178,7 +178,7 @@ private:
                 } else if (dstNComponents == 4) {
                     maskAlpha = maskPix ? maskPix[dstNComponents-1] : 0;
                 } else {
-                    maskAlpha = 1;
+                    maskAlpha = 0;
                 }
                 
 
