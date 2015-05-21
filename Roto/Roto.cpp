@@ -178,7 +178,7 @@ private:
                 } else if (dstNComponents == 4) {
                     maskAlpha = maskPix ? maskPix[dstNComponents-1] : 0;
                 } else {
-                    maskAlpha = 0;
+                    maskAlpha = 1;
                 }
                 
 
@@ -506,7 +506,6 @@ void
 RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     PreMultiplicationEnum srcPremult = _srcClip->getPreMultiplication();
-
     if (srcPremult == eImageOpaque) {
         // we're changing alpha, the image becomes UnPremultiplied
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
@@ -569,7 +568,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
     // it as the default input clip (e.g. Nuke)
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
+    //srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -585,7 +584,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
         if (context == eContextGeneral) {
             maskClip->addSupportedComponent(ePixelComponentRGBA);
             maskClip->addSupportedComponent(ePixelComponentXY);
-            maskClip->addSupportedComponent(ePixelComponentRGB);
+            //maskClip->addSupportedComponent(ePixelComponentRGB);
             maskClip->setOptional(false);
         }
         maskClip->setSupportsTiles(kSupportsTiles);
@@ -595,7 +594,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
+    //dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
