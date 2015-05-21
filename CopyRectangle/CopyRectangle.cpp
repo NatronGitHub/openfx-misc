@@ -623,8 +623,9 @@ void CopyRectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setOverlayInteractDescriptor(new RectangleOverlayDescriptor);
     
 #ifdef OFX_EXTENSIONS_NATRON
-    if (OFX::getImageEffectHostDescription()->isNatron) {
+    if (OFX::getImageEffectHostDescription()->supportsChannelSelector) {
         gHostHasNativeRGBACheckbox = true;
+        desc.setChannelSelector(ePixelComponentRGBA);
     } else {
         gHostHasNativeRGBACheckbox = false;
     }

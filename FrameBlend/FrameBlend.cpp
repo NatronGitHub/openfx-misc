@@ -958,8 +958,9 @@ void FrameBlendPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
     
 #ifdef OFX_EXTENSIONS_NATRON
-    if (OFX::getImageEffectHostDescription()->isNatron) {
+    if (OFX::getImageEffectHostDescription()->supportsChannelSelector) {
         gHostHasNativeRGBACheckbox = true;
+        desc.setChannelSelector(ePixelComponentRGBA);
     } else {
         gHostHasNativeRGBACheckbox = false;
     }

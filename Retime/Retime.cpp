@@ -594,6 +594,9 @@ void RetimePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     if (!gHostDescription.temporalClipAccess) {
         throw OFX::Exception::HostInadequate("Need random temporal image access to work");
     }
+#ifdef OFX_EXTENSIONS_NATRON
+    desc.setChannelSelector(ePixelComponentNone);
+#endif
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */

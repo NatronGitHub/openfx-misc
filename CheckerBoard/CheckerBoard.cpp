@@ -672,6 +672,9 @@ void CheckerBoardPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
     
     generatorDescribe(desc);
+#ifdef OFX_EXTENSIONS_NATRON
+    desc.setChannelSelector(ePixelComponentNone);
+#endif
 }
 
 void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)

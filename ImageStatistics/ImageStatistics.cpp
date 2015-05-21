@@ -1542,6 +1542,9 @@ void ImageStatisticsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     desc.setOverlayInteractDescriptor(new ImageStatisticsOverlayDescriptor);
+#ifdef OFX_EXTENSIONS_NATRON
+    desc.setChannelSelector(ePixelComponentNone);
+#endif
 }
 
 

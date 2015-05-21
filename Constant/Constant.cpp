@@ -494,7 +494,10 @@ void ConstantPluginFactory<solid>::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderTwiceAlways(false);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-    
+#ifdef OFX_EXTENSIONS_NATRON
+    desc.setChannelSelector(solid ? ePixelComponentRGB : ePixelComponentRGBA);
+#endif
+
     generatorDescribe(desc);
 }
 

@@ -1430,8 +1430,9 @@ void DistortionPluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
 #endif
     
 #ifdef OFX_EXTENSIONS_NATRON
-    if (OFX::getImageEffectHostDescription()->isNatron) {
+    if (OFX::getImageEffectHostDescription()->supportsChannelSelector) {
         gHostHasNativeRGBACheckbox = true;
+        desc.setChannelSelector(plugin == eDistortionPluginLensDistortion ? ePixelComponentNone : ePixelComponentRGBA);
     } else {
         gHostHasNativeRGBACheckbox = false;
     }

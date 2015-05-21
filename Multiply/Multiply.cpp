@@ -685,8 +685,9 @@ void MultiplyPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 #ifdef OFX_EXTENSIONS_NATRON
-    if (OFX::getImageEffectHostDescription()->isNatron) {
+    if (OFX::getImageEffectHostDescription()->supportsChannelSelector) {
         gHostHasNativeRGBACheckbox = true;
+        desc.setChannelSelector(ePixelComponentRGBA);
     } else {
         gHostHasNativeRGBACheckbox = false;
     }

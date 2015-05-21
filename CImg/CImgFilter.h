@@ -47,9 +47,6 @@ CLANG_DIAG_ON(shorten-64-to-32)
 #define kParamProcessALabel "A"
 #define kParamProcessAHint  "Process alpha component"
 
-//RGBA checkbox are host side if true
-static bool gHostHasNativeRGBACheckbox;
-
 template <class Params, bool sourceIsOptional>
 class CImgFilterPluginHelper : public OFX::ImageEffect
 {
@@ -86,7 +83,7 @@ public:
         _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == OFX::ePixelComponentAlpha);
         
-        if (!gHostHasNativeRGBACheckbox) {
+        if (paramExists(kParamProcessR)) {
             _processR = fetchBooleanParam(kParamProcessR);
             _processG = fetchBooleanParam(kParamProcessG);
             _processB = fetchBooleanParam(kParamProcessB);
@@ -127,7 +124,7 @@ public:
                         break;
                 }
             }
-            if (!gHostHasNativeRGBACheckbox) {
+            if (_processR) {
                 switch (_srcClip->getPixelComponents()) {
                     case OFX::ePixelComponentAlpha:
                         _processR->setValue(false);
@@ -181,10 +178,8 @@ public:
     {
         
 #ifdef OFX_EXTENSIONS_NATRON
-        if (OFX::getImageEffectHostDescription()->isNatron) {
-            gHostHasNativeRGBACheckbox = true;
-        } else {
-            gHostHasNativeRGBACheckbox = false;
+        if (OFX::getImageEffectHostDescription()->supportsChannelSelector) {
+            desc.setChannelSelector(OFX::ePixelComponentRGBA);
         }
 #else
         gHostHasNativeRGBACheckbox = false;
@@ -233,7 +228,7 @@ public:
         // create the params
         OFX::PageParamDescriptor *page = desc.definePageParam("Controls");
         
-        if (!gHostHasNativeRGBACheckbox) {
+        if (!OFX::getImageEffectHostDescription()->supportsChannelSelector) {
             {
                 OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
                 param->setLabel(kParamProcessRLabel);
@@ -704,7 +699,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     }
     
     bool processR, processG, processB, processA;
-    if (!gHostHasNativeRGBACheckbox) {
+    if (_processR) {
         _processR->getValueAtTime(time, processR);
         _processG->getValueAtTime(time, processG);
         _processB->getValueAtTime(time, processB);
@@ -1161,7 +1156,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::isIdentity(const OFX::IsIdentit
         return true;
     }
     
-    if (!gHostHasNativeRGBACheckbox) {
+    if (_processR) {
         bool processR;
         bool processG;
         bool processB;

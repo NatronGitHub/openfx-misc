@@ -629,7 +629,9 @@ ColorTransformPluginFactory<transform>::describe(OFX::ImageEffectDescriptor &des
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-
+#ifdef OFX_EXTENSIONS_NATRON
+    desc.setChannelSelector(ePixelComponentRGB);
+#endif
 }
 
 template <ColorTransformEnum transform>

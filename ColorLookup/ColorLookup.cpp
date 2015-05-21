@@ -754,6 +754,9 @@ ColorLookupPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     //if (!OFX::getImageEffectHostDescription()->supportsParametricParameter) {
     //  throwHostMissingSuiteException(kOfxParametricParameterSuite);
     //}
+#ifdef OFX_EXTENSIONS_NATRON
+    desc.setChannelSelector(ePixelComponentRGBA);
+#endif
 }
 
 void

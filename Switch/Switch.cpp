@@ -354,6 +354,9 @@ void SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setCanTransform(true);
 #endif
     desc.setRenderThreadSafety(kRenderThreadSafety);
+#ifdef OFX_EXTENSIONS_NATRON
+    desc.setChannelSelector(ePixelComponentNone);
+#endif
 }
 
 void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)

@@ -1083,8 +1083,9 @@ void ColorCorrectPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     //std::cout << "describe! OK\n";
     
 #ifdef OFX_EXTENSIONS_NATRON
-    if (OFX::getImageEffectHostDescription()->isNatron) {
+    if (OFX::getImageEffectHostDescription()->supportsChannelSelector) {
         gHostHasNativeRGBACheckbox = true;
+        desc.setChannelSelector(ePixelComponentRGB);
     } else {
         gHostHasNativeRGBACheckbox = false;
     }

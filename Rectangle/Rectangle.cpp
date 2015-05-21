@@ -880,8 +880,9 @@ void RectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     
     
 #ifdef OFX_EXTENSIONS_NATRON
-    if (OFX::getImageEffectHostDescription()->isNatron) {
+    if (OFX::getImageEffectHostDescription()->supportsChannelSelector) {
         gHostHasNativeRGBACheckbox = true;
+        desc.setChannelSelector(ePixelComponentRGBA);
     } else {
         gHostHasNativeRGBACheckbox = false;
     }
