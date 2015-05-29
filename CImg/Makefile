@@ -38,10 +38,10 @@ CXXFLAGS += -I$(CIMG_INCLUDE)
 # For CImg.h versions,
 # see http://sourceforge.net/p/cimg/source/ci/master/log/?path=/CImg.h
 #
-# commit 36807b7ece2e2c196bd05f0a212a75dc8379a493 from 2015-04-15 07:27:02  is CImg 1.6.2.0
-CIMGVERSION=36807b7ece2e2c196bd05f0a212a75dc8379a493
+# commit f8fd723226961431c36a609437ffec9a8b2ed919  is CImg 1.6.3.0+
+CIMGVERSION=f8fd723226961431c36a609437ffec9a8b2ed919
 CImg.h:
-	curl -o $@ http://sourceforge.net/p/cimg/source/ci/$(CIMGVERSION)/tree/CImg.h?format=raw
+	curl -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
 
 #git archive --remote=git://git.code.sf.net/p/gmic/source $(CIMGVERSION):src CImg.h | tar xf -
 
