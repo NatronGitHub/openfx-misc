@@ -225,15 +225,17 @@ Linus, or `/Library/OFX/Plugins`on OS X), using a command like:
 
 ### OS X, using Xcode
 
-The plugins may be compiled by compiling the Xcode project called
-`Misc.xcodeproj` in the toplevel directory. The bundles produced by
-this project have to be moved to `/Library/OFX/Plugins`.
+The latest version of Xcode should be installed in order to compile this plugin.
 
-Alternatively, you can compile from the command-line using:
+Open the "Terminal" application (use spotlight, or browse `/Applications/Utilities`), and paste the following lines one-by-one (an administrator password will be asked for after the second line):
 
-	xcodebuild -project Misc.xcodeproj -configuration Release install
+	xcodebuild -configuration Release install
 	sudo mkdir /Library/OFX/Plugins
 	sudo mv /tmp/Misc.dst/Library/OFX/Plugins/Misc /Library/OFX/Plugins
+
+The plugins may also be compiled by compiling the Xcode project called
+`Misc.xcodeproj` in the toplevel directory. The bundles produced by
+this project have to be moved to `/Library/OFX/Plugins`.
 
 ### MS Windows, using Visual Studio
 
