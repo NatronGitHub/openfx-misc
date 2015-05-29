@@ -474,7 +474,15 @@ PremultPlugin<isPremult>::render(const OFX::RenderArguments &args)
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     // do the rendering
-    if (_srcClip->getPreMultiplication() == eImageOpaque) {
+    if (!_srcClip || !_srcClip->isConnected()) {
+        // get a dst image
+        std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
+        if (!dst.get()) {
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+
+        fillBlack(*this, args.renderWindow, dst.get());
+    } else if (_srcClip->getPreMultiplication() == eImageOpaque) {
         // Opaque images can have alpha set to anything, but it should always be considered 1
 
         // fetch main input image
@@ -487,27 +495,28 @@ PremultPlugin<isPremult>::render(const OFX::RenderArguments &args)
         }
 
         copyPixelsOpaque(*this, args.renderWindow, src.get(), dst.get());
-    }
-    switch (dstBitDepth) {
-        case OFX::eBitDepthUByte : {
-            ImagePremulter<unsigned char, 4, 255, isPremult> fred(*this);
-            setupAndProcess(fred, args);
-        }
-            break;
+    } else {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte : {
+                ImagePremulter<unsigned char, 4, 255, isPremult> fred(*this);
+                setupAndProcess(fred, args);
+            }
+                break;
 
-        case OFX::eBitDepthUShort : {
-            ImagePremulter<unsigned short, 4, 65535, isPremult> fred(*this);
-            setupAndProcess(fred, args);
-        }
-            break;
+            case OFX::eBitDepthUShort : {
+                ImagePremulter<unsigned short, 4, 65535, isPremult> fred(*this);
+                setupAndProcess(fred, args);
+            }
+                break;
 
-        case OFX::eBitDepthFloat : {
-            ImagePremulter<float, 4, 1, isPremult> fred(*this);
-            setupAndProcess(fred, args);
+            case OFX::eBitDepthFloat : {
+                ImagePremulter<float, 4, 1, isPremult> fred(*this);
+                setupAndProcess(fred, args);
+            }
+                break;
+            default :
+                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
-            break;
-        default :
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
