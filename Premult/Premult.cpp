@@ -83,6 +83,7 @@
 #include "ofxsMultiThread.h"
 
 #include "ofxsProcessing.H"
+#include "ofxsCopier.h"
 #include "ofxsMacros.h"
 
 
@@ -122,9 +123,6 @@
 #define kParamProcessA      "a"
 #define kParamProcessALabel "A"
 #define kParamProcessAHint  " the alpha component"
-#define kParamPremultName   "premultChannel"
-#define kParamPremultLabel  "By"
-#define kParamPremultHint   " by this input channel"
 
 #define kParamPremultOptionNone "None"
 #define kParamPremultOptionNoneHint "Don't multiply/divide"
@@ -355,7 +353,7 @@ class PremultPlugin : public OFX::ImageEffect
             _processB = fetchBooleanParam(kParamProcessB);
             _processA = fetchBooleanParam(kParamProcessA);
         }
-        _premult = fetchChoiceParam(kParamPremultName);
+        _premult = fetchChoiceParam(kParamPremultChannel);
     }
     
 private:
@@ -476,6 +474,20 @@ PremultPlugin<isPremult>::render(const OFX::RenderArguments &args)
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     // do the rendering
+    if (_srcClip->getPreMultiplication() == eImageOpaque) {
+        // Opaque images can have alpha set to anything, but it should always be considered 1
+
+        // fetch main input image
+        std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+                                            _srcClip->fetchImage(args.time) : 0);
+        // get a dst image
+        std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
+        if (!dst.get()) {
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+
+        copyPixelsOpaque(*this, args.renderWindow, src.get(), dst.get());
+    }
     switch (dstBitDepth) {
         case OFX::eBitDepthUByte : {
             ImagePremulter<unsigned char, 4, 255, isPremult> fred(*this);
@@ -779,9 +791,9 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
     }
     
     {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamPremultName);
-        param->setLabel(kParamPremultLabel);
-        param->setHint(kParamPremultHint);
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamPremultChannel);
+        param->setLabel(kParamPremultChannelLabel);
+        param->setHint(kParamPremultChannelHint);
         assert(param->getNOptions() == eInputChannelNone);
         param->appendOption(kParamPremultOptionNone, kParamPremultOptionNoneHint);
         assert(param->getNOptions() == eInputChannelR);
