@@ -91,7 +91,7 @@
 #define kPluginGrouping      "Draw"
 #define kPluginDescription \
 "Draw a random plasma texture (using the mid-point algorithm).\n" \
-"Note that each render gives a different noise.\n" \
+"Note that each render scale gives a different noise, but the image rendered at full scale always has the same noise at a given time. Noise can be modulated using the 'seed' parameter.\n" \
 "Uses the 'draw_plasma' function from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
@@ -130,10 +130,14 @@
 
 #define kParamScale "scale"
 #define kParamScaleLabel "Scale"
-#define kParamScaleHint "Scale, in pixels (>=0)."
+#define kParamScaleHint "Noise scale, as a power of two (>=0)."
 #define kParamScaleDefault 8
 #define kParamScaleMin 2
 #define kParamScaleMax 10
+
+#define kParamSeed "seed"
+#define kParamSeedLabel "Random Seed"
+#define kParamSeedHint "Random seed used to generate the image. Time value is added to this seed, to get a time-varying effect."
 
 
 using namespace OFX;
@@ -144,6 +148,7 @@ struct CImgPlasmaParams
     double alpha;
     double beta;
     int scale;
+    int seed;
 };
 
 class CImgPlasmaPlugin : public CImgFilterPluginHelper<CImgPlasmaParams,true>
@@ -156,6 +161,7 @@ public:
         _alpha  = fetchDoubleParam(kParamAlpha);
         _beta  = fetchDoubleParam(kParamBeta);
         _scale = fetchIntParam(kParamScale);
+        _seed = fetchIntParam(kParamSeed);
         assert(_alpha && _beta && _scale);
     }
 
@@ -164,13 +170,14 @@ public:
         _alpha->getValueAtTime(time, params.alpha);
         _beta->getValueAtTime(time, params.beta);
         _scale->getValueAtTime(time, params.scale);
+        _seed->getValueAtTime(time, params.seed);
     }
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgPlasmaParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = (int)std::ceil((params.scale) * renderScale.x);
+        int delta_pix = 1 << std::max(0, params.scale - (int)OFX::MergeImages2D::mipmapLevelFromScale(renderScale.x));
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
@@ -181,13 +188,14 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-      cimg.draw_plasma((float)params.alpha, (float)params.beta, (unsigned int)std::floor(params.scale * args.renderScale.x));
+        cimg_library::cimg::srand((unsigned int)args.time + (unsigned int)params.seed);
+        cimg.draw_plasma((float)params.alpha/args.renderScale.x, (float)params.beta/args.renderScale.x, std::max(0, params.scale - (int)OFX::MergeImages2D::mipmapLevelFromScale(args.renderScale.x)));
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgPlasmaParams& params) OVERRIDE FINAL
-    {
-        return (std::floor(params.scale * args.renderScale.x) == 0);
-    };
+    //virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgPlasmaParams& params) OVERRIDE FINAL
+    //{
+    //    return (params.scale - (int)OFX::MergeImages2D::mipmapLevelFromScale(args.renderScale.x) <= 0);
+    //};
 
     /* Override the clip preferences, we need to say we are setting the frame varying flag */
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL
@@ -201,6 +209,7 @@ private:
     OFX::DoubleParam *_alpha;
     OFX::DoubleParam *_beta;
     OFX::IntParam *_scale;
+    OFX::IntParam *_seed;
 };
 
 
@@ -276,6 +285,14 @@ void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         param->setRange(kParamScaleMin, kParamScaleMax);
         param->setDisplayRange(kParamScaleMin, kParamScaleMax);
         param->setDefault(kParamScaleDefault);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::IntParamDescriptor *param = desc.defineIntParam(kParamSeed);
+        param->setLabel(kParamSeedLabel);
+        param->setHint(kParamSeedHint);
         if (page) {
             page->addChild(*param);
         }
