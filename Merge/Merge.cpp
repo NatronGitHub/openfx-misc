@@ -107,7 +107,8 @@
 #define kParamOperationHint \
 "The operation used to merge the input A and B images.\n" \
 "The operator formula is applied to each component: A and B represent the input component (Red, Green, Blue, or Alpha) of each input, and a and b represent the Alpha component of each input.\n" \
-"If Alpha masking is checked, the output alpha is computed using a different formula (a+b - a*b)"
+"If Alpha masking is checked, the output alpha is computed using a different formula (a+b - a*b).\n" \
+"Alpha masking is always enabled for HSL modes (hue, saturation, color, luminosity)."
 
 #define kParamAlphaMasking "screenAlpha"
 #define kParamAlphaMaskingLabel "Alpha masking"
@@ -686,6 +687,18 @@ MergePlugin::renderForBitDepth(const OFX::RenderArguments &args)
         case eMergeXOR:
             fred.reset(new MergeProcessor<eMergeXOR, PIX, nComponents, maxValue>(*this));
             break;
+        case eMergeHue:
+            fred.reset(new MergeProcessor<eMergeHue, PIX, nComponents, maxValue>(*this));
+            break;
+        case eMergeSaturation:
+            fred.reset(new MergeProcessor<eMergeSaturation, PIX, nComponents, maxValue>(*this));
+            break;
+        case eMergeColor:
+            fred.reset(new MergeProcessor<eMergeColor, PIX, nComponents, maxValue>(*this));
+            break;
+        case eMergeLuminosity:
+            fred.reset(new MergeProcessor<eMergeLuminosity, PIX, nComponents, maxValue>(*this));
+            break;
     } // switch
     assert(fred.get());
     if (fred.get()) {
@@ -785,6 +798,12 @@ void MergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     
 }
 
+static void
+addMergeOption(ChoiceParamDescriptor* param, MergingFunctionEnum e, const char* help)
+{
+    assert(param->getNOptions() == e);
+    param->appendOption(getOperationString(e), help);
+}
 
 void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
@@ -875,74 +894,44 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOperation);
         param->setLabel(kParamOperationLabel);
         param->setHint(kParamOperationHint);
-        assert(param->getNOptions() == eMergeATop);
-        param->appendOption( "atop", "Ab + B(1 - a)" );
-        assert(param->getNOptions() == eMergeAverage);
-        param->appendOption( "average", "(A + B) / 2" );
-        assert(param->getNOptions() == eMergeColorBurn);
-        param->appendOption( "color-burn", "darken B towards A" );
-        assert(param->getNOptions() == eMergeColorDodge);
-        param->appendOption( "color-dodge", "brighten B towards A" );
-        assert(param->getNOptions() == eMergeConjointOver);
-        param->appendOption( "conjoint-over", "A + B(1-a)/b, A if a > b" );
-        assert(param->getNOptions() == eMergeCopy);
-        param->appendOption( "copy", "A" );
-        assert(param->getNOptions() == eMergeDifference);
-        param->appendOption( "difference", "abs(A-B)" );
-        assert(param->getNOptions() == eMergeDisjointOver);
-        param->appendOption( "disjoint-over", "A+B(1-a)/b, A+B if a+b < 1" );
-        assert(param->getNOptions() == eMergeDivide);
-        param->appendOption( "divide", "A/B, 0 if A < 0 and B < 0" );
-        assert(param->getNOptions() == eMergeExclusion);
-        param->appendOption( "exclusion", "A+B-2AB" );
-        assert(param->getNOptions() == eMergeFreeze);
-        param->appendOption( "freeze", "1-sqrt(1-A)/B" );
-        assert(param->getNOptions() == eMergeFrom);
-        param->appendOption( "from", "B-A" );
-        assert(param->getNOptions() == eMergeGeometric);
-        param->appendOption( "geometric", "2AB/(A+B)" );
-        assert(param->getNOptions() == eMergeHardLight);
-        param->appendOption( "hard-light", "multiply if A < 0.5, screen if A > 0.5" );
-        assert(param->getNOptions() == eMergeHypot);
-        param->appendOption( "hypot", "sqrt(A*A+B*B)" );
-        assert(param->getNOptions() == eMergeIn);
-        param->appendOption( "in", "Ab" );
-        assert(param->getNOptions() == eMergeInterpolated);
-        param->appendOption( "interpolated", "(like average but better and slower)" );
-        assert(param->getNOptions() == eMergeMask);
-        param->appendOption( "mask", "Ba" );
-        assert(param->getNOptions() == eMergeMatte);
-        param->appendOption( "matte", "Aa + B(1-a) (unpremultiplied over)" );
-        assert(param->getNOptions() == eMergeLighten);
-        param->appendOption( "max", "max(A, B)" );
-        assert(param->getNOptions() == eMergeDarken);
-        param->appendOption( "min", "min(A, B)" );
-        assert(param->getNOptions() == eMergeMinus);
-        param->appendOption( "minus", "A-B" );
-        assert(param->getNOptions() == eMergeMultiply);
-        param->appendOption( "multiply", "AB, 0 if A < 0 and B < 0" );
-        assert(param->getNOptions() == eMergeOut);
-        param->appendOption( "out", "A(1-b)" );
-        assert(param->getNOptions() == eMergeOver);
-        param->appendOption( "over", "A+B(1-a)" );
-        assert(param->getNOptions() == eMergeOverlay);
-        param->appendOption( "overlay", "multiply if B<0.5, screen if B>0.5" );
-        assert(param->getNOptions() == eMergePinLight);
-        param->appendOption( "pinlight", "if B >= 0.5 then max(A, 2*B - 1), min(A, B * 2.0 ) else" );
-        assert(param->getNOptions() == eMergePlus);
-        param->appendOption( "plus", "A+B" );
-        assert(param->getNOptions() == eMergeReflect);
-        param->appendOption( "reflect", "A*A / (1 - B)" );
-        assert(param->getNOptions() == eMergeScreen);
-        param->appendOption( "screen", "A+B-AB" );
-        assert(param->getNOptions() == eMergeSoftLight);
-        param->appendOption( "soft-light", "burn-in if A < 0.5, lighten if A > 0.5" );
-        assert(param->getNOptions() == eMergeStencil);
-        param->appendOption( "stencil", "B(1-a)" );
-        assert(param->getNOptions() == eMergeUnder);
-        param->appendOption( "under", "A(1-b)+B" );
-        assert(param->getNOptions() == eMergeXOR);
-        param->appendOption( "xor", "A(1-b)+B(1-a)" );
+        addMergeOption(param, eMergeATop, "Ab + B(1 - a)" );
+        addMergeOption(param, eMergeAverage, "(A + B) / 2" );
+        addMergeOption(param, eMergeColorBurn, "darken B towards A" );
+        addMergeOption(param, eMergeColorDodge, "brighten B towards A" );
+        addMergeOption(param, eMergeConjointOver, "A + B(1-a)/b, A if a > b" );
+        addMergeOption(param, eMergeCopy, "A" );
+        addMergeOption(param, eMergeDifference, "abs(A-B)" );
+        addMergeOption(param, eMergeDisjointOver, "A+B(1-a)/b, A+B if a+b < 1" );
+        addMergeOption(param, eMergeDivide, "A/B, 0 if A < 0 and B < 0" );
+        addMergeOption(param, eMergeExclusion, "A+B-2AB" );
+        addMergeOption(param, eMergeFreeze, "1-sqrt(1-A)/B" );
+        addMergeOption(param, eMergeFrom, "B-A" );
+        addMergeOption(param, eMergeGeometric, "2AB/(A+B)" );
+        addMergeOption(param, eMergeHardLight, "multiply if A < 0.5, screen if A > 0.5" );
+        addMergeOption(param, eMergeHypot, "sqrt(A*A+B*B)" );
+        addMergeOption(param, eMergeIn, "Ab" );
+        addMergeOption(param, eMergeInterpolated, "(like average but better and slower)" );
+        addMergeOption(param, eMergeMask, "Ba" );
+        addMergeOption(param, eMergeMatte, "Aa + B(1-a) (unpremultiplied over)" );
+        addMergeOption(param, eMergeLighten, "max(A, B)" );
+        addMergeOption(param, eMergeDarken, "min(A, B)" );
+        addMergeOption(param, eMergeMinus, "A-B" );
+        addMergeOption(param, eMergeMultiply, "AB, 0 if A < 0 and B < 0" );
+        addMergeOption(param, eMergeOut, "A(1-b)" );
+        addMergeOption(param, eMergeOver, "A+B(1-a)" );
+        addMergeOption(param, eMergeOverlay, "multiply if B<0.5, screen if B>0.5" );
+        addMergeOption(param, eMergePinLight, "if B >= 0.5 then max(A, 2*B - 1), min(A, B * 2.0 ) else" );
+        addMergeOption(param, eMergePlus, "A+B" );
+        addMergeOption(param, eMergeReflect, "A*A / (1 - B)" );
+        addMergeOption(param, eMergeScreen, "A+B-AB" );
+        addMergeOption(param, eMergeSoftLight, "burn-in if A < 0.5, lighten if A > 0.5" );
+        addMergeOption(param, eMergeStencil, "B(1-a)" );
+        addMergeOption(param, eMergeUnder, "A(1-b)+B" );
+        addMergeOption(param, eMergeXOR, "A(1-b)+B(1-a)" );
+        addMergeOption(param, eMergeHue, "SetLum(SetSat(A, Sat(B)), Lum(B))" );
+        addMergeOption(param, eMergeSaturation, "SetLum(SetSat(B, Sat(A)), Lum(B))" );
+        addMergeOption(param, eMergeColor, "SetLum(A, Lum(B))" );
+        addMergeOption(param, eMergeLuminosity, "SetLum(B, Lum(A))" );
         param->setDefault(eMergeOver);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
