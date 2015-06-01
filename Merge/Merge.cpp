@@ -371,6 +371,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
     
     OfxRectD rodA = _srcClipA->getRegionOfDefinition(args.time);
     OfxRectD rodB = _srcClipB->getRegionOfDefinition(args.time);
+   
     
     int bboxChoice;
     double mix;
@@ -385,10 +386,33 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
     
     switch (bboxChoice) {
         case 0: { //union
-            rectBoundingBox(rodA, rodB, &rod);
+            bool aConnected = _srcClipA->isConnected();
+            bool bConnected = _srcClipB->isConnected();
+            bool rodSet = false;
+            if (aConnected) {
+                rod = rodA;
+                rodSet = true;
+            }
+            if (bConnected) {
+                if (!rodSet) {
+                    rod = rodB;
+                    rodSet = true;
+                } else {
+                    rectBoundingBox(rod, rodB, &rod);
+                }
+            }
+            
             for (unsigned int i = 0; i < _optionalASrcClips.size(); ++i) {
                 OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(args.time);
-                rectBoundingBox(rodOptionalA, rod, &rod);
+                if (!_optionalASrcClips[i]->isConnected()) {
+                    continue;
+                }
+                if (rodSet) {
+                    rectBoundingBox(rodOptionalA, rod, &rod);
+                } else {
+                    rod = rodOptionalA;
+                    rodSet = true;
+                }
             }
 			return true;
 		}
