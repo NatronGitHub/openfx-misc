@@ -682,10 +682,12 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     if (!_supportsTiles) {
         // http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#kOfxImageEffectPropSupportsTiles
         //  If a clip or plugin does not support tiled images, then the host should supply full RoD images to the effect whenever it fetches one.
-        assert(srcRoD.x1 == srcBounds.x1);
-        assert(srcRoD.x2 == srcBounds.x2);
-        assert(srcRoD.y1 == srcBounds.y1);
-        assert(srcRoD.y2 == srcBounds.y2); // crashes on Natron if kSupportsTiles=0 & kSupportsMultiResolution=1
+        if (src.get()) {
+            assert(srcRoD.x1 == srcBounds.x1);
+            assert(srcRoD.x2 == srcBounds.x2);
+            assert(srcRoD.y1 == srcBounds.y1);
+            assert(srcRoD.y2 == srcBounds.y2); // crashes on Natron if kSupportsTiles=0 & kSupportsMultiResolution=1
+        }
         assert(dstRoD.x1 == dstBounds.x1);
         assert(dstRoD.x2 == dstBounds.x2);
         assert(dstRoD.y1 == dstBounds.y1);
@@ -696,12 +698,14 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         //   Multiple resolution images mean...
         //    input and output images can be of any size
         //    input and output images can be offset from the origin
-        assert(srcRoD.x1 == 0);
-        assert(srcRoD.y1 == 0);
-        assert(srcRoD.x1 == dstRoD.x1);
-        assert(srcRoD.x2 == dstRoD.x2 || srcRoD.x2 == 0); // in Nuke, srcRoD may be empty
-        assert(srcRoD.y1 == dstRoD.y1);
-        assert(srcRoD.y2 == dstRoD.y2 || srcRoD.y2 == 0); // crashes on Natron if kSupportsMultiResolution=0
+        if (src.get()) {
+            assert(srcRoD.x1 == 0);
+            assert(srcRoD.y1 == 0);
+            assert(srcRoD.x1 == dstRoD.x1);
+            assert(srcRoD.x2 == dstRoD.x2);
+            assert(srcRoD.y1 == dstRoD.y1);
+            assert(srcRoD.y2 == dstRoD.y2); // crashes on Natron if kSupportsMultiResolution=0
+        }
     }
     
     bool processR, processG, processB, processA;

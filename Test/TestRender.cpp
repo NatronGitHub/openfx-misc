@@ -323,10 +323,12 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
         if (!supportsTiles) {
             // http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#kOfxImageEffectPropSupportsTiles
             //  If a clip or plugin does not support tiled images, then the host should supply full RoD images to the effect whenever it fetches one.
-            assert(srcRod.x1 == srcBounds.x1);
-            assert(srcRod.x2 == srcBounds.x2);
-            assert(srcRod.y1 == srcBounds.y1);
-            assert(srcRod.y2 == srcBounds.y2); // crashes on Natron if kSupportsTiles=0 & kSupportsMultiResolution=1
+            if (src.get()) {
+                assert(srcRod.x1 == srcBounds.x1);
+                assert(srcRod.x2 == srcBounds.x2);
+                assert(srcRod.y1 == srcBounds.y1);
+                assert(srcRod.y2 == srcBounds.y2); // crashes on Natron if kSupportsTiles=0 & kSupportsMultiResolution=1
+            }
             assert(dstRod.x1 == dstBounds.x1);
             assert(dstRod.x2 == dstBounds.x2);
             assert(dstRod.y1 == dstBounds.y1);
@@ -337,12 +339,14 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
             //   Multiple resolution images mean...
             //    input and output images can be of any size
             //    input and output images can be offset from the origin
-            assert(srcRod.x1 == 0);
-            assert(srcRod.y1 == 0);
-            assert(srcRod.x1 == dstRod.x1);
-            assert(srcRod.x2 == dstRod.x2);
-            assert(srcRod.y1 == dstRod.y1);
-            assert(srcRod.y2 == dstRod.y2); // crashes on Natron if kSupportsMultiResolution=0
+            if (src.get()) {
+                assert(srcRod.x1 == 0);
+                assert(srcRod.y1 == 0);
+                assert(srcRod.x1 == dstRod.x1);
+                assert(srcRod.x2 == dstRod.x2);
+                assert(srcRod.y1 == dstRod.y1);
+                assert(srcRod.y2 == dstRod.y2); // crashes on Natron if kSupportsMultiResolution=0
+            }
         }
     }
 
