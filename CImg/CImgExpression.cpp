@@ -138,8 +138,8 @@
 "\n"\
 "Sample expressions:\n"                                                 \
 "'0.5*(i(x+1)-i(x-1))' will estimate the X-derivative of an image with a classical finite difference scheme.\n"\
-"'if(x%10==0,255,i)' will draw blank vertical lines on every 10th column of an image.\n"\
-"'X=x-w/2;Y=y-h/2;D=sqrt(Xˆ2+Yˆ2);if(D+u*20<80,abs(255*cos(D/(5+c))),10*(y%(20+c)))'\n"\
+"'if(x%10==0,1,i)' will draw blank vertical lines on every 10th column of an image.\n"\
+"'X=x-w/2;Y=y-h/2;D=sqrt(X^2+Y^2);if(D+u*20<80,abs(cos(D/(5+c))),10*(y%(20+c))/255)'\n"\
 "Uses the 'fill' function from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
