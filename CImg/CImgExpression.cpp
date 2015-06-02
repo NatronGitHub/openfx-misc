@@ -114,6 +114,7 @@
 "         . 'z': current processed slice of the associated image, if any (0 otherwise).\n"\
 "         . 'c': current processed channel of the associated image, if any (0 otherwise).\n"\
 "         . 't': current time.\n"\
+"         . 'k': render scale (1 means full scale, 0.5 means half scale).\n"\
 "         . 'e': value of e, i.e. 2.71828..\n"\
 "         . 'pi': value of pi, i.e. 3.1415926..\n"\
 "         . '?' or 'u': a random value between [0,1], following a uniform distribution.\n"\
@@ -125,8 +126,7 @@
 "    _ Special operators can be used:\n"\
 "         . ';': expression separator. The returned value is always the last encountered expression. For instance expression '1;2;pi' is evaluated as 'pi'.\n"\
 "         . '=': variable assignment. Variables in mathematical parser can only refer to numerical values. Variable names are case-sensitive. Use this operator in conjunction with ';' to define complex evaluable expressions, such as 't=cos(x);3*t^2+2*t+1'.\n"\
-"            These variables remain local to the mathematical parser and cannot be accessed\n"\
-"            outside the evaluated expression.\n"\
+"            These variables remain local to the mathematical parser and cannot be accessed outside the evaluated expression.\n"\
 "    _ The following specific functions are also defined:\n"\
 "         . 'if(expr_cond,expr_then,expr_else)': return value of 'expr_then' or 'expr_else', depending on the value of 'expr_cond' (0=false, other=true). For instance, 'if(x%10==0,255,i)' will draw blank vertical lines on every 10th column of an image.\n"\
 "         . '?(max)' or '?(min,max)': return a random value between [0,max] or [min,max], following a uniform distribution. 'u(max)' and 'u(0,max)' mean the same.\n"\
@@ -136,10 +136,12 @@
 "         . 'j[offset]': does the same for an offset relative to the current pixel (x,y,z,c). For instance expression '0.5*(i(x+1)-i(x-1))' will estimate the X-derivative of an image with a classical finite difference scheme.\n"\
 "         . If specified formula starts with '>' or '<', the operators 'i(..)' and 'j(..)' will return values of the image currently being modified, in forward ('>') or backward ('<') order.\n"\
 "\n"\
-"Sample expressions:\n"                                                 \
-"'0.5*(i(x+1)-i(x-1))' will estimate the X-derivative of an image with a classical finite difference scheme.\n"\
+"Sample expressions:\n"\
+"'j(sin(y/100/k+t/10)*20*k,sin(x/100/k+t/10)*20*k)' distorts the image with time-varying waves.\n"\
+"'0.5*(j(1)-j(-1))' will estimate the X-derivative of an image with a classical finite difference scheme.\n"\
 "'if(x%10==0,1,i)' will draw blank vertical lines on every 10th column of an image.\n"\
 "'X=x-w/2;Y=y-h/2;D=sqrt(X^2+Y^2);if(D+u*20<80,abs(cos(D/(5+c))),10*(y%(20+c))/255)'\n"\
+"\n"\
 "Uses the 'fill' function from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
@@ -151,7 +153,7 @@
 
 #define kSupportsTiles 0 // Expression effect can only be computed on the whole image
 #define kSupportsMultiResolution 0
-#define kSupportsRenderScale 0 // no render scale support
+#define kSupportsRenderScale 1
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
@@ -163,7 +165,7 @@
 #define kParamExpression "expression"
 #define kParamExpressionLabel "Expression"
 #define kParamExpressionHint "G'MIC/CImg expression, see the plugin description/help, or http://gmic.eu/reference.shtml#section9"
-#define kParamExpressionDefault "i(x,y,0,c)"
+#define kParamExpressionDefault "i"
 
 
 using namespace OFX;
@@ -205,10 +207,19 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        char t[80];
-        snprintf(t, sizeof(t), "t=%g;", args.time);
+        if (params.expr.empty()) {
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+        char vars[256];
+        snprintf(vars, sizeof(vars), "t=%g;k=%g;", args.time, args.renderScale.x);
+        std::string expr;
+        if (params.expr[0] == '<' || params.expr[0] == '>') {
+            expr = params.expr.substr(0,1) + vars + params.expr.substr(1);
+        } else {
+            expr = vars + params.expr;
+        }
         try {
-            cimg.fill((t + params.expr).c_str(), true);
+            cimg.fill(expr.c_str(), true);
         } catch (const cimg_library::CImgArgumentException& e) {
             setPersistentMessage(OFX::Message::eMessageError, "", e.what());
             throwSuiteStatusException(kOfxStatFailed);
@@ -221,6 +232,13 @@ public:
         clearPersistentMessage();
         return false;
     };
+
+    /* Override the clip preferences, we need to say we are setting the frame varying flag */
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL
+    {
+        clipPreferences.setOutputFrameVarying(true);
+    }
+
 private:
 
     // params
