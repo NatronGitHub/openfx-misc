@@ -486,7 +486,6 @@ MirrorPlugin::render(const OFX::RenderArguments &args)
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave source image with wrong dimensions");
         throwSuiteStatusException(kOfxStatFailed);
     }
-    clearPersistentMessage();
     mirrorPixels(*this, args.renderWindow, srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, dstPixelData, dstBounds, dstComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
 }
 

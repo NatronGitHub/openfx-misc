@@ -215,6 +215,12 @@ public:
         }
     }
 
+    virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgExpressionParams& /*params*/) OVERRIDE FINAL
+    {
+        // must clear persistent message in isIdentity, or render() is not called by Nuke
+        clearPersistentMessage();
+        return false;
+    };
 private:
 
     // params

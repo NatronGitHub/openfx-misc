@@ -111,6 +111,7 @@ public:
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL
     {
         if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+            beginEditBlock("changedClip");
             if (_defaultUnpremult) {
                 switch (_srcClip->getPreMultiplication()) {
                     case OFX::eImageOpaque:
@@ -144,6 +145,7 @@ public:
                         break;
                 }
             }
+            endEditBlock();
         }
     }
 
@@ -697,9 +699,9 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         assert(srcRoD.x1 == 0);
         assert(srcRoD.y1 == 0);
         assert(srcRoD.x1 == dstRoD.x1);
-        assert(srcRoD.x2 == dstRoD.x2);
+        assert(srcRoD.x2 == dstRoD.x2 || srcRoD.x2 == 0); // in Nuke, srcRoD may be empty
         assert(srcRoD.y1 == dstRoD.y1);
-        assert(srcRoD.y2 == dstRoD.y2); // crashes on Natron if kSupportsMultiResolution=0
+        assert(srcRoD.y2 == dstRoD.y2 || srcRoD.y2 == 0); // crashes on Natron if kSupportsMultiResolution=0
     }
     
     bool processR, processG, processB, processA;
