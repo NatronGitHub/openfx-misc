@@ -15,6 +15,8 @@ net.sf.cimg.CImgErode.png \
 net.sf.cimg.CImgErode.svg \
 net.sf.cimg.CImgErodeSmooth.png \
 net.sf.cimg.CImgErodeSmooth.svg \
+net.sf.cimg.CImgExpression.png \
+net.sf.cimg.CImgExpression.svg \
 net.sf.cimg.CImgGuided.png \
 net.sf.cimg.CImgGuided.svg \
 net.sf.cimg.CImgLaplacian.png \
@@ -58,6 +60,8 @@ $(OBJECTPATH)/CImgEqualize.o: CImgEqualize.cpp CImg.h
 $(OBJECTPATH)/CImgErode.o: CImgErode.cpp CImg.h
 
 $(OBJECTPATH)/CImgErodeSmooth.o: CImgErodeSmooth.cpp CImg.h
+
+$(OBJECTPATH)/CImgExpression.o: CImgExpression.cpp CImg.h
 
 $(OBJECTPATH)/CImgGuided.o: CImgGuided.cpp CImg.h
 
