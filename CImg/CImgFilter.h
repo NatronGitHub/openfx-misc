@@ -179,7 +179,11 @@ public:
         
 #ifdef OFX_EXTENSIONS_NATRON
         if (OFX::getImageEffectHostDescription()->supportsChannelSelector) {
-            desc.setChannelSelector(OFX::ePixelComponentRGBA);
+            if (processRGB) {
+                desc.setChannelSelector(processAlpha ? OFX::ePixelComponentRGBA : OFX::ePixelComponentRGB);
+            } else {
+                desc.setChannelSelector(processAlpha ? OFX::ePixelComponentAlpha : OFX::ePixelComponentNone);
+            }
         }
 #else
         gHostHasNativeRGBACheckbox = false;
