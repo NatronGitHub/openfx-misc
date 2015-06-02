@@ -97,7 +97,6 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDenoise.png $(OutDir)$(ProjectName).
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDilate.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErode.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErodeSmooth.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgExpression.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgGuided.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgLaplacian.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgNoise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -130,7 +129,6 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDenoise.png $(OutDir)$(ProjectName).
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDilate.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErode.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErodeSmooth.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgExpression.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgGuided.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgLaplacian.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgNoise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -170,7 +168,6 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDenoise.png $(OutDir)$(ProjectName).
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDilate.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErode.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErodeSmooth.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgExpression.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgGuided.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgLaplacian.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgNoise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
@@ -210,7 +207,6 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDenoise.png $(OutDir)$(ProjectName).
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgDilate.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErode.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgErodeSmooth.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
-xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgExpression.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgGuided.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgLaplacian.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y
 xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgNoise.png $(OutDir)$(ProjectName).ofx.bundle\Contents\Resources\ /Y

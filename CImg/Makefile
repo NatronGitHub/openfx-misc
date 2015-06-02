@@ -1,4 +1,4 @@
-PLUGINOBJECTS = CImgBilateral.o CImgBlur.o CImgDenoise.o CImgDilate.o CImgEqualize.o CImgErode.o CImgErodeSmooth.o CImgGuided.o CImgHistEQ.o CImgNoise.o CImgPlasma.o CImgRollingGuidance.o CImgSharpenInvDiff.o CImgSharpenShock.o CImgSmooth.o ofxsLut.o PluginRegistration.o
+PLUGINOBJECTS = CImgBilateral.o CImgBlur.o CImgDenoise.o CImgDilate.o CImgEqualize.o CImgErode.o CImgErodeSmooth.o CImgExpression.o CImgGuided.o CImgHistEQ.o CImgNoise.o CImgPlasma.o CImgRollingGuidance.o CImgSharpenInvDiff.o CImgSharpenShock.o CImgSmooth.o ofxsLut.o PluginRegistration.o
 PLUGINNAME = CImg
 
 # ls *png *.svg|sort |sed -e 's!$! \\!'
@@ -15,8 +15,6 @@ net.sf.cimg.CImgErode.png \
 net.sf.cimg.CImgErode.svg \
 net.sf.cimg.CImgErodeSmooth.png \
 net.sf.cimg.CImgErodeSmooth.svg \
-net.sf.cimg.CImgExpression.png \
-net.sf.cimg.CImgExpression.svg \
 net.sf.cimg.CImgGuided.png \
 net.sf.cimg.CImgGuided.svg \
 net.sf.cimg.CImgLaplacian.png \
