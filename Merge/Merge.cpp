@@ -221,6 +221,9 @@ private:
                         // all images are supposed to be black and transparent outside o
                         tmpA[c] = srcPixA ? ((float)srcPixA[c] / maxValue) : 0.f;
                         tmpB[c] = srcPixB ? ((float)srcPixB[c] / maxValue) : 0.f;
+                        // check for NaN
+                        assert(tmpA[c] == tmpA[c]);
+                        assert(tmpB[c] == tmpB[c]);
                     }
                     if (nComponents != 4) {
                         // set alpha (1 inside, 0 outside)
@@ -237,7 +240,12 @@ private:
                         tmpPix[c] = 0;
                     }
                 }
-                
+
+                // check for NaN
+                for (int c = 0; c < 4; ++c) {
+                    assert(tmpPix[c] == tmpPix[c]);
+                }
+
                 for (unsigned int i = 0; i < _optionalAImages.size(); ++i) {
                     srcPixA = (const PIX *)  (_optionalAImages[i] ? _optionalAImages[i]->getPixelAddress(x, y) : 0);
                     
@@ -246,6 +254,8 @@ private:
                         for (int c = 0; c < nComponents; ++c) {
                             // all images are supposed to be black and transparent outside o
                             tmpA[c] = (float)srcPixA[c] / maxValue;
+                            // check for NaN
+                            assert(tmpA[c] == tmpA[c]);
                         }
                         if (nComponents != 4) {
                             // set alpha (1 inside, 0 outside)
@@ -258,7 +268,11 @@ private:
 
                         // work in float: clamping is done when mixing
                         mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, tmpB, tmpPix);
-           
+
+                        // check for NaN
+                        for (int c = 0; c < 4; ++c) {
+                            assert(tmpPix[c] == tmpPix[c]);
+                        }
                     }
                 }
                 
