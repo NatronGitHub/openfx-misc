@@ -232,6 +232,10 @@ private:
                 // merge/over
                 for (int c = 0; c < dstNComponents; ++c) {
                     dstPix[c] = OFX::MergeImages2D::overFunctor<PIX,maxValue>(maskPix ? maskPix[c] : PIX(), srcVal[c], maskAlpha, srcAlpha);
+#                 ifdef DEBUG
+                    assert(srcVal[c] == srcVal[c]); // check for NaN
+                    assert(dstPix[c] == dstPix[c]); // check for NaN
+#                 endif
                 }
             }
         }
