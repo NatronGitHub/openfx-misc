@@ -797,12 +797,15 @@ MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
         identityClip = _srcClipB;
         return true;
     }
+    
 
+    OfxRectI maskRoD;
+    bool maskClipValid = false;
     if (_maskClip && _maskClip->isConnected()) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
-            OfxRectI maskRoD;
+            maskClipValid = true;
             OFX::MergeImages2D::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
             if (!OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
@@ -810,6 +813,45 @@ MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
                 return true;
             }
         }
+    }
+    
+    //The region of effect is only the union of the intersections between the A inputs and the mask
+    OfxRectI aUnions;
+    aUnions.x1 = aUnions.x2 = aUnions.y1 = aUnions.y2 = 0;
+    bool aUnionsSet = false;
+    
+    std::vector<OFX::Clip *> aClips = _optionalASrcClips;
+    aClips.push_back(_srcClipA);
+    for (unsigned int i = 0; i < aClips.size(); ++i) {
+        if (!aClips[i]->isConnected()) {
+            continue;
+        }
+        OfxRectD rodOptionalA = aClips[i]->getRegionOfDefinition(args.time);
+
+        OfxRectI rodOptionalAPixel;
+        OFX::MergeImages2D::toPixelEnclosing(rodOptionalA, args.renderScale, aClips[i]->getPixelAspectRatio(), &rodOptionalAPixel);
+        bool aRoDValid = true;
+        if (maskClipValid) {
+            if (!OFX::MergeImages2D::rectIntersection<OfxRectI>(rodOptionalAPixel, maskRoD, &rodOptionalAPixel)) {
+                aRoDValid = false;
+            }
+        }
+        if (aRoDValid) {
+            if (!aUnionsSet) {
+                aUnions = rodOptionalAPixel;
+                aUnionsSet = true;
+            } else {
+                aUnions.x1 = std::min(aUnions.x1, rodOptionalAPixel.x1);
+                aUnions.x2 = std::max(aUnions.x2, rodOptionalAPixel.x2);
+                aUnions.y1 = std::min(aUnions.y1, rodOptionalAPixel.y1);
+                aUnions.y2 = std::max(aUnions.y2, rodOptionalAPixel.y2);
+            }
+        }
+    }
+    
+    if (!aUnionsSet || !OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, aUnions, 0)) {
+        identityClip = _srcClipB;
+        return true;
     }
 
     return false;
