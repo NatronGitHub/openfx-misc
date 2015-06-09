@@ -104,7 +104,6 @@ class RotoProcessorBase : public OFX::ImageProcessor
 protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_roto;
-    PixelComponentEnum _srcComponents;
     bool _processR;
     bool _processG;
     bool _processB;
@@ -115,7 +114,6 @@ public:
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
     , _roto(0)
-    , _srcComponents(ePixelComponentNone)
     , _processR(false)
     , _processG(false)
     , _processB(false)
@@ -127,7 +125,6 @@ public:
     void setSrcImg(const OFX::Image *v)
     {
         _srcImg = v;
-        _srcComponents = v ? _srcImg->getPixelComponents() : ePixelComponentNone;
     }
 
     /** @brief set the optional mask image */
@@ -145,7 +142,7 @@ public:
 
 // The "masked", "filter" and "clamp" template parameters allow filter-specific optimization
 // by the compiler, using the same generic code for all filters.
-template <class PIX, int srcNComponents, int dstNComponents, int maxValue>
+template <class PIX, int nComponents, int maxValue>
 class RotoProcessor : public RotoProcessorBase
 {
 public:
@@ -157,24 +154,126 @@ public:
 private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        bool proc[dstNComponents];
-        if (dstNComponents == 1) {
-            // special case for alpha output
-            proc[0] = _processA;
-        } else {
-            for (int i = 0; i < dstNComponents; ++i) {
-                proc[i] = ((i == 0) ? _processR :
-                           ((i == 1) ? _processG :
-                            ((i == 2) ? _processB : _processA)));
+
+        int todo = ((_processR ? 0xf000 : 0) | (_processG ? 0x0f00 : 0) | (_processB ? 0x00f0 : 0) | (_processA ? 0x000f : 0));
+        if (nComponents == 1) {
+            switch (todo) {
+                case 0x0000:
+                case 0x00f0:
+                case 0x0f00:
+                case 0x0ff0:
+                case 0xf000:
+                case 0xf0f0:
+                case 0xff00:
+                case 0xfff0:
+                    return process<false,false,false,false>(procWindow);
+                case 0x000f:
+                case 0x00ff:
+                case 0x0f0f:
+                case 0x0fff:
+                case 0xf00f:
+                case 0xf0ff:
+                case 0xff0f:
+                case 0xffff:
+                    return process<false,false,false,true >(procWindow);
+            }
+        } else if (nComponents == 2) {
+            switch (todo) {
+                case 0x0000:
+                case 0x000f:
+                case 0x00f0:
+                case 0x00ff:
+                    return process<false,false,false,false>(procWindow);
+                case 0x0f00:
+                case 0x0f0f:
+                case 0x0ff0:
+                case 0x0fff:
+                    return process<false,true ,false,false>(procWindow);
+                case 0xf000:
+                case 0xf00f:
+                case 0xf0f0:
+                case 0xf0ff:
+                    return process<true ,false,false,false>(procWindow);
+                case 0xff00:
+                case 0xff0f:
+                case 0xfff0:
+                case 0xffff:
+                    return process<true ,true ,false,false>(procWindow);
+            }
+        } else if (nComponents == 3) {
+            switch (todo) {
+                case 0x0000:
+                case 0x000f:
+                    return process<false,false,false,false>(procWindow);
+                case 0x00f0:
+                case 0x00ff:
+                    return process<false,false,true ,false>(procWindow);
+                case 0x0f00:
+                case 0x0f0f:
+                    return process<false,true ,false,false>(procWindow);
+                case 0x0ff0:
+                case 0x0fff:
+                    return process<false,true ,true ,false>(procWindow);
+                case 0xf000:
+                case 0xf00f:
+                    return process<true ,false,false,false>(procWindow);
+                case 0xf0f0:
+                case 0xf0ff:
+                    return process<true ,false,true ,false>(procWindow);
+                case 0xff00:
+                case 0xff0f:
+                    return process<true ,true ,false,false>(procWindow);
+                case 0xfff0:
+                case 0xffff:
+                    return process<true ,true ,true ,false>(procWindow);
+            }
+        } else if (nComponents == 4) {
+            switch (todo) {
+                case 0x0000:
+                    return process<false,false,false,false>(procWindow);
+                case 0x000f:
+                    return process<false,false,false,true >(procWindow);
+                case 0x00f0:
+                    return process<false,false,true ,false>(procWindow);
+                case 0x00ff:
+                    return process<false,false,true, true >(procWindow);
+                case 0x0f00:
+                    return process<false,true ,false,false>(procWindow);
+                case 0x0f0f:
+                    return process<false,true ,false,true >(procWindow);
+                case 0x0ff0:
+                    return process<false,true ,true ,false>(procWindow);
+                case 0x0fff:
+                    return process<false,true ,true ,true >(procWindow);
+                case 0xf000:
+                    return process<true ,false,false,false>(procWindow);
+                case 0xf00f:
+                    return process<true ,false,false,true >(procWindow);
+                case 0xf0f0:
+                    return process<true ,false,true ,false>(procWindow);
+                case 0xf0ff:
+                    return process<true ,false,true, true >(procWindow);
+                case 0xff00:
+                    return process<true ,true ,false,false>(procWindow);
+                case 0xff0f:
+                    return process<true ,true ,false,true >(procWindow);
+                case 0xfff0:
+                    return process<true ,true ,true ,false>(procWindow);
+                case 0xffff:
+                    return process<true ,true ,true ,true >(procWindow);
             }
         }
+    }
 
+    template<bool processR, bool processG, bool processB, bool processA>
+    void process(const OfxRectI& procWindow)
+    {
         // roto and dst should have the same number of components
         assert(!_roto ||
-               (_roto->getPixelComponents() == ePixelComponentAlpha && dstNComponents == 1) ||
-               (_roto->getPixelComponents() == ePixelComponentXY && dstNComponents == 2) ||
-               (_roto->getPixelComponents() == ePixelComponentRGB && dstNComponents == 3) ||
-               (_roto->getPixelComponents() == ePixelComponentRGBA && dstNComponents == 4));
+               (_roto->getPixelComponents() == ePixelComponentAlpha && nComponents == 1) ||
+               (_roto->getPixelComponents() == ePixelComponentXY && nComponents == 2) ||
+               (_roto->getPixelComponents() == ePixelComponentRGB && nComponents == 3) ||
+               (_roto->getPixelComponents() == ePixelComponentRGBA && nComponents == 4));
         //assert(filter == _filter);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
             if (_effect.abort()) {
@@ -183,78 +282,45 @@ private:
             
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
       
-            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += dstNComponents) {
+            for (int x = procWindow.x1; x < procWindow.x2; ++x, dstPix += nComponents) {
 
                 const PIX *srcPix = (const PIX*)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 const PIX *maskPix = (const PIX*) (_roto ? _roto->getPixelAddress(x, y) : 0);
 
                 PIX srcAlpha = PIX();
                 if (srcPix) {
-                    if (srcNComponents == 1) {
+                    if (nComponents == 1) {
                         srcAlpha = srcPix[0];
-                    } else if (srcNComponents == 4) {
+                    } else if (nComponents == 4) {
                         srcAlpha = srcPix[3];
                     }
                 }
                 PIX maskAlpha;
-                if (dstNComponents == 1) {
+                if (nComponents == 1) {
                     maskAlpha = maskPix ? maskPix[0] : 0;
-                } else if (dstNComponents == 4) {
-                    maskAlpha = maskPix ? maskPix[dstNComponents-1] : 0;
+                } else if (nComponents == 4) {
+                    maskAlpha = maskPix ? maskPix[nComponents-1] : 0;
                 } else {
                     maskAlpha = 1;
                 }
                 
 
-                PIX srcVal[dstNComponents];
+                PIX srcVal[nComponents];
                 // fill srcVal (hopefully the compiler will optimize this)
                 if (!srcPix) {
-                    for (int c = 0; c < dstNComponents; ++c) {
+                    for (int c = 0; c < nComponents; ++c) {
                         srcVal[c] = 0;
                     }
-                } else if (dstNComponents == 1) {
+                } else if (nComponents == 1) {
                     srcVal[0] = srcAlpha;
-                } else if (dstNComponents == 2) {
-                    if (srcNComponents == 1) {
-                        for (int c = 0; c < dstNComponents; ++c) {
-                            srcVal[c] = 0;
-                        }
-                    } else {
-                        for (int c = 0; c < dstNComponents; ++c) {
-                            srcVal[c] = srcPix[c];
-                        }
-                    }
-                } else if (dstNComponents == 3) {
-                    if (srcNComponents == 1) {
-                        for (int c = 0; c < dstNComponents; ++c) {
-                            srcVal[c] = 0;
-                        }
-                    } else {
-                        assert(srcNComponents == 3 || srcNComponents == 4);
-                        for (int c = 0; c < dstNComponents; ++c) {
-                            srcVal[c] = srcPix[c];
-                        }
-                    }
-                } else if (dstNComponents == 4) {
-                    if (srcNComponents == 3) {
-                        for (int c = 0; c < dstNComponents-1; ++c) {
-                            srcVal[c] = srcPix[c];
-                        }
-                        srcVal[dstNComponents-1] = PIX();
-                    } else if (srcNComponents == 4) {
-                        for (int c = 0; c < dstNComponents; ++c) {
-                            srcVal[c] = srcPix[c];
-                        }
-                    } else {
-                        for (int c = 0; c < dstNComponents-1; ++c) {
-                            srcVal[c] = 0;
-                        }
-                        srcVal[dstNComponents-1] = srcAlpha;
+                } else {
+                    for (int c = 0; c < nComponents; ++c) {
+                        srcVal[c] = srcPix[c];
                     }
                 }
 
                 // merge/over
-                for (int c = 0; c < dstNComponents; ++c) {
+                for (int c = 0; c < nComponents; ++c) {
                     dstPix[c] = OFX::MergeImages2D::overFunctor<PIX,maxValue>(maskPix ? maskPix[c] : PIX(), srcVal[c], maskAlpha, srcAlpha);
 #                 ifdef DEBUG
                     assert(srcVal[c] == srcVal[c]); // check for NaN
@@ -307,11 +373,8 @@ private:
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
-    template <int srcNComponents, int dstNComponents>
+    template <int nComponents>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
-
-    template <int dstNComponents>
-    void renderInternalNComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
     void setupAndProcess(RotoProcessorBase &, const OFX::RenderArguments &args);
@@ -453,51 +516,28 @@ RotoPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, 
 }
 
 // the internal render function
-template <int srcNComponents, int dstNComponents>
+template <int nComponents>
 void
 RotoPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
         case OFX::eBitDepthUByte: {
-            RotoProcessor<unsigned char, srcNComponents, dstNComponents, 255> fred(*this);
+            RotoProcessor<unsigned char, nComponents, 255> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         case OFX::eBitDepthUShort: {
-            RotoProcessor<unsigned short, srcNComponents, dstNComponents, 65535> fred(*this);
+            RotoProcessor<unsigned short, nComponents, 65535> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         case OFX::eBitDepthFloat: {
-            RotoProcessor<float, srcNComponents, dstNComponents, 1> fred(*this);
+            RotoProcessor<float, nComponents, 1> fred(*this);
             setupAndProcess(fred, args);
             break;
         }
         default:
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-    }
-}
-
-// the overridden render function
-template <int dstNComponents>
-void
-RotoPlugin::renderInternalNComponents(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
-{
-
-    // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       srcBitDepth    = _srcClip->getPixelDepth();
-    OFX::PixelComponentEnum srcComponents  = _srcClip->getPixelComponents();
-
-    assert(srcComponents == OFX::ePixelComponentRGBA || srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentAlpha);
-    assert(srcBitDepth == dstBitDepth);
-
-    if (srcComponents == OFX::ePixelComponentRGBA) {
-        renderInternal<4,dstNComponents>(args, dstBitDepth);
-    } else if (srcComponents == OFX::ePixelComponentRGB) {
-        renderInternal<3,dstNComponents>(args, dstBitDepth);
-    } else {
-        assert(srcComponents == OFX::ePixelComponentAlpha);
-        renderInternal<1,dstNComponents>(args, dstBitDepth);
     }
 }
 
@@ -517,14 +557,14 @@ RotoPlugin::render(const OFX::RenderArguments &args)
     assert(kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentXY);
     if (dstComponents == OFX::ePixelComponentRGBA) {
-        renderInternalNComponents<4>(args, dstBitDepth);
+        renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
-        renderInternalNComponents<3>(args, dstBitDepth);
+        renderInternal<3>(args, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentXY) {
-        renderInternalNComponents<2>(args, dstBitDepth);
+        renderInternal<2>(args, dstBitDepth);
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        renderInternalNComponents<1>(args, dstBitDepth);
+        renderInternal<1>(args, dstBitDepth);
     }
 }
 
