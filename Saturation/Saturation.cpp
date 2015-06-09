@@ -81,12 +81,16 @@
 #include "ofxsMaskMix.h"
 #include "ofxsMerging.h"
 #include "ofxsMacros.h"
+#include "ofxNatron.h"
 
 #define kPluginName "SaturationOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription "Modify the color saturation of an image."
 #define kPluginIdentifier "net.sf.openfx.SaturationPlugin"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+// History:
+// version 1.0: initial version
+// version 2.0: use kNatronOfxParamProcess* parameters
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
@@ -126,22 +130,6 @@ enum LuminanceMathEnum {
 #define kParamClampWhite "clampWhite"
 #define kParamClampWhiteLabel "Clamp White"
 #define kParamClampWhiteHint "All colors above 1 on output are set to 1."
-
-#define kParamProcessR      "r"
-#define kParamProcessRLabel "R"
-#define kParamProcessRHint  "Process red component"
-#define kParamProcessG      "g"
-#define kParamProcessGLabel "G"
-#define kParamProcessGHint  "Process green component"
-#define kParamProcessB      "b"
-#define kParamProcessBLabel "B"
-#define kParamProcessBHint  "Process blue component"
-#define kParamProcessA      "a"
-#define kParamProcessALabel "A"
-#define kParamProcessAHint  "Process alpha component"
-
-//RGBA checkbox are host side if true
-static bool gHostHasNativeRGBACheckbox;
 
 using namespace OFX;
 
@@ -460,14 +448,11 @@ public:
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
         
-        if (!gHostHasNativeRGBACheckbox) {
-            _processR = fetchBooleanParam(kParamProcessR);
-            _processG = fetchBooleanParam(kParamProcessG);
-            _processB = fetchBooleanParam(kParamProcessB);
-            _processA = fetchBooleanParam(kParamProcessA);
-            assert(_processR && _processG && _processB && _processA);
-        }
-        
+        _processR = fetchBooleanParam(kNatronOfxParamProcessR);
+        _processG = fetchBooleanParam(kNatronOfxParamProcessG);
+        _processB = fetchBooleanParam(kNatronOfxParamProcessB);
+        _processA = fetchBooleanParam(kNatronOfxParamProcessA);
+        assert(_processR && _processG && _processB && _processA);
     }
     
 private:
@@ -581,15 +566,11 @@ SaturationPlugin::setupAndProcess(SaturationProcessorBase &processor, const OFX:
     _mix->getValueAtTime(args.time, mix);
     
     bool processR, processG, processB, processA;
-    if (!gHostHasNativeRGBACheckbox) {
-        _processR->getValue(processR);
-        _processG->getValue(processG);
-        _processB->getValue(processB);
-        _processA->getValue(processA);
-    } else {
-        processR = processG = processB = processA = true;
-    }
-    
+    _processR->getValue(processR);
+    _processG->getValue(processG);
+    _processB->getValue(processB);
+    _processA->getValue(processA);
+
     processor.setValues(saturation, luminanceMath,
                         clampBlack, clampWhite, premult, premultChannel, mix,
                         processR, processG, processB, processA);
@@ -663,7 +644,7 @@ SaturationPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
         return true;
     }
     
-    if (!gHostHasNativeRGBACheckbox) {
+    {
         bool processR;
         bool processG;
         bool processB;
@@ -755,14 +736,7 @@ SaturationPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 #ifdef OFX_EXTENSIONS_NATRON
-    if (OFX::getImageEffectHostDescription()->supportsChannelSelector) {
-        gHostHasNativeRGBACheckbox = true;
-        desc.setChannelSelector(ePixelComponentRGB);
-    } else {
-        gHostHasNativeRGBACheckbox = false;
-    }
-#else
-    gHostHasNativeRGBACheckbox = false;
+    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
 #endif
 }
 
@@ -797,45 +771,43 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    if (!gHostHasNativeRGBACheckbox) {
-        {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-            param->setLabel(kParamProcessRLabel);
-            param->setHint(kParamProcessRHint);
-            param->setDefault(true);
-            param->setLayoutHint(eLayoutHintNoNewLine);
-            if (page) {
-                page->addChild(*param);
-            }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
+        param->setLabel(kNatronOfxParamProcessRLabel);
+        param->setHint(kNatronOfxParamProcessRHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
         }
-        {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-            param->setLabel(kParamProcessGLabel);
-            param->setHint(kParamProcessGHint);
-            param->setDefault(true);
-            param->setLayoutHint(eLayoutHintNoNewLine);
-            if (page) {
-                page->addChild(*param);
-            }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessG);
+        param->setLabel(kNatronOfxParamProcessGLabel);
+        param->setHint(kNatronOfxParamProcessGHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
         }
-        {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
-            param->setLabel(kParamProcessBLabel);
-            param->setHint(kParamProcessBHint);
-            param->setDefault(true);
-            param->setLayoutHint(eLayoutHintNoNewLine);
-            if (page) {
-                page->addChild(*param);
-            }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessB);
+        param->setLabel(kNatronOfxParamProcessBLabel);
+        param->setHint(kNatronOfxParamProcessBHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
         }
-        {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
-            param->setLabel(kParamProcessALabel);
-            param->setHint(kParamProcessAHint);
-            param->setDefault(false);
-            if (page) {
-                page->addChild(*param);
-            }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessA);
+        param->setLabel(kNatronOfxParamProcessALabel);
+        param->setHint(kNatronOfxParamProcessAHint);
+        param->setDefault(false);
+        if (page) {
+            page->addChild(*param);
         }
     }
 

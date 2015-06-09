@@ -141,7 +141,10 @@
  - implement other distortion models (PFBarrel, OpenCV)
 */
 
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+// History:
+// version 1.0: initial version
+// version 2.0: use kNatronOfxParamProcess* parameters
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
@@ -156,19 +159,6 @@ enum DistortionPluginEnum {
     eDistortionPluginIDistort,
     eDistortionPluginLensDistortion,
 };
-
-#define kParamProcessR      "r"
-#define kParamProcessRLabel "R"
-#define kParamProcessRHint  "Process red component"
-#define kParamProcessG      "g"
-#define kParamProcessGLabel "G"
-#define kParamProcessGHint  "Process green component"
-#define kParamProcessB      "b"
-#define kParamProcessBLabel "B"
-#define kParamProcessBHint  "Process blue component"
-#define kParamProcessA      "a"
-#define kParamProcessALabel "A"
-#define kParamProcessAHint  "Process alpha component"
 
 #define kParamChannelU "channelU"
 #define kParamChannelULabel "U Channel"
@@ -290,10 +280,6 @@ enum DistortionModelEnum {
 #define kParamAsymmetric "asymmetricDistortion"
 #define kParamAsymmetricLabel "Asymmetric"
 #define kParamAsymmetricHint "Asymmetric distortion (only for anamorphic lens)."
-
-//RGBA checkbox are host side if true
-static bool gHostHasNativeRGBACheckbox;
-
 
 using namespace OFX;
 
@@ -813,13 +799,11 @@ public:
         }
         _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
-        if (!gHostHasNativeRGBACheckbox) {
-            _processR = fetchBooleanParam(kParamProcessR);
-            _processG = fetchBooleanParam(kParamProcessG);
-            _processB = fetchBooleanParam(kParamProcessB);
-            _processA = fetchBooleanParam(kParamProcessA);
-            assert(_processR && _processG && _processB && _processA);
-        }
+        _processR = fetchBooleanParam(kNatronOfxParamProcessR);
+        _processG = fetchBooleanParam(kNatronOfxParamProcessG);
+        _processB = fetchBooleanParam(kNatronOfxParamProcessB);
+        _processA = fetchBooleanParam(kNatronOfxParamProcessA);
+        assert(_processR && _processG && _processB && _processA);
         if (plugin == eDistortionPluginIDistort || plugin == eDistortionPluginSTMap) {
             _uChannel = fetchChoiceParam(kParamChannelU);
             _vChannel = fetchChoiceParam(kParamChannelV);
@@ -1024,14 +1008,10 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
     processor.setRenderWindow(args.renderWindow);
     
     bool processR, processG, processB, processA;
-    if (!gHostHasNativeRGBACheckbox) {
-        _processR->getValueAtTime(time, processR);
-        _processG->getValueAtTime(time, processG);
-        _processB->getValueAtTime(time, processB);
-        _processA->getValueAtTime(time, processA);
-    } else {
-        processR = processG = processB = processA = true;
-    }
+    _processR->getValueAtTime(time, processR);
+    _processG->getValueAtTime(time, processG);
+    _processB->getValueAtTime(time, processB);
+    _processA->getValueAtTime(time, processA);
     InputChannelEnum uChannel = eInputChannelR;
     InputChannelEnum vChannel = eInputChannelG;
     double uScale = 1., vScale = 1.;
@@ -1296,7 +1276,7 @@ DistortionPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
         return true;
     }
     
-    if (!gHostHasNativeRGBACheckbox) {
+    {
         bool processR, processG, processB, processA;
         _processR->getValueAtTime(time, processR);
         _processG->getValueAtTime(time, processG);
@@ -1430,14 +1410,7 @@ void DistortionPluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
 #endif
     
 #ifdef OFX_EXTENSIONS_NATRON
-    if (OFX::getImageEffectHostDescription()->supportsChannelSelector) {
-        gHostHasNativeRGBACheckbox = true;
-        desc.setChannelSelector(plugin == eDistortionPluginLensDistortion ? ePixelComponentNone : ePixelComponentRGBA);
-    } else {
-        gHostHasNativeRGBACheckbox = false;
-    }
-#else
-    gHostHasNativeRGBACheckbox = false;
+    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
 #endif
 }
 
@@ -1525,45 +1498,43 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    if (!gHostHasNativeRGBACheckbox) {
-        {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-            param->setLabel(kParamProcessRLabel);
-            param->setHint(kParamProcessRHint);
-            param->setDefault(true);
-            param->setLayoutHint(eLayoutHintNoNewLine);
-            if (page) {
-                page->addChild(*param);
-            }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
+        param->setLabel(kNatronOfxParamProcessRLabel);
+        param->setHint(kNatronOfxParamProcessRHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
         }
-        {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-            param->setLabel(kParamProcessGLabel);
-            param->setHint(kParamProcessGHint);
-            param->setDefault(true);
-            param->setLayoutHint(eLayoutHintNoNewLine);
-            if (page) {
-                page->addChild(*param);
-            }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessG);
+        param->setLabel(kNatronOfxParamProcessGLabel);
+        param->setHint(kNatronOfxParamProcessGHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
         }
-        {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
-            param->setLabel(kParamProcessBLabel);
-            param->setHint(kParamProcessBHint);
-            param->setDefault(true);
-            param->setLayoutHint(eLayoutHintNoNewLine);
-            if (page) {
-                page->addChild(*param);
-            }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessB);
+        param->setLabel(kNatronOfxParamProcessBLabel);
+        param->setHint(kNatronOfxParamProcessBHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
         }
-        {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
-            param->setLabel(kParamProcessALabel);
-            param->setHint(kParamProcessAHint);
-            param->setDefault(true);
-            if (page) {
-                page->addChild(*param);
-            }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessA);
+        param->setLabel(kNatronOfxParamProcessALabel);
+        param->setHint(kNatronOfxParamProcessAHint);
+        param->setDefault(true);
+        if (page) {
+            page->addChild(*param);
         }
     }
 

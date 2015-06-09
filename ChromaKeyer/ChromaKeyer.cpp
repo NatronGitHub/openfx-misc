@@ -848,7 +848,7 @@ void ChromaKeyerPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(ePixelComponentRGBA);
+    desc.setChannelSelector(ePixelComponentNone);
 #endif
 }
 

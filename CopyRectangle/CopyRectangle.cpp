@@ -84,7 +84,10 @@
 #define kPluginGrouping "Merge"
 #define kPluginDescription "Copies a rectangle from the input A to the input B in output. It can be used to limit an effect to a rectangle of the original image by plugging the original image into the input B."
 #define kPluginIdentifier "net.sf.openfx.CopyRectanglePlugin"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+// History:
+// version 1.0: initial version
+// version 2.0: use kNatronOfxParamProcess* parameters
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
@@ -99,17 +102,6 @@
 #define kParamSoftness "softness"
 #define kParamSoftnessLabel "Softness"
 #define kParamSoftnessHint "Size of the fade around edges of the rectangle to apply"
-#define kParamRed "red"
-#define kParamRedLabel "Red"
-#define kParamGreen "green"
-#define kParamGreenLabel "Green"
-#define kParamBlue "blue"
-#define kParamBlueLabel "Blue"
-#define kParamAlpha "alpha"
-#define kParamAlphaLabel "Alpha"
-
-//RGBA checkbox are host side if true
-static bool gHostHasNativeRGBACheckbox;
 
 using namespace OFX;
 
@@ -289,13 +281,11 @@ public:
         _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
         _size = fetchDouble2DParam(kParamRectangleInteractSize);
         _softness = fetchDoubleParam(kParamSoftness);
-        if (!gHostHasNativeRGBACheckbox) {
-            _processR = fetchBooleanParam(kParamRed);
-            _processG = fetchBooleanParam(kParamGreen);
-            _processB = fetchBooleanParam(kParamBlue);
-            _processA = fetchBooleanParam(kParamAlpha);
-            assert(_processR && _processG && _processB && _processA);
-        }
+        _processR = fetchBooleanParam(kNatronOfxParamProcessR);
+        _processG = fetchBooleanParam(kNatronOfxParamProcessG);
+        _processB = fetchBooleanParam(kNatronOfxParamProcessB);
+        _processA = fetchBooleanParam(kNatronOfxParamProcessA);
+        assert(_processR && _processG && _processB && _processA);
         assert(_btmLeft && _size && _softness);
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
@@ -449,15 +439,11 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     bool processG;
     bool processB;
     bool processA;
-    if (!gHostHasNativeRGBACheckbox) {
-        _processR->getValueAtTime(args.time, processR);
-        _processG->getValueAtTime(args.time, processG);
-        _processB->getValueAtTime(args.time, processB);
-        _processA->getValueAtTime(args.time, processA);
-    } else {
-        processR = processG = processB = processA = true;
-    }
-    
+    _processR->getValueAtTime(args.time, processR);
+    _processG->getValueAtTime(args.time, processG);
+    _processB->getValueAtTime(args.time, processB);
+    _processA->getValueAtTime(args.time, processA);
+
     double mix;
     _mix->getValueAtTime(args.time, mix);
     processor.setValues(rectanglePixel, softness, processR, processG, processB, processA, mix);
@@ -623,14 +609,7 @@ void CopyRectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setOverlayInteractDescriptor(new RectangleOverlayDescriptor);
     
 #ifdef OFX_EXTENSIONS_NATRON
-    if (OFX::getImageEffectHostDescription()->supportsChannelSelector) {
-        gHostHasNativeRGBACheckbox = true;
-        desc.setChannelSelector(ePixelComponentRGBA);
-    } else {
-        gHostHasNativeRGBACheckbox = false;
-    }
-#else
-    gHostHasNativeRGBACheckbox = false;
+    desc.setChannelSelector(ePixelComponentNone); // we have our own channel selector
 #endif
 }
 
@@ -737,14 +716,12 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
             page->addChild(*param);
         }
     }
-    
-    if (!gHostHasNativeRGBACheckbox) {
-        defineComponentParam(desc, page, kParamRed, kParamRedLabel,false);
-        defineComponentParam(desc, page, kParamGreen, kParamGreenLabel,false);
-        defineComponentParam(desc, page, kParamBlue, kParamBlueLabel,false);
-        defineComponentParam(desc, page, kParamAlpha, kParamAlphaLabel,true);
-    }
-    
+
+    defineComponentParam(desc, page, kNatronOfxParamProcessR, kNatronOfxParamProcessRLabel,false);
+    defineComponentParam(desc, page, kNatronOfxParamProcessG, kNatronOfxParamProcessGLabel,false);
+    defineComponentParam(desc, page, kNatronOfxParamProcessB, kNatronOfxParamProcessBLabel,false);
+    defineComponentParam(desc, page, kNatronOfxParamProcessA, kNatronOfxParamProcessALabel,true);
+
     // softness
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSoftness);

@@ -105,6 +105,10 @@ protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_roto;
     PixelComponentEnum _srcComponents;
+    bool _processR;
+    bool _processG;
+    bool _processB;
+    bool _processA;
 
 public:
     RotoProcessorBase(OFX::ImageEffect &instance)
@@ -112,6 +116,10 @@ public:
     , _srcImg(0)
     , _roto(0)
     , _srcComponents(ePixelComponentNone)
+    , _processR(false)
+    , _processG(false)
+    , _processB(false)
+    , _processA(false)
     {
     }
 
@@ -125,6 +133,13 @@ public:
     /** @brief set the optional mask image */
     void setRotoImg(const OFX::Image *v) {_roto = v;}
 
+    void setValues(bool processR, bool processG, bool processB, bool processA)
+    {
+        _processR = processR;
+        _processG = processG;
+        _processB = processB;
+        _processA = processA;
+    }
 };
 
 
@@ -142,6 +157,17 @@ public:
 private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
+        bool proc[dstNComponents];
+        if (dstNComponents == 1) {
+            // special case for alpha output
+            proc[0] = _processA;
+        } else {
+            for (int i = 0; i < dstNComponents; ++i) {
+                proc[i] = ((i == 0) ? _processR :
+                           ((i == 1) ? _processG :
+                            ((i == 2) ? _processB : _processA)));
+            }
+        }
 
         // roto and dst should have the same number of components
         assert(!_roto ||
@@ -166,8 +192,6 @@ private:
                 if (srcPix) {
                     if (srcNComponents == 1) {
                         srcAlpha = srcPix[0];
-                    } else if (srcNComponents == 3 || srcNComponents == 2) {
-                        srcAlpha = 0;
                     } else if (srcNComponents == 4) {
                         srcAlpha = srcPix[3];
                     }
@@ -265,6 +289,11 @@ public:
         // name of mask clip depends on the context
         _rotoClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Roto");
         assert(_rotoClip && (_rotoClip->getPixelComponents() == ePixelComponentAlpha || _rotoClip->getPixelComponents() == ePixelComponentRGBA));
+        _processR = fetchBooleanParam(kNatronOfxParamProcessR);
+        _processG = fetchBooleanParam(kNatronOfxParamProcessG);
+        _processB = fetchBooleanParam(kNatronOfxParamProcessB);
+        _processA = fetchBooleanParam(kNatronOfxParamProcessA);
+        assert(_processR && _processG && _processB && _processA);
     }
     
 private:
@@ -292,6 +321,10 @@ private:
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
     OFX::Clip *_rotoClip;
+    OFX::BooleanParam* _processR;
+    OFX::BooleanParam* _processG;
+    OFX::BooleanParam* _processB;
+    OFX::BooleanParam* _processA;
 };
 
 
@@ -363,6 +396,12 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
         processor.setRotoImg(mask.get());
     }
 
+    bool processR, processG, processB, processA;
+    _processR->getValue(processR);
+    _processG->getValue(processG);
+    _processB->getValue(processB);
+    _processA->getValue(processA);
+    processor.setValues(processR, processG, processB, processA);
 
     // set the images
     processor.setDstImg(dst.get());
@@ -493,6 +532,28 @@ RotoPlugin::render(const OFX::RenderArguments &args)
 bool
 RotoPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
+    OFX::PixelComponentEnum srcComponents  = _srcClip->getPixelComponents();
+    OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+    if (srcComponents != dstComponents) {
+        return false;
+    }
+
+    bool processA;
+    _processA->getValue(processA);
+
+    if (srcComponents == ePixelComponentAlpha && !processA) {
+        identityClip = _srcClip;
+        return true;
+    }
+    bool processR, processG, processB;
+    _processR->getValue(processR);
+    _processG->getValue(processG);
+    _processB->getValue(processB);
+    if (srcComponents == ePixelComponentRGBA && !processR && !processG && !processB && !processA) {
+        identityClip = _srcClip;
+        return true;
+    }
+
     if (_rotoClip && _rotoClip->isConnected()) {
         OfxRectI rotoRoD;
         OFX::MergeImages2D::toPixelEnclosing(_rotoClip->getRegionOfDefinition(args.time), args.renderScale, _rotoClip->getPixelAspectRatio(), &rotoRoD);
@@ -510,7 +571,9 @@ void
 RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     PreMultiplicationEnum srcPremult = _srcClip->getPreMultiplication();
-    if (srcPremult == eImageOpaque) {
+    bool processA;
+    _processA->getValue(processA);
+    if (srcPremult == eImageOpaque && processA) {
         // we're changing alpha, the image becomes UnPremultiplied
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }
@@ -575,6 +638,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     //srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentXY);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -589,8 +653,8 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
         maskClip->addSupportedComponent(ePixelComponentAlpha);
         if (context == eContextGeneral) {
             maskClip->addSupportedComponent(ePixelComponentRGBA);
-            maskClip->addSupportedComponent(ePixelComponentXY);
             //maskClip->addSupportedComponent(ePixelComponentRGB);
+            maskClip->addSupportedComponent(ePixelComponentXY);
             maskClip->setOptional(false);
         }
         maskClip->setSupportsTiles(kSupportsTiles);
@@ -605,8 +669,48 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
+    // make some pages and to things in
+    PageParamDescriptor *page = desc.definePageParam("Controls");
 
-
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
+        param->setLabel(kNatronOfxParamProcessRLabel);
+        param->setHint(kNatronOfxParamProcessRHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessG);
+        param->setLabel(kNatronOfxParamProcessGLabel);
+        param->setHint(kNatronOfxParamProcessGHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessB);
+        param->setLabel(kNatronOfxParamProcessBLabel);
+        param->setHint(kNatronOfxParamProcessBHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessA);
+        param->setLabel(kNatronOfxParamProcessALabel);
+        param->setHint(kNatronOfxParamProcessAHint);
+        param->setDefault(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 }
 
 void getRotoPluginID(OFX::PluginFactoryArray &ids)

@@ -90,7 +90,10 @@
 #define kPluginGrouping "Color"
 #define kPluginDescription "Clamp the values of the selected channels"
 #define kPluginIdentifier "net.sf.openfx.Clamp"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+// History:
+// version 1.0: initial version
+// version 2.0: use kNatronOfxParamProcess* parameters
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
@@ -100,18 +103,10 @@
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
-#define kParamProcessR      "r"
-#define kParamProcessRLabel "R"
-#define kParamProcessRHint  "Clamp red component"
-#define kParamProcessG      "g"
-#define kParamProcessGLabel "G"
-#define kParamProcessGHint  "Clamp green component"
-#define kParamProcessB      "b"
-#define kParamProcessBLabel "B"
-#define kParamProcessBHint  "Clamp blue component"
-#define kParamProcessA      "a"
-#define kParamProcessALabel "A"
-#define kParamProcessAHint  "Clamp alpha component"
+#define kParamProcessRHint  "Clamp red component."
+#define kParamProcessGHint  "Clamp green component."
+#define kParamProcessBHint  "Clamp blue component."
+#define kParamProcessAHint  "Clamp alpha component."
 
 #define kParamMinimum "minimum"
 #define kParamMinimumLabel "Minimum"
@@ -144,9 +139,6 @@
 #define kParamMaxClampToEnable "maxClampToEnable"
 #define kParamMaxClampToEnableLabel "Enable MaxClampTo"
 #define kParamMaxClampToEnableHint "When enabled, all values above maximum are set to the maxClampTo value.\nWhen disabled, all values above maximum are clamped to the maximum value."
-
-//RGBA checkbox are host side if true
-static bool gHostHasNativeRGBACheckbox;
 
 using namespace OFX;
 
@@ -473,13 +465,11 @@ class ClampPlugin : public OFX::ImageEffect
         assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA || _srcClip->getPixelComponents() == ePixelComponentAlpha));
         _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
-        if (!gHostHasNativeRGBACheckbox) {
-            _processR = fetchBooleanParam(kParamProcessR);
-            _processG = fetchBooleanParam(kParamProcessG);
-            _processB = fetchBooleanParam(kParamProcessB);
-            _processA = fetchBooleanParam(kParamProcessA);
-            assert(_processR && _processG && _processB && _processA);
-        }
+        _processR = fetchBooleanParam(kNatronOfxParamProcessR);
+        _processG = fetchBooleanParam(kNatronOfxParamProcessG);
+        _processB = fetchBooleanParam(kNatronOfxParamProcessB);
+        _processA = fetchBooleanParam(kNatronOfxParamProcessA);
+        assert(_processR && _processG && _processB && _processA);
         _minimum = fetchRGBAParam(kParamMinimum);
         _minimumEnable = fetchBooleanParam(kParamMinimumEnable);
         assert(_minimum && _minimumEnable);
@@ -613,14 +603,10 @@ ClampPlugin::setupAndProcess(ClampBase &processor, const OFX::RenderArguments &a
     }
     
     bool processR, processG, processB, processA;
-    if (!gHostHasNativeRGBACheckbox) {
-        _processR->getValueAtTime(args.time, processR);
-        _processG->getValueAtTime(args.time, processG);
-        _processB->getValueAtTime(args.time, processB);
-        _processA->getValueAtTime(args.time, processA);
-    } else {
-        processR = processG = processB = processA = true;
-    }
+    _processR->getValueAtTime(args.time, processR);
+    _processG->getValueAtTime(args.time, processG);
+    _processB->getValueAtTime(args.time, processB);
+    _processA->getValueAtTime(args.time, processA);
     RGBAValues minimum(0.);
     _minimum->getValueAtTime(args.time, minimum.r, minimum.g, minimum.b, minimum.a);
     bool minimumEnable;
@@ -743,25 +729,22 @@ ClampPlugin::render(const OFX::RenderArguments &args)
 bool
 ClampPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
-    
-    bool processR;
-    bool processG;
-    bool processB;
-    bool processA;
-    double mix;
-    if (!gHostHasNativeRGBACheckbox) {
+    {
+        bool processR;
+        bool processG;
+        bool processB;
+        bool processA;
+        double mix;
         _processR->getValueAtTime(args.time, processR);
         _processG->getValueAtTime(args.time, processG);
         _processB->getValueAtTime(args.time, processB);
         _processA->getValueAtTime(args.time, processA);
-    } else {
-        processR = processG = processB = processA = true;
-    }
-    _mix->getValueAtTime(args.time, mix);
-    
-    if (mix == 0. || (!processR && !processG && !processB && !processA)) {
-        identityClip = _srcClip;
-        return true;
+        _mix->getValueAtTime(args.time, mix);
+
+        if (mix == 0. || (!processR && !processG && !processB && !processA)) {
+            identityClip = _srcClip;
+            return true;
+        }
     }
 
     bool minimumEnable, maximumEnable;
@@ -805,29 +788,27 @@ ClampPlugin::changedClip(const InstanceChangedArgs &args, const std::string &cli
                 _premult->setValue(false);
                 break;
         }
-        if (!gHostHasNativeRGBACheckbox) {
-            switch (_srcClip->getPixelComponents()) {
-                case OFX::ePixelComponentAlpha:
-                    _processR->setValue(false);
-                    _processG->setValue(false);
-                    _processB->setValue(false);
-                    _processA->setValue(true);
-                    break;
-                case OFX::ePixelComponentRGB:
-                    _processR->setValue(true);
-                    _processG->setValue(true);
-                    _processB->setValue(true);
-                    _processA->setValue(false);
-                    break;
-                case OFX::ePixelComponentRGBA:
-                    _processR->setValue(true);
-                    _processG->setValue(true);
-                    _processB->setValue(true);
-                    _processA->setValue(true);
-                    break;
-                default:
-                    break;
-            }
+        switch (_srcClip->getPixelComponents()) {
+            case OFX::ePixelComponentAlpha:
+                _processR->setValue(false);
+                _processG->setValue(false);
+                _processB->setValue(false);
+                _processA->setValue(true);
+                break;
+            case OFX::ePixelComponentRGB:
+                _processR->setValue(true);
+                _processG->setValue(true);
+                _processB->setValue(true);
+                _processA->setValue(false);
+                break;
+            case OFX::ePixelComponentRGBA:
+                _processR->setValue(true);
+                _processG->setValue(true);
+                _processB->setValue(true);
+                _processA->setValue(true);
+                break;
+            default:
+                break;
         }
     }
 }
@@ -864,14 +845,7 @@ void ClampPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
     
 #ifdef OFX_EXTENSIONS_NATRON
-    if (OFX::getImageEffectHostDescription()->supportsChannelSelector) {
-        gHostHasNativeRGBACheckbox = true;
-        desc.setChannelSelector(ePixelComponentRGBA);
-    } else {
-        gHostHasNativeRGBACheckbox = false;
-    }
-#else
-    gHostHasNativeRGBACheckbox = false;
+    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
 #endif
 
 }
@@ -909,45 +883,43 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    if (!gHostHasNativeRGBACheckbox) {
-        {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-            param->setLabel(kParamProcessRLabel);
-            param->setHint(kParamProcessRHint);
-            param->setDefault(true);
-            param->setLayoutHint(eLayoutHintNoNewLine);
-            if (page) {
-                page->addChild(*param);
-            }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
+        param->setLabel(kNatronOfxParamProcessRLabel);
+        param->setHint(kParamProcessRHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
         }
-        {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-            param->setLabel(kParamProcessGLabel);
-            param->setHint(kParamProcessGHint);
-            param->setDefault(true);
-            param->setLayoutHint(eLayoutHintNoNewLine);
-            if (page) {
-                page->addChild(*param);
-            }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessG);
+        param->setLabel(kNatronOfxParamProcessGLabel);
+        param->setHint(kParamProcessGHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
         }
-        {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessB);
-            param->setLabel(kParamProcessBLabel);
-            param->setHint(kParamProcessBHint);
-            param->setDefault(true);
-            param->setLayoutHint(eLayoutHintNoNewLine);
-            if (page) {
-                page->addChild(*param);
-            }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessB);
+        param->setLabel(kNatronOfxParamProcessBLabel);
+        param->setHint(kParamProcessBHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
         }
-        {
-            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessA);
-            param->setLabel(kParamProcessALabel);
-            param->setHint(kParamProcessAHint);
-            param->setDefault(true);
-            if (page) {
-                page->addChild(*param);
-            }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessA);
+        param->setLabel(kNatronOfxParamProcessALabel);
+        param->setHint(kParamProcessAHint);
+        param->setDefault(true);
+        if (page) {
+            page->addChild(*param);
         }
     }
     {

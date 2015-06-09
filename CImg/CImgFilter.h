@@ -15,6 +15,7 @@
 #include "ofxsPixelProcessor.h"
 #include "ofxsCopier.h"
 #include "ofxsMerging.h"
+#include "ofxNatron.h"
 
 #include <cassert>
 #include <memory>
@@ -33,19 +34,6 @@
 CLANG_DIAG_OFF(shorten-64-to-32)
 #include "CImg.h"
 CLANG_DIAG_ON(shorten-64-to-32)
-
-#define kParamProcessR      "r"
-#define kParamProcessRLabel "R"
-#define kParamProcessRHint  "Process red component"
-#define kParamProcessG      "g"
-#define kParamProcessGLabel "G"
-#define kParamProcessGHint  "Process green component"
-#define kParamProcessB      "b"
-#define kParamProcessBLabel "B"
-#define kParamProcessBHint  "Process blue component"
-#define kParamProcessA      "a"
-#define kParamProcessALabel "A"
-#define kParamProcessAHint  "Process alpha component"
 
 template <class Params, bool sourceIsOptional>
 class CImgFilterPluginHelper : public OFX::ImageEffect
@@ -83,11 +71,11 @@ public:
         _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == OFX::ePixelComponentAlpha);
         
-        if (paramExists(kParamProcessR)) {
-            _processR = fetchBooleanParam(kParamProcessR);
-            _processG = fetchBooleanParam(kParamProcessG);
-            _processB = fetchBooleanParam(kParamProcessB);
-            _processA = fetchBooleanParam(kParamProcessA);
+        if (paramExists(kNatronOfxParamProcessR)) {
+            _processR = fetchBooleanParam(kNatronOfxParamProcessR);
+            _processG = fetchBooleanParam(kNatronOfxParamProcessG);
+            _processB = fetchBooleanParam(kNatronOfxParamProcessB);
+            _processA = fetchBooleanParam(kNatronOfxParamProcessA);
             assert(_processR && _processG && _processB && _processA);
         }
         _premult = fetchBooleanParam(kParamPremult);
@@ -180,15 +168,7 @@ public:
     {
         
 #ifdef OFX_EXTENSIONS_NATRON
-        if (OFX::getImageEffectHostDescription()->supportsChannelSelector) {
-            if (processRGB) {
-                desc.setChannelSelector(processAlpha ? OFX::ePixelComponentRGBA : OFX::ePixelComponentRGB);
-            } else {
-                desc.setChannelSelector(processAlpha ? OFX::ePixelComponentAlpha : OFX::ePixelComponentNone);
-            }
-        }
-#else
-        gHostHasNativeRGBACheckbox = false;
+        desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
 #endif
         
         OFX::ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
@@ -236,9 +216,9 @@ public:
         
         if (!OFX::getImageEffectHostDescription()->supportsChannelSelector) {
             {
-                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessR);
-                param->setLabel(kParamProcessRLabel);
-                param->setHint(kParamProcessRHint);
+                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
+                param->setLabel(kNatronOfxParamProcessRLabel);
+                param->setHint(kNatronOfxParamProcessRHint);
                 param->setDefault(processRGB);
                 param->setIsSecret(processIsSecret);
                 param->setLayoutHint(OFX::eLayoutHintNoNewLine);
@@ -247,9 +227,9 @@ public:
                 }
             }
             {
-                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProcessG);
-                param->setLabel(kParamProcessGLabel);
-                param->setHint(kParamProcessGHint);
+                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessG);
+                param->setLabel(kNatronOfxParamProcessGLabel);
+                param->setHint(kNatronOfxParamProcessGHint);
                 param->setDefault(processRGB);
                 param->setIsSecret(processIsSecret);
                 param->setLayoutHint(OFX::eLayoutHintNoNewLine);
@@ -258,9 +238,9 @@ public:
                 }
             }
             {
-                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessB );
-                param->setLabel(kParamProcessBLabel);
-                param->setHint(kParamProcessBHint);
+                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessB);
+                param->setLabel(kNatronOfxParamProcessBLabel);
+                param->setHint(kNatronOfxParamProcessBHint);
                 param->setDefault(processRGB);
                 param->setIsSecret(processIsSecret);
                 param->setLayoutHint(OFX::eLayoutHintNoNewLine);
@@ -269,9 +249,9 @@ public:
                 }
             }
             {
-                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam( kParamProcessA );
-                param->setLabel(kParamProcessALabel);
-                param->setHint(kParamProcessAHint);
+                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessA);
+                param->setLabel(kNatronOfxParamProcessALabel);
+                param->setHint(kNatronOfxParamProcessAHint);
                 param->setDefault(processAlpha);
                 param->setIsSecret(processIsSecret);
                 if (page) {
