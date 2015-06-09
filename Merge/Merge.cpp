@@ -800,12 +800,12 @@ MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
     
 
     OfxRectI maskRoD;
-    bool maskClipValid = false;
+    bool maskRoDValid = false;
     if (_maskClip && _maskClip->isConnected()) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
-            maskClipValid = true;
+            maskRoDValid = true;
             OFX::MergeImages2D::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
             if (!OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
@@ -815,46 +815,37 @@ MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
         }
     }
     
-    //The region of effect is only the union of the intersections between the A inputs and the mask
-    OfxRectI aUnions;
-    aUnions.x1 = aUnions.x2 = aUnions.y1 = aUnions.y2 = 0;
-    bool aUnionsSet = false;
-    
+    // The region of effect is only the set of the intersections between the A inputs and the mask.
+    // If at least one of these regions intersects the renderwindow, the effect is not identity.
+
     std::vector<OFX::Clip *> aClips = _optionalASrcClips;
     aClips.push_back(_srcClipA);
     for (unsigned int i = 0; i < aClips.size(); ++i) {
         if (!aClips[i]->isConnected()) {
             continue;
         }
-        OfxRectD rodOptionalA = aClips[i]->getRegionOfDefinition(args.time);
-
-        OfxRectI rodOptionalAPixel;
-        OFX::MergeImages2D::toPixelEnclosing(rodOptionalA, args.renderScale, aClips[i]->getPixelAspectRatio(), &rodOptionalAPixel);
-        bool aRoDValid = true;
-        if (maskClipValid) {
-            if (!OFX::MergeImages2D::rectIntersection<OfxRectI>(rodOptionalAPixel, maskRoD, &rodOptionalAPixel)) {
-                aRoDValid = false;
-            }
+        OfxRectD srcARoD = aClips[i]->getRegionOfDefinition(args.time);
+        if (srcARoD.x2 <= srcARoD.x1 || srcARoD.y2 <= srcARoD.y1) {
+            // RoD is empty
+            continue;
         }
-        if (aRoDValid) {
-            if (!aUnionsSet) {
-                aUnions = rodOptionalAPixel;
-                aUnionsSet = true;
-            } else {
-                aUnions.x1 = std::min(aUnions.x1, rodOptionalAPixel.x1);
-                aUnions.x2 = std::max(aUnions.x2, rodOptionalAPixel.x2);
-                aUnions.y1 = std::min(aUnions.y1, rodOptionalAPixel.y1);
-                aUnions.y2 = std::max(aUnions.y2, rodOptionalAPixel.y2);
-            }
+
+        OfxRectI srcARoDPixel;
+        OFX::MergeImages2D::toPixelEnclosing(srcARoD, args.renderScale, aClips[i]->getPixelAspectRatio(), &srcARoDPixel);
+        bool srcARoDValid = true;
+        if (maskRoDValid) {
+            // mask the srcARoD with the mask RoD. The result may be empty
+            srcARoDValid = OFX::MergeImages2D::rectIntersection<OfxRectI>(srcARoDPixel, maskRoD, &srcARoDPixel);
+        }
+        if (OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, srcARoDPixel, 0)) {
+            // renderWindow intersects one of the effect areas
+            return false;
         }
     }
-    
-    if (!aUnionsSet || !OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, aUnions, 0)) {
-        identityClip = _srcClipB;
-        return true;
-    }
 
-    return false;
+    // renderWindow intersects no area where a "A" source is applied
+    identityClip = _srcClipB;
+    return true;
 }
 
 
