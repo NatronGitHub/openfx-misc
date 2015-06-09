@@ -111,7 +111,7 @@
 
 #define kPluginIdentifier    "net.sf.cimg.CImgBlur"
 #define kPluginIdentifierLaplacian    "net.sf.cimg.CImgLaplacian"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
