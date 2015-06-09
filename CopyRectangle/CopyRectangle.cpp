@@ -564,6 +564,8 @@ CopyRectanglePlugin::render(const OFX::RenderArguments &args)
         renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
         renderInternal<3>(args, dstBitDepth);
+    } else if (dstComponents == OFX::ePixelComponentXY) {
+        renderInternal<2>(args, dstBitDepth);
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
@@ -640,6 +642,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     ClipDescriptor *srcClipB = desc.defineClip(kClipB);
     srcClipB->addSupportedComponent(ePixelComponentRGBA);
     srcClipB->addSupportedComponent(ePixelComponentRGB);
+    srcClipB->addSupportedComponent(ePixelComponentXY);
     srcClipB->addSupportedComponent(ePixelComponentAlpha);
     srcClipB->setTemporalClipAccess(false);
     srcClipB->setSupportsTiles(kSupportsTiles);
@@ -648,6 +651,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     ClipDescriptor *srcClipA = desc.defineClip(kClipA);
     srcClipA->addSupportedComponent(ePixelComponentRGBA);
     srcClipA->addSupportedComponent(ePixelComponentRGB);
+    srcClipA->addSupportedComponent(ePixelComponentXY);
     srcClipA->addSupportedComponent(ePixelComponentAlpha);
     srcClipA->setTemporalClipAccess(false);
     srcClipA->setSupportsTiles(kSupportsTiles);
@@ -658,6 +662,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 

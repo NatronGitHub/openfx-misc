@@ -1240,6 +1240,18 @@ DistortionPlugin::render(const OFX::RenderArguments &args)
                 renderInternal<3, eDistortionPluginLensDistortion>(args, dstBitDepth);
                 break;
         }
+    } else if (dstComponents == OFX::ePixelComponentXY) {
+        switch (_plugin) {
+            case eDistortionPluginSTMap:
+                renderInternal<2, eDistortionPluginSTMap>(args, dstBitDepth);
+                break;
+            case eDistortionPluginIDistort:
+                renderInternal<2, eDistortionPluginIDistort>(args, dstBitDepth);
+                break;
+            case eDistortionPluginLensDistortion:
+                renderInternal<2, eDistortionPluginLensDistortion>(args, dstBitDepth);
+                break;
+        }
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
         switch (_plugin) {
@@ -1453,6 +1465,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
         ClipDescriptor *uvClip = desc.defineClip(kClipUV);
         uvClip->addSupportedComponent(ePixelComponentRGBA);
         uvClip->addSupportedComponent(ePixelComponentRGB);
+        uvClip->addSupportedComponent(ePixelComponentXY);
         uvClip->addSupportedComponent(ePixelComponentAlpha);
         uvClip->setTemporalClipAccess(false);
         uvClip->setSupportsTiles(kSupportsTiles);
@@ -1462,6 +1475,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentXY);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -1472,6 +1486,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
         ClipDescriptor *uvClip = desc.defineClip(kClipUV);
         uvClip->addSupportedComponent(ePixelComponentRGBA);
         uvClip->addSupportedComponent(ePixelComponentRGB);
+        uvClip->addSupportedComponent(ePixelComponentXY);
         uvClip->addSupportedComponent(ePixelComponentAlpha);
         uvClip->setTemporalClipAccess(false);
         uvClip->setSupportsTiles(kSupportsTiles);
@@ -1482,6 +1497,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 

@@ -237,6 +237,9 @@ private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
+    template <int nComponents>
+    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+
     /* set up and run a processor */
     void setupAndProcess(TestRenderBase &, const OFX::RenderArguments &args);
 
@@ -388,6 +391,33 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
     processor.process();
 }
 
+// the internal render function
+template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
+template<int nComponents>
+void
+TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+{
+    switch (dstBitDepth) {
+        case OFX::eBitDepthUByte: {
+            ImageTestRenderer<unsigned char, nComponents, 255> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            ImageTestRenderer<unsigned short, nComponents, 65535> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            ImageTestRenderer<float, nComponents, 1> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
 // the overridden render function
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
 void
@@ -405,72 +435,14 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::ren
 
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte : {
-                ImageTestRenderer<unsigned char, 4, 255> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthUShort : {
-                ImageTestRenderer<unsigned short, 4, 65535> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthFloat : {
-                ImageTestRenderer<float, 4, 1> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte : {
-                ImageTestRenderer<unsigned char, 3, 255> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthUShort : {
-                ImageTestRenderer<unsigned short, 3, 65535> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthFloat : {
-                ImageTestRenderer<float, 3, 1> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<3>(args, dstBitDepth);
+    } else if (dstComponents == OFX::ePixelComponentXY) {
+        renderInternal<2>(args, dstBitDepth);
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte : {
-                ImageTestRenderer<unsigned char, 1, 255> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthUShort : {
-                ImageTestRenderer<unsigned short, 1, 65535> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthFloat : {
-                ImageTestRenderer<float, 1, 1> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<1>(args, dstBitDepth);
     }
 }
 
@@ -797,6 +769,7 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentXY);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(supportsTiles);
@@ -806,6 +779,7 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(supportsTiles);
 

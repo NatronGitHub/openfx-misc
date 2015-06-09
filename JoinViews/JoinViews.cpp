@@ -80,6 +80,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
+#include "ofxsCopier.h"
 
 #define kPluginName "JoinViewsOFX"
 #define kPluginGrouping "Views"
@@ -99,69 +100,6 @@
 #define kClipLeft "Left"
 #define kClipRight "Right"
 
-// Base class for the RGBA and the Alpha processor
-class CopierBase : public OFX::ImageProcessor
-{
-protected:
-    const OFX::Image *_srcImg;
-
-public:
-    /** @brief no arg ctor */
-    CopierBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _srcImg(0)
-    {
-    }
-
-    /** @brief set the src image */
-    void setSrcImg(const OFX::Image *v) {_srcImg = v;}
-};
-
-// template to do the RGBA processing
-template <class PIX, int nComponents, int max>
-class ImageCopier : public CopierBase
-{
-public:
-    // ctor
-    ImageCopier(OFX::ImageEffect &instance)
-    : CopierBase(instance)
-    {
-    }
-
-private:
-    // and do some processing
-    void multiThreadProcessImages(OfxRectI procWindow)
-    {
-        for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) {
-                break;
-            }
-            
-            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-
-            for (int x = procWindow.x1; x < procWindow.x2; x++) {
-
-                const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-
-                // do we have a source image to scale up
-                if (srcPix) {
-                    for (int c = 0; c < nComponents; c++) {
-                        dstPix[c] = srcPix[c];
-                    }
-                }
-                else {
-                    // no src pixel here, be black and transparent
-                    for (int c = 0; c < nComponents; c++) {
-                        dstPix[c] = 0;
-                    }
-                }
-
-                // increment the dst pixel
-                dstPix += nComponents;
-            }
-        }
-    }
-};
 
 using namespace OFX;
 
@@ -189,11 +127,14 @@ private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     
+    template <int nComponents>
+    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+
     /** @brief get the frame/views needed for input clips*/
     virtual void getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(CopierBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(OFX::PixelProcessorFilterBase &, const OFX::RenderArguments &args);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -223,7 +164,7 @@ JoinViewsPlugin::getFrameViewsNeeded(const FrameViewsNeededArguments& args, Fram
 
 /* set up and run a processor */
 void
-JoinViewsPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArguments &args)
+JoinViewsPlugin::setupAndProcess(OFX::PixelProcessorFilterBase &processor, const OFX::RenderArguments &args)
 {
     // get a dst image
     std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
@@ -278,6 +219,33 @@ JoinViewsPlugin::setupAndProcess(CopierBase &processor, const OFX::RenderArgumen
     processor.process();
 }
 
+
+// the internal render function
+template <int nComponents>
+void
+JoinViewsPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+{
+    switch (dstBitDepth) {
+        case OFX::eBitDepthUByte: {
+            PixelCopier<unsigned char, nComponents> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            PixelCopier<unsigned short, nComponents> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            PixelCopier<float, nComponents> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
 // the overridden render function
 void
 JoinViewsPlugin::render(const OFX::RenderArguments &args)
@@ -296,71 +264,14 @@ JoinViewsPlugin::render(const OFX::RenderArguments &args)
     assert(kSupportsMultipleClipDepths || _srcRightClip->getPixelDepth()       == _dstClip->getPixelDepth());
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte : {
-                ImageCopier<unsigned char, 4, 255> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthUShort : {
-                ImageCopier<unsigned short, 4, 65535> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthFloat : {
-                ImageCopier<float, 4, 1> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte : {
-                ImageCopier<unsigned char, 3, 255> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthUShort : {
-                ImageCopier<unsigned short, 3, 65535> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthFloat : {
-                ImageCopier<float, 3, 1> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<3>(args, dstBitDepth);
+    } else if (dstComponents == OFX::ePixelComponentXY) {
+        renderInternal<2>(args, dstBitDepth);
     } else {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte : {
-                ImageCopier<unsigned char, 1, 255> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthUShort : {
-                ImageCopier<unsigned short, 1, 65535> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthFloat : {
-                ImageCopier<float, 1, 1> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        assert(dstComponents == OFX::ePixelComponentAlpha);
+        renderInternal<1>(args, dstBitDepth);
     }
 }
 
@@ -433,16 +344,18 @@ void JoinViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // create the source clips from the rightmost one (in Nuke's GUI) to the leftmost
     ClipDescriptor *srcRightClip = desc.defineClip(kClipRight);
-    srcRightClip->addSupportedComponent(ePixelComponentRGB);
     srcRightClip->addSupportedComponent(ePixelComponentRGBA);
+    srcRightClip->addSupportedComponent(ePixelComponentRGB);
+    srcRightClip->addSupportedComponent(ePixelComponentXY);
     srcRightClip->addSupportedComponent(ePixelComponentAlpha);
     srcRightClip->setTemporalClipAccess(false);
     srcRightClip->setSupportsTiles(kSupportsTiles);
     srcRightClip->setIsMask(false);
     
     ClipDescriptor *srcLeftClip = desc.defineClip(kClipLeft);
-    srcLeftClip->addSupportedComponent(ePixelComponentRGB);
     srcLeftClip->addSupportedComponent(ePixelComponentRGBA);
+    srcLeftClip->addSupportedComponent(ePixelComponentRGB);
+    srcLeftClip->addSupportedComponent(ePixelComponentXY);
     srcLeftClip->addSupportedComponent(ePixelComponentAlpha);
     srcLeftClip->setTemporalClipAccess(false);
     srcLeftClip->setSupportsTiles(kSupportsTiles);
@@ -450,8 +363,9 @@ void JoinViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
     

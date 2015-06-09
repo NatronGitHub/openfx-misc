@@ -189,6 +189,9 @@ public:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
+    template <int nComponents>
+    void renderInternal(const OFX::RenderArguments &args, double sourceTime, OFX::BitDepthEnum dstBitDepth);
+
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
 
@@ -446,6 +449,32 @@ RetimePlugin::getTimeDomain(OfxRangeD &range)
     return false;
 }
 
+// the internal render function
+template <int nComponents>
+void
+RetimePlugin::renderInternal(const OFX::RenderArguments &args, double sourceTime, OFX::BitDepthEnum dstBitDepth)
+{
+    switch (dstBitDepth) {
+        case OFX::eBitDepthUByte: {
+            OFX::ImageBlender<unsigned char, nComponents> fred(*this);
+            setupAndProcess(fred, args, sourceTime);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            OFX::ImageBlender<unsigned short, nComponents> fred(*this);
+            setupAndProcess(fred, args, sourceTime);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            OFX::ImageBlender<float, nComponents> fred(*this);
+            setupAndProcess(fred, args, sourceTime);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
 // the overridden render function
 void
 RetimePlugin::render(const OFX::RenderArguments &args)
@@ -490,64 +519,15 @@ RetimePlugin::render(const OFX::RenderArguments &args)
 
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                OFX::ImageBlender<unsigned char, 4> fred(*this);
-                setupAndProcess(fred, args, sourceTime);
-            }   break;
-
-            case OFX::eBitDepthUShort: {
-                OFX::ImageBlender<unsigned short, 4> fred(*this);
-                setupAndProcess(fred, args, sourceTime);
-            }   break;
-
-            case OFX::eBitDepthFloat: {
-                OFX::ImageBlender<float, 4> fred(*this);
-                setupAndProcess(fred, args, sourceTime);
-            }   break;
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<4>(args, sourceTime, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                OFX::ImageBlender<unsigned char, 3> fred(*this);
-                setupAndProcess(fred, args, sourceTime);
-            }   break;
-
-            case OFX::eBitDepthUShort: {
-                OFX::ImageBlender<unsigned short, 3> fred(*this);
-                setupAndProcess(fred, args, sourceTime);
-            }   break;
-
-            case OFX::eBitDepthFloat: {
-                OFX::ImageBlender<float, 3> fred(*this);
-                setupAndProcess(fred, args, sourceTime);
-            }   break;
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<3>(args, sourceTime, dstBitDepth);
+    } else if (dstComponents == OFX::ePixelComponentXY) {
+        renderInternal<2>(args, sourceTime, dstBitDepth);
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        switch(dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                OFX::ImageBlender<unsigned char, 1> fred(*this);
-                setupAndProcess(fred, args, sourceTime);
-            }   break;
-
-            case OFX::eBitDepthUShort: {
-                OFX::ImageBlender<unsigned short, 1> fred(*this);
-                setupAndProcess(fred, args, sourceTime);
-            }   break;
-
-            case OFX::eBitDepthFloat: {
-                OFX::ImageBlender<float, 1> fred(*this);
-                setupAndProcess(fred, args, sourceTime);
-            }   break;
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
-    } // switch
+        renderInternal<1>(args, sourceTime, dstBitDepth);
+    }
 }
 
 using namespace OFX;
@@ -606,6 +586,7 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentXY);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(true); // say we will be doing random time access on this clip
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -615,6 +596,7 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setFieldExtraction(eFieldExtractDoubled); // which is the default anyway
     dstClip->setSupportsTiles(kSupportsTiles);

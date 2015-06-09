@@ -337,6 +337,8 @@ DissolvePlugin::render(const OFX::RenderArguments &args)
         renderForComponents<4>(args);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
         renderForComponents<3>(args);
+    } else if (dstComponents == OFX::ePixelComponentXY) {
+        renderForComponents<2>(args);
     }  else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderForComponents<1>(args);
@@ -552,8 +554,9 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             srcClip->setOptional(true);
         }
         srcClip->addSupportedComponent(ePixelComponentNone);
-        srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
+        srcClip->addSupportedComponent(ePixelComponentRGB);
+        srcClip->addSupportedComponent(ePixelComponentXY);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
@@ -569,8 +572,9 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             srcClip->setOptional(true);
         }
         srcClip->addSupportedComponent(ePixelComponentNone);
-        srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
+        srcClip->addSupportedComponent(ePixelComponentRGB);
+        srcClip->addSupportedComponent(ePixelComponentXY);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
@@ -596,8 +600,9 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             srcClip = desc.defineClip(name);
             srcClip->setOptional(true);
             srcClip->addSupportedComponent(ePixelComponentNone);
-            srcClip->addSupportedComponent(ePixelComponentRGB);
             srcClip->addSupportedComponent(ePixelComponentRGBA);
+            srcClip->addSupportedComponent(ePixelComponentRGB);
+            srcClip->addSupportedComponent(ePixelComponentXY);
             srcClip->addSupportedComponent(ePixelComponentAlpha);
             srcClip->setTemporalClipAccess(false);
             srcClip->setSupportsTiles(kSupportsTiles);
@@ -609,6 +614,7 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 

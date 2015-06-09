@@ -764,12 +764,14 @@ MergePlugin::render(const OFX::RenderArguments &args)
     assert(kSupportsMultipleClipDepths || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth());
     assert(kSupportsMultipleClipPARs   || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth());
-    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentAlpha);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderForComponents<4>(args);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
         renderForComponents<3>(args);
+    } else if (dstComponents == OFX::ePixelComponentXY) {
+        renderForComponents<2>(args);
     } else {
+        assert(dstComponents == OFX::ePixelComponentAlpha);
         renderForComponents<1>(args);
     }
 }
@@ -895,6 +897,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     OFX::ClipDescriptor* srcClipB = desc.defineClip(kClipB);
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGB );
+    srcClipB->addSupportedComponent( OFX::ePixelComponentXY );
     srcClipB->addSupportedComponent( OFX::ePixelComponentAlpha );
     srcClipB->setTemporalClipAccess(false);
     srcClipB->setSupportsTiles(kSupportsTiles);
@@ -906,6 +909,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     OFX::ClipDescriptor* srcClipA = desc.defineClip(kClipA);
     srcClipA->addSupportedComponent( OFX::ePixelComponentRGBA );
     srcClipA->addSupportedComponent( OFX::ePixelComponentRGB );
+    srcClipA->addSupportedComponent( OFX::ePixelComponentXY );
     srcClipA->addSupportedComponent( OFX::ePixelComponentAlpha );
     srcClipA->setTemporalClipAccess(false);
     srcClipA->setSupportsTiles(kSupportsTiles);
@@ -933,6 +937,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
             OFX::ClipDescriptor* optionalSrcClip = desc.defineClip(name);
             optionalSrcClip->addSupportedComponent( OFX::ePixelComponentRGBA );
             optionalSrcClip->addSupportedComponent( OFX::ePixelComponentRGB );
+            optionalSrcClip->addSupportedComponent( OFX::ePixelComponentXY );
             optionalSrcClip->addSupportedComponent( OFX::ePixelComponentAlpha );
             optionalSrcClip->setTemporalClipAccess(false);
             optionalSrcClip->setSupportsTiles(kSupportsTiles);

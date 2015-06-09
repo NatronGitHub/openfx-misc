@@ -218,6 +218,29 @@ private:
                 case 0xffff:
                     return process<false,false,false,true >(procWindow);
             }
+        } else if (nComponents == 2) {
+            switch (todo) {
+                case 0x0000:
+                case 0x000f:
+                case 0x00f0:
+                case 0x00ff:
+                    return process<false,false,false,false>(procWindow);
+                case 0x0f00:
+                case 0x0f0f:
+                case 0x0ff0:
+                case 0x0fff:
+                    return process<false,true ,false,false>(procWindow);
+                case 0xf000:
+                case 0xf00f:
+                case 0xf0f0:
+                case 0xf0ff:
+                    return process<true ,false,false,false>(procWindow);
+                case 0xff00:
+                case 0xff0f:
+                case 0xfff0:
+                case 0xffff:
+                    return process<true ,true ,false,false>(procWindow);
+            }
         } else if (nComponents == 3) {
             switch (todo) {
                 case 0x0000:

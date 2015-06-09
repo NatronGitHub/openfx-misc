@@ -570,6 +570,32 @@ void DeinterlacePlugin::render(const OFX::RenderArguments &args)
                 default:
                     break;
             }
+        } else if (dstComponents == OFX::ePixelComponentXY) {
+            switch(dstBitDepth) {
+                case OFX::eBitDepthUByte:
+                    filter_plane_ofx<2,unsigned char,int>(imode, // mode
+                                                          dst.get(),
+                                                          srcp.get(), src.get(), srcn.get(),
+                                                          iparity,ifieldOrder); // parity, tff
+                    break;
+
+                case OFX::eBitDepthUShort:
+                    filter_plane_ofx<2,unsigned short,int>(imode, // mode
+                                                           dst.get(),
+                                                           srcp.get(), src.get(), srcn.get(),
+                                                           iparity,ifieldOrder); // parity, tff
+                    break;
+
+                case OFX::eBitDepthFloat:
+                    filter_plane_ofx<2,float,float>(imode, // mode
+                                                    dst.get(),
+                                                    srcp.get(), src.get(), srcn.get(),
+                                                    iparity,ifieldOrder); // parity, tff
+                    break;
+
+                default:
+                    break;
+            }
         } else if (dstComponents == OFX::ePixelComponentAlpha) {
             switch(dstBitDepth) {
             case OFX::eBitDepthUByte:
@@ -683,6 +709,7 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentXY);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(true);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -693,6 +720,7 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
     dstClip->setFieldExtraction(OFX::eFieldExtractBoth);

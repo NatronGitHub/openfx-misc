@@ -679,6 +679,8 @@ ColorLookupPlugin::render(const OFX::RenderArguments &args)
         renderForComponents<4>(args, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
         renderForComponents<3>(args, dstBitDepth);
+    } else if (dstComponents == OFX::ePixelComponentXY) {
+        renderForComponents<2>(args, dstBitDepth);
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderForComponents<1>(args, dstBitDepth);
@@ -772,8 +774,9 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     assert(srcClip);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
+    srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentXY);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -781,8 +784,9 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     assert(dstClip);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 

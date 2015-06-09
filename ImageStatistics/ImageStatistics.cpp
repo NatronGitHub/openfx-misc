@@ -294,6 +294,11 @@ protected:
             rgba->g = p[1]/(double)maxValue;
             rgba->b = p[2]/(double)maxValue;
             rgba->a = 0;
+        } else if (nComponents == 2) {
+            rgba->r = p[0]/(double)maxValue;
+            rgba->g = p[1]/(double)maxValue;
+            rgba->b = 0;
+            rgba->a = 0;
         } else if (nComponents == 1) {
             rgba->r = 0;
             rgba->g = 0;
@@ -337,6 +342,9 @@ protected:
             p[0] = rgba.r * maxValue + ((maxValue != 1) ? 0.5 : 0);
             p[1] = rgba.g * maxValue + ((maxValue != 1) ? 0.5 : 0);
             p[2] = rgba.b * maxValue + ((maxValue != 1) ? 0.5 : 0);
+        } else if (nComponents == 2) {
+            p[0] = rgba.r * maxValue + ((maxValue != 1) ? 0.5 : 0);
+            p[1] = rgba.g * maxValue + ((maxValue != 1) ? 0.5 : 0);
         } else if (nComponents == 1) {
             p[0] = rgba.a * maxValue + ((maxValue != 1) ? 0.5 : 0);
         }

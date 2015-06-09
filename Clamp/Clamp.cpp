@@ -278,6 +278,29 @@ class ImageClamper : public ClampBase
                 case 0xffff:
                     return process<false,false,false,true >(procWindow);
             }
+        } else if (nComponents == 2) {
+            switch (todo) {
+                case 0x0000:
+                case 0x000f:
+                case 0x00f0:
+                case 0x00ff:
+                    return process<false,false,false,false>(procWindow);
+                case 0x0f00:
+                case 0x0f0f:
+                case 0x0ff0:
+                case 0x0fff:
+                    return process<false,true ,false,false>(procWindow);
+                case 0xf000:
+                case 0xf00f:
+                case 0xf0f0:
+                case 0xf0ff:
+                    return process<true ,false,false,false>(procWindow);
+                case 0xff00:
+                case 0xff0f:
+                case 0xfff0:
+                case 0xffff:
+                    return process<true ,true ,false,false>(procWindow);
+            }
         } else if (nComponents == 3) {
             switch (todo) {
                 case 0x0000:
@@ -494,6 +517,9 @@ class ClampPlugin : public OFX::ImageEffect
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
+    template <int nComponents>
+    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+
     /* set up and run a processor */
     void setupAndProcess(ClampBase &, const OFX::RenderArguments &args);
 
@@ -645,6 +671,32 @@ ClampPlugin::setupAndProcess(ClampBase &processor, const OFX::RenderArguments &a
     processor.process();
 }
 
+// the internal render function
+template <int nComponents>
+void
+ClampPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+{
+    switch (dstBitDepth) {
+        case OFX::eBitDepthUByte: {
+            ImageClamper<unsigned char, nComponents, 255> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            ImageClamper<unsigned short, nComponents, 65535> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            ImageClamper<float, nComponents, 1> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
 // the overridden render function
 void
 ClampPlugin::render(const OFX::RenderArguments &args)
@@ -657,72 +709,14 @@ ClampPlugin::render(const OFX::RenderArguments &args)
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte : {
-                ImageClamper<unsigned char, 4, 255> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthUShort : {
-                ImageClamper<unsigned short, 4, 65535> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthFloat : {
-                ImageClamper<float, 4, 1> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<4>(args, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte : {
-                ImageClamper<unsigned char, 3, 255> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthUShort : {
-                ImageClamper<unsigned short, 3, 65535> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthFloat : {
-                ImageClamper<float, 3, 1> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<3>(args, dstBitDepth);
+    } else if (dstComponents == OFX::ePixelComponentXY) {
+        renderInternal<2>(args, dstBitDepth);
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte : {
-                ImageClamper<unsigned char, 1, 255> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthUShort : {
-                ImageClamper<unsigned short, 1, 65535> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-
-            case OFX::eBitDepthFloat : {
-                ImageClamper<float, 1, 1> fred(*this);
-                setupAndProcess(fred, args);
-            }
-                break;
-            default :
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<1>(args, dstBitDepth);
     }
 }
 
@@ -857,6 +851,7 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentXY);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -866,6 +861,7 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
