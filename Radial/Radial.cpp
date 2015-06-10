@@ -242,118 +242,73 @@ public:
 private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        
-        int todo = ((_processR ? 0xf000 : 0) | (_processG ? 0x0f00 : 0) | (_processB ? 0x00f0 : 0) | (_processA ? 0x000f : 0));
-        if (nComponents == 1) {
-            switch (todo) {
-                case 0x0000:
-                case 0x00f0:
-                case 0x0f00:
-                case 0x0ff0:
-                case 0xf000:
-                case 0xf0f0:
-                case 0xff00:
-                case 0xfff0:
-                    return process<false,false,false,false>(procWindow);
-                case 0x000f:
-                case 0x00ff:
-                case 0x0f0f:
-                case 0x0fff:
-                case 0xf00f:
-                case 0xf0ff:
-                case 0xff0f:
-                case 0xffff:
-                    return process<false,false,false,true >(procWindow);
+        const bool r = _processR && (nComponents != 1);
+        const bool g = _processG && (nComponents >= 2);
+        const bool b = _processB && (nComponents >= 3);
+        const bool a = _processA && (nComponents == 1 || nComponents == 4);
+        if (r) {
+            if (g) {
+                if (b) {
+                    if (a) {
+                        return process<true ,true ,true ,true >(procWindow); // RGBA
+                    } else {
+                        return process<true ,true ,true ,false>(procWindow); // RGBa
+                    }
+                } else {
+                    if (a) {
+                        return process<true ,true ,false,true >(procWindow); // RGbA
+                    } else {
+                        return process<true ,true ,false,false>(procWindow); // RGba
+                    }
+                }
+            } else {
+                if (b) {
+                    if (a) {
+                        return process<true ,false,true ,true >(procWindow); // RgBA
+                    } else {
+                        return process<true ,false,true ,false>(procWindow); // RgBa
+                    }
+                } else {
+                    if (a) {
+                        return process<true ,false,false,true >(procWindow); // RgbA
+                    } else {
+                        return process<true ,false,false,false>(procWindow); // Rgba
+                    }
+                }
             }
-        } else if (nComponents == 2) {
-            switch (todo) {
-                case 0x0000:
-                case 0x000f:
-                case 0x00f0:
-                case 0x00ff:
-                    return process<false,false,false,false>(procWindow);
-                case 0x0f00:
-                case 0x0f0f:
-                case 0x0ff0:
-                case 0x0fff:
-                    return process<false,true ,false,false>(procWindow);
-                case 0xf000:
-                case 0xf00f:
-                case 0xf0f0:
-                case 0xf0ff:
-                    return process<true ,false,false,false>(procWindow);
-                case 0xff00:
-                case 0xff0f:
-                case 0xfff0:
-                case 0xffff:
-                    return process<true ,true ,false,false>(procWindow);
-            }
-        } else if (nComponents == 3) {
-            switch (todo) {
-                case 0x0000:
-                case 0x000f:
-                    return process<false,false,false,false>(procWindow);
-                case 0x00f0:
-                case 0x00ff:
-                    return process<false,false,true ,false>(procWindow);
-                case 0x0f00:
-                case 0x0f0f:
-                    return process<false,true ,false,false>(procWindow);
-                case 0x0ff0:
-                case 0x0fff:
-                    return process<false,true ,true ,false>(procWindow);
-                case 0xf000:
-                case 0xf00f:
-                    return process<true ,false,false,false>(procWindow);
-                case 0xf0f0:
-                case 0xf0ff:
-                    return process<true ,false,true ,false>(procWindow);
-                case 0xff00:
-                case 0xff0f:
-                    return process<true ,true ,false,false>(procWindow);
-                case 0xfff0:
-                case 0xffff:
-                    return process<true ,true ,true ,false>(procWindow);
-            }
-        } else if (nComponents == 4) {
-            switch (todo) {
-                case 0x0000:
-                    return process<false,false,false,false>(procWindow);
-                case 0x000f:
-                    return process<false,false,false,true >(procWindow);
-                case 0x00f0:
-                    return process<false,false,true ,false>(procWindow);
-                case 0x00ff:
-                    return process<false,false,true, true >(procWindow);
-                case 0x0f00:
-                    return process<false,true ,false,false>(procWindow);
-                case 0x0f0f:
-                    return process<false,true ,false,true >(procWindow);
-                case 0x0ff0:
-                    return process<false,true ,true ,false>(procWindow);
-                case 0x0fff:
-                    return process<false,true ,true ,true >(procWindow);
-                case 0xf000:
-                    return process<true ,false,false,false>(procWindow);
-                case 0xf00f:
-                    return process<true ,false,false,true >(procWindow);
-                case 0xf0f0:
-                    return process<true ,false,true ,false>(procWindow);
-                case 0xf0ff:
-                    return process<true ,false,true, true >(procWindow);
-                case 0xff00:
-                    return process<true ,true ,false,false>(procWindow);
-                case 0xff0f:
-                    return process<true ,true ,false,true >(procWindow);
-                case 0xfff0:
-                    return process<true ,true ,true ,false>(procWindow);
-                case 0xffff:
-                    return process<true ,true ,true ,true >(procWindow);
+        } else {
+            if (g) {
+                if (b) {
+                    if (a) {
+                        return process<false,true ,true ,true >(procWindow); // rGBA
+                    } else {
+                        return process<false,true ,true ,false>(procWindow); // rGBa
+                    }
+                } else {
+                    if (a) {
+                        return process<false,true ,false,true >(procWindow); // rGbA
+                    } else {
+                        return process<false,true ,false,false>(procWindow); // rGba
+                    }
+                }
+            } else {
+                if (b) {
+                    if (a) {
+                        return process<false,false,true ,true >(procWindow); // rgBA
+                    } else {
+                        return process<false,false,true ,false>(procWindow); // rgBa
+                    }
+                } else {
+                    if (a) {
+                        return process<false,false,false,true >(procWindow); // rgbA
+                    } else {
+                        return process<false,false,false,false>(procWindow); // rgba
+                    }
+                }
             }
         }
     }
 
-    
 private:
     
     template<bool processR, bool processG, bool processB, bool processA>
