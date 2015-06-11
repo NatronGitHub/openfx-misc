@@ -703,6 +703,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
         param->setLabel(kNatronOfxParamProcessALabel);
         param->setHint(kNatronOfxParamProcessAHint);
         param->setDefault(true);
+        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }

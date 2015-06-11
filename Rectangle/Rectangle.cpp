@@ -728,9 +728,9 @@ void
 RectanglePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     // set the premultiplication of _dstClip if alpha is affected and source is Opaque
-    bool alpha;
-    _processA->getValue(alpha);
-    if (alpha && _srcClip->isConnected() && _srcClip->getPreMultiplication() == eImageOpaque) {
+    bool processA;
+    _processA->getValue(processA);
+    if (processA && _srcClip->isConnected() && _srcClip->getPreMultiplication() == eImageOpaque) {
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }
 }
@@ -922,6 +922,7 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kNatronOfxParamProcessALabel);
         param->setHint(kNatronOfxParamProcessAHint);
         param->setDefault(true);
+        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
