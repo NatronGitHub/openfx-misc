@@ -357,6 +357,9 @@ private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
     
+    template <int nComponents>
+    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+
     /* set up and run a processor */
     void setupAndProcess(AddProcessorBase &, const OFX::RenderArguments &args);
 
@@ -454,6 +457,31 @@ AddPlugin::setupAndProcess(AddProcessorBase &processor, const OFX::RenderArgumen
     processor.process();
 }
 
+// the internal render function
+template <int nComponents>
+void
+AddPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+{
+    switch (dstBitDepth) {
+        case OFX::eBitDepthUByte: {
+            AddProcessor<unsigned char, nComponents, 255> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            AddProcessor<unsigned short, nComponents, 65536> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            AddProcessor<float, nComponents, 1> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        default :
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
 // the overridden render function
 void
 AddPlugin::render(const OFX::RenderArguments &args)
@@ -465,68 +493,16 @@ AddPlugin::render(const OFX::RenderArguments &args)
     
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
-    assert(dstComponents == OFX::ePixelComponentAlpha ||dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
-    if (dstComponents == OFX::ePixelComponentAlpha) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                AddProcessor<unsigned char, 1, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                AddProcessor<unsigned short, 1, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                AddProcessor<float, 1, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
-    } else if (dstComponents == OFX::ePixelComponentRGBA) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                AddProcessor<unsigned char, 4, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                AddProcessor<unsigned short, 4, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                AddProcessor<float, 4, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
+    if (dstComponents == OFX::ePixelComponentRGBA) {
+        renderInternal<4>(args, dstBitDepth);
+    } else if (dstComponents == OFX::ePixelComponentRGB) {
+        renderInternal<3>(args, dstBitDepth);
+    } else if (dstComponents == OFX::ePixelComponentXY) {
+        renderInternal<2>(args, dstBitDepth);
     } else {
-        assert(dstComponents == OFX::ePixelComponentRGB);
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                AddProcessor<unsigned char, 3, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                AddProcessor<unsigned short, 3, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                AddProcessor<float, 3, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        assert(dstComponents == OFX::ePixelComponentAlpha);
+        renderInternal<1>(args, dstBitDepth);
     }
 }
 

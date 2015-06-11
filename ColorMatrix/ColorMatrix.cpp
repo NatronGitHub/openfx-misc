@@ -400,7 +400,10 @@ public:
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-    
+
+    template <int nComponents>
+    void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
+
     /* set up and run a processor */
     void setupAndProcess(ColorMatrixProcessorBase &, const OFX::RenderArguments &args);
 
@@ -523,6 +526,32 @@ ColorMatrixPlugin::setupAndProcess(ColorMatrixProcessorBase &processor, const OF
     processor.process();
 }
 
+// the internal render function
+template <int nComponents>
+void
+ColorMatrixPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+{
+    switch (dstBitDepth) {
+        case OFX::eBitDepthUByte: {
+            ColorMatrixProcessor<unsigned char, nComponents, 255> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            ColorMatrixProcessor<unsigned short, nComponents, 65535> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            ColorMatrixProcessor<float, nComponents, 1> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+}
+
 // the overridden render function
 void
 ColorMatrixPlugin::render(const OFX::RenderArguments &args)
@@ -534,68 +563,17 @@ ColorMatrixPlugin::render(const OFX::RenderArguments &args)
     
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
-    assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentAlpha);
+    assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
+    // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                ColorMatrixProcessor<unsigned char, 4, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                ColorMatrixProcessor<unsigned short, 4, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                ColorMatrixProcessor<float, 4, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
-    } else if (dstComponents == OFX::ePixelComponentAlpha) {
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                ColorMatrixProcessor<unsigned char, 1, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                ColorMatrixProcessor<unsigned short, 1, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                ColorMatrixProcessor<float, 1, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        renderInternal<4>(args, dstBitDepth);
+    } else if (dstComponents == OFX::ePixelComponentRGB) {
+        renderInternal<3>(args, dstBitDepth);
+    } else if (dstComponents == OFX::ePixelComponentXY) {
+        renderInternal<2>(args, dstBitDepth);
     } else {
-        assert(dstComponents == OFX::ePixelComponentRGB);
-        switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                ColorMatrixProcessor<unsigned char, 3, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                ColorMatrixProcessor<unsigned short, 3, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                ColorMatrixProcessor<float, 3, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
-        }
+        assert(dstComponents == OFX::ePixelComponentAlpha);
+        renderInternal<1>(args, dstBitDepth);
     }
 }
 
@@ -711,6 +689,7 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentXY);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -720,6 +699,7 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
     
