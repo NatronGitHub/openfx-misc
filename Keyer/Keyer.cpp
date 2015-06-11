@@ -640,7 +640,7 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArg
         }
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if (srcBitDepth != dstBitDepth/* || srcComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }

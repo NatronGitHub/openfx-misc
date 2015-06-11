@@ -724,6 +724,18 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+
+    int outputAlpha_i;
+    _outputAlpha->getValueAtTime(args.time, outputAlpha_i);
+    OutputAlphaEnum outputAlpha = (OutputAlphaEnum)outputAlpha_i;
+    if (outputAlpha != eOutputAlphaSource) {
+        if (dstComponents != OFX::ePixelComponentRGBA) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host dit not take into account output components");
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            return;
+        }
+    }
+
     std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
                                         _srcClip->fetchImage(args.time) : 0);
     if (src.get()) {
@@ -735,8 +747,12 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
         }
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        // set the components of _dstClip
+        int outputAlpha_i;
+        _outputAlpha->getValue(outputAlpha_i);
+        OutputAlphaEnum outputAlpha = (OutputAlphaEnum)outputAlpha_i;
+
+        if (srcBitDepth != dstBitDepth || (outputAlpha == eOutputAlphaSource && srcComponents != dstComponents)) {            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
     std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
@@ -776,16 +792,6 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
     bool clampBlack,clampWhite;
     _clampBlack->getValueAtTime(args.time, clampBlack);
     _clampWhite->getValueAtTime(args.time, clampWhite);
-    int outputAlpha_i;
-    _outputAlpha->getValueAtTime(args.time, outputAlpha_i);
-    OutputAlphaEnum outputAlpha = (OutputAlphaEnum)outputAlpha_i;
-    if (outputAlpha != eOutputAlphaSource) {
-        if (dstComponents != OFX::ePixelComponentRGBA) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host dit not take into account output components");
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-            return;
-        }
-    }
 
     bool premult;
     int premultChannel;
@@ -1295,6 +1301,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
         assert(param->getNOptions() == (int)eOutputAlphaAll);
         param->appendOption(kParamOutputAlphaOptionAll, kParamOutputAlphaOptionAllHint);
         param->setDefault((int)eOutputAlphaHue);
+        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
