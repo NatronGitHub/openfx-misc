@@ -880,10 +880,11 @@ void MergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 static void
-addMergeOption(ChoiceParamDescriptor* param, MergingFunctionEnum e, const char* help)
+addMergeOption(ChoiceParamDescriptor* param, MergingFunctionEnum e, const char* help, bool cascading)
 {
     assert(param->getNOptions() == e);
-    param->appendOption(getOperationString(e), help);
+    param->appendOption(cascading ? (getOperationGroupString(e) + '/' + getOperationString(e))
+                                     : getOperationString(e), help);
 }
 
 void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
@@ -978,44 +979,46 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOperation);
         param->setLabel(kParamOperationLabel);
         param->setHint(kParamOperationHint);
-        addMergeOption(param, eMergeATop, "Ab + B(1 - a)" );
-        addMergeOption(param, eMergeAverage, "(A + B) / 2" );
-        addMergeOption(param, eMergeColorBurn, "darken B towards A" );
-        addMergeOption(param, eMergeColorDodge, "brighten B towards A" );
-        addMergeOption(param, eMergeConjointOver, "A + B(1-a)/b, A if a > b" );
-        addMergeOption(param, eMergeCopy, "A" );
-        addMergeOption(param, eMergeDifference, "abs(A-B)" );
-        addMergeOption(param, eMergeDisjointOver, "A+B(1-a)/b, A+B if a+b < 1" );
-        addMergeOption(param, eMergeDivide, "A/B, 0 if A < 0 and B < 0" );
-        addMergeOption(param, eMergeExclusion, "A+B-2AB" );
-        addMergeOption(param, eMergeFreeze, "1-sqrt(1-A)/B" );
-        addMergeOption(param, eMergeFrom, "B-A" );
-        addMergeOption(param, eMergeGeometric, "2AB/(A+B)" );
-        addMergeOption(param, eMergeHardLight, "multiply if A < 0.5, screen if A > 0.5" );
-        addMergeOption(param, eMergeHypot, "sqrt(A*A+B*B)" );
-        addMergeOption(param, eMergeIn, "Ab" );
-        addMergeOption(param, eMergeInterpolated, "(like average but better and slower)" );
-        addMergeOption(param, eMergeMask, "Ba" );
-        addMergeOption(param, eMergeMatte, "Aa + B(1-a) (unpremultiplied over)" );
-        addMergeOption(param, eMergeLighten, "max(A, B)" );
-        addMergeOption(param, eMergeDarken, "min(A, B)" );
-        addMergeOption(param, eMergeMinus, "A-B" );
-        addMergeOption(param, eMergeMultiply, "AB, 0 if A < 0 and B < 0" );
-        addMergeOption(param, eMergeOut, "A(1-b)" );
-        addMergeOption(param, eMergeOver, "A+B(1-a)" );
-        addMergeOption(param, eMergeOverlay, "multiply if B<0.5, screen if B>0.5" );
-        addMergeOption(param, eMergePinLight, "if B >= 0.5 then max(A, 2*B - 1), min(A, B * 2.0 ) else" );
-        addMergeOption(param, eMergePlus, "A+B" );
-        addMergeOption(param, eMergeReflect, "A*A / (1 - B)" );
-        addMergeOption(param, eMergeScreen, "A+B-AB" );
-        addMergeOption(param, eMergeSoftLight, "burn-in if A < 0.5, lighten if A > 0.5" );
-        addMergeOption(param, eMergeStencil, "B(1-a)" );
-        addMergeOption(param, eMergeUnder, "A(1-b)+B" );
-        addMergeOption(param, eMergeXOR, "A(1-b)+B(1-a)" );
-        addMergeOption(param, eMergeHue, "SetLum(SetSat(A, Sat(B)), Lum(B))" );
-        addMergeOption(param, eMergeSaturation, "SetLum(SetSat(B, Sat(A)), Lum(B))" );
-        addMergeOption(param, eMergeColor, "SetLum(A, Lum(B))" );
-        addMergeOption(param, eMergeLuminosity, "SetLum(B, Lum(A))" );
+        bool cascading = OFX::getImageEffectHostDescription()->supportsCascadingChoices;
+        param->setCascading(cascading);
+        addMergeOption(param, eMergeATop, "Ab + B(1 - a)", cascading);
+        addMergeOption(param, eMergeAverage, "(A + B) / 2", cascading);
+        addMergeOption(param, eMergeColorBurn, "darken B towards A", cascading);
+        addMergeOption(param, eMergeColorDodge, "brighten B towards A", cascading);
+        addMergeOption(param, eMergeConjointOver, "A + B(1-a)/b, A if a > b", cascading);
+        addMergeOption(param, eMergeCopy, "A", cascading);
+        addMergeOption(param, eMergeDifference, "abs(A-B)", cascading);
+        addMergeOption(param, eMergeDisjointOver, "A+B(1-a)/b, A+B if a+b < 1", cascading);
+        addMergeOption(param, eMergeDivide, "A/B, 0 if A < 0 and B < 0", cascading);
+        addMergeOption(param, eMergeExclusion, "A+B-2AB", cascading);
+        addMergeOption(param, eMergeFreeze, "1-sqrt(1-A)/B", cascading);
+        addMergeOption(param, eMergeFrom, "B-A", cascading);
+        addMergeOption(param, eMergeGeometric, "2AB/(A+B)", cascading);
+        addMergeOption(param, eMergeHardLight, "multiply if A < 0.5, screen if A > 0.5", cascading);
+        addMergeOption(param, eMergeHypot, "sqrt(A*A+B*B)", cascading);
+        addMergeOption(param, eMergeIn, "Ab", cascading);
+        addMergeOption(param, eMergeInterpolated, "(like average but better and slower)", cascading);
+        addMergeOption(param, eMergeMask, "Ba", cascading);
+        addMergeOption(param, eMergeMatte, "Aa + B(1-a) (unpremultiplied over)", cascading);
+        addMergeOption(param, eMergeLighten, "max(A, B)", cascading);
+        addMergeOption(param, eMergeDarken, "min(A, B)", cascading);
+        addMergeOption(param, eMergeMinus, "A-B", cascading);
+        addMergeOption(param, eMergeMultiply, "AB, 0 if A < 0 and B < 0", cascading);
+        addMergeOption(param, eMergeOut, "A(1-b)", cascading);
+        addMergeOption(param, eMergeOver, "A+B(1-a)", cascading);
+        addMergeOption(param, eMergeOverlay, "multiply if B<0.5, screen if B>0.5", cascading);
+        addMergeOption(param, eMergePinLight, "if B >= 0.5 then max(A, 2*B - 1), min(A, B * 2.0 ) else", cascading);
+        addMergeOption(param, eMergePlus, "A+B", cascading);
+        addMergeOption(param, eMergeReflect, "A*A / (1 - B)", cascading);
+        addMergeOption(param, eMergeScreen, "A+B-AB", cascading);
+        addMergeOption(param, eMergeSoftLight, "burn-in if A < 0.5, lighten if A > 0.5", cascading);
+        addMergeOption(param, eMergeStencil, "B(1-a)", cascading);
+        addMergeOption(param, eMergeUnder, "A(1-b)+B", cascading);
+        addMergeOption(param, eMergeXOR, "A(1-b)+B(1-a)", cascading);
+        addMergeOption(param, eMergeHue, "SetLum(SetSat(A, Sat(B)), Lum(B))", cascading);
+        addMergeOption(param, eMergeSaturation, "SetLum(SetSat(B, Sat(A)), Lum(B))", cascading);
+        addMergeOption(param, eMergeColor, "SetLum(A, Lum(B))", cascading);
+        addMergeOption(param, eMergeLuminosity, "SetLum(B, Lum(A))", cascading);
         param->setDefault(eMergeOver);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
