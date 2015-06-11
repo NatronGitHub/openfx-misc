@@ -609,7 +609,7 @@ RotoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(ePixelComponentAlpha);
+    desc.setChannelSelector(ePixelComponentNone);
 #endif
 }
 
@@ -672,7 +672,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
         param->setLabel(kNatronOfxParamProcessRLabel);
         param->setHint(kNatronOfxParamProcessRHint);
-        param->setDefault(true);
+        param->setDefault(false);
         param->setLayoutHint(eLayoutHintNoNewLine);
         if (page) {
             page->addChild(*param);
@@ -682,7 +682,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessG);
         param->setLabel(kNatronOfxParamProcessGLabel);
         param->setHint(kNatronOfxParamProcessGHint);
-        param->setDefault(true);
+        param->setDefault(false);
         param->setLayoutHint(eLayoutHintNoNewLine);
         if (page) {
             page->addChild(*param);
@@ -692,7 +692,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessB);
         param->setLabel(kNatronOfxParamProcessBLabel);
         param->setHint(kNatronOfxParamProcessBHint);
-        param->setDefault(true);
+        param->setDefault(false);
         param->setLayoutHint(eLayoutHintNoNewLine);
         if (page) {
             page->addChild(*param);
