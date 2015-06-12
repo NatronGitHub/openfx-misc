@@ -214,51 +214,50 @@ public:
         // create the params
         OFX::PageParamDescriptor *page = desc.definePageParam("Controls");
         
-        if (!OFX::getImageEffectHostDescription()->supportsChannelSelector) {
-            {
-                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
-                param->setLabel(kNatronOfxParamProcessRLabel);
-                param->setHint(kNatronOfxParamProcessRHint);
-                param->setDefault(processRGB);
-                param->setIsSecret(processIsSecret);
-                param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-                if (page) {
-                    page->addChild(*param);
-                }
-            }
-            {
-                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessG);
-                param->setLabel(kNatronOfxParamProcessGLabel);
-                param->setHint(kNatronOfxParamProcessGHint);
-                param->setDefault(processRGB);
-                param->setIsSecret(processIsSecret);
-                param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-                if (page) {
-                    page->addChild(*param);
-                }
-            }
-            {
-                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessB);
-                param->setLabel(kNatronOfxParamProcessBLabel);
-                param->setHint(kNatronOfxParamProcessBHint);
-                param->setDefault(processRGB);
-                param->setIsSecret(processIsSecret);
-                param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-                if (page) {
-                    page->addChild(*param);
-                }
-            }
-            {
-                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessA);
-                param->setLabel(kNatronOfxParamProcessALabel);
-                param->setHint(kNatronOfxParamProcessAHint);
-                param->setDefault(processAlpha);
-                param->setIsSecret(processIsSecret);
-                if (page) {
-                    page->addChild(*param);
-                }
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
+            param->setLabel(kNatronOfxParamProcessRLabel);
+            param->setHint(kNatronOfxParamProcessRHint);
+            param->setDefault(processRGB);
+            param->setIsSecret(processIsSecret);
+            param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
             }
         }
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessG);
+            param->setLabel(kNatronOfxParamProcessGLabel);
+            param->setHint(kNatronOfxParamProcessGHint);
+            param->setDefault(processRGB);
+            param->setIsSecret(processIsSecret);
+            param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessB);
+            param->setLabel(kNatronOfxParamProcessBLabel);
+            param->setHint(kNatronOfxParamProcessBHint);
+            param->setDefault(processRGB);
+            param->setIsSecret(processIsSecret);
+            param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessA);
+            param->setLabel(kNatronOfxParamProcessALabel);
+            param->setHint(kNatronOfxParamProcessAHint);
+            param->setDefault(processAlpha);
+            param->setIsSecret(processIsSecret);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        
         
         return page;
     }
