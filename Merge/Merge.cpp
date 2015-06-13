@@ -218,6 +218,11 @@ private:
                 if (srcPixA || srcPixB) {
 
                     for (int c = 0; c < nComponents; ++c) {
+#                     ifdef DEBUG
+                        // check for NaN
+                        assert(!srcPixA || srcPixA[c] == srcPixA[c]);
+                        assert(!srcPixB || srcPixB[c] == srcPixB[c]);
+#                     endif
                         // all images are supposed to be black and transparent outside o
                         tmpA[c] = srcPixA ? ((float)srcPixA[c] / maxValue) : 0.f;
                         tmpB[c] = srcPixB ? ((float)srcPixB[c] / maxValue) : 0.f;
@@ -256,6 +261,10 @@ private:
                     if (srcPixA) {
                         
                         for (int c = 0; c < nComponents; ++c) {
+#                     ifdef DEBUG
+                            // check for NaN
+                            assert(srcPixA[c] == srcPixA[c]);
+#                     endif
                             // all images are supposed to be black and transparent outside o
                             tmpA[c] = (float)srcPixA[c] / maxValue;
 #                         ifdef DEBUG
