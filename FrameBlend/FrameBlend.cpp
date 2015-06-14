@@ -76,8 +76,6 @@
  */
 
 // TODO:
-// - fetch Images and process them one by one
-// - compute count only if necessary (i.e. it is asked on output or operation is average)
 // - show progress
 
 #include "FrameBlend.h"
@@ -157,9 +155,11 @@ enum OperationEnum {
 
 #define kParamOutputCountName  "outputCount"
 #define kParamOutputCountLabel "Output Count to Alpha"
-#define kParamOutputCountHint  "Output image count at each pixel to alpha."
+#define kParamOutputCountHint  "Output image count at each pixel to alpha (input must have an alpha channel)."
 
 #define kClipFgMName "FgM"
+
+#define kFrameChunk 4 // how many frames to process simultaneously
 
 using namespace OFX;
 
@@ -169,11 +169,14 @@ protected:
     const OFX::Image *_srcImg;
     std::vector<const OFX::Image*> _srcImgs;
     std::vector<const OFX::Image*> _fgMImgs;
+    float *_accumulatorData;
+    unsigned short *_countData;
     const OFX::Image *_maskImg;
     bool _processR;
     bool _processG;
     bool _processB;
     bool _processA;
+    bool _lastPass;
     bool _outputCount;
     bool   _doMasking;
     double _mix;
@@ -186,11 +189,14 @@ public:
     , _srcImg(0)
     , _srcImgs(0)
     , _fgMImgs(0)
+    , _accumulatorData(0)
+    , _countData(0)
     , _maskImg(0)
     , _processR(true)
     , _processG(true)
     , _processB(true)
     , _processA(false)
+    , _lastPass(false)
     , _outputCount(false)
     , _doMasking(false)
     , _mix(1.)
@@ -200,6 +206,8 @@ public:
 
     void setSrcImgs(const OFX::Image *src, const std::vector<const OFX::Image*> &v) {_srcImg = src; _srcImgs = v;}
     void setFgMImgs(const std::vector<const OFX::Image*> &v) {_fgMImgs = v;}
+    void setAccumulators(float *accumulatorData, unsigned short *countData)
+    {_accumulatorData = accumulatorData; _countData = countData;}
 
     void setMaskImg(const OFX::Image *v, bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
 
@@ -209,6 +217,7 @@ public:
                    bool processG,
                    bool processB,
                    bool processA,
+                   bool lastPass,
                    bool outputCount,
                    double mix)
     {
@@ -216,10 +225,12 @@ public:
         _processG = processG;
         _processB = processB;
         _processA = processA;
+        _lastPass = lastPass;
         _outputCount = outputCount;
         _mix = mix;
     }
 
+    virtual OperationEnum getOperation() = 0;
 private:
 };
 
@@ -235,6 +246,8 @@ public:
     }
 
 private:
+
+    virtual OperationEnum getOperation() OVERRIDE FINAL { return operation; };
 
     void multiThreadProcessImages(OfxRectI procWindow)
     {
@@ -308,22 +321,12 @@ private:
     template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow)
     {
-        assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
-        assert(_dstPixelData);
+        assert(1 <= nComponents && nComponents <= 4);
+        assert(!_lastPass || _dstPixelData);
         assert(_srcImgs.size() == _fgMImgs.size());
         float tmpPix[nComponents];
-        for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) {
-                break;
-            }
-
-            PIX *dstPix = (PIX *) getDstPixelAddress(procWindow.x1, y);
-            assert(dstPix);
-            if (!dstPix) {
-                // coverity[dead_error_line]
-                continue;
-            }
-            float initVal = 0.;
+        float initVal = 0.;
+        if (!_accumulatorData) {
             switch (operation) {
                 case eOperationAverage:
                     initVal = 0.;
@@ -341,11 +344,30 @@ private:
                     initVal = 1.;
                     break;
             }
+        }
+
+        for (int y = procWindow.y1; y < procWindow.y2; y++) {
+            if (_effect.abort()) {
+                break;
+            }
+
+            PIX *dstPix = _lastPass ? (PIX *) getDstPixelAddress(procWindow.x1, y) : 0;
+            assert(!_lastPass || dstPix);
+            if (_lastPass && !dstPix) {
+                // coverity[dead_error_line]
+                continue;
+            }
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                int count = 0;
-                std::fill(tmpPix, tmpPix+nComponents, initVal);
+                size_t renderPix = ((_renderWindow.x2 - _renderWindow.x1) * (y - _renderWindow.y1) +
+                                    (x - _renderWindow.x1));
+                int count = _countData ? _countData[renderPix] : 0;
+                if (_accumulatorData) {
+                    std::copy(&_accumulatorData[renderPix * nComponents], &_accumulatorData[renderPix * nComponents + nComponents], tmpPix);
+                } else {
+                    std::fill(tmpPix, tmpPix + nComponents, initVal);
+                }
                 // accumulate
                 for (unsigned i = 0; i < _srcImgs.size(); ++i) {
                     const PIX *fgMPix = (const PIX *)  (_fgMImgs[i] ? _fgMImgs[i]->getPixelAddress(x, y) : 0);
@@ -375,52 +397,63 @@ private:
                         ++count;
                     }
                 }
-                // copy back original values from unprocessed channels
-                if (nComponents == 1) {
-                    int c = 0;
-                    if (_outputCount) {
-                        tmpPix[c] = count;
-                    } else {
-                        tmpPix[c] = (operation == eOperationAverage) ? (count ? (tmpPix[c] / count) : 0) : tmpPix[c];
+                if (!_lastPass) {
+                    if (_countData) {
+                        _countData[renderPix] = count;
                     }
-                } else if (3 <= nComponents && nComponents <= 4) {
-                    for (int c = 0; c < 3; ++c) {
-                        tmpPix[c] = (operation == eOperationAverage) ? (count ? (tmpPix[c] / count) : 0) : tmpPix[c];
+                    if (_accumulatorData) {
+                        std::copy(tmpPix, tmpPix + nComponents , &_accumulatorData[renderPix * nComponents]);
                     }
-                    if (nComponents >= 4) {
-                        int c = nComponents - 1;
+                } else {
+                    // copy back original values from unprocessed channels
+                    if (nComponents == 1) {
+                        int c = 0;
                         if (_outputCount) {
                             tmpPix[c] = count;
-                        } else {
-                            tmpPix[c] = (operation == eOperationAverage) ? (count ? (tmpPix[c] / count) : 0) : tmpPix[c];
+                        } else if (operation == eOperationAverage) {
+                            tmpPix[c] =  (count ? (tmpPix[c] / count) : 0);
+                        }
+                    } else if (3 <= nComponents && nComponents <= 4) {
+                        if (operation == eOperationAverage) {
+                            for (int c = 0; c < 3; ++c) {
+                                tmpPix[c] = (count ? (tmpPix[c] / count) : 0);
+                            }
+                        }
+                        if (nComponents >= 4) {
+                            int c = nComponents - 1;
+                            if (_outputCount) {
+                                tmpPix[c] = count;
+                            } else if (operation == eOperationAverage) {
+                                tmpPix[c] =  (count ? (tmpPix[c] / count) : 0);
+                            }
                         }
                     }
+                    // tmpPix is not normalized, it is within [0,maxValue]
+                    ofxsMaskMixPix<PIX,nComponents,maxValue,true>(tmpPix, x, y, srcPix, _doMasking,
+                                                                  _maskImg, _mix, _maskInvert,
+                                                                  dstPix);
+                    // copy back original values from unprocessed channels
+                    if (nComponents == 1) {
+                        if (!processA) {
+                            dstPix[0] = srcPix ? srcPix[0] : PIX();
+                        }
+                    } else {
+                        if (!processR) {
+                            dstPix[0] = srcPix ? srcPix[0] : PIX();
+                        }
+                        if (nComponents >= 2 && !processG) {
+                            dstPix[1] = srcPix ? srcPix[1] : PIX();
+                        }
+                        if (nComponents >= 3 && !processB) {
+                            dstPix[2] = srcPix ? srcPix[2] : PIX();
+                        }
+                        if (nComponents >= 4 && !processA) {
+                            dstPix[3] = srcPix ? srcPix[3] : PIX();
+                        }
+                    }
+                    // increment the dst pixel
+                    dstPix += nComponents;
                 }
-                // tmpPix is not normalized, it is within [0,maxValue]
-                ofxsMaskMixPix<PIX,nComponents,maxValue,true>(tmpPix, x, y, srcPix, _doMasking,
-                                                              _maskImg, _mix, _maskInvert,
-                                                              dstPix);
-                // copy back original values from unprocessed channels
-                if (nComponents == 1) {
-                    if (!processA) {
-                        dstPix[0] = srcPix ? srcPix[0] : PIX();
-                    }
-                } else if (nComponents == 3 || nComponents == 4) {
-                    if (!processR) {
-                        dstPix[0] = srcPix ? srcPix[0] : PIX();
-                    }
-                    if (!processG) {
-                        dstPix[1] = srcPix ? srcPix[1] : PIX();
-                    }
-                    if (!processB) {
-                        dstPix[2] = srcPix ? srcPix[2] : PIX();
-                    }
-                    if (!processA && nComponents == 4) {
-                        dstPix[3] = srcPix ? srcPix[3] : PIX();
-                    }
-                }
-                // increment the dst pixel
-                dstPix += nComponents;
             }
         }
     }
@@ -573,6 +606,65 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+
+    // fetch the mask
+    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
+                                         _maskClip->fetchImage(time) : 0);
+
+    bool doMasking = false;
+    // do we do masking
+    if (getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) {
+        if (mask.get()) {
+            if (mask->getRenderScale().x != args.renderScale.x ||
+                mask->getRenderScale().y != args.renderScale.y ||
+                (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+            }
+        }
+        bool maskInvert;
+        _maskInvert->getValueAtTime(time, maskInvert);
+        doMasking = true;
+        processor.doMasking(true);
+        processor.setMaskImg(mask.get(), maskInvert);
+    }
+
+    double mix = 1.;
+    _mix->getValueAtTime(time, mix);
+    bool outputCount = false;
+    if (dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentAlpha) {
+        _outputCount->getValue(outputCount);
+    }
+    bool processR, processG, processB, processA;
+    _processR->getValueAtTime(time, processR);
+    _processG->getValueAtTime(time, processG);
+    _processB->getValueAtTime(time, processB);
+    _processA->getValueAtTime(time, processA);
+
+    // If masking or mixing, fetch the original image
+    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected() && (doMasking || mix != 1.)) ?
+                                        _srcClip->fetchImage(args.time) :
+                                        0);
+    if (src.get()) {
+        if (src->getRenderScale().x != args.renderScale.x ||
+            src->getRenderScale().y != args.renderScale.y ||
+            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        }
+    }
+
+    // accumulator image
+    std::auto_ptr<OFX::ImageMemory> accumulator;
+    float *accumulatorData = NULL;
+    std::auto_ptr<OFX::ImageMemory> count;
+    unsigned short *countData = NULL;
+
     // compute range
     bool absolute;
     _absolute->getValueAtTime(time, absolute);
@@ -590,101 +682,110 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
         min += time;
         //max += time; // max is not used anymore
     }
-    // fetch the source images
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
-    if (src.get()) {
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
-        }
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-        }
-    }
-    OptionalImagesHolder_RAII srcImgs;
-    for (int i = 0; i < n; ++i) {
-        if (abort()) {
-            throwSuiteStatusException(kOfxStatFailed);
-        }
-        const OFX::Image* src = _srcClip ? _srcClip->fetchImage(min + i*interval) : 0;
-        if (src) {
-            if (src->getRenderScale().x != args.renderScale.x ||
-                src->getRenderScale().y != args.renderScale.y ||
-                (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
-                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                OFX::throwSuiteStatusException(kOfxStatFailed);
-            }
-            OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
-            OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-            if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
-                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-            }
-        }
-        srcImgs.images.push_back(src);
-    }
-    // fetch the foreground mattes
-    OptionalImagesHolder_RAII fgMImgs;
-    for (int i = 0; i < n; ++i) {
-        if (abort()) {
-            throwSuiteStatusException(kOfxStatFailed);
-        }
-        const OFX::Image* mask = (_fgMClip && _fgMClip->isConnected()) ? _fgMClip->fetchImage(min + i*interval) : 0;
-        if (mask) {
-            assert(_fgMClip->isConnected());
-            if (mask->getRenderScale().x != args.renderScale.x ||
-                mask->getRenderScale().y != args.renderScale.y ||
-                (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
-                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                OFX::throwSuiteStatusException(kOfxStatFailed);
-            }
-        }
-        fgMImgs.images.push_back(mask);
-    }
-    // fetch the mask
-    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
-                                         _maskClip->fetchImage(time) : 0);
-    // do we do masking
-    if (getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) {
-        if (mask.get()) {
-            if (mask->getRenderScale().x != args.renderScale.x ||
-                mask->getRenderScale().y != args.renderScale.y ||
-                (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
-                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-                OFX::throwSuiteStatusException(kOfxStatFailed);
-            }
-        }
-        bool maskInvert;
-        _maskInvert->getValueAtTime(time, maskInvert);
-        processor.doMasking(true);
-        processor.setMaskImg(mask.get(), maskInvert);
-    }
 
-    // set the images
-    processor.setDstImg(dst.get());
-    processor.setSrcImgs(src.get(), srcImgs.images);
-    processor.setFgMImgs(fgMImgs.images);
-    // set the render window
-    processor.setRenderWindow(args.renderWindow);
-    
-    bool processR, processG, processB, processA;
-    _processR->getValueAtTime(time, processR);
-    _processG->getValueAtTime(time, processG);
-    _processB->getValueAtTime(time, processB);
-    _processA->getValueAtTime(time, processA);
-    bool outputCount;
-    _outputCount->getValueAtTime(time, outputCount);
-    double mix;
-    _mix->getValueAtTime(time, mix);
-    processor.setValues(processR, processG, processB, processA,
-                        outputCount, mix);
+    const OfxRectI& renderWindow = args.renderWindow;
+    size_t nPixels = (renderWindow.y2 - renderWindow.y1) * (renderWindow.x2 - renderWindow.x1);
+    OperationEnum operation = processor.getOperation();
 
-    // Call the base class process member, this will call the derived templated process code
-    processor.process();
+    // Main processing loop.
+    // We process the frame range by chunks, to avoid using too much memory.
+    int imin;
+    int imax = 0;
+    while (imax < n) {
+        imin = imax;
+        imax = std::min(imin + kFrameChunk, n);
+        bool lastPass = (imax == n);
+
+        if (!lastPass) {
+            // Initialize accumulator image (always use float)
+            if (!accumulatorData) {
+                int dstNComponents = _dstClip->getPixelComponentCount();
+                accumulator.reset(new OFX::ImageMemory(nPixels * dstNComponents * sizeof(float), this));
+                accumulatorData = (float*)accumulator->lock();
+                switch (operation) {
+                    case eOperationAverage:
+                    case eOperationSum:
+                        std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, 0.);
+                        break;
+                    case eOperationMin:
+                        std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, std::numeric_limits<float>::infinity());
+                        break;
+                    case eOperationMax:
+                        std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, -std::numeric_limits<float>::infinity());
+                        break;
+                    case eOperationProduct:
+                        std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, 1.);
+                        break;
+                }
+
+            }
+            // Initialize count image if operator is average or outputCount is true and output has alpha (use short)
+            if (!countData && (operation == eOperationAverage || outputCount)) {
+                count.reset(new OFX::ImageMemory(nPixels * sizeof(unsigned short), this));
+                countData = (unsigned short*)count->lock();
+                std::fill(countData, countData + nPixels, 0);
+            }
+        }
+
+        // fetch the source images
+        OptionalImagesHolder_RAII srcImgs;
+        for (int i = 0; i < n; ++i) {
+            if (abort()) {
+                throwSuiteStatusException(kOfxStatFailed);
+                return;
+            }
+            const OFX::Image* src = _srcClip ? _srcClip->fetchImage(min + i*interval) : 0;
+            if (src) {
+                if (src->getRenderScale().x != args.renderScale.x ||
+                    src->getRenderScale().y != args.renderScale.y ||
+                    (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+                    setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                    OFX::throwSuiteStatusException(kOfxStatFailed);
+                }
+                OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+                OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
+                if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+                    OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+                }
+            }
+            srcImgs.images.push_back(src);
+        }
+        // fetch the foreground mattes
+        OptionalImagesHolder_RAII fgMImgs;
+        for (int i = 0; i < n; ++i) {
+            if (abort()) {
+                throwSuiteStatusException(kOfxStatFailed);
+                return;
+            }
+            const OFX::Image* mask = (_fgMClip && _fgMClip->isConnected()) ? _fgMClip->fetchImage(min + i*interval) : 0;
+            if (mask) {
+                assert(_fgMClip->isConnected());
+                if (mask->getRenderScale().x != args.renderScale.x ||
+                    mask->getRenderScale().y != args.renderScale.y ||
+                    (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
+                    setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                    OFX::throwSuiteStatusException(kOfxStatFailed);
+                }
+            }
+            fgMImgs.images.push_back(mask);
+        }
+
+        // set the images
+        if (lastPass) {
+            processor.setDstImg(dst.get());
+        }
+        processor.setSrcImgs(lastPass ? src.get() : 0, srcImgs.images);
+        processor.setFgMImgs(fgMImgs.images);
+        // set the render window
+        processor.setRenderWindow(renderWindow);
+        processor.setAccumulators(accumulatorData, countData);
+
+        processor.setValues(processR, processG, processB, processA,
+                            lastPass, outputCount, mix);
+        
+        // Call the base class process member, this will call the derived templated process code
+        processor.process();
+    }
 }
 
 // the overridden render function
@@ -1074,6 +1175,7 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOutputCountName);
         param->setLabel(kParamOutputCountLabel);
         param->setHint(kParamOutputCountHint);
+        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }
