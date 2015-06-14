@@ -125,6 +125,28 @@
 #define kParamDurationLabel "Duration"
 #define kParamDurationHint "How long the output clip should be, as a proportion of the input clip's length."
 
+#define kParamFilter "filter"
+#define kParamFilterLabel "Filter"
+#define kParamFilterHint "How input images are combined to compute the output image."
+
+#define kParamFilterOptionNone "None"
+#define kParamFilterOptionNoneHint "Do not interpolate, ask for images with fractional time to the input effect. Useful if the input effect can interpolate itself."
+#define kParamFilterOptionNearest "Nearest"
+#define kParamFilterOptionNearestHint "Pick input image with nearest integer time."
+#define kParamFilterOptionLinear "Linear"
+#define kParamFilterOptionLinearHint "Blend the two nearest images with linear interpolation."
+// TODO:
+#define kParamFilterOptionBox "Box"
+#define kParamFilterOptionBoxHint "Weighted average of images over the shutter time (shutter time is defined in the output sequence)." // requires shutter parameter
+
+enum FilterEnum {
+    eFilterNone,
+    eFilterNearest,
+    eFilterLinear,
+    //eFilterBox,
+};
+#define kParamFilterDefault eFilterLinear
+
 #define kPageTimeWarp "timeWarp"
 #define kPageTimeWarpLabel "Time Warp"
 
@@ -148,7 +170,8 @@ protected:
     OFX::DoubleParam  *_sourceTime; /**< @brief mandated parameter, only used in the retimer context. */
     OFX::DoubleParam  *_speed;      /**< @brief only used in the filter or general context. */
     OFX::ParametricParam  *_warp;      /**< @brief only used in the filter or general context. */
-    OFX::DoubleParam  *_duration;   /**< @brief how long the output should be as a proportion of input. General context only  */
+    OFX::DoubleParam  *_duration;   /**< @brief how long the output should be as a proportion of input. General context only. */
+    OFX::ChoiceParam  *_filter;   /**< @brief how images are interpolated (or not). */
 
 public:
     /** @brief ctor */
@@ -161,6 +184,7 @@ public:
     , _speed(0)
     , _warp(0)
     , _duration(0)
+    , _filter(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -184,13 +208,15 @@ public:
                 assert(_duration);
             }
         }
+        _filter = fetchChoiceParam(kParamFilter);
+        assert(_filter);
     }
 
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, double sourceTime, OFX::BitDepthEnum dstBitDepth);
+    void renderInternal(const OFX::RenderArguments &args, double sourceTime, FilterEnum filter, OFX::BitDepthEnum dstBitDepth);
 
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
@@ -201,7 +227,7 @@ public:
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(OFX::ImageBlenderBase &, const OFX::RenderArguments &args, double sourceTime);
+    void setupAndProcess(OFX::ImageBlenderBase &, const OFX::RenderArguments &args, double sourceTime, FilterEnum filter);
 };
 
 
@@ -259,7 +285,10 @@ static void framesNeeded(double sourceTime, OFX::FieldEnum fieldToRender, double
 
 /* set up and run a processor */
 void
-RetimePlugin::setupAndProcess(OFX::ImageBlenderBase &processor, const OFX::RenderArguments &args, double sourceTime)
+RetimePlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
+                              const OFX::RenderArguments &args,
+                              double sourceTime,
+                              FilterEnum filter)
 {
     const double time = args.time;
     // get a dst image
@@ -281,7 +310,8 @@ RetimePlugin::setupAndProcess(OFX::ImageBlenderBase &processor, const OFX::Rende
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    if (sourceTime == (int)sourceTime) {
+    if (sourceTime == (int)sourceTime || filter == eFilterNone || filter == eFilterNearest) {
+        // should have been caught by isIdentity...
         std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
                                             _srcClip->fetchImage(sourceTime) : 0);
         if (src.get()) {
@@ -373,11 +403,18 @@ RetimePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
             }
         }
     }
+
+    int filter_i;
+    _filter->getValueAtTime(time, filter_i);
+    FilterEnum filter = (FilterEnum)filter_i;
+
     OfxRangeD range;
-    if (sourceTime == (int)sourceTime) {
+    if (sourceTime == (int)sourceTime || filter == eFilterNone) {
         range.min = sourceTime;
         range.max = sourceTime;
-    } else {
+    } else if (filter == eFilterNearest) {
+        range.min = range.max = std::floor(sourceTime + 0.5);
+    } else if (filter == eFilterLinear) {
         // figure the two images we are blending between
         double fromTime, toTime;
         double blend;
@@ -385,6 +422,8 @@ RetimePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
         framesNeeded(sourceTime, OFX::eFieldNone, &fromTime, &toTime, &blend);
         range.min = fromTime;
         range.max = toTime;
+    } else {
+        assert(false);
     }
     frames.setFramesNeeded(*_srcClip, range);
 }
@@ -414,11 +453,21 @@ RetimePlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &iden
             }
         }
     }
-    if (sourceTime == (int)sourceTime) {
+    int filter_i;
+    _filter->getValueAtTime(time, filter_i);
+    FilterEnum filter = (FilterEnum)filter_i;
+
+    if (sourceTime == (int)sourceTime || filter == eFilterNone) {
         identityClip = _srcClip;
         identityTime = sourceTime;
         return true;
     }
+    if (filter == eFilterNearest) {
+        identityClip = _srcClip;
+        identityTime = std::floor(sourceTime + 0.5);
+        return true;
+    }
+
     return false;
 }
 
@@ -452,22 +501,25 @@ RetimePlugin::getTimeDomain(OfxRangeD &range)
 // the internal render function
 template <int nComponents>
 void
-RetimePlugin::renderInternal(const OFX::RenderArguments &args, double sourceTime, OFX::BitDepthEnum dstBitDepth)
+RetimePlugin::renderInternal(const OFX::RenderArguments &args,
+                             double sourceTime,
+                             FilterEnum filter,
+                             OFX::BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
         case OFX::eBitDepthUByte: {
             OFX::ImageBlender<unsigned char, nComponents> fred(*this);
-            setupAndProcess(fred, args, sourceTime);
+            setupAndProcess(fred, args, sourceTime, filter);
             break;
         }
         case OFX::eBitDepthUShort: {
             OFX::ImageBlender<unsigned short, nComponents> fred(*this);
-            setupAndProcess(fred, args, sourceTime);
+            setupAndProcess(fred, args, sourceTime, filter);
             break;
         }
         case OFX::eBitDepthFloat: {
             OFX::ImageBlender<float, nComponents> fred(*this);
-            setupAndProcess(fred, args, sourceTime);
+            setupAndProcess(fred, args, sourceTime, filter);
             break;
         }
         default:
@@ -511,7 +563,11 @@ RetimePlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-    if (sourceTime == (int)sourceTime) {
+    int filter_i;
+    _filter->getValueAtTime(time, filter_i);
+    FilterEnum filter = (FilterEnum)filter_i;
+
+    if (sourceTime == (int)sourceTime || filter == eFilterNone || filter == eFilterNearest) {
         // should be caught by isIdentity!
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host should not render");
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -519,14 +575,14 @@ RetimePlugin::render(const OFX::RenderArguments &args)
 
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
-        renderInternal<4>(args, sourceTime, dstBitDepth);
+        renderInternal<4>(args, sourceTime, filter, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
-        renderInternal<3>(args, sourceTime, dstBitDepth);
+        renderInternal<3>(args, sourceTime, filter, dstBitDepth);
     } else if (dstComponents == OFX::ePixelComponentXY) {
-        renderInternal<2>(args, sourceTime, dstBitDepth);
+        renderInternal<2>(args, sourceTime, filter, dstBitDepth);
     } else {
         assert(dstComponents == OFX::ePixelComponentAlpha);
-        renderInternal<1>(args, sourceTime, dstBitDepth);
+        renderInternal<1>(args, sourceTime, filter, dstBitDepth);
     }
 }
 
@@ -601,6 +657,9 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
     dstClip->setFieldExtraction(eFieldExtractDoubled); // which is the default anyway
     dstClip->setSupportsTiles(kSupportsTiles);
 
+    // make a page to put it in
+    PageParamDescriptor *page = desc.definePageParam("Controls");
+
     // what param we have is dependant on the host
     if (context == OFX::eContextRetimer) {
         // Define the mandated kOfxImageEffectRetimerParamName param, note that we don't do anything with this other than.
@@ -610,8 +669,6 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
         (void)param;
     }  else {
         // We are a general or filter context, define a speed param and a page of controls to put that in
-        // make a page to put it in
-        PageParamDescriptor *page = desc.definePageParam("Controls");
         // reverse_input
         {
             BooleanParamDescriptor *param = desc.defineBooleanParam(kParamReverseInput);
@@ -693,6 +750,24 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
             if (page) {
                 page->addChild(*param);
             }
+        }
+    }
+
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFilter);
+        param->setLabel(kParamFilterLabel);
+        param->setHint(kParamFilterHint);
+        assert(param->getNOptions() == eFilterNone);
+        param->appendOption(kParamFilterOptionNone, kParamFilterOptionNoneHint);
+        assert(param->getNOptions() == eFilterNearest);
+        param->appendOption(kParamFilterOptionNearest, kParamFilterOptionNearestHint);
+        assert(param->getNOptions() == eFilterLinear);
+        param->appendOption(kParamFilterOptionLinear, kParamFilterOptionLinearHint);
+        //assert(param->getNOptions() == eFilterBox);
+        //param->appendOption(kParamFilterOptionBox, kParamFilterOptionBoxHint);
+        param->setDefault((int)kParamFilterDefault);
+        if (page) {
+            page->addChild(*param);
         }
     }
 }
