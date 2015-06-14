@@ -48,6 +48,7 @@ Roto.o \
 Saturation.o \
 Shuffle.o \
 SideBySide.o \
+SlitScan.o \
 Switch.o \
 TestRender.o \
 TimeOffset.o \
@@ -172,6 +173,8 @@ RESOURCES = \
 ../Shuffle/net.sf.openfx.ShufflePlugin.svg \
 ../SideBySide/net.sf.openfx.sideBySidePlugin.png \
 ../SideBySide/net.sf.openfx.sideBySidePlugin.svg \
+../SlitScan/net.sf.openfx.SlitScan.png \
+../SlitScan/net.sf.openfx.SlitScan.svg \
 ../Switch/net.sf.openfx.switchPlugin.png \
 ../Switch/net.sf.openfx.switchPlugin.svg \
 ../TimeOffset/net.sf.openfx.timeOffset.png \
@@ -238,6 +241,7 @@ VPATH += \
 ../Saturation \
 ../Shuffle \
 ../SideBySide \
+../SlitScan \
 ../Switch \
 ../Test \
 ../TimeOffset \
@@ -298,6 +302,7 @@ CXXFLAGS += \
 -I../Saturation \
 -I../Shuffle \
 -I../SideBySide \
+-I../SlitScan \
 -I../Switch \
 -I../Test \
 -I../TimeOffset \

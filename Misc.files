@@ -225,6 +225,9 @@ Shuffle/Shuffle.h
 SideBySide/PluginRegistration.cpp
 SideBySide/SideBySide.cpp
 SideBySide/SideBySide.h
+SlitScan/PluginRegistration.cpp
+SlitScan/SlitScan.cpp
+SlitScan/SlitScan.h
 SupportExt/ofxsCopier.h
 SupportExt/ofxsFilter.h
 SupportExt/ofxsFormatResolution.h

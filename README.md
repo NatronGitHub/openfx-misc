@@ -44,6 +44,7 @@ grouping).
 * FrameHoldOFX: Hold a frame, or subsample the input frames.
 * FrameRangeOFX: Change the frame range of a clip. Useful with AppendClip
 * RetimeOFX: Change the timing of the input clip.
+* SlitScan: Per-pixel retiming.
 * TimeOffsetOFX: Move the input clip forward or backward in time.
 
 ### Channel
@@ -254,11 +255,11 @@ ReConverge, SideBySide are by Frederic Devernay.
 
 ColorLookup, Switch, TimeOffset, ChromaKeyer, Difference, Constant,
 Shuffle, Rectangle, Radial, HSVTool, ImageStatistics, CheckerBoard,
-and the CImg plugins are by Frederic Devernay.
+Retime, SlitScan and the CImg plugins are by Frederic Devernay.
 
 Merge, ColorCorrect, Grade, Roto, Crop, CopyRectangle  are by
 Alexandre Gauthier.
 
 Transform and CornerPin are by Frederic Devernay and Alexandre Gauthier.
 
-Deinterlace/yadif was first ported to OFX by [George Yohng](http://yohng.com) and rewritten when yadif was relicensed to LGPL.
+Deinterlace/yadif was first ported to OFX by [George Yohng](http://yohng.com) and rewritten by Frederic Devernay when yadif was relicensed to LGPL.

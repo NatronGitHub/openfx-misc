@@ -50,6 +50,7 @@ Roto \
 Saturation \
 Shuffle \
 SideBySide \
+SlitScan \
 Switch \
 TimeOffset \
 TrackerPM \

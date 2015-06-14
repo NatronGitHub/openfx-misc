@@ -47,6 +47,7 @@
 #include "Saturation.h"
 #include "Shuffle.h"
 #include "SideBySide.h"
+#include "SlitScan.h"
 #include "Switch.h"
 #include "TimeOffset.h"
 #include "TrackerPM.h"
@@ -110,6 +111,7 @@ namespace OFX
             getSaturationPluginID(ids);
             getShufflePluginID(ids);
             getSideBySidePluginID(ids);
+            getSlitScanPluginID(ids);
             getSwitchPluginID(ids);
             getTimeOffsetPluginID(ids);
             getTrackerPMPluginID(ids);
