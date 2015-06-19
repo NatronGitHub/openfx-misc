@@ -95,6 +95,8 @@
 
 using namespace OFX;
 
+#define SCALE_MAX 10000.
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class TransformPlugin : public Transform3x3Plugin
@@ -223,7 +225,6 @@ TransformPlugin::getInverseTransformCanonical(double time, double amount, bool i
     }
 
     double rot = OFX::ofxsToRadians(rotate);
-
     if (!invert) {
         *invtransform = OFX::ofxsMatInverseTransformCanonical(translate.x, translate.y, scale.x, scale.y, skewX, skewY, (bool)skewOrder, rot, center.x, center.y);
     } else {
@@ -377,7 +378,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         param->setDoubleType(eDoubleTypeScale);
         //param->setDimensionLabels("w","h");
         param->setDefault(1,1);
-        //param->setRange(0.1,0.1,10,10);
+        param->setRange(-SCALE_MAX, -SCALE_MAX, SCALE_MAX, SCALE_MAX);
         param->setDisplayRange(0.1, 0.1, 10, 10);
         param->setIncrement(0.01);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
