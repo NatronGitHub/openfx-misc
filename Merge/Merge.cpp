@@ -690,20 +690,20 @@ MergePlugin::renderForBitDepth(const OFX::RenderArguments &args)
         case eMergeIn:
             fred.reset(new MergeProcessor<eMergeIn, PIX, nComponents, maxValue>(*this));
             break;
-        case eMergeInterpolated:
-            fred.reset(new MergeProcessor<eMergeInterpolated, PIX, nComponents, maxValue>(*this));
-            break;
+        //case eMergeInterpolated:
+        //    fred.reset(new MergeProcessor<eMergeInterpolated, PIX, nComponents, maxValue>(*this));
+        //    break;
         case eMergeMask:
             fred.reset(new MergeProcessor<eMergeMask, PIX, nComponents, maxValue>(*this));
             break;
         case eMergeMatte:
             fred.reset(new MergeProcessor<eMergeMatte, PIX, nComponents, maxValue>(*this));
             break;
-        case eMergeLighten:
-            fred.reset(new MergeProcessor<eMergeLighten, PIX, nComponents, maxValue>(*this));
+        case eMergeMax:
+            fred.reset(new MergeProcessor<eMergeMax, PIX, nComponents, maxValue>(*this));
             break;
-        case eMergeDarken:
-            fred.reset(new MergeProcessor<eMergeDarken, PIX, nComponents, maxValue>(*this));
+        case eMergeMin:
+            fred.reset(new MergeProcessor<eMergeMin, PIX, nComponents, maxValue>(*this));
             break;
         case eMergeMinus:
             fred.reset(new MergeProcessor<eMergeMinus, PIX, nComponents, maxValue>(*this));
@@ -997,11 +997,12 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setCascading(cascading);
         addMergeOption(param, eMergeATop, "Ab + B(1 - a)", cascading);
         addMergeOption(param, eMergeAverage, "(A + B) / 2", cascading);
+        addMergeOption(param, eMergeColor, "SetLum(A, Lum(B))", cascading);
         addMergeOption(param, eMergeColorBurn, "darken B towards A", cascading);
         addMergeOption(param, eMergeColorDodge, "brighten B towards A", cascading);
         addMergeOption(param, eMergeConjointOver, "A + B(1-a)/b, A if a > b", cascading);
         addMergeOption(param, eMergeCopy, "A", cascading);
-        addMergeOption(param, eMergeDifference, "abs(A-B)", cascading);
+        addMergeOption(param, eMergeDifference, "abs(A-B) (a.k.a. absminus)", cascading);
         addMergeOption(param, eMergeDisjointOver, "A+B(1-a)/b, A+B if a+b < 1", cascading);
         addMergeOption(param, eMergeDivide, "A/B, 0 if A < 0 and B < 0", cascading);
         addMergeOption(param, eMergeExclusion, "A+B-2AB", cascading);
@@ -1009,13 +1010,15 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         addMergeOption(param, eMergeFrom, "B-A", cascading);
         addMergeOption(param, eMergeGeometric, "2AB/(A+B)", cascading);
         addMergeOption(param, eMergeHardLight, "multiply if A < 0.5, screen if A > 0.5", cascading);
+        addMergeOption(param, eMergeHue, "SetLum(SetSat(A, Sat(B)), Lum(B))", cascading);
         addMergeOption(param, eMergeHypot, "sqrt(A*A+B*B)", cascading);
         addMergeOption(param, eMergeIn, "Ab", cascading);
-        addMergeOption(param, eMergeInterpolated, "(like average but better and slower)", cascading);
+        //addMergeOption(param, eMergeInterpolated, "(like average but better and slower)", cascading);
+        addMergeOption(param, eMergeLuminosity, "SetLum(B, Lum(A))", cascading);
         addMergeOption(param, eMergeMask, "Ba", cascading);
         addMergeOption(param, eMergeMatte, "Aa + B(1-a) (unpremultiplied over)", cascading);
-        addMergeOption(param, eMergeLighten, "max(A, B)", cascading);
-        addMergeOption(param, eMergeDarken, "min(A, B)", cascading);
+        addMergeOption(param, eMergeMax, "max(A, B) (a.k.a. lighten)", cascading);
+        addMergeOption(param, eMergeMin, "min(A, B) (a.k.a. darken)", cascading);
         addMergeOption(param, eMergeMinus, "A-B", cascading);
         addMergeOption(param, eMergeMultiply, "AB, 0 if A < 0 and B < 0", cascading);
         addMergeOption(param, eMergeOut, "A(1-b)", cascading);
@@ -1024,15 +1027,12 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         addMergeOption(param, eMergePinLight, "if B >= 0.5 then max(A, 2*B - 1), min(A, B * 2.0 ) else", cascading);
         addMergeOption(param, eMergePlus, "A+B", cascading);
         addMergeOption(param, eMergeReflect, "A*A / (1 - B)", cascading);
+        addMergeOption(param, eMergeSaturation, "SetLum(SetSat(B, Sat(A)), Lum(B))", cascading);
         addMergeOption(param, eMergeScreen, "A+B-AB", cascading);
         addMergeOption(param, eMergeSoftLight, "burn-in if A < 0.5, lighten if A > 0.5", cascading);
         addMergeOption(param, eMergeStencil, "B(1-a)", cascading);
         addMergeOption(param, eMergeUnder, "A(1-b)+B", cascading);
         addMergeOption(param, eMergeXOR, "A(1-b)+B(1-a)", cascading);
-        addMergeOption(param, eMergeHue, "SetLum(SetSat(A, Sat(B)), Lum(B))", cascading);
-        addMergeOption(param, eMergeSaturation, "SetLum(SetSat(B, Sat(A)), Lum(B))", cascading);
-        addMergeOption(param, eMergeColor, "SetLum(A, Lum(B))", cascading);
-        addMergeOption(param, eMergeLuminosity, "SetLum(B, Lum(A))", cascading);
         param->setDefault(eMergeOver);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
