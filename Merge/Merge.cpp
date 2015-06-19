@@ -89,7 +89,9 @@
 #define kPluginDescription \
 "Pixel-by-pixel merge operation between the two inputs.\n" \
 "A complete explanation of the different operators can be found in \"Compositing Digital Images\", by T. Porter & T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
-"See also the course \"Digital Image Compositing\" by Marc Levoy https://graphics.stanford.edu/courses/cs248-06/comp/comp.html"
+"See also:\n" \
+"- \"Digital Image Compositing\" by Marc Levoy https://graphics.stanford.edu/courses/cs248-06/comp/comp.html\n" \
+"- \"Merge Blend Modes\" by Martin Constable http://opticalenquiry.com/nuke/index.php?title=Merge_Blend_Modes."
 
 #define kPluginIdentifier "net.sf.openfx.MergePlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
