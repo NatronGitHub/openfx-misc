@@ -894,8 +894,11 @@ static void
 addMergeOption(ChoiceParamDescriptor* param, MergingFunctionEnum e, const char* help, bool cascading)
 {
     assert(param->getNOptions() == e);
-    param->appendOption(cascading ? (getOperationGroupString(e) + '/' + getOperationString(e))
-                                     : getOperationString(e), help);
+    if (cascading) {
+        param->appendOption(getOperationGroupString(e) + '/' + getOperationString(e), help);
+    } else {
+        param->appendOption(getOperationString(e), '(' + getOperationGroupString(e) + ") " + help);
+    }
 }
 
 void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
@@ -990,7 +993,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOperation);
         param->setLabel(kParamOperationLabel);
         param->setHint(kParamOperationHint);
-        bool cascading = OFX::getImageEffectHostDescription()->supportsCascadingChoices;
+        bool cascading = false;// OFX::getImageEffectHostDescription()->supportsCascadingChoices;
         param->setCascading(cascading);
         addMergeOption(param, eMergeATop, "Ab + B(1 - a)", cascading);
         addMergeOption(param, eMergeAverage, "(A + B) / 2", cascading);
