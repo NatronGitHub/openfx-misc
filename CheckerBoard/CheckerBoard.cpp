@@ -379,7 +379,7 @@ class CheckerBoardPlugin : public GeneratorPlugin
 public:
     /** @brief ctor */
     CheckerBoardPlugin(OfxImageEffectHandle handle)
-    : GeneratorPlugin(handle)
+    : GeneratorPlugin(handle, true)
     , _boxSize(0)
     , _color0(0)
     , _color1(0)
@@ -677,7 +677,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    generatorDescribeInContext(page, desc, *dstClip, eGeneratorTypeDefault, context);
+    generatorDescribeInContext(page, desc, *dstClip, eGeneratorTypeDefault, true,  context);
 
 #define kParamSize "boxsize"
 #define kParamSizeLabel "Size"

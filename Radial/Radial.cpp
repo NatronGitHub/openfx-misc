@@ -434,7 +434,7 @@ class RadialPlugin : public GeneratorPlugin
 public:
     /** @brief ctor */
     RadialPlugin(OfxImageEffectHandle handle)
-    : GeneratorPlugin(handle)
+    : GeneratorPlugin(handle, false)
     , _dstClip(0)
     , _srcClip(0)
     , _processR(0)
@@ -947,7 +947,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     }
 
 
-    generatorDescribeInContext(page, desc, *dstClip, eGeneratorTypeSize,  context);
+    generatorDescribeInContext(page, desc, *dstClip, eGeneratorTypeSize, false,  context);
 
     // interactive
     {

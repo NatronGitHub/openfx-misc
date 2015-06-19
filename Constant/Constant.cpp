@@ -226,7 +226,7 @@ class ConstantPlugin : public GeneratorPlugin
 public:
     /** @brief ctor */
     ConstantPlugin(OfxImageEffectHandle handle, bool solid)
-    : GeneratorPlugin(handle)
+    : GeneratorPlugin(handle, true)
     , _color(0)
     , _colorRGB(0)
     , _range(0)
@@ -504,7 +504,7 @@ void ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor 
     
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    generatorDescribeInContext(page, desc, *dstClip, eGeneratorTypeDefault, context);
+    generatorDescribeInContext(page, desc, *dstClip, eGeneratorTypeDefault, true, context);
 
     // color
     if (solid) {
