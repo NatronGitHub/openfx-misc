@@ -93,7 +93,20 @@
 "- \"Digital Image Compositing\" by Marc Levoy https://graphics.stanford.edu/courses/cs248-06/comp/comp.html\n" \
 "- \"Merge Blend Modes\" by Martin Constable http://opticalenquiry.com/nuke/index.php?title=Merge_Blend_Modes."
 
+#define kPluginGroupingSub "Merge/Merges"
+
+#define kPluginNamePlus "PlusOFX"
+#define kPluginNameMatte "MatteOFX"
+#define kPluginNameMultiply "MultiplyOFX"
+#define kPluginNameIn "InOFX"
+#define kPluginNameOut "OutOFX"
+#define kPluginNameScreen "ScreenOFX"
+#define kPluginNameMax "MaxOFX"
+#define kPluginNameMin "MinOFX"
+#define kPluginNameAbsminus "AbsminusOFX"
+
 #define kPluginIdentifier "net.sf.openfx.MergePlugin"
+#define kPluginIdentifierSub "net.sf.openfx.Merge"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -862,14 +875,73 @@ MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
 }
 
 
-mDeclarePluginFactory(MergePluginFactory, {}, {});
+//mDeclarePluginFactory(MergePluginFactory, {}, {});
+template<MergingFunctionEnum plugin>
+class MergePluginFactory : public OFX::PluginFactoryHelper<MergePluginFactory<plugin> >
+{
+public:
+    MergePluginFactory<plugin>(const std::string& id, unsigned int verMaj, unsigned int verMin):OFX::PluginFactoryHelper<MergePluginFactory>(id, verMaj, verMin){}
+    virtual void describe(OFX::ImageEffectDescriptor &desc);
+    virtual void describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
+    virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context);
+};
 
-void MergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+template<MergingFunctionEnum plugin>
+void MergePluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    desc.setLabel(kPluginName);
-    desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+    switch (plugin) {
+        case eMergeOver:
+            desc.setLabel(kPluginName);
+            desc.setPluginGrouping(kPluginGrouping);
+            desc.setPluginDescription(kPluginDescription);
+            break;
+        case eMergePlus:
+            desc.setLabel(kPluginNamePlus);
+            desc.setPluginGrouping(kPluginGroupingSub);
+            desc.setPluginDescription(kPluginDescription);
+            break;
+        case eMergeMatte:
+            desc.setLabel(kPluginNameMatte);
+            desc.setPluginGrouping(kPluginGroupingSub);
+            desc.setPluginDescription(kPluginDescription);
+            break;
+        case eMergeMultiply:
+            desc.setLabel(kPluginNameMultiply);
+            desc.setPluginGrouping(kPluginGroupingSub);
+            desc.setPluginDescription(kPluginDescription);
+            break;
+        case eMergeIn:
+            desc.setLabel(kPluginNameIn);
+            desc.setPluginGrouping(kPluginGroupingSub);
+            desc.setPluginDescription(kPluginDescription);
+            break;
+        case eMergeOut:
+            desc.setLabel(kPluginNameOut);
+            desc.setPluginGrouping(kPluginGroupingSub);
+            desc.setPluginDescription(kPluginDescription);
+            break;
+        case eMergeScreen:
+            desc.setLabel(kPluginNameScreen);
+            desc.setPluginGrouping(kPluginGroupingSub);
+            desc.setPluginDescription(kPluginDescription);
+            break;
+        case eMergeMax:
+            desc.setLabel(kPluginNameMax);
+            desc.setPluginGrouping(kPluginGroupingSub);
+            desc.setPluginDescription(kPluginDescription);
+            break;
+        case eMergeMin:
+            desc.setLabel(kPluginNameMin);
+            desc.setPluginGrouping(kPluginGroupingSub);
+            desc.setPluginDescription(kPluginDescription);
+            break;
+        case eMergeDifference:
+            desc.setLabel(kPluginNameAbsminus);
+            desc.setPluginGrouping(kPluginGroupingSub);
+            desc.setPluginDescription(kPluginDescription);
+            break;
+    }
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -901,7 +973,9 @@ addMergeOption(ChoiceParamDescriptor* param, MergingFunctionEnum e, const char* 
     }
 }
 
-void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+template<MergingFunctionEnum plugin>
+void
+MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
@@ -982,7 +1056,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setEnabled(false);
         param->setIsPersistant(true);
         param->setEvaluateOnChange(false);
-        param->setDefault(getOperationString(eMergeOver));
+        param->setDefault(getOperationString(plugin));
         if (page) {
             page->addChild(*param);
         }
@@ -1033,7 +1107,7 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         addMergeOption(param, eMergeStencil, "B(1-a)", cascading);
         addMergeOption(param, eMergeUnder, "A(1-b)+B", cascading);
         addMergeOption(param, eMergeXOR, "A(1-b)+B(1-a)", cascading);
-        param->setDefault(eMergeOver);
+        param->setDefault(plugin);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
         if (page) {
@@ -1073,7 +1147,9 @@ void MergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     ofxsMaskMixDescribeParams(desc, page);
 }
 
-OFX::ImageEffect* MergePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+template<MergingFunctionEnum plugin>
+OFX::ImageEffect*
+MergePluginFactory<plugin>::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
@@ -1086,7 +1162,45 @@ OFX::ImageEffect* MergePluginFactory::createInstance(OfxImageEffectHandle handle
 
 void getMergePluginID(OFX::PluginFactoryArray &ids)
 {
-    static MergePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
+    {
+        static MergePluginFactory<eMergeOver> p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static MergePluginFactory<eMergePlus> p(std::string(kPluginIdentifierSub) + "Plus", kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static MergePluginFactory<eMergeMatte> p(std::string(kPluginIdentifierSub) + "Matte", kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static MergePluginFactory<eMergeMultiply> p(std::string(kPluginIdentifierSub) + "Multiply", kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static MergePluginFactory<eMergeIn> p(std::string(kPluginIdentifierSub) + "In", kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static MergePluginFactory<eMergeOut> p(std::string(kPluginIdentifierSub) + "Out", kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static MergePluginFactory<eMergeScreen> p(std::string(kPluginIdentifierSub) + "Screen", kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static MergePluginFactory<eMergeMax> p(std::string(kPluginIdentifierSub) + "Max", kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static MergePluginFactory<eMergeMin> p(std::string(kPluginIdentifierSub) + "Min", kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
+    {
+        static MergePluginFactory<eMergeDifference> p(std::string(kPluginIdentifierSub) + "Difference", kPluginVersionMajor, kPluginVersionMinor);
+        ids.push_back(&p);
+    }
 }
 
