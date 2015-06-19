@@ -39,7 +39,9 @@ CXXFLAGS += -I$(CIMG_INCLUDE)
 # see http://sourceforge.net/p/cimg/source/ci/master/log/?path=/CImg.h
 #
 # commit b99c968d1594e52005d60145f11c71b3f5db8679 is CImg 1.6.3
-CIMGVERSION=b99c968d1594e52005d60145f11c71b3f5db8679
+# commit 852e71429760c2695f6b02b1a49400c31ad60154 is CImg 1.6.4
+CIMGVERSION=852e71429760c2695f6b02b1a49400c31ad60154
+
 CImg.h:
 	curl -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
 
