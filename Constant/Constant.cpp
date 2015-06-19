@@ -504,7 +504,7 @@ void ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor 
     
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    generatorDescribeInContext(page, desc, *dstClip, context);
+    generatorDescribeInContext(page, desc, *dstClip, eGeneratorTypeDefault, context);
 
     // color
     if (solid) {

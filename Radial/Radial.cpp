@@ -77,9 +77,9 @@
 #include "ofxsProcessing.H"
 #include "ofxsMerging.h"
 #include "ofxsMaskMix.h"
-#include "ofxsRectangleInteract.h"
 #include "ofxsMacros.h"
 #include "ofxNatron.h"
+#include "ofxsGenerator.h"
 
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
@@ -429,12 +429,12 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class RadialPlugin : public OFX::ImageEffect
+class RadialPlugin : public GeneratorPlugin
 {
 public:
     /** @brief ctor */
     RadialPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
+    : GeneratorPlugin(handle)
     , _dstClip(0)
     , _srcClip(0)
     , _processR(0)
@@ -592,8 +592,20 @@ RadialPlugin::setupAndProcess(RadialProcessorBase &processor, const OFX::RenderA
     processor.setRenderWindow(args.renderWindow);
 
     OfxPointD btmLeft, size;
-    _btmLeft->getValueAtTime(args.time, btmLeft.x, btmLeft.y);
-    _size->getValueAtTime(args.time, size.x, size.y);
+    {
+        OfxRectD rod;
+        bool wasCaught = GeneratorPlugin::getRegionOfDefinition(rod);
+        if (!wasCaught) {
+            //Overlay in default mode, use the project rod
+            size = getProjectSize();
+            btmLeft = getProjectOffset();
+        } else {
+            btmLeft.x = rod.x1;
+            btmLeft.y = rod.y1;
+            size.x = rod.x2 - rod.x1;
+            size.y = rod.y2 - rod.y1;
+        }
+    }
 
     double softness;
     _softness->getValueAtTime(args.time, softness);
@@ -733,6 +745,8 @@ RadialPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     if (processA && _srcClip->getPreMultiplication() == eImageOpaque) {
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }
+    
+    GeneratorPlugin::getClipPreferences(clipPreferences);
 }
 
 bool
@@ -778,13 +792,9 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
     if (_srcClip && _srcClip->isConnected() && !expandRoD) {
         return false;
     }
-    OfxPointD btmLeft, size;
-    _btmLeft->getValueAtTime(args.time, btmLeft.x, btmLeft.y);
-    _size->getValueAtTime(args.time, size.x, size.y);
-    rod.x1 = btmLeft.x;
-    rod.y1 = btmLeft.y;
-    rod.x2 = rod.x1 + size.x;
-    rod.y2 = rod.y1 + size.y;
+    
+    bool wasCaught = GeneratorPlugin::getRegionOfDefinition(rod);
+
     if (_srcClip && _srcClip->isConnected()) {
         // something has to be drawn outside of the rectangle: return union of input RoD and rectangle
         OfxRectD srcRoD = _srcClip->getRegionOfDefinition(args.time);
@@ -792,6 +802,18 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
         rod.x2 = std::max(rod.x2, srcRoD.x2);
         rod.y1 = std::min(rod.y1, srcRoD.y1);
         rod.y2 = std::max(rod.y2, srcRoD.y2);
+    } else {
+        
+        if (!wasCaught) {
+            //The generator is in default mode, if the source clip is connected, take its rod, otherwise take
+            //the rod of the project
+            OfxPointD siz = getProjectSize();
+            OfxPointD off = getProjectOffset();
+            rod.x1 = off.x;
+            rod.x2 = off.x + siz.x;
+            rod.y1 = off.y;
+            rod.y2 = off.y + siz.y;
+        }
     }
 
     return true;
@@ -828,7 +850,7 @@ void RadialPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // and scale the transform appropriately.
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
-    desc.setOverlayInteractDescriptor(new RectangleOverlayDescriptor);
+    generatorDescribe(desc);
     
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
@@ -924,36 +946,8 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         }
     }
 
-    // btmLeft
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
-        param->setLabel(kParamRectangleInteractBtmLeftLabel);
-        param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
-        param->setDefault(0.25, 0.25);
-        param->setIncrement(1.);
-        param->setHint("Coordinates of the bottom left corner of the effect rectangle.");
-        param->setDigits(0);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
 
-    // size
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
-        param->setLabel(kParamRectangleInteractSizeLabel);
-        param->setDoubleType(OFX::eDoubleTypeXY);
-        param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
-        param->setDefault(0.5, 0.5);
-        param->setIncrement(1.);
-        param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
-        param->setHint("Width and height of the effect rectangle.");
-        param->setDigits(0);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
+    generatorDescribeInContext(page, desc, *dstClip, eGeneratorTypeSize,  context);
 
     // interactive
     {
