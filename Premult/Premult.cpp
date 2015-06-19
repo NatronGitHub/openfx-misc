@@ -224,6 +224,7 @@ class ImagePremulter : public PremultBase
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
+#     ifndef __COVERITY__ // too many coverity[dead_error_line] errors
         const bool r = _processR && (nComponents != 1);
         const bool g = _processG && (nComponents >= 2);
         const bool b = _processB && (nComponents >= 3);
@@ -289,6 +290,7 @@ class ImagePremulter : public PremultBase
                 }
             }
         }
+#     endif
     }
 
   private:
