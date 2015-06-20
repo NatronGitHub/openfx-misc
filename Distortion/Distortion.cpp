@@ -546,6 +546,7 @@ private:
     static inline double wrap(double x, WrapEnum wrap)
     {
         switch(wrap) {
+            default:
             case eWrapClamp:
                 return x;
             case eWrapRepeat:
