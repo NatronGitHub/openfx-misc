@@ -329,6 +329,8 @@
 		1E52FFCF1955CE720000FB79 /* Premult.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E52FFCD1955CE720000FB79 /* Premult.cpp */; };
 		1E52FFD01955CE720000FB79 /* Premult.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E52FFCD1955CE720000FB79 /* Premult.cpp */; };
 		1E52FFD21955CE7C0000FB79 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E52FFD11955CE7C0000FB79 /* PluginRegistration.cpp */; };
+		1E53E2F21B359A010082B2AB /* ofxsGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E75A0311A87BA37005BAA36 /* ofxsGenerator.cpp */; };
+		1E53E2F31B359A020082B2AB /* ofxsGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E75A0311A87BA37005BAA36 /* ofxsGenerator.cpp */; };
 		1E57FC8F1ABEC65200AC4EB7 /* net.sf.openfx.AdjustRoDPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06266A1ABDC2D500B3D105 /* net.sf.openfx.AdjustRoDPlugin.png */; };
 		1E57FC901ABEC65200AC4EB7 /* net.sf.openfx.AdjustRoDPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06266B1ABDC2D500B3D105 /* net.sf.openfx.AdjustRoDPlugin.svg */; };
 		1E57FC911ABEC71100AC4EB7 /* net.sf.openfx.IDistort.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0626761ABDC65800B3D105 /* net.sf.openfx.IDistort.png */; };
@@ -5660,6 +5662,7 @@
 				1E0072D51A40417F00E77042 /* ofxsCore.cpp in Sources */,
 				1E0072D61A40417F00E77042 /* ofxsImageEffect.cpp in Sources */,
 				1E0072D71A40417F00E77042 /* ofxsInteract.cpp in Sources */,
+				1E53E2F31B359A020082B2AB /* ofxsGenerator.cpp in Sources */,
 				1E0072D81A40417F00E77042 /* ofxsRectangleInteract.cpp in Sources */,
 				1E0072D91A40417F00E77042 /* ofxsLog.cpp in Sources */,
 				1E0072DA1A40417F00E77042 /* ofxsMultiThread.cpp in Sources */,
@@ -6318,6 +6321,7 @@
 				1ECA4DFD1A3F3ACD00C5128B /* ofxsCore.cpp in Sources */,
 				1ECA4DFE1A3F3ACD00C5128B /* ofxsImageEffect.cpp in Sources */,
 				1ECA4DFF1A3F3ACD00C5128B /* ofxsInteract.cpp in Sources */,
+				1E53E2F21B359A010082B2AB /* ofxsGenerator.cpp in Sources */,
 				1ECA4E001A3F3ACD00C5128B /* ofxsRectangleInteract.cpp in Sources */,
 				1ECA4E011A3F3ACD00C5128B /* ofxsLog.cpp in Sources */,
 				1ECA4E021A3F3ACD00C5128B /* ofxsMultiThread.cpp in Sources */,
