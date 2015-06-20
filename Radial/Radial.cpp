@@ -69,6 +69,8 @@
  England
  
  */
+
+// NOTE: This plugin is very similar to Rectangle. Any changes made here should probably be made in Rectangle.
 #include "Radial.h"
 
 #include <cmath>
@@ -745,7 +747,7 @@ RadialPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     if (processA && _srcClip->getPreMultiplication() == eImageOpaque) {
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }
-    
+
     GeneratorPlugin::getClipPreferences(clipPreferences);
 }
 
@@ -802,18 +804,15 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
         rod.x2 = std::max(rod.x2, srcRoD.x2);
         rod.y1 = std::min(rod.y1, srcRoD.y1);
         rod.y2 = std::max(rod.y2, srcRoD.y2);
-    } else {
-        
-        if (!wasCaught) {
-            //The generator is in default mode, if the source clip is connected, take its rod, otherwise take
-            //the rod of the project
-            OfxPointD siz = getProjectSize();
-            OfxPointD off = getProjectOffset();
-            rod.x1 = off.x;
-            rod.x2 = off.x + siz.x;
-            rod.y1 = off.y;
-            rod.y2 = off.y + siz.y;
-        }
+    } else if (!wasCaught) {
+        //The generator is in default mode, if the source clip is connected, take its rod, otherwise take
+        //the rod of the project
+        OfxPointD siz = getProjectSize();
+        OfxPointD off = getProjectOffset();
+        rod.x1 = off.x;
+        rod.x2 = off.x + siz.x;
+        rod.y1 = off.y;
+        rod.y2 = off.y + siz.y;
     }
 
     return true;
@@ -851,7 +850,7 @@ void RadialPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
     generatorDescribe(desc);
-    
+
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
 #endif
@@ -945,7 +944,6 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
             page->addChild(*param);
         }
     }
-
 
     generatorDescribeInContext(page, desc, *dstClip, eGeneratorTypeSize, false,  context);
 
