@@ -93,8 +93,9 @@
 #define kPluginDescription \
 "Quickly generate image from mathematical formula evaluated for each pixel of the selected images.\n"\
 "Full documentation for G'MIC/CImg expressions can be found at http://gmic.eu/reference.shtml#section9\n"\
-"The only difference is the 't' variable, which is defined to current time by default.\n"\
-"  - The mathematical parser understands the following set of functions, operators and variables:\n"\
+"The only difference is the predefined variables 't' (current time) and 'k' (render scale).\n"\
+"\n"\
+"The mathematical parser understands the following set of functions, operators and variables:\n"\
 "    _ Usual operators: || (logical or), && (logical and), | (bitwise or), & (bitwise and), !=, ==, <=, >=, <, >, << (left bitwise shift), >> (right bitwise shift), -, +, *, /, % (modulo), ^ (power), ! (logical not), ~ (bitwise not).\n"\
 "    _ Usual functions: sin(), cos(), tan(), asin(), acos(), atan(), sinh(), cosh(), tanh(),log(), log2(), log10(), exp(), sign(), abs(), atan2(), round(), narg(), arg(), isval(), isnan(), isinf(), isint(), isbool(), isdir(), isfile(), rol() (left bit rotation), ror() (right bit rotation), min(), max(), med(), kth(), sinc(), int().\n"\
 "       Function 'atan2()' is the version of 'atan()' with two arguments 'y' and 'x' (as in C/C++).\n"\
