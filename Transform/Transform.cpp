@@ -180,13 +180,6 @@ TransformPlugin::isIdentity(double time)
         return true;
     }
 
-    if (_amount) {
-        double amount;
-        _amount->getValueAtTime(time, amount);
-        if (amount == 0.) {
-            return true;
-        }
-    }
     return false;
 }
 
