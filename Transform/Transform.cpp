@@ -83,12 +83,16 @@
 #define kPluginName "TransformOFX"
 #define kPluginMaskedName "TransformMaskedOFX"
 #define kPluginGrouping "Transform"
-#define kPluginDescription "Translate / Rotate / Scale a 2D image."
+#define kPluginDescription "Translate / Rotate / Scale a 2D image.\n"\
+"This plugin concatenates transforms."
+#define kPluginMaskedDescription "Translate / Rotate / Scale a 2D image, with optional masking.\n"\
+"This plugin concatenates transforms upstream."
 #define kPluginIdentifier "net.sf.openfx.TransformPlugin"
 #define kPluginMaskedIdentifier "net.sf.openfx.TransformMaskedPlugin"
 #define kPluginDirBlurName "DirBlurOFX"
 #define kPluginDirBlurGrouping "Filter"
-#define kPluginDirBlurDescription "Apply directional blur to an image."
+#define kPluginDirBlurDescription "Apply directional blur to an image.\n"\
+"This plugin concatenates transforms upstream."
 #define kPluginDirBlurIdentifier "net.sf.openfx.DirBlur"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -149,7 +153,7 @@ private:
     OFX::DoubleParam* _skewY;
     OFX::ChoiceParam* _skewOrder;
     OFX::Double2DParam* _center;
-    BooleanParam* _interactive;
+    OFX::BooleanParam* _interactive;
 };
 
 // overridden is identity
@@ -176,6 +180,13 @@ TransformPlugin::isIdentity(double time)
         return true;
     }
 
+    if (_amount) {
+        double amount;
+        _amount->getValueAtTime(time, amount);
+        if (amount == 0.) {
+            return true;
+        }
+    }
     return false;
 }
 
@@ -510,7 +521,7 @@ void TransformMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // basic labels
     desc.setLabel(kPluginMaskedName);
     desc.setPluginGrouping(kPluginGrouping);
-    desc.setPluginDescription(kPluginDescription);
+    desc.setPluginDescription(kPluginMaskedDescription);
 
     Transform3x3Describe(desc, true);
 

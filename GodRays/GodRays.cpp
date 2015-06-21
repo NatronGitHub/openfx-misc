@@ -86,7 +86,8 @@
 "Average an image over a range of transforms.\n" \
 "This can be used to create crepuscular rays (also called God rays) by setting the scale and center parameters: scale governs the length of rays, and center should be set to the Sun or light position (which may be outside of the image).\n" \
 "Setting toColor to black and gamma to 1 causes an exponential decay which is very similar to the real crepuscular rays.\n" \
-"This can also be used to create directional blur using a fixed number of samples (as opposed to DirBlur, which uses an adaptive sampling method)."
+"This can also be used to create directional blur using a fixed number of samples (as opposed to DirBlur, which uses an adaptive sampling method).\n" \
+"This plugin concatenates transforms upstream."
 
 #define kPluginIdentifier "net.sf.openfx.GodRays"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -165,7 +166,7 @@ public:
 #endif
                            bool max)
     {
-        Transform3x3ProcessorBase::setValues(invtransform, invtransformsize, blackOutside, motionblur, mix);
+        Transform3x3ProcessorBase::setValues(invtransform, 0, invtransformsize, blackOutside, motionblur, mix);
         for (int c=0; c < 4; ++c) {
             _fromColor[c] = fromColor[c];
             _toColor[c] = toColor[c];
@@ -860,7 +861,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         invtransformsizealloc = kTransform3x3MotionBlurCount;
 #endif
         invtransform.resize(invtransformsizealloc);
-        invtransformsize = getInverseTransformsBlur(time, args.renderScale, fielded, pixelAspectRatio, invert, &invtransform.front(), invtransformsizealloc);
+        invtransformsize = getInverseTransformsBlur(time, args.renderScale, fielded, pixelAspectRatio, invert, 0., 1., &invtransform.front(), 0, invtransformsizealloc);
         if (invtransformsize == 1) {
             motionblur  = 0.;
         }
