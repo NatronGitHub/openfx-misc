@@ -90,7 +90,8 @@
 
 #define kPluginName "SwitchOFX"
 #define kPluginGrouping "Merge"
-#define kPluginDescription "Lets you switch between any number of inputs."
+#define kPluginDescription "Lets you switch between any number of inputs.\n"\
+"This plugin concatenates transforms."
 #define kPluginIdentifier "net.sf.openfx.switchPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.

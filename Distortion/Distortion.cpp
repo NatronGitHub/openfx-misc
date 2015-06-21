@@ -112,7 +112,8 @@
 "The U and V channels give the offset in pixels in the destination image to the pixel where the color is taken. " \
 "For example, if at pixel (45,12) the UV value is (-1.5,3.2), then the color at this pixel is taken from (43.5,15.2) in the source image. " \
 "This plugin concatenates transforms upstream, so that if the nodes upstream output a 3x3 transform " \
-"(e.g. Transform, CornerPin, Dot, NoOp, Switch), the original image is sampled only once." \
+"(e.g. Transform, CornerPin, Dot, NoOp, Switch), the original image is sampled only once.\n"\
+"This plugin concatenates transforms upstream." \
 
 #define kPluginIDistortIdentifier "net.sf.openfx.IDistort"
 
@@ -123,14 +124,16 @@
 "The U and V channels give, for each pixel in the destination image, the normalized position of the pixel where the color is taken. " \
 "(0,0) is the bottom left corner of the input image, while (1,1) is the top right corner. " \
 "This plugin concatenates transforms upstream, so that if the nodes upstream output a 3x3 transform " \
-"(e.g. Transform, CornerPin, Dot, NoOp, Switch), the original image is sampled only once." \
+"(e.g. Transform, CornerPin, Dot, NoOp, Switch), the original image is sampled only once.\n"\
+"This plugin concatenates transforms upstream." \
 
 #define kPluginSTMapIdentifier "net.sf.openfx.STMap"
 
 #define kPluginLensDistortionName "LensDistortionOFX"
 #define kPluginLensDistortionGrouping "Transform"
 #define kPluginLensDistortionDescription \
-"Add or remove lens distortion." \
+"Add or remove lens distortion.\n"\
+"This plugin concatenates transforms upstream." \
 
 #define kPluginLensDistortionIdentifier "net.sf.openfx.LensDistortion"
 

@@ -85,7 +85,8 @@
 
 #define kPluginName "PositionOFX"
 #define kPluginGrouping "Transform"
-#define kPluginDescription "Translate an image by an integer number of pixels."
+#define kPluginDescription "Translate an image by an integer number of pixels.\n"\
+"This plugin does not concatenate transforms."
 #define kPluginIdentifier "net.sf.openfx.Position"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.

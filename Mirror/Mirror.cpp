@@ -85,7 +85,8 @@
 
 #define kPluginMirrorName "MirrorOFX"
 #define kPluginMirrorGrouping "Transform"
-#define kPluginMirrorDescription "Flip (vertical mirror) or flop (horizontal mirror) an image. Interlaced video can not be flipped."
+#define kPluginMirrorDescription "Flip (vertical mirror) or flop (horizontal mirror) an image. Interlaced video can not be flipped.\n"\
+"This plugin does not concatenate transforms."
 #define kPluginMirrorIdentifier "net.sf.openfx.Mirror"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.

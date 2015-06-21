@@ -81,7 +81,8 @@
 
 #define kPluginName "CropOFX"
 #define kPluginGrouping "Transform"
-#define kPluginDescription "Removes everything outside the defined rectangle and adds black edges so everything outside is black."
+#define kPluginDescription "Removes everything outside the defined rectangle and adds black edges so everything outside is black.\n"\
+"This plugin does not concatenate transforms."
 #define kPluginIdentifier "net.sf.openfx.CropPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.

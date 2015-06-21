@@ -4020,13 +4020,13 @@
 		1EB0A45A1AA202AE00F9C93E /* Position */ = {
 			isa = PBXGroup;
 			children = (
+				1EB0A45E1AA202DF00F9C93E /* Position.cpp */,
+				1EB0A45F1AA202DF00F9C93E /* Position.h */,
 				1EB0A45B1AA202DF00F9C93E /* Info.plist */,
 				1EB0A45C1AA202DF00F9C93E /* Makefile */,
 				1EB0A45D1AA202DF00F9C93E /* PluginRegistration.cpp */,
 				AC0626721ABDC54E00B3D105 /* net.sf.openfx.Position.png */,
 				AC0626731ABDC54E00B3D105 /* net.sf.openfx.Position.svg */,
-				1EB0A45E1AA202DF00F9C93E /* Position.cpp */,
-				1EB0A45F1AA202DF00F9C93E /* Position.h */,
 			);
 			path = Position;
 			sourceTree = "<group>";
@@ -4048,12 +4048,12 @@
 		1EB9C06E196DD61B003C1849 /* NoOp */ = {
 			isa = PBXGroup;
 			children = (
+				1EB9C082196DD697003C1849 /* NoOp.cpp */,
+				1EB9C083196DD697003C1849 /* NoOp.h */,
 				1EB9C088196DD6AD003C1849 /* Info.plist */,
 				1EB9C089196DD6AD003C1849 /* Makefile */,
 				AC6486D61A41A5270088844F /* net.sf.openfx.NoOpPlugin.png */,
 				1E32848F1A41C23300C9A4E4 /* net.sf.openfx.NoOpPlugin.svg */,
-				1EB9C082196DD697003C1849 /* NoOp.cpp */,
-				1EB9C083196DD697003C1849 /* NoOp.h */,
 				1EB9C086196DD6A2003C1849 /* PluginRegistration.cpp */,
 			);
 			path = NoOp;
