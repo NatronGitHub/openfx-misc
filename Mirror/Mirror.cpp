@@ -128,12 +128,12 @@ public:
         assert(_srcBounds.x1 < _srcBounds.x2 && _srcBounds.y1 < _srcBounds.y2); // image should be non-empty
 
         if (flip) {
-            assert(_srcBounds.y1 <= (_yoff - procWindow.y2) && (_yoff - procWindow.y1) <= _srcBounds.y2);
+            assert(_srcBounds.y1 <= (_yoff - (procWindow.y2-1)) && (_yoff - procWindow.y1) < _srcBounds.y2);
         } else {
             assert(_srcBounds.y1 <= procWindow.y1 && procWindow.y2 <= _srcBounds.y2);
         }
         if (flop) {
-            assert(_srcBounds.x1 <= (_xoff - procWindow.x2) && (_xoff - procWindow.x1) <= _srcBounds.x2);
+            assert(_srcBounds.x1 <= (_xoff - (procWindow.x2-1)) && (_xoff - procWindow.x1) < _srcBounds.x2);
         } else {
             assert(_srcBounds.x1 <= procWindow.x1 && procWindow.x2 <= _srcBounds.x2);
         }
