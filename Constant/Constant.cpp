@@ -85,10 +85,10 @@
 
 #define kPluginName "ConstantOFX"
 #define kPluginGrouping "Image"
-#define kPluginDescription "Generate an image with a constant color. A frame range may be specified for operators that need it."
+#define kPluginDescription "Generate an image with a constant color."
 #define kPluginIdentifier "net.sf.openfx.ConstantPlugin"
 #define kPluginSolidName "SolidOFX"
-#define kPluginSolidDescription "Generate an image with a constant opaque color. A frame range may be specified for operators that need it."
+#define kPluginSolidDescription "Generate an image with a constant opaque color."
 #define kPluginSolidIdentifier "net.sf.openfx.Solid"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -103,10 +103,6 @@
 #define kParamColor "color"
 #define kParamColorLabel "Color"
 #define kParamColorHint "Color to fill the image with."
-
-#define kParamRange "frameRange"
-#define kParamRangeLabel "Frame Range"
-#define kParamRangeHint "Time domain."
 
 #include "ofxNatron.h"
 
@@ -229,15 +225,13 @@ public:
     : GeneratorPlugin(handle, true)
     , _color(0)
     , _colorRGB(0)
-    , _range(0)
     {
         if (solid) {
             _colorRGB   = fetchRGBParam(kParamColor);
         } else {
             _color   = fetchRGBAParam(kParamColor);
         }
-        _range   = fetchInt2DParam(kParamRange);
-        assert((_color || _colorRGB) && _range);
+        assert(_color || _colorRGB);
     }
 
 private:
@@ -247,22 +241,16 @@ private:
     template <int nComponents>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
-    /* override the time domain action, only for the general context */
-    virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
-
     /* set up and run a processor */
     void setupAndProcess(ConstantProcessorBase &, const OFX::RenderArguments &args);
     
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args,
-                               OFX::Clip * &identityClip,
-                               double &identityTime) OVERRIDE FINAL;
-
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+
+    virtual bool paramsNotAnimated() OVERRIDE FINAL;
 
 private:
     OFX::RGBAParam  *_color;
     OFX::RGBParam *_colorRGB;
-    OFX::Int2DParam  *_range;
 };
 
 
@@ -346,6 +334,7 @@ ConstantPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEn
 void
 ConstantPlugin::render(const OFX::RenderArguments &args)
 {
+    printf("Constant: render\n");
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
@@ -365,73 +354,24 @@ ConstantPlugin::render(const OFX::RenderArguments &args)
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
+    printf("Constant: render OK\n");
 }
 
-/* override the time domain action, only for the general context */
-bool
-ConstantPlugin::getTimeDomain(OfxRangeD &range)
-{
-    // this should only be called in the general context, ever!
-    if (getContext() == OFX::eContextGeneral) {
-        // how many frames on the input clip
-        //OfxRangeD srcRange = _srcClip->getFrameRange();
-
-        int min, max;
-        _range->getValue(min, max);
-        range.min = min;
-        range.max = max;
-        return true;
-    }
-
-    return false;
-}
 
 bool
-ConstantPlugin::isIdentity(const OFX::IsIdentityArguments &args,
-                                OFX::Clip * &identityClip,
-                                double &identityTime)
+ConstantPlugin::paramsNotAnimated()
 {
-    
-    if (gHostIsNatron) {
-        
-        // only Natron supports setting the identityClip to the output clip
-        
-        int min, max;
-        _range->getValue(min, max);
-        
-        int type_i;
-        _type->getValue(type_i);
-        GeneratorTypeEnum type = (GeneratorTypeEnum)type_i;
-        bool paramsNotAnimated = ((_color && _color->getNumKeys() == 0) ||
-                                  (_colorRGB && _colorRGB->getNumKeys() == 0));
-        if (type == eGeneratorTypeSize) {
-            ///If not animated and different than 'min' time, return identity on the min time.
-            ///We need to check more parameters
-            if (paramsNotAnimated && _size->getNumKeys() == 0 && _btmLeft->getNumKeys() == 0 && args.time != min) {
-                identityClip = _dstClip;
-                identityTime = min;
-                return true;
-            }
-        } else {
-            ///If not animated and different than 'min' time, return identity on the min time.
-            if (paramsNotAnimated && args.time != min) {
-                identityClip = _dstClip;
-                identityTime = min;
-                return true;
-            }
-        }
-        
-        
-       
-    }
-    return false;
+    return ((!_color || _color->getNumKeys() == 0) &&
+            (!_colorRGB || _colorRGB->getNumKeys() == 0));
 }
 
 void
 ConstantPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
+    printf("Constant: GCP\n");
     GeneratorPlugin::getClipPreferences(clipPreferences);
     clipPreferences.setOutputPremultiplication(_colorRGB ? OFX::eImageOpaque : OFX::eImagePreMultiplied);
+    printf("Constant: GCP OK\n");
 }
 
 using namespace OFX;
@@ -449,6 +389,7 @@ public:
 template<bool solid>
 void ConstantPluginFactory<solid>::describe(OFX::ImageEffectDescriptor &desc)
 {
+    printf("Constant: Dest\n");
     if (solid) {
         desc.setLabel(kPluginSolidName);
         desc.setPluginDescription(kPluginSolidDescription);
@@ -479,12 +420,13 @@ void ConstantPluginFactory<solid>::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 
     generatorDescribe(desc);
+    printf("Constant: Desc OK\n");
 }
 
 template<bool solid>
 void ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
-    gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
+    printf("Constant: DIC\n");
     
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip( kOfxImageEffectSimpleSourceClipName );
@@ -531,25 +473,15 @@ void ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor 
         }
     }
 
-    // range
-    {
-        Int2DParamDescriptor *param = desc.defineInt2DParam(kParamRange);
-        param->setLabel(kParamRangeLabel);
-        param->setHint(kParamRangeHint);
-        param->setDefault(1, 1);
-        param->setDimensionLabels("min", "max");
-        param->setAnimates(false); // can not animate, because it defines the time domain
-        if (page) {
-            page->addChild(*param);
-        }
-    }
 }
 
 template<bool solid>
 ImageEffect*
 ConstantPluginFactory<solid>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
+    printf("Constant: createInstance\n");
     return new ConstantPlugin(handle, solid);
+    printf("Constant: createInstance OK\n");
 }
 
 void getConstantPluginID(OFX::PluginFactoryArray &ids)
