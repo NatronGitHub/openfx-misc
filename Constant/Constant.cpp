@@ -334,7 +334,6 @@ ConstantPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEn
 void
 ConstantPlugin::render(const OFX::RenderArguments &args)
 {
-    printf("Constant: render\n");
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
@@ -354,7 +353,6 @@ ConstantPlugin::render(const OFX::RenderArguments &args)
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderInternal<1>(args, dstBitDepth);
     }
-    printf("Constant: render OK\n");
 }
 
 
@@ -368,10 +366,8 @@ ConstantPlugin::paramsNotAnimated()
 void
 ConstantPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-    printf("Constant: GCP\n");
     GeneratorPlugin::getClipPreferences(clipPreferences);
     clipPreferences.setOutputPremultiplication(_colorRGB ? OFX::eImageOpaque : OFX::eImagePreMultiplied);
-    printf("Constant: GCP OK\n");
 }
 
 using namespace OFX;
@@ -389,7 +385,6 @@ public:
 template<bool solid>
 void ConstantPluginFactory<solid>::describe(OFX::ImageEffectDescriptor &desc)
 {
-    printf("Constant: Dest\n");
     if (solid) {
         desc.setLabel(kPluginSolidName);
         desc.setPluginDescription(kPluginSolidDescription);
@@ -420,14 +415,11 @@ void ConstantPluginFactory<solid>::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 
     generatorDescribe(desc);
-    printf("Constant: Desc OK\n");
 }
 
 template<bool solid>
 void ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
-    printf("Constant: DIC\n");
-    
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip( kOfxImageEffectSimpleSourceClipName );
     srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -479,9 +471,7 @@ template<bool solid>
 ImageEffect*
 ConstantPluginFactory<solid>::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    printf("Constant: createInstance\n");
     return new ConstantPlugin(handle, solid);
-    printf("Constant: createInstance OK\n");
 }
 
 void getConstantPluginID(OFX::PluginFactoryArray &ids)
