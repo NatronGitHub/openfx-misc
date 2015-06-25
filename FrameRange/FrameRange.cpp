@@ -88,7 +88,7 @@ public:
     , _frameRange(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         _frameRange = fetchInt2DParam(kParamFrameRange);
         assert(_frameRange);
     }
@@ -163,7 +163,7 @@ FrameRangePlugin::getTransform(const OFX::TransformArguments &/*args*/, OFX::Cli
 void
 FrameRangePlugin::changedParam(const OFX::InstanceChangedArgs &/*args*/, const std::string &paramName)
 {
-    if (paramName == kParamReset) {
+    if (paramName == kParamReset && _srcClip && _srcClip->isConnected()) {
         OfxRangeD range = _srcClip->getFrameRange();
         _frameRange->setValue((int)range.min, (int)range.max);
     }

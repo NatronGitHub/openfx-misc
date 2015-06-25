@@ -307,9 +307,14 @@ public:
     , _rotoClip(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
+                            _dstClip->getPixelComponents() == ePixelComponentRGB ||
+                            _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
+               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGBA)));
         // name of mask clip depends on the context
         _rotoClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Roto");
         assert(_rotoClip && (_rotoClip->getPixelComponents() == ePixelComponentAlpha || _rotoClip->getPixelComponents() == ePixelComponentRGBA));
@@ -530,6 +535,9 @@ RotoPlugin::render(const OFX::RenderArguments &args)
 bool
 RotoPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
+    if (!_srcClip) {
+        return false;
+    }
     OFX::PixelComponentEnum srcComponents  = _srcClip->getPixelComponents();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     if (srcComponents != dstComponents) {
@@ -568,6 +576,9 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, do
 void
 RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
+    if (!_srcClip) {
+        return;
+    }
     PreMultiplicationEnum srcPremult = _srcClip->getPreMultiplication();
     bool processA;
     _processA->getValue(processA);
@@ -599,7 +610,7 @@ RotoPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
     desc.setTemporalClipAccess(false);
-    desc.setRenderTwiceAlways(true);
+    desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);

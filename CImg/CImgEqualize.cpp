@@ -245,6 +245,7 @@ void CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& de
         param->setLabel(kParamMinLabel);
         param->setHint(kParamMinHint);
         param->setDefault(kParamMinDefault);
+        param->setDisplayRange(0., 1.);
         param->setIncrement(0.001);
         if (page) {
             page->addChild(*param);
@@ -255,6 +256,7 @@ void CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& de
         param->setLabel(kParamMaxLabel);
         param->setHint(kParamMaxHint);
         param->setDefault(kParamMaxDefault);
+        param->setDisplayRange(0., 1.);
         param->setIncrement(0.001);
         if (page) {
             page->addChild(*param);

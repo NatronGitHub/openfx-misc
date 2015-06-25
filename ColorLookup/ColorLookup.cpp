@@ -389,11 +389,16 @@ public:
     , _maskClip(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
+                            _dstClip->getPixelComponents() == ePixelComponentRGB ||
+                            _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
+               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGBA)));
 
-        _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = (getContext() == OFX::eContextFilter  || getContext() == OFX::eContextGenerator) ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _lookupTable = fetchParametricParam(kParamLookupTable);
         _range = fetchDouble2DParam(kParamRange);
@@ -582,7 +587,6 @@ ColorLookupPlugin::setupAndProcess(ColorLookupProcessorBase &processor,
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    assert(_srcClip);
     std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
                                         _srcClip->fetchImage(args.time) : 0);
     if (src.get()) {
@@ -810,6 +814,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setDimensionLabels("min", "max");
         param->setHint(kParamRangeHint);
         param->setDefault(0., 1.);
+        param->setDisplayRange(0., 0., 1., 1.);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);

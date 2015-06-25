@@ -376,12 +376,14 @@ public:
     , _flop(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
 
         _flip = fetchBooleanParam(kParamMirrorFlip);
         _flop = fetchBooleanParam(kParamMirrorFlop);
         assert(_flip && _flop);
-        _flip->setEnabled(_srcClip->getFieldOrder() == eFieldNone);
+        if (_srcClip) {
+            _flip->setEnabled(_srcClip->getFieldOrder() == eFieldNone);
+        }
 }
 
 private:
@@ -464,8 +466,10 @@ MirrorPlugin::render(const OFX::RenderArguments &args)
 
     int xoff = 0;
     int yoff = 0;
-    OfxRectI srcRoD;
-    OFX::MergeImages2D::toPixelEnclosing(_srcClip->getRegionOfDefinition(time), args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoD);
+    OfxRectI srcRoD = {0, 0, 0, 0};
+    if (_srcClip) {
+        OFX::MergeImages2D::toPixelEnclosing(_srcClip->getRegionOfDefinition(time), args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoD);
+    }
     if (flop) {
         xoff = srcRoD.x1 + srcRoD.x2 - 1;
     }
@@ -494,6 +498,9 @@ MirrorPlugin::render(const OFX::RenderArguments &args)
 void
 MirrorPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
+    if (!_srcClip) {
+        return;
+    }
     const double time = args.time;
     OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
     bool flip;

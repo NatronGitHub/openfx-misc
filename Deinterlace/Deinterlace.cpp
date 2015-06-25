@@ -179,7 +179,7 @@ public:
     DeinterlacePlugin(OfxImageEffectHandle handle) : ImageEffect(handle), _dstClip(0), _srcClip(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
 
         mode = fetchChoiceParam("mode");
         fieldOrder = fetchChoiceParam("fieldOrder");

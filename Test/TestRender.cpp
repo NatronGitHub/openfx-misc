@@ -207,12 +207,18 @@ public:
     : ImageEffect(handle)
     , _dstClip(0)
     , _srcClip(0)
+    , _maskClip(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA || _srcClip->getPixelComponents() == ePixelComponentAlpha));
-        _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
+                            _dstClip->getPixelComponents() == ePixelComponentRGBA ||
+                            _dstClip->getPixelComponents() == ePixelComponentAlpha));
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
+               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGBA ||
+                             _srcClip->getPixelComponents() == ePixelComponentAlpha)));
+        _maskClip = (getContext() == OFX::eContextFilter  || getContext() == OFX::eContextGenerator) ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         _color[0] = fetchRGBAParam(kParamColor0);
@@ -303,6 +309,7 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
 
     // make sure bit depths are sane
     if (src.get()) {
+        assert(_srcClip);
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
             (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {

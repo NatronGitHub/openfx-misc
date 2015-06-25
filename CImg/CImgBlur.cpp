@@ -402,7 +402,7 @@ public:
         if (uniform) {
             params.sizey = params.sizex;
         }
-        double par = _srcClip->getPixelAspectRatio();
+        double par = _srcClip ? _srcClip->getPixelAspectRatio() : 0.;
         if (par != 0.) {
             params.sizex /= par;
         }

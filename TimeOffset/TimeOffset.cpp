@@ -142,8 +142,11 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
 , _time_offset(0)
 , _reverse_input(0)
 {
-    _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-    assert(_srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentAlpha || _srcClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA));
+    _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+    assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
+           (_srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentAlpha ||
+                         _srcClip->getPixelComponents() == OFX::ePixelComponentRGB ||
+                         _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA)));
 
     _time_offset   = fetchIntParam(kParamTimeOffset);
     _reverse_input = fetchBooleanParam(kParamReverseInput);
@@ -162,6 +165,9 @@ double
 TimeOffsetPlugin::getSourceTime(double t) const
 {
     double sourceTime = t - _time_offset->getValueAtTime(t); // no animation
+    if (!_srcClip) {
+        return sourceTime;
+    }
     OfxRangeD range = _srcClip->getFrameRange();
     bool reverse_input = _reverse_input->getValueAtTime(t);
     if (reverse_input) {

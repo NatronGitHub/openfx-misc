@@ -368,9 +368,14 @@ class PremultPlugin : public OFX::ImageEffect
     , _premult(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA || _srcClip->getPixelComponents() == ePixelComponentAlpha));
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
+                            _dstClip->getPixelComponents() == ePixelComponentRGBA ||
+                            _dstClip->getPixelComponents() == ePixelComponentAlpha));
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
+               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGBA ||
+                             _srcClip->getPixelComponents() == ePixelComponentAlpha)));
         _processR = fetchBooleanParam(kNatronOfxParamProcessR);
         _processG = fetchBooleanParam(kNatronOfxParamProcessG);
         _processB = fetchBooleanParam(kNatronOfxParamProcessB);
@@ -544,6 +549,9 @@ template<bool isPremult>
 bool
 PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
+    if (!_srcClip) {
+        return false;
+    }
     if (isPremult) {
         if (_srcClip->getPreMultiplication() != eImagePreMultiplied) {
             // input is UnPremult, output is Premult: no identity
@@ -618,7 +626,7 @@ template<bool isPremult>
 void
 PremultPlugin<isPremult>::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
-    if (paramName == kParamClipInfo && args.reason == eChangeUserEdit) {
+    if (paramName == kParamClipInfo && _srcClip && args.reason == eChangeUserEdit) {
         std::string msg;
         msg += "Input; ";
         if (!_srcClip) {

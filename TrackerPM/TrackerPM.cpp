@@ -138,7 +138,7 @@ public:
     , _outerBtmLeft(0)
     , _outerTopRight(0)
     {
-        _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = (getContext() == OFX::eContextFilter  || getContext() == OFX::eContextGenerator) ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _score = fetchChoiceParam(kParamScore);
         assert(_score);
@@ -551,6 +551,9 @@ private:
 void
 TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
 {
+    if (!_srcClip) {
+        return;
+    }
     // Although the following property has been there since OFX 1.0,
     // it's not in the HostSupport library.
     getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
@@ -684,6 +687,9 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
                                  const OfxRectD& trackSearchBounds,
                                  const OFX::Image* otherImg)
 {
+    if (!_srcClip) {
+        return;
+    }
     const double par = _srcClip->getPixelAspectRatio();
     const OfxPointD rsOne = {1., 1.};
     OfxRectI trackSearchBoundsPixel;
@@ -930,6 +936,7 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDoubleType(eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(eCoordinatesNormalised);
         param->setDefault(0.5, 0.5);
+        param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setIncrement(1.);
         param->setEvaluateOnChange(false); // The tracker is identity always
         param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
@@ -947,6 +954,7 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDoubleType(eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(eCoordinatesCanonical);
         param->setDefault(0, 0);
+        param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setIncrement(1.);
         param->setEvaluateOnChange(false); // The tracker is identity always
         if (page) {

@@ -89,7 +89,7 @@ public:
     , _forceCopy(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         _forceCopy = fetchBooleanParam(kParamForceCopy);
         assert(_forceCopy);
     }

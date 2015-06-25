@@ -395,7 +395,7 @@ public:
             // both sizes should have the same sign
             params.sizey = 0.;
         }
-        double par = _srcClip->getPixelAspectRatio();
+        double par = _srcClip ? _srcClip->getPixelAspectRatio() : 0.;
         if (par != 0.) {
             params.sizex /= par;
         }
@@ -644,6 +644,7 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         param->setDimensionLabels("min", "max");
         param->setHint(kParamRangeHint);
         param->setDefault(0., 1.);
+        param->setDisplayRange(0., 0., 1., 1.);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);

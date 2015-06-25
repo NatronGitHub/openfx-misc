@@ -275,7 +275,7 @@ public:
         assert(_srcClipA && (_srcClipA->getPixelComponents() == ePixelComponentAlpha || _srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA));
         _srcClipB = fetchClip(kClipB);
         assert(_srcClipB && (_srcClipB->getPixelComponents() == ePixelComponentAlpha || _srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA));
-        _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = (getContext() == OFX::eContextFilter  || getContext() == OFX::eContextGenerator) ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         
         _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
@@ -687,6 +687,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(0., 0.);
+        param->setDisplayRange(-10000., -10000., 10000., 10000.); // Resolve requires display range or values are clamped to (-1,1)
         param->setIncrement(1.);
         param->setHint(kParamRectangleInteractBtmLeftHint);
         param->setDigits(0);
@@ -702,6 +703,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
         param->setDoubleType(OFX::eDoubleTypeXY);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(1., 1.);
+        param->setDisplayRange(0., 0., 10000., 10000.); // Resolve requires display range or values are clamped to (-1,1)
         param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
         param->setHint(kParamRectangleInteractSizeHint);
         param->setIncrement(1.);

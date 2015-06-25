@@ -940,9 +940,14 @@ public:
     , _restrictToRectangle(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
+                            _dstClip->getPixelComponents() == ePixelComponentRGB ||
+                            _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
+               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGBA)));
 
         _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
         _size = fetchDouble2DParam(kParamRectangleInteractSize);
@@ -1377,7 +1382,7 @@ ImageStatisticsPlugin::computeWindow(const OFX::Image* srcImg, double time, OfxR
     OfxRectD regionOfInterest;
     bool restrictToRectangle;
     _restrictToRectangle->getValueAtTime(time, restrictToRectangle);
-    if (!restrictToRectangle) {
+    if (!restrictToRectangle && _srcClip) {
         // use the src region of definition as rectangle, but avoid infinite rectangle
         regionOfInterest = _srcClip->getRegionOfDefinition(time);
         OfxPointD size = getProjectSize();
@@ -1528,7 +1533,7 @@ void ImageStatisticsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
 
     desc.addSupportedContext(eContextGeneral);
-    desc.addSupportedContext(eContextGenerator);
+    desc.addSupportedContext(eContextFilter);
 
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
@@ -1609,6 +1614,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(0., 0.);
+        param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setIncrement(1.);
         param->setHint(kParamRectangleInteractBtmLeftHint);
         param->setDigits(0);
@@ -1625,6 +1631,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setDoubleType(OFX::eDoubleTypeXY);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setDefault(1., 1.);
+        param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setIncrement(1.);
         param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
         param->setHint(kParamRectangleInteractSizeHint);

@@ -2460,8 +2460,8 @@ EXPORT int
 OfxGetNumberOfPlugins(void)
 {
   if (OfxGetNumberOfPlugins_binary == 0) {
-     std::cout << "OFX DebugProxy: cannot load plugin from " << gBinaryPath << std::endl;
-     gPluginsNb = 0;
+    std::cout << "OFX DebugProxy: cannot load plugin from " << gBinaryPath << std::endl;
+    gPluginsNb = 0;
   } else {
     gPluginsNb = (*OfxGetNumberOfPlugins_binary)();
     std::cout << "OFX DebugProxy: found " << gPluginsNb << " plugins in " << gBinaryPath << std::endl;

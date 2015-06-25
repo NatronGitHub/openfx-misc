@@ -133,10 +133,6 @@
 #define kParamCenterLineWidthLabel "Centerline Width"
 #define kParamCenterLineWidthHint "Width, in pixels, of the center lines."
 
-#define kParamRange "frameRange"
-#define kParamRangeLabel "Frame Range"
-#define kParamRangeHint "Time domain."
-
 #include "ofxNatron.h"
 
 static bool gHostIsNatron   = false;
@@ -389,7 +385,6 @@ public:
     , _lineWidth(0)
     , _centerlineColor(0)
     , _centerlineWidth(0)
-    , _range(0)
     {
         _boxSize = fetchDouble2DParam(kParamBoxSize);
         _color0 = fetchRGBAParam(kParamColor0);
@@ -400,8 +395,7 @@ public:
         _lineWidth = fetchDoubleParam(kParamLineWidth);
         _centerlineColor = fetchRGBAParam(kParamCenterLineColor);
         _centerlineWidth = fetchDoubleParam(kParamCenterLineWidth);
-        _range   = fetchInt2DParam(kParamRange);
-        assert(_size && _color0 && _color1 && _color2 && _color3 && _lineColor && _lineWidth && _centerlineColor && _centerlineWidth && _range);
+        assert(_size && _color0 && _color1 && _color2 && _color3 && _lineColor && _lineWidth && _centerlineColor && _centerlineWidth);
     }
 
 private:
@@ -411,15 +405,10 @@ private:
     template <int nComponents>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
-    /* override the time domain action, only for the general context */
-    virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
-
     /* set up and run a processor */
     void setupAndProcess(CheckerBoardProcessorBase &, const OFX::RenderArguments &args);
     
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args,
-                               OFX::Clip * &identityClip,
-                               double &identityTime) OVERRIDE FINAL;
+    virtual bool paramsNotAnimated() OVERRIDE FINAL;
 
 private:
     OFX::Double2DParam *_boxSize;
@@ -431,7 +420,6 @@ private:
     OFX::DoubleParam *_lineWidth;
     OFX::RGBAParam  *_centerlineColor;
     OFX::DoubleParam *_centerlineWidth;
-    OFX::Int2DParam  *_range;
 };
 
 
@@ -556,71 +544,18 @@ CheckerBoardPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
-/* override the time domain action, only for the general context */
 bool
-CheckerBoardPlugin::getTimeDomain(OfxRangeD &range)
+CheckerBoardPlugin::paramsNotAnimated()
 {
-    // this should only be called in the general context, ever!
-    if (getContext() == OFX::eContextGeneral) {
-        // how many frames on the input clip
-        //OfxRangeD srcRange = _srcClip->getFrameRange();
-
-        int min, max;
-        _range->getValue(min, max);
-        range.min = min;
-        range.max = max;
-        return true;
-    }
-
-    return false;
-}
-
-bool
-CheckerBoardPlugin::isIdentity(const OFX::IsIdentityArguments &args,
-                                OFX::Clip * &identityClip,
-                                double &identityTime)
-{
-    
-    if (gHostIsNatron) {
-        
-        // only Natron supports setting the identityClip to the output clip
-        
-        int min, max;
-        _range->getValue(min, max);
-        
-        int type_i;
-        _type->getValue(type_i);
-        GeneratorTypeEnum type = (GeneratorTypeEnum)type_i;
-        bool paramsNotAnimated = (_boxSize->getNumKeys() == 0 &&
-                                  _color0->getNumKeys() == 0 &&
-                                  _color1->getNumKeys() == 0 &&
-                                  _color2->getNumKeys() == 0 &&
-                                  _color3->getNumKeys() == 0 &&
-                                  _lineColor->getNumKeys() == 0 &&
-                                  _lineWidth->getNumKeys() == 0 &&
-                                  _centerlineColor->getNumKeys() == 0 &&
-                                  _centerlineWidth->getNumKeys() == 0);
-        if (type == eGeneratorTypeSize) {
-            ///If not animated and different than 'min' time, return identity on the min time.
-            ///We need to check more parameters
-            if (paramsNotAnimated && _size->getNumKeys() == 0 && _btmLeft->getNumKeys() == 0 && args.time != min) {
-                identityClip = _dstClip;
-                identityTime = min;
-                return true;
-            }
-        } else {
-            ///If not animated and different than 'min' time, return identity on the min time.
-            if (paramsNotAnimated && args.time != min) {
-                identityClip = _dstClip;
-                identityTime = min;
-                return true;
-            }
-        }
-        
-        
-       
-    }
-    return false;
+    return ((!_boxSize || _boxSize->getNumKeys() == 0) &&
+            (!_color0 || _color0->getNumKeys() == 0) &&
+            (!_color1 || _color1->getNumKeys() == 0) &&
+            (!_color2 || _color2->getNumKeys() == 0) &&
+            (!_color3 || _color3->getNumKeys() == 0) &&
+            (!_lineColor || _lineColor->getNumKeys() == 0) &&
+            (!_lineWidth || _lineWidth->getNumKeys() == 0) &&
+            (!_centerlineColor || _centerlineColor->getNumKeys() == 0) &&
+            (!_centerlineWidth || _centerlineWidth->getNumKeys() == 0));
 }
 
 using namespace OFX;
@@ -808,19 +743,6 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setRange(0., INT_MAX);
         param->setDisplayRange(0, 10);
         param->setAnimates(true); // can animate
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // range
-    {
-        Int2DParamDescriptor *param = desc.defineInt2DParam(kParamRange);
-        param->setLabel(kParamRangeLabel);
-        param->setHint(kParamRangeHint);
-        param->setDefault(1, 1);
-        param->setDimensionLabels("min", "max");
-        param->setAnimates(false); // can not animate, because it defines the time domain
         if (page) {
             page->addChild(*param);
         }

@@ -125,7 +125,7 @@ public:
     , _translate(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         _translate = fetchDouble2DParam(kParamTranslate);
         assert(_translate);
     }
@@ -226,6 +226,9 @@ PositionPlugin::render(const OFX::RenderArguments &args)
 bool
 PositionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
+    if (!_srcClip) {
+        return false;
+    }
     const double time = args.time;
     OfxRectD srcrod = _srcClip->getRegionOfDefinition(time);
     double par = _dstClip->getPixelAspectRatio();
@@ -257,6 +260,9 @@ PositionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
 void
 PositionPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
+    if (!_srcClip) {
+        return;
+    }
     const double time = args.time;
     OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
     double par = _dstClip->getPixelAspectRatio();
@@ -406,6 +412,7 @@ void PositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setDoubleType(eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(eCoordinatesNormalised);
         param->setDefault(0., 0.);
+        param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         hostHasNativeOverlayForPosition = param->getHostHasNativeOverlayHandle();
         if (hostHasNativeOverlayForPosition) {
             param->setUseHostOverlayHandle(true);

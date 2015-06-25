@@ -512,10 +512,15 @@ public:
     , _interactive(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
-        _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
+                            _dstClip->getPixelComponents() == ePixelComponentRGB ||
+                            _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
+               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGBA)));
+        _maskClip = (getContext() == OFX::eContextFilter  || getContext() == OFX::eContextGenerator) ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         
         _processR = fetchBooleanParam(kNatronOfxParamProcessR);
@@ -605,7 +610,6 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor, const OFX::RenderArgum
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    assert(_srcClip);
     std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
                                         _srcClip->fetchImage(args.time) : 0);
     if (src.get()) {
@@ -790,11 +794,13 @@ RampPlugin::isIdentity(const OFX::IsIdentityArguments &args,
 void
 RampPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-    // set the premultiplication of _dstClip if alpha is affected and source is Opaque
-    bool processA;
-    _processA->getValue(processA);
-    if (processA && _srcClip->getPreMultiplication() == eImageOpaque) {
-        clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
+    if (_srcClip) {
+        // set the premultiplication of _dstClip if alpha is affected and source is Opaque
+        bool processA;
+        _processA->getValue(processA);
+        if (processA && _srcClip->getPreMultiplication() == eImageOpaque) {
+            clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
+        }
     }
 }
 
@@ -1190,7 +1196,7 @@ void RampPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
     desc.setTemporalClipAccess(false);
-    desc.setRenderTwiceAlways(true);
+    desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
@@ -1305,6 +1311,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesCanonical);
         param->setDefault(100., 100.);
+        param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         if (page) {
             page->addChild(*param);
         }
@@ -1328,6 +1335,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(OFX::eCoordinatesCanonical);
         param->setDefault(100., 200.);
+        param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         if (page) {
             page->addChild(*param);
         }

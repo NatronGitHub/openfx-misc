@@ -225,14 +225,20 @@ public:
     /** @brief ctor */
     NoisePlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
+    , _srcClip(0)
     , _dstClip(0)
     , _noise(0)
     , _seed(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA || _srcClip->getPixelComponents() == ePixelComponentAlpha));
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
+                            _dstClip->getPixelComponents() == ePixelComponentRGBA ||
+                            _dstClip->getPixelComponents() == ePixelComponentAlpha));
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
+               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGBA ||
+                             _srcClip->getPixelComponents() == ePixelComponentAlpha)));
         _noise   = fetchDoubleParam(kParamNoiseLevel);
         _seed   = fetchIntParam(kParamSeed);
         assert(_noise && _seed);

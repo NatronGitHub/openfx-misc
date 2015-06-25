@@ -236,8 +236,9 @@ public:
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && _dstClip->getPixelComponents() == ePixelComponentRGBA);
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClip && _srcClip->getPixelComponents() == ePixelComponentRGBA);
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
+               (_srcClip && _srcClip->getPixelComponents() == ePixelComponentRGBA));
         _amtcolour  = fetchDoubleParam(kParamAmtColour);
         _swap = fetchBooleanParam(kParamSwap);
         _offset = fetchIntParam(kParamOffset);

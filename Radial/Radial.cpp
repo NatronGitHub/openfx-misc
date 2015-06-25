@@ -437,38 +437,34 @@ public:
     /** @brief ctor */
     RadialPlugin(OfxImageEffectHandle handle)
     : GeneratorPlugin(handle, false)
-    , _dstClip(0)
     , _srcClip(0)
     , _processR(0)
     , _processG(0)
     , _processB(0)
     , _processA(0)
-    , _btmLeft(0)
-    , _size(0)
     , _color0(0)
     , _color1(0)
     , _expandRoD(0)
     {
-        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
-        _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
+               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGBA ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
+                             _srcClip->getPixelComponents() == ePixelComponentXY ||
+                             _srcClip->getPixelComponents() == ePixelComponentAlpha)));
+        _maskClip = (getContext() == OFX::eContextFilter  || getContext() == OFX::eContextGenerator) ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
-        
         _processR = fetchBooleanParam(kNatronOfxParamProcessR);
         _processG = fetchBooleanParam(kNatronOfxParamProcessG);
         _processB = fetchBooleanParam(kNatronOfxParamProcessB);
         _processA = fetchBooleanParam(kNatronOfxParamProcessA);
         assert(_processR && _processG && _processB && _processA);
-        _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
-        _size = fetchDouble2DParam(kParamRectangleInteractSize);
         _softness = fetchDoubleParam(kParamSoftness);
         _plinear = fetchBooleanParam(kParamPLinear);
         _color0 = fetchRGBAParam(kParamColor0);
         _color1 = fetchRGBAParam(kParamColor1);
         _expandRoD = fetchBooleanParam(kParamExpandRoD);
-        assert(_btmLeft && _size && _softness && _plinear && _color0 && _color1 && _expandRoD);
+        assert(_softness && _plinear && _color0 && _color1 && _expandRoD);
 
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
@@ -492,11 +488,12 @@ private:
 
     /* set up and run a processor */
     void setupAndProcess(RadialProcessorBase &, const OFX::RenderArguments &args);
-    
+
+    virtual bool paramsNotAnimated() OVERRIDE FINAL;
+
 private:
     
     // do not need to delete these, the ImageEffect is managing them for us
-    Clip *_dstClip;
     Clip *_srcClip;
     Clip *_maskClip;
 
@@ -504,8 +501,6 @@ private:
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
-    Double2DParam* _btmLeft;
-    Double2DParam* _size;
     DoubleParam* _softness;
     BooleanParam* _plinear;
     RGBAParam* _color0;
@@ -542,7 +537,6 @@ RadialPlugin::setupAndProcess(RadialProcessorBase &processor, const OFX::RenderA
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    assert(_srcClip);
     std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
                                         _srcClip->fetchImage(args.time) : 0);
     if (src.get()) {
@@ -687,8 +681,16 @@ RadialPlugin::render(const OFX::RenderArguments &args)
 bool
 RadialPlugin::isIdentity(const OFX::IsIdentityArguments &args,
                        OFX::Clip * &identityClip,
-                       double &/*identityTime*/)
+                       double &identityTime)
 {
+    if (GeneratorPlugin::isIdentity(args, identityClip, identityTime)) {
+        return true;
+    }
+
+    if (!_srcClip) {
+        return false;
+    }
+
     double mix;
     _mix->getValueAtTime(args.time, mix);
 
@@ -737,15 +739,33 @@ RadialPlugin::isIdentity(const OFX::IsIdentityArguments &args,
     return false;
 }
 
+bool
+RadialPlugin::paramsNotAnimated()
+{
+    return ((!_processR || _processR->getNumKeys() == 0) &&
+            (!_processG || _processG->getNumKeys() == 0) &&
+            (!_processB || _processB->getNumKeys() == 0) &&
+            (!_processA || _processA->getNumKeys() == 0) &&
+            (!_softness || _softness->getNumKeys() == 0) &&
+            (!_plinear || _plinear->getNumKeys() == 0) &&
+            (!_color0 || _color0->getNumKeys() == 0) &&
+            (!_color1 || _color1->getNumKeys() == 0) &&
+            (!_expandRoD || _expandRoD->getNumKeys() == 0) &&
+            (!_mix || _mix->getNumKeys() == 0) &&
+            (!_maskInvert || _maskInvert->getNumKeys() == 0));
+}
+
 /* Override the clip preferences */
 void
 RadialPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-    // set the premultiplication of _dstClip if alpha is affected and source is Opaque
-    bool processA;
-    _processA->getValue(processA);
-    if (processA && _srcClip->getPreMultiplication() == eImageOpaque) {
-        clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
+    if (_srcClip) {
+        // set the premultiplication of _dstClip if alpha is affected and source is Opaque
+        bool processA;
+        _processA->getValue(processA);
+        if (processA && _srcClip->getPreMultiplication() == eImageOpaque) {
+            clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
+        }
     }
 
     GeneratorPlugin::getClipPreferences(clipPreferences);
@@ -757,7 +777,7 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
     double mix;
     _mix->getValueAtTime(args.time, mix);
     if (mix == 0.) {
-        if (_srcClip->isConnected()) {
+        if (_srcClip && _srcClip->isConnected()) {
             // nothing to draw: return default region of definition
             return false;
         } else {
@@ -799,7 +819,7 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
 
     if (_srcClip && _srcClip->isConnected()) {
         // something has to be drawn outside of the rectangle: return union of input RoD and rectangle
-        OfxRectD srcRoD = _srcClip->getRegionOfDefinition(args.time);
+        const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(args.time);
         rod.x1 = std::min(rod.x1, srcRoD.x1);
         rod.x2 = std::max(rod.x2, srcRoD.x2);
         rod.y1 = std::min(rod.y1, srcRoD.y1);
@@ -838,7 +858,7 @@ void RadialPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
     desc.setTemporalClipAccess(false);
-    desc.setRenderTwiceAlways(true);
+    desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);

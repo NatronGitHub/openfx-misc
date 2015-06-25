@@ -113,9 +113,14 @@ public:
     , _size(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
+                            _dstClip->getPixelComponents() == ePixelComponentRGB ||
+                            _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
+               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGBA)));
         
         _size = fetchDouble2DParam(kParamAddPixels);
         assert(_size);
@@ -206,7 +211,7 @@ AdjustRoDPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     if (!_srcClip) {
         return;
     }
-    const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(args.time);
+    const OfxRectD srcRod = _srcClip->getRegionOfDefinition(args.time);
     double w,h;
     _size->getValueAtTime(args.time, w, h);
     
@@ -227,6 +232,9 @@ AdjustRoDPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
 bool
 AdjustRoDPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
+    if (!_srcClip) {
+        return false;
+    }
     const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(args.time);
     double w,h;
     _size->getValueAtTime(args.time, w, h);
@@ -390,6 +398,8 @@ void AdjustRoDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefaultCoordinateSystem(eCoordinatesNormalised);
         param->setDefault(0., 0.);
         param->setIncrement(1.);
+        param->setRange(0., 0., INT_MAX, INT_MAX);
+        param->setDisplayRange(0., 0., 1000., 1000.);
         param->setDimensionLabels("w", "h");
         param->setIncrement(1.);
         param->setDigits(0);

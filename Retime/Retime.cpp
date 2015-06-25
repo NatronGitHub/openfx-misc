@@ -187,7 +187,7 @@ public:
     , _filter(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
 
         // What parameters we instantiate depend on the context
         if (getContext() == OFX::eContextRetimer) {
@@ -381,6 +381,9 @@ void
 RetimePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
                                OFX::FramesNeededSetter &frames)
 {
+    if (!_srcClip) {
+        return;
+    }
     const double time = args.time;
     double sourceTime;
     if (getContext() == OFX::eContextRetimer) {
@@ -431,6 +434,9 @@ RetimePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
 bool
 RetimePlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime)
 {
+    if (!_srcClip) {
+        return false;
+    }
     const double time = args.time;
     double sourceTime;
     if (getContext() == OFX::eContextRetimer) {
@@ -477,7 +483,7 @@ bool
 RetimePlugin::getTimeDomain(OfxRangeD &range)
 {
     // this should only be called in the general context, ever!
-    if (getContext() == OFX::eContextGeneral && _duration) {
+    if (getContext() == OFX::eContextGeneral && _srcClip && _duration) {
         assert(!_warp);
         // If we are a general context, we can changed the duration of the effect, so have a param to do that
         // We need a separate param as it is impossible to derive this from a speed param and the input clip
@@ -540,13 +546,14 @@ RetimePlugin::render(const OFX::RenderArguments &args)
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
 
     // figure the frame we should be retiming from
-    double sourceTime;
+    double sourceTime = time;
 
     if (getContext() == OFX::eContextRetimer) {
         // the host is specifying it, so fetch it from the kOfxImageEffectRetimerParamName pseudo-param
         sourceTime = _sourceTime->getValueAtTime(time);
-    } else {
+    } else if (_srcClip) {
         bool reverse_input;
+
         OfxRangeD srcRange = _srcClip->getFrameRange();
         _reverse_input->getValueAtTime(time, reverse_input);
         // we have our own param, which is a speed, so we integrate it to get the time we want

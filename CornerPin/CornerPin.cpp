@@ -1020,6 +1020,7 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
         param->setAnimates(true);
         param->setDefault(x, y);
         param->setIncrement(1.);
+        param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setDimensionLabels("x", "y");
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
         param->setParent(*group);
@@ -1056,6 +1057,7 @@ static void defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
     param->setAnimates(true);
     param->setDefault(x, y);
     param->setIncrement(1.);
+    param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
     param->setDimensionLabels("x", "y");
     param->setParent(*group);
     if (page) {

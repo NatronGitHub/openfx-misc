@@ -35,6 +35,8 @@ Rocquencourt - B.P. 105
 78153 Le Chesnay Cedex - France
 */
 
+#include "SlitScan.h"
+
 #include <cmath> // for floor
 #include <climits> // for INT_MAX
 #include <cassert>

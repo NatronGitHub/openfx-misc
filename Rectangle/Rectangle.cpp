@@ -77,6 +77,10 @@
 #include <climits>
 #include <algorithm>
 
+#ifdef DEBUG_HOSTDESCRIPTION
+#include <iostream> // for host description printing code
+#endif
+
 #include "ofxsProcessing.H"
 #include "ofxsMerging.h"
 #include "ofxsMaskMix.h"
@@ -440,25 +444,24 @@ public:
     /** @brief ctor */
     RectanglePlugin(OfxImageEffectHandle handle)
     : GeneratorPlugin(handle, false)
-    , _dstClip(0)
     , _srcClip(0)
     , _maskClip(0)
     , _processR(0)
     , _processG(0)
     , _processB(0)
     , _processA(0)
-    , _btmLeft(0)
-    , _size(0)
     , _color0(0)
     , _color1(0)
     , _expandRoD(0)
     , _blackOutside(0)
     {
-        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha || _dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA));
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha || _srcClip->getPixelComponents() == ePixelComponentRGB || _srcClip->getPixelComponents() == ePixelComponentRGBA));
-        _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
+               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGBA ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
+                             _srcClip->getPixelComponents() == ePixelComponentXY ||
+                             _srcClip->getPixelComponents() == ePixelComponentAlpha)));
+        _maskClip = (getContext() == OFX::eContextFilter  || getContext() == OFX::eContextGenerator) ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         _processR = fetchBooleanParam(kNatronOfxParamProcessR);
@@ -466,14 +469,12 @@ public:
         _processB = fetchBooleanParam(kNatronOfxParamProcessB);
         _processA = fetchBooleanParam(kNatronOfxParamProcessA);
         assert(_processR && _processG && _processB && _processA);
-        _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
-        _size = fetchDouble2DParam(kParamRectangleInteractSize);
         _softness = fetchDoubleParam(kParamSoftness);
         _color0 = fetchRGBAParam(kParamColor0);
         _color1 = fetchRGBAParam(kParamColor1);
         _expandRoD = fetchBooleanParam(kParamExpandRoD);
         _blackOutside = fetchBooleanParam(kParamBlackOutside);
-        assert(_btmLeft && _size && _softness && _color0 && _color1 && _expandRoD && _blackOutside);
+        assert(_softness && _color0 && _color1 && _expandRoD && _blackOutside);
 
         _mix = fetchDoubleParam(kParamMix);
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
@@ -497,11 +498,12 @@ private:
 
     /* set up and run a processor */
     void setupAndProcess(RectangleProcessorBase &, const OFX::RenderArguments &args);
-    
+
+    virtual bool paramsNotAnimated() OVERRIDE FINAL;
+
 private:
     
     // do not need to delete these, the ImageEffect is managing them for us
-    Clip *_dstClip;
     Clip *_srcClip;
     Clip *_maskClip;
 
@@ -509,8 +511,6 @@ private:
     BooleanParam* _processG;
     BooleanParam* _processB;
     BooleanParam* _processA;
-    Double2DParam* _btmLeft;
-    Double2DParam* _size;
     DoubleParam* _softness;
     RGBAParam* _color0;
     RGBAParam* _color1;
@@ -534,6 +534,7 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor, const OFX::R
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+
     OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
     if (dstBitDepth != _dstClip->getPixelDepth() ||
@@ -547,7 +548,6 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor, const OFX::R
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    assert(_srcClip);
     std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
                                         _srcClip->fetchImage(args.time) : 0);
     if (src.get()) {
@@ -667,7 +667,7 @@ RectanglePlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthE
 void
 RectanglePlugin::render(const OFX::RenderArguments &args)
 {
-    
+    assert(_dstClip && _dstClip->isConnected());
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
@@ -690,8 +690,15 @@ RectanglePlugin::render(const OFX::RenderArguments &args)
 bool
 RectanglePlugin::isIdentity(const OFX::IsIdentityArguments &args,
                        OFX::Clip * &identityClip,
-                       double &/*identityTime*/)
+                       double &identityTime)
 {
+    if (GeneratorPlugin::isIdentity(args, identityClip, identityTime)) {
+        return true;
+    }
+
+    if (!_srcClip) {
+        return false;
+    }
     double mix;
     _mix->getValueAtTime(args.time, mix);
 
@@ -740,15 +747,33 @@ RectanglePlugin::isIdentity(const OFX::IsIdentityArguments &args,
     return false;
 }
 
+bool
+RectanglePlugin::paramsNotAnimated()
+{
+    return ((!_processR || _processR->getNumKeys() == 0) &&
+            (!_processG || _processG->getNumKeys() == 0) &&
+            (!_processB || _processB->getNumKeys() == 0) &&
+            (!_processA || _processA->getNumKeys() == 0) &&
+            (!_softness || _softness->getNumKeys() == 0) &&
+            (!_color0 || _color0->getNumKeys() == 0) &&
+            (!_color1 || _color1->getNumKeys() == 0) &&
+            (!_expandRoD || _expandRoD->getNumKeys() == 0) &&
+            (!_mix || _mix->getNumKeys() == 0) &&
+            (!_maskInvert || _maskInvert->getNumKeys() == 0) &&
+            (!_blackOutside || _blackOutside->getNumKeys() == 0));
+}
+
 /* Override the clip preferences */
 void
 RectanglePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-    // set the premultiplication of _dstClip if alpha is affected and source is Opaque
-    bool processA;
-    _processA->getValue(processA);
-    if (processA && _srcClip->isConnected() && _srcClip->getPreMultiplication() == eImageOpaque) {
-        clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
+    if (_srcClip) {
+        // set the premultiplication of _dstClip if alpha is affected and source is Opaque
+        bool processA;
+        _processA->getValue(processA);
+        if (processA && _srcClip->isConnected() && _srcClip->getPreMultiplication() == eImageOpaque) {
+            clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
+        }
     }
 
     GeneratorPlugin::getClipPreferences(clipPreferences);
@@ -761,7 +786,7 @@ RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     double mix;
     _mix->getValueAtTime(time, mix);
     if (mix == 0.) {
-        if (_srcClip->isConnected()) {
+        if (_srcClip && _srcClip->isConnected()) {
             // nothing to draw: return default region of definition
             return false;
         } else {
@@ -784,7 +809,7 @@ RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     RGBAValues color1;
     _color1->getValueAtTime(time, color1.r, color1.g, color1.b, color1.a);
     if (color1.a == 0.) {
-        if (_srcClip->isConnected()) {
+        if (_srcClip && _srcClip->isConnected()) {
             // nothing to draw: return default region of definition
             return false;
         } else {
@@ -810,7 +835,7 @@ RectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
 
     if (_srcClip && _srcClip->isConnected()) {
         // something has to be drawn outside of the rectangle: return union of input RoD and rectangle
-        OfxRectD srcRoD = _srcClip->getRegionOfDefinition(time);
+        const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(time);
         rod.x1 = std::min(rod.x1, srcRoD.x1);
         rod.x2 = std::max(rod.x2, srcRoD.x2);
         rod.y1 = std::min(rod.y1, srcRoD.y1);
@@ -833,6 +858,121 @@ mDeclarePluginFactory(RectanglePluginFactory, {}, {});
 
 void RectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
+#ifdef DEBUG_HOSTDESCRIPTION
+    {
+        const ImageEffectHostDescription& hostDesc = *OFX::getImageEffectHostDescription();
+        std::cout << "OFX host description follows" << std::endl;
+        std::cout << "OFX API version " << hostDesc.APIVersionMajor << '.' << hostDesc.APIVersionMinor << std::endl;
+        std::cout << "hostName=" << hostDesc.hostName << std::endl;
+        std::cout << "hostLabel=" << hostDesc.hostLabel << std::endl;
+        std::cout << "hostVersion=" << hostDesc.versionMajor << '.' << hostDesc.versionMinor << '.' << hostDesc.versionMicro;
+        std::cout << " (" << hostDesc.versionLabel << ')' << std::endl;
+        std::cout << "hostIsBackground=" << hostDesc.hostIsBackground << std::endl;
+        std::cout << "supportsOverlays=" << hostDesc.supportsOverlays << std::endl;
+        std::cout << "supportsMultiResolution=" << hostDesc.supportsMultiResolution << std::endl;
+        std::cout << "supportsTiles=" << hostDesc.supportsTiles << std::endl;
+        std::cout << "temporalClipAccess=" << hostDesc.temporalClipAccess << std::endl;
+//        bool first;
+//        first = true;
+//        std::cout << "supportedComponents=";
+//        for (std::vector<std::string>::const_iterator it = hostDesc._supportedComponents.begin(); it != hostDesc._supportedComponents.end(); ++it) {
+//            if (!first) {
+//                std::cout << ",";
+//            }
+//            first = false;
+//            std::cout << *it;
+//        }
+//        std::cout << std::endl;
+//        first = true;
+//        std::cout << "supportedContexts=";
+//        for (std::vector<std::string>::const_iterator it = hostDesc._supportedContexts.begin(); it != hostDesc._supportedContexts.end(); ++it) {
+//            if (!first) {
+//                std::cout << ",";
+//            }
+//            first = false;
+//            std::cout << *it;
+//        }
+//        std::cout << std::endl;
+//        first = true;
+//        std::cout << "supportedPixelDepths=";
+//        for (std::vector<std::string>::const_iterator it = hostDesc._supportedPixelDepths.begin(); it != hostDesc._supportedPixelDepths.end(); ++it) {
+//            if (!first) {
+//                std::cout << ",";
+//            }
+//            first = false;
+//            std::cout << *it;
+//        }
+//        std::cout << std::endl;
+        std::cout << "supportsMultipleClipDepths=" << hostDesc.supportsMultipleClipDepths << std::endl;
+        std::cout << "supportsMultipleClipPARs=" << hostDesc.supportsMultipleClipPARs << std::endl;
+        std::cout << "supportsSetableFrameRate=" << hostDesc.supportsSetableFrameRate << std::endl;
+        std::cout << "supportsSetableFielding=" << hostDesc.supportsSetableFielding << std::endl;
+        std::cout << "supportsStringAnimation=" << hostDesc.supportsStringAnimation << std::endl;
+        std::cout << "supportsCustomInteract=" << hostDesc.supportsCustomInteract << std::endl;
+        std::cout << "supportsChoiceAnimation=" << hostDesc.supportsChoiceAnimation << std::endl;
+        std::cout << "supportsBooleanAnimation=" << hostDesc.supportsBooleanAnimation << std::endl;
+        std::cout << "supportsCustomAnimation=" << hostDesc.supportsCustomAnimation << std::endl;
+        //std::cout << "supportsParametricAnimation=" << hostDesc.supportsParametricAnimation << std::endl;
+#ifdef OFX_EXTENSIONS_NUKE
+        std::cout << "canTransform=" << hostDesc.canTransform << std::endl;
+#endif
+        std::cout << "maxParameters=" << hostDesc.maxParameters << std::endl;
+        std::cout << "pageRowCount=" << hostDesc.pageRowCount << std::endl;
+        std::cout << "pageColumnCount=" << hostDesc.pageColumnCount << std::endl;
+        std::cout << "suites=";
+        if (fetchSuite(kOfxImageEffectSuite, 1, true)) {
+            std::cout << kOfxImageEffectSuite << ',';
+        }
+        if (fetchSuite(kOfxPropertySuite, 1, true)) {
+            std::cout << kOfxPropertySuite << ',';
+        }
+        if (fetchSuite(kOfxParameterSuite, 1, true)) {
+            std::cout << kOfxParameterSuite << ',';
+        }
+        if (fetchSuite(kOfxMemorySuite, 1, true)) {
+            std::cout << kOfxMemorySuite << ',';
+        }
+        if (fetchSuite(kOfxMessageSuite, 1, true)) {
+            std::cout << kOfxMessageSuite << ',';
+        }
+        if (fetchSuite(kOfxMessageSuite, 2, true)) {
+            std::cout << kOfxMessageSuite << "V2" << ',';
+        }
+        if (fetchSuite(kOfxProgressSuite, 1, true)) {
+            std::cout << kOfxProgressSuite << ',';
+        }
+        if (fetchSuite(kOfxTimeLineSuite, 1, true)) {
+            std::cout << kOfxTimeLineSuite << ',';
+        }
+        if (fetchSuite(kOfxParametricParameterSuite, 1, true)) {
+            std::cout << kOfxParametricParameterSuite << ',';
+        }
+#ifdef OFX_EXTENSIONS_NUKE
+        if (fetchSuite(kNukeOfxCameraSuite, 1, true)) {
+            std::cout << kNukeOfxCameraSuite << ',';
+        }
+        if (fetchSuite(kFnOfxImageEffectPlaneSuite, 1, true)) {
+            std::cout << kFnOfxImageEffectPlaneSuite << "V1" << ',';
+        }
+        if (fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true)) {
+            std::cout << kFnOfxImageEffectPlaneSuite << "V2" << ',';
+        }
+#endif
+#ifdef OFX_EXTENSIONS_VEGAS
+        if (fetchSuite(kOfxVegasProgressSuite, 1, true)) {
+            std::cout << kOfxVegasProgressSuite << ',';
+        }
+        if (fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
+            std::cout << kOfxVegasStereoscopicImageEffectSuite << ',';
+        }
+        if (fetchSuite(kOfxVegasKeyframeSuite, 1, true)) {
+            std::cout << kOfxVegasKeyframeSuite << ',';
+        }
+#endif
+        std::cout << std::endl;
+        std::cout << "OFX DebugProxy: host description finished" << std::endl;
+    }
+#endif
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -848,18 +988,17 @@ void RectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
-    desc.setTemporalClipAccess(false);
-    desc.setRenderTwiceAlways(true);
-    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
-    desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
-    desc.setRenderThreadSafety(kRenderThreadSafety);
-    
-    desc.setSupportsTiles(kSupportsTiles);
-    
     // in order to support multiresolution, render() must take into account the pixelaspectratio and the renderscale
     // and scale the transform appropriately.
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
+    desc.setSupportsTiles(kSupportsTiles);
+    desc.setTemporalClipAccess(false);
+    desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
+    desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
+    desc.setRenderTwiceAlways(false);
+    desc.setRenderThreadSafety(kRenderThreadSafety);
+
     generatorDescribe(desc);
 
 #ifdef OFX_EXTENSIONS_NATRON
@@ -885,19 +1024,19 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     // it as the default input clip (e.g. Nuke)
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
-    srcClip->addSupportedComponent(ePixelComponentXY);
+    //srcClip->addSupportedComponent(ePixelComponentRGB);
+    //srcClip->addSupportedComponent(ePixelComponentXY);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
-    srcClip->setTemporalClipAccess(false);
+    //srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
-    srcClip->setIsMask(false);
+    //srcClip->setIsMask(false);
     srcClip->setOptional(true);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->addSupportedComponent(ePixelComponentRGB);
-    dstClip->addSupportedComponent(ePixelComponentXY);
+    //dstClip->addSupportedComponent(ePixelComponentRGB);
+    //dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 

@@ -690,6 +690,9 @@ GodRaysPlugin::getInverseTransformCanonical(double time, double amount, bool inv
 void
 GodRaysPlugin::resetCenter(double time)
 {
+    if (!_srcClip) {
+        return;
+    }
     OfxRectD rod = _srcClip->getRegionOfDefinition(time);
     if (rod.x1 <= kOfxFlagInfiniteMin || kOfxFlagInfiniteMax <= rod.x2 ||
         rod.y1 <= kOfxFlagInfiniteMin || kOfxFlagInfiniteMax <= rod.y2) {
@@ -1087,6 +1090,7 @@ void GodRaysPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Conte
         param->setDefaultCoordinateSystem(eCoordinatesNormalised);
         //param->setDimensionLabels("x","y");
         param->setDefault(0, 0);
+        param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setIncrement(10.);
         if (page) {
             page->addChild(*param);
@@ -1182,6 +1186,7 @@ void GodRaysPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Conte
         //param->setDimensionLabels("x","y");
         param->setDefaultCoordinateSystem(eCoordinatesNormalised);
         param->setDefault(0.5, 0.5);
+        param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setIncrement(1.);
         param->setLayoutHint(eLayoutHintNoNewLine);
         if (page) {

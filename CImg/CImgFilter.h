@@ -65,10 +65,13 @@ public:
     , _defaultProcessAlphaOnRGBA(defaultProcessAlphaOnRGBA)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA));
-        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA));
-        _maskClip = getContext() == OFX::eContextFilter ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGB ||
+                            _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA));
+        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
+               (_srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentRGB ||
+                             _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA)));
+        _maskClip = (getContext() == OFX::eContextFilter  || getContext() == OFX::eContextGenerator) ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == OFX::ePixelComponentAlpha);
         
         if (paramExists(kNatronOfxParamProcessR)) {
@@ -640,6 +643,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         srcBitDepth = _srcClip ? _srcClip->getPixelDepth() : OFX::eBitDepthNone;
         srcRowBytes = 0;
     } else {
+        assert(_srcClip);
         srcPixelData = src->getPixelData();
         srcBounds = src->getBounds();
         // = src->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
