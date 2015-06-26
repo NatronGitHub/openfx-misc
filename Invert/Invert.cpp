@@ -317,7 +317,6 @@ class InvertPlugin : public OFX::ImageEffect
                              _srcClip->getPixelComponents() == ePixelComponentRGBA ||
                              _srcClip->getPixelComponents() == ePixelComponentAlpha)));
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
-        printf("CI: maskClip = %p, isConnected=%d\n", _maskClip, _maskClip ? (int)_maskClip->isConnected() : 0);
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _processR = fetchBooleanParam(kNatronOfxParamProcessR);
         _processG = fetchBooleanParam(kNatronOfxParamProcessG);
@@ -425,8 +424,6 @@ InvertPlugin::setupAndProcess(InvertBase &processor, const OFX::RenderArguments 
     // auto ptr for the mask.
     bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
     std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
-    printf("maskClip = %p, isConnected=%d\n", _maskClip, _maskClip ? (int)_maskClip->isConnected() : 0);
-    printf("mask = %p\n", mask.get());
 
     // do we do masking
     if (doMasking) {
