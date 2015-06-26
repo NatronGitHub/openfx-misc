@@ -113,10 +113,12 @@ class DissolvePlugin
 public:
     /** @brief ctor */
     DissolvePlugin(OfxImageEffectHandle handle, bool numerousInputs)
-        : ImageEffect(handle)
-          , _dstClip(0)
-          , _srcClip(numerousInputs ? kClipSourceCount : 2)
-          , _which(0)
+    : ImageEffect(handle)
+    , _dstClip(0)
+    , _srcClip(numerousInputs ? kClipSourceCount : 2)
+    , _which(0)
+    , _maskApply(0)
+    , _maskInvert(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha));
@@ -136,6 +138,7 @@ public:
         assert(!_maskClip || _maskClip->getPixelComponents() == OFX::ePixelComponentAlpha);
         _which = fetchDoubleParam(getContext() == OFX::eContextTransition ? kOfxImageEffectTransitionParamName : kParamWhich);
         assert(_which);
+        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_maskInvert);
 
@@ -186,6 +189,7 @@ private:
     std::vector<OFX::Clip *> _srcClip;
     OFX::Clip *_maskClip;
     OFX::DoubleParam* _which;
+    OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
 };
 
@@ -286,8 +290,8 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
 
-    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
-                                         _maskClip->fetchImage(args.time) : 0);
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     if (mask.get()) {
         if (mask->getRenderScale().x != args.renderScale.x ||
             mask->getRenderScale().y != args.renderScale.y ||
@@ -296,9 +300,7 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    if (getContext() != OFX::eContextFilter &&
-        getContext() != OFX::eContextTransition &&
-        _maskClip && _maskClip->isConnected()) {
+    if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         processor.doMasking(true);
@@ -411,7 +413,8 @@ DissolvePlugin::isIdentity(const OFX::IsIdentityArguments &args,
         return true;
     }
 
-    if (_maskClip && _maskClip->isConnected()) {
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
@@ -493,7 +496,7 @@ DissolvePlugin::getClipPreferences(OFX::ClipPreferencesSetter &/*clipPreferences
 void
 DissolvePlugin::changedClip(const OFX::InstanceChangedArgs &/*args*/, const std::string &/*clipName*/)
 {
-    updateRange();
+   updateRange();
 }
 
 mDeclarePluginFactory(DissolvePluginFactory, {}, {}
@@ -584,7 +587,7 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ClipDescriptor *maskClip = desc.defineClip("Mask");
     maskClip->addSupportedComponent(ePixelComponentAlpha);
     maskClip->setTemporalClipAccess(false);
-    if (context == eContextGeneral) {
+    if (context != eContextPaint) {
         maskClip->setOptional(true);
     }
     maskClip->setSupportsTiles(kSupportsTiles);

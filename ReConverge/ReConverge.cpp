@@ -458,7 +458,7 @@ void ReConvergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
-void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
@@ -471,17 +471,15 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
 
-    if (context == eContextGeneral) {
-        // Optional disparity clip
-        ClipDescriptor *dispClip = desc.defineClip(kClipDisparity);
-        dispClip->addSupportedComponent(ePixelComponentRGBA);
-        dispClip->addSupportedComponent(ePixelComponentRGB);
-        dispClip->addSupportedComponent(ePixelComponentXY);
-        dispClip->addSupportedComponent(ePixelComponentAlpha);
-        dispClip->setTemporalClipAccess(false);
-        dispClip->setOptional(true);
-        dispClip->setSupportsTiles(kSupportsTiles);
-    }
+    // Optional disparity clip
+    ClipDescriptor *dispClip = desc.defineClip(kClipDisparity);
+    dispClip->addSupportedComponent(ePixelComponentRGBA);
+    dispClip->addSupportedComponent(ePixelComponentRGB);
+    dispClip->addSupportedComponent(ePixelComponentXY);
+    dispClip->addSupportedComponent(ePixelComponentAlpha);
+    dispClip->setTemporalClipAccess(false);
+    dispClip->setOptional(true);
+    dispClip->setSupportsTiles(kSupportsTiles);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
@@ -495,29 +493,27 @@ void ReConvergePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     // convergepoint
-    if (context == eContextGeneral) {
-        {
-            Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamConvergePoint);
-            param->setLabel(kParamConvergePointLabel);
-            param->setHint(kParamConvergePointHint);
-            param->setDoubleType(eDoubleTypeXYAbsolute);
-            param->setDefaultCoordinateSystem(eCoordinatesNormalised);
-            param->setDefault(0.5, 0.5);
-            param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
-            param->setIncrement(1.);
-            param->setAnimates(true);
-            if (page) {
-                page->addChild(*param);
-            }
+    {
+        Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamConvergePoint);
+        param->setLabel(kParamConvergePointLabel);
+        param->setHint(kParamConvergePointHint);
+        param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
+        param->setDefault(0.5, 0.5);
+        param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
+        param->setIncrement(1.);
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
         }
-        {
-            BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
-            param->setLabel(kParamInteractiveLabel);
-            param->setHint(kParamInteractiveHint);
-            param->setAnimates(false);
-            if (page) {
-                page->addChild(*param);
-            }
+    }
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
+        param->setLabel(kParamInteractiveLabel);
+        param->setHint(kParamInteractiveHint);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
         }
     }
 

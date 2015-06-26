@@ -77,6 +77,7 @@
 #include <climits>
 #include <algorithm>
 
+//#define DEBUG_HOSTDESCRIPTION
 #ifdef DEBUG_HOSTDESCRIPTION
 #include <iostream> // for host description printing code
 #endif
@@ -165,7 +166,7 @@ class RectangleProcessorBase : public OFX::ImageProcessor
 protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
-    bool   _doMasking;
+    bool  _doMasking;
     double _mix;
     bool _maskInvert;
     bool _processR;
@@ -461,7 +462,7 @@ public:
                              _srcClip->getPixelComponents() == ePixelComponentRGB ||
                              _srcClip->getPixelComponents() == ePixelComponentXY ||
                              _srcClip->getPixelComponents() == ePixelComponentAlpha)));
-        _maskClip = (getContext() == OFX::eContextFilter  || getContext() == OFX::eContextGenerator) ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         _processR = fetchBooleanParam(kNatronOfxParamProcessR);
@@ -477,6 +478,7 @@ public:
         assert(_softness && _color0 && _color1 && _expandRoD && _blackOutside);
 
         _mix = fetchDoubleParam(kParamMix);
+        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
     }
@@ -516,6 +518,7 @@ private:
     RGBAParam* _color1;
     BooleanParam* _expandRoD;
     OFX::DoubleParam* _mix;
+    OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
     OFX::BooleanParam* _blackOutside;
 };
@@ -563,9 +566,9 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor, const OFX::R
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
-                                         _maskClip->fetchImage(args.time) : 0);
-    if (getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) {
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    if (doMasking) {
         if (mask.get()) {
             if (mask->getRenderScale().x != args.renderScale.x ||
                 mask->getRenderScale().y != args.renderScale.y ||
@@ -730,7 +733,8 @@ RectanglePlugin::isIdentity(const OFX::IsIdentityArguments &args,
         return true;
     }
 
-    if (_maskClip && _maskClip->isConnected()) {
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
@@ -872,37 +876,37 @@ void RectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
         std::cout << "supportsMultiResolution=" << hostDesc.supportsMultiResolution << std::endl;
         std::cout << "supportsTiles=" << hostDesc.supportsTiles << std::endl;
         std::cout << "temporalClipAccess=" << hostDesc.temporalClipAccess << std::endl;
-//        bool first;
-//        first = true;
-//        std::cout << "supportedComponents=";
-//        for (std::vector<std::string>::const_iterator it = hostDesc._supportedComponents.begin(); it != hostDesc._supportedComponents.end(); ++it) {
-//            if (!first) {
-//                std::cout << ",";
-//            }
-//            first = false;
-//            std::cout << *it;
-//        }
-//        std::cout << std::endl;
-//        first = true;
-//        std::cout << "supportedContexts=";
-//        for (std::vector<std::string>::const_iterator it = hostDesc._supportedContexts.begin(); it != hostDesc._supportedContexts.end(); ++it) {
-//            if (!first) {
-//                std::cout << ",";
-//            }
-//            first = false;
-//            std::cout << *it;
-//        }
-//        std::cout << std::endl;
-//        first = true;
-//        std::cout << "supportedPixelDepths=";
-//        for (std::vector<std::string>::const_iterator it = hostDesc._supportedPixelDepths.begin(); it != hostDesc._supportedPixelDepths.end(); ++it) {
-//            if (!first) {
-//                std::cout << ",";
-//            }
-//            first = false;
-//            std::cout << *it;
-//        }
-//        std::cout << std::endl;
+        bool first;
+        first = true;
+        std::cout << "supportedComponents=";
+        for (std::vector<PixelComponentEnum>::const_iterator it = hostDesc._supportedComponents.begin(); it != hostDesc._supportedComponents.end(); ++it) {
+            if (!first) {
+                std::cout << ",";
+            }
+            first = false;
+            std::cout << mapPixelComponentEnumToStr(*it);
+        }
+        std::cout << std::endl;
+        first = true;
+        std::cout << "supportedContexts=";
+        for (std::vector<ContextEnum>::const_iterator it = hostDesc._supportedContexts.begin(); it != hostDesc._supportedContexts.end(); ++it) {
+            if (!first) {
+                std::cout << ",";
+            }
+            first = false;
+            std::cout << mapContextEnumToStr(*it);
+        }
+        std::cout << std::endl;
+        first = true;
+        std::cout << "supportedPixelDepths=";
+        for (std::vector<BitDepthEnum>::const_iterator it = hostDesc._supportedPixelDepths.begin(); it != hostDesc._supportedPixelDepths.end(); ++it) {
+            if (!first) {
+                std::cout << ",";
+            }
+            first = false;
+            std::cout << mapBitDepthEnumToStr(*it);
+        }
+        std::cout << std::endl;
         std::cout << "supportsMultipleClipDepths=" << hostDesc.supportsMultipleClipDepths << std::endl;
         std::cout << "supportsMultipleClipPARs=" << hostDesc.supportsMultipleClipPARs << std::endl;
         std::cout << "supportsSetableFrameRate=" << hostDesc.supportsSetableFrameRate << std::endl;
@@ -912,13 +916,19 @@ void RectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
         std::cout << "supportsChoiceAnimation=" << hostDesc.supportsChoiceAnimation << std::endl;
         std::cout << "supportsBooleanAnimation=" << hostDesc.supportsBooleanAnimation << std::endl;
         std::cout << "supportsCustomAnimation=" << hostDesc.supportsCustomAnimation << std::endl;
-        //std::cout << "supportsParametricAnimation=" << hostDesc.supportsParametricAnimation << std::endl;
+        std::cout << "supportsParametricAnimation=" << hostDesc.supportsParametricAnimation << std::endl;
 #ifdef OFX_EXTENSIONS_NUKE
         std::cout << "canTransform=" << hostDesc.canTransform << std::endl;
 #endif
         std::cout << "maxParameters=" << hostDesc.maxParameters << std::endl;
         std::cout << "pageRowCount=" << hostDesc.pageRowCount << std::endl;
         std::cout << "pageColumnCount=" << hostDesc.pageColumnCount << std::endl;
+#ifdef OFX_EXTENSIONS_NATRON
+        std::cout << "isNatron=" << hostDesc.isNatron << std::endl;
+        std::cout << "supportsDynamicChoices=" << hostDesc.supportsDynamicChoices << std::endl;
+        std::cout << "supportsCascadingChoices=" << hostDesc.supportsCascadingChoices << std::endl;
+        std::cout << "supportsChannelSelector=" << hostDesc.supportsChannelSelector << std::endl;
+#endif
         std::cout << "suites=";
         if (fetchSuite(kOfxImageEffectSuite, 1, true)) {
             std::cout << kOfxImageEffectSuite << ',';
@@ -1040,16 +1050,14 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
-    if (context == eContextGeneral || context == eContextPaint) {
-        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
-        maskClip->addSupportedComponent(ePixelComponentAlpha);
-        maskClip->setTemporalClipAccess(false);
-        if (context == eContextGeneral) {
-            maskClip->setOptional(true);
-        }
-        maskClip->setSupportsTiles(kSupportsTiles);
-        maskClip->setIsMask(true);
+    ClipDescriptor *maskClip = (context == eContextPaint) ? desc.defineClip("Brush") : desc.defineClip("Mask");
+    maskClip->addSupportedComponent(ePixelComponentAlpha);
+    maskClip->setTemporalClipAccess(false);
+    if (context != eContextPaint) {
+        maskClip->setOptional(true);
     }
+    maskClip->setSupportsTiles(kSupportsTiles);
+    maskClip->setIsMask(true);
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");

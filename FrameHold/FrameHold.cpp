@@ -314,7 +314,7 @@ void FrameHoldPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamFirstFrameLabel);
         param->setHint(kParamFirstFrameHint);
         param->setDefault(0);
-        // keep default range (INT_MIN..INT_MAX)
+        // keep default range (kOfxFlagInfiniteMin..kOfxFlagInfiniteMax)
         // no display range
         // param->setDisplayRange(0, 0);
         param->setAnimates(true);

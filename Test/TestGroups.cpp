@@ -98,7 +98,7 @@ public:
                (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
                              _srcClip->getPixelComponents() == ePixelComponentRGBA ||
                              _srcClip->getPixelComponents() == ePixelComponentAlpha)));
-        _maskClip = (getContext() == OFX::eContextFilter  || getContext() == OFX::eContextGenerator) ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         _color = fetchRGBAParam(kParamColor0);
@@ -108,6 +108,7 @@ public:
         assert(_forceCopy);
 
         _mix = fetchDoubleParam(kParamMix);
+        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
     }
@@ -129,6 +130,7 @@ private:
 
     OFX::BooleanParam *_forceCopy;
     OFX::DoubleParam* _mix;
+    OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
 };
 
@@ -201,7 +203,8 @@ TestGroupsPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
         return true;
     }
 
-    if (_maskClip && _maskClip->isConnected()) {
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
@@ -448,11 +451,11 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
 
-    if (context == eContextGeneral || context == eContextPaint) {
-        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
+    if (context != eContextGenerator) {
+        ClipDescriptor *maskClip = (context == eContextPaint) ? desc.defineClip("Brush") : desc.defineClip("Mask");
         maskClip->addSupportedComponent(ePixelComponentAlpha);
         maskClip->setTemporalClipAccess(false);
-        if (context == eContextGeneral) {
+        if (context != eContextPaint) {
             maskClip->setOptional(true);
         }
         maskClip->setIsMask(true);

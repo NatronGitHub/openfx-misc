@@ -321,7 +321,7 @@ protected:
     OutputAlphaEnum _outputAlpha;
     bool _premult;
     int _premultChannel;
-    bool   _doMasking;
+    bool  _doMasking;
     double _mix;
     bool _maskInvert;
 
@@ -618,6 +618,7 @@ public:
     , _premult(0)
     , _premultChannel(0)
     , _mix(0)
+    , _maskApply(0)
     , _maskInvert(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -627,7 +628,7 @@ public:
         assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
                (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
                              _srcClip->getPixelComponents() == ePixelComponentRGBA)));
-        _maskClip = (getContext() == OFX::eContextFilter  || getContext() == OFX::eContextGenerator) ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         _srcColor = fetchRGBParam(kParamSrcColor);
@@ -654,6 +655,7 @@ public:
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
         _mix = fetchDoubleParam(kParamMix);
+        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
     }
@@ -696,6 +698,7 @@ private:
     OFX::BooleanParam *_premult;
     OFX::ChoiceParam *_premultChannel;
     OFX::DoubleParam *_mix;
+    OFX::BooleanParam *_maskApply;
     OFX::BooleanParam *_maskInvert;
 };
 
@@ -758,9 +761,9 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
         if (srcBitDepth != dstBitDepth || (outputAlpha == eOutputAlphaSource && srcComponents != dstComponents)) {            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
-                                         _maskClip->fetchImage(args.time) : 0);
-    if (getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) {
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    if (doMasking) {
         if (mask.get()) {
             if (mask->getRenderScale().x != args.renderScale.x ||
                 mask->getRenderScale().y != args.renderScale.y ||
@@ -947,7 +950,8 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip,
         return true;
     }
 
-    if (_maskClip && _maskClip->isConnected()) {
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
@@ -1087,16 +1091,15 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->setSupportsTiles(kSupportsTiles);
     
-    if (context == eContextGeneral || context == eContextPaint) {
-        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
-        maskClip->addSupportedComponent(ePixelComponentAlpha);
-        maskClip->setTemporalClipAccess(false);
-        if (context == eContextGeneral)
-            maskClip->setOptional(true);
-        maskClip->setSupportsTiles(kSupportsTiles);
-        maskClip->setIsMask(true);
+    ClipDescriptor *maskClip = (context == eContextPaint) ? desc.defineClip("Brush") : desc.defineClip("Mask");
+    maskClip->addSupportedComponent(ePixelComponentAlpha);
+    maskClip->setTemporalClipAccess(false);
+    if (context != eContextPaint) {
+        maskClip->setOptional(true);
     }
-    
+    maskClip->setSupportsTiles(kSupportsTiles);
+    maskClip->setIsMask(true);
+
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
     

@@ -398,7 +398,7 @@ void AdjustRoDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefaultCoordinateSystem(eCoordinatesNormalised);
         param->setDefault(0., 0.);
         param->setIncrement(1.);
-        param->setRange(0., 0., INT_MAX, INT_MAX);
+        param->setRange(0., 0., kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
         param->setDisplayRange(0., 0., 1000., 1000.);
         param->setDimensionLabels("w", "h");
         param->setIncrement(1.);

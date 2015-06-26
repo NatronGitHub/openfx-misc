@@ -114,7 +114,7 @@ class TestRenderBase : public OFX::ImageProcessor
 protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
-    bool   _doMasking;
+    bool  _doMasking;
 
     double _mix;
     bool _maskInvert;
@@ -218,7 +218,7 @@ public:
                (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
                              _srcClip->getPixelComponents() == ePixelComponentRGBA ||
                              _srcClip->getPixelComponents() == ePixelComponentAlpha)));
-        _maskClip = (getContext() == OFX::eContextFilter  || getContext() == OFX::eContextGenerator) ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
         _color[0] = fetchRGBAParam(kParamColor0);
@@ -235,6 +235,7 @@ public:
         assert(_identityEven && _identityOdd && _forceCopy);
 
         _mix = fetchDoubleParam(kParamMix);
+        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
     }
@@ -268,6 +269,7 @@ private:
     OFX::BooleanParam* _forceCopy;
 
     OFX::DoubleParam* _mix;
+    OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
 };
 
@@ -361,11 +363,11 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
     }
 
     // auto ptr for the mask.
-    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
-                                         _maskClip->fetchImage(args.time) : 0);
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
 
     // do we do masking
-    if (getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) {
+    if (doMasking) {
         if (mask.get()) {
             if (mask->getRenderScale().x != args.renderScale.x ||
                 mask->getRenderScale().y != args.renderScale.y ||
@@ -502,7 +504,8 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isI
     }
 #endif
 
-    if (_maskClip && _maskClip->isConnected()) {
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
@@ -790,11 +793,11 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(supportsTiles);
 
-    if (context == eContextGeneral || context == eContextPaint) {
-        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
+    if (context != eContextGenerator) {
+        ClipDescriptor *maskClip = (context == eContextPaint) ? desc.defineClip("Brush") : desc.defineClip("Mask");
         maskClip->addSupportedComponent(ePixelComponentAlpha);
         maskClip->setTemporalClipAccess(false);
-        if (context == eContextGeneral) {
+        if (context != eContextPaint) {
             maskClip->setOptional(true);
         }
         maskClip->setSupportsTiles(supportsTiles);

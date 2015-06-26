@@ -57,6 +57,7 @@ public:
     , _premult(0)
     , _premultChannel(0)
     , _mix(0)
+    , _maskApply(0)
     , _maskInvert(0)
     , _supportsTiles(supportsTiles)
     , _supportsMultiResolution(supportsMultiResolution)
@@ -71,7 +72,7 @@ public:
         assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
                (_srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentRGB ||
                              _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA)));
-        _maskClip = (getContext() == OFX::eContextFilter  || getContext() == OFX::eContextGenerator) ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == OFX::ePixelComponentAlpha);
         
         if (paramExists(kNatronOfxParamProcessR)) {
@@ -85,6 +86,7 @@ public:
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
         _mix = fetchDoubleParam(kParamMix);
+        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
     }
@@ -443,6 +445,7 @@ private:
     OFX::BooleanParam* _premult;
     OFX::ChoiceParam* _premultChannel;
     OFX::DoubleParam* _mix;
+    OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
 
     bool _supportsTiles;
@@ -483,7 +486,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::setupAndFill(OFX::PixelProcesso
 template <class Params, bool sourceIsOptional>
 void
 CImgFilterPluginHelper<Params,sourceIsOptional>::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
-                                                              double /*time*/,
+                                                              double time,
                                                               const OfxRectI &renderWindow,
                                                               const OFX::Image* orig,
                                                               const OFX::Image* mask,
@@ -521,7 +524,8 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::setupAndCopy(OFX::PixelProcesso
     if (isEmpty(renderWindow)) {
         return;
     }
-    if (getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) {
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(time)) && _maskClip && _maskClip->isConnected());
+    if (doMasking) {
         processor.doMasking(true);
         processor.setMaskImg(mask, maskInvert);
     }
@@ -713,8 +717,8 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         premult = false;
     }
 
-    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
-                                         _maskClip->fetchImage(time) : 0);
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     OfxRectI processWindow = renderWindow; //!< the window where pixels have to be computed (may be smaller than renderWindow if mask is zero on the borders)
 
     if (mix == 0.) {
@@ -822,8 +826,6 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         return;
     }
     assert(mix != 0.); // mix == 0. should give an empty processWindow
-
-    const bool doMasking = getContext() != OFX::eContextFilter && _maskClip->isConnected();
 
     // compute the src ROI (should be consistent with getRegionsOfInterest())
     OfxRectI srcRoI;
@@ -1069,7 +1071,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionsOfInterest(const OFX:
     OfxRectD srcRoI;
 
     double mix = 1.;
-    const bool doMasking = getContext() != OFX::eContextFilter && _maskClip->isConnected();
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
     if (doMasking) {
         _mix->getValueAtTime(time, mix);
         if (mix == 0.) {
@@ -1171,7 +1173,8 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::isIdentity(const OFX::IsIdentit
         return true;
     }
 
-    if (_maskClip && _maskClip->isConnected()) {
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {

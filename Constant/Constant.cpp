@@ -106,8 +106,6 @@
 
 #include "ofxNatron.h"
 
-static bool gHostIsNatron   = false;
-
 /** @brief  Base class used to blend two images together */
 class ConstantProcessorBase : public OFX::ImageProcessor {
 protected:
@@ -446,7 +444,7 @@ void ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor 
         param->setLabel(kParamColorLabel);
         param->setHint(kParamColorHint);
         param->setDefault(0.0, 0.0, 0.0);
-        param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX);
+        param->setRange(kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
         param->setDisplayRange(0, 0, 0, 1, 1, 1);
         param->setAnimates(true); // can animate
         if (page) {
@@ -457,7 +455,7 @@ void ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor 
         param->setLabel(kParamColorLabel);
         param->setHint(kParamColorHint);
         param->setDefault(0.0, 0.0, 0.0, 0.0);
-        param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
+        param->setRange(kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
         if (page) {

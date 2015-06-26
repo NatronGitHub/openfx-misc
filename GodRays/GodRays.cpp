@@ -895,11 +895,9 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
     }
 
     // auto ptr for the mask.
-    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
-                                         _maskClip->fetchImage(time) : 0);
-
-    // do we do masking
-    if ( getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected() ) {
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(time, maskInvert);
 

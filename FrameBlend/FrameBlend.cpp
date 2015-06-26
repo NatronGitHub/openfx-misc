@@ -81,7 +81,7 @@
 #include "FrameBlend.h"
 
 #include <cmath> // for floor
-#include <climits> // for INT_MAX
+#include <climits> // for kOfxFlagInfiniteMax
 #include <cassert>
 
 #include "ofxsImageEffect.h"
@@ -178,7 +178,7 @@ protected:
     bool _processA;
     bool _lastPass;
     bool _outputCount;
-    bool   _doMasking;
+    bool  _doMasking;
     double _mix;
     bool _maskInvert;
 
@@ -485,6 +485,7 @@ public:
     , _operation(0)
     , _outputCount(0)
     , _mix(0)
+    , _maskApply(0)
     , _maskInvert(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -494,7 +495,7 @@ public:
         assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
                (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
                              _srcClip->getPixelComponents() == ePixelComponentRGBA)));
-        _maskClip = (getContext() == OFX::eContextFilter  || getContext() == OFX::eContextGenerator) ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _fgMClip = fetchClip(kClipFgMName);
         assert(!_fgMClip || _fgMClip->getPixelComponents() == ePixelComponentAlpha);
@@ -511,6 +512,7 @@ public:
         _outputCount = fetchBooleanParam(kParamOutputCountName);
         assert(_frameRange && _absolute && _inputRange && _operation && _outputCount);
         _mix = fetchDoubleParam(kParamMix);
+        _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
     }
@@ -557,6 +559,7 @@ private:
     ChoiceParam* _operation;
     BooleanParam* _outputCount;
     OFX::DoubleParam* _mix;
+    OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
 };
 
@@ -613,12 +616,11 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
     }
 
     // fetch the mask
-    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
-                                         _maskClip->fetchImage(time) : 0);
-
-    bool doMasking = false;
+    // auto ptr for the mask.
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     // do we do masking
-    if (getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) {
+    if (doMasking) {
         if (mask.get()) {
             if (mask->getRenderScale().x != args.renderScale.x ||
                 mask->getRenderScale().y != args.renderScale.y ||
@@ -932,7 +934,8 @@ FrameBlendPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
         return true;
     }
 
-    if (_maskClip && _maskClip->isConnected()) {
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
@@ -1049,12 +1052,13 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
-    if (context == eContextGeneral || context == eContextPaint) {
-        ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
+    if (context != eContextGenerator) {
+        ClipDescriptor *maskClip = (context == eContextPaint) ? desc.defineClip("Brush") : desc.defineClip("Mask");
         maskClip->addSupportedComponent(ePixelComponentAlpha);
         maskClip->setTemporalClipAccess(true);
-        if (context == eContextGeneral)
+        if (context != eContextPaint) {
             maskClip->setOptional(true);
+        }
         maskClip->setSupportsTiles(kSupportsTiles);
         maskClip->setIsMask(true);
     }
@@ -1147,7 +1151,7 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         IntParamDescriptor *param = desc.defineIntParam(kParamFrameIntervalName);
         param->setLabel(kParamFrameIntervalLabel);
         param->setHint(kParamFrameIntervalHint);
-        param->setRange(1, INT_MAX);
+        param->setRange(1, kOfxFlagInfiniteMax);
         param->setDisplayRange(1, 10);
         param->setDefault(1);
         param->setAnimates(true); // can animate

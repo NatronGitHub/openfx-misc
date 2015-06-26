@@ -135,8 +135,6 @@
 
 #include "ofxNatron.h"
 
-static bool gHostIsNatron   = false;
-
 /** @brief  Base class used to blend two images together */
 class CheckerBoardProcessorBase : public OFX::ImageProcessor {
 protected:
@@ -594,8 +592,6 @@ void CheckerBoardPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
-    gHostIsNatron = (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName);
-    
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip( kOfxImageEffectSimpleSourceClipName );
     srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -623,7 +619,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamBoxSize);
         param->setLabel(kParamBoxSizeLabel);
         param->setHint(kParamBoxSizeHint);
-        param->setRange(1, 1, INT_MAX, INT_MAX);
+        param->setRange(1, 1, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
         param->setDisplayRange(0, 0, 100, 100);
         param->setDoubleType(eDoubleTypeXY);
         param->setDefault(64, 64);
@@ -640,7 +636,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setLabel(kParamColor0Label);
         param->setHint(kParamColor0Hint);
         param->setDefault(0.1, 0.1, 0.1, 1.0);
-        param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
+        param->setRange(kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
         if (page) {
@@ -654,7 +650,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setLabel(kParamColor1Label);
         param->setHint(kParamColor1Hint);
         param->setDefault(0.5, 0.5, 0.5, 1.0);
-        param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
+        param->setRange(kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
         if (page) {
@@ -668,7 +664,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setLabel(kParamColor2Label);
         param->setHint(kParamColor2Hint);
         param->setDefault(0.1, 0.1, 0.1, 1.0);
-        param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
+        param->setRange(kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
         if (page) {
@@ -682,7 +678,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setLabel(kParamColor3Label);
         param->setHint(kParamColor3Hint);
         param->setDefault(0.5, 0.5, 0.5, 1.0);
-        param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
+        param->setRange(kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
         if (page) {
@@ -697,7 +693,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setLabel(kParamLineColorLabel);
         param->setHint(kParamLineColorHint);
         param->setDefault(1.0, 1.0, 1.0, 1.0);
-        param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
+        param->setRange(kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
         if (page) {
@@ -711,7 +707,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setLabel(kParamLineWidthLabel);
         param->setHint(kParamLineWidthHint);
         param->setDefault(0.);
-        param->setRange(0., INT_MAX);
+        param->setRange(0., kOfxFlagInfiniteMax);
         param->setDisplayRange(0, 10);
         param->setAnimates(true); // can animate
         if (page) {
@@ -726,7 +722,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setLabel(kParamCenterLineColorLabel);
         param->setHint(kParamCenterLineColorHint);
         param->setDefault(1.0, 1.0, 0.0, 1.0);
-        param->setRange(INT_MIN, INT_MIN, INT_MIN, INT_MIN, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
+        param->setRange(kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
         if (page) {
@@ -740,7 +736,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setLabel(kParamCenterLineWidthLabel);
         param->setHint(kParamCenterLineWidthHint);
         param->setDefault(1);
-        param->setRange(0., INT_MAX);
+        param->setRange(0., kOfxFlagInfiniteMax);
         param->setDisplayRange(0, 10);
         param->setAnimates(true); // can animate
         if (page) {

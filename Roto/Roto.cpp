@@ -397,11 +397,11 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     }
     
     // auto ptr for the mask.
-    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _rotoClip && _rotoClip->isConnected()) ?
+    std::auto_ptr<const OFX::Image> mask((_rotoClip && _rotoClip->isConnected()) ?
                                          _rotoClip->fetchImage(args.time) : 0);
     
     // do we do masking
-    if (getContext() != OFX::eContextFilter && _rotoClip && _rotoClip->isConnected()) {
+    if (_rotoClip && _rotoClip->isConnected()) {
         if (!mask.get()) {
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -660,7 +660,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
         ClipDescriptor *maskClip = context == eContextGeneral ? desc.defineClip("Roto") : desc.defineClip("Brush");
         maskClip->setTemporalClipAccess(false);
         maskClip->addSupportedComponent(ePixelComponentAlpha);
-        if (context == eContextGeneral) {
+        if (context != eContextPaint) {
             maskClip->addSupportedComponent(ePixelComponentRGBA);
             //maskClip->addSupportedComponent(ePixelComponentRGB);
             maskClip->addSupportedComponent(ePixelComponentXY);

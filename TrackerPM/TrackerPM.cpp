@@ -138,7 +138,7 @@ public:
     , _outerBtmLeft(0)
     , _outerTopRight(0)
     {
-        _maskClip = (getContext() == OFX::eContextFilter  || getContext() == OFX::eContextGenerator) ? NULL : fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
+        _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _score = fetchChoiceParam(kParamScore);
         assert(_score);
@@ -858,9 +858,10 @@ TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime, const OFX::Tr
     }
 
     OFX::BitDepthEnum srcBitDepth = srcRef->getPixelDepth();
-    
+
+    //  mask cannot be black and transparent, so an empty mask means mask is disabled.
     // auto ptr for the mask.
-    std::auto_ptr<const OFX::Image> mask((getContext() != OFX::eContextFilter && _maskClip && _maskClip->isConnected()) ?
+    std::auto_ptr<const OFX::Image> mask((_maskClip && _maskClip->isConnected()) ?
                                          _maskClip->fetchImage(refTime) : 0);
     if (mask.get()) {
         if (mask->getRenderScale().x != args.renderScale.x ||
@@ -1037,7 +1038,7 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
 
     // this tracker can be masked
-    if (context == eContextGeneral || context == eContextPaint || context == eContextTracker) {
+    if (context == eContextGeneral || (context == eContextPaint) || context == eContextTracker) {
         ClipDescriptor *maskClip = (context == eContextGeneral || context == eContextTracker) ? desc.defineClip("Mask") : desc.defineClip("Brush");
         maskClip->addSupportedComponent(ePixelComponentAlpha);
         maskClip->setTemporalClipAccess(false);
