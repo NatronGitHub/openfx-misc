@@ -205,16 +205,14 @@ public:
         }
         dstClip->setSupportsTiles(supportsTiles);
         
-        if (context == OFX::eContextGeneral || context == OFX::eContextPaint) {
-            OFX::ClipDescriptor *maskClip = context == OFX::eContextGeneral ? desc.defineClip("Mask") : desc.defineClip("Brush");
-            maskClip->addSupportedComponent(OFX::ePixelComponentAlpha);
-            maskClip->setTemporalClipAccess(false);
-            if (context == OFX::eContextGeneral) {
-                maskClip->setOptional(true);
-            }
-            maskClip->setSupportsTiles(supportsTiles);
-            maskClip->setIsMask(true);
+        OFX::ClipDescriptor *maskClip = (context == OFX::eContextPaint) ? desc.defineClip("Brush") : desc.defineClip("Mask");
+        maskClip->addSupportedComponent(OFX::ePixelComponentAlpha);
+        maskClip->setTemporalClipAccess(false);
+        if (context != OFX::eContextPaint) {
+            maskClip->setOptional(true);
         }
+        maskClip->setSupportsTiles(supportsTiles);
+        maskClip->setIsMask(true);
 
         // create the params
         OFX::PageParamDescriptor *page = desc.definePageParam("Controls");
