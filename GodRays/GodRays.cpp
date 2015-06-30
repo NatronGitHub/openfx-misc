@@ -515,7 +515,7 @@ class GodRaysPlugin : public Transform3x3Plugin
 public:
     /** @brief ctor */
     GodRaysPlugin(OfxImageEffectHandle handle)
-    : Transform3x3Plugin(handle, true, true)
+    : Transform3x3Plugin(handle, true, eTransform3x3ParamsTypeNone)
     , _translate(0)
     , _rotate(0)
     , _scale(0)

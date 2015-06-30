@@ -340,7 +340,7 @@ class CornerPinPlugin : public Transform3x3Plugin
 public:
     /** @brief ctor */
     CornerPinPlugin(OfxImageEffectHandle handle, bool masked)
-    : Transform3x3Plugin(handle, masked, false)
+    : Transform3x3Plugin(handle, masked, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur)
     , _extraMatrixRow1(0)
     , _extraMatrixRow2(0)
     , _extraMatrixRow3(0)
@@ -1218,7 +1218,7 @@ void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     CornerPinPluginDescribeInContext(desc, context, page);
 
-    Transform3x3DescribeInContextEnd(desc, context, page, false);
+    Transform3x3DescribeInContextEnd(desc, context, page, false, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
 }
 
 
@@ -1251,7 +1251,7 @@ void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
 
     CornerPinPluginDescribeInContext(desc, context, page);
 
-    Transform3x3DescribeInContextEnd(desc, context, page, true);
+    Transform3x3DescribeInContextEnd(desc, context, page, true, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
 }
 
 OFX::ImageEffect* CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

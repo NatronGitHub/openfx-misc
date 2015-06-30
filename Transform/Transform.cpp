@@ -108,7 +108,7 @@ class TransformPlugin : public Transform3x3Plugin
 public:
     /** @brief ctor */
     TransformPlugin(OfxImageEffectHandle handle, bool masked, bool isDirBlur)
-    : Transform3x3Plugin(handle, masked, isDirBlur)
+    : Transform3x3Plugin(handle, masked, isDirBlur ? eTransform3x3ParamsTypeDirBlur : eTransform3x3ParamsTypeMotionBlur)
     , _translate(0)
     , _rotate(0)
     , _scale(0)
@@ -503,7 +503,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     TransformPluginDescribeInContext(desc, context, page);
 
-    Transform3x3DescribeInContextEnd(desc, context, page, false);
+    Transform3x3DescribeInContextEnd(desc, context, page, false, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
 }
 
 OFX::ImageEffect* TransformPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
@@ -534,7 +534,7 @@ void TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
 
     TransformPluginDescribeInContext(desc, context, page);
 
-    Transform3x3DescribeInContextEnd(desc, context, page, true);
+    Transform3x3DescribeInContextEnd(desc, context, page, true, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
 }
 
 OFX::ImageEffect* TransformMaskedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
@@ -564,7 +564,7 @@ void DirBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
 
     TransformPluginDescribeInContext(desc, context, page);
 
-    Transform3x3DescribeInContextEnd(desc, context, page, true, true);
+    Transform3x3DescribeInContextEnd(desc, context, page, true, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeDirBlur);
 }
 
 OFX::ImageEffect* DirBlurPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
