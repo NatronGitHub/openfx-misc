@@ -333,8 +333,8 @@ AppendClipPlugin::getSources(int firstFrame,
                 clip1Min = r.min;
                 clip1Max = r.max;
                 clip1OutMin = firstFrame;
-                clip1OutMax = firstFrame + (int)(r.max - r.min);
-
+                clip1OutMax = std::max(firstFrame + (int)(r.max - r.min),firstFrame);
+                
                 continue; // proceed to extract clip1 etc.
             }
             // get info for this clip
@@ -379,8 +379,8 @@ AppendClipPlugin::getSources(int firstFrame,
 
     // clips should be ordered
     assert(clip0 == -1|| clip1 == -1 || (clip0OutMin <= clip1OutMin && clip0OutMax <= clip1OutMax));
-    assert(clip0 == -1|| (clip0Min < clip0Max && clip0OutMin < clip0OutMax));
-    assert(clip1 == -1|| (clip1Min < clip1Max && clip1OutMin < clip1OutMax));
+    assert(clip0 == -1|| (clip0Min <= clip0Max && clip0OutMin <= clip0OutMax));
+    assert(clip1 == -1|| (clip1Min <= clip1Max && clip1OutMin <= clip1OutMax));
     if (clip0 == -1 && clip1 == -1) {
         assert(false); // treated above, should never happen!
         // no clip, just be black, and lastFrame = firstFrame-1
@@ -470,8 +470,8 @@ AppendClipPlugin::getSources(int firstFrame,
     }
     // clips should be ordered
     assert(clip0 == -1|| clip1 == -1 || (clip0OutMin <= clip1OutMin && clip0OutMax <= clip1OutMax));
-    assert(clip0 == -1|| (clip0Min < clip0Max && clip0OutMin < clip0OutMax));
-    assert(clip1 == -1|| (clip1Min < clip1Max && clip1OutMin < clip1OutMax));
+    assert(clip0 == -1|| (clip0Min <= clip0Max && clip0OutMin <= clip0OutMax));
+    assert(clip1 == -1|| (clip1Min <= clip1Max && clip1OutMin <= clip1OutMax));
 
     // now, check for fade in/fade out
     if (fadeIn != 0) {
