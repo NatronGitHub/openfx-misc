@@ -467,9 +467,7 @@ MirrorPlugin::render(const OFX::RenderArguments &args)
     int xoff = 0;
     int yoff = 0;
     OfxRectI srcRoD = {0, 0, 0, 0};
-    if (_srcClip) {
-        OFX::MergeImages2D::toPixelEnclosing(_srcClip->getRegionOfDefinition(time), args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoD);
-    }
+    OFX::MergeImages2D::toPixelEnclosing(_srcClip->getRegionOfDefinition(time), args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoD);
     if (flop) {
         xoff = srcRoD.x1 + srcRoD.x2 - 1;
     }

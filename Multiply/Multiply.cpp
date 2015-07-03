@@ -496,7 +496,7 @@ MultiplyPlugin::render(const OFX::RenderArguments &args)
     
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
-    assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
+    assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
             case OFX::eBitDepthUByte: {
@@ -531,6 +531,26 @@ MultiplyPlugin::render(const OFX::RenderArguments &args)
             }
             case OFX::eBitDepthFloat: {
                 MultiplyProcessor<float, 1, 1> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+            default:
+                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
+    } else if (dstComponents == OFX::ePixelComponentXY) {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
+                MultiplyProcessor<unsigned char, 2, 255> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+            case OFX::eBitDepthUShort: {
+                MultiplyProcessor<unsigned short, 2, 65535> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+            case OFX::eBitDepthFloat: {
+                MultiplyProcessor<float, 2, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -663,6 +683,7 @@ void MultiplyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentXY);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -672,6 +693,7 @@ void MultiplyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
     

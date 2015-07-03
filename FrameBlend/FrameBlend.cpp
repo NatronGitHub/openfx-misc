@@ -808,6 +808,8 @@ FrameBlendPlugin::render(const OFX::RenderArguments &args)
         renderForComponents<4>(args);
     } else if (dstComponents == OFX::ePixelComponentAlpha) {
         renderForComponents<1>(args);
+    } else if (dstComponents == OFX::ePixelComponentXY) {
+        renderForComponents<2>(args);
     } else {
         assert(dstComponents == OFX::ePixelComponentRGB);
         renderForComponents<3>(args);
