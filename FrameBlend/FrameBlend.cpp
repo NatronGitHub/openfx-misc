@@ -489,11 +489,15 @@ public:
     , _maskInvert(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
+        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
+                            _dstClip->getPixelComponents() == ePixelComponentXY ||
+                            _dstClip->getPixelComponents() == ePixelComponentRGB ||
                             _dstClip->getPixelComponents() == ePixelComponentRGBA));
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
+               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
+                             _srcClip->getPixelComponents() == ePixelComponentXY ||
+                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
                              _srcClip->getPixelComponents() == ePixelComponentRGBA)));
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
@@ -803,7 +807,7 @@ FrameBlendPlugin::render(const OFX::RenderArguments &args)
 
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
-    assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
+    assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderForComponents<4>(args);
     } else if (dstComponents == OFX::ePixelComponentAlpha) {
@@ -1042,6 +1046,7 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentXY);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(true);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -1051,6 +1056,7 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 

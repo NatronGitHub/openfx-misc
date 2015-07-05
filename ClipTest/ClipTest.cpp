@@ -351,11 +351,13 @@ public:
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
+                            _dstClip->getPixelComponents() == ePixelComponentXY ||
                             _dstClip->getPixelComponents() == ePixelComponentRGB ||
                             _dstClip->getPixelComponents() == ePixelComponentRGBA));
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
                (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
+                             _srcClip->getPixelComponents() == ePixelComponentXY ||
                              _srcClip->getPixelComponents() == ePixelComponentRGB ||
                              _srcClip->getPixelComponents() == ePixelComponentRGBA)));
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
@@ -506,7 +508,7 @@ ClipTestPlugin::render(const OFX::RenderArguments &args)
     
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
-    assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
+    assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentAlpha) {
         switch (dstBitDepth) {
             case OFX::eBitDepthUByte: {
@@ -521,6 +523,26 @@ ClipTestPlugin::render(const OFX::RenderArguments &args)
             }
             case OFX::eBitDepthFloat: {
                 ClipTestProcessor<float, 1, 1> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+            default:
+                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
+    } else if (dstComponents == OFX::ePixelComponentXY) {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte: {
+                ClipTestProcessor<unsigned char, 2, 255> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+            case OFX::eBitDepthUShort: {
+                ClipTestProcessor<unsigned short, 2, 65535> fred(*this);
+                setupAndProcess(fred, args);
+                break;
+            }
+            case OFX::eBitDepthFloat: {
+                ClipTestProcessor<float, 2, 1> fred(*this);
                 setupAndProcess(fred, args);
                 break;
             }
@@ -638,6 +660,12 @@ ClipTestPlugin::changedClip(const InstanceChangedArgs &args, const std::string &
                 _processB->setValue(false);
                 _processA->setValue(true);
                 break;
+            case OFX::ePixelComponentXY:
+                _processR->setValue(true);
+                _processG->setValue(true);
+                _processB->setValue(false);
+                _processA->setValue(false);
+                break;
             case OFX::ePixelComponentRGB:
                 _processR->setValue(true);
                 _processG->setValue(true);
@@ -696,6 +724,7 @@ void ClipTestPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
+    srcClip->addSupportedComponent(ePixelComponentXY);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
@@ -705,6 +734,7 @@ void ClipTestPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
     
