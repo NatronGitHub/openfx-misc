@@ -35,6 +35,8 @@ CLANG_DIAG_OFF(shorten-64-to-32)
 #include "CImg.h"
 CLANG_DIAG_ON(shorten-64-to-32)
 
+#define CIMG_ABORTABLE // use abortable versions of CImg functions
+
 template <class Params, bool sourceIsOptional>
 class CImgFilterPluginHelper : public OFX::ImageEffect
 {

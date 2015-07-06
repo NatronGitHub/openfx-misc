@@ -141,6 +141,7 @@
 #define kParamIterationsDefault 1
 
 using namespace OFX;
+using namespace cimg_library;
 
 /// SharpenShock plugin
 struct CImgSharpenShockParams
@@ -191,7 +192,7 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        if (params.iterations <= 0 || params.amplitude == 0.) {
+        if (params.iterations <= 0 || params.amplitude == 0. || cimg.is_empty()) {
             return;
         }
         double alpha = args.renderScale.x * params.alpha;
@@ -200,7 +201,99 @@ public:
             if (abort()) {
                 return;
             }
+#ifdef CIMG_ABORTABLE
+            // args
+            const float amplitude = (float)params.amplitude;
+            const float edge = (float)params.edge;
+
+
+#define Tfloat float
+#define T float
+            T val_min, val_max = cimg.max_min(val_min);
+            const float nedge = edge/2;
+            CImg<Tfloat> velocity(cimg._width,cimg._height,cimg._depth,cimg._spectrum), _veloc_max(cimg._spectrum);
+
+            // 2d.
+            // Shock filters.
+            CImg<Tfloat> G = (alpha>0?cimg.get_blur(alpha).get_structure_tensors():cimg.get_structure_tensors());
+            if (sigma>0) {
+                G.blur(sigma);
+            }
+#ifdef cimg_use_openmp
+#pragma omp parallel for if (_width>=32 && _height>=16)
+#endif
+            cimg_forY(G,y) {
+                CImg<Tfloat> val, vec;
+                Tfloat *ptrG0 = G.data(0,y,0,0), *ptrG1 = G.data(0,y,0,1), *ptrG2 = G.data(0,y,0,2);
+                if (abort()) {
+                    return;
+                }
+                cimg_forX(G,x) {
+                    G.get_tensor_at(x,y).symmetric_eigen(val,vec);
+                    if (val[0]<0) val[0] = 0;
+                    if (val[1]<0) val[1] = 0;
+                    *(ptrG0++) = vec(0,0);
+                    *(ptrG1++) = vec(0,1);
+                    *(ptrG2++) = 1 - (Tfloat)std::pow(1 + val[0] + val[1],-(Tfloat)nedge);
+                }
+            }
+#ifdef cimg_use_openmp
+#pragma omp parallel for if (_width*_height>=512 && _spectrum>=2)
+#endif
+            cimg_forC(cimg,c) {
+                Tfloat *ptrd = velocity.data(0,0,0,c), veloc_max = 0;
+                CImg_3x3(I,Tfloat);
+                cimg_for3(cimg._height,y) {
+                    if (abort()) {
+                        return;
+                    }
+                    for (int x = 0,
+                         _p1x = 0,
+                         _n1x = (int)(
+                                      (I[0] = I[1] = (T)cimg(_p1x,_p1y,0,c)),
+                                      (I[3] = I[4] = (T)cimg(0,y,0,c)),
+                                      (I[6] = I[7] = (T)cimg(0,_n1y,0,c)),
+                                      1>=cimg._width?cimg.width() - 1:1);
+                         (_n1x<cimg.width() && (
+                                                (I[2] = (T)cimg(_n1x,_p1y,0,c)),
+                                                (I[5] = (T)cimg(_n1x,y,0,c)),
+                                                (I[8] = (T)cimg(_n1x,_n1y,0,c)),1)) ||
+                         x==--_n1x;
+                         I[0] = I[1], I[1] = I[2],
+                         I[3] = I[4], I[4] = I[5],
+                         I[6] = I[7], I[7] = I[8],
+                         _p1x = x++, ++_n1x) {
+                        const Tfloat u = G(x,y,0),
+                        v = G(x,y,1),
+                        amp = G(x,y,2),
+                        ixx = Inc + Ipc - 2*Icc,
+                        ixy = (Inn + Ipp - Inp - Ipn)/4,
+                        iyy = Icn + Icp - 2*Icc,
+                        ixf = Inc - Icc,
+                        ixb = Icc - Ipc,
+                        iyf = Icn - Icc,
+                        iyb = Icc - Icp,
+                        itt = u*u*ixx + v*v*iyy + 2*u*v*ixy,
+                        it = u*cimg::minmod(ixf,ixb) + v*cimg::minmod(iyf,iyb),
+                        veloc = -amp*cimg::sign(itt)*cimg::abs(it);
+                        *(ptrd++) = veloc;
+                        if (veloc>veloc_max) {
+                            veloc_max = veloc;
+                        } else if (-veloc>veloc_max) {
+                            veloc_max = -veloc;
+                        }
+                    }
+                }
+                _veloc_max[c] = veloc_max;
+            }
+
+            const Tfloat veloc_max = _veloc_max.max();
+            if (veloc_max > 0) {
+                ((velocity*=amplitude/veloc_max)+=cimg).cut(val_min,val_max).move_to(cimg);
+            }
+#else
             cimg.sharpen((float)params.amplitude, true, (float)params.edge, (float)alpha, (float)sigma);
+#endif
         }
     }
 

@@ -149,6 +149,7 @@
 #define kParamFastApproxDafault true
 
 using namespace OFX;
+using namespace cimg_library;
 
 /// Denoise plugin
 struct CImgDenoiseParams
@@ -202,12 +203,153 @@ public:
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
+#ifdef CIMG_ABORTABLE
+        // code copied from CImg.h's get_blur_patch, with calls to abort() added here and there
+
+        // args
+        const float sigma_s = (float)(params.sigma_s * args.renderScale.x);
+        const float sigma_p = (float)params.sigma_r;
+        const unsigned int patch_size = (unsigned int)std::ceil(std::max(0, params.psize) * args.renderScale.x);
+        const unsigned int lookup_size = (unsigned int)std::ceil(std::max(0, params.lsize) * args.renderScale.x);
+        const float smoothness = (float)(params.smoothness * args.renderScale.x);
+        const bool is_fast_approx = params.fast_approx;
+
+#define Tfloat float
+#define T float
+#undef _cimg_blur_patch2d_fast
+#undef _cimg_blur_patch2d
+
+#define _cimg_blur_patch2d_fast(N) \
+        cimg_for##N##Y(res,y) { \
+         if (abort()) return; \
+         cimg_for##N##X(res,x) { \
+          T *pP = P._data; cimg_forC(res,c) { cimg_get##N##x##N(img,x,y,0,c,pP,T); pP+=N2; } \
+          const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2; \
+          float sum_weights = 0; \
+          cimg_for_in##N##XY(res,x0,y0,x1,y1,p,q) if (cimg::abs(img(x,y,0,0) - img(p,q,0,0))<sigma_p3) { \
+            T *pQ = Q._data; cimg_forC(res,c) { cimg_get##N##x##N(img,p,q,0,c,pQ,T); pQ+=N2; } \
+            float distance2 = 0; \
+            pQ = Q._data; cimg_for(P,pP,T) { const float dI = (float)*pP - (float)*(pQ++); distance2+=dI*dI; } \
+            distance2/=Pnorm; \
+            const float dx = (float)p - x, dy = (float)q - y, \
+              alldist = distance2 + (dx*dx+dy*dy)/sigma_s2, weight = alldist>3?0.0f:1.0f; \
+            sum_weights+=weight; \
+            cimg_forC(res,c) res(x,y,c)+=weight*cimg(p,q,c); \
+          } \
+          if (sum_weights>0) cimg_forC(res,c) res(x,y,c)/=sum_weights; \
+          else cimg_forC(res,c) res(x,y,c) = (Tfloat)(cimg(x,y,c)); \
+         } \
+        }
+
+#define _cimg_blur_patch2d(N) \
+        cimg_for##N##Y(res,y) { \
+         if (abort()) return; \
+         cimg_for##N##X(res,x) { \
+          T *pP = P._data; cimg_forC(res,c) { cimg_get##N##x##N(img,x,y,0,c,pP,T); pP+=N2; } \
+          const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2; \
+          float sum_weights = 0, weight_max = 0; \
+          cimg_for_in##N##XY(res,x0,y0,x1,y1,p,q) if (p!=x || q!=y) { \
+            T *pQ = Q._data; cimg_forC(res,c) { cimg_get##N##x##N(img,p,q,0,c,pQ,T); pQ+=N2; } \
+            float distance2 = 0; \
+            pQ = Q._data; cimg_for(P,pP,T) { const float dI = (float)*pP - (float)*(pQ++); distance2+=dI*dI; } \
+            distance2/=Pnorm; \
+            const float dx = (float)p - x, dy = (float)q - y, \
+              alldist = distance2 + (dx*dx+dy*dy)/sigma_s2, weight = (float)std::exp(-alldist); \
+            if (weight>weight_max) weight_max = weight; \
+            sum_weights+=weight; \
+            cimg_forC(res,c) res(x,y,c)+=weight*cimg(p,q,c); \
+          } \
+          sum_weights+=weight_max; cimg_forC(res,c) res(x,y,c)+=weight_max*cimg(x,y,c); \
+          if (sum_weights>0) cimg_forC(res,c) res(x,y,c)/=sum_weights; \
+          else cimg_forC(res,c) res(x,y,c) = (Tfloat)(cimg(x,y,c)); \
+         } \
+        }
+
+        if (cimg.is_empty() || !patch_size || !lookup_size) return;
+        CImg<Tfloat> res(cimg._width,cimg._height,cimg._depth,cimg._spectrum,0);
+        const CImg<T> _img = smoothness>0?cimg.get_blur(smoothness):CImg<Tfloat>(),&img = smoothness>0?_img:cimg;
+        CImg<T> P(patch_size*patch_size*cimg._spectrum), Q(P);
+        const float
+        nsigma_s = sigma_s>=0?sigma_s:-sigma_s*cimg::max(cimg._width,cimg._height,cimg._depth)/100,
+        sigma_s2 = nsigma_s*nsigma_s, sigma_p2 = sigma_p*sigma_p, sigma_p3 = 3*sigma_p,
+        Pnorm = P.size()*sigma_p2;
+        const int rsize2 = (int)lookup_size/2, rsize1 = (int)lookup_size - rsize2 - 1;
+        const unsigned int N2 = patch_size*patch_size, N3 = N2*patch_size;
+        cimg::unused(N2,N3);
+        switch (patch_size) { // 2d
+            case 2 : if (is_fast_approx) _cimg_blur_patch2d_fast(2) else _cimg_blur_patch2d(2) break;
+            case 3 : if (is_fast_approx) _cimg_blur_patch2d_fast(3) else _cimg_blur_patch2d(3) break;
+            case 4 : if (is_fast_approx) _cimg_blur_patch2d_fast(4) else _cimg_blur_patch2d(4) break;
+            case 5 : if (is_fast_approx) _cimg_blur_patch2d_fast(5) else _cimg_blur_patch2d(5) break;
+            case 6 : if (is_fast_approx) _cimg_blur_patch2d_fast(6) else _cimg_blur_patch2d(6) break;
+            case 7 : if (is_fast_approx) _cimg_blur_patch2d_fast(7) else _cimg_blur_patch2d(7) break;
+            case 8 : if (is_fast_approx) _cimg_blur_patch2d_fast(8) else _cimg_blur_patch2d(8) break;
+            case 9 : if (is_fast_approx) _cimg_blur_patch2d_fast(9) else _cimg_blur_patch2d(9) break;
+            default : { // Fast
+                const int psize2 = (int)patch_size/2, psize1 = (int)patch_size - psize2 - 1;
+                if (is_fast_approx) {
+#ifdef cimg_use_openmp
+#pragma omp parallel for if (res._width>=32 && res._height>=4) firstprivate(P,Q)
+#endif
+                    cimg_forY(res,y) {
+                        if (abort()) return;
+                        cimg_forX(res,x) { // 2d fast approximation.
+                            P = img.get_crop(x - psize1,y - psize1,x + psize2,y + psize2,true);
+                            const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2;
+                            float sum_weights = 0;
+                            cimg_for_inXY(res,x0,y0,x1,y1,p,q) if (cimg::abs(img(x,y,0)-img(p,q,0))<sigma_p3) {
+                                (Q = img.get_crop(p - psize1,q - psize1,p + psize2,q + psize2,true))-=P;
+                                const float
+                                dx = (float)x - p, dy = (float)y - q,
+                                distance2 = (float)(Q.pow(2).sum()/Pnorm + (dx*dx + dy*dy)/sigma_s2),
+                                weight = distance2>3?0.0f:1.0f;
+                                sum_weights+=weight;
+                                cimg_forC(res,c) res(x,y,c)+=weight*cimg(p,q,c);
+                            }
+                            if (sum_weights>0) cimg_forC(res,c) res(x,y,c)/=sum_weights;
+                            else cimg_forC(res,c) res(x,y,c) = (Tfloat)(cimg(x,y,c));
+                        }
+                    }
+                } else {
+#ifdef cimg_use_openmp
+#pragma omp parallel for if (res._width>=32 && res._height>=4) firstprivate(P,Q)
+#endif
+                    cimg_forY(res,y) {
+                        if (abort()) return;
+                        cimg_forX(res,x) { // 2d exact algorithm.
+                            P = img.get_crop(x - psize1,y - psize1,x + psize2,y + psize2,true);
+                            const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2;
+                            float sum_weights = 0, weight_max = 0;
+                            cimg_for_inXY(res,x0,y0,x1,y1,p,q) if (p!=x || q!=y) {
+                                (Q = img.get_crop(p - psize1,q - psize1,p + psize2,q + psize2,true))-=P;
+                                const float
+                                dx = (float)x - p, dy = (float)y - q,
+                                distance2 = (float)(Q.pow(2).sum()/Pnorm + (dx*dx + dy*dy)/sigma_s2),
+                                weight = (float)std::exp(-distance2);
+                                if (weight>weight_max) weight_max = weight;
+                                sum_weights+=weight;
+                                cimg_forC(res,c) res(x,y,c)+=weight*cimg(p,q,c);
+                            }
+                            sum_weights+=weight_max; cimg_forC(res,c) res(x,y,c)+=weight_max*cimg(x,y,c);
+                            if (sum_weights>0) cimg_forC(res,c) res(x,y,c)/=sum_weights;
+                            else cimg_forC(res,c) res(x,y,0,c) = (Tfloat)(cimg(x,y,c));
+                        }
+                    }
+                }
+            }
+        }
+        cimg.assign(res);
+#undef Tfloat
+#undef T
+
+#else
         cimg.blur_patch((float)(params.sigma_s * args.renderScale.x),
                         (float)params.sigma_r,
                         (unsigned int)std::ceil(std::max(0, params.psize) * args.renderScale.x),
                         (unsigned int)std::ceil(std::max(0, params.lsize) * args.renderScale.x),
                         (float)(params.smoothness * args.renderScale.x),
                         params.fast_approx);
+#endif
     }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgDenoiseParams& params) OVERRIDE FINAL
