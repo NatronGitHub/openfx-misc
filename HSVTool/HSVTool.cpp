@@ -142,7 +142,7 @@
 #define kParamSaturationRangeHint "Range of color saturations that are modified."
 #define kParamSaturationAdjustment "saturationAdjustment"
 #define kParamSaturationAdjustmentLabel "Saturation Adjustment"
-#define kParamSaturationAdjustmentHint "Adjustment of color saturations within the range."
+#define kParamSaturationAdjustmentHint "Adjustment of color saturations within the range. Saturation is clamped to zero to avoid color inversions."
 #define kParamSaturationRangeRolloff "saturationRangeRolloff"
 #define kParamSaturationRangeRolloffLabel "Saturation Range Rolloff"
 #define kParamSaturationRangeRolloffHint "Interval (in degrees) around Saturation Range, where saturation rotation decreases progressively to zero."
@@ -483,6 +483,9 @@ public:
         } else {
             h += coeff * (float)_values.hueRotation;
             s += coeff * (float)_values.satAdjust;
+            if (s < 0) {
+                s = 0;
+            }
             v += coeff * (float)_values.valAdjust;
             OFX::Color::hsv_to_rgb(h, s, v, rout, gout, bout);
         }
