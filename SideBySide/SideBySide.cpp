@@ -226,6 +226,9 @@ private:
 
     // override the roi call
     virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
+    
+    /** @brief get the frame/views needed for input clips*/
+    virtual void getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(SideBySideBase &, const OFX::RenderArguments &args);
@@ -312,20 +315,18 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
     }
 
     bool vertical = vertical_->getValueAtTime(args.time);
-    OfxPointD offset = getProjectOffset();
-    OfxPointD size = getProjectSize();
-
+    
     // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask
-    OfxRectD rod = {0., 0., 0., 0.};
-    if (_srcClip) {
-        rod = _srcClip->getRegionOfDefinition(args.time);
+    OfxRectD rod = _srcClip->getRegionOfDefinition(args.time, view1);
+    OfxRectD rightRod = _srcClip->getRegionOfDefinition(args.time, view2);
+    
+    
+    // the RoD is twice the size of the original ROD in one direction
+    if (vertical) {
+        rod.y2 = rod.y2 + (rightRod.y2-rightRod.y1);
+    } else {
+        rod.x2 = rod.x2 + (rightRod.x2 - rightRod.x1);
     }
-
-    // clip to the project rect
-    //rod.x1 = std::max(rod.x1,offset.x);
-    rod.x2 = std::min(rod.x2,offset.x+size.x);
-    //rod.y1 = std::max(rod.y1,offset.y);
-    rod.y2 = std::min(rod.y2,offset.y+size.y);
 
     // set the images
     processor.setDstImg(dst.get());
@@ -351,23 +352,21 @@ SideBySidePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
         return false;
     }
     bool vertical = vertical_->getValueAtTime(args.time);
-    OfxPointD offset = getProjectOffset();
-    OfxPointD size = getProjectSize();
 
+    int view1;
+    view1_->getValueAtTime(args.time, view1);
+    int view2;
+    view2_->getValueAtTime(args.time, view2);
     // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask
-    rod = _srcClip->getRegionOfDefinition(args.time);
+    rod = _srcClip->getRegionOfDefinition(args.time, view1);
+    OfxRectD rightRod = _srcClip->getRegionOfDefinition(args.time, view2);
 
-    // clip to the project rect
-    rod.x1 = std::max(rod.x1,offset.x);
-    rod.x2 = std::min(rod.x2,offset.x+size.x);
-    rod.y1 = std::max(rod.y1,offset.y);
-    rod.y2 = std::min(rod.y2,offset.y+size.y);
 
     // the RoD is twice the size of the original ROD in one direction
     if (vertical) {
-        rod.y2 = rod.y1 + 2*(rod.y2-rod.y1);
+        rod.y2 = rod.y2 + (rightRod.y2-rightRod.y1);
     } else {
-        rod.x2 = rod.x1 + 2*(rod.x2-rod.x1);
+        rod.x2 = rod.x2 + (rightRod.x2 - rightRod.x1);
     }
     // say we set it
     return true;
@@ -381,23 +380,44 @@ SideBySidePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
         return;
     }
     bool vertical = vertical_->getValueAtTime(args.time);
+    
+    int view1;
+    view1_->getValueAtTime(args.time, view1);
+    int view2;
+    view2_->getValueAtTime(args.time, view2);
 
-    // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask
-    OfxRectD roi = _srcClip->getRegionOfDefinition(args.time);
-
-    // since getRegionsOfInterest is not view-specific, return a full horizontal or vertical band
-    if (vertical) {
-        roi.x1 = args.regionOfInterest.x1;
-        roi.x2 = args.regionOfInterest.x2;
-    } else {
-        roi.y1 = args.regionOfInterest.y1;
-        roi.y2 = args.regionOfInterest.y2;
+    OfxRectD roi = args.regionOfInterest;
+    if (view2 == args.view) {
+        OfxRectD rod = _srcClip->getRegionOfDefinition(args.time, view1);
+        
+        if (vertical) {
+            double leftImgSize = rod.y2 - rod.y1;
+            roi.y1 -= leftImgSize;
+            roi.y2 -= leftImgSize;
+        } else {
+            double leftImgSize = rod.x2 - rod.x1;
+            roi.x1 -= leftImgSize;
+            roi.x2 -= leftImgSize;
+        }
     }
     rois.setRegionOfInterest(*_srcClip, roi);
-
+    
     // set it on the mask only if we are in an interesting context
     //if (getContext() != OFX::eContextFilter)
     //  rois.setRegionOfInterest(*_maskClip, roi);
+}
+
+void
+SideBySidePlugin::getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews)
+{
+    int view1;
+    view1_->getValueAtTime(args.time, view1);
+    int view2;
+    view2_->getValueAtTime(args.time, view2);
+    OfxRangeD range;
+    range.min = range.max = args.time;
+    frameViews.addFrameViewsNeeded(*_srcClip, range, view1);
+    frameViews.addFrameViewsNeeded(*_srcClip, range, view2);
 }
 
 // the internal render function
