@@ -192,8 +192,14 @@ JoinViewsPlugin::setupAndProcess(OFX::PixelProcessorFilterBase &processor, const
                                         ((_srcRightClip && _srcRightClip->isConnected()) ?
                                          _srcRightClip->fetchStereoscopicImage(args.time,0) : 0));
 
-    // make sure bit depths are sane
-    if (src.get()) {
+    if (!src.get()) {
+        if (!abort()) {
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        } else {
+            return;
+        }
+    } else {
+        // make sure bit depths are sane
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
             (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
