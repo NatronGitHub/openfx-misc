@@ -83,6 +83,7 @@
 #include <cmath> // for floor
 #include <climits> // for kOfxFlagInfiniteMax
 #include <cassert>
+#include <algorithm>
 
 #include "ofxsImageEffect.h"
 #include "ofxsMultiThread.h"

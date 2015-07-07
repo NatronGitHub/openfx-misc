@@ -73,6 +73,7 @@
 #include "Roto.h"
 
 #include <cmath>
+#include <algorithm>
 
 #include "ofxsProcessing.H"
 #include "ofxsMerging.h"

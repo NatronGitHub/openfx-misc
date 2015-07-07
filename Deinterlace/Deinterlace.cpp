@@ -75,6 +75,7 @@
 #include <cstring> // for memcpy
 #include <cmath>
 #include <algorithm>
+
 #include "ofxsImageEffect.h"
 #include "ofxsMultiThread.h"
 #include "ofxsProcessing.H"

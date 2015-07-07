@@ -74,6 +74,7 @@
 
 #include "SideBySide.h"
 
+#include <algorithm>
 #ifdef _WINDOWS
 #include <windows.h>
 #endif

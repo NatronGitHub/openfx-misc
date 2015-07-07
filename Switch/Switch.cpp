@@ -75,6 +75,7 @@
 #include "Switch.h"
 
 #include <string>
+#include <algorithm>
 
 #ifdef _WINDOWS
 #include <windows.h>

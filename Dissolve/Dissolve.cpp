@@ -73,6 +73,7 @@
 #include "Dissolve.h"
 
 #include <cmath>
+#include <algorithm>
 
 #include "ofxsImageEffect.h"
 #include "ofxsMultiThread.h"

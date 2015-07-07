@@ -74,7 +74,7 @@
 #include "ColorLookup.h"
 
 #include <cmath>
-
+#include <algorithm>
 #ifdef _WINDOWS
 #include <windows.h>
 #define isnan _isnan

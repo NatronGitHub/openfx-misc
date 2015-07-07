@@ -10,15 +10,16 @@
 #ifndef Misc_CImgFilter_h
 #define Misc_CImgFilter_h
 
+#include <cassert>
+#include <memory>
+#include <algorithm>
+
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
 #include "ofxsPixelProcessor.h"
 #include "ofxsCopier.h"
 #include "ofxsMerging.h"
 #include "ofxNatron.h"
-
-#include <cassert>
-#include <memory>
 
 //#define CIMG_DEBUG
 

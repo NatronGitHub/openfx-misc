@@ -73,11 +73,11 @@
 #include "Shuffle.h"
 
 #include <cmath>
+#include <set>
+#include <algorithm>
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
-#include <set>
-#include <algorithm>
 
 #include "ofxsProcessing.H"
 #include "ofxsPixelProcessor.h"

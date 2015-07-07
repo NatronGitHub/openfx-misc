@@ -76,6 +76,7 @@
 #include <cmath>
 #include <cstring>
 #include <climits>
+#include <algorithm>
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
