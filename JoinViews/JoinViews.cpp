@@ -130,6 +130,9 @@ private:
     template <int nComponents>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
+    // override the rod call
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    
     /** @brief get the frame/views needed for input clips*/
     virtual void getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews) OVERRIDE FINAL;
 
@@ -143,6 +146,16 @@ private:
     OFX::Clip *_srcRightClip;
 };
 
+bool
+JoinViewsPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    if (args.view == 0) {
+        rod = _srcLeftClip->getRegionOfDefinition(args.time, 0);
+    } else {
+        rod = _srcRightClip->getRegionOfDefinition(args.time, 0);
+    }
+    return true;
+}
 
 void
 JoinViewsPlugin::getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews)
