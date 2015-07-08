@@ -382,26 +382,19 @@ SideBySidePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
     }
     bool vertical = vertical_->getValueAtTime(args.time);
     
-    int view1;
-    view1_->getValueAtTime(args.time, view1);
-    int view2;
-    view2_->getValueAtTime(args.time, view2);
-
-    OfxRectD roi = args.regionOfInterest;
-    if (view2 == args.view) {
-        OfxRectD rod = _srcClip->getRegionOfDefinition(args.time, view1);
-        
-        if (vertical) {
-            double leftImgSize = rod.y2 - rod.y1;
-            roi.y1 -= leftImgSize;
-            roi.y2 -= leftImgSize;
-        } else {
-            double leftImgSize = rod.x2 - rod.x1;
-            roi.x1 -= leftImgSize;
-            roi.x2 -= leftImgSize;
-        }
+    // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask
+    OfxRectD roi = _srcClip->getRegionOfDefinition(args.time);
+    
+    // since getRegionsOfInterest is not view-specific, return a full horizontal or vertical band
+    if (vertical) {
+        roi.x1 = args.regionOfInterest.x1;
+        roi.x2 = args.regionOfInterest.x2;
+    } else {
+        roi.y1 = args.regionOfInterest.y1;
+        roi.y2 = args.regionOfInterest.y2;
     }
     rois.setRegionOfInterest(*_srcClip, roi);
+
     
     // set it on the mask only if we are in an interesting context
     //if (getContext() != OFX::eContextFilter)
