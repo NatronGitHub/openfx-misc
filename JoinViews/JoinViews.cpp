@@ -342,7 +342,7 @@ void JoinViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setIsViewAware(true);
     
     //We do not render the same thing on all views
-    desc.setIsViewInvariant(true);
+    desc.setIsViewInvariant(OFX::eViewInvarianceAllViewsVariant);
 
     
     // returning an error here crashes Nuke

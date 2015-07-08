@@ -512,6 +512,14 @@ void SideBySidePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+    
+    //We're using the view calls (i.e: getFrameViewsNeeded)
+    desc.setIsViewAware(true);
+    
+    //We render the same thing whatever the requested view
+    desc.setIsViewInvariant(OFX::eViewInvarianceAllViewsInvariant);
+
+    
     // returning an error here crashes Nuke
     //if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
     //  throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);

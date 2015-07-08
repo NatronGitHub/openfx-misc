@@ -326,7 +326,7 @@ void OneViewPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setIsViewAware(true);
     
     //We render the same thing on all views
-    desc.setIsViewInvariant(true);
+    desc.setIsViewInvariant(OFX::eViewInvarianceAllViewsInvariant);
     
     // returning an error here crashes Nuke
     //if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
