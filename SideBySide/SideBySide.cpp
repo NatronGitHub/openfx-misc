@@ -115,7 +115,9 @@ protected:
     const OFX::Image *_srcImg1;
     const OFX::Image *_srcImg2;
     bool _vertical;
-    int _offset;
+    
+    //Contains the (x1,x2) or (y1,y2) (depending on _vertical) bounds of the first image
+    OfxRangeI _srcOffset;
 public:
     /** @brief no arg ctor */
     SideBySideBase(OFX::ImageEffect &instance)
@@ -123,7 +125,7 @@ public:
     , _srcImg1(0)
     , _srcImg2(0)
     , _vertical(false)
-    , _offset(0)
+    , _srcOffset()
     {
     }
 
@@ -134,7 +136,7 @@ public:
     void setSrcImg2(const OFX::Image *v) {_srcImg2 = v;}
 
     /** @brief set vertical stacking and offset oin the vertical or horizontal direction */
-    void setVerticalAndOffset(bool v, int offset) {_vertical = v; _offset = offset;}
+    void setVerticalAndOffset(bool v, const OfxRangeI& offset) {_vertical = v; _srcOffset = offset;}
 };
 
 // template to do the RGBA processing
@@ -151,7 +153,8 @@ private:
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        assert(_offset != 0);
+        assert(_srcOffset.max != 0);
+        double offset = _srcOffset.max - _srcOffset.min;
         for(int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
@@ -161,10 +164,10 @@ private:
 
             for(int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix;
-                if ((_vertical && y >= _offset) || (!_vertical && x < _offset)) {
-                    srcPix = (const PIX *)(_srcImg1 ? _srcImg1->getPixelAddress(x, _vertical ? y - _offset : y) : 0);
+                if ((_vertical && y >= _srcOffset.max) || (!_vertical && x < _srcOffset.max)) {
+                    srcPix = (const PIX *)(_srcImg1 ? _srcImg1->getPixelAddress(x, _vertical ? y - offset : y) : 0);
                 } else {
-                    srcPix = (const PIX *)(_srcImg2 ? _srcImg2->getPixelAddress(_vertical ? x : x - _offset, y ) : 0);
+                    srcPix = (const PIX *)(_srcImg2 ? _srcImg2->getPixelAddress(_vertical ? x : x - offset, y ) : 0);
                 }
 
                 if (srcPix) {
@@ -318,17 +321,11 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
     bool vertical = vertical_->getValueAtTime(args.time);
     
     // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask
-    OfxRectD rod = _srcClip->getRegionOfDefinition(args.time, view1);
-    OfxRectD rightRod = _srcClip->getRegionOfDefinition(args.time, view2);
+    OfxRectD leftRod = _srcClip->getRegionOfDefinition(args.time, view1);
+    OfxRangeI offset;
+    offset.min = vertical ? int(leftRod.y1 * args.renderScale.y) : int(leftRod.x1 * args.renderScale.x);
+    offset.max = vertical ? int(leftRod.y2 * args.renderScale.y) : int(leftRod.x2 * args.renderScale.x);
     
-    
-    // the RoD is twice the size of the original ROD in one direction
-    if (vertical) {
-        rod.y2 = rod.y2 + (rightRod.y2-rightRod.y1);
-    } else {
-        rod.x2 = rod.x2 + (rightRod.x2 - rightRod.x1);
-    }
-
     // set the images
     processor.setDstImg(dst.get());
     processor.setSrcImg1(src1.get());
@@ -338,8 +335,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
     processor.setRenderWindow(args.renderWindow);
 
     // set the parameters
-    double sideBySideOffset = vertical ? (int)(rod.y2 * args.renderScale.y) : (int)(rod.x2 * args.renderScale.x);
-    processor.setVerticalAndOffset(vertical, sideBySideOffset);
+    processor.setVerticalAndOffset(vertical, offset);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -362,10 +358,8 @@ SideBySidePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
     rod = _srcClip->getRegionOfDefinition(args.time, view1);
     OfxRectD rightRod = _srcClip->getRegionOfDefinition(args.time, view2);
 
-
-    // the RoD is twice the size of the original ROD in one direction
     if (vertical) {
-        rod.y2 = rod.y2 + (rightRod.y2-rightRod.y1);
+        rod.y2 = rod.y2 + (rightRod.y2 - rightRod.y1);
     } else {
         rod.x2 = rod.x2 + (rightRod.x2 - rightRod.x1);
     }

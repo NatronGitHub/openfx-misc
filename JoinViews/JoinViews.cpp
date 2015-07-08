@@ -81,6 +81,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
+#include "ofxsMerging.h"
 
 #define kPluginName "JoinViewsOFX"
 #define kPluginGrouping "Views"
@@ -149,11 +150,23 @@ private:
 bool
 JoinViewsPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
-    if (args.view == 0) {
-        rod = _srcLeftClip->getRegionOfDefinition(args.time, 0);
-    } else {
-        rod = _srcRightClip->getRegionOfDefinition(args.time, 0);
-    }
+    /*
+     The RoD has to be the union of all views. Imagine a graph example in Natron as such:
+     
+     Reader1—>Crop1 \ (right)
+                            JoinViews1—> SideBySide1 —> Viewer
+     Reader2—>Crop2 / (left)
+     
+     In OpenFX-HostSupport, the RoI returned by getRegionsOfInterest is clipped against the RoD.
+     That would mean that the RoIS returned by SideBySide1 in our example would get clipped against the
+     RoD of Crop2, which is wrong obviously for the RoI of the right view.
+     The solution is to return the union of the RoDs of the views for JoinViews so that the clip does not harm
+     the RoIs of the grpah downstream.
+     */
+    
+    OfxRectD leftRoD = _srcLeftClip->getRegionOfDefinition(args.time, 0);
+    OfxRectD rightRoD = _srcRightClip->getRegionOfDefinition(args.time, 0);
+    MergeImages2D::rectBoundingBox(leftRoD, rightRoD, &rod);
     return true;
 }
 
