@@ -73,6 +73,7 @@
 #include "Grade.h"
 
 #include <cmath>
+#include <algorithm>
 #ifdef _WINDOWS
 #include <windows.h>
 #endif

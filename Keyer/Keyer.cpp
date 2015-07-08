@@ -74,6 +74,7 @@
 
 #include <cmath>
 #include <limits>
+#include <algorithm>
 #ifdef _WINDOWS
 #include <windows.h>
 #endif

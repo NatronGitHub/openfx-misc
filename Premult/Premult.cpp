@@ -74,6 +74,7 @@
 #include "Premult.h"
 
 #include <limits>
+#include <algorithm>
 
 #ifdef _WINDOWS
 #include <windows.h>

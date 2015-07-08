@@ -74,6 +74,7 @@
 #include <cmath>
 #include <map>
 #include <limits>
+#include <algorithm>
 
 #include "ofxsProcessing.H"
 #include "ofxsTracking.h"

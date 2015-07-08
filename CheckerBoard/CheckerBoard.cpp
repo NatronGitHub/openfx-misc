@@ -73,10 +73,11 @@
 #include "CheckerBoard.h"
 
 #include <cmath>
+#include <algorithm>
+#include <climits>
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
-#include <climits>
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"

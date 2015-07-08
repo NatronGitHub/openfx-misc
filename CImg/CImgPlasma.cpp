@@ -75,6 +75,7 @@
 #include <memory>
 #include <cmath>
 #include <cstring>
+#include <algorithm>
 #ifdef _WINDOWS
 #include <windows.h>
 #endif

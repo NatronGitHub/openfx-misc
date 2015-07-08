@@ -72,6 +72,7 @@
 
 #include "ChromaKeyer.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #ifdef _WINDOWS

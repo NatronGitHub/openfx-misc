@@ -89,6 +89,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
