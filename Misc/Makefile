@@ -61,6 +61,7 @@ ofxsGenerator.o \
 ofxsLut.o \
 ofxsOGLTextRenderer.o \
 ofxsOGLFontData.o  \
+ofxsShutter.o \
 ofxsTracking.o \
 ofxsTransform3x3.o \
 ofxsTransformInteract.o \
