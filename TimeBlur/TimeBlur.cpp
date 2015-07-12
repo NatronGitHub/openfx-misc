@@ -84,6 +84,9 @@
 #include <climits> // for kOfxFlagInfiniteMax
 #include <cassert>
 #include <algorithm>
+#ifdef DEBUG
+#include <cstdio>
+#endif
 
 #include "ofxsImageEffect.h"
 #include "ofxsMultiThread.h"
@@ -380,7 +383,9 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor, const OFX::Ren
                 return;
             }
             const OFX::Image* src = _srcClip ? _srcClip->fetchImage(range.min + i * interval) : 0;
-            printf("TimeBlur: fetchimage(%g)\n", range.min + i * interval);
+#ifdef DEBUG
+            std::printf("TimeBlur: fetchimage(%g)\n", range.min + i * interval);
+#endif
             if (src) {
                 if (src->getRenderScale().x != args.renderScale.x ||
                     src->getRenderScale().y != args.renderScale.y ||
