@@ -49,6 +49,8 @@
 #include "SideBySide.h"
 #include "SlitScan.h"
 #include "Switch.h"
+#include "TimeBlur.h"
+#include "NoTimeBlur.h"
 #include "TimeOffset.h"
 #include "TrackerPM.h"
 #include "Transform.h"
@@ -113,6 +115,8 @@ namespace OFX
             getSideBySidePluginID(ids);
             getSlitScanPluginID(ids);
             getSwitchPluginID(ids);
+            getTimeBlurPluginID(ids);
+            getNoTimeBlurPluginID(ids);
             getTimeOffsetPluginID(ids);
             getTrackerPMPluginID(ids);
             getTransformPluginIDs(ids);

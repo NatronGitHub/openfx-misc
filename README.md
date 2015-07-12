@@ -46,6 +46,8 @@ grouping).
 * RetimeOFX: Change the timing of the input clip.
 * SlitScan: Per-pixel retiming.
 * TimeOffsetOFX: Move the input clip forward or backward in time.
+* TimeBlurOFX: Average frames over a fractional shutter period.
+* NoTimeBlurOFX: Round fractional frames to integer values.
 
 ### Channel
 
