@@ -75,9 +75,6 @@
 
  */
 
-// TODO:
-// - fix bugs
-
 #include "TimeBlur.h"
 
 #include <cmath> // for floor
@@ -383,9 +380,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor, const OFX::Ren
                 return;
             }
             const OFX::Image* src = _srcClip ? _srcClip->fetchImage(range.min + i * interval) : 0;
-#ifdef DEBUG
-            std::printf("TimeBlur: fetchimage(%g)\n", range.min + i * interval);
-#endif
+            //std::printf("TimeBlur: fetchimage(%g)\n", range.min + i * interval);
             if (src) {
                 if (src->getRenderScale().x != args.renderScale.x ||
                     src->getRenderScale().y != args.renderScale.y ||
@@ -514,9 +509,23 @@ TimeBlurPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
     _divisions->getValueAtTime(time, divisions);
     if (shutter == 0 || divisions <= 1) {
         range.max = range.min;
+        frames.setFramesNeeded(*_srcClip, range);
+        return;
     }
-
+#define OFX_HOST_ACCEPTS_FRACTIONAL_FRAME_RANGES // works with Natron, but this is perhaps borderline with respect to OFX spec
+#ifdef OFX_HOST_ACCEPTS_FRACTIONAL_FRAME_RANGES
+    //std::printf("TimeBlur: range(%g,%g)\n", range.min, range.max);
     frames.setFramesNeeded(*_srcClip, range);
+#else
+    double interval = divisions > 1 ? (range.max-range.min)/divisions : 1.;
+    for (int i = 1; i < divisions; ++i) {
+        double t = range.min + i * interval;
+
+        OfxRangeD r = {t, t};
+        //std::printf("TimeBlur: range(%g,%g)\n", r.min, r.max);
+        frames.setFramesNeeded(*_srcClip, r);
+    }
+#endif
 }
 
 bool
