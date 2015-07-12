@@ -741,7 +741,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
 
         // fetch the source images
         OptionalImagesHolder_RAII srcImgs;
-        for (int i = 0; i < n; ++i) {
+        for (int i = imin; i < imax; ++i) {
             if (abort()) {
                 throwSuiteStatusException(kOfxStatFailed);
                 return;
@@ -764,7 +764,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
         }
         // fetch the foreground mattes
         OptionalImagesHolder_RAII fgMImgs;
-        for (int i = 0; i < n; ++i) {
+        for (int i = imin; i < imax; ++i) {
             if (abort()) {
                 throwSuiteStatusException(kOfxStatFailed);
                 return;
@@ -852,31 +852,26 @@ FrameBlendPlugin::renderForBitDepth(const OFX::RenderArguments &args)
     OperationEnum operation = (OperationEnum)operation_i;
 
     switch (operation) {
-        case eOperationAverage: {
-            FrameBlendProcessor<PIX, nComponents, maxValue, eOperationAverage> fred(*this);
-            setupAndProcess(fred, args);
+        case eOperationAverage:
+            renderForOperation<PIX, nComponents, maxValue, eOperationAverage>(args);
             break;
-        }
-        case eOperationMin: {
-            FrameBlendProcessor<PIX, nComponents, maxValue, eOperationMin> fred(*this);
-            setupAndProcess(fred, args);
+
+        case eOperationMin:
+            renderForOperation<PIX, nComponents, maxValue, eOperationMin>(args);
             break;
-        }
-        case eOperationMax: {
-            FrameBlendProcessor<PIX, nComponents, maxValue, eOperationMax> fred(*this);
-            setupAndProcess(fred, args);
+
+        case eOperationMax:
+            renderForOperation<PIX, nComponents, maxValue, eOperationMax>(args);
             break;
-        }
-        case eOperationSum: {
-            FrameBlendProcessor<PIX, nComponents, maxValue, eOperationSum> fred(*this);
-            setupAndProcess(fred, args);
+
+        case eOperationSum:
+            renderForOperation<PIX, nComponents, maxValue, eOperationSum>(args);
             break;
-        }
-        case eOperationProduct: {
-            FrameBlendProcessor<PIX, nComponents, maxValue, eOperationProduct> fred(*this);
-            setupAndProcess(fred, args);
+
+        case eOperationProduct:
+            renderForOperation<PIX, nComponents, maxValue, eOperationProduct>(args);
             break;
-        }
+
     }
 }
 
