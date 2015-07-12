@@ -76,7 +76,8 @@
  */
 
 // TODO:
-// - show progress
+// - fix bugs
+// - implement getRoD
 
 #include "TimeBlur.h"
 
@@ -378,7 +379,6 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor, const OFX::Ren
         OptionalImagesHolder_RAII srcImgs;
         for (int i = imin; i < imax; ++i) {
             if (abort()) {
-                throwSuiteStatusException(kOfxStatFailed);
                 return;
             }
             const OFX::Image* src = _srcClip ? _srcClip->fetchImage(range.min + i * interval) : 0;
