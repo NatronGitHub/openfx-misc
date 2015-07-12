@@ -143,10 +143,12 @@ TestGroupsPlugin::render(const OFX::RenderArguments &args)
     bool forceCopy;
     _forceCopy->getValue(forceCopy);
 
+#ifdef DEBUG
     if (!forceCopy) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host should not render");
         throwSuiteStatusException(kOfxStatFailed);
     }
+#endif
 
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());

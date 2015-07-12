@@ -599,11 +599,13 @@ RetimePlugin::render(const OFX::RenderArguments &args)
     _filter->getValueAtTime(time, filter_i);
     FilterEnum filter = (FilterEnum)filter_i;
 
+#ifdef DEBUG
     if (sourceTime == (int)sourceTime || filter == eFilterNone || filter == eFilterNearest) {
         // should be caught by isIdentity!
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host should not render");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+#endif
 
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {

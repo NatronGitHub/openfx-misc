@@ -69,6 +69,7 @@ Rocquencourt - B.P. 105
 
 void getSlitScanPluginID(OFX::PluginFactoryArray &ids)
 {
+#pragma message WARN("TODO")
     //static SlitScanPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     //ids.push_back(&p);
 }
