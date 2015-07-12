@@ -52,6 +52,7 @@ Shuffle \
 SideBySide \
 SlitScan \
 Switch \
+TimeBlur \
 TimeOffset \
 TrackerPM \
 Transform \

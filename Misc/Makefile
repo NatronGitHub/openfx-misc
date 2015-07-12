@@ -51,6 +51,8 @@ SideBySide.o \
 SlitScan.o \
 Switch.o \
 TestRender.o \
+TimeBlur.o \
+NoTimeBlur.o \
 TimeOffset.o \
 TrackerPM.o \
 Transform.o \
@@ -244,6 +246,7 @@ VPATH += \
 ../SlitScan \
 ../Switch \
 ../Test \
+../TimeBlur \
 ../TimeOffset \
 ../TrackerPM \
 ../Transform \
@@ -305,6 +308,7 @@ CXXFLAGS += \
 -I../SlitScan \
 -I../Switch \
 -I../Test \
+-I../TimeBlur \
 -I../TimeOffset \
 -I../TrackerPM \
 -I../Transform \
