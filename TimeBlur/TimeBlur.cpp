@@ -166,19 +166,16 @@ private:
         assert(1 <= nComponents && nComponents <= 4);
         assert(!_divisions || _dstPixelData);
         float tmpPix[nComponents];
-        float initVal = 0.;
-        if (!_accumulatorData) {
-            initVal = 0.;
-        }
-
+        const float initVal = 0.;
+        const bool lastPass = (_divisions != 0);
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
             if (_effect.abort()) {
                 break;
             }
 
-            PIX *dstPix = _divisions ? (PIX *) getDstPixelAddress(procWindow.x1, y) : 0;
-            assert(!_divisions || dstPix);
-            if (_divisions && !dstPix) {
+            PIX *dstPix = lastPass ? (PIX *) getDstPixelAddress(procWindow.x1, y) : 0;
+            assert(!lastPass || dstPix);
+            if (lastPass && !dstPix) {
                 // coverity[dead_error_line]
                 continue;
             }
@@ -197,11 +194,11 @@ private:
                     if (srcPixi) {
                         for (int c = 0; c < nComponents; ++c) {
                             tmpPix[c] += srcPixi[c];
-                            break;
                         }
                     }
                 }
-                if (!_divisions) {
+                if (!lastPass) {
+                    assert(_accumulatorData);
                     if (_accumulatorData) {
                         std::copy(tmpPix, tmpPix + nComponents , &_accumulatorData[renderPix * nComponents]);
                     }
@@ -351,7 +348,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor, const OFX::Ren
 
     int divisions;
     _divisions->getValueAtTime(time, divisions);
-    double interval = divisions > 1 ? (range.max-range.min)/(divisions - 1) : 1.;
+    double interval = divisions >= 1 ? (range.max-range.min)/divisions : 1.;
 
     const OfxRectI& renderWindow = args.renderWindow;
     size_t nPixels = (renderWindow.y2 - renderWindow.y1) * (renderWindow.x2 - renderWindow.x1);
@@ -383,6 +380,7 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor, const OFX::Ren
                 return;
             }
             const OFX::Image* src = _srcClip ? _srcClip->fetchImage(range.min + i * interval) : 0;
+            printf("TimeBlur: fetchimage(%g)\n", range.min + i * interval);
             if (src) {
                 if (src->getRenderScale().x != args.renderScale.x ||
                     src->getRenderScale().y != args.renderScale.y ||
@@ -531,11 +529,11 @@ TimeBlurPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
     OFX::shutterRange(time, shutter, (ShutterOffsetEnum)shutteroffset_i, shuttercustomoffset, &range);
     int divisions;
     _divisions->getValueAtTime(time, divisions);
-    double interval = divisions > 1 ? (range.max-range.min)/(divisions - 1) : 1.;
+    double interval = divisions > 1 ? (range.max-range.min)/divisions : 1.;
 
     rod = _srcClip->getRegionOfDefinition(range.min);
 
-    for (int i = 0; i < divisions; ++i) {
+    for (int i = 1; i < divisions; ++i) {
         OfxRectD srcRoD = _srcClip->getRegionOfDefinition(range.min + i * interval);
         OFX::MergeImages2D::rectBoundingBox(srcRoD, rod, &rod);
     }
@@ -597,52 +595,14 @@ void TimeBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
-        param->setLabel(kNatronOfxParamProcessRLabel);
-        param->setHint(kNatronOfxParamProcessRHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessG);
-        param->setLabel(kNatronOfxParamProcessGLabel);
-        param->setHint(kNatronOfxParamProcessGHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessB);
-        param->setLabel(kNatronOfxParamProcessBLabel);
-        param->setHint(kNatronOfxParamProcessBHint);
-        param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessA);
-        param->setLabel(kNatronOfxParamProcessALabel);
-        param->setHint(kNatronOfxParamProcessAHint);
-        param->setDefault(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
 
     {
         IntParamDescriptor *param = desc.defineIntParam(kParamDivisions);
         param->setLabel(kParamDivisionsLabel);
         param->setHint(kParamDivisionsHint);
         param->setDefault(10);
+        param->setRange(1, kOfxFlagInfiniteMax);
+        param->setDisplayRange(1, 10);
         param->setAnimates(true); // can animate
         if (page) {
             page->addChild(*param);
