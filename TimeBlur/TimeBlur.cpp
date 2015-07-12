@@ -517,7 +517,7 @@ TimeBlurPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
 }
 
 bool
-TimeBlurPluginFactory::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+TimeBlurPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     const double time = args.time;
     // compute range
@@ -569,7 +569,7 @@ void TimeBlurPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
     
 #ifdef OFX_EXTENSIONS_NATRON
-    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
+    //desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
 #endif
 
 }
