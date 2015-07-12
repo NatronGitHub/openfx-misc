@@ -77,7 +77,6 @@
 
 // TODO:
 // - fix bugs
-// - implement getRoD
 
 #include "TimeBlur.h"
 
@@ -264,6 +263,8 @@ private:
 
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
+
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 private:
 
@@ -513,6 +514,32 @@ TimeBlurPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
     }
 
     frames.setFramesNeeded(*_srcClip, range);
+}
+
+bool
+TimeBlurPluginFactory::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    const double time = args.time;
+    // compute range
+    double shutter = 0.;
+    _shutter->getValueAtTime(time, shutter);
+    int shutteroffset_i = 0;
+    _shutteroffset->getValueAtTime(time, shutteroffset_i);
+    double shuttercustomoffset = 0.;
+    _shuttercustomoffset->getValueAtTime(time, shuttercustomoffset);
+    OfxRangeD range;
+    OFX::shutterRange(time, shutter, (ShutterOffsetEnum)shutteroffset_i, shuttercustomoffset, &range);
+    int divisions;
+    _divisions->getValueAtTime(time, divisions);
+    double interval = divisions > 1 ? (range.max-range.min)/(divisions - 1) : 1.;
+
+    rod = _srcClip->getRegionOfDefinition(range.min);
+
+    for (int i = 0; i < divisions; ++i) {
+        OfxRectD srcRoD = _srcClip->getRegionOfDefinition(range.min + i * interval);
+        OFX::MergeImages2D::rectBoundingBox(srcRoD, rod, &rod);
+    }
+    return true;
 }
 
 mDeclarePluginFactory(TimeBlurPluginFactory, {}, {});
