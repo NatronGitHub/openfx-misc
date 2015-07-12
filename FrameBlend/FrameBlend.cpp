@@ -534,6 +534,8 @@ private:
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
 
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+
     /** @brief called when a param has just had its value changed */
     virtual void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
@@ -743,7 +745,6 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
         OptionalImagesHolder_RAII srcImgs;
         for (int i = imin; i < imax; ++i) {
             if (abort()) {
-                throwSuiteStatusException(kOfxStatFailed);
                 return;
             }
             const OFX::Image* src = _srcClip ? _srcClip->fetchImage(min + i*interval) : 0;
@@ -766,7 +767,6 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
         OptionalImagesHolder_RAII fgMImgs;
         for (int i = imin; i < imax; ++i) {
             if (abort()) {
-                throwSuiteStatusException(kOfxStatFailed);
                 return;
             }
             const OFX::Image* mask = (_fgMClip && _fgMClip->isConnected()) ? _fgMClip->fetchImage(min + i*interval) : 0;
@@ -983,6 +983,33 @@ FrameBlendPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
             frames.setFramesNeeded(*_srcClip, range);
         }
     }
+}
+
+bool
+FrameBlendPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    const double time = args.time;
+    bool absolute;
+    _absolute->getValueAtTime(time, absolute);
+    int min, max;
+    _frameRange->getValueAtTime(time, min, max);
+    if (min > max) {
+        std::swap(min, max);
+    }
+    if (!absolute) {
+        min += time;
+        max += time;
+    }
+    int interval;
+    _frameInterval->getValueAtTime(time, interval);
+
+    rod = _srcClip->getRegionOfDefinition(min);
+
+    for (int i = min + interval; i <= max; i += interval) {
+        OfxRectD srcRoD = _srcClip->getRegionOfDefinition(i);
+        OFX::MergeImages2D::rectBoundingBox(srcRoD, rod, &rod);
+    }
+    return true;
 }
 
 /** @brief called when a param has just had its value changed */
