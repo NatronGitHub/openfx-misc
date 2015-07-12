@@ -226,8 +226,15 @@ public:
     /* override the time domain action, only for the general context */
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
 
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    
     /* set up and run a processor */
     void setupAndProcess(OFX::ImageBlenderBase &, const OFX::RenderArguments &args, double sourceTime, FilterEnum filter);
+    
+private:
+    
+    
+    bool isIdentityInternal(OfxTime time, OFX::Clip* &identityClip, OfxTime &identityTime);
 };
 
 
@@ -432,12 +439,24 @@ RetimePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
 }
 
 bool
-RetimePlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime)
+RetimePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    OFX::Clip* identityClip;
+    OfxTime identityTime;
+    bool identity = isIdentityInternal(args.time, identityClip, identityTime);
+    if (!identity) {
+        return false;
+    }
+    rod = _srcClip->getRegionOfDefinition(identityTime, args.view);
+    return true;
+}
+
+bool
+RetimePlugin::isIdentityInternal(OfxTime time, OFX::Clip* &identityClip, OfxTime &identityTime)
 {
     if (!_srcClip) {
         return false;
     }
-    const double time = args.time;
     double sourceTime;
     if (getContext() == OFX::eContextRetimer) {
         // the host is specifying it, so fetch it from the kOfxImageEffectRetimerParamName pseudo-param
@@ -462,7 +481,7 @@ RetimePlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &iden
     int filter_i;
     _filter->getValueAtTime(time, filter_i);
     FilterEnum filter = (FilterEnum)filter_i;
-
+    
     if (sourceTime == (int)sourceTime || filter == eFilterNone) {
         identityClip = _srcClip;
         identityTime = sourceTime;
@@ -473,8 +492,14 @@ RetimePlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &iden
         identityTime = std::floor(sourceTime + 0.5);
         return true;
     }
-
+    
     return false;
+}
+
+bool
+RetimePlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime)
+{
+    return isIdentityInternal(args.time, identityClip, identityTime);
 }
 
 
