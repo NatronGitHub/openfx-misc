@@ -719,8 +719,8 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     <ClInclude Include="..\Test\TestGroups.h" />
     <ClInclude Include="..\Test\TestPosition.h" />
     <ClInclude Include="..\Test\TestRender.h" />
-    <ClCompile Include="..\TimeBlur\NoTimeBlur.h" />
-    <ClCompile Include="..\TimeBlur\TimeBlur.h" />
+    <ClInclude Include="..\TimeBlur\NoTimeBlur.h" />
+    <ClInclude Include="..\TimeBlur\TimeBlur.h" />
     <ClInclude Include="..\TimeOffset\TimeOffset.h" />
     <ClInclude Include="..\TrackerPM\TrackerPM.h" />
     <ClInclude Include="..\Transform\Transform.h" />
