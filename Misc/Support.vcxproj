@@ -60,6 +60,7 @@
     <ClInclude Include="..\SupportExt\ofxsPixelProcessor.h" />
     <ClInclude Include="..\SupportExt\ofxsPositionInteract.h" />
     <ClInclude Include="..\SupportExt\ofxsRectangleInteract.h" />
+    <ClInclude Include="..\SupportExt\ofxsShutter.h" />
     <ClInclude Include="..\SupportExt\ofxsTracking.h" />
     <ClInclude Include="..\SupportExt\ofxsTransform3x3.h" />
     <ClInclude Include="..\SupportExt\ofxsTransform3x3Processor.h" />
@@ -79,6 +80,7 @@
     <ClCompile Include="..\SupportExt\ofxsOGLFontData.cpp" />
     <ClCompile Include="..\SupportExt\ofxsOGLTextRenderer.cpp" />
     <ClCompile Include="..\SupportExt\ofxsRectangleInteract.cpp" />
+    <ClInclude Include="..\SupportExt\ofxsShutter.cpp" />
     <ClCompile Include="..\SupportExt\ofxsTracking.cpp" />
     <ClCompile Include="..\SupportExt\ofxsTransform3x3.cpp" />
     <ClCompile Include="..\SupportExt\ofxsTransformInteract.cpp" />
