@@ -703,8 +703,8 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
     
     if (bg.get()) {
         OFX::BitDepthEnum    srcBitDepth      = bg->getPixelDepth();
-        OFX::PixelComponentEnum srcComponents = bg->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        //OFX::PixelComponentEnum srcComponents = bg->getPixelComponents();
+        if (srcBitDepth != dstBitDepth/* || srcComponents != dstComponents*/) { // ChromaKeyer outputs RGBA but may have RGB input
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
         if (bg->getRenderScale().x != args.renderScale.x ||
