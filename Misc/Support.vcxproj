@@ -80,7 +80,7 @@
     <ClCompile Include="..\SupportExt\ofxsOGLFontData.cpp" />
     <ClCompile Include="..\SupportExt\ofxsOGLTextRenderer.cpp" />
     <ClCompile Include="..\SupportExt\ofxsRectangleInteract.cpp" />
-    <ClInclude Include="..\SupportExt\ofxsShutter.cpp" />
+    <ClCompile Include="..\SupportExt\ofxsShutter.cpp" />
     <ClCompile Include="..\SupportExt\ofxsTracking.cpp" />
     <ClCompile Include="..\SupportExt\ofxsTransform3x3.cpp" />
     <ClCompile Include="..\SupportExt\ofxsTransformInteract.cpp" />
