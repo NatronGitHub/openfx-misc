@@ -871,6 +871,8 @@ private:
     void setupAndProcess(DistortionProcessorBase &, const OFX::RenderArguments &args);
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+    
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /** @brief called when a param has just had its value changed */
     void changedParam(const InstanceChangedArgs &args, const std::string &paramName)
@@ -936,6 +938,15 @@ private:
     DistortionPluginEnum _plugin;
 };
 
+
+void
+DistortionPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    //We have to do this because the processing code does not support varying components for uvClip and srcClip
+    OFX::PixelComponentEnum srcComps = _srcClip->getPixelComponents();
+    clipPreferences.setClipComponents(*_uvClip, srcComps);
+    
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */
