@@ -555,10 +555,11 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
     if (!_srcClip) {
         return;
     }
+# ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
     // Although the following property has been there since OFX 1.0,
     // it's not in the HostSupport library.
     getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
-
+#  endif
     //double t1, t2;
     // get the first and last times available on the effect's timeline
     //timeLineGetBounds(t1, t2);
@@ -605,7 +606,9 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
     if (showProgress) {
         progressEnd();
     }
+# ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
     getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
+# endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -941,7 +944,9 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setIncrement(1.);
         param->setEvaluateOnChange(false); // The tracker is identity always
-        param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
+#     ifdef kOfxParamPropPluginMayWrite // removed from OFX 1.4
+        param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1, false);
+#     endif
         if (page) {
             page->addChild(*param);
         }
@@ -976,7 +981,9 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setIncrement(1.);
         //param->setIsSecret(true);
         param->setEvaluateOnChange(false); // The tracker is identity always
-        param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
+#     ifdef kOfxParamPropPluginMayWrite // removed from OFX 1.4
+        param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1, false);
+#     endif
         if (page) {
             page->addChild(*param);
         }
@@ -994,7 +1001,9 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setIncrement(1.);
         //innerTopRight->setIsSecret(true);
         param->setEvaluateOnChange(false); // The tracker is identity always
-        param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
+#     ifdef kOfxParamPropPluginMayWrite // removed from OFX 1.4
+        param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1, false);
+#     endif
         if (page) {
             page->addChild(*param);
         }
@@ -1012,7 +1021,9 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setIncrement(1.);
         //param->setIsSecret(true);
         param->setEvaluateOnChange(false); // The tracker is identity always
-        param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
+#     ifdef kOfxParamPropPluginMayWrite // removed from OFX 1.4
+        param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1, false);
+#     endif
         if (page) {
             page->addChild(*param);
         }
@@ -1030,7 +1041,9 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setIncrement(1.);
         //param->setIsSecret(true);
         param->setEvaluateOnChange(false); // The tracker is identity always
-        param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1);
+#     ifdef kOfxParamPropPluginMayWrite // removed from OFX 1.4
+        param->getPropertySet().propSetInt(kOfxParamPropPluginMayWrite, 1, false);
+#     endif
         if (page) {
             page->addChild(*param);
         }

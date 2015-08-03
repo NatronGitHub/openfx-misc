@@ -1309,19 +1309,25 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             }
             bool intersect = computeWindow(src.get(), args.time, &analysisWindow);
             if (intersect) {
+#             ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
                 getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
+#             endif
                 if (doAnalyzeRGBA) {
                     update(src.get(), args.time, analysisWindow);
                 }
                 if (doAnalyzeHSVL) {
                     updateHSVL(src.get(), args.time, analysisWindow);
                 }
+#             ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
                 getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
+#             endif
             }
         }
     }
     if ((doAnalyzeSequenceRGBA || doAnalyzeSequenceHSVL) && _srcClip && _srcClip->isConnected()) {
+#     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
+#     endif
         progressStart("Analyzing sequence...");
         OfxRangeD range = _srcClip->getFrameRange();
         //timeLineGetBounds(range.min, range.max); // wrong: we want the input frame range only
@@ -1351,7 +1357,9 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             }
         }
         progressEnd();
+#     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
+#     endif
     }
 }
 
