@@ -186,7 +186,7 @@ typedef OfxStatus (*FnOfxImageEffectPlaneSuiteV2clipGetRegionOfDefinition)(OfxIm
                                        OfxRectD           *bounds);
 typedef OfxStatus (*FnOfxImageEffectPlaneSuiteV2getViewName)(OfxImageEffectHandle effect,
                          int                  view,
-                         char               **viewName);
+                         const char         **viewName);
 typedef OfxStatus (*FnOfxImageEffectPlaneSuiteV2getViewCount)(OfxImageEffectHandle effect,
                           int                 *nViews);
 
@@ -2347,7 +2347,7 @@ fnClipGetRegionOfDefinitionNthFunc(int nth)
 template<int nth>
 static OfxStatus getViewNameNth(OfxImageEffectHandle effect,
                                 int                  view,
-                                char               **viewName)
+                                const char         **viewName)
 {
     OfxStatus st;
     assert(nth < gHost.size() && nth < gPluginsSetHost.size());
