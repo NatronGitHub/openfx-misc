@@ -697,6 +697,12 @@ MergePlugin::renderForBitDepth(const OFX::RenderArguments &args)
         case eMergeGeometric:
             fred.reset(new MergeProcessor<eMergeGeometric, PIX, nComponents, maxValue>(*this));
             break;
+        case eMergeGrainExtract:
+            fred.reset(new MergeProcessor<eMergeGrainExtract, PIX, nComponents, maxValue>(*this));
+            break;
+        case eMergeGrainMerge:
+            fred.reset(new MergeProcessor<eMergeGrainMerge, PIX, nComponents, maxValue>(*this));
+            break;
         case eMergeHardLight:
             fred.reset(new MergeProcessor<eMergeHardLight, PIX, nComponents, maxValue>(*this));
             break;
@@ -1087,6 +1093,8 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         addMergeOption(param, eMergeFreeze, "1-sqrt(1-A)/B", cascading);
         addMergeOption(param, eMergeFrom, "B-A", cascading);
         addMergeOption(param, eMergeGeometric, "2AB/(A+B)", cascading);
+        addMergeOption(param, eMergeGrainExtract, "B - A + 0.5", cascading);
+        addMergeOption(param, eMergeGrainMerge, "B + A - 0.5", cascading);
         addMergeOption(param, eMergeHardLight, "multiply if A < 0.5, screen if A > 0.5", cascading);
         addMergeOption(param, eMergeHue, "SetLum(SetSat(A, Sat(B)), Lum(B))", cascading);
         addMergeOption(param, eMergeHypot, "sqrt(A*A+B*B)", cascading);
