@@ -80,6 +80,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxsMaskMix.h"
 
 #include "ofxNatron.h"
@@ -447,7 +448,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
                     rod = rodB;
                     rodSet = true;
                 } else {
-                    rectBoundingBox(rod, rodB, &rod);
+                    OFX::Coords::rectBoundingBox(rod, rodB, &rod);
                 }
             }
             
@@ -457,7 +458,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
                     continue;
                 }
                 if (rodSet) {
-                    rectBoundingBox(rodOptionalA, rod, &rod);
+                    OFX::Coords::rectBoundingBox(rodOptionalA, rod, &rod);
                 } else {
                     rod = rodOptionalA;
                     rodSet = true;
@@ -466,14 +467,14 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
 			return true;
 		}
         case 1: { //intersection
-            bool interesect = rectIntersection(rodA, rodB, &rod);
+            bool interesect = OFX::Coords::rectIntersection(rodA, rodB, &rod);
             if (!interesect) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Input images intersection is empty.");
                 return false;
             }
             for (unsigned int i = 0; i < _optionalASrcClips.size(); ++i) {
                 OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(args.time);
-                interesect = rectIntersection(rodOptionalA, rod, &rod);
+                interesect = OFX::Coords::rectIntersection(rodOptionalA, rod, &rod);
                 if (!interesect) {
                     setPersistentMessage(OFX::Message::eMessageError, "",
                                          "Input images intersection is empty. ");
@@ -843,9 +844,9 @@ MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
             maskRoDValid = true;
-            OFX::MergeImages2D::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
                 identityClip = _srcClipB;
                 return true;
             }
@@ -868,13 +869,13 @@ MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
         }
 
         OfxRectI srcARoDPixel;
-        OFX::MergeImages2D::toPixelEnclosing(srcARoD, args.renderScale, aClips[i]->getPixelAspectRatio(), &srcARoDPixel);
+        OFX::Coords::toPixelEnclosing(srcARoD, args.renderScale, aClips[i]->getPixelAspectRatio(), &srcARoDPixel);
         bool srcARoDValid = true;
         if (maskRoDValid) {
             // mask the srcARoD with the mask RoD. The result may be empty
-            srcARoDValid = OFX::MergeImages2D::rectIntersection<OfxRectI>(srcARoDPixel, maskRoD, &srcARoDPixel);
+            srcARoDValid = OFX::Coords::rectIntersection<OfxRectI>(srcARoDPixel, maskRoD, &srcARoDPixel);
         }
-        if (OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, srcARoDPixel, 0)) {
+        if (OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, srcARoDPixel, 0)) {
             // renderWindow intersects one of the effect areas
             return false;
         }

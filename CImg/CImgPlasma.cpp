@@ -83,7 +83,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxsCopier.h"
 
 #include "CImgFilter.h"
@@ -181,7 +181,7 @@ public:
     // only called if mix != 0.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgPlasmaParams& params, OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = 1 << std::max(0, params.scale - (int)OFX::MergeImages2D::mipmapLevelFromScale(renderScale.x));
+        int delta_pix = 1 << std::max(0, params.scale - (int)OFX::Coords::mipmapLevelFromScale(renderScale.x));
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
@@ -193,12 +193,12 @@ public:
         // PROCESSING.
         // This is the only place where the actual processing takes place
         cimg_library::cimg::srand((unsigned int)args.time + (unsigned int)params.seed);
-        cimg.draw_plasma((float)params.alpha/args.renderScale.x, (float)params.beta/args.renderScale.x, std::max(0, params.scale - (int)OFX::MergeImages2D::mipmapLevelFromScale(args.renderScale.x)));
+        cimg.draw_plasma((float)params.alpha/args.renderScale.x, (float)params.beta/args.renderScale.x, std::max(0, params.scale - (int)OFX::Coords::mipmapLevelFromScale(args.renderScale.x)));
     }
 
     //virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgPlasmaParams& params) OVERRIDE FINAL
     //{
-    //    return (params.scale - (int)OFX::MergeImages2D::mipmapLevelFromScale(args.renderScale.x) <= 0);
+    //    return (params.scale - (int)OFX::Coords::mipmapLevelFromScale(args.renderScale.x) <= 0);
     //};
 
     /* Override the clip preferences, we need to say we are setting the frame varying flag */

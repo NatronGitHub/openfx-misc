@@ -89,7 +89,7 @@
 #include "ofxsMultiThread.h"
 
 #include "ofxsPixelProcessor.h"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxsShutter.h"
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
@@ -549,7 +549,7 @@ TimeBlurPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
 
     for (int i = 1; i < divisions; ++i) {
         OfxRectD srcRoD = _srcClip->getRegionOfDefinition(range.min + i * interval);
-        OFX::MergeImages2D::rectBoundingBox(srcRoD, rod, &rod);
+        OFX::Coords::rectBoundingBox(srcRoD, rod, &rod);
     }
     return true;
 }

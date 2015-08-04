@@ -78,7 +78,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsTracking.h"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 
 #define kPluginName "TrackerPM"
 #define kPluginGrouping "Transform"
@@ -697,20 +697,20 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
     const double par = _srcClip->getPixelAspectRatio();
     const OfxPointD rsOne = {1., 1.};
     OfxRectI trackSearchBoundsPixel;
-    OFX::MergeImages2D::toPixelEnclosing(trackSearchBounds, rsOne, par, &trackSearchBoundsPixel);
+    OFX::Coords::toPixelEnclosing(trackSearchBounds, rsOne, par, &trackSearchBoundsPixel);
 
     // compute the pattern window in pixel coords
     OfxRectI refRectPixel;
-    OFX::MergeImages2D::toPixelEnclosing(refBounds, rsOne, par, &refRectPixel);
+    OFX::Coords::toPixelEnclosing(refBounds, rsOne, par, &refRectPixel);
 
     // round center to nearest pixel center
     OfxPointI refCenterI;
     OfxPointD refCenterPixelSub;
-    OFX::MergeImages2D::toPixel(refCenterWithOffset, rsOne, par, &refCenterI);
-    OFX::MergeImages2D::toPixelSub(refCenterWithOffset, rsOne, par, &refCenterPixelSub);
+    OFX::Coords::toPixel(refCenterWithOffset, rsOne, par, &refCenterI);
+    OFX::Coords::toPixelSub(refCenterWithOffset, rsOne, par, &refCenterPixelSub);
 
     //Clip the refRectPixel to the bounds of the ref image
-    bool intersect = MergeImages2D::rectIntersection(refRectPixel, refImg->getBounds(), &refRectPixel);
+    bool intersect = OFX::Coords::rectIntersection(refRectPixel, refImg->getBounds(), &refRectPixel);
     
     if (!intersect) {
         // can't track: erase any existing track
@@ -753,7 +753,7 @@ TrackerPMPlugin::setupAndProcess(TrackerPMProcessorBase &processor,
 
             newCenterPixelSub.x = refCenterPixelSub.x + bestMatch.x - refCenterI.x;
             newCenterPixelSub.y = refCenterPixelSub.y + bestMatch.y - refCenterI.y;
-            OFX::MergeImages2D::toCanonicalSub(newCenterPixelSub, rsOne, par, &newCenter);
+            OFX::Coords::toCanonicalSub(newCenterPixelSub, rsOne, par, &newCenter);
             
             //Commented-out for Natron compat: Natron does beginEditBlock in the main-thread, hence
             //since the instanceChanged action is executed in multiple separated thread by Natron when tracking, there's no

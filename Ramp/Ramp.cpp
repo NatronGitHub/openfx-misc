@@ -75,7 +75,7 @@
 #include <algorithm>
 
 #include "ofxsProcessing.H"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
 #include "ofxsOGLTextRenderer.h"
@@ -376,7 +376,7 @@ private:
                 OfxPointD p;
                 p_pixel.x = x;
                 p_pixel.y = y;
-                OFX::MergeImages2D::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
+                OFX::Coords::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
                 double t = (p.x - _point0.x) * nx + (p.y - _point0.y) * ny;
 
                 if (t <= 0) {
@@ -786,9 +786,9 @@ RampPlugin::isIdentity(const OFX::IsIdentityArguments &args,
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            OFX::MergeImages2D::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
                 identityClip = _srcClip;
                 return true;
             }

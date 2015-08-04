@@ -83,7 +83,7 @@
 #endif
 
 #include "ofxsProcessing.H"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxsMaskMix.h"
 #include "ofxsRectangleInteract.h"
 #include "ofxsMacros.h"
@@ -342,7 +342,7 @@ private:
                 OfxPointD p;
                 p_pixel.x = x;
                 p_pixel.y = y;
-                OFX::MergeImages2D::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
+                OFX::Coords::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
 
                 double dx = std::min(p.x - _btmLeft.x, _btmLeft.x + _size.x - p.x);
                 double dy = std::min(p.y - _btmLeft.y, _btmLeft.y + _size.y - p.y);
@@ -739,9 +739,9 @@ RectanglePlugin::isIdentity(const OFX::IsIdentityArguments &args,
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            OFX::MergeImages2D::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
                 identityClip = _srcClip;
                 return true;
             }

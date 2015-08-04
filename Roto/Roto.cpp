@@ -76,6 +76,7 @@
 #include <algorithm>
 
 #include "ofxsProcessing.H"
+#include "ofxsCoords.h"
 #include "ofxsMerging.h"
 #include "ofxsMacros.h"
 
@@ -563,9 +564,9 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, do
 
     if (_rotoClip && _rotoClip->isConnected()) {
         OfxRectI rotoRoD;
-        OFX::MergeImages2D::toPixelEnclosing(_rotoClip->getRegionOfDefinition(args.time), args.renderScale, _rotoClip->getPixelAspectRatio(), &rotoRoD);
+        OFX::Coords::toPixelEnclosing(_rotoClip->getRegionOfDefinition(args.time), args.renderScale, _rotoClip->getPixelAspectRatio(), &rotoRoD);
         // effect is identity if the renderWindow doesn't intersect the roto RoD
-        if (!OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, rotoRoD, 0)) {
+        if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, rotoRoD, 0)) {
             identityClip = _srcClip;
             return true;
         }

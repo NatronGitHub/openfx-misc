@@ -75,7 +75,7 @@
 #include <algorithm>
 
 #include "ofxsProcessing.H"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxsRectangleInteract.h"
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
@@ -427,7 +427,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     getRectanglecanonical(args.time, rectangle);
     OfxRectI rectanglePixel;
     double par = dst->getPixelAspectRatio();
-    MergeImages2D::toPixelEnclosing(rectangle, args.renderScale, par, &rectanglePixel);
+    Coords::toPixelEnclosing(rectangle, args.renderScale, par, &rectanglePixel);
 
     double softness;
     _softness->getValueAtTime(args.time, softness);
@@ -435,7 +435,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     
     const OfxRectD& dstRoD = _dstClip->getRegionOfDefinition(args.time);
     OfxRectI dstRoDPix;
-    MergeImages2D::toPixelEnclosing(dstRoD, args.renderScale, par, &dstRoDPix);
+    Coords::toPixelEnclosing(dstRoD, args.renderScale, par, &dstRoDPix);
     
     bool processR;
     bool processG;
@@ -467,7 +467,7 @@ CopyRectanglePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments 
     getRectanglecanonical(args.time, rectangle);
 
     // intersect the crop rectangle with args.regionOfInterest
-    MergeImages2D::rectIntersection(rectangle, args.regionOfInterest, &rectangle);
+    OFX::Coords::rectIntersection(rectangle, args.regionOfInterest, &rectangle);
 
     double mix = 1.;
     bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
@@ -477,7 +477,7 @@ CopyRectanglePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments 
     if (doMasking && mix != 1.) {
         // for masking or mixing, we also need the source image.
         // compute the bounding box with the default ROI
-        MergeImages2D::rectBoundingBox(rectangle, args.regionOfInterest, &rectangle);
+        OFX::Coords::rectBoundingBox(rectangle, args.regionOfInterest, &rectangle);
     }
     rois.setRegionOfInterest(*_srcClipA, rectangle);
     // no need to set the RoI on _srcClipB, since it's the same as the output RoI
@@ -490,7 +490,7 @@ CopyRectanglePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgument
     OfxRectD rect;
     getRectanglecanonical(args.time, rect);
     const OfxRectD& srcB_rod = _srcClipB->getRegionOfDefinition(args.time);
-    MergeImages2D::rectBoundingBox(rect, srcB_rod, &rod);
+    OFX::Coords::rectBoundingBox(rect, srcB_rod, &rod);
     return true;
 }
 
@@ -537,9 +537,9 @@ CopyRectanglePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identit
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            OFX::MergeImages2D::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
                 identityClip = _srcClipB;
                 return true;
             }

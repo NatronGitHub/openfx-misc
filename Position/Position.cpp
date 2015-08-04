@@ -78,7 +78,7 @@
 #include <windows.h>
 #endif
 
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
 #include "ofxsPositionInteract.h"
@@ -289,7 +289,7 @@ PositionPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args
     srcRoi.y1 -= t_canonical.y;
     srcRoi.y2 -= t_canonical.y;
     // intersect srcRoi with srcRoD
-    MergeImages2D::rectIntersection(srcRoi, srcRod, &srcRoi);
+    OFX::Coords::rectIntersection(srcRoi, srcRod, &srcRoi);
     rois.setRegionOfInterest(*_srcClip, srcRoi);
 }
 

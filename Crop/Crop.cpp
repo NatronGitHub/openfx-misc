@@ -75,7 +75,7 @@
 #include <algorithm>
 
 #include "ofxsProcessing.H"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxsRectangleInteract.h"
 #include "ofxsMacros.h"
 
@@ -218,7 +218,7 @@ private:
                     OfxPointD p;
                     p_pixel.x = x + _translation.x;
                     p_pixel.y = y + _translation.y;
-                    OFX::MergeImages2D::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
+                    OFX::Coords::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
 
                     double dx = std::min(p.x - _btmLeft.x, _btmLeft.x + _size.x - p.x);
                     double dy = std::min(p.y - _btmLeft.y, _btmLeft.y + _size.y - p.y);
@@ -387,7 +387,7 @@ CropPlugin::getCropRectangle_canonical(OfxTime time,bool useReformat,bool forceI
     
     if (intersect && _srcClip) {
         const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(time);
-        MergeImages2D::rectIntersection(cropRect, srcRoD, &cropRect);
+        OFX::Coords::rectIntersection(cropRect, srcRoD, &cropRect);
     }
     
 
@@ -459,7 +459,7 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
     getCropRectangle_canonical(args.time, false, false, cropRectCanonical);
     OfxRectI cropRectPixel;
     double par = dst->getPixelAspectRatio();
-    MergeImages2D::toPixelEnclosing(cropRectCanonical, args.renderScale, par, &cropRectPixel);
+    Coords::toPixelEnclosing(cropRectCanonical, args.renderScale, par, &cropRectPixel);
     
     double softness;
     _softness->getValueAtTime(args.time, softness);
@@ -467,7 +467,7 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
     
     const OfxRectD& dstRoD = _dstClip->getRegionOfDefinition(args.time);
     OfxRectI dstRoDPix;
-    MergeImages2D::toPixelEnclosing(dstRoD, args.renderScale, par, &dstRoDPix);
+    Coords::toPixelEnclosing(dstRoD, args.renderScale, par, &dstRoDPix);
 
     processor.setValues(btmLeft, size, cropRectPixel, dstRoDPix, blackOutside, reformat, softness);
     
@@ -502,7 +502,7 @@ CropPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OF
     }
 
     // intersect the crop rectangle with args.regionOfInterest
-    MergeImages2D::rectIntersection(cropRect, roi, &cropRect);
+    OFX::Coords::rectIntersection(cropRect, roi, &cropRect);
     rois.setRegionOfInterest(*_srcClip, cropRect);
 }
 

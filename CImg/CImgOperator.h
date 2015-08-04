@@ -14,7 +14,7 @@
 #include "ofxsMacros.h"
 #include "ofxsPixelProcessor.h"
 #include "ofxsCopier.h"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 
 #include <cassert>
 #include <memory>
@@ -404,7 +404,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         srcAPixelData = srcA->getPixelData();
         srcABounds = srcA->getBounds();
         // = src->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-        OFX::MergeImages2D::toPixelEnclosing(_srcAClip->getRegionOfDefinition(time), args.renderScale, _srcAClip->getPixelAspectRatio(), &srcARoD);
+        OFX::Coords::toPixelEnclosing(_srcAClip->getRegionOfDefinition(time), args.renderScale, _srcAClip->getPixelAspectRatio(), &srcARoD);
         srcAPixelComponents = srcA->getPixelComponents();
         srcAPixelComponentCount = srcA->getPixelComponentCount();
         srcABitDepth = srcA->getPixelDepth();
@@ -446,7 +446,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         srcBPixelData = srcB->getPixelData();
         srcBBounds = srcB->getBounds();
         // = srcB->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-        OFX::MergeImages2D::toPixelEnclosing(_srcBClip->getRegionOfDefinition(time), args.renderScale, _srcBClip->getPixelAspectRatio(), &srcBRoD);
+        OFX::Coords::toPixelEnclosing(_srcBClip->getRegionOfDefinition(time), args.renderScale, _srcBClip->getPixelAspectRatio(), &srcBRoD);
         srcBPixelComponents = srcB->getPixelComponents();
         srcBPixelComponentCount = srcB->getPixelComponentCount();
         srcBBitDepth = srcB->getPixelDepth();
@@ -456,7 +456,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     void *dstPixelData = dst->getPixelData();
     const OfxRectI& dstBounds = dst->getBounds();
     OfxRectI dstRoD; // = dst->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-    OFX::MergeImages2D::toPixelEnclosing(_dstClip->getRegionOfDefinition(time), args.renderScale, _dstClip->getPixelAspectRatio(), &dstRoD);
+    OFX::Coords::toPixelEnclosing(_dstClip->getRegionOfDefinition(time), args.renderScale, _dstClip->getPixelAspectRatio(), &dstRoD);
     //const OFX::PixelComponentEnum dstPixelComponents = dst->getPixelComponents();
     //const OFX::BitDepthEnum dstBitDepth = dst->getPixelDepth();
     const int dstRowBytes = dst->getRowBytes();
@@ -520,7 +520,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     getRoI(renderWindow, renderScale, params, &srcRoI);
 
     // intersect against the destination RoD
-    bool intersect = OFX::MergeImages2D::rectIntersection(srcRoI, dstRoD, &srcRoI);
+    bool intersect = OFX::Coords::rectIntersection(srcRoI, dstRoD, &srcRoI);
     if (!intersect) {
         srcA.reset(0);
         srcAPixelData = NULL;
@@ -546,7 +546,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     // This was disactivated by commit c47d07669b78a71960b204989d9c36f746d14a4c, then reactivated.
     // DISACTIVATED AGAIN by FD 9/12/2014: boundary conditions are now handled by pixelcopier, and interstection with dstRoD was added above
 #if 0 //def CIMGFILTER_INSTERSECT_ROI
-    OFX::MergeImages2D::rectIntersection(srcRoI, srcRoD, &srcRoI);
+    OFX::Coords::rectIntersection(srcRoI, srcRoD, &srcRoI);
     // the resulting ROI should be within the src bounds, or it means that the host didn't take into account the region of interest (see getRegionsOfInterest() )
     assert(srcBounds.x1 <= srcRoI.x1 && srcRoI.x2 <= srcBounds.x2 &&
            srcBounds.y1 <= srcRoI.y1 && srcRoI.y2 <= srcBounds.y2);
@@ -771,10 +771,10 @@ CImgOperatorPluginHelper<Params>::getRegionsOfInterest(const OFX::RegionsOfInter
         double pixelaspectratio = _srcAClip ? _srcAClip->getPixelAspectRatio() : 1.;
 
         OfxRectI rectPixel;
-        OFX::MergeImages2D::toPixelEnclosing(regionOfInterest, args.renderScale, pixelaspectratio, &rectPixel);
+        OFX::Coords::toPixelEnclosing(regionOfInterest, args.renderScale, pixelaspectratio, &rectPixel);
         OfxRectI srcRoIPixel;
         getRoI(rectPixel, args.renderScale, params, &srcRoIPixel);
-        OFX::MergeImages2D::toCanonical(srcRoIPixel, args.renderScale, pixelaspectratio, &srcRoI);
+        OFX::Coords::toCanonical(srcRoIPixel, args.renderScale, pixelaspectratio, &srcRoI);
 
         rois.setRegionOfInterest(*_srcAClip, srcRoI);
     }
@@ -783,10 +783,10 @@ CImgOperatorPluginHelper<Params>::getRegionsOfInterest(const OFX::RegionsOfInter
         double pixelaspectratio = _srcBClip ? _srcBClip->getPixelAspectRatio() : 1.;
 
         OfxRectI rectPixel;
-        OFX::MergeImages2D::toPixelEnclosing(regionOfInterest, args.renderScale, pixelaspectratio, &rectPixel);
+        OFX::Coords::toPixelEnclosing(regionOfInterest, args.renderScale, pixelaspectratio, &rectPixel);
         OfxRectI srcRoIPixel;
         getRoI(rectPixel, args.renderScale, params, &srcRoIPixel);
-        OFX::MergeImages2D::toCanonical(srcRoIPixel, args.renderScale, pixelaspectratio, &srcRoI);
+        OFX::Coords::toCanonical(srcRoIPixel, args.renderScale, pixelaspectratio, &srcRoI);
 
         rois.setRegionOfInterest(*_srcBClip, srcRoI);
     }
@@ -807,14 +807,14 @@ CImgOperatorPluginHelper<Params>::getRegionOfDefinition(const OFX::RegionOfDefin
 
     OfxRectI srcARoDPixel = {0, 0, 0, 0};
     if (_srcAClip) {
-        OFX::MergeImages2D::toPixelEnclosing(_srcAClip->getRegionOfDefinition(args.time), args.renderScale, srcApixelaspectratio, &srcARoDPixel);
+        OFX::Coords::toPixelEnclosing(_srcAClip->getRegionOfDefinition(args.time), args.renderScale, srcApixelaspectratio, &srcARoDPixel);
     }
 
     double srcBpixelaspectratio = _srcBClip ? _srcBClip->getPixelAspectRatio() : 1.;
 
     OfxRectI srcBRoDPixel = {0, 0, 0, 0};
     if (_srcBClip) {
-        OFX::MergeImages2D::toPixelEnclosing(_srcBClip->getRegionOfDefinition(args.time), args.renderScale, srcBpixelaspectratio, &srcARoDPixel);
+        OFX::Coords::toPixelEnclosing(_srcBClip->getRegionOfDefinition(args.time), args.renderScale, srcBpixelaspectratio, &srcARoDPixel);
     }
 
     OfxRectI rodPixel;
@@ -822,7 +822,7 @@ CImgOperatorPluginHelper<Params>::getRegionOfDefinition(const OFX::RegionOfDefin
     bool ret = getRoD(srcARoDPixel, srcBRoDPixel, args.renderScale, params, &rodPixel);
     if (ret) {
         double dstpixelaspectratio = _dstClip ? _dstClip->getPixelAspectRatio() : 1.;
-        OFX::MergeImages2D::toCanonical(rodPixel, args.renderScale, dstpixelaspectratio, &rod);
+        OFX::Coords::toCanonical(rodPixel, args.renderScale, dstpixelaspectratio, &rod);
         return true;
     }
 

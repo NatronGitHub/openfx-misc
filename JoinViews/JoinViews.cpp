@@ -81,7 +81,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 
 #define kPluginName "JoinViewsOFX"
 #define kPluginGrouping "Views"
@@ -166,7 +166,7 @@ JoinViewsPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     
     OfxRectD leftRoD = _srcLeftClip->getRegionOfDefinition(args.time, 0);
     OfxRectD rightRoD = _srcRightClip->getRegionOfDefinition(args.time, 0);
-    MergeImages2D::rectBoundingBox(leftRoD, rightRoD, &rod);
+    OFX::Coords::rectBoundingBox(leftRoD, rightRoD, &rod);
     return true;
 }
 

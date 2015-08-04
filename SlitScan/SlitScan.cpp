@@ -46,7 +46,7 @@ Rocquencourt - B.P. 105
 
 #include "ofxsPixelProcessor.h"
 #include "ofxsMaskMix.h"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
 #define kPluginName "SlitScan"

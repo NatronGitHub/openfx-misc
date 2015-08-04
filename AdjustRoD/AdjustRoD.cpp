@@ -76,7 +76,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxsCopier.h"
 
 #define kPluginName "AdjustRoD"
@@ -222,9 +222,9 @@ AdjustRoDPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     paddedRoD.y2 += h;
     
     // intersect the crop rectangle with args.regionOfInterest
-    MergeImages2D::rectIntersection(paddedRoD, args.regionOfInterest, &paddedRoD);
+    OFX::Coords::rectIntersection(paddedRoD, args.regionOfInterest, &paddedRoD);
     // intersect the crop rectangle with srcRoD
-    MergeImages2D::rectIntersection(paddedRoD, srcRod, &paddedRoD);
+    OFX::Coords::rectIntersection(paddedRoD, srcRod, &paddedRoD);
     rois.setRegionOfInterest(*_srcClip, paddedRoD);
 }
 

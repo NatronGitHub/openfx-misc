@@ -80,7 +80,7 @@
 #endif
 
 #include "ofxsPixelProcessor.h"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
 #define kPluginMirrorName "MirrorOFX"
@@ -467,7 +467,7 @@ MirrorPlugin::render(const OFX::RenderArguments &args)
     int xoff = 0;
     int yoff = 0;
     OfxRectI srcRoD = {0, 0, 0, 0};
-    OFX::MergeImages2D::toPixelEnclosing(_srcClip->getRegionOfDefinition(time), args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoD);
+    OFX::Coords::toPixelEnclosing(_srcClip->getRegionOfDefinition(time), args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoD);
     if (flop) {
         xoff = srcRoD.x1 + srcRoD.x2 - 1;
     }

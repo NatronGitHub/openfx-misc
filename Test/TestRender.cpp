@@ -46,7 +46,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
 
@@ -326,10 +326,10 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
         OfxRectI srcRod; // = src->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-        OFX::MergeImages2D::toPixelEnclosing(_srcClip->getRegionOfDefinition(args.time), args.renderScale, _srcClip->getPixelAspectRatio(), &srcRod);
+        OFX::Coords::toPixelEnclosing(_srcClip->getRegionOfDefinition(args.time), args.renderScale, _srcClip->getPixelAspectRatio(), &srcRod);
         const OfxRectI& srcBounds = src->getBounds();
         OfxRectI dstRod; // = dst->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-        OFX::MergeImages2D::toPixelEnclosing(_dstClip->getRegionOfDefinition(args.time), args.renderScale, _dstClip->getPixelAspectRatio(), &dstRod);
+        OFX::Coords::toPixelEnclosing(_dstClip->getRegionOfDefinition(args.time), args.renderScale, _dstClip->getPixelAspectRatio(), &dstRod);
         const OfxRectI& dstBounds = dst->getBounds();
 
         if (!supportsTiles) {
@@ -480,7 +480,7 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isI
     bool identityEven, identityOdd;
     _identityEven->getValueAtTime(args.time, identityEven);
     _identityOdd->getValueAtTime(args.time, identityOdd);
-    unsigned int mipMapLevel = MergeImages2D::mipmapLevelFromScale(args.renderScale.x);
+    unsigned int mipMapLevel = OFX::Coords::mipmapLevelFromScale(args.renderScale.x);
     bool isOdd = bool(mipMapLevel & 1);
     if ((identityEven && !isOdd) || (identityOdd && isOdd)) {
         identityClip = _srcClip;
@@ -510,9 +510,9 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isI
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            OFX::MergeImages2D::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
                 identityClip = _srcClip;
                 return true;
             }

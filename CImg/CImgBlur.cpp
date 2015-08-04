@@ -84,7 +84,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxsCopier.h"
 
 #include "CImgFilter.h"

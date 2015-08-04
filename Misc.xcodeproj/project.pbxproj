@@ -2385,6 +2385,7 @@
 		1E2A935F1990EED40061B1F1 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E2A93601990EED40061B1F1 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E2A93611990EED40061B1F1 /* Retime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Retime.h; sourceTree = "<group>"; };
+		1E3060271B70DA5300A9B507 /* ofxsCoords.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsCoords.h; sourceTree = "<group>"; };
 		1E31940A19D9987F0027D0E2 /* CImgSmooth.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CImgSmooth.cpp; sourceTree = "<group>"; };
 		1E31940B19D9987F0027D0E2 /* CImgSmooth.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CImgSmooth.h; sourceTree = "<group>"; };
 		1E31940C19D9987F0027D0E2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -4010,6 +4011,7 @@
 		1E9B5F46198A51590095C8AA /* SupportExt */ = {
 			isa = PBXGroup;
 			children = (
+				1E3060271B70DA5300A9B507 /* ofxsCoords.h */,
 				1E9B5F47198A51840095C8AA /* ofxsCopier.h */,
 				1E9B5F48198A51840095C8AA /* ofxsFilter.h */,
 				1E9B5F49198A51840095C8AA /* ofxsFormatResolution.h */,

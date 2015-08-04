@@ -83,7 +83,7 @@
 #include "ofxsMaskMix.h"
 #include "ofxsCopier.h"
 #include "ofxsMacros.h"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxNatron.h"
 
 #define kPluginName "DissolveOFX"
@@ -420,9 +420,9 @@ DissolvePlugin::isIdentity(const OFX::IsIdentityArguments &args,
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            OFX::MergeImages2D::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
                 identityClip = _srcClip[0];
                 return true;
             }

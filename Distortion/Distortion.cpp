@@ -99,7 +99,7 @@
 
 #include "ofxsImageEffect.h"
 #include "ofxsProcessing.H"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxsMaskMix.h"
 #include "ofxsFilter.h"
 #include "ofxsMatrix2D.h"
@@ -1333,9 +1333,9 @@ DistortionPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            OFX::MergeImages2D::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
                 identityClip = _srcClip;
                 return true;
             }
@@ -1362,7 +1362,7 @@ DistortionPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
     // only ask for the renderWindow (intersected with the RoD) from uvClip
     if (_uvClip) {
         OfxRectD uvRoI = _uvClip->getRegionOfDefinition(time);
-        MergeImages2D::rectIntersection(uvRoI, args.regionOfInterest, &uvRoI);
+        Coords::rectIntersection(uvRoI, args.regionOfInterest, &uvRoI);
         rois.setRegionOfInterest(*_uvClip, uvRoI);
     }
 }

@@ -18,7 +18,7 @@
 #include "ofxsMacros.h"
 #include "ofxsPixelProcessor.h"
 #include "ofxsCopier.h"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxNatron.h"
 
 //#define CIMG_DEBUG
@@ -652,7 +652,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
         srcPixelData = src->getPixelData();
         srcBounds = src->getBounds();
         // = src->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-        OFX::MergeImages2D::toPixelEnclosing(_srcClip->getRegionOfDefinition(time), args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoD);
+        OFX::Coords::toPixelEnclosing(_srcClip->getRegionOfDefinition(time), args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoD);
         srcPixelComponents = src->getPixelComponents();
         srcPixelComponentCount = src->getPixelComponentCount();
         srcBitDepth = src->getPixelDepth();
@@ -662,7 +662,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     void *dstPixelData = dst->getPixelData();
     const OfxRectI& dstBounds = dst->getBounds();
     OfxRectI dstRoD; // = dst->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
-    OFX::MergeImages2D::toPixelEnclosing(_dstClip->getRegionOfDefinition(time), args.renderScale, _dstClip->getPixelAspectRatio(), &dstRoD);
+    OFX::Coords::toPixelEnclosing(_dstClip->getRegionOfDefinition(time), args.renderScale, _dstClip->getPixelAspectRatio(), &dstRoD);
     //const OFX::PixelComponentEnum dstPixelComponents = dst->getPixelComponents();
     //const OFX::BitDepthEnum dstBitDepth = dst->getPixelDepth();
     const int dstRowBytes = dst->getRowBytes();
@@ -833,7 +833,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     getRoI(processWindow, renderScale, params, &srcRoI);
 
     // intersect against the destination RoD
-    bool intersect = OFX::MergeImages2D::rectIntersection(srcRoI, dstRoD, &srcRoI);
+    bool intersect = OFX::Coords::rectIntersection(srcRoI, dstRoD, &srcRoI);
     if (!intersect) {
         src.reset(0);
         srcPixelData = NULL;
@@ -851,7 +851,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     // This was disactivated by commit c47d07669b78a71960b204989d9c36f746d14a4c, then reactivated.
     // DISACTIVATED AGAIN by FD 9/12/2014: boundary conditions are now handled by pixelcopier, and interstection with dstRoD was added above
 #if 0 //def CIMGFILTER_INSTERSECT_ROI
-    OFX::MergeImages2D::rectIntersection(srcRoI, srcRoD, &srcRoI);
+    OFX::Coords::rectIntersection(srcRoI, srcRoD, &srcRoI);
     // the resulting ROI should be within the src bounds, or it means that the host didn't take into account the region of interest (see getRegionsOfInterest() )
     assert(srcBounds.x1 <= srcRoI.x1 && srcRoI.x2 <= srcBounds.x2 &&
            srcBounds.y1 <= srcRoI.y1 && srcRoI.y2 <= srcBounds.y2);
@@ -1089,15 +1089,15 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionsOfInterest(const OFX:
     double pixelaspectratio = _srcClip ? _srcClip->getPixelAspectRatio() : 1.;
 
     OfxRectI rectPixel;
-    OFX::MergeImages2D::toPixelEnclosing(regionOfInterest, args.renderScale, pixelaspectratio, &rectPixel);
+    OFX::Coords::toPixelEnclosing(regionOfInterest, args.renderScale, pixelaspectratio, &rectPixel);
     OfxRectI srcRoIPixel;
     getRoI(rectPixel, args.renderScale, params, &srcRoIPixel);
-    OFX::MergeImages2D::toCanonical(srcRoIPixel, args.renderScale, pixelaspectratio, &srcRoI);
+    OFX::Coords::toCanonical(srcRoIPixel, args.renderScale, pixelaspectratio, &srcRoI);
 
     if (doMasking && mix != 1.) {
         // for masking or mixing, we also need the source image.
         // compute the bounding box with the default ROI
-        OFX::MergeImages2D::rectBoundingBox(srcRoI, regionOfInterest, &srcRoI);
+        OFX::Coords::rectBoundingBox(srcRoI, regionOfInterest, &srcRoI);
     }
 
     // no need to set it on mask (the default ROI is OK)
@@ -1119,7 +1119,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionOfDefinition(const OFX
     {
         double pixelaspectratio = _srcClip ? _srcClip->getPixelAspectRatio() : 1.;
         if (_srcClip) {
-            OFX::MergeImages2D::toPixelEnclosing(_srcClip->getRegionOfDefinition(args.time), args.renderScale, pixelaspectratio, &srcRoDPixel);
+            OFX::Coords::toPixelEnclosing(_srcClip->getRegionOfDefinition(args.time), args.renderScale, pixelaspectratio, &srcRoDPixel);
         }
     }
     OfxRectI rodPixel;
@@ -1127,7 +1127,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionOfDefinition(const OFX
     bool ret = getRoD(srcRoDPixel, args.renderScale, params, &rodPixel);
     if (ret) {
         double pixelaspectratio = _dstClip ? _dstClip->getPixelAspectRatio() : 1.;
-        OFX::MergeImages2D::toCanonical(rodPixel, args.renderScale, pixelaspectratio, &rod);
+        OFX::Coords::toCanonical(rodPixel, args.renderScale, pixelaspectratio, &rod);
         return true;
     }
 
@@ -1180,9 +1180,9 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::isIdentity(const OFX::IsIdentit
         _maskInvert->getValueAtTime(args.time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            OFX::MergeImages2D::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::MergeImages2D::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
                 identityClip = _srcClip;
                 return true;
             }

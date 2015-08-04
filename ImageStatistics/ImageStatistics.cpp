@@ -79,7 +79,7 @@
 #include "ofxsRectangleInteract.h"
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
-#include "ofxsMerging.h"
+#include "ofxsCoords.h"
 #include "ofxsLut.h"
 
 #ifdef __APPLE__
@@ -1170,7 +1170,7 @@ ImageStatisticsPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArgument
         regionOfInterest.x2 += regionOfInterest.x1;
         regionOfInterest.y2 += regionOfInterest.y1;
         // Union with output RoD, so that render works
-        MergeImages2D::rectBoundingBox(args.regionOfInterest, regionOfInterest, &regionOfInterest);
+        OFX::Coords::rectBoundingBox(args.regionOfInterest, regionOfInterest, &regionOfInterest);
         rois.setRegionOfInterest(*_srcClip, regionOfInterest);
     }
 }
@@ -1413,11 +1413,11 @@ ImageStatisticsPlugin::computeWindow(const OFX::Image* srcImg, double time, OfxR
         regionOfInterest.x2 += regionOfInterest.x1;
         regionOfInterest.y2 += regionOfInterest.y1;
     }
-    MergeImages2D::toPixelEnclosing(regionOfInterest,
+    Coords::toPixelEnclosing(regionOfInterest,
                                     srcImg->getRenderScale(),
                                     srcImg->getPixelAspectRatio(),
                                     analysisWindow);
-    return MergeImages2D::rectIntersection(*analysisWindow, srcImg->getBounds(), analysisWindow);
+    return OFX::Coords::rectIntersection(*analysisWindow, srcImg->getBounds(), analysisWindow);
 }
 // update image statistics
 void
