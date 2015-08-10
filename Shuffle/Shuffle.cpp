@@ -993,38 +993,36 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
     } else {
         //Find in aComponents or bComponents a layer matching the name of the layer
         for (std::list<std::string>::const_iterator it = aComponents.begin(); it!=aComponents.end(); ++it) {
-            if (it->find(layerName) != std::string::npos) {
-                //We found a matching layer
-                std::string realLayerName;
-                std::vector<std::string> channels;
-                std::vector<std::string> layerChannels = mapPixelComponentCustomToLayerChannels(*it);
-                if (layerChannels.empty()) {
-                    // ignore it
-                    continue;
-                }
-                channels.assign(layerChannels.begin() + 1, layerChannels.end());
-                int foundChannel = -1;
-                for (std::size_t i = 0; i < channels.size(); ++i) {
-                    if (channels[i] == chanName) {
-                        foundChannel = i;
-                        break;
-                    }
-                }
-                assert(foundChannel != -1);
-                *ofxPlane = *it;
-                *channelIndexInPlane = foundChannel;
-                *ofxComponents = *it;
-                return true;
+            //We found a matching layer
+            std::string realLayerName;
+            std::vector<std::string> channels;
+            std::vector<std::string> layerChannels = mapPixelComponentCustomToLayerChannels(*it);
+            if (layerChannels.empty() || layerName != layerChannels[0]) {
+                // ignore it
+                continue;
             }
+            channels.assign(layerChannels.begin() + 1, layerChannels.end());
+            int foundChannel = -1;
+            for (std::size_t i = 0; i < channels.size(); ++i) {
+                if (channels[i] == chanName) {
+                    foundChannel = i;
+                    break;
+                }
+            }
+            assert(foundChannel != -1);
+            *ofxPlane = *it;
+            *channelIndexInPlane = foundChannel;
+            *ofxComponents = *it;
+            return true;
+            
         }
         
         for (std::list<std::string>::const_iterator it = bComponents.begin(); it!=bComponents.end(); ++it) {
-            if (it->find(layerName) != std::string::npos) {
                 //We found a matching layer
                 std::string realLayerName;
                 std::vector<std::string> channels;
                 std::vector<std::string> layerChannels = mapPixelComponentCustomToLayerChannels(*it);
-                if (layerChannels.empty()) {
+                if (layerChannels.empty()  || layerName != layerChannels[0]) {
                     // ignore it
                     continue;
                 }
@@ -1041,7 +1039,7 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
                 *channelIndexInPlane = foundChannel;
                 *ofxComponents = *it;
                 return true;
-            }
+            
         }
 #endif // OFX_EXTENSIONS_NATRON
     }
