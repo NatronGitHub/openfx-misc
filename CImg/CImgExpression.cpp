@@ -115,8 +115,8 @@
 "         . 'y': current processed row of the associated image, if any (0 otherwise).\n"\
 "         . 'z': current processed slice of the associated image, if any (0 otherwise).\n"\
 "         . 'c': current processed channel of the associated image, if any (0 otherwise).\n"\
-"         . 't': current time.\n"\
-"         . 'k': render scale (1 means full scale, 0.5 means half scale).\n"\
+"         . 't': current time.\n"\
+"         . 'k': render scale (1 means full scale, 0.5 means half scale).\n"\
 "         . 'e': value of e, i.e. 2.71828..\n"\
 "         . 'pi': value of pi, i.e. 3.1415926..\n"\
 "         . '?' or 'u': a random value between [0,1], following a uniform distribution.\n"\
