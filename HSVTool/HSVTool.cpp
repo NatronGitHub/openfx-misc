@@ -1041,6 +1041,7 @@ HSVToolPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     if (outputAlpha != eOutputAlphaSource) {
         // output must be RGBA, output image is unpremult
         clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
+        clipPreferences.setClipComponents(*_srcClip, ePixelComponentRGBA);
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }
 }
