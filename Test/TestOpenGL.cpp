@@ -38,6 +38,11 @@
 
 #include "TestOpenGL.h"
 
+#ifdef DEBUG
+#include <cstdio>
+#include <cstdarg>
+#endif
+
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -78,6 +83,9 @@
 #define kParamSourceScaleLabel "Source Scale"
 #define kParamSourceScaleHint "Scales the source image"
 
+#ifndef DEBUG
+#define DPRINT(args) (void)0
+#else
 #define DPRINT(args) print_dbg args
 static
 void print_dbg(const char *fmt, ...)
@@ -94,6 +102,7 @@ void print_dbg(const char *fmt, ...)
 #endif
     va_end(ap);
 }
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
