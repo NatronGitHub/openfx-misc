@@ -232,6 +232,7 @@ TestOpenGLPlugin::render(const OFX::RenderArguments &args)
 
     const OfxPointD& rs = args.renderScale;
 
+    // Render to texture: see http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
     float w = (renderWindow.x2 - renderWindow.x1);
     float h = (renderWindow.y2 - renderWindow.y1);
 
