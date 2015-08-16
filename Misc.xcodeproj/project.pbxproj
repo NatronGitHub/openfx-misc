@@ -938,6 +938,7 @@
 		1EE9B0C71A4B301500869861 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1EE9B0C81A4B301500869861 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1EE9B0CA1A4B301500869861 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1EF3DBF21B805036006C63CF /* TestOpenGL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF3DBF01B805036006C63CF /* TestOpenGL.cpp */; };
 		1EF46F34194A394E00825BDF /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EF46F35194A394E00825BDF /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1EF46F36194A394E00825BDF /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -2808,6 +2809,8 @@
 		1EF2A80A1AB1CF8B00CC0D10 /* Misc.sln */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Misc.sln; path = Misc/Misc.sln; sourceTree = "<group>"; };
 		1EF2A80B1AB1CF8B00CC0D10 /* Misc.vcxproj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = Misc.vcxproj; path = Misc/Misc.vcxproj; sourceTree = "<group>"; };
 		1EF2A80C1AB1CF8B00CC0D10 /* Support.vcxproj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = Support.vcxproj; path = Misc/Support.vcxproj; sourceTree = "<group>"; };
+		1EF3DBF01B805036006C63CF /* TestOpenGL.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestOpenGL.cpp; sourceTree = "<group>"; };
+		1EF3DBF11B805036006C63CF /* TestOpenGL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestOpenGL.h; sourceTree = "<group>"; };
 		1EF46F43194A394E00825BDF /* Shuffle.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Shuffle.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EF46F45194A39C800825BDF /* Shuffle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Shuffle.cpp; sourceTree = "<group>"; };
 		1EF46F46194A39C800825BDF /* Shuffle.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Shuffle.h; sourceTree = "<group>"; };
@@ -4118,6 +4121,8 @@
 		1EBAEFCA199A81790037B3E6 /* Test */ = {
 			isa = PBXGroup;
 			children = (
+				1EF3DBF01B805036006C63CF /* TestOpenGL.cpp */,
+				1EF3DBF11B805036006C63CF /* TestOpenGL.h */,
 				1EB0A4411AA1F03C00F9C93E /* TestGroups.cpp */,
 				1EB0A4421AA1F03C00F9C93E /* TestGroups.h */,
 				1EB0A43E1AA1EDB100F9C93E /* TestPosition.cpp */,
@@ -6318,6 +6323,7 @@
 				1EBAEFD4199A81DB0037B3E6 /* ofxsCore.cpp in Sources */,
 				1EB0A4431AA1F03C00F9C93E /* TestGroups.cpp in Sources */,
 				1EBAEFD5199A81DB0037B3E6 /* ofxsImageEffect.cpp in Sources */,
+				1EF3DBF21B805036006C63CF /* TestOpenGL.cpp in Sources */,
 				1EBAEFD6199A81DB0037B3E6 /* ofxsInteract.cpp in Sources */,
 				1EBAEFD7199A81DB0037B3E6 /* ofxsLog.cpp in Sources */,
 				1EB0A4401AA1EDB100F9C93E /* TestPosition.cpp in Sources */,
@@ -7548,6 +7554,7 @@
 					OFX_EXTENSIONS_VEGAS,
 					OFX_EXTENSIONS_TUTTLE,
 					OFX_EXTENSIONS_NATRON,
+					OFX_SUPPORTS_OPENGLRENDER,
 				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
@@ -7589,6 +7596,7 @@
 					OFX_EXTENSIONS_VEGAS,
 					OFX_EXTENSIONS_TUTTLE,
 					OFX_EXTENSIONS_NATRON,
+					OFX_SUPPORTS_OPENGLRENDER,
 				);
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
