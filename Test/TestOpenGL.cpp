@@ -41,6 +41,7 @@
 #ifdef DEBUG
 #include <cstdio>
 #include <cstdarg>
+#include <cstring> // strlen
 #endif
 
 #ifdef _WINDOWS
