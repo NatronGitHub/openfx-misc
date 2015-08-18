@@ -67,6 +67,7 @@
 				1EBB4B921B2CA07B0042DBE0 /* PBXTargetDependency */,
 				1E0E4ECE194CB2C30072248F /* PBXTargetDependency */,
 				1EA0C22619BA12A0006AB602 /* PBXTargetDependency */,
+				1E2868D11B832AD200B18774 /* PBXTargetDependency */,
 				1E0E4ED0194CB2C30072248F /* PBXTargetDependency */,
 				D733F7031959803600028B57 /* PBXTargetDependency */,
 				1E0E4ED2194CB2C30072248F /* PBXTargetDependency */,
@@ -179,6 +180,9 @@
 		1E235FFE18369E4C0019C45F /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E23600018369E4C0019C45F /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1E23600718369E890019C45F /* TimeOffset.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E23600618369E890019C45F /* TimeOffset.cpp */; };
+		1E2868C81B8324F700B18774 /* TestOpenGLRenderGL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E2868C71B8324F700B18774 /* TestOpenGLRenderGL.cpp */; };
+		1E2868CA1B83269100B18774 /* TestOpenGLRenderMesa.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E2868C91B83269100B18774 /* TestOpenGLRenderMesa.cpp */; };
+		1E2868D51B832BB400B18774 /* libMangledOSMesa32.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E2868D41B832BB400B18774 /* libMangledOSMesa32.a */; };
 		1E2A934B1990EE690061B1F1 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E2A934C1990EE690061B1F1 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E2A934D1990EE690061B1F1 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -1272,6 +1276,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = D7349E8F18E7767D0097DB1D;
 			remoteInfo = Transform.ofx;
+		};
+		1E2868D01B832AD200B18774 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1EE72BF31B524A6D001B0245;
+			remoteInfo = TimeBlur.ofx;
 		};
 		1E31942419D9B6DE0027D0E2 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -2380,6 +2391,10 @@
 		1E23600918369E920019C45F /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E2770281A7A47A700516761 /* ofxsImageBlender.H */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = ofxsImageBlender.H; path = openfx/Support/Plugins/include/ofxsImageBlender.H; sourceTree = SOURCE_ROOT; };
 		1E2770291A7A47A700516761 /* ofxsProcessing.H */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = ofxsProcessing.H; path = openfx/Support/Plugins/include/ofxsProcessing.H; sourceTree = SOURCE_ROOT; };
+		1E2868C61B82408700B18774 /* TestOpenGLRender.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TestOpenGLRender.h; sourceTree = "<group>"; };
+		1E2868C71B8324F700B18774 /* TestOpenGLRenderGL.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestOpenGLRenderGL.cpp; sourceTree = "<group>"; };
+		1E2868C91B83269100B18774 /* TestOpenGLRenderMesa.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestOpenGLRenderMesa.cpp; sourceTree = "<group>"; };
+		1E2868D41B832BB400B18774 /* libMangledOSMesa32.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libMangledOSMesa32.a; path = ../../../../opt/osmesa/lib/libMangledOSMesa32.a; sourceTree = OSMESA_PATH; };
 		1E2A93581990EE690061B1F1 /* Retime.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Retime.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E2A935A1990EEB60061B1F1 /* Retime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Retime.cpp; sourceTree = "<group>"; };
 		1E2A935D1990EEC70061B1F1 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
@@ -3184,6 +3199,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1E2868D51B832BB400B18774 /* libMangledOSMesa32.a in Frameworks */,
 				1EBAEFDD199A81DB0037B3E6 /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3884,6 +3900,7 @@
 		1E551EDA17994E8100A4135C /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				1E2868D41B832BB400B18774 /* libMangledOSMesa32.a */,
 				1E551F5A179950EC00A4135C /* OpenGL.framework */,
 			);
 			name = Frameworks;
@@ -4121,14 +4138,17 @@
 		1EBAEFCA199A81790037B3E6 /* Test */ = {
 			isa = PBXGroup;
 			children = (
-				1EF3DBF01B805036006C63CF /* TestOpenGL.cpp */,
-				1EF3DBF11B805036006C63CF /* TestOpenGL.h */,
 				1EB0A4411AA1F03C00F9C93E /* TestGroups.cpp */,
 				1EB0A4421AA1F03C00F9C93E /* TestGroups.h */,
 				1EB0A43E1AA1EDB100F9C93E /* TestPosition.cpp */,
 				1EB0A43F1AA1EDB100F9C93E /* TestPosition.h */,
 				1EBAEFCE199A81AA0037B3E6 /* TestRender.cpp */,
 				1EBAEFCF199A81AA0037B3E6 /* TestRender.h */,
+				1EF3DBF01B805036006C63CF /* TestOpenGL.cpp */,
+				1EF3DBF11B805036006C63CF /* TestOpenGL.h */,
+				1E2868C61B82408700B18774 /* TestOpenGLRender.h */,
+				1E2868C71B8324F700B18774 /* TestOpenGLRenderGL.cpp */,
+				1E2868C91B83269100B18774 /* TestOpenGLRenderMesa.cpp */,
 				1EBAEFCB199A81AA0037B3E6 /* Info.plist */,
 				1EBAEFCC199A81AA0037B3E6 /* Makefile */,
 				1EBAEFCD199A81AA0037B3E6 /* PluginRegistration.cpp */,
@@ -6327,12 +6347,14 @@
 				1EBAEFD6199A81DB0037B3E6 /* ofxsInteract.cpp in Sources */,
 				1EBAEFD7199A81DB0037B3E6 /* ofxsLog.cpp in Sources */,
 				1EB0A4401AA1EDB100F9C93E /* TestPosition.cpp in Sources */,
+				1E2868CA1B83269100B18774 /* TestOpenGLRenderMesa.cpp in Sources */,
 				1EB0A4441AA2002700F9C93E /* ofxsTransform3x3.cpp in Sources */,
 				1EBAEFD8199A81DB0037B3E6 /* ofxsMultiThread.cpp in Sources */,
 				1EBAEFD9199A81DB0037B3E6 /* ofxsParams.cpp in Sources */,
 				1EE72C141B525906001B0245 /* ofxsShutter.cpp in Sources */,
 				1EBAEFDA199A81DB0037B3E6 /* ofxsProperty.cpp in Sources */,
 				1EBAEFDB199A81DB0037B3E6 /* ofxsPropertyValidation.cpp in Sources */,
+				1E2868C81B8324F700B18774 /* TestOpenGLRenderGL.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -6991,6 +7013,11 @@
 			target = D7349E8F18E7767D0097DB1D /* Transform.ofx */;
 			targetProxy = 1E0E4ED1194CB2C30072248F /* PBXContainerItemProxy */;
 		};
+		1E2868D11B832AD200B18774 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1EE72BF31B524A6D001B0245 /* TimeBlur.ofx */;
+			targetProxy = 1E2868D01B832AD200B18774 /* PBXContainerItemProxy */;
+		};
 		1E31942519D9B6DE0027D0E2 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 1E31940F19D9B2270027D0E2 /* CImg.ofx */;
@@ -7548,8 +7575,8 @@
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
 					"$(inherited)",
+					"DEBUG=1",
 					OFX_EXTENSIONS_NUKE,
 					OFX_EXTENSIONS_VEGAS,
 					OFX_EXTENSIONS_TUTTLE,
@@ -7590,8 +7617,8 @@
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					"NDEBUG=1",
 					"$(inherited)",
+					"NDEBUG=1",
 					OFX_EXTENSIONS_NUKE,
 					OFX_EXTENSIONS_VEGAS,
 					OFX_EXTENSIONS_TUTTLE,
@@ -7942,8 +7969,22 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"HAVE_OSMESA=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(OFX_PATH)/include",
+					"$(OFX_PATH)/Support/include",
+					"$(OFX_PATH)/Support/Plugins/include",
+					"$(OSMESA_PATH)/include",
+				);
 				INFOPLIST_FILE = Test/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/opt/osmesa/lib,
+				);
 				PRODUCT_NAME = Test.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};
@@ -7953,8 +7994,22 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"HAVE_OSMESA=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(OFX_PATH)/include",
+					"$(OFX_PATH)/Support/include",
+					"$(OFX_PATH)/Support/Plugins/include",
+					"$(OSMESA_PATH)/include",
+				);
 				INFOPLIST_FILE = Test/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/opt/osmesa/lib,
+				);
 				PRODUCT_NAME = Test.ofx;
 				WRAPPER_EXTENSION = bundle;
 			};

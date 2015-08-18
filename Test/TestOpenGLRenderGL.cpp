@@ -32,40 +32,8 @@
  Domaine de Voluceau
  Rocquencourt - B.P. 105
  78153 Le Chesnay Cedex - France
+ 
  */
-#ifndef Misc_TestOpenGL_h
-#define Misc_TestOpenGL_h
 
-#include "ofxsImageEffect.h"
-#include "ofxsMacros.h"
-
-void getTestOpenGLPluginID(OFX::PluginFactoryArray &ids);
-
-/** @brief The plugin that does our work */
-class TestOpenGLPlugin : public OFX::ImageEffect
-{
-public:
-    /** @brief ctor */
-    TestOpenGLPlugin(OfxImageEffectHandle handle);
-
-private:
-    /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
-    void renderGL(const OFX::RenderArguments &args);
-    void renderMesa(const OFX::RenderArguments &args);
-
-    // override the rod call
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
-
-private:
-    // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-
-    OFX::DoubleParam *_scale;
-    OFX::DoubleParam *_sourceScale;
-    OFX::BooleanParam *_useGPUIfAvailable;
-};
-
-#endif // Misc_TestOpenGL_h
+#define USE_OPENGL
+#include "TestOpenGLRender.h"
