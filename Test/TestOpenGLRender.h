@@ -62,6 +62,10 @@
 #ifndef DEBUG
 #define DPRINT(args) (void)0
 #else
+#include <cstdio> // vsnprintf, fwrite
+#include <cstdarg> // ...
+#include <cstring> // strlen
+
 #define DPRINT(args) print_dbg args
 static
 void print_dbg(const char *fmt, ...)

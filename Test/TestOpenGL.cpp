@@ -39,12 +39,6 @@
 
 #include "TestOpenGL.h"
 
-#ifdef DEBUG
-#include <cstdio>
-#include <cstdarg>
-#include <cstring> // strlen
-#endif
-
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -83,27 +77,6 @@
 #define kParamUseGPU "useGPUIfAvailable"
 #define kParamUseGPULabel "Use GPU If Available"
 #define kParamUseGPUHint "If GPU rendering is available, use it. If the checkbox is not available, GPU rendering is not available on this host."
-#endif
-
-#ifndef DEBUG
-#define DPRINT(args) (void)0
-#else
-#define DPRINT(args) print_dbg args
-static
-void print_dbg(const char *fmt, ...)
-{
-    char msg[1024];
-    va_list ap;
-
-    va_start(ap, fmt);
-    vsnprintf(msg, 1023, fmt, ap);
-    fwrite(msg, sizeof(char), strlen(msg), stderr);
-    fflush(stderr);
-#ifdef _WIN32
-    OutputDebugString(msg);
-#endif
-    va_end(ap);
-}
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
