@@ -163,6 +163,14 @@ TestOpenGLPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
     return false;
 }
 
+void
+TestOpenGLPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    // We have to do this because the processing code does not support varying components for srcClip and dstClip
+    // (The OFX spec doesn't state a default value for this)
+    clipPreferences.setClipComponents(*_dstClip, _srcClip->getPixelComponents());
+}
+
 mDeclarePluginFactory(TestOpenGLPluginFactory, ;, {});
 
 using namespace OFX;
