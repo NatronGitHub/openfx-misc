@@ -46,9 +46,11 @@
 
 #ifdef USE_OSMESA
 #  include <GL/gl_mangle.h>
+#  include <GL/glu_mangle.h>
+#  include <GL/osmesa.h>
 #  define RENDERFUNC renderMesa
 #else
-#define RENDERFUNC renderGL
+#  define RENDERFUNC renderGL
 #endif
 
 #ifdef __APPLE__
@@ -170,14 +172,91 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     // XXX: check status for errors
 
 #ifdef USE_OSMESA
-    // create the OSMesa context
+    GLenum format;
+    switch (srcComponents) {
+        case OFX::ePixelComponentRGBA:
+            format = GL_RGBA;
+            break;
+        case OFX::ePixelComponentAlpha:
+            format = GL_ALPHA;
+            break;
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            return;
+    }
+    GLint depthBits = 0;
+    GLint stencilBits = 0;
+    GLint accumBits = 0;
+    GLenum type;
+    switch (srcBitDepth) {
+        case OFX::eBitDepthUByte:
+            depthBits = 16;
+            type = GL_UNSIGNED_BYTE;
+            break;
+        case OFX::eBitDepthUShort:
+            depthBits = 16;
+            type = GL_UNSIGNED_SHORT;
+            break;
+        case OFX::eBitDepthFloat:
+            depthBits = 32;
+            type = GL_FLOAT;
+            break;
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            return;
+    }
+    /* Create an RGBA-mode context */
+#if OSMESA_MAJOR_VERSION * 100 + OSMESA_MINOR_VERSION >= 305
+    /* specify Z, stencil, accum sizes */
+    OSMesaContext ctx = OSMesaCreateContextExt( format, depthBits, stencilBits, accumBits, NULL );
+#else
+    OSMesaContext ctx = OSMesaCreateContext( format, NULL );
+#endif
+    if (!ctx) {
+        DPRINT(("OSMesaCreateContext failed!\n"));
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
 
-    // check that 32-bits float processing is available
+    /* Allocate the image buffer */
+    void* buffer = dst->getPixelData();
+    OfxRectI dstBounds = dst->getBounds();
+    /* Bind the buffer to the context and make it current */
+    if (!OSMesaMakeCurrent( ctx, buffer, type, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1 )) {
+        DPRINT(("OSMesaMakeCurrent failed!\n"));
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
 
-    // load the texture
+    // load the source image into a texture
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    GLuint srcIndex;
+    glGenTextures(1, &srcIndex);
+    const GLenum srcTarget = GL_TEXTURE_RECTANGLE_NV;
+    OfxRectI srcBounds = src->getBounds();
+    glActiveTextureARB(GL_TEXTURE0_ARB);
+    glBindTexture(GL_TEXTURE_RECTANGLE_NV, srcIndex);
+    glTexImage2D(srcTarget, 0, format,
+                 srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
+                 format, type, src->getPixelData());
+
+    // setup the projection
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(dstBounds.x1, dstBounds.x2,
+            dstBounds.y1, dstBounds.y2,
+            -10.0, 10.0);
+    glMatrixMode(GL_MODELVIEW);
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 #endif
 
+#ifdef DEBUG
+    DPRINT(("GL_RENDERER   = %s\n", (char *) glGetString(GL_RENDERER)));
+    DPRINT(("GL_VERSION    = %s\n", (char *) glGetString(GL_VERSION)));
+    DPRINT(("GL_VENDOR     = %s\n", (char *) glGetString(GL_VENDOR)));
+    DPRINT(("GL_EXTENSIONS = %s\n", (char *) glGetString(GL_EXTENSIONS)));
+#endif
     // get the scale parameter
     double scale = 1;
     double sourceScale = 1;
@@ -254,8 +333,25 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glPopAttrib();
 
 #ifdef USE_OSMESA
-    // read back the output framebuffer
+    /* This is very important!!!
+     * Make sure buffered commands are finished!!!
+     */
+    glFinish();
 
-    // free the OSMesa context
+#ifdef DEBUG
+    {
+        GLint r, g, b, a, d;
+        glGetIntegerv(GL_RED_BITS, &r);
+        glGetIntegerv(GL_GREEN_BITS, &g);
+        glGetIntegerv(GL_BLUE_BITS, &b);
+        glGetIntegerv(GL_ALPHA_BITS, &a);
+        glGetIntegerv(GL_DEPTH_BITS, &d);
+        DPRINT(("channel sizes: %d %d %d %d\n", r, g, b, a));
+        DPRINT(("depth bits %d\n", d));
+    }
+#endif
+
+    /* destroy the context */
+    OSMesaDestroyContext( ctx );
 #endif
 }
