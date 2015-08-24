@@ -102,7 +102,7 @@ private:
 
 #ifdef OFX_EXTENSIONS_NUKE
     /** @brief recover a transform matrix from an effect */
-    virtual bool getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9]);
+    virtual bool getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9]) OVERRIDE FINAL;
 #endif
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;

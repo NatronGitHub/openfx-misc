@@ -168,6 +168,8 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     const GLenum srcTarget = (GLenum)src->getTarget();
     DPRINT(("openGL: source texture index %d, target %d, depth %s\n",
             srcIndex, srcTarget, mapBitDepthEnumToStr(srcBitDepth)));
+    int srcWidth = 1;
+    int srcHeight = 1;
 # endif
     // XXX: check status for errors
 
@@ -235,9 +237,12 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     const GLenum srcTarget = GL_TEXTURE_RECTANGLE_NV;
     OfxRectI srcBounds = src->getBounds();
     glActiveTextureARB(GL_TEXTURE0_ARB);
-    glBindTexture(GL_TEXTURE_RECTANGLE_NV, srcIndex);
+    glBindTexture(srcTarget, srcIndex);
+    int srcWidth = srcBounds.x2 - srcBounds.x1;
+    int srcHeight = srcBounds.y2 - srcBounds.y1;
+
     glTexImage2D(srcTarget, 0, format,
-                 srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
+                 srcWidth, srcHeight, 0,
                  format, type, src->getPixelData());
 
     // setup the projection
@@ -249,6 +254,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glMatrixMode(GL_MODELVIEW);
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
+    
 #endif
 
 #ifdef DEBUG
@@ -306,13 +312,13 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glBegin(GL_QUADS);
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     glBegin (GL_QUADS);
-    glTexCoord2f (0, tymin);
+    glTexCoord2f (0 * srcWidth, tymin * srcHeight);
     glVertex2f   (0, 0);
-    glTexCoord2f (1.0, tymin);
+    glTexCoord2f (1 * srcWidth, tymin * srcHeight);
     glVertex2f   (w * sourceScale, 0);
-    glTexCoord2f (1.0, tymax);
+    glTexCoord2f (1 * srcWidth, tymax * srcHeight);
     glVertex2f   (w * sourceScale, h * sourceScale);
-    glTexCoord2f (0, tymax);
+    glTexCoord2f (0 * srcWidth, tymax * srcHeight);
     glVertex2f   (0, h * sourceScale);
     glEnd ();
 

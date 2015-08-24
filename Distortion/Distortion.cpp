@@ -875,7 +875,7 @@ private:
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /** @brief called when a param has just had its value changed */
-    void changedParam(const InstanceChangedArgs &args, const std::string &paramName)
+    void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL
     {
         if (_plugin == eDistortionPluginLensDistortion) {
             if (paramName == kParamDistortionModel && args.reason == eChangeUserEdit) {
