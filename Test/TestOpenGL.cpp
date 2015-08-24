@@ -101,7 +101,7 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
     _scale = fetchDoubleParam(kParamScale);
     _sourceScale = fetchDoubleParam(kParamSourceScale);
     assert(_scale && _sourceScale);
-#if defined(OFX_SUPPORT_OPENGLRENDER) && defined(HAVE_OSMESA)
+#if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     _useGPUIfAvailable = fetchBooleanParam(kParamUseGPU);
     assert(_useGPUIfAvailable);
     const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
@@ -131,14 +131,15 @@ TestOpenGLPlugin::render(const OFX::RenderArguments &args)
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
 
     bool openGLRender = false;
-#if defined(OFX_SUPPORT_OPENGLRENDER) && defined(HAVE_OSMESA)
+#if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
+    const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
     if (gHostDescription.supportsOpenGLRender) {
         _useGPUIfAvailable->getValueAtTime(args.time, openGLRender);
     }
 #endif
 
     // do the rendering
-#ifdef OFX_SUPPORT_OPENGLRENDER
+#ifdef OFX_SUPPORTS_OPENGLRENDER
     if (openGLRender) {
         return renderGL(args);
     }

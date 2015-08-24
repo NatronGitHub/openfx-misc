@@ -168,8 +168,6 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     const GLenum srcTarget = (GLenum)src->getTarget();
     DPRINT(("openGL: source texture index %d, target %d, depth %s\n",
             srcIndex, srcTarget, mapBitDepthEnumToStr(srcBitDepth)));
-    int srcWidth = 1;
-    int srcHeight = 1;
 # endif
     // XXX: check status for errors
 
@@ -234,15 +232,15 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     GLuint srcIndex;
     glGenTextures(1, &srcIndex);
-    const GLenum srcTarget = GL_TEXTURE_RECTANGLE_NV;
+    // Non-power-of-two textures are supported if the GL version is 2.0 or greater, or if the implementation exports the GL_ARB_texture_non_power_of_two extension. (Mesa does, of course)
+
+    const GLenum srcTarget = GL_TEXTURE_2D;
     OfxRectI srcBounds = src->getBounds();
     glActiveTextureARB(GL_TEXTURE0_ARB);
     glBindTexture(srcTarget, srcIndex);
-    int srcWidth = srcBounds.x2 - srcBounds.x1;
-    int srcHeight = srcBounds.y2 - srcBounds.y1;
 
     glTexImage2D(srcTarget, 0, format,
-                 srcWidth, srcHeight, 0,
+                 srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
                  format, type, src->getPixelData());
 
     // setup the projection
@@ -312,13 +310,13 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glBegin(GL_QUADS);
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     glBegin (GL_QUADS);
-    glTexCoord2f (0 * srcWidth, tymin * srcHeight);
+    glTexCoord2f (0, tymin);
     glVertex2f   (0, 0);
-    glTexCoord2f (1 * srcWidth, tymin * srcHeight);
+    glTexCoord2f (1, tymin);
     glVertex2f   (w * sourceScale, 0);
-    glTexCoord2f (1 * srcWidth, tymax * srcHeight);
+    glTexCoord2f (1, tymax);
     glVertex2f   (w * sourceScale, h * sourceScale);
-    glTexCoord2f (0 * srcWidth, tymax * srcHeight);
+    glTexCoord2f (0, tymax);
     glVertex2f   (0, h * sourceScale);
     glEnd ();
 
