@@ -401,7 +401,7 @@ private:
     }
 
 
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double min[nComponents], max[nComponents], sum[nComponents];
         std::fill(min, min+nComponents, +std::numeric_limits<double>::infinity());
@@ -489,7 +489,7 @@ private:
     }
 
 
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double sum_p2[nComponents];
         std::fill(sum_p2, sum_p2 + nComponents, 0.);
@@ -593,7 +593,7 @@ private:
     }
 
 
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double sum_p3[nComponents];
         double sum_p4[nComponents];
@@ -687,7 +687,7 @@ private:
     }
 
 
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double min[nComponentsHSVL], max[nComponentsHSVL], sum[nComponentsHSVL];
         std::fill(min, min+nComponentsHSVL, +std::numeric_limits<double>::infinity());
@@ -777,7 +777,7 @@ private:
     }
 
 
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double sum_p2[nComponentsHSVL];
         std::fill(sum_p2, sum_p2 + nComponentsHSVL, 0.);
@@ -879,7 +879,7 @@ private:
     }
 
 
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double sum_p3[nComponentsHSVL];
         double sum_p4[nComponentsHSVL];

@@ -215,7 +215,7 @@ private:
 #ifdef USE_STEPS
                            int steps,
 #endif
-                           bool max)
+                           bool max) OVERRIDE FINAL
     {
         GodRaysProcessorBase::setValues(invtransform, invtransformsize, blackOutside, motionblur, mix, fromColor, toColor, gamma, steps, max);
         _color.resize(invtransformsize);

@@ -250,7 +250,7 @@ private:
 
     virtual OperationEnum getOperation() OVERRIDE FINAL { return operation; };
 
-    void multiThreadProcessImages(OfxRectI procWindow)
+    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
 #     ifndef __COVERITY__ // too many coverity[dead_error_line] errors
         const bool r = _processR && (nComponents != 1);

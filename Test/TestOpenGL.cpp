@@ -34,24 +34,13 @@
  78153 Le Chesnay Cedex - France
 
  */
-#ifdef OFX_SUPPORTS_OPENGLRENDER
+
+#if defined(OFX_SUPPORTS_OPENGLRENDER) || defined(HAVE_OSMESA) // at least one is required for this plugin
 
 #include "TestOpenGL.h"
 
-#ifdef DEBUG
-#include <cstdio>
-#include <cstdarg>
-#include <cstring> // strlen
-#endif
-
 #ifdef _WINDOWS
 #include <windows.h>
-#endif
-
-#ifdef __APPLE__
-#include <OpenGL/gl.h>
-#else
-#include <GL/gl.h>
 #endif
 
 #include "ofxsImageEffect.h"
@@ -84,68 +73,44 @@
 #define kParamSourceScaleLabel "Source Scale"
 #define kParamSourceScaleHint "Scales the source image"
 
-#ifndef DEBUG
-#define DPRINT(args) (void)0
-#else
-#define DPRINT(args) print_dbg args
-static
-void print_dbg(const char *fmt, ...)
-{
-    char msg[1024];
-    va_list ap;
-
-    va_start(ap, fmt);
-    vsnprintf(msg, 1023, fmt, ap);
-    fwrite(msg, sizeof(char), strlen(msg), stderr);
-    fflush(stderr);
-#ifdef _WIN32
-    OutputDebugString(msg);
-#endif
-    va_end(ap);
-}
+#if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
+#define kParamUseGPU "useGPUIfAvailable"
+#define kParamUseGPULabel "Use GPU If Available"
+#define kParamUseGPUHint "If GPU rendering is available, use it. If the checkbox is not available, GPU rendering is not available on this host."
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class TestOpenGLPlugin : public OFX::ImageEffect
+
+TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
+: ImageEffect(handle)
+, _dstClip(0)
+, _srcClip(0)
+, _scale(0)
+, _sourceScale(0)
+, _useGPUIfAvailable(0)
 {
-public:
-    /** @brief ctor */
-    TestOpenGLPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _scale(0)
-    , _sourceScale(0)
-    {
-        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
-                            _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha));
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-               (_srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
-                             _srcClip->getPixelComponents() == OFX::ePixelComponentAlpha)));
+    _dstClip = fetchClip(kOfxImageEffectOutputClipName);
+    assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
+                        _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha));
+    _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+    assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
+           (_srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
+                         _srcClip->getPixelComponents() == OFX::ePixelComponentAlpha)));
 
-        _scale = fetchDoubleParam(kParamScale);
-        _sourceScale = fetchDoubleParam(kParamSourceScale);
-        assert(_scale && _sourceScale);
+    _scale = fetchDoubleParam(kParamScale);
+    _sourceScale = fetchDoubleParam(kParamSourceScale);
+    assert(_scale && _sourceScale);
+#if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
+    _useGPUIfAvailable = fetchBooleanParam(kParamUseGPU);
+    assert(_useGPUIfAvailable);
+    const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+    if (!gHostDescription.supportsOpenGLRender) {
+        _useGPUIfAvailable->setEnabled(false);
     }
+#endif
 
-private:
-    /* Override the render */
-    virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
-    // override the rod call
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
-
-private:
-    // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcClip;
-
-    OFX::DoubleParam *_scale;
-    OFX::DoubleParam *_sourceScale;
-};
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -162,148 +127,29 @@ TestOpenGLPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    const double time = args.time;
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
 
-    // do the rendering
-
-    const int& gl_enabled = args.openGLEnabled;
-    const OfxRectI renderWindow = args.renderWindow;
-
+    bool openGLRender = false;
+#if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
-    DPRINT(("render: openGLSuite %s\n", gHostDescription.supportsOpenGLRender ? "found" : "not found"));
     if (gHostDescription.supportsOpenGLRender) {
-        DPRINT(("render: openGL rendering %s\n", gl_enabled ? "enabled" : "DISABLED"));
+        _useGPUIfAvailable->getValueAtTime(args.time, openGLRender);
     }
-    DPRINT(("Render: window = [%d, %d - %d, %d]\n",
-            renderWindow.x1, renderWindow.y1,
-            renderWindow.x2, renderWindow.y2));
+#endif
 
-    // For this test, we only process in OpenGL mode.
-    if (!gl_enabled) {
-        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-        return;
+    // do the rendering
+#ifdef OFX_SUPPORTS_OPENGLRENDER
+    if (openGLRender) {
+        return renderGL(args);
     }
-
-    // get the output image texture
-    std::auto_ptr<OFX::Texture> dst(_dstClip->loadTexture(time));
-    if (!dst.get()) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
+#endif
+#ifdef HAVE_OSMESA
+    if (!openGLRender) {
+        return renderMesa(args);
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
-    }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
-    }
-    const GLuint dstIndex = (GLuint)dst->getIndex();
-    const GLenum dstTarget = (GLenum)dst->getTarget();
-    DPRINT(("openGL: output texture index %d, target %d, depth %s\n",
-            dstIndex, dstTarget, mapBitDepthEnumToStr(dstBitDepth)));
-
-    std::auto_ptr<const OFX::Texture> src((_srcClip && _srcClip->isConnected()) ?
-                                          _srcClip->loadTexture(time) : 0);
-    if (!src.get()) {
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
-    }
-    OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
-    OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-    if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
-        OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-        return;
-    }
-    const GLuint srcIndex = (GLuint)src->getIndex();
-    const GLenum srcTarget = (GLenum)src->getTarget();
-    DPRINT(("openGL: source texture index %d, target %d, depth %s\n",
-            srcIndex, srcTarget, mapBitDepthEnumToStr(srcBitDepth)));
-    // XXX: check status for errors
-
-    // get the scale parameter
-    double scale = 1;
-    double sourceScale = 1;
-    if (_scale) {
-        _scale->getValueAtTime(time, scale);
-    }
-    if (_sourceScale) {
-        _sourceScale->getValueAtTime(time, sourceScale);
-    }
-
-    const OfxPointD& rs = args.renderScale;
-
-    // Render to texture: see http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
-    float w = (renderWindow.x2 - renderWindow.x1);
-    float h = (renderWindow.y2 - renderWindow.y1);
-
-    glPushAttrib(GL_ALL_ATTRIB_BITS);
-    glDisable(GL_BLEND);
-
-    // Draw black into dest to start
-    glBegin(GL_QUADS);
-    glColor4f(0, 0, 0, 1); //Set the colour to opaque black
-    glVertex2f(0, 0);
-    glVertex2f(0, h);
-    glVertex2f(w, h);
-    glVertex2f(w, 0);
-    glEnd();
-
-    //
-    // Copy source texture to output by drawing a big textured quad
-    //
-
-    // set up texture (how much of this is needed?)
-    glEnable(srcTarget);
-    glBindTexture(srcTarget, srcIndex);
-    glTexParameteri(srcTarget, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(srcTarget, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(srcTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(srcTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-
-    // textures are oriented with Y up (standard orientation)
-    float tymin = 0;
-    float tymax = 1;
-
-    // now draw the textured quad containing the source
-    glBegin(GL_QUADS);
-    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-    glBegin (GL_QUADS);
-    glTexCoord2f (0, tymin);
-    glVertex2f   (0, 0);
-    glTexCoord2f (1.0, tymin);
-    glVertex2f   (w * sourceScale, 0);
-    glTexCoord2f (1.0, tymax);
-    glVertex2f   (w * sourceScale, h * sourceScale);
-    glTexCoord2f (0, tymax);
-    glVertex2f   (0, h * sourceScale);
-    glEnd ();
-
-    glDisable(srcTarget);
-
-    // Now draw some stuff on top of it to show we really did something
-#define WIDTH 200
-#define HEIGHT 100
-    glBegin(GL_QUADS);
-    glColor3f(1.0f, 0, 0); //Set the colour to red
-    glVertex2f(10 * rs.x, 10 * rs.y);
-    glVertex2f(10 * rs.x, (10 + HEIGHT * scale) * rs.y);
-    glVertex2f((10 + WIDTH * scale) * rs.x, (10 + HEIGHT * scale) * rs.y);
-    glVertex2f((10 + WIDTH * scale) * rs.x, 10 * rs.y);
-    glEnd();
-    
-    // done; clean up.
-    glPopAttrib();
+#endif // HAVE_OSMESA
+    OFX::throwSuiteStatusException(kOfxStatFailed);
 }
 
 // overriding getRegionOfDefinition is necessary to tell the host that we do not support render scale
@@ -318,6 +164,14 @@ TestOpenGLPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
     return false;
 }
 
+void
+TestOpenGLPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    // We have to do this because the processing code does not support varying components for srcClip and dstClip
+    // (The OFX spec doesn't state a default value for this)
+    clipPreferences.setClipComponents(*_dstClip, _srcClip->getPixelComponents());
+}
+
 mDeclarePluginFactory(TestOpenGLPluginFactory, ;, {});
 
 using namespace OFX;
@@ -326,20 +180,24 @@ void TestOpenGLPluginFactory::load()
 {
     // we can't be used on hosts that don't support the stereoscopic suite
     // returning an error here causes a blank menu entry in Nuke
+    //#if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
     //const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
     //if (!gHostDescription.supportsOpenGLRender) {
     //    throwHostMissingSuiteException(kOfxOpenGLRenderSuite);
     //}
+    //#endif
 }
 
 void
 TestOpenGLPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // returning an error here crashes Nuke
+    //#if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
     //const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
     //if (!gHostDescription.supportsOpenGLRender) {
     //    throwHostMissingSuiteException(kOfxOpenGLRenderSuite);
     //}
+    //#endif
 
     // basic labels
     desc.setLabel(kPluginName);
@@ -368,17 +226,24 @@ TestOpenGLPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // say we can support multiple pixel depths and let the clip preferences action deal with it all.
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     // we support OpenGL rendering (could also say "needed" here)
+#ifdef OFX_SUPPORTS_OPENGLRENDER
+#ifdef HAVE_MESA
+    desc.setSupportsOpenGLRender(true);
+#else
     desc.setNeedsOpenGLRender(true);
+#endif
+#endif
 }
 
 void
 TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
+#if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
     const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
-
     if (!gHostDescription.supportsOpenGLRender) {
         throwHostMissingSuiteException(kOfxOpenGLRenderSuite);
     }
+#endif
 
     // Source clip only in the filter context
     // create the mandated source clip
@@ -427,6 +292,18 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
             page->addChild(*param);
         }
     }
+
+#if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamUseGPU);
+        param->setLabel(kParamUseGPULabel);
+        param->setHint(kParamUseGPUHint);
+        param->setDefault(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+#endif
 }
 
 OFX::ImageEffect*
