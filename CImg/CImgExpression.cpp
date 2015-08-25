@@ -138,12 +138,13 @@
 "         . 'j[offset]': does the same for an offset relative to the current pixel (x,y,z,c). For instance expression '0.5*(i(x+1)-i(x-1))' will estimate the X-derivative of an image with a classical finite difference scheme.\n"\
 "         . If specified formula starts with '>' or '<', the operators 'i(..)' and 'j(..)' will return values of the image currently being modified, in forward ('>') or backward ('<') order.\n"\
 "\n"\
-"Sample expressions:\n"\
-"'j(sin(y/100/k+t/10)*20*k,sin(x/100/k+t/10)*20*k)' distorts the image with time-varying waves.\n"\
-"'0.5*(j(1)-j(-1))' will estimate the X-derivative of an image with a classical finite difference scheme.\n"\
-"'if(x%10==0,1,i)' will draw blank vertical lines on every 10th column of an image.\n"\
-"'X=x-w/2;Y=y-h/2;D=sqrt(X^2+Y^2);if(D+u*20<80,abs(cos(D/(5+c))),10*(y%(20+c))/255)'\n"\
-"\n"\
+"Sample expressions:\n\n"\
+"'j(sin(y/100/k+t/10)*20*k,sin(x/100/k+t/10)*20*k)' distorts the image with time-varying waves.\n\n"\
+"'0.5*(j(1)-j(-1))' will estimate the X-derivative of an image with a classical finite difference scheme.\n\n"\
+"'if(x%10==0,1,i)' will draw blank vertical lines on every 10th column of an image.\n\n"\
+"'X=x-w/2;Y=y-h/2;D=sqrt(X^2+Y^2);if(D+u*20<80,abs(cos(D/(5+c))),10*(y%(20+c))/255)'\n\n"\
+"'X=x-w/2;Y=y-h/2;D=sqrt(X^2+Y^2);if(D+u*20<80,abs(cos(D/(5+c))),10*(y%(20+c))/255)'\n\n"\
+"'sqrt(zr=-1.2+2.4*x/w;zi=-1.2+2.4*y/h;for(i=0,zr*zr+zi*zi<=4&&i<256,t=zr*zr-zi*zi+0.4;zi=2*zr*zi+0.2;zr=t; i=i+1))/255' draws the Mandelbrot fractal (give it a 1024x1024 image as input).\n"\
 "Uses the 'fill' function from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
