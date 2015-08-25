@@ -47,7 +47,6 @@
 #include "ofxsMacros.h"
 #include "ofxOpenGLRender.h"
 
-
 #define kPluginName "TestOpenGL"
 #define kPluginGrouping "Other/Test"
 #define kPluginDescription \
@@ -73,6 +72,18 @@
 #define kParamSourceScaleLabel "Source Scale"
 #define kParamSourceScaleHint "Scales the source image"
 
+#define kParamAngleX "angleX"
+#define kParamAngleXLabel "X Angle"
+#define kParamAngleXHint "Rotation in degrees around the X angle"
+
+#define kParamAngleY "angleY"
+#define kParamAngleYLabel "Y Angle"
+#define kParamAngleYHint "Rotation in degrees around the Y angle"
+
+#define kParamAngleZ "angleZ"
+#define kParamAngleZLabel "Z Angle"
+#define kParamAngleZHint "Rotation in degrees around the Z angle"
+
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
 #define kParamUseGPU "useGPUIfAvailable"
 #define kParamUseGPULabel "Use GPU If Available"
@@ -88,6 +99,9 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
 , _srcClip(0)
 , _scale(0)
 , _sourceScale(0)
+, _angleX(0)
+, _angleY(0)
+, _angleZ(0)
 , _useGPUIfAvailable(0)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -101,6 +115,10 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
     _scale = fetchDoubleParam(kParamScale);
     _sourceScale = fetchDoubleParam(kParamSourceScale);
     assert(_scale && _sourceScale);
+    _angleX = fetchDoubleParam(kParamAngleX);
+    _angleY = fetchDoubleParam(kParamAngleY);
+    _angleZ = fetchDoubleParam(kParamAngleZ);
+    assert(_angleX && _angleY && _angleZ);
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     _useGPUIfAvailable = fetchBooleanParam(kParamUseGPU);
     assert(_useGPUIfAvailable);
@@ -288,6 +306,49 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setRange(0., kOfxFlagInfiniteMax);
         param->setDisplayRange(0., 10.);
         param->setIncrement(0.01);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAngleX);
+        param->setLabel(kParamAngleXLabel);
+        param->setHint(kParamAngleXHint);
+        // say we are a angle parameter
+        param->setDoubleType(eDoubleTypeAngle);
+        param->setDefault(0.);
+        param->setRange(kOfxFlagInfiniteMin, kOfxFlagInfiniteMax);
+        param->setDisplayRange(-180., 180.);
+        param->setIncrement(1.);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAngleY);
+        param->setLabel(kParamAngleYLabel);
+        param->setHint(kParamAngleYHint);
+        // say we are a angle parameter
+        param->setDoubleType(eDoubleTypeAngle);
+        param->setDefault(0.);
+        param->setRange(kOfxFlagInfiniteMin, kOfxFlagInfiniteMax);
+        param->setDisplayRange(-180., 180.);
+        param->setIncrement(1.);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamAngleZ);
+        param->setLabel(kParamAngleZLabel);
+        param->setHint(kParamAngleZHint);
+        // say we are a angle parameter
+        param->setDoubleType(eDoubleTypeAngle);
+        param->setDefault(0.);
+        param->setRange(kOfxFlagInfiniteMin, kOfxFlagInfiniteMax);
+        param->setDisplayRange(-180., 180.);
+        param->setIncrement(1.);
         if (page) {
             page->addChild(*param);
         }

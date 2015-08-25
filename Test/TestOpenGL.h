@@ -67,6 +67,9 @@ private:
 
     OFX::DoubleParam *_scale;
     OFX::DoubleParam *_sourceScale;
+    OFX::DoubleParam *_angleX;
+    OFX::DoubleParam *_angleY;
+    OFX::DoubleParam *_angleZ;
     OFX::BooleanParam *_useGPUIfAvailable;
 };
 
