@@ -76,7 +76,7 @@
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
 #define kParamUseGPU "useGPUIfAvailable"
 #define kParamUseGPULabel "Use GPU If Available"
-#define kParamUseGPUHint "If GPU rendering is available, use it. If the checkbox is not available, GPU rendering is not available on this host."
+#define kParamUseGPUHint "If GPU rendering is available, use it. If the checkbox is not enabled, GPU rendering is not available on this host."
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
