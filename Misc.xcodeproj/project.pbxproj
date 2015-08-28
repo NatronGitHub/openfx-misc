@@ -4210,13 +4210,13 @@
 		1ECA4DDF1A3F3A2C00C5128B /* Radial */ = {
 			isa = PBXGroup;
 			children = (
+				1E0072EC1A4041D200E77042 /* Radial.cpp */,
+				1E0072ED1A4041D200E77042 /* Radial.h */,
 				1E0072E91A4041D200E77042 /* Info.plist */,
 				1E0072EA1A4041D200E77042 /* Makefile */,
 				AC6486D81A41A5350088844F /* net.sf.openfx.Radial.png */,
 				1E3284971A41C26300C9A4E4 /* net.sf.openfx.Radial.svg */,
 				1E0072EB1A4041D200E77042 /* PluginRegistration.cpp */,
-				1E0072EC1A4041D200E77042 /* Radial.cpp */,
-				1E0072ED1A4041D200E77042 /* Radial.h */,
 			);
 			path = Radial;
 			sourceTree = "<group>";
@@ -4336,12 +4336,12 @@
 		1EDE1BC8182D3F73002392CB /* OneView */ = {
 			isa = PBXGroup;
 			children = (
+				1EDE1BC9182D3F90002392CB /* OneView.cpp */,
+				1E8B5D7318B7803F00C31FDC /* OneView.h */,
 				1EDE1BCB182D3F98002392CB /* Info.plist */,
 				1EDE1BCC182D3F98002392CB /* Makefile */,
 				AC6486D71A41A52F0088844F /* net.sf.openfx.oneViewPlugin.png */,
 				1E3284931A41C24600C9A4E4 /* net.sf.openfx.oneViewPlugin.svg */,
-				1EDE1BC9182D3F90002392CB /* OneView.cpp */,
-				1E8B5D7318B7803F00C31FDC /* OneView.h */,
 				1E8B5D7418B7805D00C31FDC /* PluginRegistration.cpp */,
 			);
 			path = OneView;
@@ -4487,13 +4487,13 @@
 		AC60A32419FE995F00375A86 /* Ramp */ = {
 			isa = PBXGroup;
 			children = (
+				AC60A32A19FE995F00375A86 /* Ramp.cpp */,
+				AC60A32B19FE995F00375A86 /* Ramp.h */,
 				AC60A32519FE995F00375A86 /* Info.plist */,
 				AC60A32619FE995F00375A86 /* Makefile */,
 				AC60A32719FE995F00375A86 /* net.sf.openfx.Ramp.png */,
 				AC60A32819FE995F00375A86 /* net.sf.openfx.Ramp.svg */,
 				AC60A32919FE995F00375A86 /* PluginRegistration.cpp */,
-				AC60A32A19FE995F00375A86 /* Ramp.cpp */,
-				AC60A32B19FE995F00375A86 /* Ramp.h */,
 			);
 			path = Ramp;
 			sourceTree = "<group>";
