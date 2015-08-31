@@ -35,6 +35,8 @@
 #  include <GL/glu_mangle.h>
 #  include <GL/osmesa.h>
 #  define RENDERFUNC renderMesa
+#  define contextAttached contextAttachedMesa
+#  define contextDetached contextDetachedMesa
 #else
 #  define RENDERFUNC renderGL
 #endif
@@ -411,6 +413,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
+    contextAttachedMesa();
 
     /* Allocate the image buffer */
     void* buffer = dst->getPixelData();
@@ -584,6 +587,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
      * Make sure buffered commands are finished!!!
      */
     glFinish();
+    glDeleteTextures(1, &srcIndex);
 
 #ifdef DEBUG
     {
@@ -598,7 +602,38 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
 #endif
 
+    contextDetachedMesa();
     /* destroy the context */
     OSMesaDestroyContext( ctx );
 #endif
+}
+
+/*
+ * Action called when an effect has just been attached to an OpenGL
+ * context.
+ *
+ * The purpose of this action is to allow a plugin to set up any data it may need
+ * to do OpenGL rendering in an instance. For example...
+ *  - allocate a lookup table on a GPU,
+ *  - create an openCL or CUDA context that is bound to the host's OpenGL
+ *    context so it can share buffers.
+*/
+void
+TestOpenGLPlugin::contextAttached()
+{
+}
+
+/*
+ * Action called when an effect is about to be detached from an
+ * OpenGL context
+ *
+ * The purpose of this action is to allow a plugin to deallocate any resource
+ * allocated in \ref ::kOfxActionOpenGLContextAttached just before the host
+ * decouples a plugin from an OpenGL context.
+ * The host must call this with the same OpenGL context active as it
+ * called with the corresponding ::kOfxActionOpenGLContextAttached.
+ */
+void
+TestOpenGLPlugin::contextDetached()
+{
 }

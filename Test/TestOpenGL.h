@@ -39,8 +39,23 @@ private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
+    /* The purpose of this action is to allow a plugin to set up any data it may need
+     to do OpenGL rendering in an instance. */
+    virtual void contextAttached() OVERRIDE FINAL;
+    /* The purpose of this action is to allow a plugin to deallocate any resource
+     allocated in \ref ::kOfxActionOpenGLContextAttached just before the host
+     decouples a plugin from an OpenGL context. */
+    virtual void contextDetached() OVERRIDE FINAL;
+
+    /* The OpenGL context is also set when beginSequenceRender() and endSequenceRender()
+     are called. This may be useful to allocate/deallocate sequence-specific OpenGL data. */
+    //virtual void beginSequenceRender(const OFX::BeginSequenceRenderArguments &args) OVERRIDE FINAL;
+    //virtual void endSequenceRender(const OFX::EndSequenceRenderArguments &args) OVERRIDE FINAL;
+
     void renderGL(const OFX::RenderArguments &args);
     void renderMesa(const OFX::RenderArguments &args);
+    void contextAttachedMesa();
+    void contextDetachedMesa();
 
     // override the rod call
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;

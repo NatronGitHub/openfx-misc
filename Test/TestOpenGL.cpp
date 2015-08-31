@@ -230,10 +230,21 @@ TestOpenGLPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     // we support OpenGL rendering (could also say "needed" here)
 #ifdef OFX_SUPPORTS_OPENGLRENDER
-#ifdef HAVE_MESA
+#ifdef HAVE_OSMESA
     desc.setSupportsOpenGLRender(true);
 #else
     desc.setNeedsOpenGLRender(true);
+    /*
+     * If a host supports OpenGL rendering then it flags this with the string
+     * property ::kOfxImageEffectOpenGLRenderSupported on its descriptor property
+     * set. Effects that cannot run without OpenGL support should examine this in
+     * ::kOfxActionDescribe action and return a ::kOfxStatErrMissingHostFeature
+     * status flag if it is not set to "true".
+     */
+    const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+    if (!gHostDescription.supportsOpenGLRender) {
+        throwSuiteStatusException(kOfxStatErrMissingHostFeature);
+    }
 #endif
 #endif
 }
