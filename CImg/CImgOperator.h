@@ -25,32 +25,48 @@
 #ifndef Misc_CImgOperator_h
 #define Misc_CImgOperator_h
 
-#include "ofxsImageEffect.h"
-#include "ofxsMacros.h"
-#include "ofxsPixelProcessor.h"
-#include "ofxsCopier.h"
-#include "ofxsCoords.h"
+#include "CImgFilter.h"
 
-#include <cassert>
-#include <memory>
+class CImgOperatorPluginHelperBase : public CImgFilterPluginHelperBase
+{
+public:
 
-//#define CIMG_DEBUG
+    CImgOperatorPluginHelperBase(OfxImageEffectHandle handle,
+                                 const char* srcAClipName, //!< should be either kOfxImageEffectSimpleSourceClipName or "A" if you want this to be the default output when plugin is disabled
+                                 const char* srcBClipName,
+                                 bool supportsTiles,
+                                 bool supportsMultiResolution,
+                                 bool supportsRenderScale,
+                                 bool defaultUnpremult = true,
+                                 bool defaultProcessAlphaOnRGBA = false);
 
-// use the locally-downloaded CImg.h
-//
-// To download the latest CImg.h, use:
-// git archive --remote=git://git.code.sf.net/p/gmic/source HEAD:src CImg.h |tar xf -
-//
-// CImg.h must at least be the version from Oct 17 2014, commit 9b52016cab3368744ea9f3cc20a3e9b4f0c66eb3
-// To download, use:
-// git archive --remote=git://git.code.sf.net/p/gmic/source 9b52016cab3368744ea9f3cc20a3e9b4f0c66eb3:src CImg.h |tar xf -
-#define cimg_display 0
-CLANG_DIAG_OFF(shorten-64-to-32)
-#include "CImg.h"
-CLANG_DIAG_ON(shorten-64-to-32)
+    virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+
+    static OFX::PageParamDescriptor*
+    describeInContextBegin(OFX::ImageEffectDescriptor &desc,
+                           OFX::ContextEnum /*context*/,
+                           const char* srcAClipName,
+                           const char* srcBClipName,
+                           bool supportsRGBA,
+                           bool supportsRGB,
+                           bool supportsAlpha,
+                           bool supportsTiles,
+                           bool processRGB = true,
+                           bool processAlpha = false,
+                           bool processIsSecret = false);
+
+protected:
+    // do not need to delete these, the ImageEffect is managing them for us
+    OFX::Clip *_srcAClip;
+    OFX::Clip *_srcBClip;
+
+    // params
+    std::string _srcAClipName;
+    std::string _srcBClipName;
+};
 
 template <class Params>
-class CImgOperatorPluginHelper : public OFX::ImageEffect
+class CImgOperatorPluginHelper : public CImgOperatorPluginHelperBase
 {
 public:
 
@@ -62,31 +78,8 @@ public:
                              bool supportsRenderScale,
                              bool defaultUnpremult = true,
                              bool defaultProcessAlphaOnRGBA = false)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcAClip(0)
-    , _srcBClip(0)
-    , _premult(0)
-    , _premultChannel(0)
-    , _srcAClipName(srcAClipName)
-    , _srcBClipName(srcBClipName)
-    , _supportsTiles(supportsTiles)
-    , _supportsMultiResolution(supportsMultiResolution)
-    , _supportsRenderScale(supportsRenderScale)
-    , _defaultUnpremult(defaultUnpremult)
-    , _defaultProcessAlphaOnRGBA(defaultProcessAlphaOnRGBA)
-    {
-        _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA));
-        _srcAClip = fetchClip(_srcAClipName);
-        assert(_srcAClip && (_srcAClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcAClip->getPixelComponents() == OFX::ePixelComponentRGBA));
-        _srcBClip = fetchClip(_srcBClipName);
-        assert(_srcBClip && (_srcBClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcBClip->getPixelComponents() == OFX::ePixelComponentRGBA));
-
-        _premult = fetchBooleanParam(kParamPremult);
-        _premultChannel = fetchChoiceParam(kParamPremultChannel);
-        assert(_premult && _premultChannel);
-    }
+    : CImgOperatorPluginHelperBase(handle, srcAClipName, srcBClipName, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA)
+    {}
 
     // override the roi call
     virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
@@ -97,40 +90,6 @@ public:
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip* &identityClip, double &identityTime) OVERRIDE FINAL;
-
-    virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL
-    {
-        if (clipName == _srcAClipName && _srcAClip && args.reason == OFX::eChangeUserEdit) {
-            if (_defaultUnpremult) {
-                switch (_srcAClip->getPreMultiplication()) {
-                    case OFX::eImageOpaque:
-                        _premult->setValue(false);
-                        break;
-                    case OFX::eImagePreMultiplied:
-                        _premult->setValue(true);
-                        break;
-                    case OFX::eImageUnPreMultiplied:
-                        _premult->setValue(false);
-                        break;
-                }
-            }
-        }
-        if (clipName == _srcBClipName && _srcBClip && args.reason == OFX::eChangeUserEdit) {
-            if (_defaultUnpremult) {
-                switch (_srcBClip->getPreMultiplication()) {
-                    case OFX::eImageOpaque:
-                        _premult->setValue(false);
-                        break;
-                    case OFX::eImagePreMultiplied:
-                        _premult->setValue(true);
-                        break;
-                    case OFX::eImageUnPreMultiplied:
-                        _premult->setValue(false);
-                        break;
-                }
-            }
-        }
-    }
 
     // the following functions can be overridden/implemented by the plugin
 
@@ -151,211 +110,7 @@ public:
 
     //static void describe(OFX::ImageEffectDescriptor &desc, bool supportsTiles);
 
-    static OFX::PageParamDescriptor*
-    describeInContextBegin(OFX::ImageEffectDescriptor &desc,
-                           OFX::ContextEnum /*context*/,
-                           const char* srcAClipName,
-                           const char* srcBClipName,
-                           bool supportsRGBA,
-                           bool supportsRGB,
-                           bool supportsAlpha,
-                           bool supportsTiles,
-                           bool /*processRGB*/ = true,
-                           bool /*processAlpha*/ = false,
-                           bool /*processIsSecret*/ = false)
-    {
-        OFX::ClipDescriptor *srcBClip = desc.defineClip(srcBClipName);
-        OFX::ClipDescriptor *srcAClip = desc.defineClip(srcAClipName);
-        OFX::ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
-        if (supportsRGBA) {
-            srcAClip->addSupportedComponent(OFX::ePixelComponentRGBA);
-            srcBClip->addSupportedComponent(OFX::ePixelComponentRGBA);
-            dstClip->addSupportedComponent(OFX::ePixelComponentRGBA);
-        }
-        if (supportsRGB) {
-            srcAClip->addSupportedComponent(OFX::ePixelComponentRGB);
-            srcBClip->addSupportedComponent(OFX::ePixelComponentRGB);
-            dstClip->addSupportedComponent(OFX::ePixelComponentRGB);
-        }
-        if (supportsAlpha) {
-            srcAClip->addSupportedComponent(OFX::ePixelComponentAlpha);
-            srcBClip->addSupportedComponent(OFX::ePixelComponentAlpha);
-            dstClip->addSupportedComponent(OFX::ePixelComponentAlpha);
-        }
-        srcAClip->setTemporalClipAccess(false);
-        srcBClip->setTemporalClipAccess(false);
-        dstClip->setSupportsTiles(supportsTiles);
-        srcAClip->setSupportsTiles(supportsTiles);
-        srcBClip->setSupportsTiles(supportsTiles);
-        srcAClip->setIsMask(false);
-        srcBClip->setIsMask(false);
-
-        // create the params
-        OFX::PageParamDescriptor *page = desc.definePageParam("Controls");
-
-        return page;
-    }
-
-    static void
-    describeInContextEnd(OFX::ImageEffectDescriptor &desc,
-                         OFX::ContextEnum /*context*/,
-                         OFX::PageParamDescriptor* page)
-    {
-        ofxsPremultDescribeParams(desc, page);
-    }
-
-    // utility functions
-    static bool
-    isEmpty(const OfxRectI& r)
-    {
-        return r.x1 >= r.x2 || r.y1 >= r.y2;
-    }
-
-private:
-#ifdef CIMG_DEBUG
-    static void
-    printRectI(const char*name, const OfxRectI& rect) {
-        printf("%s= (%d, %d)-(%d, %d)\n", name, rect.x1, rect.y1, rect.x2, rect.y2);
-    }
-#else
-    static void printRectI(const char*, const OfxRectI&) {}
-#endif
-
-
-    void
-    setupAndFill(OFX::PixelProcessorFilterBase & processor,
-                 const OfxRectI &renderWindow,
-                 void *dstPixelData,
-                 const OfxRectI& dstBounds,
-                 OFX::PixelComponentEnum dstPixelComponents,
-                 int dstPixelComponentCount,
-                 OFX::BitDepthEnum dstPixelDepth,
-                 int dstRowBytes);
-
-    void
-    setupAndCopy(OFX::PixelProcessorFilterBase & processor,
-                 double time,
-                 const OfxRectI &renderWindow,
-                 const void *srcPixelData,
-                 const OfxRectI& srcBounds,
-                 OFX::PixelComponentEnum srcPixelComponents,
-                 int srcPixelComponentCount,
-                 OFX::BitDepthEnum srcBitDepth,
-                 int srcRowBytes,
-                 int srcBoundary,
-                 void *dstPixelData,
-                 const OfxRectI& dstBounds,
-                 OFX::PixelComponentEnum dstPixelComponents,
-                 int dstPixelComponentCount,
-                 OFX::BitDepthEnum dstPixelDepth,
-                 int dstRowBytes,
-                 bool premult,
-                 int premultChannel);
-
-
-    // utility functions
-
-
-private:
-    // do not need to delete these, the ImageEffect is managing them for us
-    OFX::Clip *_dstClip;
-    OFX::Clip *_srcAClip;
-    OFX::Clip *_srcBClip;
-
-    // params
-    OFX::BooleanParam* _premult;
-    OFX::ChoiceParam* _premultChannel;
-
-    std::string _srcAClipName;
-    std::string _srcBClipName;
-    bool _supportsTiles;
-    bool _supportsMultiResolution;
-    bool _supportsRenderScale;
-    bool _defaultUnpremult; //!< unpremult by default
-    bool _defaultProcessAlphaOnRGBA; //!< process alpha by default on RGBA images
 };
-
-
-/* set up and run a copy processor */
-template <class Params>
-void
-CImgOperatorPluginHelper<Params>::setupAndFill(OFX::PixelProcessorFilterBase & processor,
-                                               const OfxRectI &renderWindow,
-                                               void *dstPixelData,
-                                               const OfxRectI& dstBounds,
-                                               OFX::PixelComponentEnum dstPixelComponents,
-                                               int dstPixelComponentCount,
-                                               OFX::BitDepthEnum dstPixelDepth,
-                                               int dstRowBytes)
-{
-    assert(dstPixelData &&
-           dstBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= dstBounds.x2 &&
-           dstBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= dstBounds.y2);
-    // set the images
-    processor.setDstImg(dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstPixelDepth, dstRowBytes);
-
-    // set the render window
-    processor.setRenderWindow(renderWindow);
-
-    // Call the base class process member, this will call the derived templated process code
-    processor.process();
-}
-
-
-/* set up and run a copy processor */
-template <class Params>
-void
-CImgOperatorPluginHelper<Params>::setupAndCopy(OFX::PixelProcessorFilterBase & processor,
-                                               double /*time*/,
-                                               const OfxRectI &renderWindow,
-                                               const void *srcPixelData,
-                                               const OfxRectI& srcBounds,
-                                               OFX::PixelComponentEnum srcPixelComponents,
-                                               int srcPixelComponentCount,
-                                               OFX::BitDepthEnum srcBitDepth,
-                                               int srcRowBytes,
-                                               int srcBoundary,
-                                               void *dstPixelData,
-                                               const OfxRectI& dstBounds,
-                                               OFX::PixelComponentEnum dstPixelComponents,
-                                               int dstPixelComponentCount,
-                                               OFX::BitDepthEnum dstPixelDepth,
-                                               int dstRowBytes,
-                                               bool premult,
-                                               int premultChannel)
-{
-    // src may not be valid over the renderWindow
-    //assert(srcPixelData &&
-    //       srcBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= srcBounds.x2 &&
-    //       srcBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= srcBounds.y2);
-    // dst must be valid over the renderWindow
-    assert(dstPixelData &&
-           dstBounds.x1 <= renderWindow.x1 && renderWindow.x2 <= dstBounds.x2 &&
-           dstBounds.y1 <= renderWindow.y1 && renderWindow.y2 <= dstBounds.y2);
-    // make sure bit depths are sane
-    if(srcBitDepth != dstPixelDepth/* || srcPixelComponents != dstPixelComponents*/) {
-        OFX::throwSuiteStatusException(kOfxStatErrFormat);
-    }
-
-    if (isEmpty(renderWindow)) {
-        return;
-    }
-
-    // set the images
-    assert(dstPixelData);
-    processor.setDstImg(dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstPixelDepth, dstRowBytes);
-    assert(0 <= srcBoundary && srcBoundary <= 2);
-    processor.setSrcImg(srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, srcBoundary);
-
-    // set the render window
-    processor.setRenderWindow(renderWindow);
-
-    processor.setPremultMaskMix(premult, premultChannel, 1.);
-
-    // Call the base class process member, this will call the derived templated process code
-    processor.process();
-}
-
 
 template <class Params>
 void
@@ -622,9 +377,11 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         assert(fred.get());
         if (fred.get()) {
             setupAndCopy(*fred, time, srcRoI,
+                         NULL, NULL,
                          srcAPixelData, srcABounds, srcAPixelComponents, srcAPixelComponentCount, srcABitDepth, srcARowBytes, srcBoundary,
                          tmpAPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes,
-                         premult, premultChannel);
+                         premult, premultChannel,
+                         1., false);
         }
     }
     
@@ -664,9 +421,11 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         assert(fred.get());
         if (fred.get()) {
             setupAndCopy(*fred, time, srcRoI,
-                         srcBPixelData, srcBBounds, srcBPixelComponents, srcBPixelComponentCount, srcBBitDepth, srcBRowBytes, srcBoundary,
+                         NULL, NULL,
+                        srcBPixelData, srcBBounds, srcBPixelComponents, srcBPixelComponentCount, srcBBitDepth, srcBRowBytes, srcBoundary,
                          tmpBPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes,
-                         premult, premultChannel);
+                         premult, premultChannel,
+                         1., false);
         }
     }
 
@@ -753,9 +512,11 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         assert(fred.get());
         if (fred.get()) {
             setupAndCopy(*fred, time, renderWindow,
+                         NULL, NULL,
                          tmpPixelData, tmpBounds, tmpPixelComponents, tmpPixelComponentCount, tmpBitDepth, tmpRowBytes, 0,
                          dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
-                         premult, premultChannel);
+                         premult, premultChannel,
+                         1., false);
         }
     }
 

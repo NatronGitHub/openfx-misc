@@ -1,4 +1,4 @@
-PLUGINOBJECTS = CImgBilateral.o CImgBlur.o CImgDenoise.o CImgDilate.o CImgEqualize.o CImgErode.o CImgErodeSmooth.o CImgExpression.o CImgGuided.o CImgHistEQ.o CImgNoise.o CImgPlasma.o CImgRollingGuidance.o CImgSharpenInvDiff.o CImgSharpenShock.o CImgSmooth.o ofxsLut.o PluginRegistration.o
+PLUGINOBJECTS = CImgBilateral.o CImgBlur.o CImgDenoise.o CImgDilate.o CImgEqualize.o CImgErode.o CImgErodeSmooth.o CImgExpression.o CImgGuided.o CImgHistEQ.o CImgNoise.o CImgPlasma.o CImgRollingGuidance.o CImgSharpenInvDiff.o CImgSharpenShock.o CImgSmooth.o ofxsLut.o PluginRegistration.o CImgFilter.o CImgOperator.o
 PLUGINNAME = CImg
 
 # ls *png *.svg|sort |sed -e 's!$! \\!'

@@ -227,9 +227,11 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgSmooth.png $(OutDir)$(ProjectName).o
     <ClCompile Include="..\CImg\CImgErode.cpp" />
     <ClCompile Include="..\CImg\CImgErodeSmooth.cpp" />
     <ClCompile Include="..\CImg\CImgExpression.cpp" />
+    <ClCompile Include="..\CImg\CImgFilter.cpp" />
     <ClCompile Include="..\CImg\CImgGuided.cpp" />
     <ClCompile Include="..\CImg\CImgHistEQ.cpp" />
     <ClCompile Include="..\CImg\CImgNoise.cpp" />
+    <ClCompile Include="..\CImg\CImgOperator.cpp" />
     <ClCompile Include="..\CImg\CImgPlasma.cpp" />
     <ClCompile Include="..\CImg\CImgRollingGuidance.cpp" />
     <ClCompile Include="..\CImg\CImgSharpenInvDiff.cpp" />
@@ -250,6 +252,7 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgSmooth.png $(OutDir)$(ProjectName).o
     <ClInclude Include="..\CImg\CImgGuided.h" />
     <ClInclude Include="..\CImg\CImgHistEQ.h" />
     <ClInclude Include="..\CImg\CImgNoise.h" />
+    <ClInclude Include="..\CImg\CImgOperator.h" />
     <ClInclude Include="..\CImg\CImgPlasma.h" />
     <ClInclude Include="..\CImg\CImgRollingGuidance.h" />
     <ClInclude Include="..\CImg\CImgSharpenInvDiff.h" />

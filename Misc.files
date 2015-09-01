@@ -33,6 +33,7 @@ CImg/CImgErodeSmooth.cpp
 CImg/CImgErodeSmooth.h
 CImg/CImgExpression.cpp
 CImg/CImgExpression.h
+CImg/CImgFilter.cpp
 CImg/CImgFilter.h
 CImg/CImgGuided.cpp
 CImg/CImgGuided.h
@@ -40,6 +41,7 @@ CImg/CImgHistEQ.cpp
 CImg/CImgHistEQ.h
 CImg/CImgNoise.cpp
 CImg/CImgNoise.h
+CImg/CImgOperator.cpp
 CImg/CImgOperator.h
 CImg/CImgPlasma.cpp
 CImg/CImgPlasma.h
