@@ -134,15 +134,13 @@ TestOpenGLPlugin::render(const OFX::RenderArguments &args)
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
 
     bool openGLRender = false;
-#if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
+#if defined(OFX_SUPPORTS_OPENGLRENDER)
     const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
     if (gHostDescription.supportsOpenGLRender) {
         _useGPUIfAvailable->getValueAtTime(args.time, openGLRender);
     }
-#endif
 
     // do the rendering
-#ifdef OFX_SUPPORTS_OPENGLRENDER
     if (openGLRender) {
         return renderGL(args);
     }
