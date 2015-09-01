@@ -111,7 +111,7 @@ inline void gImageEffectAbort()
     }
 #  endif
     if (tls::gImageEffect && tls::gImageEffect->abort()) {
-        throw OFX::Exception::Suite(kOfxStatOK); //cimg_library::CImgAbortException("");
+        throw cimg_library::CImgAbortException("");
     }
 }
 
