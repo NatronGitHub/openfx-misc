@@ -100,7 +100,7 @@ CLANG_DIAG_ON(shorten-64-to-32)
 
 #ifdef HAVE_THREAD_LOCAL
 struct tls {
-    thread_local static OFX::ImageEffect *gImageEffect;
+    static thread_local OFX::ImageEffect *gImageEffect;
 };
 
 inline void gImageEffectAbort()
