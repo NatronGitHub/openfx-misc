@@ -608,6 +608,48 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #endif
 }
 
+static
+void getGlVersion(int *major, int *minor)
+{
+    const char *verstr = (const char *) glGetString(GL_VERSION);
+    if ((verstr == NULL) || (sscanf(verstr,"%d.%d", major, minor) != 2)) {
+        *major = *minor = 0;
+        //fprintf(stderr, "Invalid GL_VERSION format!!!\n");
+    }
+}
+
+#if 0
+static
+void getGlslVersion(int *major, int *minor)
+{
+    int gl_major, gl_minor;
+    getGlVersion(&gl_major, &gl_minor);
+
+    *major = *minor = 0;
+    if(gl_major == 1) {
+        /* GL v1.x can only provide GLSL v1.00 as an extension */
+        const char *extstr = (const char *) glGetString(GL_EXTENSIONS);
+        if ((extstr != NULL) &&
+            (strstr(extstr, "GL_ARB_shading_language_100") != NULL)) {
+            *major = 1;
+            *minor = 0;
+        }
+    }
+    else if (gl_major >= 2)
+    {
+        /* GL v2.0 and greater must parse the version string */
+        const char *verstr =
+        (const char *) glGetString(GL_SHADING_LANGUAGE_VERSION);
+
+        if ((verstr == NULL) ||
+            (sscanf(verstr, "%d.%d", major, minor) != 2)) {
+            *major = *minor = 0;
+            //fprintf(stderr, "Invalid GL_SHADING_LANGUAGE_VERSION format!!!\n");
+        }
+    }
+}
+#endif
+
 /*
  * Action called when an effect has just been attached to an OpenGL
  * context.
@@ -621,6 +663,17 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 void
 TestOpenGLPlugin::contextAttached()
 {
+    // Non-power-of-two textures are supported if the GL version is 2.0 or greater, or if the implementation exports the GL_ARB_texture_non_power_of_two extension. (Mesa does, of course)
+    int major, minor;
+    getGlVersion(&major, &minor);
+    if (major < 2) {
+        const char *extstr = (const char *) glGetString(GL_EXTENSIONS);
+        if ((extstr == NULL) ||
+            (strstr(extstr, "GL_ARB_texture_non_power_of_two") == NULL)) {
+            sendMessage(OFX::Message::eMessageError, "", "Can not render: OpenGL 2.0 or GL_ARB_texture_non_power_of_two is required.");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+    }
 }
 
 /*
