@@ -382,6 +382,7 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor, const OFX::Ren
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+    const double time = args.time;
     OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
     if (dstBitDepth != _dstClip->getPixelDepth() ||
@@ -423,7 +424,7 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor, const OFX::Ren
     _processB->getValueAtTime(args.time, processB);
     _processA->getValueAtTime(args.time, processA);
     int premult_i;
-    _premult->getValue(premult_i);
+    _premult->getValueAtTime(time, premult_i);
     InputChannelEnum premult = InputChannelEnum(premult_i);
     processor.setValues(processR, processG, processB, processA, premult);
     
@@ -541,12 +542,12 @@ PremultPlugin<isPremult>::getClipPreferences(OFX::ClipPreferencesSetter &clipPre
 #if 0
     // set the premultiplication of _dstClip
     bool processR, processG, processB, processA;
-    _processR->getValue(processR);
-    _processG->getValue(processG);
-    _processB->getValue(processB);
-    _processA->getValue(processA);
+    _processR->getValueAtTime(time, processR);
+    _processG->getValueAtTime(time, processG);
+    _processB->getValueAtTime(time, processB);
+    _processA->getValueAtTime(time, processA);
     int premult_i;
-    _premult->getValue(premult_i);
+    _premult->getValueAtTime(time, premult_i);
     InputChannelEnum premult = InputChannelEnum(premult_i);
     
     if (premult == eInputChannelA && processR && processG && processB && !processA) {

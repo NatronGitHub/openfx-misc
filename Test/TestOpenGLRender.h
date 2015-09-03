@@ -459,13 +459,27 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     DPRINT(("GL_EXTENSIONS = %s\n", (char *) glGetString(GL_EXTENSIONS)));
 #endif
     // get the scale parameter
-    double scale = 1;
-    double sourceScale = 1;
+    double scalex = 1;
+    double scaley = 1;
+    double sourceScalex = 1;
+    double sourceScaley = 1;
+    double sourceStretch = 0;
+    double teapotScale = 1.;
+    bool projective = true;
     if (_scale) {
-        _scale->getValueAtTime(time, scale);
+        _scale->getValueAtTime(time, scalex, scaley);
     }
     if (_sourceScale) {
-        _sourceScale->getValueAtTime(time, sourceScale);
+        _sourceScale->getValueAtTime(time, sourceScalex, sourceScaley);
+    }
+    if (_sourceStretch) {
+        _sourceStretch->getValueAtTime(time, sourceStretch);
+    }
+    if (_teapotScale) {
+        _teapotScale->getValueAtTime(time, teapotScale);
+    }
+    if (_projective) {
+        _projective->getValueAtTime(time, projective);
     }
 
     const OfxPointD& rs = args.renderScale;
@@ -500,21 +514,37 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
     // textures are oriented with Y up (standard orientation)
-    float tymin = 0;
-    float tymax = 1;
+    //float tymin = 0;
+    //float tymax = 1;
 
     // now draw the textured quad containing the source
     glBegin(GL_QUADS);
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
     glBegin (GL_QUADS);
-    glTexCoord2f (0, tymin);
+    if (projective) {
+        glTexCoord4f (0, 0, 0, 1);
+    } else {
+        glTexCoord2f (0, 0);
+    }
     glVertex2f   (0, 0);
-    glTexCoord2f (1, tymin);
-    glVertex2f   (w * sourceScale, 0);
-    glTexCoord2f (1, tymax);
-    glVertex2f   (w * sourceScale, h * sourceScale);
-    glTexCoord2f (0, tymax);
-    glVertex2f   (0, h * sourceScale);
+    if (projective) {
+        glTexCoord4f (1, 0, 0, 1);
+    } else {
+        glTexCoord2f (1, 0);
+    }
+    glVertex2f   (w * sourceScalex, 0);
+    if (projective) {
+        glTexCoord4f ((1 - sourceStretch), (1 - sourceStretch), 0, (1 - sourceStretch));
+    } else {
+        glTexCoord2f (1, 1);
+    }
+    glVertex2f   (w * sourceScalex * (1 + (1 - sourceStretch)) / 2., h * sourceScaley);
+    if (projective) {
+        glTexCoord4f (0, (1 - sourceStretch), 0, (1 - sourceStretch));
+    } else {
+        glTexCoord2f (0, 1);
+    }
+    glVertex2f   (w * sourceScalex * (1 - (1 - sourceStretch)) / 2., h * sourceScaley);
     glEnd ();
 
     glDisable(srcTarget);
@@ -525,9 +555,9 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glBegin(GL_QUADS);
     glColor3f(1.0f, 0, 0); //Set the colour to red
     glVertex2f(10 * rs.x, 10 * rs.y);
-    glVertex2f(10 * rs.x, (10 + HEIGHT * scale) * rs.y);
-    glVertex2f((10 + WIDTH * scale) * rs.x, (10 + HEIGHT * scale) * rs.y);
-    glVertex2f((10 + WIDTH * scale) * rs.x, 10 * rs.y);
+    glVertex2f(10 * rs.x, (10 + HEIGHT * scaley) * rs.y);
+    glVertex2f((10 + WIDTH * scalex) * rs.x, (10 + HEIGHT * scaley) * rs.y);
+    glVertex2f((10 + WIDTH * scalex) * rs.x, 10 * rs.y);
     glEnd();
 
     // Now draw a teapot

@@ -1049,7 +1049,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
     double par = 1., k1 = 0., k2 = 0., k3 = 0., p1 = 0., p2 = 0., cx = 0., cy = 0., squeeze = 1., ax = 0., ay = 0.;
     if (_plugin == eDistortionPluginLensDistortion) {
         int distortionModel_i;
-        _distortionModel->getValue(distortionModel_i);
+        _distortionModel->getValueAtTime(time, distortionModel_i);
         distortionModel = (DistortionModelEnum)distortionModel_i;
         switch (distortionModel) {
             case eDistortionModelNuke:

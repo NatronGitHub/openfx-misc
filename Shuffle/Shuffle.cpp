@@ -536,7 +536,7 @@ public:
 
 private:
     
-    void setChannelsFromRed();
+    void setChannelsFromRed(double time);
     
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
@@ -559,9 +559,10 @@ private:
 
 private:
     
-    bool isIdentityInternal(OFX::Clip*& identityClip);
+    bool isIdentityInternal(double time, OFX::Clip*& identityClip);
     
-    bool getPlaneNeededForParam(const std::list<std::string>& aComponents,
+    bool getPlaneNeededForParam(double time,
+                                const std::list<std::string>& aComponents,
                                 const std::list<std::string>& bComponents,
                                 OFX::ChoiceParam* param,
                                 OFX::Clip** clip,
@@ -806,7 +807,8 @@ ShufflePlugin::buildChannelMenus(const std::list<std::string> &outputComponents)
 }
 
 bool
-ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
+ShufflePlugin::getPlaneNeededForParam(double time,
+                                      const std::list<std::string>& aComponents,
                                       const std::list<std::string>& bComponents,
                                       OFX::ChoiceParam* param,
                                       OFX::Clip** clip,
@@ -818,7 +820,7 @@ ShufflePlugin::getPlaneNeededForParam(const std::list<std::string>& aComponents,
     *clip = 0;
     
     int channelIndex;
-    param->getValue(channelIndex);
+    param->getValueAtTime(time, channelIndex);
     std::string channelEncoded;
     param->getOption(channelIndex, channelEncoded);
     if (channelEncoded.empty()) {
@@ -1056,9 +1058,9 @@ ShufflePlugin::getPlaneNeededInOutput(const std::list<std::string>& components,
 
 
 void
-ShufflePlugin::getClipComponents(const OFX::ClipComponentsArguments& /*args*/, OFX::ClipComponentsSetter& clipComponents)
+ShufflePlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
 {
-    
+    const double time = args.time;
     std::list<std::string> componentsA = _srcClipA->getComponentsPresent();
     std::list<std::string> componentsB = _srcClipB->getComponentsPresent();
     
@@ -1069,7 +1071,7 @@ ShufflePlugin::getClipComponents(const OFX::ClipComponentsArguments& /*args*/, O
         clipComponents.addClipComponents(*_dstClip, ofxComp);
     } else {
         int outputComponents_i;
-        _outputComponents->getValue(outputComponents_i);
+        _outputComponents->getValueAtTime(time, outputComponents_i);
         PixelComponentEnum outputComponents = gOutputComponentsMap[outputComponents_i];
         clipComponents.addClipComponents(*_dstClip, outputComponents);
     }
@@ -1082,7 +1084,7 @@ ShufflePlugin::getClipComponents(const OFX::ClipComponentsArguments& /*args*/, O
         std::string ofxComp,ofxPlane;
         int channelIndex;
         OFX::Clip* clip = 0;
-        bool ok = getPlaneNeededForParam(componentsA, componentsB, params[i], &clip, &ofxPlane, &ofxComp, &channelIndex);
+        bool ok = getPlaneNeededForParam(time, componentsA, componentsB, params[i], &clip, &ofxPlane, &ofxComp, &channelIndex);
         assert(ok);
         if (ofxComp == kParamOutputOption0 || ofxComp == kParamOutputOption1) {
             continue;
@@ -1114,20 +1116,20 @@ struct IdentityChoiceData
 };
 
 bool
-ShufflePlugin::isIdentityInternal(OFX::Clip*& identityClip)
+ShufflePlugin::isIdentityInternal(double time, OFX::Clip*& identityClip)
 {
     if (!gSupportsDynamicChoices || !gIsMultiPlanar) {
         int r_i;
-        _r->getValue(r_i);
+        _r->getValueAtTime(time, r_i);
         InputChannelEnum r = InputChannelEnum(r_i);
         int g_i;
-        _g->getValue(g_i);
+        _g->getValueAtTime(time, g_i);
         InputChannelEnum g = InputChannelEnum(g_i);
         int b_i;
-        _b->getValue(b_i);
+        _b->getValueAtTime(time, b_i);
         InputChannelEnum b = InputChannelEnum(b_i);
         int a_i;
-        _a->getValue(a_i);
+        _a->getValueAtTime(time, a_i);
         InputChannelEnum a = InputChannelEnum(a_i);
         
         if (r == eInputChannelAR && g == eInputChannelAG && b == eInputChannelAB && a == eInputChannelAA && _srcClipA) {
@@ -1151,7 +1153,7 @@ ShufflePlugin::isIdentityInternal(OFX::Clip*& identityClip)
         int expectedIndex = -1;
         for (int i = 0; i < 4; ++i) {
             std::string plane;
-            bool ok = getPlaneNeededForParam(componentsA, componentsB, params[i], &data[i].clip, &plane, &data[i].components, &data[i].index);
+            bool ok = getPlaneNeededForParam(time, componentsA, componentsB, params[i], &data[i].clip, &plane, &data[i].components, &data[i].index);
             assert(ok);
             if (!plane.empty()) {
                 //This is not the color plane, no identity
@@ -1171,16 +1173,18 @@ ShufflePlugin::isIdentityInternal(OFX::Clip*& identityClip)
 }
 
 bool
-ShufflePlugin::isIdentity(const OFX::IsIdentityArguments &/*args*/, OFX::Clip * &identityClip, double &/*identityTime*/)
+ShufflePlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &/*identityTime*/)
 {
-    return isIdentityInternal(identityClip);
+    const double time = args.time;
+    return isIdentityInternal(time, identityClip);
 }
 
 bool
 ShufflePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
+    const double time = args.time;
     OFX::Clip* identityClip = 0;
-    if (isIdentityInternal(identityClip)) {
+    if (isIdentityInternal(time, identityClip)) {
         rod = identityClip->getRegionOfDefinition(args.time);
         return true;
     }
@@ -1212,6 +1216,7 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+    const double time = args.time;
     OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
     if (dstBitDepth != _dstClip->getPixelDepth() ||
@@ -1267,16 +1272,16 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     }
     
     int r_i;
-    _r->getValue(r_i);
+    _r->getValueAtTime(time, r_i);
     r = InputChannelEnum(r_i);
     int g_i;
-    _g->getValue(g_i);
+    _g->getValueAtTime(time, g_i);
     g = InputChannelEnum(g_i);
     int b_i;
-    _b->getValue(b_i);
+    _b->getValueAtTime(time, b_i);
     b = InputChannelEnum(b_i);
     int a_i;
-    _a->getValue(a_i);
+    _a->getValueAtTime(time, a_i);
     a = InputChannelEnum(a_i);
     
     
@@ -1310,13 +1315,13 @@ ShufflePlugin::setupAndProcess(ShufflerBase &processor, const OFX::RenderArgumen
     processor.setSrcImg(srcA.get(),srcB.get());
     
     int outputComponents_i;
-    _outputComponents->getValue(outputComponents_i);
+    _outputComponents->getValueAtTime(time, outputComponents_i);
     PixelComponentEnum outputComponents = gOutputComponentsMap[outputComponents_i];
     assert(dstComponents == outputComponents);
     BitDepthEnum outputBitDepth = srcBitDepth;
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         int outputBitDepth_i;
-        _outputBitDepth->getValue(outputBitDepth_i);
+        _outputBitDepth->getValueAtTime(time, outputBitDepth_i);
         outputBitDepth = gOutputBitDepthMap[outputBitDepth_i];
     }
     assert(outputBitDepth == dstBitDepth);
@@ -1357,6 +1362,7 @@ public:
 void
 ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, const OFX::RenderArguments &args)
 {
+    const double time = args.time;
     std::string dstOfxPlane,dstOfxComp;
     std::list<std::string> outputComponents = _dstClip->getComponentsPresent();
     getPlaneNeededInOutput(outputComponents, _outputComponents, &dstOfxPlane, &dstOfxComp);
@@ -1427,7 +1433,8 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
         InputPlaneChannel p;
         OFX::Clip* clip = 0;
         std::string plane,ofxComp;
-        bool ok = getPlaneNeededForParam(componentsA, componentsB,
+        bool ok = getPlaneNeededForParam(time,
+                                         componentsA, componentsB,
                                          nDstComponents == 1 ? params[3] : params[i],
                                          &clip, &plane, &ofxComp, &p.channelIndex);
         assert(ok);
@@ -1475,7 +1482,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
     BitDepthEnum outputBitDepth = srcBitDepth;
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         int outputBitDepth_i;
-        _outputBitDepth->getValue(outputBitDepth_i);
+        _outputBitDepth->getValueAtTime(time, outputBitDepth_i);
         outputBitDepth = gOutputBitDepthMap[outputBitDepth_i];
     }
     assert(outputBitDepth == dstBitDepth);
@@ -1564,6 +1571,7 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
     if (!_srcClipA || !_srcClipB || !_dstClip) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+    const double time = args.time;
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
@@ -1599,7 +1607,7 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
     } else {
         // set the components of _dstClip
         int outputComponents_i;
-        _outputComponents->getValue(outputComponents_i);
+        _outputComponents->getValueAtTime(time, outputComponents_i);
         PixelComponentEnum outputComponents = gOutputComponentsMap[outputComponents_i];
         assert(dstComponents == outputComponents);
     }
@@ -1607,7 +1615,7 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         // set the bitDepth of _dstClip
         int outputBitDepth_i;
-        _outputBitDepth->getValue(outputBitDepth_i);
+        _outputBitDepth->getValueAtTime(time, outputBitDepth_i);
         BitDepthEnum outputBitDepth = gOutputBitDepthMap[outputBitDepth_i];
         assert(dstBitDepth == outputBitDepth);
     }
@@ -1623,7 +1631,7 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
     
     if (!gIsMultiPlanar) {
         int outputComponents_i;
-        _outputComponents->getValue(outputComponents_i);
+        _outputComponents->getValueAtTime(time, outputComponents_i);
         PixelComponentEnum outputComponents = gOutputComponentsMap[outputComponents_i];
         if (dstComponents != outputComponents) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Shuffle: OFX Host did not take into account output components");
@@ -1634,7 +1642,7 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         // get the bitDepth of _dstClip
         int outputBitDepth_i;
-        _outputBitDepth->getValue(outputBitDepth_i);
+        _outputBitDepth->getValueAtTime(time, outputBitDepth_i);
         BitDepthEnum outputBitDepth = gOutputBitDepthMap[outputBitDepth_i];
         if (dstBitDepth != outputBitDepth) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Shuffle: OFX Host did not take into account output bit depth");
@@ -1700,7 +1708,8 @@ ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
                     break;
             }
         } else if (dstPixelComps == OFX::ePixelComponentRGB) {
-            bool createAlpha = _createAlpha->getValue();
+            bool createAlpha;
+            _createAlpha->getValue(createAlpha);
             if (createAlpha) {
                 dstPixelComps = OFX::ePixelComponentRGBA;
             }
@@ -1805,10 +1814,10 @@ static bool endsWith(const std::string &str, const std::string &suffix)
 }
 
 void
-ShufflePlugin::setChannelsFromRed()
+ShufflePlugin::setChannelsFromRed(double time)
 {
     int r_i;
-    _r->getValue(r_i);
+    _r->getValueAtTime(time, r_i);
     std::string rChannel;
     _r->getOption(r_i, rChannel);
     
@@ -1899,7 +1908,7 @@ ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::str
     }
 #ifdef OFX_EXTENSIONS_NATRON
     else if (paramName == kParamOutputR) {
-        setChannelsFromRed();
+        setChannelsFromRed(args.time);
     }
 #endif
 }

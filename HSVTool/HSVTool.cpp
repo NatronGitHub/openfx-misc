@@ -671,6 +671,7 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+    const double time = args.time;
     OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
     if (dstBitDepth != _dstClip->getPixelDepth() ||
@@ -709,7 +710,7 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
         // set the components of _dstClip
         int outputAlpha_i;
-        _outputAlpha->getValue(outputAlpha_i);
+        _outputAlpha->getValueAtTime(time, outputAlpha_i);
         OutputAlphaEnum outputAlpha = (OutputAlphaEnum)outputAlpha_i;
 
         if (srcBitDepth != dstBitDepth || (outputAlpha == eOutputAlphaSource && srcComponents != dstComponents)) {            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
@@ -736,7 +737,6 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
     processor.setSrcImg(src.get());
     processor.setRenderWindow(args.renderWindow);
 
-    const double time = args.time;
     HSVToolValues values;
     _hueRange->getValueAtTime(time, values.hueRange[0], values.hueRange[1]);
     values.hueRangeWithRolloff[0] = values.hueRangeWithRolloff[1] = 0; // set in setValues()

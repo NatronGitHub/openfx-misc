@@ -488,6 +488,7 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor, const OFX::R
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
+    const double time = args.time;
     OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
     if (dstBitDepth != _dstClip->getPixelDepth() ||
@@ -575,10 +576,10 @@ RectanglePlugin::setupAndProcess(RectangleProcessorBase &processor, const OFX::R
     _color1->getValueAtTime(args.time, color1.r, color1.g, color1.b, color1.a);
     
     bool processR, processG, processB, processA;
-    _processR->getValue(processR);
-    _processG->getValue(processG);
-    _processB->getValue(processB);
-    _processA->getValue(processA);
+    _processR->getValueAtTime(time, processR);
+    _processG->getValueAtTime(time, processG);
+    _processB->getValueAtTime(time, processB);
+    _processA->getValueAtTime(time, processA);
 
     double mix;
     _mix->getValueAtTime(args.time, mix);

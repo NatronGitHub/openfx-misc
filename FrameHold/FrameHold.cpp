@@ -103,7 +103,7 @@ private:
 private:
     double getSourceTime(double time) const;
 
-    void updateSublabel();
+    void updateSublabel(double time);
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -138,13 +138,13 @@ FrameHoldPlugin::getSourceTime(double t) const
 }
 
 void
-FrameHoldPlugin::updateSublabel()
+FrameHoldPlugin::updateSublabel(double time)
 {
     char label[80];
 
     int firstFrame, increment;
-    _firstFrame->getValue(firstFrame);
-    _increment->getValue(increment);
+    _firstFrame->getValueAtTime(time, firstFrame);
+    _increment->getValueAtTime(time, increment);
     if (increment == 0) {
         snprintf(label, sizeof(label), "frame %d", firstFrame);
     } else {
@@ -184,7 +184,7 @@ void
 FrameHoldPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
     if ((paramName == kParamFirstFrame || paramName == kParamIncrement) && args.reason == OFX::eChangeUserEdit) {
-        updateSublabel();
+        updateSublabel(args.time);
     }
 }
 

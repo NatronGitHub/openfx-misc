@@ -592,7 +592,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
     _mix->getValueAtTime(time, mix);
     bool outputCount = false;
     if (dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentAlpha) {
-        _outputCount->getValue(outputCount);
+        _outputCount->getValueAtTime(time, outputCount);
     }
     bool processR, processG, processB, processA;
     _processR->getValueAtTime(time, processR);

@@ -111,8 +111,9 @@ private:
 void
 NoOpPlugin::render(const OFX::RenderArguments &args)
 {
+    const double time = args.time;
     bool forceCopy;
-    _forceCopy->getValue(forceCopy);
+    _forceCopy->getValueAtTime(time, forceCopy);
 
 #ifdef DEBUG
     if (!forceCopy) {
@@ -155,10 +156,11 @@ NoOpPlugin::render(const OFX::RenderArguments &args)
 }
 
 bool
-NoOpPlugin::isIdentity(const IsIdentityArguments &/*args*/, Clip * &identityClip, double &/*identityTime*/)
+NoOpPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
+    const double time = args.time;
     bool forceCopy;
-    _forceCopy->getValue(forceCopy);
+    _forceCopy->getValueAtTime(time, forceCopy);
 
     if (!forceCopy) {
         identityClip = _srcClip;
@@ -171,10 +173,11 @@ NoOpPlugin::isIdentity(const IsIdentityArguments &/*args*/, Clip * &identityClip
 #ifdef OFX_EXTENSIONS_NUKE
 // overridden getTransform
 bool
-NoOpPlugin::getTransform(const OFX::TransformArguments &/*args*/, OFX::Clip * &transformClip, double transformMatrix[9])
+NoOpPlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9])
 {
+    const double time = args.time;
     bool forceCopy;
-    _forceCopy->getValue(forceCopy);
+    _forceCopy->getValueAtTime(time, forceCopy);
     if (forceCopy) {
         return false;
     }

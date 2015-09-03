@@ -496,13 +496,13 @@ AppendClipPlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
 
     const double time = args.time;
     int firstFrame;
-    _firstFrame->getValue(firstFrame);
+    _firstFrame->getValueAtTime(time, firstFrame);
     int fadeIn;
-    _fadeIn->getValue(fadeIn);
+    _fadeIn->getValueAtTime(time, fadeIn);
     int fadeOut;
-    _fadeOut->getValue(fadeOut);
+    _fadeOut->getValueAtTime(time, fadeOut);
     int crossDissolve;
-    _crossDissolve->getValue(crossDissolve);
+    _crossDissolve->getValueAtTime(time, crossDissolve);
     int clip0;
     double t0;
     double alpha0;
@@ -645,13 +645,13 @@ AppendClipPlugin::isIdentity(const OFX::IsIdentityArguments &args,
 {
     const double time = args.time;
     int firstFrame;
-    _firstFrame->getValue(firstFrame);
+    _firstFrame->getValueAtTime(time, firstFrame);
     int fadeIn;
-    _fadeIn->getValue(fadeIn);
+    _fadeIn->getValueAtTime(time, fadeIn);
     int fadeOut;
-    _fadeOut->getValue(fadeOut);
+    _fadeOut->getValueAtTime(time, fadeOut);
     int crossDissolve;
-    _crossDissolve->getValue(crossDissolve);
+    _crossDissolve->getValueAtTime(time, crossDissolve);
     int clip0;
     double t0;
     double alpha0;
@@ -676,13 +676,13 @@ AppendClipPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
 {
     const double time = args.time;
     int firstFrame;
-    _firstFrame->getValue(firstFrame);
+    _firstFrame->getValueAtTime(time, firstFrame);
     int fadeIn;
-    _fadeIn->getValue(fadeIn);
+    _fadeIn->getValueAtTime(time, fadeIn);
     int fadeOut;
-    _fadeOut->getValue(fadeOut);
+    _fadeOut->getValueAtTime(time, fadeOut);
     int crossDissolve;
-    _crossDissolve->getValue(crossDissolve);
+    _crossDissolve->getValueAtTime(time, crossDissolve);
     int clip0, clip1;
     getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, NULL, NULL, &clip1, NULL, NULL, NULL);
     const OfxRectD emptyRoI = {0., 0., 0., 0.};
@@ -699,13 +699,13 @@ AppendClipPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
 {
     const double time = args.time;
     int firstFrame;
-    _firstFrame->getValue(firstFrame);
+    _firstFrame->getValueAtTime(time, firstFrame);
     int fadeIn;
-    _fadeIn->getValue(fadeIn);
+    _fadeIn->getValueAtTime(time, fadeIn);
     int fadeOut;
-    _fadeOut->getValue(fadeOut);
+    _fadeOut->getValueAtTime(time, fadeOut);
     int crossDissolve;
-    _crossDissolve->getValue(crossDissolve);
+    _crossDissolve->getValueAtTime(time, crossDissolve);
     int clip0, clip1;
     double t0, t1;
     getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, NULL, &clip1, &t1, NULL, NULL);
@@ -731,13 +731,13 @@ AppendClipPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
 {
     const double time = args.time;
     int firstFrame;
-    _firstFrame->getValue(firstFrame);
+    _firstFrame->getValueAtTime(time, firstFrame);
     int fadeIn;
-    _fadeIn->getValue(fadeIn);
+    _fadeIn->getValueAtTime(time, fadeIn);
     int fadeOut;
-    _fadeOut->getValue(fadeOut);
+    _fadeOut->getValueAtTime(time, fadeOut);
     int crossDissolve;
-    _crossDissolve->getValue(crossDissolve);
+    _crossDissolve->getValueAtTime(time, crossDissolve);
     int clip0;
     double t0;
     getSources(firstFrame, fadeIn, fadeOut, crossDissolve, time, &clip0, &t0, NULL, NULL, NULL, NULL, NULL);
@@ -750,16 +750,17 @@ AppendClipPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
 }
 
 void
-AppendClipPlugin::changedClip(const OFX::InstanceChangedArgs &/*args*/, const std::string &/*clipName*/)
+AppendClipPlugin::changedClip(const OFX::InstanceChangedArgs &args, const std::string &/*clipName*/)
 {
+    const double time = args.time;
     int firstFrame;
-    _firstFrame->getValue(firstFrame);
+    _firstFrame->getValueAtTime(time, firstFrame);
     int fadeIn;
-    _fadeIn->getValue(fadeIn);
+    _fadeIn->getValueAtTime(time, fadeIn);
     int fadeOut;
-    _fadeOut->getValue(fadeOut);
+    _fadeOut->getValueAtTime(time, fadeOut);
     int crossDissolve;
-    _crossDissolve->getValue(crossDissolve);
+    _crossDissolve->getValueAtTime(time, crossDissolve);
     int lastFrame;
     getSources(firstFrame, fadeIn, fadeOut, crossDissolve, -1, NULL, NULL, NULL, NULL, NULL, NULL, &lastFrame);
     _lastFrame->setValue(lastFrame);
@@ -768,15 +769,16 @@ AppendClipPlugin::changedClip(const OFX::InstanceChangedArgs &/*args*/, const st
 void
 AppendClipPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
+    const double time = args.time;
     if (paramName != kParamLastFrame && args.reason == OFX::eChangeUserEdit) {
         int firstFrame;
-        _firstFrame->getValue(firstFrame);
+        _firstFrame->getValueAtTime(time, firstFrame);
         int fadeIn;
-        _fadeIn->getValue(fadeIn);
+        _fadeIn->getValueAtTime(time, fadeIn);
         int fadeOut;
-        _fadeOut->getValue(fadeOut);
+        _fadeOut->getValueAtTime(time, fadeOut);
         int crossDissolve;
-        _crossDissolve->getValue(crossDissolve);
+        _crossDissolve->getValueAtTime(time, crossDissolve);
         int lastFrame;
         getSources(firstFrame, fadeIn, fadeOut, crossDissolve, -1, NULL, NULL, NULL, NULL, NULL, NULL, &lastFrame);
         _lastFrame->setValue(lastFrame);

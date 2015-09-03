@@ -1146,8 +1146,9 @@ ImageStatisticsPlugin::isIdentity(const OFX::IsIdentityArguments &args,
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
+    const double time = args.time;
     bool autoUpdate;
-    _autoUpdate->getValue(autoUpdate);
+    _autoUpdate->getValueAtTime(time, autoUpdate);
 
     if (!autoUpdate) {
         identityClip = _srcClip;
@@ -1172,11 +1173,12 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
     bool doAnalyzeSequenceRGBA = false;
     bool doAnalyzeSequenceHSVL = false;
     OfxRectI analysisWindow;
+    const double time = args.time;
 
     if (paramName == kParamRestrictToRectangle) {
         // update visibility
         bool restrictToRectangle;
-        _restrictToRectangle->getValue(restrictToRectangle);
+        _restrictToRectangle->getValueAtTime(time, restrictToRectangle);
         _btmLeft->setEnabled(restrictToRectangle);
         _btmLeft->setIsSecret(!restrictToRectangle);
         _size->setEnabled(restrictToRectangle);
@@ -1187,15 +1189,15 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
     }
     if (paramName == kParamAutoUpdate) {
         bool restrictToRectangle;
-        _restrictToRectangle->getValue(restrictToRectangle);
-        _autoUpdate->getValue(doUpdate);
+        _restrictToRectangle->getValueAtTime(time, restrictToRectangle);
+        _autoUpdate->getValueAtTime(time, doUpdate);
         _interactive->setEnabled(restrictToRectangle && doUpdate);
         _interactive->setIsSecret(!restrictToRectangle || !doUpdate);
     }
     if (//paramName == kParamRectangleInteractBtmLeft ||
         // only trigger on kParamRectangleInteractSize (the last one changed)
         paramName == kParamRectangleInteractSize) {
-        _autoUpdate->getValue(doUpdate);
+        _autoUpdate->getValueAtTime(time, doUpdate);
     }
     if (paramName == kParamAnalyzeFrame) {
         doAnalyzeRGBA = true;

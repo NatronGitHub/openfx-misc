@@ -479,6 +479,7 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+    const double time = args.time;
     OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
     if (dstBitDepth != _dstClip->getPixelDepth() ||
@@ -547,10 +548,10 @@ GradePlugin::setupAndProcess(GradeProcessorBase &processor, const OFX::RenderArg
     _mix->getValueAtTime(args.time, mix);
     
     bool processR, processG, processB, processA;
-    _processR->getValue(processR);
-    _processG->getValue(processG);
-    _processB->getValue(processB);
-    _processA->getValue(processA);
+    _processR->getValueAtTime(time, processR);
+    _processG->getValueAtTime(time, processG);
+    _processB->getValueAtTime(time, processB);
+    _processA->getValueAtTime(time, processA);
 
     processor.setValues(blackPoint, whitePoint, black, white, multiply, offset, gamma,
                         clampBlack, clampWhite, premult, premultChannel, mix,

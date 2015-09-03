@@ -125,8 +125,9 @@ private:
 void
 TestGroupsPlugin::render(const OFX::RenderArguments &args)
 {
+    const double time = args.time;
     bool forceCopy;
-    _forceCopy->getValue(forceCopy);
+    _forceCopy->getValueAtTime(time, forceCopy);
 
 #ifdef DEBUG
     if (!forceCopy) {
@@ -174,8 +175,9 @@ TestGroupsPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
     if (!_srcClip) {
         return false;
     }
+    const double time = args.time;
     bool forceCopy;
-    _forceCopy->getValue(forceCopy);
+    _forceCopy->getValueAtTime(time, forceCopy);
 
     if (!forceCopy) {
         identityClip = _srcClip;

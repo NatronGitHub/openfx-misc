@@ -439,6 +439,7 @@ SaturationPlugin::setupAndProcess(SaturationProcessorBase &processor, const OFX:
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+    const double time = args.time;
     OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
     if (dstBitDepth != _dstClip->getPixelDepth() ||
@@ -504,10 +505,10 @@ SaturationPlugin::setupAndProcess(SaturationProcessorBase &processor, const OFX:
     _mix->getValueAtTime(args.time, mix);
     
     bool processR, processG, processB, processA;
-    _processR->getValue(processR);
-    _processG->getValue(processG);
-    _processB->getValue(processB);
-    _processA->getValue(processA);
+    _processR->getValueAtTime(time, processR);
+    _processG->getValueAtTime(time, processG);
+    _processB->getValueAtTime(time, processB);
+    _processA->getValueAtTime(time, processA);
 
     processor.setValues(saturation, luminanceMath,
                         clampBlack, clampWhite, premult, premultChannel, mix,

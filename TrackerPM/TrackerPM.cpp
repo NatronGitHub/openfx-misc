@@ -518,7 +518,7 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
     OfxTime t = args.first;
     bool changeTime = (args.reason == eChangeUserEdit && t == timeLineGetTime());
     std::string name;
-    _instanceName->getValue(name);
+    _instanceName->getValueAtTime(t, name);
     assert((args.forward && args.last >= args.first) || (!args.forward && args.last <= args.first));
     bool showProgress = std::abs(args.last - args.first) > 1;
     if (showProgress) {

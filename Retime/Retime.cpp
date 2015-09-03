@@ -458,7 +458,8 @@ RetimePlugin::getTimeDomain(OfxRangeD &range)
         // If we are a general context, we can changed the duration of the effect, so have a param to do that
         // We need a separate param as it is impossible to derive this from a speed param and the input clip
         // duration (the speed may be animating or wired to an expression).
-        double duration = _duration->getValue(); //don't animate
+        double duration;
+        _duration->getValue(duration); //don't animate
 
         // how many frames on the input clip
         OfxRangeD srcRange = _srcClip->getFrameRange();

@@ -405,6 +405,7 @@ public:
     ColorCorrecter(OFX::ImageEffect &instance, const OFX::RenderArguments &args, bool supportsParametricParameter)
     : ColorCorrecterBase(instance,args)
     {
+        const double time = args.time;
         // build the LUT
         OFX::ParametricParam  *lookupTable = 0;
         if (supportsParametricParameter) {
@@ -418,7 +419,7 @@ public:
                 // evaluate the parametric param
                 double value;
                 if (lookupTable) {
-                    value = lookupTable->getValue(curve, args.time, parametricPos);
+                    value = lookupTable->getValue(curve, time, parametricPos);
                 } else if (curve == 0) {
                     if (parametricPos < 0.09) {
                         value = 1. - parametricPos/0.09;
@@ -718,6 +719,7 @@ void ColorCorrectPlugin::getColorCorrectGroupValues(double time, ColorControlGro
 void
 ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::RenderArguments &args)
 {
+    const double time = args.time;
     std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -787,10 +789,10 @@ ColorCorrectPlugin::setupAndProcess(ColorCorrecterBase &processor, const OFX::Re
     _mix->getValueAtTime(args.time, mix);
     
     bool processR, processG, processB, processA;
-    _processR->getValue(processR);
-    _processG->getValue(processG);
-    _processB->getValue(processB);
-    _processA->getValue(processA);
+    _processR->getValueAtTime(time, processR);
+    _processG->getValueAtTime(time, processG);
+    _processB->getValueAtTime(time, processB);
+    _processA->getValueAtTime(time, processA);
 
     processor.setColorControlValues(masterValues, shadowValues, midtoneValues, highlightValues, clampBlack, clampWhite, premult, premultChannel, mix,
                                     processR,processG,processB,processA);

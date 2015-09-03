@@ -437,7 +437,7 @@ private:
                         if (prev.first != next.first) { // don't create additional points if there is no space for one
                             // create a new control point between two existing control points
                             double parametricPos = (prev.first + next.first)/2.;
-                            double parametricVal = _lookupTable->getValue(component, args.time, parametricPos);
+                            double parametricVal = _lookupTable->getValueAtTime(time, component, args.time, parametricPos);
                             newCtrlPts.push_back(std::make_pair(parametricPos, parametricVal));
                         }
                         prev = next;

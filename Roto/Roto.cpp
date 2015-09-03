@@ -321,6 +321,7 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
+    const double time = args.time;
     OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
     if (dstBitDepth != _dstClip->getPixelDepth() ||
@@ -375,10 +376,10 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     }
 
     bool processR, processG, processB, processA;
-    _processR->getValue(processR);
-    _processG->getValue(processG);
-    _processB->getValue(processB);
-    _processA->getValue(processA);
+    _processR->getValueAtTime(time, processR);
+    _processG->getValueAtTime(time, processG);
+    _processB->getValueAtTime(time, processB);
+    _processA->getValueAtTime(time, processA);
     processor.setValues(processR, processG, processB, processA);
 
     // set the images
@@ -490,6 +491,7 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, do
     if (!_srcClip) {
         return false;
     }
+    const double time = args.time;
     OFX::PixelComponentEnum srcComponents  = _srcClip->getPixelComponents();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
     if (srcComponents != dstComponents) {
@@ -497,16 +499,16 @@ RotoPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, do
     }
 
     bool processA;
-    _processA->getValue(processA);
+    _processA->getValueAtTime(time, processA);
 
     if (srcComponents == ePixelComponentAlpha && !processA) {
         identityClip = _srcClip;
         return true;
     }
     bool processR, processG, processB;
-    _processR->getValue(processR);
-    _processG->getValue(processG);
-    _processB->getValue(processB);
+    _processR->getValueAtTime(time, processR);
+    _processG->getValueAtTime(time, processG);
+    _processB->getValueAtTime(time, processB);
     if (srcComponents == ePixelComponentRGBA && !processR && !processG && !processB && !processA) {
         identityClip = _srcClip;
         return true;

@@ -632,7 +632,7 @@ static bool isNearby(const OfxPointD& p, double x, double y, double tolerance, c
 bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
 {
     //const OfxPointD &pscale = args.pixelScale;
-    const double &time = args.time;
+    const double time = args.time;
     OfxRGBColourD color = { 0.8, 0.8, 0.8 };
     getSuggestedColour(color);
     GLdouble projection[16];
@@ -755,7 +755,7 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
 bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
 {
     const OfxPointD &pscale = args.pixelScale;
-    const double &time = args.time;
+    const double time = args.time;
 
     OfxPointD to[4];
     OfxPointD from[4];
@@ -849,7 +849,7 @@ bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
 bool CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
 {
     const OfxPointD &pscale = args.pixelScale;
-    const double &time = args.time;
+    const double time = args.time;
 
     OfxPointD to[4];
     OfxPointD from[4];
