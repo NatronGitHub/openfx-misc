@@ -7607,6 +7607,9 @@
 				WARNING_CFLAGS = (
 					"-Wextra",
 					"-Wall",
+					"-Wmissing-prototypes",
+					"-Wmissing-declarations",
+					"-Wno-multichar",
 				);
 			};
 			name = Debug;
@@ -7647,6 +7650,9 @@
 				WARNING_CFLAGS = (
 					"-Wextra",
 					"-Wall",
+					"-Wmissing-prototypes",
+					"-Wmissing-declarations",
+					"-Wno-multichar",
 				);
 			};
 			name = Release;
