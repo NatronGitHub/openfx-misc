@@ -20,6 +20,12 @@
  * OFX TestOpenGL plugin.
  */
 
+/*
+ TODO:
+ - add filtering options: nearest, bilinear, trilinear,
+ - add GL_EXT_texture_filter_anisotropic checkbox if supported http://www.informit.com/articles/article.aspx?p=770639&seqNum=2
+ */
+
 #if defined(OFX_SUPPORTS_OPENGLRENDER) || defined(HAVE_OSMESA) // at least one is required for this plugin
 
 #include "TestOpenGL.h"
@@ -57,6 +63,15 @@
 #define kParamSourceScaleLabel "Source Scale"
 #define kParamSourceScaleHint "Scales the source image"
 
+#define kParamSourceStretch "sourceStretch"
+#define kParamSourceStretchLabel "Source Stretch"
+#define kParamSourceStretchHint "Stretches the source image"
+
+#define kParamTeapotScale "teapotScale"
+#define kParamTeapotScaleLabel "Teapot Scale"
+#define kParamTeapotScaleHint "Scales the teapot"
+
+
 #define kParamAngleX "angleX"
 #define kParamAngleXLabel "X Angle"
 #define kParamAngleXHint "Rotation in degrees around the X angle"
@@ -68,6 +83,10 @@
 #define kParamAngleZ "angleZ"
 #define kParamAngleZLabel "Z Angle"
 #define kParamAngleZHint "Rotation in degrees around the Z angle"
+
+#define kParamProjective "projective"
+#define kParamProjectiveLabel "Projective"
+#define kParamProjectiveHint "Une projective texture mapping (effect is noticeable if stretch is nonzero)"
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
 #define kParamUseGPU "useGPUIfAvailable"
@@ -84,9 +103,12 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
 , _srcClip(0)
 , _scale(0)
 , _sourceScale(0)
+, _sourceStretch(0)
+, _teapotScale(0)
 , _angleX(0)
 , _angleY(0)
 , _angleZ(0)
+, _projective(0)
 , _useGPUIfAvailable(0)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -97,13 +119,17 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
            (_srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
                          _srcClip->getPixelComponents() == OFX::ePixelComponentAlpha)));
 
-    _scale = fetchDoubleParam(kParamScale);
-    _sourceScale = fetchDoubleParam(kParamSourceScale);
+    _scale = fetchDouble2DParam(kParamScale);
+    _sourceScale = fetchDouble2DParam(kParamSourceScale);
+    _sourceStretch = fetchDoubleParam(kParamSourceStretch);
+    _teapotScale = fetchDoubleParam(kParamTeapotScale);
     assert(_scale && _sourceScale);
     _angleX = fetchDoubleParam(kParamAngleX);
     _angleY = fetchDoubleParam(kParamAngleY);
     _angleZ = fetchDoubleParam(kParamAngleZ);
     assert(_angleX && _angleY && _angleZ);
+    _projective = fetchBooleanParam(kParamProjective);
+    assert(_projective);
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     _useGPUIfAvailable = fetchBooleanParam(kParamUseGPU);
     assert(_useGPUIfAvailable);
@@ -276,14 +302,14 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamScale);
+        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamScale);
         param->setLabel(kParamScaleLabel);
         param->setHint(kParamScaleHint);
         // say we are a scaling parameter
         param->setDoubleType(eDoubleTypeScale);
-        param->setDefault(1.);
-        param->setRange(0., kOfxFlagInfiniteMax);
-        param->setDisplayRange(0., 10.);
+        param->setDefault(1., 1.);
+        param->setRange(0., 0., kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
+        param->setDisplayRange(0., 0., 10., 10.);
         param->setIncrement(0.01);
         if (page) {
             page->addChild(*param);
@@ -291,9 +317,37 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     }
 
     {
-        OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSourceScale);
+        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamSourceScale);
         param->setLabel(kParamSourceScaleLabel);
         param->setHint(kParamSourceScaleHint);
+        // say we are a scaling parameter
+        param->setDoubleType(eDoubleTypeScale);
+        param->setDefault(1., 1.);
+        param->setRange(0., 0., kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
+        param->setDisplayRange(0., 0., 10., 10.);
+        param->setIncrement(0.01);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamSourceStretch);
+        param->setLabel(kParamSourceStretchLabel);
+        param->setHint(kParamSourceStretchHint);
+        param->setDefault(0.);
+        param->setRange(0., 0.999);
+        param->setDisplayRange(0., 1.);
+        param->setIncrement(0.01);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamTeapotScale);
+        param->setLabel(kParamTeapotScaleLabel);
+        param->setHint(kParamTeapotScaleHint);
         // say we are a scaling parameter
         param->setDoubleType(eDoubleTypeScale);
         param->setDefault(1.);
@@ -347,6 +401,16 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
             page->addChild(*param);
         }
     }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProjective);
+        param->setLabel(kParamProjectiveLabel);
+        param->setHint(kParamProjectiveHint);
+        param->setDefault(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     {

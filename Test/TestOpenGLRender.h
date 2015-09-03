@@ -605,7 +605,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glRotatef(angleY, 0., 1., 0.);
     glRotatef(angleZ, 0., 0., 1.);
     glEnable(srcTarget); // it deserves testure
-    glutSolidTeapot(h/4.);
+    glutSolidTeapot(teapotScale * h/4.);
     glDisable(srcTarget);
     glPopMatrix();
 

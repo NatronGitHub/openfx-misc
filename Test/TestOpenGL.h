@@ -67,11 +67,14 @@ private:
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
 
-    OFX::DoubleParam *_scale;
-    OFX::DoubleParam *_sourceScale;
+    OFX::Double2DParam *_scale;
+    OFX::Double2DParam *_sourceScale;
+    OFX::DoubleParam *_sourceStretch;
+    OFX::DoubleParam *_teapotScale;
     OFX::DoubleParam *_angleX;
     OFX::DoubleParam *_angleY;
     OFX::DoubleParam *_angleZ;
+    OFX::BooleanParam *_projective;
     OFX::BooleanParam *_useGPUIfAvailable;
 };
 
