@@ -75,7 +75,12 @@ private:
     OFX::DoubleParam *_angleY;
     OFX::DoubleParam *_angleZ;
     OFX::BooleanParam *_projective;
+    OFX::BooleanParam *_mipmap;
+    OFX::BooleanParam *_anisotropic;
     OFX::BooleanParam *_useGPUIfAvailable;
+
+    bool _haveAniso;
+    float _maxAnisoMax;
 };
 
 #endif // Misc_TestOpenGL_h

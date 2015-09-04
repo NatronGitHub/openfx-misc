@@ -20,12 +20,6 @@
  * OFX TestOpenGL plugin.
  */
 
-/*
- TODO:
- - add filtering options: nearest, bilinear, trilinear,
- - add GL_EXT_texture_filter_anisotropic checkbox if supported http://www.informit.com/articles/article.aspx?p=770639&seqNum=2
- */
-
 #if defined(OFX_SUPPORTS_OPENGLRENDER) || defined(HAVE_OSMESA) // at least one is required for this plugin
 
 #include "TestOpenGL.h"
@@ -86,7 +80,15 @@
 
 #define kParamProjective "projective"
 #define kParamProjectiveLabel "Projective"
-#define kParamProjectiveHint "Une projective texture mapping (effect is noticeable if stretch is nonzero)"
+#define kParamProjectiveHint "Use projective texture mapping (effect is noticeable if stretch is nonzero)"
+
+#define kParamMipmap "mipmap"
+#define kParamMipmapLabel "Mipmap"
+#define kParamMipmapHint "Use mipmapping (if supported)"
+
+#define kParamAnisotropic "anisotropic"
+#define kParamAnisotropicLabel "Anisotropic"
+#define kParamAnisotropicHint "Use anisotropic texture filtering (if supported)"
 
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
 #define kParamUseGPU "useGPUIfAvailable"
@@ -109,6 +111,8 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
 , _angleY(0)
 , _angleZ(0)
 , _projective(0)
+, _mipmap(0)
+, _anisotropic(0)
 , _useGPUIfAvailable(0)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -129,7 +133,9 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
     _angleZ = fetchDoubleParam(kParamAngleZ);
     assert(_angleX && _angleY && _angleZ);
     _projective = fetchBooleanParam(kParamProjective);
-    assert(_projective);
+    _mipmap = fetchBooleanParam(kParamMipmap);
+    _anisotropic = fetchBooleanParam(kParamAnisotropic);
+    assert(_projective && _mipmap && _anisotropic);
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && defined(HAVE_OSMESA)
     _useGPUIfAvailable = fetchBooleanParam(kParamUseGPU);
     assert(_useGPUIfAvailable);
@@ -405,6 +411,24 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamProjective);
         param->setLabel(kParamProjectiveLabel);
         param->setHint(kParamProjectiveHint);
+        param->setDefault(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMipmap);
+        param->setLabel(kParamMipmapLabel);
+        param->setHint(kParamMipmapHint);
+        param->setDefault(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAnisotropic);
+        param->setLabel(kParamAnisotropicLabel);
+        param->setHint(kParamAnisotropicHint);
         param->setDefault(true);
         if (page) {
             page->addChild(*param);

@@ -300,6 +300,7 @@
 		1E34520D190695DC0080D699 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1E3452131906961F0080D699 /* ColorCorrect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B4C95E18D9DA410004137D /* ColorCorrect.cpp */; };
 		1E3452141906961F0080D699 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B4C96218D9DA410004137D /* PluginRegistration.cpp */; };
+		1E398DAB1B9900A600C98B28 /* libGLU.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E398DAA1B99008E00C98B28 /* libGLU.a */; };
 		1E3AC8C918B6207600F228A6 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E3AC8CA18B6207600F228A6 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E3AC8CB18B6207600F228A6 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -2442,6 +2443,7 @@
 		1E3451F6190695850080D699 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E3451F7190695850080D699 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1E345211190695DC0080D699 /* ColorCorrect.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorCorrect.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1E398DAA1B99008E00C98B28 /* libGLU.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libGLU.a; path = lib/libGLU.a; sourceTree = OSMESA_PATH; };
 		1E3AC8D618B6207600F228A6 /* Switch.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Switch.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E3AC8DD18B6215F00F228A6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E3AC8DE18B6215F00F228A6 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -3204,6 +3206,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E2868D51B832BB400B18774 /* libMangledOSMesa32.a in Frameworks */,
+				1E398DAB1B9900A600C98B28 /* libGLU.a in Frameworks */,
 				1EBAEFDD199A81DB0037B3E6 /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3906,6 +3909,7 @@
 		1E551EDA17994E8100A4135C /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				1E398DAA1B99008E00C98B28 /* libGLU.a */,
 				1E2868D41B832BB400B18774 /* libMangledOSMesa32.a */,
 				1E551F5A179950EC00A4135C /* OpenGL.framework */,
 			);

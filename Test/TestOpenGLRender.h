@@ -51,10 +51,24 @@
 
 #ifndef DEBUG
 #define DPRINT(args) (void)0
+#define glCheckError() ( (void)0 )
 #else
 #include <cstdio> // vsnprintf, fwrite
 #include <cstdarg> // ...
 #include <cstring> // strlen
+#include <iostream>
+
+// put a breakpoint in glError to halt the debugger
+inline void glError() {}
+
+#define glCheckError()                                                  \
+    {                                                                   \
+        GLenum _glerror_ = glGetError();                                \
+        if (_glerror_ != GL_NO_ERROR) {                                 \
+            std::cout << "GL_ERROR :" << __FILE__ << " " << __LINE__ << " " << gluErrorString(_glerror_) << std::endl; \
+            glError();                                                  \
+        }                                                               \
+    }
 
 #define DPRINT(args) print_dbg args
 static
@@ -73,6 +87,7 @@ void print_dbg(const char *fmt, ...)
     va_end(ap);
 }
 #endif
+
 
 /* The OpenGL teapot */
 
@@ -282,10 +297,80 @@ glutSolidTeapot(GLdouble scale)
 
 /* ENDCENTRY */
 
+static
+int glutExtensionSupported( const char* extension )
+{
+    const char *extensions, *start;
+    const size_t len = strlen( extension );
+
+    /* Make sure there is a current window, and thus a current context available */
+    //FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutExtensionSupported" );
+    //freeglut_return_val_if_fail( fgStructure.CurrentWindow != NULL, 0 );
+
+    if (strchr(extension, ' '))
+        return 0;
+    start = extensions = (const char *) glGetString(GL_EXTENSIONS);
+
+    /* XXX consider printing a warning to stderr that there's no current
+     * rendering context.
+     */
+    //freeglut_return_val_if_fail( extensions != NULL, 0 );
+    if (extensions == NULL) {
+        return 0;
+    }
+
+    while (1) {
+        const char *p = strstr(extensions, extension);
+        if (!p)
+            return 0;  /* not found */
+        /* check that the match isn't a super string */
+        if ((p == start || p[-1] == ' ') && (p[len] == ' ' || p[len] == 0))
+            return 1;
+        /* skip the false match and continue */
+        extensions = p + len;
+    }
+    
+    return 0 ;
+}
+
 void
 TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 {
     const double time = args.time;
+    double scalex = 1;
+    double scaley = 1;
+    double sourceScalex = 1;
+    double sourceScaley = 1;
+    double sourceStretch = 0;
+    double teapotScale = 1.;
+    bool projective = true;
+    bool mipmap = true;
+    bool anisotropic = true;
+    if (_scale) {
+        _scale->getValueAtTime(time, scalex, scaley);
+    }
+    if (_sourceScale) {
+        _sourceScale->getValueAtTime(time, sourceScalex, sourceScaley);
+    }
+    if (_sourceStretch) {
+        _sourceStretch->getValueAtTime(time, sourceStretch);
+    }
+    if (_teapotScale) {
+        _teapotScale->getValueAtTime(time, teapotScale);
+    }
+    if (_projective) {
+        _projective->getValueAtTime(time, projective);
+    }
+    if (_mipmap) {
+        _mipmap->getValueAtTime(time, mipmap);
+    }
+    if (_anisotropic) {
+        _anisotropic->getValueAtTime(time, anisotropic);
+    }
+
+    if (args.renderQualityDraft) {
+        mipmap = anisotropic = false;
+    }
 
 # ifdef OFX_SUPPORTS_OPENGLRENDER
     const int& gl_enabled = args.openGLEnabled;
@@ -413,7 +498,6 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
-    contextAttachedMesa();
 
     /* Allocate the image buffer */
     void* buffer = dst->getPixelData();
@@ -424,6 +508,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     }
+    contextAttachedMesa();
 
     // load the source image into a texture
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -435,6 +520,12 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     OfxRectI srcBounds = src->getBounds();
     glActiveTextureARB(GL_TEXTURE0_ARB);
     glBindTexture(srcTarget, srcIndex);
+    if (mipmap) {
+        // this must be done before glTexImage2D
+        glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
+        // requires extension GL_SGIS_generate_mipmap or OpenGL 1.4.
+        glTexParameteri(srcTarget, GL_GENERATE_MIPMAP, GL_TRUE); // Allocate the mipmaps
+    }
 
     glTexImage2D(srcTarget, 0, format,
                  srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
@@ -451,36 +542,6 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 
     
 #endif
-
-#ifdef DEBUG
-    DPRINT(("GL_RENDERER   = %s\n", (char *) glGetString(GL_RENDERER)));
-    DPRINT(("GL_VERSION    = %s\n", (char *) glGetString(GL_VERSION)));
-    DPRINT(("GL_VENDOR     = %s\n", (char *) glGetString(GL_VENDOR)));
-    DPRINT(("GL_EXTENSIONS = %s\n", (char *) glGetString(GL_EXTENSIONS)));
-#endif
-    // get the scale parameter
-    double scalex = 1;
-    double scaley = 1;
-    double sourceScalex = 1;
-    double sourceScaley = 1;
-    double sourceStretch = 0;
-    double teapotScale = 1.;
-    bool projective = true;
-    if (_scale) {
-        _scale->getValueAtTime(time, scalex, scaley);
-    }
-    if (_sourceScale) {
-        _sourceScale->getValueAtTime(time, sourceScalex, sourceScaley);
-    }
-    if (_sourceStretch) {
-        _sourceStretch->getValueAtTime(time, sourceStretch);
-    }
-    if (_teapotScale) {
-        _teapotScale->getValueAtTime(time, teapotScale);
-    }
-    if (_projective) {
-        _projective->getValueAtTime(time, projective);
-    }
 
     const OfxPointD& rs = args.renderScale;
 
@@ -509,8 +570,24 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glBindTexture(srcTarget, srcIndex);
     glTexParameteri(srcTarget, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(srcTarget, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    //glTexParameteri(srcTarget, GL_TEXTURE_BASE_LEVEL, 0);
+    //glTexParameteri(srcTarget, GL_TEXTURE_MAX_LEVEL, 1);
+    //glTexParameterf(srcTarget, GL_TEXTURE_MIN_LOD, -1);
+    //glTexParameterf(srcTarget, GL_TEXTURE_MAX_LOD, 1);
     glTexParameteri(srcTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(srcTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // With opengl render, we don't know if mipmaps were generated by the host.
+    // check if mipmaps exist for that texture (we only check if level 1 exists)
+    {
+        int width = 0;
+        glGetTexLevelParameteriv(srcTarget, 1, GL_TEXTURE_WIDTH, &width);
+        if (width == 0) {
+            mipmap = false;
+        }
+    }
+    glTexParameteri(srcTarget, GL_TEXTURE_MIN_FILTER, mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+    if (anisotropic && _haveAniso) {
+        glTexParameterf(srcTarget, GL_TEXTURE_MAX_ANISOTROPY_EXT, _maxAnisoMax);
+    }
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
     // textures are oriented with Y up (standard orientation)
@@ -693,16 +770,29 @@ void getGlslVersion(int *major, int *minor)
 void
 TestOpenGLPlugin::contextAttached()
 {
+#ifdef DEBUG
+    DPRINT(("GL_RENDERER   = %s\n", (char *) glGetString(GL_RENDERER)));
+    DPRINT(("GL_VERSION    = %s\n", (char *) glGetString(GL_VERSION)));
+    DPRINT(("GL_VENDOR     = %s\n", (char *) glGetString(GL_VENDOR)));
+    DPRINT(("GL_EXTENSIONS = %s\n", (char *) glGetString(GL_EXTENSIONS)));
+#endif
     // Non-power-of-two textures are supported if the GL version is 2.0 or greater, or if the implementation exports the GL_ARB_texture_non_power_of_two extension. (Mesa does, of course)
     int major, minor;
     getGlVersion(&major, &minor);
     if (major < 2) {
-        const char *extstr = (const char *) glGetString(GL_EXTENSIONS);
-        if ((extstr == NULL) ||
-            (strstr(extstr, "GL_ARB_texture_non_power_of_two") == NULL)) {
+        if (!glutExtensionSupported("GL_ARB_texture_non_power_of_two")) {
             sendMessage(OFX::Message::eMessageError, "", "Can not render: OpenGL 2.0 or GL_ARB_texture_non_power_of_two is required.");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
+    }
+    if (major < 3) {
+    }
+    _haveAniso = glutExtensionSupported("GL_EXT_texture_filter_anisotropic");
+    if (_haveAniso) {
+        GLfloat MaxAnisoMax;
+        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &MaxAnisoMax);
+        _maxAnisoMax = MaxAnisoMax;
+        DPRINT(("GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = %f\n", _maxAnisoMax));
     }
 }
 
