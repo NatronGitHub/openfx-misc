@@ -109,12 +109,12 @@
 #define kParamRetimeOffset "retimeOffset"
 #define kParamRetimeOffsetLabel "Retime Offset"
 #define kParamRetimeOffsetHint "Offset to the retime map."
-#define kParamRetimeOffsetDefault "0."
+#define kParamRetimeOffsetDefault 0.
 
 #define kParamRetimeGain "retimeGain"
 #define kParamRetimeGainLabel "Retime Offset"
 #define kParamRetimeGainHint "Gain applied to the retime map (after offset)."
-#define kParamRetimeGainDefault "-10"
+#define kParamRetimeGainDefault -10
 
 #define kParamRetimeAbsolute "retimeAbsolute"
 #define kParamRetimeAbsoluteLabel "Absolute"
@@ -123,7 +123,7 @@
 
 #define kParamFrameRange "frameRange"
 #define kParamFrameRangeLabel "Max. Frame Range"
-#define kParamFrameRangeHint "Gain applied to the retime map (after offset)."
+#define kParamFrameRangeHint "Maximum input frame range to fetch images from (may be relative or absolute, depending on the \"absolute\" parameter). Only used if the Retime Map is connected."
 #define kParamFrameRangeDefault -10,0
 
 #define kParamFilter "filter"
@@ -146,7 +146,6 @@ enum FilterEnum {
 };
 #define kParamFilterDefault eFilterNearest
 
-#if 0
 
 namespace OFX {
     extern ImageEffectHostDescription gHostDescription;
@@ -159,76 +158,50 @@ protected:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;            /**< @brief Mandated output clips */
     OFX::Clip *_srcClip;            /**< @brief Mandated input clips */
+    OFX::Clip *_retimeMapClip;      /**< @brief Optional retime map */
 
-    OFX::BooleanParam  *_reverse_input;
-    OFX::DoubleParam  *_sourceTime; /**< @brief mandated parameter, only used in the retimer context. */
-    OFX::DoubleParam  *_retimeOffset;      /**< @brief only used in the filter or general context. */
-    OFX::ParametricParam  *_warp;      /**< @brief only used in the filter or general context. */
-    OFX::DoubleParam  *_duration;   /**< @brief how long the output should be as a proportion of input. General context only. */
-    OFX::ChoiceParam  *_filter;   /**< @brief how images are interpolated (or not). */
+    OFX::DoubleParam  *_retimeOffset;
+    OFX::DoubleParam  *_retimeGain;
+    OFX::BooleanParam *_retimeAbsolute;
+    OFX::Int2DParam *_frameRange;
+    OFX::ChoiceParam *_filter;   /**< @brief how images are interpolated (or not). */
 
 public:
     /** @brief ctor */
-    SlitScanPlugin(OfxImageEffectHandle handle, bool supportsParametricParameter)
+    SlitScanPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
     , _dstClip(0)
     , _srcClip(0)
-    , _reverse_input(0)
-    , _sourceTime(0)
+    , _retimeMapClip(0)
     , _retimeOffset(0)
-    , _warp(0)
-    , _duration(0)
+    , _retimeGain(0)
+    , _retimeAbsolute(0)
+    , _frameRange(0)
     , _filter(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        _retimeMapClip = fetchClip(kClipRetimeMap);
 
-        // What parameters we instantiate depend on the context
-        if (getContext() == OFX::eContextSlitScanr) {
-            // fetch the mandated parameter which the host uses to pass us the frame to retime to
-            _sourceTime = fetchDoubleParam(kOfxImageEffectSlitScanrParamName);
-            assert(_sourceTime);
-        } else { // context == OFX::eContextFilter || context == OFX::eContextGeneral
-            // filter context means we are in charge of how to retime, and our example is using a retimeOffset curve to do that
-            _reverse_input = fetchBooleanParam(kParamReverseInput);
-            _retimeOffset = fetchDoubleParam(kParamRetimeOffset);
-            assert(_retimeOffset);
-            if (supportsParametricParameter) {
-                _warp = fetchParametricParam(kParamWarp);
-                assert(_warp);
-            } else if (getContext() == OFX::eContextGeneral) {
-                // fetch duration param for general context
-                _duration = fetchDoubleParam(kParamDuration);
-                assert(_duration);
-            }
-        }
         _filter = fetchChoiceParam(kParamFilter);
         assert(_filter);
     }
 
+private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
-    template <int nComponents>
-    void renderInternal(const OFX::RenderArguments &args, double sourceTime, FilterEnum filter, OFX::BitDepthEnum dstBitDepth);
+    //template <int nComponents>
+    //void renderInternal(const OFX::RenderArguments &args, double sourceTime, FilterEnum filter, OFX::BitDepthEnum dstBitDepth);
 
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
-    /* override the time domain action, only for the general context */
-    virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
-
-    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
-
     /* set up and run a processor */
-    void setupAndProcess(OFX::ImageBlenderBase &, const OFX::RenderArguments &args, double sourceTime, FilterEnum filter);
+    //void setupAndProcess(OFX::SlitScanerBase &, const OFX::RenderArguments &args, double sourceTime, FilterEnum filter);
 
-private:
-
-
-    bool isIdentityInternal(OfxTime time, OFX::Clip* &identityClip, OfxTime &identityTime);
 };
 
 
@@ -253,37 +226,7 @@ checkComponents(const OFX::Image &src,
     }
 }
 
-static void framesNeeded(double sourceTime, OFX::FieldEnum fieldToRender, double *fromTimep, double *toTimep, double *blendp)
-{
-    // figure the two images we are blending between
-    double fromTime, toTime;
-    double blend;
-
-    if (fieldToRender == OFX::eFieldNone) {
-        // unfielded, easy peasy
-        fromTime = std::floor(sourceTime);
-        toTime = fromTime + 1;
-        blend = sourceTime - fromTime;
-    } else {
-        // Fielded clips, pook. We are rendering field doubled images,
-        // and so need to blend between fields, not frames.
-        double frac = sourceTime - std::floor(sourceTime);
-        if (frac < 0.5) {
-            // need to go between the first and second fields of this frame
-            fromTime = std::floor(sourceTime); // this will get the first field
-            toTime   = fromTime + 0.5;    // this will get the second field of the same frame
-            blend    = frac * 2.0;        // and the blend is between those two
-        } else { // frac > 0.5
-            fromTime = std::floor(sourceTime) + 0.5; // this will get the second field of this frame
-            toTime   = std::floor(sourceTime) + 1.0; // this will get the first field of the next frame
-            blend    = (frac - 0.5) * 2.0;
-        }
-    }
-    *fromTimep = fromTime;
-    *toTimep = toTime;
-    *blendp = blend;
-}
-
+#if 0
 /* set up and run a processor */
 void
 SlitScanPlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
@@ -377,6 +320,7 @@ SlitScanPlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 }
+#endif
 
 void
 SlitScanPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
@@ -386,143 +330,77 @@ SlitScanPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
         return;
     }
     const double time = args.time;
-    double sourceTime;
-    if (getContext() == OFX::eContextSlitScanr) {
-        // the host is specifying it, so fetch it from the kOfxImageEffectSlitScanrParamName pseudo-param
-        sourceTime = _sourceTime->getValueAtTime(time);
-    } else {
-        bool reverse_input;
-        OfxRangeD srcRange = _srcClip->getFrameRange();
-        _reverse_input->getValueAtTime(time, reverse_input);
-        // we have our own param, which is a retimeOffset, so we integrate it to get the time we want
-        if (reverse_input) {
-            sourceTime = srcRange.max - _retimeOffset->integrate(srcRange.min, time);
+    double tmin, tmax;
+    bool retimeAbsolute;
+    _retimeAbsolute->getValueAtTime(time, retimeAbsolute);
+    if (_retimeMapClip->isConnected()) {
+        int t1, t2;
+        _frameRange->getValueAtTime(time, t1, t2);
+        if (retimeAbsolute) {
+            tmin = std::min(t1, t2);
+            tmax = std::max(t1, t2);
         } else {
-            sourceTime = srcRange.min + _retimeOffset->integrate(srcRange.min, time);
+            tmin = time + std::min(t1, t2);
+            tmax = time + std::max(t1, t2);
         }
-        if (_warp) {
-            double r = srcRange.max - srcRange.min;
-            if (r != 0.) {
-                sourceTime = srcRange.min + r * _warp->getValueAtTime(time, 0, time, (sourceTime-srcRange.min)/r);
-            }
+    } else {
+        double retimeOffset, retimeGain;
+        _retimeOffset->getValueAtTime(time, retimeOffset);
+        _retimeGain->getValueAtTime(time, retimeGain);
+        tmin = (retimeGain >  0) ? retimeOffset : retimeOffset + retimeGain;
+        tmax = (retimeGain <= 0) ? retimeOffset : retimeOffset + retimeGain;
+        if (!retimeAbsolute) {
+            tmin += time;
+            tmax += time;
         }
-    }
+        int filter_i;
+        _filter->getValueAtTime(time, filter_i);
+        FilterEnum filter = (FilterEnum)filter_i;
+        if (filter == eFilterNearest) {
+            tmin = std::floor(tmin + 0.5);
+            tmax = std::floor(tmax + 0.5);
+        } else if (filter == eFilterLinear) {
+            tmin = std::floor(tmin);
+            tmax = std::ceil(tmax);
+        }
 
-    int filter_i;
-    _filter->getValueAtTime(time, filter_i);
-    FilterEnum filter = (FilterEnum)filter_i;
+    }
 
     OfxRangeD range;
-    if (sourceTime == (int)sourceTime || filter == eFilterNone) {
-        range.min = sourceTime;
-        range.max = sourceTime;
-    } else if (filter == eFilterNearest) {
-        range.min = range.max = std::floor(sourceTime + 0.5);
-    } else if (filter == eFilterLinear) {
-        // figure the two images we are blending between
-        double fromTime, toTime;
-        double blend;
-        // whatever the rendered field is, the frames are the same
-        framesNeeded(sourceTime, OFX::eFieldNone, &fromTime, &toTime, &blend);
-        range.min = fromTime;
-        range.max = toTime;
-    } else {
-        assert(false);
-    }
+    range.min = tmin;
+    range.max = tmax;
     frames.setFramesNeeded(*_srcClip, range);
-}
-
-bool
-SlitScanPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
-{
-    OFX::Clip* identityClip;
-    OfxTime identityTime;
-    bool identity = isIdentityInternal(args.time, identityClip, identityTime);
-    if (!identity) {
-        return false;
-    }
-    rod = _srcClip->getRegionOfDefinition(identityTime, args.view);
-    return true;
-}
-
-bool
-SlitScanPlugin::isIdentityInternal(OfxTime time, OFX::Clip* &identityClip, OfxTime &identityTime)
-{
-    if (!_srcClip) {
-        return false;
-    }
-    double sourceTime;
-    if (getContext() == OFX::eContextSlitScanr) {
-        // the host is specifying it, so fetch it from the kOfxImageEffectSlitScanrParamName pseudo-param
-        sourceTime = _sourceTime->getValueAtTime(time);
-    } else {
-        bool reverse_input;
-        OfxRangeD srcRange = _srcClip->getFrameRange();
-        _reverse_input->getValueAtTime(time, reverse_input);
-        // we have our own param, which is a retimeOffset, so we integrate it to get the time we want
-        if (reverse_input) {
-            sourceTime = srcRange.max - _retimeOffset->integrate(srcRange.min, time);
-        } else {
-            sourceTime = srcRange.min + _retimeOffset->integrate(srcRange.min, time);
-        }
-        if (_warp) {
-            double r = srcRange.max - srcRange.min;
-            if (r != 0.) {
-                sourceTime = srcRange.min + r * _warp->getValueAtTime(time, 0, time, (sourceTime-srcRange.min)/r);
-            }
-        }
-    }
-    int filter_i;
-    _filter->getValueAtTime(time, filter_i);
-    FilterEnum filter = (FilterEnum)filter_i;
-
-    if (sourceTime == (int)sourceTime || filter == eFilterNone) {
-        identityClip = _srcClip;
-        identityTime = sourceTime;
-        return true;
-    }
-    if (filter == eFilterNearest) {
-        identityClip = _srcClip;
-        identityTime = std::floor(sourceTime + 0.5);
-        return true;
-    }
-
-    return false;
 }
 
 bool
 SlitScanPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime)
 {
-    return isIdentityInternal(args.time, identityClip, identityTime);
-}
-
-
-/* override the time domain action, only for the general context */
-bool
-SlitScanPlugin::getTimeDomain(OfxRangeD &range)
-{
-    // this should only be called in the general context, ever!
-    if (getContext() == OFX::eContextGeneral && _srcClip && _duration) {
-        assert(!_warp);
-        // If we are a general context, we can changed the duration of the effect, so have a param to do that
-        // We need a separate param as it is impossible to derive this from a retimeOffset param and the input clip
-        // duration (the retimeOffset may be animating or wired to an expression).
-        double duration = _duration->getValueAtTime(time, ); //don't animate
-
-        // how many frames on the input clip
-        OfxRangeD srcRange = _srcClip->getFrameRange();
-
-        range.min = srcRange.min;
-        range.max = srcRange.min + (srcRange.max-srcRange.min) * duration;
-
+    const double time = args.time;
+    double retimeGain;
+    _retimeGain->getValueAtTime(time, retimeGain);
+    if (retimeGain == 0.) {
+        double retimeOffset;
+        _retimeOffset->getValueAtTime(time, retimeOffset);
+        bool retimeAbsolute;
+        _retimeAbsolute->getValueAtTime(time, retimeAbsolute);
+        identityTime = retimeAbsolute ? retimeOffset : (time + retimeOffset);
+        int filter_i;
+        if (identityTime != (int)identityTime) {
+            _filter->getValueAtTime(time, filter_i);
+            FilterEnum filter = (FilterEnum)filter_i;
+            if (filter == eFilterNearest) {
+                identityTime = std::floor(identityTime + 0.5);
+            } else {
+                return false; // result is blended
+            }
+        }
+        identityClip = _srcClip;
         return true;
     }
-
-    // If there's a warp curve, the time domain could be determined from the intersections of the warp curve with y=0 and y=1.
-    // for now, we prefer returning the input time domain.
     return false;
 }
 
+#if 0
 // the internal render function
 template <int nComponents>
 void
@@ -551,6 +429,7 @@ SlitScanPlugin::renderInternal(const OFX::RenderArguments &args,
             OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
+#endif
 
 // the overridden render function
 void
@@ -563,6 +442,8 @@ SlitScanPlugin::render(const OFX::RenderArguments &args)
 
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+
+#if 0
 
     // figure the frame we should be retiming from
     double sourceTime = time;
@@ -612,6 +493,9 @@ SlitScanPlugin::render(const OFX::RenderArguments &args)
         assert(dstComponents == OFX::ePixelComponentAlpha);
         renderInternal<1>(args, sourceTime, filter, dstBitDepth);
     }
+#else
+    OFX::throwSuiteStatusException(kOfxStatFailed);
+#endif
 }
 
 using namespace OFX;
@@ -633,8 +517,6 @@ void SlitScanPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
-    // Say we are a transition context
-    desc.addSupportedContext(OFX::eContextSlitScanr);
     desc.addSupportedContext(OFX::eContextFilter);
     desc.addSupportedContext(OFX::eContextGeneral);
 
@@ -666,7 +548,6 @@ void SlitScanPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 /** @brief The describe in context function, passed a plugin descriptor and a context */
 void SlitScanPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
 {
-    // we are a transition, so define the sourceTo input clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
@@ -675,6 +556,12 @@ void SlitScanPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     srcClip->setTemporalClipAccess(true); // say we will be doing random time access on this clip
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setFieldExtraction(eFieldExtractDoubled); // which is the default anyway
+
+    ClipDescriptor *retimeMapClip = desc.defineClip(kClipRetimeMap);
+    retimeMapClip->addSupportedComponent(ePixelComponentAlpha);
+    retimeMapClip->setSupportsTiles(kSupportsTiles);
+    retimeMapClip->setOptional(true);
+    retimeMapClip->setIsMask(false);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
@@ -688,96 +575,43 @@ void SlitScanPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     // make a page to put it in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    // what param we have is dependant on the host
-    if (context == OFX::eContextSlitScanr) {
-        // Define the mandated kOfxImageEffectSlitScanrParamName param, note that we don't do anything with this other than.
-        // describe it. It is not a true param but how the host indicates to the plug-in which frame
-        // it wants you to retime to. It appears on no plug-in side UI, it is purely the host's to manage.
-        DoubleParamDescriptor *param = desc.defineDoubleParam(kOfxImageEffectSlitScanrParamName);
-        (void)param;
-    }  else {
-        // We are a general or filter context, define a retimeOffset param and a page of controls to put that in
-        // reverse_input
-        {
-            BooleanParamDescriptor *param = desc.defineBooleanParam(kParamReverseInput);
-            param->setDefault(false);
-            param->setHint(kParamReverseInputHint);
-            param->setLabel(kParamReverseInputLabel);
-            param->setAnimates(true);
-            if (page) {
-                page->addChild(*param);
-            }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamRetimeOffset);
+        param->setDefault(kParamRetimeOffsetDefault);
+        param->setHint(kParamRetimeOffsetHint);
+        param->setLabel(kParamRetimeOffsetLabel);
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
         }
-
-        {
-            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamRetimeOffset);
-            param->setLabel(kParamRetimeOffsetLabel);
-            param->setHint(kParamRetimeOffsetHint);
-            param->setDefault(1);
-            param->setRange(-FLT_MAX, FLT_MAX);
-            param->setIncrement(0.05);
-            param->setDisplayRange(0.1, 10.);
-            param->setAnimates(true); // can animate
-            param->setDoubleType(eDoubleTypeScale);
-            if (page) {
-                page->addChild(*param);
-            }
+    }
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamRetimeGain);
+        param->setDefault(kParamRetimeGainDefault);
+        param->setHint(kParamRetimeGainHint);
+        param->setLabel(kParamRetimeGainLabel);
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
         }
-
-        const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
-        const bool supportsParametricParameter = (gHostDescription.supportsParametricParameter &&
-                                                  !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                    (gHostDescription.versionMajor == 8 || gHostDescription.versionMajor == 9))); // Nuke 8 and 9 are known to *not* support Parametric
-        if (supportsParametricParameter) {
-            OFX::PageParamDescriptor* page = desc.definePageParam(kPageTimeWarp);
-            if (page) {
-                page->setLabel(kPageTimeWarpLabel);
-            }
-            {
-                OFX::ParametricParamDescriptor* param = desc.defineParametricParam(kParamWarp);
-                assert(param);
-                param->setLabel(kParamWarpLabel);
-                param->setHint(kParamWarpHint);
-
-                // define it as one dimensional
-                param->setDimension(1);
-                param->setDimensionLabel(kParamWarp, 0);
-
-                const OfxRGBColourD blue  = {0.5, 0.5, 1};		//set blue color to blue curve
-                param->setUIColour( 0, blue );
-
-                // set the min/max parametric range to 0..1
-                param->setRange(0.0, 1.0);
-
-                param->setIdentity(0);
-
-                // add param to page
-                if (page) {
-                    page->addChild(*param);
-                }
-            }
-        } else if (context == OFX::eContextGeneral) {
-            // If we are a general context, we can change the duration of the effect, so have a param to do that
-            // We need a separate param as it is impossible to derive this from a retimeOffset param and the input clip
-            // duration (the retimeOffset may be animating or wired to an expression).
-
-            // This is not possible if there's a warp curve.
-
-            // We are a general or filter context, define a retimeOffset param and a page of controls to put that in
-            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamDuration);
-            param->setLabel(kParamDurationLabel);
-            param->setHint(kParamDurationHint);
-            param->setDefault(1);
-            param->setRange(0, 10);
-            param->setIncrement(0.1);
-            param->setDisplayRange(0, 10);
-            param->setAnimates(false); // no animation here!
-            param->setDoubleType(eDoubleTypeScale);
-
-            // add param to page
-            if (page) {
-                page->addChild(*param);
-            }
+    }
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamRetimeAbsolute);
+        param->setDefault(kParamRetimeAbsoluteDefault);
+        param->setHint(kParamRetimeAbsoluteHint);
+        param->setLabel(kParamRetimeAbsoluteLabel);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        Int2DParamDescriptor *param = desc.defineInt2DParam(kParamFrameRange);
+        param->setDefault(kParamFrameRangeDefault);
+        param->setHint(kParamFrameRangeHint);
+        param->setLabel(kParamFrameRangeLabel);
+        param->setDimensionLabels("min", "max");
+        if (page) {
+            page->addChild(*param);
         }
     }
 
@@ -785,8 +619,6 @@ void SlitScanPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamFilter);
         param->setLabel(kParamFilterLabel);
         param->setHint(kParamFilterHint);
-        assert(param->getNOptions() == eFilterNone);
-        param->appendOption(kParamFilterOptionNone, kParamFilterOptionNoneHint);
         assert(param->getNOptions() == eFilterNearest);
         param->appendOption(kParamFilterOptionNearest, kParamFilterOptionNearestHint);
         assert(param->getNOptions() == eFilterLinear);
@@ -803,19 +635,14 @@ void SlitScanPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
 ImageEffect* SlitScanPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
-    const bool supportsParametricParameter = (gHostDescription.supportsParametricParameter &&
-                                              !(gHostDescription.hostName == "uk.co.thefoundry.nuke" &&
-                                                (gHostDescription.versionMajor == 8 || gHostDescription.versionMajor == 9)));
-    return new SlitScanPlugin(handle, supportsParametricParameter);
+    return new SlitScanPlugin(handle);
 }
-
-#endif
 
 void getSlitScanPluginID(OFX::PluginFactoryArray &ids)
 {
-#pragma message WARN("TODO")
-    //static SlitScanPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    //ids.push_back(&p);
+#ifdef DEBUG
+    static SlitScanPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    ids.push_back(&p);
+#endif
 }
 
