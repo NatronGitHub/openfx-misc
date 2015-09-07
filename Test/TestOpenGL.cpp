@@ -114,6 +114,8 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
 , _mipmap(0)
 , _anisotropic(0)
 , _useGPUIfAvailable(0)
+, _haveAniso(false)
+, _maxAnisoMax(1.)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
