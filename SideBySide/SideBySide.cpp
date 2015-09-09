@@ -212,6 +212,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
     std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
     }
     OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
@@ -234,6 +235,7 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
     view2_->getValueAtTime(args.time, view2);
     if (!_srcClip) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
     }
     std::auto_ptr<const OFX::Image> src1((_srcClip && _srcClip->isConnected()) ?
                                          _srcClip->fetchStereoscopicImage(args.time, view1) : 0);
