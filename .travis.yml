@@ -52,7 +52,7 @@ script:
   - make $J nomulti CONFIG=debug
   - if [ "$CC" = "gcc" ]; then
       make -C CImg clean;
-      make -C CImg CONFIG=debug CXXFLAGS_ADD=-fopenmp LDFLAGS_ADD=-fopenmp
+      make -C CImg CONFIG=debug CXXFLAGS_ADD=-fopenmp LDFLAGS_ADD=-fopenmp;
     fi
 
 addons:
