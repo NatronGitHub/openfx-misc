@@ -59,7 +59,11 @@
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
+#ifdef cimg_use_openmp
+#define kHostFrameThreading false
+#else
 #define kHostFrameThreading true
+#endif
 #define kSupportsRGBA true
 #define kSupportsRGB true
 #define kSupportsAlpha true
@@ -88,6 +92,12 @@
 #define kParamIterationsLabel "Iterations"
 #define kParamIterationsHint "Number of iterations. A reasonable value is 1."
 #define kParamIterationsDefault 1
+
+#ifdef cimg_use_openmp
+#define test_abort() if (!omp_get_thread_num() && abort()) throw CImgAbortException("")
+#else
+#define test_abort() if (abort()) throw CImgAbortException("")
+#endif
 
 using namespace OFX;
 using namespace cimg_library;
@@ -147,9 +157,7 @@ public:
         double alpha = args.renderScale.x * params.alpha;
         double sigma = args.renderScale.x * params.sigma;
         for (int i = 1; i < params.iterations; ++i) {
-            if (abort()) {
-                return;
-            }
+	  test_abort();
 #ifdef CIMG_ABORTABLE
             // args
             const float amplitude = (float)params.amplitude;
@@ -169,14 +177,12 @@ public:
                 G.blur(sigma);
             }
 #ifdef cimg_use_openmp
-#pragma omp parallel for if (_width>=32 && _height>=16)
+#pragma omp parallel for if (G.width()>=32 && G.height()>=16)
 #endif
             cimg_forY(G,y) {
                 CImg<Tfloat> val, vec;
                 Tfloat *ptrG0 = G.data(0,y,0,0), *ptrG1 = G.data(0,y,0,1), *ptrG2 = G.data(0,y,0,2);
-                if (abort()) {
-                    return;
-                }
+		test_abort();
                 cimg_forX(G,x) {
                     G.get_tensor_at(x,y).symmetric_eigen(val,vec);
                     if (val[0]<0) val[0] = 0;
@@ -187,15 +193,13 @@ public:
                 }
             }
 #ifdef cimg_use_openmp
-#pragma omp parallel for if (_width*_height>=512 && _spectrum>=2)
+#pragma omp parallel for if (cimg.width()*cimg.height()>=512 && cimg.spectrum()>=2)
 #endif
             cimg_forC(cimg,c) {
                 Tfloat *ptrd = velocity.data(0,0,0,c), veloc_max = 0;
                 CImg_3x3(I,Tfloat);
                 cimg_for3(cimg._height,y) {
-                    if (abort()) {
-                        return;
-                    }
+		    test_abort();
                     for (int x = 0,
                          _p1x = 0,
                          _n1x = (int)(

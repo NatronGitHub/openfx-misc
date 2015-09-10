@@ -50,6 +50,10 @@ script:
     fi
   - make $J CONFIG=debug
   - make $J nomulti CONFIG=debug
+  - if [ "$CC" = "gcc" ]; then
+      make -C CImg clean;
+      make -C CImg CONFIG=debug CXXFLAGS_ADD=-fopenmp LDFLAGS_ADD=-fopenmp
+    fi
 
 addons:
   coverity_scan:

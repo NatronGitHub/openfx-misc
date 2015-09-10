@@ -66,7 +66,11 @@
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
+#ifdef cimg_use_openmp
+#define kHostFrameThreading false
+#else
 #define kHostFrameThreading true
+#endif
 #define kSupportsRGBA true
 #define kSupportsRGB true
 #define kSupportsAlpha true
