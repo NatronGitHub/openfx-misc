@@ -46,7 +46,7 @@
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
-#define kSupportsMultipleClipPARs false
+#define kSupportsMultipleClipPARs true
 #define kSupportsMultipleClipDepths true
 #define kRenderThreadSafety eRenderFullySafe
 
