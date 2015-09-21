@@ -73,17 +73,22 @@
 #    endif
 
 #   elif defined(__GNUC__)
-#    if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 8)
-// The C++11 thread_local keyword is supported in GCC only since 4.8
+//#    if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 8)
+//// The C++11 thread_local keyword is supported in GCC only since 4.8
+//#      define thread_local __thread
+//#    endif
+//#    define HAVE_THREAD_LOCAL
+// __thread became widely supported with GCC 4.7
+#    if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7)
 #      define thread_local __thread
+#      define HAVE_THREAD_LOCAL
 #    endif
-#    define HAVE_THREAD_LOCAL
 #   endif
 # endif
 #endif
 
 #if !defined(HAVE_THREAD_LOCAL)
-#  warning "CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang."
+#  warning "Most CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang."
 #endif
 
 
