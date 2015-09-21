@@ -58,12 +58,32 @@
 # elif defined __GNUC__ || \
        defined __SUNPRO_C || \
        defined __xlC__
-#  define thread_local __thread
-#  define HAVE_THREAD_LOCAL
-# else
-//#  error "Cannot define thread_local"
-#  warning "CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang."
+// Clang 3.4 also support SD-6 (feature test macros __cpp_*), but no thread local macro
+#   if defined(__clang__)
+#    if __has_feature(cxx_thread_local)
+// thread_local was added in Clang 3.3
+// Still requires libstdc++ from GCC 4.8
+// For that __GLIBCXX__ isn't good enough
+// Also the MacOS build of clang does *not* support thread local yet.
+#      define thread_local __thread
+#      define HAVE_THREAD_LOCAL
+#    elif __has_feature(c_thread_local) || __has_extension(c_thread_local)
+#      define thread_local _Thread_local
+#      define HAVE_THREAD_LOCAL
+#    endif
+
+#   elif defined(__GNUC__)
+#    if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 8)
+// The C++11 thread_local keyword is supported in GCC only since 4.8
+#      define thread_local __thread
+#    endif
+#    define HAVE_THREAD_LOCAL
+#   endif
 # endif
+#endif
+
+#if !defined(HAVE_THREAD_LOCAL)
+#  warning "CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang."
 #endif
 
 
