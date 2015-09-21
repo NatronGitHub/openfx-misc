@@ -39,7 +39,8 @@
 #define kPluginName "MergeOFX"
 #define kPluginGrouping "Merge"
 #define kPluginDescription \
-"Pixel-by-pixel merge operation between the two inputs.\n" \
+"Pixel-by-pixel merge operation between two or more inputs.\n" \
+"Input A is first merged with B (B is non-optional), then A2, if connected, is merged with the intermediary result, then A3, etc.\n" \
 "A complete explanation of the different operators can be found in \"Compositing Digital Images\", by T. Porter & T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
 "See also:\n" \
 "- \"Digital Image Compositing\" by Marc Levoy https://graphics.stanford.edu/courses/cs248-06/comp/comp.html\n" \
@@ -955,7 +956,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
     
     //Optional: If we want a render to be triggered even if one of the inputs is not connected
     //they need to be optional.
-    srcClipB->setOptional(true);
+    srcClipB->setOptional(false); // B clip is non-optional
 
     OFX::ClipDescriptor* srcClipA = desc.defineClip(kClipA);
     srcClipA->addSupportedComponent( OFX::ePixelComponentRGBA );
