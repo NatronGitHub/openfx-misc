@@ -76,7 +76,7 @@
 #define kParamUpdateLastFrameLabel "Update"
 #define kParamUpdateLastFrameHint "Update lastFrame."
 
-#define kClipSourceCount 16
+#define kClipSourceCount 64
 #define kClipSourceOffset 1 // clip numbers start
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -850,9 +850,8 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kNatronOfxHostName ||
-                            (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName &&
-                             OFX::getImageEffectHostDescription()->versionMajor >= 2));
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
+                            OFX::getImageEffectHostDescription()->versionMajor >= 2);
 
     int clipSourceCount = numerousInputs ? kClipSourceCount : 2;
 
@@ -865,8 +864,8 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
             int i = 0;
             int clipNumber = i + kClipSourceOffset;
-            name[0] = '0' + clipNumber;
-            name[1] = 0;
+            name[0] = (clipNumber < 10) ? ('0' + clipNumber) : ('0' + clipNumber / 10);
+            name[1] = (clipNumber < 10) ?                  0 : ('0' + clipNumber % 10);
             srcClip = desc.defineClip(name);
             srcClip->setOptional(true);
         }
@@ -915,6 +914,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             ClipDescriptor *srcClip;
             char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
             int clipNumber = i + kClipSourceOffset;
+            assert(clipNumber < 100);
             name[0] = (clipNumber < 10) ? ('0' + clipNumber) : ('0' + clipNumber / 10);
             name[1] = (clipNumber < 10) ?                  0 : ('0' + clipNumber % 10);
             srcClip = desc.defineClip(name);
@@ -1011,9 +1011,8 @@ AppendClipPluginFactory::createInstance(OfxImageEffectHandle handle,
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kNatronOfxHostName ||
-                            (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName &&
-                             OFX::getImageEffectHostDescription()->versionMajor >= 2));
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
+                            OFX::getImageEffectHostDescription()->versionMajor >= 2);
 
     return new AppendClipPlugin(handle, numerousInputs);
 }

@@ -54,7 +54,7 @@
 #define kParamWhichLabel "Which"
 #define kParamWhichHint "Mix factor between the inputs."
 
-#define kClipSourceCount 16
+#define kClipSourceCount 64
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -492,9 +492,8 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kNatronOfxHostName ||
-                            (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName &&
-                             OFX::getImageEffectHostDescription()->versionMajor >= 2));
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
+                            OFX::getImageEffectHostDescription()->versionMajor >= 2);
 
     int clipSourceCount = numerousInputs ? kClipSourceCount : 2;
 
@@ -549,6 +548,7 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             assert(i < 100);
             ClipDescriptor *srcClip;
             char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
+            assert(i < 100);
             name[0] = (i < 10) ? ('0' + i) : ('0' + i / 10);
             name[1] = (i < 10) ?         0 : ('0' + i % 10);
             srcClip = desc.defineClip(name);
@@ -605,9 +605,8 @@ DissolvePluginFactory::createInstance(OfxImageEffectHandle handle,
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kNatronOfxHostName ||
-                            (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName &&
-                             OFX::getImageEffectHostDescription()->versionMajor >= 2));
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
+                            OFX::getImageEffectHostDescription()->versionMajor >= 2);
 
     return new DissolvePlugin(handle, numerousInputs);
 }

@@ -91,7 +91,7 @@
 #define kClipA "A"
 #define kClipB "B"
 
-#define kMaximumAInputs 10
+#define kMaximumAInputs 64
 
 using namespace OFX;
 using namespace MergeImages2D;
@@ -942,9 +942,8 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kNatronOfxHostName ||
-                            (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName &&
-                             OFX::getImageEffectHostDescription()->versionMajor >= 2));
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
+                            OFX::getImageEffectHostDescription()->versionMajor >= 2);
 
     OFX::ClipDescriptor* srcClipB = desc.defineClip(kClipB);
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
@@ -983,6 +982,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         for (int i = 2; i <= kMaximumAInputs; ++i) {
             assert(i < 100);
             char name[4] = { 'A', 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
+            assert(i < 100);
             name[1] = (i < 10) ? ('0' + i) : ('0' + i / 10);
             name[2] = (i < 10) ?         0 : ('0' + i % 10);
             OFX::ClipDescriptor* optionalSrcClip = desc.defineClip(name);
@@ -1117,9 +1117,8 @@ MergePluginFactory<plugin>::createInstance(OfxImageEffectHandle handle, OFX::Con
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kNatronOfxHostName ||
-                            (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName &&
-                             OFX::getImageEffectHostDescription()->versionMajor >= 2));
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
+                            OFX::getImageEffectHostDescription()->versionMajor >= 2);
 
     return new MergePlugin(handle, numerousInputs);
 }
