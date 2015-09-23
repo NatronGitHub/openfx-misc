@@ -338,6 +338,8 @@ private:
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
     
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    
 private:
     template<int nComponents>
     void renderForComponents(const OFX::RenderArguments &args);
@@ -761,6 +763,16 @@ MergePlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+void
+MergePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
+{
+    OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+    clipPreferences.setClipComponents(*_srcClipA, outputComps);
+    clipPreferences.setClipComponents(*_srcClipB, outputComps);
+    for (unsigned i = 0; i < _optionalASrcClips.size(); ++i) {
+        clipPreferences.setClipComponents(*_optionalASrcClips[i], outputComps);
+    }
+}
 
 void
 MergePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
