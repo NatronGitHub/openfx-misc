@@ -60,8 +60,8 @@
 #endif
 
 #define kParamOutputChannels kNatronOfxParamOutputChannels
-#define kParamOutputChannelsLabel "Output Channels"
-#define kParamOutputChannelsHint "The channels that will be written to in output"
+#define kParamOutputChannelsLabel "Output Layer"
+#define kParamOutputChannelsHint "The layer that will be written to in output"
 
 
 #define kParamOutputBitDepth "outputBitDepth"
