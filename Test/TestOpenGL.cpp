@@ -266,6 +266,8 @@ TestOpenGLPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsOpenGLRender(true);
 #else
     desc.setNeedsOpenGLRender(true);
+    desc.setSupportsRenderQuality(true);
+
     /*
      * If a host supports OpenGL rendering then it flags this with the string
      * property ::kOfxImageEffectOpenGLRenderSupported on its descriptor property
