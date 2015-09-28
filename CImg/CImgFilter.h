@@ -292,7 +292,7 @@ public:
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const Params& params, OfxRectI* roi) = 0;
 
-    virtual bool getRoD(const OfxRectI& /*srcRoD*/, const OfxPointD& /*renderScale*/, const Params& /*params*/, OfxRectI* /*dstRoD*/) { return false; };
+    virtual bool getRegionOfDefinition(const OfxRectI& /*srcRoD*/, const OfxPointD& /*renderScale*/, const Params& /*params*/, OfxRectI* /*dstRoD*/) { return false; };
 
     virtual void render(const OFX::RenderArguments &args, const Params& params, int x1, int y1, cimg_library::CImg<float>& cimg) = 0;
 
@@ -927,7 +927,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionOfDefinition(const OFX
     }
     OfxRectI rodPixel;
 
-    bool ret = getRoD(srcRoDPixel, args.renderScale, params, &rodPixel);
+    bool ret = getRegionOfDefinition(srcRoDPixel, args.renderScale, params, &rodPixel);
     if (ret) {
         double pixelaspectratio = _dstClip ? _dstClip->getPixelAspectRatio() : 1.;
         OFX::Coords::toCanonical(rodPixel, args.renderScale, pixelaspectratio, &rod);

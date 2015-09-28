@@ -32,6 +32,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsPixelProcessor.h"
 #include "ofxsMacros.h"
+#include "ofxsCoords.h"
 
 #define kPluginName "ShuffleOFX"
 #define kPluginGrouping "Channel"
@@ -1191,11 +1192,8 @@ ShufflePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &arg
     if (_srcClipA && _srcClipA->isConnected() && _srcClipB && _srcClipB->isConnected()) {
         OfxRectD rodA = _srcClipA->getRegionOfDefinition(args.time);
         OfxRectD rodB = _srcClipB->getRegionOfDefinition(args.time);
-        rod.x1 = std::min(rodA.x1, rodB.x1);
-        rod.y1 = std::min(rodA.y1, rodB.y1);
-        rod.x2 = std::max(rodA.x2, rodB.x2);
-        rod.y2 = std::max(rodA.y2, rodB.y2);
-        
+        OFX::Coords::rectBoundingBox(rodA, rodB, &rod);
+
         return true;
     }
     return false;

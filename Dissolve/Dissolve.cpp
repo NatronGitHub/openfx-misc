@@ -427,10 +427,7 @@ DissolvePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
     if (_srcClip[prev] && _srcClip[prev]->isConnected() && _srcClip[next] && _srcClip[next]->isConnected()) {
         OfxRectD fromRoD = _srcClip[prev]->getRegionOfDefinition(args.time);
         OfxRectD toRoD = _srcClip[next]->getRegionOfDefinition(args.time);
-        rod.x1 = std::min(fromRoD.x1, toRoD.x1);
-        rod.y1 = std::min(fromRoD.y1, toRoD.y1);
-        rod.x2 = std::max(fromRoD.x2, toRoD.x2);
-        rod.y2 = std::max(fromRoD.y2, toRoD.y2);
+        OFX::Coords::rectBoundingBox(fromRoD, toRoD, &rod);
 
         return true;
     }

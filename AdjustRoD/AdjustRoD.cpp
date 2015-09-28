@@ -163,6 +163,9 @@ AdjustRoDPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
         return;
     }
     const OfxRectD srcRod = _srcClip->getRegionOfDefinition(args.time);
+    if (OFX::Coords::rectIsEmpty(srcRod) || OFX::Coords::rectIsEmpty(args.regionOfInterest)) {
+        return;
+    }
     double w,h;
     _size->getValueAtTime(args.time, w, h);
     
@@ -187,6 +190,9 @@ AdjustRoDPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
         return false;
     }
     const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(args.time);
+    if (OFX::Coords::rectIsEmpty(srcRod)) {
+        return false;
+    }
     double w,h;
     _size->getValueAtTime(args.time, w, h);
     

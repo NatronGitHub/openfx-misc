@@ -383,11 +383,7 @@ CopyRectanglePlugin::setupAndProcess(CopyRectangleProcessorBase &processor, cons
     double softness;
     _softness->getValueAtTime(args.time, softness);
     softness *= args.renderScale.x;
-    
-    const OfxRectD& dstRoD = _dstClip->getRegionOfDefinition(args.time);
-    OfxRectI dstRoDPix;
-    Coords::toPixelEnclosing(dstRoD, args.renderScale, par, &dstRoDPix);
-    
+
     bool processR;
     bool processG;
     bool processB;

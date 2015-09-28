@@ -379,7 +379,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
     int bboxChoice;
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    //Do the same as isIdentity otherwise the result of getRoD() might not be coherent with the RoD of the identity clip.
+    //Do the same as isIdentity otherwise the result of getRegionOfDefinition() might not be coherent with the RoD of the identity clip.
     if (mix == 0.) {
         rod = rodB;
         return true;

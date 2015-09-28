@@ -774,10 +774,7 @@ RadialPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
     if (_srcClip && _srcClip->isConnected()) {
         // something has to be drawn outside of the rectangle: return union of input RoD and rectangle
         const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(args.time);
-        rod.x1 = std::min(rod.x1, srcRoD.x1);
-        rod.x2 = std::max(rod.x2, srcRoD.x2);
-        rod.y1 = std::min(rod.y1, srcRoD.y1);
-        rod.y2 = std::max(rod.y2, srcRoD.y2);
+        OFX::Coords::rectBoundingBox(rod, srcRoD, &rod);
     } else if (!wasCaught) {
         //The generator is in default mode, if the source clip is connected, take its rod, otherwise take
         //the rod of the project

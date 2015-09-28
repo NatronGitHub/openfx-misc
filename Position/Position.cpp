@@ -181,6 +181,9 @@ PositionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
     }
     const double time = args.time;
     OfxRectD srcrod = _srcClip->getRegionOfDefinition(time);
+    if (OFX::Coords::rectIsEmpty(srcrod)) {
+        return false;
+    }
     double par = _dstClip->getPixelAspectRatio();
     OfxPointD t_canonical;
     _translate->getValueAtTime(time, t_canonical.x, t_canonical.y);
@@ -215,6 +218,9 @@ PositionPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args
     }
     const double time = args.time;
     OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+    if (OFX::Coords::rectIsEmpty(srcRod)) {
+        return;
+    }
     double par = _dstClip->getPixelAspectRatio();
     OfxPointD t_canonical;
     _translate->getValueAtTime(time, t_canonical.x, t_canonical.y);

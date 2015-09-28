@@ -362,7 +362,7 @@ public:
         _expandRoD->getValueAtTime(time, params.expandRoD);
     }
 
-    bool getRoD(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgErodeSmoothParams& params, OfxRectI* dstRoD) OVERRIDE FINAL
+    bool getRegionOfDefinition(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgErodeSmoothParams& params, OfxRectI* dstRoD) OVERRIDE FINAL
     {
         double sx = renderScale.x * std::abs(params.sizex);
         double sy = renderScale.y * std::abs(params.sizey);

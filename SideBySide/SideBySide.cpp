@@ -30,6 +30,7 @@
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
+#include "ofxsCoords.h"
 
 #define kPluginName "SideBySideOFX"
 #define kPluginGrouping "Views/Stereo"
@@ -311,7 +312,9 @@ SideBySidePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
     // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask
     rod = _srcClip->getRegionOfDefinition(args.time, view1);
     OfxRectD rightRod = _srcClip->getRegionOfDefinition(args.time, view2);
-
+    if (OFX::Coords::rectIsEmpty(rightRod)) {
+        return false;
+    }
     if (vertical) {
         rod.y2 = rod.y2 + (rightRod.y2 - rightRod.y1);
     } else {
@@ -332,7 +335,10 @@ SideBySidePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
     
     // our RoD is defined with respect to the 'Source' clip's, we are not interested in the mask
     OfxRectD roi = _srcClip->getRegionOfDefinition(args.time);
-    
+    if (OFX::Coords::rectIsEmpty(roi)) {
+        return;
+    }
+
     // since getRegionsOfInterest is not view-specific, return a full horizontal or vertical band
     if (vertical) {
         roi.x1 = args.regionOfInterest.x1;

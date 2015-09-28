@@ -374,7 +374,7 @@ public:
         _expandRoD->getValueAtTime(time, params.expandRoD);
     }
 
-    bool getRoD(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* dstRoD) OVERRIDE FINAL
+    bool getRegionOfDefinition(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* dstRoD) OVERRIDE FINAL
     {
         double sx = renderScale.x * params.sizex;
         double sy = renderScale.y * params.sizey;

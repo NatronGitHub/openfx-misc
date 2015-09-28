@@ -30,6 +30,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
+#include "ofxsCoords.h"
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
@@ -239,7 +240,9 @@ NoOpPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, 
     }
 
     const OfxRectD srcRoD = _srcClip->getRegionOfDefinition(args.time);
-
+    if (OFX::Coords::rectIsEmpty(srcRoD)) {
+        return false;
+    }
     rod = srcRoD;
     rod.x1 *= pixelAspectRatio / srcPAR;
     rod.x2 *= pixelAspectRatio / srcPAR;

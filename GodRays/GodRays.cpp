@@ -21,8 +21,6 @@
  */
 
 #include "GodRays.h"
-#include "ofxsTransform3x3.h"
-#include "ofxsTransformInteract.h"
 
 #include <cmath>
 #include <iostream>
@@ -30,6 +28,10 @@
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
+
+#include "ofxsTransform3x3.h"
+#include "ofxsTransformInteract.h"
+#include "ofxsCoords.h"
 
 #define kPluginName "GodRaysOFX"
 #define kPluginGrouping "Filter"
@@ -649,7 +651,7 @@ GodRaysPlugin::resetCenter(double time)
         rod.y1 <= kOfxFlagInfiniteMin || kOfxFlagInfiniteMax <= rod.y2) {
         return;
     }
-    if (rod.x1 == 0. && rod.x2 == 0. && rod.y1 == 0. && rod.y2 == 0.) {
+    if (OFX::Coords::rectIsEmpty(rod)) {
         // default to project window
         OfxPointD offset = getProjectOffset();
         OfxPointD size = getProjectSize();
