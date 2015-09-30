@@ -1,0 +1,31 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:1.41421;">
+    <g id="GMICExpr">
+        <g transform="matrix(1.55576,0,0,1.28465,-34.9004,-29.2868)">
+            <path d="M88,64L42,64C42,64 44.63,75.408 44.63,93C44.63,105.903 42,113 42,113C42,113 40.055,122.152 64,122C92.049,121.822 88,113 88,113C88,113 85.272,104.972 85.272,93C85.272,76.416 88,64 88,64Z" style="fill:rgb(230,230,230);"/>
+        </g>
+        <g transform="matrix(1.17759,0,0,1.28465,-11.3687,-29.2868)">
+            <ellipse cx="66" cy="64" rx="48" ry="14" style="fill:rgb(163,163,163);"/>
+        </g>
+        <g transform="matrix(1.28465,0,0,1.28465,-18.4342,-29.2868)">
+            <ellipse cx="66" cy="64" rx="25" ry="6" style="fill:black;"/>
+        </g>
+        <g transform="matrix(0.999731,-0.0232006,0.0232006,0.999731,6.47967,4.52771)">
+            <g>
+                <g transform="matrix(1.09229,-0.432631,0.98366,2.48351,-39.405,-5.24823)">
+                    <rect x="39" y="23" width="84" height="3" style="fill:black;"/>
+                </g>
+                <g transform="matrix(0.208056,-0.0824059,0.98366,2.48351,-4.91976,-18.907)">
+                    <rect x="39" y="23" width="84" height="3" style="fill:rgb(230,230,230);"/>
+                </g>
+                <g transform="matrix(0.208056,-0.0824059,0.98366,2.48351,69.3562,-48.3259)">
+                    <rect x="39" y="23" width="84" height="3" style="fill:rgb(230,230,230);"/>
+                </g>
+            </g>
+        </g>
+        <g transform="matrix(2.35516,0,0,2.35516,-62.2717,-164.606)">
+            <text x="43px" y="120.526px" style="font-family:Open Sans;font-size:39.819px;font-weight:700;fill:black;">ε</text>
+        </g>
+    </g>
+</svg>

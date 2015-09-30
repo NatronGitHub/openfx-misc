@@ -41,7 +41,7 @@
 #define kPluginName          "GMICExpr"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-"Quickly generate image from mathematical formula evaluated for each pixel of the selected images.\n"\
+"Quickly generate or process image from mathematical formula evaluated for each pixel.\n"\
 "Full documentation for G'MIC/CImg expressions can be found at http://gmic.eu/reference.shtml#section9\n"\
 "The only difference is the predefined variables 't' (current time) and 'k' (render scale).\n"\
 "\n"\

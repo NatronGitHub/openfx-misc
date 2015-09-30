@@ -15,6 +15,8 @@ net.sf.cimg.CImgErode.png \
 net.sf.cimg.CImgErode.svg \
 net.sf.cimg.CImgErodeSmooth.png \
 net.sf.cimg.CImgErodeSmooth.svg \
+net.sf.cimg.CImgExpression.png \
+net.sf.cimg.CImgExpression.svg \
 net.sf.cimg.CImgGuided.png \
 net.sf.cimg.CImgGuided.svg \
 net.sf.cimg.CImgLaplacian.png \
@@ -36,7 +38,7 @@ CIMG_INCLUDE ?= /opt/local/include
 CXXFLAGS += -I$(CIMG_INCLUDE)
 
 # For CImg.h versions,
-# see http://sourceforge.net/p/cimg/source/ci/master/log/?path=/CImg.h
+# see https://github.com/dtschump/CImg/commits/master/CImg.h
 #
 # commit b99c968d1594e52005d60145f11c71b3f5db8679 is CImg 1.6.3
 # commit 852e71429760c2695f6b02b1a49400c31ad60154 is CImg 1.6.4
