@@ -297,6 +297,9 @@
 #define kParamExpressionHint "G'MIC/CImg expression, see the plugin description/help, or http://gmic.eu/reference.shtml#section9"
 #define kParamExpressionDefault "i"
 
+#define kParamHelp "help"
+#define kParamHelpLabel "Help"
+#define kParamHelpHint "Display help for writing GMIC expressions."
 
 using namespace OFX;
 
@@ -369,6 +372,13 @@ public:
         clipPreferences.setOutputFrameVarying(true);
     }
 
+    virtual void changedParam(const OFX::InstanceChangedArgs &/*args*/, const std::string &paramName) OVERRIDE FINAL
+    {
+        if (paramName == kParamHelp) {
+            sendMessage(OFX::Message::eMessageMessage, "", kPluginDescriptionUnsafe);
+        }
+    }
+
 private:
 
     // params
@@ -427,6 +437,15 @@ void CImgExpressionPluginFactory::describeInContext(OFX::ImageEffectDescriptor& 
         param->setLabel(kParamExpressionLabel);
         param->setHint(kParamExpressionHint);
         param->setDefault(kParamExpressionDefault);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        OFX::PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamHelp);
+        param->setLabel(kParamHelpLabel);
+        param->setHint(kParamHelpHint);
         if (page) {
             page->addChild(*param);
         }
