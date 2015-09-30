@@ -40,7 +40,7 @@
 
 #define kPluginName          "GMICExpr"
 #define kPluginGrouping      "Filter"
-#define kPluginDescription \
+#define kPluginDescriptionUnsafe \
 "Quickly generate or process image from mathematical formula evaluated for each pixel.\n"\
 "Full documentation for G'MIC/CImg expressions can be found at http://gmic.eu/reference.shtml#section9\n"\
 "The only difference is the predefined variables 't' (current time) and 'k' (render scale).\n"\
@@ -151,6 +151,119 @@
 "'X=x-w/2;Y=y-h/2;D=sqrt(X^2+Y^2);if(D+u*20<80,abs(cos(D/(5+c))),10*(y%(20+c))/255)'\n\n"\
 "'X=x-w/2;Y=y-h/2;D=sqrt(X^2+Y^2);if(D+u*20<80,abs(cos(D/(5+c))),10*(y%(20+c))/255)'\n\n"\
 "'sqrt(zr=-1.2+2.4*x/w;zi=-1.2+2.4*y/h;for(i=0,zr*zr+zi*zi<=4&&i<256,t=zr*zr-zi*zi+0.4;zi=2*zr*zi+0.2;zr=t; i=i+1))/255' draws the Mandelbrot fractal (give it a 1024x1024 image as input).\n"\
+"\n"\
+"Uses the 'fill' function from the CImg library.\n" \
+"CImg is a free, open-source library distributed under the CeCILL-C " \
+"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+"It can be used in commercial applications (see http://cimg.sourceforge.net)."
+
+#define kPluginDescription \
+"Quickly generate or process image from mathematical formula evaluated for each pixel.\n"\
+"Full documentation for G'MIC/CImg expressions can be found at http://gmic.eu/reference.shtml#section9\n"\
+"The only difference is the predefined variables 't' (current time) and 'k' (render scale).\n"\
+"\n"\
+"The mathematical parser understands the following set of functions, operators and variables:\n"\
+"    _ Usual operators, written using the C or Python language: || (logical or),\n"\
+"       logical and (two ampersands), | (bitwise or), bitwise and (ampersand),\n"\
+"       !=, ==, less than or equal, >=, less than, >, left bitwise shift (two less than),\n"\
+"       >> (right bitwise shift), -, +, *, /, % (modulo), ^ (power), ! (logical not), ~ (bitwise not).\n"\
+"       See http://gmic.eu/reference.shtml#section9 for the exact syntax.\n"\
+"    _ Usual functions: sin(), cos(), tan(), asin(), acos(), atan(), sinh(), cosh(), tanh(),\n"\
+"       log(), log2(), log10(), exp(), sign(), abs(), atan2(), round(), narg(), arg(),\n"\
+"       isval(), isnan(), isinf(), isint(), isbool(), isdir(), isfile(), rol() (left bit rotation),\n"\
+"       ror() (right bit rotation), min(), max(), med(), kth(), sinc(), int().\n"\
+"       . Function 'atan2()' is the version of 'atan()' with two arguments 'y' and 'x' (as in C/C++).\n"\
+"       . Function 'hypoth(x,y)' computes the square root of the sum of the squares of x and y.\n"\
+"       . Function 'normP(u1,...,un)' computes the LP-norm of the specified vector\n"\
+"         (P being an unsigned integer or 'inf').\n"\
+"       . Function 'narg()' returns the number of specified arguments.\n"\
+"       . Function 'arg(i,a_1,..,a_n)' returns the ith argument a_i.\n"\
+"       . Functions 'min()', 'max()', 'med()' and 'kth()' can be called with\n"\
+"         an arbitrary number of arguments.\n"\
+"       . Function 'dowhile(expression)' repeats the evaluation of the expression until it vanishes.\n"\
+"          It can be used to compute mathematical series.\n"\
+"          'dowhile(expression)' always evaluates the specified expression at least once, then check\n"\
+"          for the nullity condition. It always returns 0 when done.\n"\
+"       . Function 'for(init,condition,expression)' first evaluates the expression 'init', then iteratively\n"\
+"          evaluates 'expression' while 'condition' is verified. it may happen that no iteration is done,\n"\
+"          in which case the function returns 0. Otherwise, it returns the last value of 'expression'.\n"\
+"       . Functions 'isval()', 'isnan()', 'isinf()', 'isbool()' can be used to test the type of\n"\
+"          a given number or expression.\n"\
+"       . Function 'isfile()' (resp. 'isdir()') returns 0 (false) or 1 (true) whether its argument\n"\
+"          is a valid path to a file (resp. to a directory) or not.\n"\
+"       . Function 'isin(v,a_1,...,a_n)' returns 0 (false) or 1 (true) whether the first value 'v' appears\n"\
+"          in the set of other values 'a_i'.\n"\
+"       . Function 'fdate(path,attr)' returns the date attribute for the given 'path' (file or directory),\n"\
+"          with 'attr' being { 0=year | 1=month | 2=day | 3=day of week | 4=hour | 5=minute | 6=second }.\n"\
+"       . Function 'date(attr) returns the specified attribute for the current (locale) date\n"\
+"         (same meaning as fdate()).\n"\
+"\n"\
+"    _ Variable names below are pre-defined. They can be overloaded.\n"\
+"         . 'w': width of the associated image, if any (0 otherwise).\n"\
+"         . 'h': height of the associated image, if any (0 otherwise).\n"\
+"         . 'd': depth of the associated image, if any (0 otherwise).\n"\
+"         . 's': spectrum of the associated image, if any (0 otherwise).\n"\
+"         . 'r': shared state of the associated image, if any (0 otherwise).\n"\
+"         . 'wh': shortcut for width*height.\n"\
+"         . 'whd': shortcut for width*height*depth.\n"\
+"         . 'whds': shortcut for width*height*depth*spectrum (i.e. total number of pixel values).\n"\
+"         . 'x': current processed column of the associated image, if any (0 otherwise).\n"\
+"         . 'y': current processed row of the associated image, if any (0 otherwise).\n"\
+"         . 'z': current processed slice of the associated image, if any (0 otherwise).\n"\
+"         . 'c': current processed channel of the associated image, if any (0 otherwise).\n"\
+"         . 't': current time [OpenFX-only].\n"\
+"         . 'k': render scale (1 means full scale, 0.5 means half scale) [OpenFX-only].\n"\
+"         . 'e': value of e, i.e. 2.71828..\n"\
+"         . 'pi': value of pi, i.e. 3.1415926..\n"\
+"         . '?' or 'u': a random value between [0,1], following a uniform distribution.\n"\
+"         . 'g': a random value, following a gaussian distribution of variance 1 (roughly in [-5,5]).\n"\
+"         . 'i': current processed pixel value (i.e. value located at (x,y,z,c)) of the\n"\
+"            associated image, if any (0 otherwise).\n"\
+"         . 'im','iM','ia','iv','ic': Respectively the minimum, maximum, average values,\n"\
+"            variance and median value of the associated image, if any (0 otherwise).\n"\
+"         . 'xm','ym','zm','cm': The pixel coordinates of the minimum value in the associated\n"\
+"            image, if any (0 otherwise).\n"\
+"         . 'xM','yM','zM','cM': The pixel coordinates of the maximum value in the\n"\
+"            associated image, if any (0 otherwise).\n"\
+"\n"\
+"    _ Special operators can be used:\n"\
+"         . ';': expression separator. The returned value is always the last encountered\n"\
+"            expression. For instance expression '1;2;pi' is evaluated as 'pi'.\n"\
+"         . '=': variable assignment. Variables in mathematical parser can only refer to\n"\
+"            numerical values. Variable names are case-sensitive. Use this operator in\n"\
+"            conjunction with ';' to define complex evaluable expressions, such as\n"\
+"            't=cos(x);3*t^2+2*t+1'.\n"\
+"            These variables remain local to the mathematical parser and cannot be accessed\n"\
+"            outside the evaluated expression.\n"\
+"\n"\
+"    _ The following specific functions are also defined:\n"\
+"         . 'if(expr_cond,expr_then,expr_else)': return value of 'expr_then' or 'expr_else',\n"\
+"            depending on the value of 'expr_cond' (0=false, other=true). For instance,\n"\
+"            GMICExpr command 'if(x%10==0,255,i)' will draw blank vertical lines on every\n"\
+"            10th column of an image.\n"\
+"         . '?(max)' or '?(min,max)': return a random value between [0,max] or [min,max],\n"\
+"            following a uniform distribution. 'u(max)' and 'u(0,max)' mean the same.\n"\
+"         . 'i(_a,_b,_c,_d,_interpolation,_boundary)': return the value of the pixel located\n"\
+"            at position (a,b,c,d) in the associated image, if any (0 otherwise).\n"\
+"            Interpolation parameter can be { 0=nearest neighbor | other=linear }.\n"\
+"            Boundary conditions can be { 0=dirichlet | 1=neumann | 2=periodic }.\n"\
+"            Omitted coordinates are replaced by their default values which are respectively\n"\
+"            x, y, z, c and 0.\n"\
+"         . 'j(_dx,_dy,_dz,_dc,_interpolation,_boundary)': does the same for the pixel located\n"\
+"            at position (x+dx,y+dy,z+dz,c+dc).\n"\
+"         . 'i[offset]': return the value of the pixel located at specified offset in the associated\n"\
+"            image buffer.\n"\
+"         . 'j[offset]': does the same for an offset relative to the current pixel (x,y,z,c).\n"\
+"            For instance expression '0.5*(i(x+1)-i(x-1))' will estimate the X-derivative\n"\
+"            of an image with a classical finite difference scheme.\n"\
+"         . If specified formula starts with '>' or the 'less than' character, the operators\n"\
+"            'i(..)' and 'j(..)' will return values of the image currently being modified, in\n"\
+"            forward ('>') or backward ('less than' character) order.\n"\
+"\n"\
+"Sample expressions:\n\n"\
+"'j(sin(y/100/k+t/10)*20*k,sin(x/100/k+t/10)*20*k)' distorts the image with time-varying waves.\n\n"\
+"'0.5*(j(1)-j(-1))' will estimate the X-derivative of an image with a classical finite difference scheme.\n\n"\
+"'if(x%10==0,1,i)' will draw blank vertical lines on every 10th column of an image.\n\n"\
 "\n"\
 "Uses the 'fill' function from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
@@ -270,8 +383,16 @@ void CImgExpressionPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     // basic labels
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
+#ifdef DEBUG
     desc.setPluginDescription(kPluginDescription);
-
+#else
+    if (OFX::getImageEffectHostDescription()->isNatron &&
+        OFX::getImageEffectHostDescription()->versionMajor >= 2) {
+        desc.setPluginDescription(kPluginDescriptionUnsafe);
+    } else {
+        desc.setPluginDescription(kPluginDescription);
+    }
+#endif
     // add supported context
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
