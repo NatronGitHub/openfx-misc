@@ -163,10 +163,7 @@
 "The only difference is the predefined variables 't' (current time) and 'k' (render scale).\n"\
 "\n"\
 "The mathematical parser understands the following set of functions, operators and variables:\n"\
-"    _ Usual operators, written using the C or Python language: || (logical or),\n"\
-"       logical and (two ampersands), | (bitwise or), bitwise and (ampersand),\n"\
-"       !=, ==, less than or equal, >=, less than, >, left bitwise shift (two less than),\n"\
-"       >> (right bitwise shift), -, +, *, /, % (modulo), ^ (power), ! (logical not), ~ (bitwise not).\n"\
+"    _ Usual operators, written as in the C or Python programming language.\n"\
 "       See http://gmic.eu/reference.shtml#section9 for the exact syntax.\n"\
 "    _ Usual functions: sin(), cos(), tan(), asin(), acos(), atan(), sinh(), cosh(), tanh(),\n"\
 "       log(), log2(), log10(), exp(), sign(), abs(), atan2(), round(), narg(), arg(),\n"\
