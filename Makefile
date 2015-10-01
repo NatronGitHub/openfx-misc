@@ -84,7 +84,7 @@ $(SUBDIRS):
 	$(MAKE) -C $@
 
 clean:
-	for i in $(SUBDIRS) ; do \
+	for i in $(SUBDIRS) $(SUBDIRS_NOMULTI); do \
 	  $(MAKE) -C $$i $@; \
 	done
 
