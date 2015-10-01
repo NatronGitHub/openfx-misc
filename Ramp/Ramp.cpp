@@ -391,6 +391,8 @@ public:
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
+
+        updateVisibility();
     }
     
 private:
@@ -420,6 +422,10 @@ private:
         _point0->setIsSecret(noramp);
         _point1->setIsSecret(noramp);
         _interactive->setIsSecret(noramp);
+        _color0->setEnabled(!noramp);
+        _point0->setEnabled(!noramp);
+        _point1->setEnabled(!noramp);
+        _interactive->setEnabled(!noramp);
     }
 
 private:
