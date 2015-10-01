@@ -953,6 +953,8 @@
 		1EE9B0C71A4B301500869861 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1EE9B0C81A4B301500869861 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1EE9B0CA1A4B301500869861 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1EEAA6C71BBD3C1F00D397F5 /* ofxsRamp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EEAA6C51BBD3C1F00D397F5 /* ofxsRamp.cpp */; settings = {ASSET_TAGS = (); }; };
+		1EEAA6C81BBD3C1F00D397F5 /* ofxsRamp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EEAA6C51BBD3C1F00D397F5 /* ofxsRamp.cpp */; settings = {ASSET_TAGS = (); }; };
 		1EF3DBF21B805036006C63CF /* TestOpenGL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF3DBF01B805036006C63CF /* TestOpenGL.cpp */; };
 		1EF46F34194A394E00825BDF /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EF46F35194A394E00825BDF /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
@@ -2846,6 +2848,10 @@
 		1EE72C0F1B5253A4001B0245 /* ofxsShutter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsShutter.cpp; sourceTree = "<group>"; };
 		1EE9B0A51A4B300700869861 /* Add.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Add.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EE9B0CF1A4B301500869861 /* ClipTest.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClipTest.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EEAA6C51BBD3C1F00D397F5 /* ofxsRamp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsRamp.cpp; sourceTree = "<group>"; };
+		1EEAA6C61BBD3C1F00D397F5 /* ofxsRamp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsRamp.h; sourceTree = "<group>"; };
+		1EEAA6C91BBD3C4000D397F5 /* gpl-header-c.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "gpl-header-c.txt"; sourceTree = "<group>"; };
+		1EEAA6CA1BBD3C4000D397F5 /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
 		1EF2A8071AB1CF7500CC0D10 /* Misc.creator */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Misc.creator; sourceTree = "<group>"; };
 		1EF2A8081AB1CF7600CC0D10 /* Misc.files */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Misc.files; sourceTree = "<group>"; };
 		1EF2A8091AB1CF8B00CC0D10 /* CImg.vcxproj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = CImg.vcxproj; path = Misc/CImg.vcxproj; sourceTree = "<group>"; };
@@ -4086,6 +4092,8 @@
 				1E9B5F50198A51840095C8AA /* ofxsOGLTextRenderer.h */,
 				1E9B5F51198A51840095C8AA /* ofxsPixelProcessor.h */,
 				1E9B5F52198A51840095C8AA /* ofxsPositionInteract.h */,
+				1EEAA6C51BBD3C1F00D397F5 /* ofxsRamp.cpp */,
+				1EEAA6C61BBD3C1F00D397F5 /* ofxsRamp.h */,
 				1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */,
 				1E9B5F54198A51840095C8AA /* ofxsRectangleInteract.h */,
 				1EE72C0E1B5253A4001B0245 /* ofxsShutter.h */,
@@ -4098,6 +4106,8 @@
 				1EC1B4F61A964209001D7020 /* ofxsTransformInteract.cpp */,
 				1EC1B4F71A964209001D7020 /* ofxsTransformInteract.h */,
 				1E9B5F5A198A51840095C8AA /* README.md */,
+				1EEAA6C91BBD3C4000D397F5 /* gpl-header-c.txt */,
+				1EEAA6CA1BBD3C4000D397F5 /* LICENSE */,
 			);
 			path = SupportExt;
 			sourceTree = "<group>";
@@ -6250,6 +6260,7 @@
 				1EFBC9991A23A23C00086E7A /* VectorToColor.cpp in Sources */,
 				1E8B5D5D18B76AB300C31FDC /* PluginRegistrationCombined.cpp in Sources */,
 				1ED4AEB81973DE1200EE64C8 /* randomGenerator.cpp in Sources */,
+				1EEAA6C81BBD3C1F00D397F5 /* ofxsRamp.cpp in Sources */,
 				1EE72C131B5253A4001B0245 /* ofxsShutter.cpp in Sources */,
 				1E75A0341A87BA37005BAA36 /* ofxsGenerator.cpp in Sources */,
 				1EC1B4F91A964209001D7020 /* ofxsTransformInteract.cpp in Sources */,
@@ -6459,6 +6470,7 @@
 				1ECA4DF71A3F3AC900C5128B /* Ramp.cpp in Sources */,
 				1ECA4DF81A3F3AC900C5128B /* PluginRegistration.cpp in Sources */,
 				1E0072F91A407A3600E77042 /* ofxsOGLTextRenderer.cpp in Sources */,
+				1EEAA6C71BBD3C1F00D397F5 /* ofxsRamp.cpp in Sources */,
 				1E6CC0941A76B1F700173EB3 /* ofxsOGLFontData.cpp in Sources */,
 				1ECA4DE41A3F3A6500C5128B /* ofxsCore.cpp in Sources */,
 				1ECA4DE51A3F3A6500C5128B /* ofxsImageEffect.cpp in Sources */,

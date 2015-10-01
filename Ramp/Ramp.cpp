@@ -29,7 +29,7 @@
 #include "ofxsCoords.h"
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
-#include "ofxsOGLTextRenderer.h"
+#include "ofxsRamp.h"
 #include "ofxNatron.h"
 
 #ifdef __APPLE__
@@ -37,8 +37,6 @@
 #else
 #include <GL/gl.h>
 #endif
-#define POINT_TOLERANCE 6
-#define POINT_SIZE 5
 
 
 #define kPluginName "RampOFX"
@@ -60,44 +58,6 @@
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
-#define kParamPoint0 "point0"
-#define kParamPoint0Label "Point 0"
-
-#define kParamColor0 "color0"
-#define kParamColor0Label "Color 0"
-
-#define kParamPoint1 "point1"
-#define kParamPoint1Label "Point 1"
-
-#define kParamColor1 "color1"
-#define kParamColor1Label "Color 1"
-
-#define kParamType "type"
-#define kParamTypeLabel "Type"
-#define kParamTypeHint "The type of interpolation used to generate the ramp"
-#define kParamTypeOptionLinear "Linear"
-#define kParamTypeOptionLinearHint "Linear ramp."
-#define kParamTypeOptionPLinear "PLinear"
-#define kParamTypeOptionPLinearHint "Perceptually linear ramp in Rec.709."
-#define kParamTypeOptionEaseIn "Ease-in"
-#define kParamTypeOptionEaseInHint "Catmull-Rom spline, smooth start, linear end (a.k.a. smooth0)."
-#define kParamTypeOptionEaseOut "Ease-out"
-#define kParamTypeOptionEaseOutHint "Catmull-Rom spline, linear start, smooth end (a.k.a. smooth1)."
-#define kParamTypeOptionSmooth "Smooth"
-#define kParamTypeOptionSmoothHint "Traditional smoothstep ramp."
-
-enum RampTypeEnum
-{
-    eRampTypeLinear = 0,
-    eRampTypePLinear,
-    eRampTypeEaseIn,
-    eRampTypeEaseOut,
-    eRampTypeSmooth
-};
-
-#define kParamInteractive "interactive"
-#define kParamInteractiveLabel "Interactive Update"
-#define kParamInteractiveHint "If checked, update the parameter values during interaction with the image viewer, else update the values when pen is released."
 
 
 namespace {
@@ -106,16 +66,6 @@ namespace {
         RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
         RGBAValues() : r(0), g(0), b(0), a(0) {}
     };
-}
-
-// round to the closest int, 1/10 int, etc
-// this make parameter editing easier
-// pscale is args.pixelScale.x / args.renderScale.x;
-// pscale10 is the power of 10 below pscale
-static double fround(double val, double pscale)
-{
-    double pscale10 = std::pow(10.,std::floor(std::log10(pscale)));
-    return pscale10 * std::floor(val/pscale10 + 0.5);
 }
 
 using namespace OFX;
@@ -301,6 +251,9 @@ private:
             case eRampTypeSmooth:
                 processForType<processR,processG,processB,processA,eRampTypeSmooth>(procWindow);
                 break;
+            case eRampTypeNone:
+                processForType<processR,processG,processB,processA,eRampTypeNone>(procWindow);
+                break;
         }
     }
     
@@ -328,70 +281,14 @@ private:
                 p_pixel.x = x;
                 p_pixel.y = y;
                 OFX::Coords::toCanonical(p_pixel, _dstImg->getRenderScale(), _dstImg->getPixelAspectRatio(), &p);
-                double t = (p.x - _point0.x) * nx + (p.y - _point0.y) * ny;
 
-                if (t <= 0) {
-                    tmpPix[0] = (float)_color0.r;
-                    tmpPix[1] = (float)_color0.g;
-                    tmpPix[2] = (float)_color0.b;
-                    tmpPix[3] = (float)_color0.a;
-
-                } else if (t >= 1.) {
-                    tmpPix[0] = (float)_color1.r;
-                    tmpPix[1] = (float)_color1.g;
-                    tmpPix[2] = (float)_color1.b;
-                    tmpPix[3] = (float)_color1.a;
-
-                } else {
-                    // from http://www.comp-fu.com/2012/01/nukes-smooth-ramp-functions/
-                    // linear
-                    //y = x
-                    // plinear: perceptually linear in rec709
-                    //y = pow(x, 3)
-                    // smooth: traditional smoothstep
-                    //y = x*x*(3 - 2*x)
-                    // smooth0: Catmull-Rom spline, smooth start, linear end
-                    //y = x*x*(2 - x)
-                    // smooth1: Catmull-Rom spline, linear start, smooth end
-                    //y = x*(1 + x*(1 - x))
-                    switch (type) {
-                        case eRampTypeLinear:
-                            break;
-                        case eRampTypePLinear:
-                            // plinear: perceptually linear in rec709
-                            t = t*t*t;
-                            break;
-                        case eRampTypeEaseIn:
-                            //t *= t; // old version, end of curve is too sharp
-                            // smooth0: Catmull-Rom spline, smooth start, linear end
-                            t = t*t*(2-t);
-                            break;
-                        case eRampTypeEaseOut:
-                            //t = - t * (t - 2); // old version, start of curve is too sharp
-                            // smooth1: Catmull-Rom spline, linear start, smooth end
-                            t = t*(1 + t*(1 - t));
-                            break;
-                        case eRampTypeSmooth:
-                            /*
-                            t *= 2.;
-                            if (t < 1) {
-                                t = t * t / (2.);
-                            } else {
-                                --t;
-                                t =  -0.5 * (t * (t - 2) - 1);
-                            }
-                            */
-                            // smooth: traditional smoothstep
-                            t = t*t*(3 - 2*t);
-                        default:
-                            break;
-                    }
+                double t = ofxsRampFunc<type>(_point0, nx, ny, p);
                     
-                    tmpPix[0] = (float)_color0.r * (1 - (float)t) + (float)_color1.r * (float)t;
-                    tmpPix[1] = (float)_color0.g * (1 - (float)t) + (float)_color1.g * (float)t;
-                    tmpPix[2] = (float)_color0.b * (1 - (float)t) + (float)_color1.b * (float)t;
-                    tmpPix[3] = (float)_color0.a * (1 - (float)t) + (float)_color1.a * (float)t;
-                }
+                tmpPix[0] = (float)_color0.r * (1 - (float)t) + (float)_color1.r * (float)t;
+                tmpPix[1] = (float)_color0.g * (1 - (float)t) + (float)_color1.g * (float)t;
+                tmpPix[2] = (float)_color0.b * (1 - (float)t) + (float)_color1.b * (float)t;
+                tmpPix[3] = (float)_color0.a * (1 - (float)t) + (float)_color1.a * (float)t;
+
                 float a = tmpPix[3];
 
                 // ofxsMaskMixPix takes non-normalized values
@@ -482,23 +379,18 @@ public:
         _processB = fetchBooleanParam(kNatronOfxParamProcessB);
         _processA = fetchBooleanParam(kNatronOfxParamProcessA);
         assert(_processR && _processG && _processB && _processA);
-        _point0 = fetchDouble2DParam(kParamPoint0);
-        _point1 = fetchDouble2DParam(kParamPoint1);
-        _color0 = fetchRGBAParam(kParamColor0);
-        _color1 = fetchRGBAParam(kParamColor1);
-        _type = fetchChoiceParam(kParamType);
-        _interactive = fetchBooleanParam(kParamInteractive);
+        _point0 = fetchDouble2DParam(kParamRampPoint0);
+        _point1 = fetchDouble2DParam(kParamRampPoint1);
+        _color0 = fetchRGBAParam(kParamRampColor0);
+        _color1 = fetchRGBAParam(kParamRampColor1);
+        _type = fetchChoiceParam(kParamRampType);
+        _interactive = fetchBooleanParam(kParamRampInteractive);
         assert(_point0 && _point1 && _color0 && _color1 && _type && _interactive);
 
         _mix = fetchDoubleParam(kParamMix);
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
-    }
-
-    OfxRectD getRegionOfDefinitionForInteract(OfxTime time) const
-    {
-        return _dstClip->getRegionOfDefinition(time);
     }
     
 private:
@@ -510,13 +402,26 @@ private:
 
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-    
+
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
     template <int nComponents>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
     /* set up and run a processor */
     void setupAndProcess(RampProcessorBase &, const OFX::RenderArguments &args);
-    
+
+    void updateVisibility() {
+        int type_i;
+        _type->getValue(type_i);
+        RampTypeEnum type = (RampTypeEnum)type_i;
+        bool noramp = (type == eRampTypeNone);
+        _color0->setIsSecret(noramp);
+        _point0->setIsSecret(noramp);
+        _point1->setIsSecret(noramp);
+        _interactive->setIsSecret(noramp);
+    }
+
 private:
     
     // do not need to delete these, the ImageEffect is managing them for us
@@ -764,377 +669,17 @@ RampPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     }
 }
 
-class RampInteract : public OFX::OverlayInteract
+void
+RampPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+                         const std::string &paramName)
 {
-    enum InteractState
-    {
-        eInteractStateIdle = 0,
-        eInteractStateDraggingPoint0,
-        eInteractStateDraggingPoint1
-    };
-    
-    Double2DParam* _point0;
-    Double2DParam* _point1;
-    BooleanParam* _interactive;
-    OfxPointD _point0DragPos,_point1DragPos;
-    bool _interactiveDrag;
-    OfxPointD _lastMousePos;
-    InteractState _state;
-    RampPlugin* _effect;
-    
-public:
-    RampInteract(OfxInteractHandle handle, OFX::ImageEffect* effect)
-    : OFX::OverlayInteract(handle)
-    , _point0(0)
-    , _point1(0)
-    , _interactive(0)
-    , _point0DragPos()
-    , _point1DragPos()
-    , _interactiveDrag(false)
-    , _lastMousePos()
-    , _state(eInteractStateIdle)
-    , _effect(0)
-    {
-        _point0 = effect->fetchDouble2DParam(kParamPoint0);
-        _point1 = effect->fetchDouble2DParam(kParamPoint1);
-        _interactive = effect->fetchBooleanParam(kParamInteractive);
-        assert(_point0 && _point1 && _interactive);
-        _effect = dynamic_cast<RampPlugin*>(effect);
-        assert(_effect);
+    if (paramName == kParamRampType && args.reason == OFX::eChangeUserEdit) {
+        updateVisibility();
     }
-    
-    /** @brief the function called to draw in the interact */
-    virtual bool draw(const DrawArgs &args) OVERRIDE FINAL;
-    
-    /** @brief the function called to handle pen motion in the interact
-     
-     returns true if the interact trapped the action in some sense. This will block the action being passed to
-     any other interact that may share the viewer.
-     */
-    virtual bool penMotion(const PenArgs &args) OVERRIDE FINAL;
-    
-    /** @brief the function called to handle pen down events in the interact
-     
-     returns true if the interact trapped the action in some sense. This will block the action being passed to
-     any other interact that may share the viewer.
-     */
-    virtual bool penDown(const PenArgs &args) OVERRIDE FINAL;
-    
-    /** @brief the function called to handle pen up events in the interact
-     
-     returns true if the interact trapped the action in some sense. This will block the action being passed to
-     any other interact that may share the viewer.
-     */
-    virtual bool penUp(const PenArgs &args) OVERRIDE FINAL;
+}
 
-    virtual void loseFocus(const FocusArgs &args) OVERRIDE FINAL;
-
-};
 
 //static void intersectToRoD(const OfxRectD& rod,const OfxPointD& p0)
-
-static inline
-void
-crossProd(const Ofx3DPointD& u,
-          const Ofx3DPointD& v,
-          Ofx3DPointD* w)
-{
-    w->x = u.y*v.z - u.z*v.y;
-    w->y = u.z*v.x - u.x*v.z;
-    w->z = u.x*v.y - u.y*v.x;
-}
-
-bool
-RampInteract::draw(const DrawArgs &args)
-{
-    OfxRGBColourD color = { 0.8, 0.8, 0.8 };
-    getSuggestedColour(color);
-    const OfxPointD &pscale = args.pixelScale;
-    GLdouble projection[16];
-    glGetDoublev( GL_PROJECTION_MATRIX, projection);
-    GLint viewport[4];
-    glGetIntegerv(GL_VIEWPORT, viewport);
-    OfxPointD shadow; // how much to translate GL_PROJECTION to get exactly one pixel on screen
-    shadow.x = 2./(projection[0] * viewport[2]);
-    shadow.y = 2./(projection[5] * viewport[3]);
-
-    OfxPointD p[2];
-    if (_state == eInteractStateIdle) {
-        _point0->getValueAtTime(args.time, p[0].x, p[0].y);
-        _point1->getValueAtTime(args.time, p[1].x, p[1].y);
-    } else {
-        p[0] = _point0DragPos;
-        p[1] = _point1DragPos;
-    }
-    
-    ///Clamp points to the rod
-    OfxRectD rod = _effect->getRegionOfDefinitionForInteract(args.time);
-
-    // A line is represented by a 3-vector (a,b,c), and its equation is (a,b,c).(x,y,1)=0
-    // The intersection of two lines is given by their cross-product: (wx,wy,w) = (a,b,c)x(a',b',c').
-    // The line passing through 2 points is obtained by their cross-product: (a,b,c) = (x,y,1)x(x',y',1)
-    // The two lines passing through p0 and p1 and orthogonal to p0p1 are:
-    // (p1.x - p0.x, p1.y - p0.y, -p0.x*(p1.x-p0.x) - p0.y*(p1.y-p0.y)) passing through p0
-    // (p1.x - p0.x, p1.y - p0.y, -p1.x*(p1.x-p0.x) - p1.y*(p1.y-p0.y)) passing through p1
-    // the four lines defining the RoD are:
-    // (1,0,-x1) [x=x1]
-    // (1,0,-x2) [x=x2]
-    // (0,1,-y1) [x=y1]
-    // (0,1,-y2) [y=y2]
-    const Ofx3DPointD linex1 = {1, 0, -rod.x1};
-    const Ofx3DPointD linex2 = {1, 0, -rod.x2};
-    const Ofx3DPointD liney1 = {0, 1, -rod.y1};
-    const Ofx3DPointD liney2 = {0, 1, -rod.y2};
-
-    Ofx3DPointD line[2];
-    OfxPointD pline1[2];
-    OfxPointD pline2[2];
-
-    // line passing through p0
-    line[0].x = p[1].x - p[0].x;
-    line[0].y = p[1].y - p[0].y;
-    line[0].z = -p[0].x*(p[1].x-p[0].x) - p[0].y*(p[1].y-p[0].y);
-    // line passing through p1
-    line[1].x = p[1].x - p[0].x;
-    line[1].y = p[1].y - p[0].y;
-    line[1].z = -p[1].x*(p[1].x-p[0].x) - p[1].y*(p[1].y-p[0].y);
-    // for each line...
-    for (int i = 0; i < 2; ++i) {
-        // compute the intersection with the four lines
-        Ofx3DPointD interx1, interx2, intery1, intery2;
-
-        crossProd(line[i], linex1, &interx1);
-        crossProd(line[i], linex2, &interx2);
-        crossProd(line[i], liney1, &intery1);
-        crossProd(line[i], liney2, &intery2);
-        if (interx1.z != 0. && interx2.z != 0.) {
-            // initialize pline1 to the intersection with x=x1, pline2 with x=x2
-            pline1[i].x = interx1.x/interx1.z;
-            pline1[i].y = interx1.y/interx1.z;
-            pline2[i].x = interx2.x/interx2.z;
-            pline2[i].y = interx2.y/interx2.z;
-            if ((pline1[i].y > rod.y2 && pline2[i].y > rod.y2) ||
-                (pline1[i].y < rod.y1 && pline2[i].y < rod.y1)) {
-                // line doesn't intersect rectangle, don't draw it.
-                pline1[i].x = p[i].x;
-                pline1[i].y = p[i].y;
-                pline2[i].x = p[i].x;
-                pline2[i].y = p[i].y;
-            } else if (pline1[i].y < pline2[i].y) {
-                // y is an increasing function of x, test the two other endpoints
-                if (intery1.z != 0. && intery1.x/intery1.z > pline1[i].x) {
-                    pline1[i].x = intery1.x/intery1.z;
-                    pline1[i].y = intery1.y/intery1.z;
-                }
-                if (intery2.z != 0. && intery2.x/intery2.z < pline2[i].x) {
-                    pline2[i].x = intery2.x/intery2.z;
-                    pline2[i].y = intery2.y/intery2.z;
-                }
-            } else {
-                // y is an decreasing function of x, test the two other endpoints
-                if (intery2.z != 0. && intery2.x/intery2.z > pline1[i].x) {
-                    pline1[i].x = intery2.x/intery2.z;
-                    pline1[i].y = intery2.y/intery2.z;
-                }
-                if (intery1.z != 0. && intery1.x/intery1.z < pline2[i].x) {
-                    pline2[i].x = intery1.x/intery1.z;
-                    pline2[i].y = intery1.y/intery1.z;
-                }
-            }
-        } else {
-            // initialize pline1 to the intersection with y=y1, pline2 with y=y2
-            pline1[i].x = intery1.x/intery1.z;
-            pline1[i].y = intery1.y/intery1.z;
-            pline2[i].x = intery2.x/intery2.z;
-            pline2[i].y = intery2.y/intery2.z;
-            if ((pline1[i].x > rod.x2 && pline2[i].x > rod.x2) ||
-                (pline1[i].x < rod.x1 && pline2[i].x < rod.x1)) {
-                // line doesn't intersect rectangle, don't draw it.
-                pline1[i].x = p[i].x;
-                pline1[i].y = p[i].y;
-                pline2[i].x = p[i].x;
-                pline2[i].y = p[i].y;
-            }
-        }
-    }
-
-    //glPushAttrib(GL_ALL_ATTRIB_BITS); // caller is responsible for protecting attribs
-
-    glEnable(GL_LINE_SMOOTH);
-    glEnable(GL_BLEND);
-    glHint(GL_LINE_SMOOTH_HINT,GL_DONT_CARE);
-    glLineWidth(1.5f);
-    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-
-    glPointSize(POINT_SIZE);
-    
-    // Draw everything twice
-    // l = 0: shadow
-    // l = 1: drawing
-    for (int l = 0; l < 2; ++l) {
-        // shadow (uses GL_PROJECTION)
-        glMatrixMode(GL_PROJECTION);
-        int direction = (l == 0) ? 1 : -1;
-        // translate (1,-1) pixels
-        glTranslated(direction * shadow.x, -direction * shadow.y, 0);
-        glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
-        
-        for (int i = 0; i < 2; ++i) {
-            bool dragging = _state == (i == 0 ? eInteractStateDraggingPoint0 : eInteractStateDraggingPoint1);
-            glBegin(GL_POINTS);
-            if (dragging) {
-                glColor3f(0.f*l, 1.f*l, 0.f*l);
-            } else {
-                glColor3f((float)color.r*l, (float)color.g*l, (float)color.b*l);
-            }
-            glVertex2d(p[i].x, p[i].y);
-            glEnd();
-
-            glLineStipple(2, 0xAAAA);
-            glEnable(GL_LINE_STIPPLE);
-            glBegin(GL_LINES);
-            glColor3f((float)color.r*l, (float)color.g*l, (float)color.b*l);
-            glVertex2d(pline1[i].x, pline1[i].y);
-            glVertex2d(pline2[i].x, pline2[i].y);
-            glEnd();
-
-            double xoffset = 5 * pscale.x;
-            double yoffset = 5 * pscale.y;
-            TextRenderer::bitmapString(p[i].x + xoffset, p[i].y + yoffset, i == 0 ? kParamPoint0Label : kParamPoint1Label);
-        }
-    }
-
-    //glPopAttrib();
-
-    return true;
-}
-
-static bool isNearby(const OfxPointD& p, double x, double y, double tolerance, const OfxPointD& pscale)
-{
-    return std::fabs(p.x-x) <= tolerance*pscale.x &&  std::fabs(p.y-y) <= tolerance*pscale.y;
-}
-
-
-bool
-RampInteract::penMotion(const PenArgs &args)
-{
-    const OfxPointD &pscale = args.pixelScale;
-
-    OfxPointD p0,p1;
-    if (_state != eInteractStateIdle) {
-        p0 = _point0DragPos;
-        p1 = _point1DragPos;
-    } else {
-        _point0->getValueAtTime(args.time, p0.x, p0.y);
-        _point1->getValueAtTime(args.time, p1.x, p1.y);
-    }
-    bool valuesChanged = false;
-    
-    OfxPointD delta;
-    delta.x = args.penPosition.x - _lastMousePos.x;
-    delta.y = args.penPosition.y - _lastMousePos.y;
-    
-    if (_state == eInteractStateDraggingPoint0) {
-        _point0DragPos.x += delta.x;
-        _point0DragPos.y += delta.y;
-        valuesChanged = true;
-
-    } else if (_state == eInteractStateDraggingPoint1) {
-        _point1DragPos.x += delta.x;
-        _point1DragPos.y += delta.y;
-        valuesChanged = true;
-    }
-
-    if (_state != eInteractStateIdle && _interactiveDrag && valuesChanged) {
-        if (_state == eInteractStateDraggingPoint0) {
-            _point0->setValue(fround(_point0DragPos.x, pscale.x), fround(_point0DragPos.y, pscale.y));
-        } else if (_state == eInteractStateDraggingPoint1) {
-            _point1->setValue(fround(_point1DragPos.x, pscale.x), fround(_point1DragPos.y, pscale.y));
-        }
-    }
-
-    if (valuesChanged) {
-        _effect->redrawOverlays();
-    }
-
-    _lastMousePos = args.penPosition;
-
-    return valuesChanged;
-}
-
-bool
-RampInteract::penDown(const PenArgs &args)
-{
-    const OfxPointD &pscale = args.pixelScale;
-
-    OfxPointD p0,p1;
-    if (_state != eInteractStateIdle) {
-        p0 = _point0DragPos;
-        p1 = _point1DragPos;
-    } else {
-        _point0->getValueAtTime(args.time, p0.x, p0.y);
-        _point1->getValueAtTime(args.time, p1.x, p1.y);
-        _interactive->getValueAtTime(args.time, _interactiveDrag);
-    }
-
-    bool didSomething = false;
-    
-    if (isNearby(args.penPosition, p0.x, p0.y, POINT_TOLERANCE, pscale)) {
-        _state = eInteractStateDraggingPoint0;
-        didSomething = true;
-    } else if (isNearby(args.penPosition, p1.x, p1.y, POINT_TOLERANCE, pscale)) {
-        _state = eInteractStateDraggingPoint1;
-        didSomething = true;
-    } else {
-        _state = eInteractStateIdle;
-    }
-    
-    _point0DragPos = p0;
-    _point1DragPos = p1;
-    _lastMousePos = args.penPosition;
-
-    if (didSomething) {
-        _effect->redrawOverlays();
-    }
-
-    return didSomething;
-}
-
-bool
-RampInteract::penUp(const PenArgs &args)
-{
-    bool didSomething = false;
-    const OfxPointD &pscale = args.pixelScale;
-
-    if (!_interactiveDrag && _state != eInteractStateIdle) {
-        if (_state == eInteractStateDraggingPoint0) {
-            // round newx/y to the closest int, 1/10 int, etc
-            // this make parameter editing easier
-
-            _point0->setValue(fround(_point0DragPos.x, pscale.x), fround(_point0DragPos.y, pscale.y));
-            didSomething = true;
-        } else if (_state == eInteractStateDraggingPoint1) {
-            _point1->setValue(fround(_point1DragPos.x, pscale.x), fround(_point1DragPos.y, pscale.y));
-            didSomething = true;
-        }
-    } else  if (_state != eInteractStateIdle) {
-        _effect->redrawOverlays();
-    }
-    
-    _state = eInteractStateIdle;
-    
-    return didSomething;
-}
-
-/** @brief Called when the interact is loses input focus */
-void
-RampInteract::loseFocus(const FocusArgs &/*args*/)
-{
-    _interactiveDrag = false;
-    _state = eInteractStateIdle;
-}
-
-class RampOverlayDescriptor : public DefaultEffectOverlayDescriptor<RampOverlayDescriptor, RampInteract> {};
 
 
 
@@ -1264,85 +809,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         }
     }
 
-    // point0
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamPoint0);
-        param->setLabel(kParamPoint0Label);
-        param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(OFX::eCoordinatesCanonical);
-        param->setDefault(100., 100.);
-        param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    
-    
-    // color0
-    {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor0);
-        param->setLabel(kParamColor0Label);
-        param->setDefault(0, 0, 0, 0);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // point1
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamPoint1);
-        param->setLabel(kParamPoint1Label);
-        param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(OFX::eCoordinatesCanonical);
-        param->setDefault(100., 200.);
-        param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // color1
-    {
-        RGBAParamDescriptor* param = desc.defineRGBAParam(kParamColor1);
-        param->setLabel(kParamColor1Label);
-        param->setDefault(1., 1., 1., 1. );
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-    
-    // type
-    {
-        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamType);
-        param->setLabel(kParamTypeLabel);
-        param->setHint(kParamTypeHint);
-        assert(param->getNOptions() == eRampTypeLinear);
-        param->appendOption(kParamTypeOptionLinear, kParamTypeOptionLinearHint);
-        assert(param->getNOptions() == eRampTypePLinear);
-        param->appendOption(kParamTypeOptionPLinear, kParamTypeOptionPLinearHint);
-        assert(param->getNOptions() == eRampTypeEaseIn);
-        param->appendOption(kParamTypeOptionEaseIn, kParamTypeOptionEaseInHint);
-        assert(param->getNOptions() == eRampTypeEaseOut);
-        param->appendOption(kParamTypeOptionEaseOut, kParamTypeOptionEaseOutHint);
-        assert(param->getNOptions() == eRampTypeSmooth);
-        param->appendOption(kParamTypeOptionSmooth, kParamTypeOptionSmoothHint);
-        param->setDefault(eRampTypeLinear);
-        param->setAnimates(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // interactive
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamInteractive);
-        param->setLabel(kParamInteractiveLabel);
-        param->setHint(kParamInteractiveHint);
-        param->setEvaluateOnChange(false);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
+    ofxsRampDescribeParams(desc, page, NULL, eRampTypeLinear);
 
     ofxsMaskMixDescribeParams(desc, page);
 }
