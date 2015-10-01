@@ -371,7 +371,7 @@ void PositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         hostHasNativeOverlayForPosition = param->getHostHasNativeOverlayHandle();
         if (hostHasNativeOverlayForPosition) {
-            param->setUseHostOverlayHandle(true);
+            param->setUseHostNativeOverlayHandle(true);
         }
         if (page) {
             page->addChild(*param);
