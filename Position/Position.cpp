@@ -181,6 +181,9 @@ PositionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
     }
     const double time = args.time;
     OfxRectD srcrod = _srcClip->getRegionOfDefinition(time);
+    if (OFX::Coords::rectIsEmpty(srcrod)) {
+        return false;
+    }
     double par = _dstClip->getPixelAspectRatio();
     OfxPointD t_canonical;
     _translate->getValueAtTime(time, t_canonical.x, t_canonical.y);
@@ -215,6 +218,9 @@ PositionPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args
     }
     const double time = args.time;
     OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+    if (OFX::Coords::rectIsEmpty(srcRod)) {
+        return;
+    }
     double par = _dstClip->getPixelAspectRatio();
     OfxPointD t_canonical;
     _translate->getValueAtTime(time, t_canonical.x, t_canonical.y);
@@ -365,7 +371,7 @@ void PositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         hostHasNativeOverlayForPosition = param->getHostHasNativeOverlayHandle();
         if (hostHasNativeOverlayForPosition) {
-            param->setUseHostOverlayHandle(true);
+            param->setUseHostNativeOverlayHandle(true);
         }
         if (page) {
             page->addChild(*param);

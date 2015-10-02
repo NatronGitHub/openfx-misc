@@ -58,12 +58,37 @@
 # elif defined __GNUC__ || \
        defined __SUNPRO_C || \
        defined __xlC__
-#  define thread_local __thread
-#  define HAVE_THREAD_LOCAL
-# else
-//#  error "Cannot define thread_local"
-#  warning "CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang."
+// Clang 3.4 also support SD-6 (feature test macros __cpp_*), but no thread local macro
+#   if defined(__clang__)
+#    if __has_feature(cxx_thread_local)
+// thread_local was added in Clang 3.3
+// Still requires libstdc++ from GCC 4.8
+// For that __GLIBCXX__ isn't good enough
+// Also the MacOS build of clang does *not* support thread local yet.
+#      define thread_local __thread
+#      define HAVE_THREAD_LOCAL
+#    elif __has_feature(c_thread_local) || __has_extension(c_thread_local)
+#      define thread_local _Thread_local
+#      define HAVE_THREAD_LOCAL
+#    endif
+
+#   elif defined(__GNUC__)
+//#    if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 8)
+//// The C++11 thread_local keyword is supported in GCC only since 4.8
+//#      define thread_local __thread
+//#    endif
+//#    define HAVE_THREAD_LOCAL
+// __thread became widely supported with GCC 4.7
+#    if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7)
+#      define thread_local __thread
+#      define HAVE_THREAD_LOCAL
+#    endif
+#   endif
 # endif
+#endif
+
+#if !defined(HAVE_THREAD_LOCAL)
+#  warning "Most CImg plugins cannot be aborted when compiled with this compiler. Please use MinGW, GCC or Clang."
 #endif
 
 
@@ -267,7 +292,7 @@ public:
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const Params& params, OfxRectI* roi) = 0;
 
-    virtual bool getRoD(const OfxRectI& /*srcRoD*/, const OfxPointD& /*renderScale*/, const Params& /*params*/, OfxRectI* /*dstRoD*/) { return false; };
+    virtual bool getRegionOfDefinition(const OfxRectI& /*srcRoD*/, const OfxPointD& /*renderScale*/, const Params& /*params*/, OfxRectI* /*dstRoD*/) { return false; };
 
     virtual void render(const OFX::RenderArguments &args, const Params& params, int x1, int y1, cimg_library::CImg<float>& cimg) = 0;
 
@@ -902,7 +927,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::getRegionOfDefinition(const OFX
     }
     OfxRectI rodPixel;
 
-    bool ret = getRoD(srcRoDPixel, args.renderScale, params, &rodPixel);
+    bool ret = getRegionOfDefinition(srcRoDPixel, args.renderScale, params, &rodPixel);
     if (ret) {
         double pixelaspectratio = _dstClip ? _dstClip->getPixelAspectRatio() : 1.;
         OFX::Coords::toCanonical(rodPixel, args.renderScale, pixelaspectratio, &rod);

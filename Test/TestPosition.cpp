@@ -147,7 +147,7 @@ void TestPositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setDefault(0., 0.);
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         if (param->getHostHasNativeOverlayHandle()) {
-            param->setUseHostOverlayHandle(true);
+            param->setUseHostNativeOverlayHandle(true);
         }
 
         if (page) {

@@ -42,7 +42,7 @@
 #define kPluginGrouping "Time"
 #define kPluginDescription \
 "Blend frames of the input clip.\n" \
-"If a foreground matte is connected, only pixels with a negative or zero (<= 0) foreground value are taken into account.\n" \
+"If a foreground matte is connected, only pixels with a negative or zero foreground value are taken into account.\n" \
 "The number of values used to compute each pixel can be output to the alpha channel."
 
 #define kPluginIdentifier "net.sf.openfx.FrameBlend"

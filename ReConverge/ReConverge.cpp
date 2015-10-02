@@ -36,6 +36,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsPositionInteract.h"
 #include "ofxsMacros.h"
+#include "ofxsCoords.h"
 
 #define kPluginName "ReConvergeOFX"
 #define kPluginGrouping "Views/Stereo"
@@ -307,6 +308,9 @@ ReConvergePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
         OfxRectD roi;
         // since getRegionsOfInterest is not view-specific, return a full horizontal band
         roi = _srcClip->getRegionOfDefinition(args.time);
+        if (OFX::Coords::rectIsEmpty(roi)) {
+            return;
+        }
         roi.y1 = args.regionOfInterest.y1;
         roi.y2 = args.regionOfInterest.y2;
 

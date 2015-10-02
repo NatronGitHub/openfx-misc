@@ -30,6 +30,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
+#include "ofxsCoords.h"
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
@@ -46,7 +47,7 @@
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
-#define kSupportsMultipleClipPARs false
+#define kSupportsMultipleClipPARs true
 #define kSupportsMultipleClipDepths true
 #define kRenderThreadSafety eRenderFullySafe
 
@@ -57,6 +58,38 @@
 #define kParamForceCopy "forceCopy"
 #define kParamForceCopyLabel "Force Copy"
 #define kParamForceCopyHint "Force copy from input to output"
+
+#define kParamSetPremult "setPremult"
+#define kParamSetPremultLabel "Set Premultiplication"
+#define kParamSetPremultHint "Set the premultiplication state of the output clip, without modifying the raw content. Use the Premult or UnPremult plu-gins to affect the content."
+
+#define kParamOutputPremult "outputPremult"
+#define kParamOutputPremultLabel "Output Premultiplication"
+#define kParamOutputPremultHint "Premultiplication state of the output clip."
+
+#define kParamSetFieldOrder "setFieldOrder"
+#define kParamSetFieldOrderLabel "Set Field Order"
+#define kParamSetFieldOrderHint "Set the field order state of the output clip, without modifying the raw content."
+
+#define kParamOutputFieldOrder "outputFieldOrder"
+#define kParamOutputFieldOrderLabel "Output Field Order"
+#define kParamOutputFieldOrderHint "Field order state of the output clip."
+
+#define kParamSetPixelAspectRatio "setPixelAspectRatio"
+#define kParamSetPixelAspectRatioLabel "Set Pixel Aspect Ratio"
+#define kParamSetPixelAspectRatioHint "Set the pixel aspect ratio of the output clip, without modifying the raw content."
+
+#define kParamOutputPixelAspectRatio "outputPixelAspectRatio"
+#define kParamOutputPixelAspectRatioLabel "Output Pixel Aspect Ratio"
+#define kParamOutputPixelAspectRatioHint "Pixel aspect ratio of the output clip."
+
+#define kParamSetFrameRate "setFrameRate"
+#define kParamSetFrameRateLabel "Set Frame Rate"
+#define kParamSetFrameRateHint "Set the frame rate state of the output clip, without modifying the raw content."
+
+#define kParamOutputFrameRate "outputFrameRate"
+#define kParamOutputFrameRateLabel "Output Frame Rate"
+#define kParamOutputFrameRateHint "Frame rate of the output clip."
 
 using namespace OFX;
 
@@ -71,18 +104,57 @@ public:
     , _dstClip(0)
     , _srcClip(0)
     , _forceCopy(0)
+    , _setPremult(0)
+    , _premult(0)
+    , _setFieldOrder(0)
+    , _fieldOrder(0)
+    , _setPixelAspectRatio(0)
+    , _pixelAspectRatio(0)
+    , _setFrameRate(0)
+    , _frameRate(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         _forceCopy = fetchBooleanParam(kParamForceCopy);
-        assert(_forceCopy);
+        _setPremult = fetchBooleanParam(kParamSetPremult);
+        _premult = fetchChoiceParam(kParamOutputPremult);
+        assert(_forceCopy && _setPremult && _premult);
+        _premult->setEnabled(_setPremult->getValue());
+
+        const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+        if (gHostDescription.supportsSetableFielding) {
+            _setFieldOrder = fetchBooleanParam(kParamSetFieldOrder);
+            _fieldOrder = fetchChoiceParam(kParamOutputFieldOrder);
+            assert(_setFieldOrder && _fieldOrder);
+            _fieldOrder->setEnabled(_setFieldOrder->getValue());
+        }
+        if (gHostDescription.supportsMultipleClipPARs) {
+            _setPixelAspectRatio = fetchBooleanParam(kParamSetPixelAspectRatio);
+            _pixelAspectRatio = fetchDoubleParam(kParamOutputPixelAspectRatio);
+            assert(_setPixelAspectRatio && _pixelAspectRatio);
+            _pixelAspectRatio->setEnabled(_setPixelAspectRatio->getValue());
+        }
+        if (gHostDescription.supportsSetableFrameRate) {
+            _setFrameRate = fetchBooleanParam(kParamSetFrameRate);
+            _frameRate = fetchDoubleParam(kParamOutputFrameRate);
+            assert(_setFrameRate && _frameRate);
+            _frameRate->setEnabled(_setFrameRate->getValue());
+        }
     }
 
 private:
+    // override the roi call
+    virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
+
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
+
+    /** @brief get the clip preferences */
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 #ifdef OFX_EXTENSIONS_NUKE
     /** @brief recover a transform matrix from an effect */
@@ -97,6 +169,14 @@ private:
     OFX::Clip *_srcClip;
 
     OFX::BooleanParam *_forceCopy;
+    OFX::BooleanParam *_setPremult;
+    OFX::ChoiceParam *_premult;
+    OFX::BooleanParam *_setFieldOrder;
+    OFX::ChoiceParam *_fieldOrder;
+    OFX::BooleanParam *_setPixelAspectRatio;
+    OFX::DoubleParam *_pixelAspectRatio;
+    OFX::BooleanParam *_setFrameRate;
+    OFX::DoubleParam *_frameRate;
 };
 
 
@@ -106,6 +186,69 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
 
+// override the roi call
+// Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
+// (this is the case here)
+void
+NoOpPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+{
+    if (!_srcClip) {
+        return;
+    }
+    if (!_setPixelAspectRatio) {
+        return;
+    }
+    bool setPixelAspectRatio;
+    _setPixelAspectRatio->getValueAtTime(args.time, setPixelAspectRatio);
+    if (!setPixelAspectRatio) {
+        return;
+    }
+    double srcPAR = _srcClip->getPixelAspectRatio();
+    double pixelAspectRatio = 1.;
+    _pixelAspectRatio->getValueAtTime(args.time, pixelAspectRatio);
+    if (srcPAR <= 0 || pixelAspectRatio <= 0) {
+        return;
+    }
+
+    OfxRectD srcRoI = args.regionOfInterest;
+    srcRoI.x1 *= srcPAR / pixelAspectRatio;
+    srcRoI.x2 *= srcPAR / pixelAspectRatio;
+
+    rois.setRegionOfInterest(*_srcClip, srcRoI);
+}
+
+
+bool
+NoOpPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    if (!_srcClip) {
+        return false;
+    }
+    if (!_setPixelAspectRatio) {
+        return false;
+    }
+    bool setPixelAspectRatio;
+    _setPixelAspectRatio->getValueAtTime(args.time, setPixelAspectRatio);
+    if (!setPixelAspectRatio) {
+        return false;
+    }
+    double srcPAR = _srcClip->getPixelAspectRatio();
+    double pixelAspectRatio = 1.;
+    _pixelAspectRatio->getValueAtTime(args.time, pixelAspectRatio);
+    if (srcPAR <= 0 || pixelAspectRatio <= 0) {
+        return false;
+    }
+
+    const OfxRectD srcRoD = _srcClip->getRegionOfDefinition(args.time);
+    if (OFX::Coords::rectIsEmpty(srcRoD)) {
+        return false;
+    }
+    rod = srcRoD;
+    rod.x1 *= pixelAspectRatio / srcPAR;
+    rod.x2 *= pixelAspectRatio / srcPAR;
+
+    return true;
+}
 
 // the overridden render function
 void
@@ -288,7 +431,17 @@ fieldOrderString(FieldEnum e)
 void
 NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
-    if (paramName == kParamClipInfo) {
+    if (paramName == kParamSetPremult) {
+        _premult->setEnabled(_setPremult->getValue());
+    } else if (paramName == kParamSetFieldOrder) {
+        _fieldOrder->setEnabled(_setFieldOrder->getValue());
+    } else if (paramName == kParamSetFieldOrder) {
+        _fieldOrder->setEnabled(_setFieldOrder->getValue());
+    } else if (paramName == kParamSetPixelAspectRatio) {
+        _pixelAspectRatio->setEnabled(_setPixelAspectRatio->getValue());
+    } else if (paramName == kParamSetFrameRate) {
+        _frameRate->setEnabled(_setFrameRate->getValue());
+    } else if (paramName == kParamClipInfo) {
         std::ostringstream oss;
         oss << "Clip Info:\n\n";
         oss << "Input: ";
@@ -376,6 +529,52 @@ NoOpPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string
         oss << "time: " << args.time << ", renderscale: " << args.renderScale.x << 'x' << args.renderScale.y << '\n';
         
         sendMessage(OFX::Message::eMessageMessage, "", oss.str());
+    }
+}
+
+/* Override the clip preferences */
+void
+NoOpPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    // set the premultiplication of _dstClip
+    bool setPremult;
+    _setPremult->getValue(setPremult);
+    if (setPremult) {
+        int premult_i;
+        _premult->getValue(premult_i);
+        PreMultiplicationEnum premult = (PreMultiplicationEnum)premult_i;
+
+        clipPreferences.setOutputPremultiplication(premult);
+    }
+    if (_setFieldOrder) {
+        // set the field order of _dstClip
+        bool setFieldOrder;
+        _setFieldOrder->getValue(setFieldOrder);
+        if (setFieldOrder) {
+            int fieldOrder_i;
+            _fieldOrder->getValue(fieldOrder_i);
+            FieldEnum fieldOrder = (FieldEnum)fieldOrder_i;
+
+            clipPreferences.setOutputFielding(fieldOrder);
+        }
+    }
+    if (_setPixelAspectRatio) {
+        bool setPixelAspectRatio;
+        _setPixelAspectRatio->getValue(setPixelAspectRatio);
+        if (setPixelAspectRatio) {
+            double pixelAspectRatio;
+            _pixelAspectRatio->getValue(pixelAspectRatio);
+            clipPreferences.setPixelAspectRatio(*_dstClip, pixelAspectRatio);
+        }
+    }
+    if (_setFrameRate) {
+        bool setFrameRate;
+        _setFrameRate->getValue(setFrameRate);
+        if (setFrameRate) {
+            double frameRate;
+            _frameRate->getValue(frameRate);
+            clipPreferences.setOutputFrameRate(frameRate);
+        }
     }
 }
 
@@ -470,6 +669,136 @@ void NoOpPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setAnimates(false);
         if (page) {
             page->addChild(*param);
+        }
+    }
+
+    //// setPremult
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetPremult);
+        param->setLabel(kParamSetPremultLabel);
+        param->setHint(kParamSetPremultHint);
+        param->setDefault(false);
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    //// premult
+    {
+        OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputPremult);
+        param->setLabel(kParamOutputPremultLabel);
+        param->setHint(kParamOutputPremultHint);
+        assert(param->getNOptions() == eImageOpaque);
+        param->appendOption(premultString(eImageOpaque));
+        assert(param->getNOptions() == eImagePreMultiplied);
+        param->appendOption(premultString(eImagePreMultiplied));
+        assert(param->getNOptions() == eImageUnPreMultiplied);
+        param->appendOption(premultString(eImageUnPreMultiplied));
+        param->setDefault(eImagePreMultiplied); // images should be premultiplied in a compositing context
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+
+    if (gHostDescription.supportsSetableFielding) {
+        //// setFieldOrder
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetFieldOrder);
+            param->setLabel(kParamSetFieldOrderLabel);
+            param->setHint(kParamSetFieldOrderHint);
+            param->setDefault(false);
+            param->setAnimates(false);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        //// fieldOrder
+        {
+            OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputFieldOrder);
+            param->setLabel(kParamOutputFieldOrderLabel);
+            param->setHint(kParamOutputFieldOrderHint);
+            assert(param->getNOptions() == eFieldNone);
+            param->appendOption(fieldOrderString(eFieldNone));
+            assert(param->getNOptions() == eFieldBoth);
+            param->appendOption(fieldOrderString(eFieldBoth));
+            assert(param->getNOptions() == eFieldLower);
+            param->appendOption(fieldOrderString(eFieldLower));
+            assert(param->getNOptions() == eFieldUpper);
+            param->appendOption(fieldOrderString(eFieldUpper));
+            assert(param->getNOptions() == eFieldSingle);
+            param->appendOption(fieldOrderString(eFieldSingle));
+            assert(param->getNOptions() == eFieldDoubled);
+            param->appendOption(fieldOrderString(eFieldDoubled));
+            param->setDefault(eFieldNone);
+            param->setAnimates(false);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+    }
+
+    if (gHostDescription.supportsMultipleClipPARs) {
+        //// setPixelAspectRatio
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetPixelAspectRatio);
+            param->setLabel(kParamSetPixelAspectRatioLabel);
+            param->setHint(kParamSetPixelAspectRatioHint);
+            param->setDefault(false);
+            param->setAnimates(false);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        //// pixelAspectRatio
+        {
+            OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamOutputPixelAspectRatio);
+            param->setLabel(kParamOutputPixelAspectRatioLabel);
+            param->setHint(kParamOutputPixelAspectRatioHint);
+            param->setDefault(1.);
+            param->setAnimates(false);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+    }
+
+    if (gHostDescription.supportsSetableFrameRate) {
+        //// setFrameRate
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSetFrameRate);
+            param->setLabel(kParamSetFrameRateLabel);
+            param->setHint(kParamSetFrameRateHint);
+            param->setDefault(false);
+            param->setAnimates(false);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        //// frameRate
+        {
+            OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamOutputFrameRate);
+            param->setLabel(kParamOutputFrameRateLabel);
+            param->setHint(kParamOutputFrameRateHint);
+            param->setDefault(24.);
+            param->setAnimates(false);
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
 

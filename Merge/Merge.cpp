@@ -39,8 +39,9 @@
 #define kPluginName "MergeOFX"
 #define kPluginGrouping "Merge"
 #define kPluginDescription \
-"Pixel-by-pixel merge operation between the two inputs.\n" \
-"A complete explanation of the different operators can be found in \"Compositing Digital Images\", by T. Porter & T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
+"Pixel-by-pixel merge operation between two or more inputs.\n" \
+"Input A is first merged with B (B is non-optional), then A2, if connected, is merged with the intermediary result, then A3, etc.\n" \
+"A complete explanation of the different operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
 "See also:\n" \
 "- \"Digital Image Compositing\" by Marc Levoy https://graphics.stanford.edu/courses/cs248-06/comp/comp.html\n" \
 "- \"Merge Blend Modes\" by Martin Constable http://opticalenquiry.com/nuke/index.php?title=Merge_Blend_Modes."
@@ -90,7 +91,7 @@
 #define kClipA "A"
 #define kClipB "B"
 
-#define kMaximumAInputs 10
+#define kMaximumAInputs 64
 
 using namespace OFX;
 using namespace MergeImages2D;
@@ -337,6 +338,8 @@ private:
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
     
+    virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    
 private:
     template<int nComponents>
     void renderForComponents(const OFX::RenderArguments &args);
@@ -376,7 +379,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
     int bboxChoice;
     double mix;
     _mix->getValueAtTime(args.time, mix);
-    //Do the same as isIdentity otherwise the result of getRoD() might not be coherent with the RoD of the identity clip.
+    //Do the same as isIdentity otherwise the result of getRegionOfDefinition() might not be coherent with the RoD of the identity clip.
     if (mix == 0.) {
         rod = rodB;
         return true;
@@ -760,6 +763,16 @@ MergePlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+void
+MergePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
+{
+    OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+    clipPreferences.setClipComponents(*_srcClipA, outputComps);
+    clipPreferences.setClipComponents(*_srcClipB, outputComps);
+    for (unsigned i = 0; i < _optionalASrcClips.size(); ++i) {
+        clipPreferences.setClipComponents(*_optionalASrcClips[i], outputComps);
+    }
+}
 
 void
 MergePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
@@ -941,9 +954,8 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kNatronOfxHostName ||
-                            (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName &&
-                             OFX::getImageEffectHostDescription()->versionMajor >= 2));
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
+                            OFX::getImageEffectHostDescription()->versionMajor >= 2);
 
     OFX::ClipDescriptor* srcClipB = desc.defineClip(kClipB);
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
@@ -955,7 +967,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
     
     //Optional: If we want a render to be triggered even if one of the inputs is not connected
     //they need to be optional.
-    srcClipB->setOptional(true);
+    srcClipB->setOptional(false); // B clip is non-optional
 
     OFX::ClipDescriptor* srcClipA = desc.defineClip(kClipA);
     srcClipA->addSupportedComponent( OFX::ePixelComponentRGBA );
@@ -982,6 +994,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         for (int i = 2; i <= kMaximumAInputs; ++i) {
             assert(i < 100);
             char name[4] = { 'A', 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
+            assert(i < 100);
             name[1] = (i < 10) ? ('0' + i) : ('0' + i / 10);
             name[2] = (i < 10) ?         0 : ('0' + i % 10);
             OFX::ClipDescriptor* optionalSrcClip = desc.defineClip(name);
@@ -1116,9 +1129,8 @@ MergePluginFactory<plugin>::createInstance(OfxImageEffectHandle handle, OFX::Con
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kNatronOfxHostName ||
-                            (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName &&
-                             OFX::getImageEffectHostDescription()->versionMajor >= 2));
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
+                            OFX::getImageEffectHostDescription()->versionMajor >= 2);
 
     return new MergePlugin(handle, numerousInputs);
 }

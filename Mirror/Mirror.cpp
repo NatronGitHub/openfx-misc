@@ -417,12 +417,16 @@ MirrorPlugin::render(const OFX::RenderArguments &args)
     int xoff = 0;
     int yoff = 0;
     OfxRectI srcRoD = {0, 0, 0, 0};
-    OFX::Coords::toPixelEnclosing(_srcClip->getRegionOfDefinition(time), args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoD);
-    if (flop) {
-        xoff = srcRoD.x1 + srcRoD.x2 - 1;
-    }
-    if (flip) {
-        yoff = srcRoD.y1 + srcRoD.y2 - 1;
+    OfxRectD srcRoDCanonical = _srcClip->getRegionOfDefinition(time);
+    assert(!OFX::Coords::rectIsEmpty(srcRoDCanonical));
+    OFX::Coords::toPixelEnclosing(srcRoDCanonical, args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoD);
+    if (!OFX::Coords::rectIsEmpty(srcRoD)) {
+        if (flop) {
+            xoff = srcRoD.x1 + srcRoD.x2 - 1;
+        }
+        if (flip) {
+            yoff = srcRoD.y1 + srcRoD.y2 - 1;
+        }
     }
 
     const OfxRectI& renderWindow = args.renderWindow;

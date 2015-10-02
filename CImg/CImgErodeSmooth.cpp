@@ -67,7 +67,11 @@
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
+#ifdef cimg_use_openmp
+#define kHostFrameThreading false
+#else
 #define kHostFrameThreading true
+#endif
 #define kSupportsRGBA true
 #define kSupportsRGB true
 #define kSupportsAlpha true
@@ -358,7 +362,7 @@ public:
         _expandRoD->getValueAtTime(time, params.expandRoD);
     }
 
-    bool getRoD(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgErodeSmoothParams& params, OfxRectI* dstRoD) OVERRIDE FINAL
+    bool getRegionOfDefinition(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgErodeSmoothParams& params, OfxRectI* dstRoD) OVERRIDE FINAL
     {
         double sx = renderScale.x * std::abs(params.sizex);
         double sy = renderScale.y * std::abs(params.sizey);
@@ -446,7 +450,7 @@ public:
         }
         // scale to [0,1]
 #ifdef cimg_use_openmp
-#pragma omp parallel for if (denom.size()>=4096)
+#pragma omp parallel for if (cimg.size()>=4096)
 #endif
         cimg_rof(cimg,ptrd,float) *ptrd = (float)((*ptrd-rmin)/(rmax-rmin) + ERODESMOOTH_OFFSET);
 
@@ -511,7 +515,7 @@ public:
 
         // scale to [rmin,rmax]
 #ifdef cimg_use_openmp
-#pragma omp parallel for if (denom.size()>=4096)
+#pragma omp parallel for if (cimg.size()>=4096)
 #endif
         cimg_rof(cimg,ptrd,float) *ptrd = (float)((*ptrd-ERODESMOOTH_OFFSET)*(rmax-rmin)+rmin);
     }

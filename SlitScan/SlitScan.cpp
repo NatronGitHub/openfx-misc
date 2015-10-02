@@ -76,18 +76,19 @@
 #define kPluginName "SlitScan"
 #define kPluginGrouping "Time"
 #define kPluginDescription \
-"Apply per-pixel retiming: the time is computed for each pixel from the retime map (by default, it is a vertical ramp, to get the SlitScan effect, originally by Douglas Trumbull).\n" \
+"Apply per-pixel retiming: the time is computed for each pixel from the retime function (by default, it is a vertical ramp).\n" \
 "\n" \
-"The default time map is a linear function of y (as in the original slitscan), which is 0 at the top and 1 at the bottom of the image, but there can be an optionnal single-channel \"Retime Map\" input.\n" \
+"The default retime function corresponds to a horizontal slit: it is a vertical ramp, which is a linear function of y, which is 0 at the center of the bottom image line, and 1 at the center of the tom image line. Optionally, a vertical slit may be used (0 at the center of the leftmost image column, 1 at the center of the rightmost image column), or the optional single-channel \"Retime Map\" input may also be used.\n" \
 "\n" \
 "This plugin requires to render many frames on input, which may fill up the host cache, but if more than 4 frames required on input, Natron renders them on-demand, rather than pre-caching them.\n" \
 "Note that the results may be on higher quality if the video is slowed fown (e.g. using slowmoVideo)\n" \
 "\n" \
 "The parameters are:\n" \
-"- offset for the Retime Map (default = 0)\n" \
-"- gain for the Retime Map (default = -10)\n" \
+"- retime function (default = horizontal slit)\n" \
+"- offset for the retime function (default = 0)\n" \
+"- gain for the retime function (default = -10)\n" \
 "- absolute, a boolean indicating that the time map gives absolute frames rather than relative frames\n" \
-"- frame range, only if RetimeMap is connected, because the frame range cannot be guessed without looking at the image (default = -10..0). If \"absolute\" is checked, this frame range is absolute, else it is relative to the current frame\n" \
+"- frame range, only if RetimeMap is connected, because the frame range depends on the images (default = -10..0). If \"absolute\" is checked, this frame range is absolute, else it is relative to the current frame\n" \
 "- filter to handle time offsets that \"fall between\" frames. They can be mapped to the nearest frame, or interpolated between the nearest frames.\n" \
 
 
@@ -106,6 +107,23 @@
 
 #define kClipRetimeMap "Retime Map"
 
+#define kParamRetimeFunction "retimeFunction"
+#define kParamRetimeFunctionLabel "Retime Function"
+#define kParamRetimeFunctionHint "The function that gives, for each pixel in the image, its time. The default retime function corresponds to a horizontal slit: it is a vertical ramp (a linear function of y) which is 0 at the center of the bottom image line, and 1 at the center of the top image line. Optionally, a vertical slit may be used (0 at the center of the leftmost image column, 1 at the center of the rightmost image column), or the optional single-channel \"Retime Map\" input may also be used."
+#define kParamRetimeFunctionOptionHorizontalSlit "Horizontal Slit"
+#define kParamRetimeFunctionOptionHorizontalSlitHint "A vertical ramp (a linear function of y) which is 0 at the center of the bottom image line, and 1 at the center of the tom image line."
+#define kParamRetimeFunctionOptionVerticalSlit "Vertical Slit"
+#define kParamRetimeFunctionOptionVerticalSlitHint "A horizontal ramp (alinear function of x) which is 0 at the center of the leftmost image line, and 1 at the center of the rightmost image line."
+#define kParamRetimeFunctionOptionRetimeMap "Retime Map"
+#define kParamRetimeFunctionOptionRetimeMapHint "The single-channel image from the \"Retime Map\" input."
+#define kParamRetimeFunctionDefault eRetimeFunctionHorizontalSlit
+enum RetimeFunctionEnum {
+    eRetimeFunctionHorizontalSlit,
+    eRetimeFunctionVerticalSlit,
+    eRetimeFunctionRetimeMap,
+};
+
+#define kParamRetimeFunctionOptionVertical
 #define kParamRetimeOffset "retimeOffset"
 #define kParamRetimeOffsetLabel "Retime Offset"
 #define kParamRetimeOffsetHint "Offset to the retime map."
@@ -113,7 +131,7 @@
 
 #define kParamRetimeGain "retimeGain"
 #define kParamRetimeGainLabel "Retime Offset"
-#define kParamRetimeGainHint "Gain applied to the retime map (after offset)."
+#define kParamRetimeGainHint "Gain applied to the retime map (after offset). With the horizontal or vertical slits, to get one line or column per frame you should use respectively (height-1) or (width-1)."
 #define kParamRetimeGainDefault -10
 
 #define kParamRetimeAbsolute "retimeAbsolute"
@@ -160,6 +178,7 @@ protected:
     OFX::Clip *_srcClip;            /**< @brief Mandated input clips */
     OFX::Clip *_retimeMapClip;      /**< @brief Optional retime map */
 
+    OFX::ChoiceParam  *_retimeFunction;
     OFX::DoubleParam  *_retimeOffset;
     OFX::DoubleParam  *_retimeGain;
     OFX::BooleanParam *_retimeAbsolute;
@@ -173,6 +192,7 @@ public:
     , _dstClip(0)
     , _srcClip(0)
     , _retimeMapClip(0)
+    , _retimeFunction(0)
     , _retimeOffset(0)
     , _retimeGain(0)
     , _retimeAbsolute(0)
@@ -183,8 +203,13 @@ public:
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
         _retimeMapClip = fetchClip(kClipRetimeMap);
 
+        _retimeFunction = fetchChoiceParam(kParamRetimeFunction);
+        _retimeOffset = fetchDoubleParam(kParamRetimeOffset);
+        _retimeGain = fetchDoubleParam(kParamRetimeGain);
+        _retimeAbsolute = fetchBooleanParam(kParamRetimeAbsolute);
+        _frameRange = fetchInt2DParam(kParamFrameRange);
         _filter = fetchChoiceParam(kParamFilter);
-        assert(_filter);
+        assert(_retimeFunction && _retimeOffset && _retimeGain && _retimeAbsolute && _frameRange && _filter);
     }
 
 private:
@@ -226,13 +251,104 @@ checkComponents(const OFX::Image &src,
     }
 }
 
-#if 0
-/* set up and run a processor */
+
 void
-SlitScanPlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
-                              const OFX::RenderArguments &args,
-                              double sourceTime,
-                              FilterEnum filter)
+SlitScanPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
+                              OFX::FramesNeededSetter &frames)
+{
+    if (!_srcClip) {
+        return;
+    }
+    const double time = args.time;
+    double tmin, tmax;
+    bool retimeAbsolute;
+    _retimeAbsolute->getValueAtTime(time, retimeAbsolute);
+    int retimeFunction_i;
+    _retimeFunction->getValueAtTime(time, retimeFunction_i);
+    RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)retimeFunction_i;
+    if (retimeFunction == eRetimeFunctionRetimeMap) {
+        int t1, t2;
+        _frameRange->getValueAtTime(time, t1, t2);
+        if (retimeAbsolute) {
+            tmin = std::min(t1, t2);
+            tmax = std::max(t1, t2);
+        } else {
+            tmin = time + std::min(t1, t2);
+            tmax = time + std::max(t1, t2);
+        }
+    } else {
+        double retimeOffset, retimeGain;
+        _retimeOffset->getValueAtTime(time, retimeOffset);
+        _retimeGain->getValueAtTime(time, retimeGain);
+        tmin = (retimeGain >  0) ? retimeOffset : retimeOffset + retimeGain;
+        tmax = (retimeGain <= 0) ? retimeOffset : retimeOffset + retimeGain;
+        if (!retimeAbsolute) {
+            tmin += time;
+            tmax += time;
+        }
+        int filter_i;
+        _filter->getValueAtTime(time, filter_i);
+        FilterEnum filter = (FilterEnum)filter_i;
+        if (filter == eFilterNearest) {
+            tmin = std::floor(tmin + 0.5);
+            tmax = std::floor(tmax + 0.5);
+        } else if (filter == eFilterLinear) {
+            tmin = std::floor(tmin);
+            tmax = std::ceil(tmax);
+        }
+
+    }
+
+    OfxRangeD range;
+    range.min = tmin;
+    range.max = tmax;
+    frames.setFramesNeeded(*_srcClip, range);
+}
+
+bool
+SlitScanPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime)
+{
+    const double time = args.time;
+    double retimeGain;
+    _retimeGain->getValueAtTime(time, retimeGain);
+
+    int retimeFunction_i;
+    _retimeFunction->getValueAtTime(time, retimeFunction_i);
+    RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)retimeFunction_i;
+    if (retimeFunction == eRetimeFunctionRetimeMap && !(_retimeMapClip && _retimeMapClip->isConnected())) {
+        // no retime map, equivalent to value = 0 everywhere
+        retimeGain = 0.;
+    }
+
+    if (retimeGain == 0.) {
+        double retimeOffset;
+        _retimeOffset->getValueAtTime(time, retimeOffset);
+        bool retimeAbsolute;
+        _retimeAbsolute->getValueAtTime(time, retimeAbsolute);
+        identityTime = retimeAbsolute ? retimeOffset : (time + retimeOffset);
+        int filter_i;
+        if (identityTime != (int)identityTime) {
+            _filter->getValueAtTime(time, filter_i);
+            FilterEnum filter = (FilterEnum)filter_i;
+            if (filter == eFilterNearest) {
+                identityTime = std::floor(identityTime + 0.5);
+            } else {
+                return false; // result is blended
+            }
+        }
+        identityClip = _srcClip;
+        return true;
+    }
+    return false;
+}
+
+#if 0
+/* set up and run a processor for a standard horizontal slit scan with linear time interpolation */
+void
+SlitScanPlugin::setupAndProcessSlitScanLinear(OFX::ImageBlenderBase &processor,
+                                              const OFX::RenderArguments &args,
+                                              double sourceTime,
+                                              FilterEnum filter)
 {
     const double time = args.time;
     // get a dst image
@@ -254,6 +370,7 @@ SlitScanPlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
+    // TODO: loop over lines
     if (sourceTime == (int)sourceTime || filter == eFilterNone || filter == eFilterNearest) {
         // should have been caught by isIdentity...
         std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
@@ -320,94 +437,15 @@ SlitScanPlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 }
-#endif
 
-void
-SlitScanPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
-                              OFX::FramesNeededSetter &frames)
-{
-    if (!_srcClip) {
-        return;
-    }
-    const double time = args.time;
-    double tmin, tmax;
-    bool retimeAbsolute;
-    _retimeAbsolute->getValueAtTime(time, retimeAbsolute);
-    if (_retimeMapClip->isConnected()) {
-        int t1, t2;
-        _frameRange->getValueAtTime(time, t1, t2);
-        if (retimeAbsolute) {
-            tmin = std::min(t1, t2);
-            tmax = std::max(t1, t2);
-        } else {
-            tmin = time + std::min(t1, t2);
-            tmax = time + std::max(t1, t2);
-        }
-    } else {
-        double retimeOffset, retimeGain;
-        _retimeOffset->getValueAtTime(time, retimeOffset);
-        _retimeGain->getValueAtTime(time, retimeGain);
-        tmin = (retimeGain >  0) ? retimeOffset : retimeOffset + retimeGain;
-        tmax = (retimeGain <= 0) ? retimeOffset : retimeOffset + retimeGain;
-        if (!retimeAbsolute) {
-            tmin += time;
-            tmax += time;
-        }
-        int filter_i;
-        _filter->getValueAtTime(time, filter_i);
-        FilterEnum filter = (FilterEnum)filter_i;
-        if (filter == eFilterNearest) {
-            tmin = std::floor(tmin + 0.5);
-            tmax = std::floor(tmax + 0.5);
-        } else if (filter == eFilterLinear) {
-            tmin = std::floor(tmin);
-            tmax = std::ceil(tmax);
-        }
+// the internal render function for a standard horizontal slit scan with linear time interpolation
 
-    }
-
-    OfxRangeD range;
-    range.min = tmin;
-    range.max = tmax;
-    frames.setFramesNeeded(*_srcClip, range);
-}
-
-bool
-SlitScanPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime)
-{
-    const double time = args.time;
-    double retimeGain;
-    _retimeGain->getValueAtTime(time, retimeGain);
-    if (retimeGain == 0.) {
-        double retimeOffset;
-        _retimeOffset->getValueAtTime(time, retimeOffset);
-        bool retimeAbsolute;
-        _retimeAbsolute->getValueAtTime(time, retimeAbsolute);
-        identityTime = retimeAbsolute ? retimeOffset : (time + retimeOffset);
-        int filter_i;
-        if (identityTime != (int)identityTime) {
-            _filter->getValueAtTime(time, filter_i);
-            FilterEnum filter = (FilterEnum)filter_i;
-            if (filter == eFilterNearest) {
-                identityTime = std::floor(identityTime + 0.5);
-            } else {
-                return false; // result is blended
-            }
-        }
-        identityClip = _srcClip;
-        return true;
-    }
-    return false;
-}
-
-#if 0
-// the internal render function
 template <int nComponents>
 void
-SlitScanPlugin::renderInternal(const OFX::RenderArguments &args,
-                             double sourceTime,
-                             FilterEnum filter,
-                             OFX::BitDepthEnum dstBitDepth)
+SlitScanPlugin::renderInternalSlitScanLinear(const OFX::RenderArguments &args,
+                                             double sourceTime,
+                                             FilterEnum filter,
+                                             OFX::BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
         case OFX::eBitDepthUByte: {
@@ -443,55 +481,39 @@ SlitScanPlugin::render(const OFX::RenderArguments &args)
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
 
+    int retimeFunction_i;
+    _retimeFunction->getValueAtTime(time, retimeFunction_i);
+    
 #if 0
 
-    // figure the frame we should be retiming from
-    double sourceTime = time;
-
-    if (getContext() == OFX::eContextSlitScanr) {
-        // the host is specifying it, so fetch it from the kOfxImageEffectSlitScanrParamName pseudo-param
-        sourceTime = _sourceTime->getValueAtTime(time);
-    } else if (_srcClip) {
-        bool reverse_input;
-
-        OfxRangeD srcRange = _srcClip->getFrameRange();
-        _reverse_input->getValueAtTime(time, reverse_input);
-        // we have our own param, which is a retimeOffset, so we integrate it to get the time we want
-        if (reverse_input) {
-            sourceTime = srcRange.max - _retimeOffset->integrate(srcRange.min, time);
-        } else {
-            sourceTime = srcRange.min + _retimeOffset->integrate(srcRange.min, time);
-        }
-        if (_warp) {
-            double r = srcRange.max - srcRange.min;
-            if (r != 0.) {
-                sourceTime = srcRange.min + r * _warp->getValueAtTime(time, 0, time, (sourceTime-srcRange.min)/r);
-            }
-        }
-    }
-
-    int filter_i;
-    _filter->getValueAtTime(time, filter_i);
-    FilterEnum filter = (FilterEnum)filter_i;
-
-#ifdef DEBUG
-    if (sourceTime == (int)sourceTime || filter == eFilterNone || filter == eFilterNearest) {
-        // should be caught by isIdentity!
-        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host should not render");
+    if (_retimeMapClip && _retimeMapClip->isConnected()) {
+#pragma message WARN("TODO")
         OFX::throwSuiteStatusException(kOfxStatFailed);
-    }
-#endif
-
-    // do the rendering
-    if (dstComponents == OFX::ePixelComponentRGBA) {
-        renderInternal<4>(args, sourceTime, filter, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentRGB) {
-        renderInternal<3>(args, sourceTime, filter, dstBitDepth);
-    } else if (dstComponents == OFX::ePixelComponentXY) {
-        renderInternal<2>(args, sourceTime, filter, dstBitDepth);
+        return;
     } else {
-        assert(dstComponents == OFX::ePixelComponentAlpha);
-        renderInternal<1>(args, sourceTime, filter, dstBitDepth);
+        int filter_i;
+        _filter->getValueAtTime(time, filter_i);
+        FilterEnum filter = (FilterEnum)filter_i;
+
+        switch (filter) {
+            case eFilterNearest:
+#pragma message WARN("TODO")
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+                break;
+            case eFilterLinear:
+                // do the rendering
+                if (dstComponents == OFX::ePixelComponentRGBA) {
+                    renderInternalSlitScanHorizontal<4>(args, dstBitDepth);
+                } else if (dstComponents == OFX::ePixelComponentRGB) {
+                    renderInternalSlitScanLinear<3>(args, dstBitDepth);
+                } else if (dstComponents == OFX::ePixelComponentXY) {
+                    renderInternalSlitScanLinear<2>(args, dstBitDepth);
+                } else {
+                    assert(dstComponents == OFX::ePixelComponentAlpha);
+                    renderInternalSlitScanLinear<1>(args, dstBitDepth);
+                }
+                break;
+        }
     }
 #else
     OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -546,7 +568,7 @@ void SlitScanPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void SlitScanPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
+void SlitScanPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -574,6 +596,22 @@ void SlitScanPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 
     // make a page to put it in
     PageParamDescriptor *page = desc.definePageParam("Controls");
+
+    {
+        ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamRetimeFunction);
+        param->setLabel(kParamRetimeFunctionLabel);
+        param->setHint(kParamRetimeFunctionHint);
+        assert(param->getNOptions() == eRetimeFunctionHorizontalSlit);
+        param->appendOption(kParamRetimeFunctionOptionHorizontalSlit, kParamRetimeFunctionOptionHorizontalSlitHint);
+        assert(param->getNOptions() == eRetimeFunctionVerticalSlit);
+        param->appendOption(kParamRetimeFunctionOptionVerticalSlit, kParamRetimeFunctionOptionVerticalSlitHint);
+        assert(param->getNOptions() == eRetimeFunctionRetimeMap);
+        param->appendOption(kParamRetimeFunctionOptionRetimeMap, kParamRetimeFunctionOptionRetimeMapHint);
+        param->setDefault((int)kParamRetimeFunctionDefault);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamRetimeOffset);

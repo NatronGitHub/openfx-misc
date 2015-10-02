@@ -59,6 +59,7 @@
 "The input to display. Each input is displayed at the value corresponding to the number of the input. For example, setting which to 4 displays the image from input 4."
 
 #define kClipSourceCount 16
+#define kClipSourceCountNumerous 64
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -114,7 +115,7 @@ private:
 SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle, bool numerousInputs)
 : ImageEffect(handle)
 , _dstClip(0)
-, _srcClip(numerousInputs ? kClipSourceCount : 2)
+, _srcClip(numerousInputs ? kClipSourceCountNumerous : kClipSourceCount)
 , _which(0)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -314,12 +315,10 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    //bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kNatronOfxHostName ||
-    //                        (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName &&
-    //                         OFX::getImageEffectHostDescription()->versionMajor >= 2));
-    const bool numerousInputs = true; // Natron 1.x was distributed with it
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
+                            OFX::getImageEffectHostDescription()->versionMajor >= 2);
 
-    int clipSourceCount = numerousInputs ? kClipSourceCount : 2;
+    int clipSourceCount = numerousInputs ? kClipSourceCountNumerous : kClipSourceCount;
 
     // Source clip only in the filter context
     // create the mandated source clip
@@ -407,10 +406,8 @@ OFX::ImageEffect* SwitchPluginFactory::createInstance(OfxImageEffectHandle handl
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
-    //bool numerousInputs =  (OFX::getImageEffectHostDescription()->hostName != kNatronOfxHostName ||
-    //                        (OFX::getImageEffectHostDescription()->hostName == kNatronOfxHostName &&
-    //                         OFX::getImageEffectHostDescription()->versionMajor >= 2));
-    const bool numerousInputs = true; // Natron 1.x was distributed with it
+    bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
+                            OFX::getImageEffectHostDescription()->versionMajor >= 2);
 
     return new SwitchPlugin(handle, numerousInputs);
 }

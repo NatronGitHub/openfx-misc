@@ -44,8 +44,8 @@
 "Denoise selected images by non-local patch averaging.\n" \
 "This uses the method described in:  " \
 "Non-Local Image Smoothing by Applying Anisotropic Diffusion PDE's in the Space of Patches " \
-"(D. Tschumperlé, L. Brun), ICIP'09. " \
-"<https://tschumperle.users.greyc.fr/publications/tschumperle_icip09.pdf>.\n" \
+"(D. Tschumperlé, L. Brun), ICIP'09 " \
+"(https://tschumperle.users.greyc.fr/publications/tschumperle_icip09.pdf).\n" \
 "Uses the 'blur_patch' function from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
@@ -64,7 +64,11 @@
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
+#ifdef cimg_use_openmp
+#define kHostFrameThreading false
+#else
 #define kHostFrameThreading true
+#endif
 #define kSupportsRGBA true
 #define kSupportsRGB true
 #define kSupportsAlpha true
@@ -170,9 +174,15 @@ public:
 #undef _cimg_blur_patch2d_fast
 #undef _cimg_blur_patch2d
 
+#ifdef cimg_use_openmp
+#define test_abort() if (!omp_get_thread_num() && abort()) throw CImgAbortException("")
+#else
+#define test_abort() if (abort()) throw CImgAbortException("")
+#endif
+
 #define _cimg_blur_patch2d_fast(N) \
         cimg_for##N##Y(res,y) { \
-         if (abort()) return; \
+         test_abort(); \
          cimg_for##N##X(res,x) { \
           T *pP = P._data; cimg_forC(res,c) { cimg_get##N##x##N(img,x,y,0,c,pP,T); pP+=N2; } \
           const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2; \
@@ -194,7 +204,7 @@ public:
 
 #define _cimg_blur_patch2d(N) \
         cimg_for##N##Y(res,y) { \
-         if (abort()) return; \
+         test_abort(); \
          cimg_for##N##X(res,x) { \
           T *pP = P._data; cimg_forC(res,c) { cimg_get##N##x##N(img,x,y,0,c,pP,T); pP+=N2; } \
           const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2; \
@@ -243,7 +253,7 @@ public:
 #pragma omp parallel for if (res._width>=32 && res._height>=4) firstprivate(P,Q)
 #endif
                     cimg_forY(res,y) {
-                        if (abort()) return;
+                        test_abort();
                         cimg_forX(res,x) { // 2d fast approximation.
                             P = img.get_crop(x - psize1,y - psize1,x + psize2,y + psize2,true);
                             const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2;
@@ -266,7 +276,7 @@ public:
 #pragma omp parallel for if (res._width>=32 && res._height>=4) firstprivate(P,Q)
 #endif
                     cimg_forY(res,y) {
-                        if (abort()) return;
+                        test_abort();
                         cimg_forX(res,x) { // 2d exact algorithm.
                             P = img.get_crop(x - psize1,y - psize1,x + psize2,y + psize2,true);
                             const int x0 = x - rsize1, y0 = y - rsize1, x1 = x + rsize2, y1 = y + rsize2;
