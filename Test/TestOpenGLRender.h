@@ -57,6 +57,13 @@
 #include <cstdarg> // ...
 #include <cstring> // strlen
 #include <iostream>
+#include <stdio.h> // for snprintf & _snprintf
+#ifdef _WINDOWS
+#  include <windows.h>
+#  if defined(_MSC_VER) && _MSC_VER < 1900
+#    define snprintf _snprintf
+#  endif
+#endif // _WINDOWS
 
 // put a breakpoint in glError to halt the debugger
 inline void glError() {}
@@ -72,14 +79,26 @@ inline void glError() {}
 
 #define DPRINT(args) print_dbg args
 static
-void print_dbg(const char *fmt, ...)
+void print_dbg(const char *format, ...)
 {
-    char msg[1024];
+    char str[1024];
     va_list ap;
 
-    va_start(ap, fmt);
-    vsnprintf(msg, 1023, fmt, ap);
-    fwrite(msg, sizeof(char), strlen(msg), stderr);
+    va_start(ap, format);
+    size_t size = sizeof(str);
+#if defined(_MSC_VER)
+#  if _MSC_VER >= 1400
+    vsnprintf_s(str, size, _TRUNCATE, format, ap);
+#  else
+    if (size == 0)        /* not even room for a \0? */
+        return -1;        /* not what C99 says to do, but what windows does */
+    str[size-1] = '\0';
+    _vsnprintf(str, size-1, format, ap);
+#  endif
+#else
+    vsnprintf(str, size, format, ap);
+#endif
+    fwrite(str, sizeof(char), strlen(str), stderr);
     fflush(stderr);
 #ifdef _WIN32
     OutputDebugString(msg);
