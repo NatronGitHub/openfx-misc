@@ -392,7 +392,9 @@ public:
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
 
-        updateVisibility();
+        // update Visibility
+        OFX::InstanceChangedArgs args = {eChangeUserEdit, 0., {0., 0.}};
+        changedParam(args, kParamRampType);
     }
     
 private:
@@ -412,21 +414,6 @@ private:
 
     /* set up and run a processor */
     void setupAndProcess(RampProcessorBase &, const OFX::RenderArguments &args);
-
-    void updateVisibility() {
-        int type_i;
-        _type->getValue(type_i);
-        RampTypeEnum type = (RampTypeEnum)type_i;
-        bool noramp = (type == eRampTypeNone);
-        _color0->setIsSecret(noramp);
-        _point0->setIsSecret(noramp);
-        _point1->setIsSecret(noramp);
-        _interactive->setIsSecret(noramp);
-        _color0->setEnabled(!noramp);
-        _point0->setEnabled(!noramp);
-        _point1->setEnabled(!noramp);
-        _interactive->setEnabled(!noramp);
-    }
 
 private:
     
@@ -680,7 +667,18 @@ RampPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                          const std::string &paramName)
 {
     if (paramName == kParamRampType && args.reason == OFX::eChangeUserEdit) {
-        updateVisibility();
+        int type_i;
+        _type->getValue(type_i);
+        RampTypeEnum type = (RampTypeEnum)type_i;
+        bool noramp = (type == eRampTypeNone);
+        _color0->setIsSecret(noramp);
+        _point0->setIsSecret(noramp);
+        _point1->setIsSecret(noramp);
+        _interactive->setIsSecret(noramp);
+        _color0->setEnabled(!noramp);
+        _point0->setEnabled(!noramp);
+        _point1->setEnabled(!noramp);
+        _interactive->setEnabled(!noramp);
     }
 }
 
