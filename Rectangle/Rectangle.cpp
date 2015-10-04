@@ -1053,16 +1053,6 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     generatorDescribeInContext(page, desc, *dstClip, eGeneratorTypeSize, false,  context);
 
-    // interactive
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamRectangleInteractInteractive);
-        param->setLabel(kParamRectangleInteractInteractiveLabel);
-        param->setHint(kParamRectangleInteractInteractiveHint);
-        param->setEvaluateOnChange(false);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
 
     // softness
     {
