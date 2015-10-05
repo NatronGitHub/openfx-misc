@@ -1306,7 +1306,9 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                 }
             }
             if (tmax != tmin) {
-                progressUpdate((t-tmin)/(double)(tmax-tmin));
+                if (!progressUpdate((t-tmin)/(double)(tmax-tmin))) {
+                    break;
+                }
             }
         }
         progressEnd();
