@@ -379,12 +379,12 @@ public:
         _processB = fetchBooleanParam(kNatronOfxParamProcessB);
         _processA = fetchBooleanParam(kNatronOfxParamProcessA);
         assert(_processR && _processG && _processB && _processA);
-        _point0 = fetchDouble2DParam(kParamRampPoint0);
-        _point1 = fetchDouble2DParam(kParamRampPoint1);
-        _color0 = fetchRGBAParam(kParamRampColor0);
-        _color1 = fetchRGBAParam(kParamRampColor1);
-        _type = fetchChoiceParam(kParamRampType);
-        _interactive = fetchBooleanParam(kParamRampInteractive);
+        _point0 = fetchDouble2DParam(kParamRampPoint0Old);
+        _point1 = fetchDouble2DParam(kParamRampPoint1Old);
+        _color0 = fetchRGBAParam(kParamRampColor0Old);
+        _color1 = fetchRGBAParam(kParamRampColor1Old);
+        _type = fetchChoiceParam(kParamRampTypeOld);
+        _interactive = fetchBooleanParam(kParamRampInteractiveOld);
         assert(_point0 && _point1 && _color0 && _color1 && _type && _interactive);
 
         _mix = fetchDoubleParam(kParamMix);
@@ -718,7 +718,7 @@ void RampPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // and scale the transform appropriately.
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
-    desc.setOverlayInteractDescriptor(new RampOverlayDescriptor);
+    desc.setOverlayInteractDescriptor(new RampOverlayDescriptorOldParams);
     
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
@@ -813,7 +813,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         }
     }
 
-    ofxsRampDescribeParams(desc, page, NULL, eRampTypeLinear);
+    ofxsRampDescribeParams(desc, page, NULL, eRampTypeLinear, /*oldParams=*/true);
 
     ofxsMaskMixDescribeParams(desc, page);
 }
