@@ -487,15 +487,15 @@ public:
     , _max(0)
     {
         // NON-GENERIC
-        _translate = fetchDouble2DParam(kParamTransformTranslate);
-        _rotate = fetchDoubleParam(kParamTransformRotate);
-        _scale = fetchDouble2DParam(kParamTransformScale);
-        _scaleUniform = fetchBooleanParam(kParamTransformScaleUniform);
-        _skewX = fetchDoubleParam(kParamTransformSkewX);
-        _skewY = fetchDoubleParam(kParamTransformSkewY);
-        _skewOrder = fetchChoiceParam(kParamTransformSkewOrder);
-        _center = fetchDouble2DParam(kParamTransformCenter);
-        _interactive = fetchBooleanParam(kParamTransformInteractive);
+        _translate = fetchDouble2DParam(kParamTransformTranslateOld);
+        _rotate = fetchDoubleParam(kParamTransformRotateOld);
+        _scale = fetchDouble2DParam(kParamTransformScaleOld);
+        _scaleUniform = fetchBooleanParam(kParamTransformScaleUniformOld);
+        _skewX = fetchDoubleParam(kParamTransformSkewXOld);
+        _skewY = fetchDoubleParam(kParamTransformSkewYOld);
+        _skewOrder = fetchChoiceParam(kParamTransformSkewOrderOld);
+        _center = fetchDouble2DParam(kParamTransformCenterOld);
+        _interactive = fetchBooleanParam(kParamTransformInteractiveOld);
         assert(_translate && _rotate && _scale && _scaleUniform && _skewX && _skewY && _skewOrder && _center && _interactive);
 
         _fromColor = fetchRGBAParam(kParamFromColor);
@@ -715,16 +715,16 @@ GodRaysPlugin::resetCenter(double time)
 void
 GodRaysPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
-    if (paramName == kParamTransformResetCenter) {
+    if (paramName == kParamTransformResetCenterOld) {
         resetCenter(args.time);
-    } else if (paramName == kParamTransformTranslate ||
-        paramName == kParamTransformRotate ||
-        paramName == kParamTransformScale ||
-        paramName == kParamTransformScaleUniform ||
-        paramName == kParamTransformSkewX ||
-        paramName == kParamTransformSkewY ||
-        paramName == kParamTransformSkewOrder ||
-        paramName == kParamTransformCenter) {
+    } else if (paramName == kParamTransformTranslateOld ||
+        paramName == kParamTransformRotateOld ||
+        paramName == kParamTransformScaleOld ||
+        paramName == kParamTransformScaleUniformOld ||
+        paramName == kParamTransformSkewXOld ||
+        paramName == kParamTransformSkewYOld ||
+        paramName == kParamTransformSkewOrderOld ||
+        paramName == kParamTransformCenterOld) {
         changedTransform(args);
     } else {
         Transform3x3Plugin::changedParam(args, paramName);
@@ -1027,147 +1027,6 @@ using namespace OFX;
 
 mDeclarePluginFactory(GodRaysPluginFactory, {}, {});
 
-
-static
-void GodRaysPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/, PageParamDescriptor *page)
-{
-    // NON-GENERIC PARAMETERS
-    //
-    // translate
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTransformTranslate);
-        param->setLabel(kParamTransformTranslateLabel);
-        //param->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
-        param->setDoubleType(eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
-        //param->setDimensionLabels("x","y");
-        param->setDefault(0, 0);
-        param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
-        param->setIncrement(10.);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // rotate
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamTransformRotate);
-        param->setLabel(kParamTransformRotateLabel);
-        param->setDoubleType(eDoubleTypeAngle);
-        param->setDefault(0);
-        //param->setRange(-180, 180); // the angle may be -infinity..+infinity
-        param->setDisplayRange(-180, 180);
-        param->setIncrement(0.1);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // scale
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTransformScale);
-        param->setLabel(kParamTransformScaleLabel);
-        param->setDoubleType(eDoubleTypeScale);
-        //param->setDimensionLabels("w","h");
-        param->setDefault(1,1);
-        //param->setRange(0.1,0.1,10,10);
-        param->setDisplayRange(0.1, 0.1, 10, 10);
-        param->setIncrement(0.01);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // scaleUniform
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamTransformScaleUniform);
-        param->setLabel(kParamTransformScaleUniformLabel);
-        param->setHint(kParamTransformScaleUniformHint);
-        // don't check it by default: it is easy to obtain Uniform scaling using the slider or the interact
-        param->setDefault(false);
-        param->setAnimates(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // skewX
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamTransformSkewX);
-        param->setLabel(kParamTransformSkewXLabel);
-        param->setDefault(0);
-        param->setDisplayRange(-1,1);
-        param->setIncrement(0.01);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // skewY
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamTransformSkewY);
-        param->setLabel(kParamTransformSkewYLabel);
-        param->setDefault(0);
-        param->setDisplayRange(-1,1);
-        param->setIncrement(0.01);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // skewOrder
-    {
-        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamTransformSkewOrder);
-        param->setLabel(kParamTransformSkewOrderLabel);
-        param->setDefault(0);
-        param->appendOption("XY");
-        param->appendOption("YX");
-        param->setAnimates(true);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // center
-    {
-        Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTransformCenter);
-        param->setLabel(kParamTransformCenterLabel);
-        //param->setDoubleType(eDoubleTypeNormalisedXY); // deprecated in OpenFX 1.2
-        param->setDoubleType(eDoubleTypeXYAbsolute);
-        //param->setDimensionLabels("x","y");
-        param->setDefaultCoordinateSystem(eCoordinatesNormalised);
-        param->setDefault(0.5, 0.5);
-        param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
-        param->setIncrement(1.);
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // resetcenter
-    {
-        PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamTransformResetCenter);
-        param->setLabel(kParamTransformResetCenterLabel);
-        param->setHint(kParamTransformResetCenterHint);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-
-    // interactive
-    {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamTransformInteractive);
-        param->setLabel(kParamTransformInteractiveLabel);
-        param->setHint(kParamTransformInteractiveHint);
-        param->setEvaluateOnChange(false);
-        if (page) {
-            page->addChild(*param);
-        }
-    }
-}
-
 void GodRaysPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
@@ -1177,7 +1036,7 @@ void GodRaysPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
     Transform3x3Describe(desc, true);
 
-    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptor);
+    desc.setOverlayInteractDescriptor(new TransformOverlayDescriptorOldParams);
 }
 
 void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
@@ -1185,7 +1044,9 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, true);
 
-    GodRaysPluginDescribeInContext(desc, context, page);
+    // NON-GENERIC PARAMETERS
+    //
+    ofxsTransformDescribeParams(desc, page, NULL, /*oldParams=*/true);
 
     // invert
     {
