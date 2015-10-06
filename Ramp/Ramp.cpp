@@ -813,7 +813,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         }
     }
 
-    ofxsRampDescribeParams(desc, page, NULL, eRampTypeLinear, /*oldParams=*/true);
+    ofxsRampDescribeParams(desc, page, NULL, eRampTypeLinear, /*isOpen=*/true, /*oldParams=*/true);
 
     ofxsMaskMixDescribeParams(desc, page);
 }

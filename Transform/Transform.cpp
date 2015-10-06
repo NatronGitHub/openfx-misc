@@ -300,7 +300,7 @@ void TransformPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
 {
     // NON-GENERIC PARAMETERS
     //
-    ofxsTransformDescribeParams(desc, page, NULL, /*oldParams=*/true);
+    ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/true, /*oldParams=*/true);
 }
 
 void TransformPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
