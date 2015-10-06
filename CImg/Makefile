@@ -11,6 +11,8 @@ net.sf.cimg.CImgDenoise.png \
 net.sf.cimg.CImgDenoise.svg \
 net.sf.cimg.CImgDilate.png \
 net.sf.cimg.CImgDilate.svg \
+net.sf.cimg.CImgEqualize.png \
+net.sf.cimg.CImgEqualize.svg \
 net.sf.cimg.CImgErode.png \
 net.sf.cimg.CImgErode.svg \
 net.sf.cimg.CImgErodeSmooth.png \
@@ -19,6 +21,8 @@ net.sf.cimg.CImgExpression.png \
 net.sf.cimg.CImgExpression.svg \
 net.sf.cimg.CImgGuided.png \
 net.sf.cimg.CImgGuided.svg \
+net.sf.cimg.CImgHistEQ.png \
+net.sf.cimg.CImgHistEQ.svg \
 net.sf.cimg.CImgLaplacian.png \
 net.sf.cimg.CImgLaplacian.svg \
 net.sf.cimg.CImgNoise.png \
@@ -28,9 +32,10 @@ net.sf.cimg.CImgPlasma.svg \
 net.sf.cimg.CImgRollingGuidance.png \
 net.sf.cimg.CImgRollingGuidance.svg \
 net.sf.cimg.CImgSharpenInvDiff.png \
+net.sf.cimg.CImgSharpenInvDiff.svg \
 net.sf.cimg.CImgSharpenShock.png \
 net.sf.cimg.CImgSmooth.png \
-net.sf.cimg.CImgSmooth.svg 
+net.sf.cimg.CImgSmooth.svg \
 
 include ../Makefile.master
 
