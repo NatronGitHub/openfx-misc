@@ -583,6 +583,7 @@
 		1EA0C22719BA12D3006AB602 /* Dissolve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA0C1FF19BA1234006AB602 /* Dissolve.cpp */; };
 		1EA330AA19E83A33002EFA5B /* CImgPlasma.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA330A819E83A33002EFA5B /* CImgPlasma.cpp */; };
 		1EA330AD19E846F7002EFA5B /* CImgEqualize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA330AB19E846F7002EFA5B /* CImgEqualize.cpp */; };
+		1EA8C5681BC69D9B0000FFBF /* CImgMedian.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA8C5671BC69D8D0000FFBF /* CImgMedian.cpp */; settings = {ASSET_TAGS = (); }; };
 		1EA92DC31B1DD1B400FE3709 /* CImgExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA92DC11B1DD1B400FE3709 /* CImgExpression.cpp */; };
 		1EAD4AE21A0A68FD00AF834D /* AdjustRoD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */; };
 		1EAD4AE71A0A691700AF834D /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
@@ -2657,6 +2658,8 @@
 		1EA330A919E83A33002EFA5B /* CImgPlasma.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgPlasma.h; sourceTree = "<group>"; };
 		1EA330AB19E846F7002EFA5B /* CImgEqualize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgEqualize.cpp; sourceTree = "<group>"; };
 		1EA330AC19E846F7002EFA5B /* CImgEqualize.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgEqualize.h; sourceTree = "<group>"; };
+		1EA8C5661BC69D8D0000FFBF /* CImgMedian.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgMedian.h; sourceTree = "<group>"; };
+		1EA8C5671BC69D8D0000FFBF /* CImgMedian.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgMedian.cpp; sourceTree = "<group>"; };
 		1EA92DC11B1DD1B400FE3709 /* CImgExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgExpression.cpp; sourceTree = "<group>"; };
 		1EA92DC21B1DD1B400FE3709 /* CImgExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgExpression.h; sourceTree = "<group>"; };
 		1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AdjustRoD.cpp; sourceTree = "<group>"; };
@@ -3626,6 +3629,8 @@
 				1E1DDFEB1A04E432007F45B2 /* CImgGuided.h */,
 				1EFA77141A24DCFA00212DB0 /* CImgHistEQ.cpp */,
 				1EFA77151A24DCFA00212DB0 /* CImgHistEQ.h */,
+				1EA8C5671BC69D8D0000FFBF /* CImgMedian.cpp */,
+				1EA8C5661BC69D8D0000FFBF /* CImgMedian.h */,
 				1E868B7919E6E72B00B793BA /* CImgNoise.cpp */,
 				1E868B7A19E6E72B00B793BA /* CImgNoise.h */,
 				1E7B38BE1B95E80D00012B76 /* CImgOperator.cpp */,
@@ -5981,6 +5986,7 @@
 				1ECF2F5319F2CB9F00E91A38 /* CImgErodeSmooth.cpp in Sources */,
 				1E868B7819E6E28E00B793BA /* CImgErode.cpp in Sources */,
 				1E1DDFEC1A04E432007F45B2 /* CImgGuided.cpp in Sources */,
+				1EA8C5681BC69D9B0000FFBF /* CImgMedian.cpp in Sources */,
 				1EFA77161A24DCFA00212DB0 /* CImgHistEQ.cpp in Sources */,
 				1E868B7B19E6E72B00B793BA /* CImgNoise.cpp in Sources */,
 				1EA330AA19E83A33002EFA5B /* CImgPlasma.cpp in Sources */,
