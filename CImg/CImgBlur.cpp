@@ -498,14 +498,14 @@ public:
             assert(cimg.spectrum() >= 3);
             // allocate chrominance image
             cimg0.resize(cimg.width(), cimg.height(), cimg.depth(), 2);
-#ifdef cimg_use_openmp
-#pragma omp parallel for if (cimg.width()*cimg.height()*cimg.depth()>=32768)
-#endif
             // chrominance (X+Z) goes into cimg0, luminance goes into first channel of cimg
             float *p1 = &cimg(0,0,0,0);
             const float *p2 = &cimg(0,0,0,1);
             const float *p3 = &cimg(0,0,0,2);
             float *px = &cimg0(0,0,0,0), *pz = &cimg0(0,0,0,1);
+#ifdef cimg_use_openmp
+#pragma omp parallel for if (cimg.width()*cimg.height()*cimg.depth()>=32768)
+#endif
             for (unsigned long N = (unsigned long)cimg.width()*cimg.height()*cimg.depth(); N; --N) {
                 const float R = *p1;
                 const float G = *p2;
@@ -561,15 +561,15 @@ public:
             cimg += cimg0;
         } else if (_blurPlugin == eBlurPluginChromaBlur) {
             // recombine luminance in cimg0 & chrominance in cimg to cimg
-#ifdef cimg_use_openmp
-#pragma omp parallel for if (cimg.width()*cimg.height()*cimg.depth()>=32768)
-#endif
             // chrominance (X+Z) is in cimg0, luminance is in first channel of cimg
             float *p1 = &cimg(0,0,0,0);
             float *p2 = &cimg(0,0,0,1);
             float *p3 = &cimg(0,0,0,2);
             const float *px = &cimg0(0,0,0,0);
             const float *pz = &cimg0(0,0,0,1);
+#ifdef cimg_use_openmp
+#pragma omp parallel for if (cimg.width()*cimg.height()*cimg.depth()>=32768)
+#endif
             for (unsigned long N = (unsigned long)cimg.width()*cimg.height()*cimg.depth(); N; --N) {
                 const float X = *px;
                 const float Y = *p1;
