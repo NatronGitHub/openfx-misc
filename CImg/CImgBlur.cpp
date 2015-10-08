@@ -684,7 +684,11 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
         param->setLabel(kParamSizeLabel);
         param->setHint(kParamSizeHint);
         param->setRange(0, 0, 1000, 1000);
-        param->setDisplayRange(0, 0, 100, 100);
+        if (blurPlugin == eBlurPluginChromaBlur) {
+            param->setDisplayRange(0, 0, 10, 10);
+        } else {
+            param->setDisplayRange(0, 0, 100, 100);
+        }
         if (blurPlugin == eBlurPluginLaplacian) {
             param->setDefault(kParamSizeDefaultLaplacian, kParamSizeDefaultLaplacian);
         } else {
