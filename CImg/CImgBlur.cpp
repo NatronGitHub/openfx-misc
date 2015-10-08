@@ -127,6 +127,15 @@
 #define kParamBoundaryOptionPeriodicHint "Image is considered to be periodic out of the image domain."
 #define kParamBoundaryDefault eBoundaryDirichlet
 #define kParamBoundaryDefaultLaplacian eBoundaryNeumann
+
+#define kParamChrominanceMath "chrominanceMath"
+#define kParamChrominanceMathLabel "Chrominance Math"
+#define kParamChrominanceMathHint "Formula used to compute chrominance from RGB values."
+#define kParamChrominanceMathOptionRec709 "Rec. 709"
+#define kParamChrominanceMathOptionRec709Hint "Use Rec. 709."
+#define kParamChrominanceMathOptionCcir601 "CCIR 601"
+#define kParamChrominanceMathOptionCcir601Hint "Use CCIR 601."
+
 enum BoundaryEnum
 {
     eBoundaryDirichlet = 0,
@@ -501,14 +510,16 @@ public:
                 const float R = *p1;
                 const float G = *p2;
                 const float B = *p3;
-                // YUV
-                *p1 = 0.2126f * R + 0.7152f * G + 0.0722f * B; //Y
-                *px = -0.09991f * R - 0.33609f * G + 0.436f * B;//U
-                *pz = 0.615f * R - 0.55861f * G - 0.05639f * B; //V
-                // YCbCr
-                //*p1 = 0.2215 * R + 0.7154 * G + 0.0721 * B; // Y
-                //*px = -0.1145 * R - 0.3855 * G + 0.5000 * B + 128./255; // Cb
-                //*pz = 0.5016 * R - 0.4556 * G  - 0.0459 * B + 128./255; // Cr
+                /// YUV (BT.601)
+                /// ref: https://en.wikipedia.org/wiki/YUV#SDTV_with_BT.601
+                //*p1 =  0.299f   * R +0.587f   * G +0.114f  * B;
+                //*px = -0.14713f * R -0.28886f * G +0.114f  * B;
+                //*pz =  0.615f   * R -0.51499f * G -0.10001 * B;
+                /// YUV (Rec.709)
+                /// ref: https://en.wikipedia.org/wiki/YUV#HDTV_with_BT.709
+                *p1 =  0.2126f  * R +0.7152f  * G +0.0722f  * B; //Y
+                *px = -0.09991f * R -0.33609f * G +0.436f   * B; //U
+                *pz =  0.615f   * R -0.55861f * G -0.05639f * B; //V
                 ++p1;
                 ++p2;
                 ++p3;
@@ -563,14 +574,16 @@ public:
                 const float X = *px;
                 const float Y = *p1;
                 const float Z = *pz;
-                // YUV
-                *p1 = Y + 1.28033f * Z,
-                *p2 = Y - 0.21482f * X - 0.38059f * Z;
-                *p3 = Y + 2.12798f * X;
-                // YCbCr
-                //*p1 = Y + 0.0000 * (X - 128./255) + 1.5701 * (Z - 128./255);
-                //*p2 = Y - 0.1870 * (X - 128./255) - 0.4664 * (Z - 128./255);
-                //*p3 = Y + 1.8556 * (X - 128./255) + 0.0000 * (Z - 128./255);
+                /// YUV (BT.601)
+                /// ref: https://en.wikipedia.org/wiki/YUV#SDTV_with_BT.601
+                //*p1 = Y                + 1.13983f * Z,
+                //*p2 = Y - 0.39465f * X - 0.58060f * Z;
+                //*p3 = Y + 2.03211f * X;
+                /// YUV (Rec.709)
+                /// ref: https://en.wikipedia.org/wiki/YUV#HDTV_with_BT.709
+                *p1 = Y               +1.28033f * Z,
+                *p2 = Y -0.21482f * X -0.38059f * Z;
+                *p3 = Y +2.12798f * X;
 
                 ++p1;
                 ++p2;
