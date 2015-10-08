@@ -44,7 +44,7 @@
 // Note: this plugin was initially named NoiseOFX, but was renamed to Rand (like the Shake node)
 #define kPluginName "Rand"
 #define kPluginGrouping "Draw"
-#define kPluginDescription "Generate a random field of noise. The field does not resample if you change the resolution or density—you can animate the density without pixels randomly changing."
+#define kPluginDescription "Generate a random field of noise. The field does not resample if you change the resolution or density (you can animate the density without pixels randomly changing)."
 #define kPluginIdentifier "net.sf.openfx.Noise" // don't ever change the plugin ID
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
