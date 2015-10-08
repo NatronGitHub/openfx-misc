@@ -108,6 +108,7 @@ matrix.
 * BilateralCImg: Blur input stream by bilateral filtering.
 * BilateralGuidedCImg: Apply joint/cross bilateral filtering on image A, guided by the intensity differences of image B.
 * BlurCImg: Blur input stream by a quasi-Gaussian or Gaussian filter (recursive implementation), or compute derivatives.
+* ChromaBlurCImg: Blur the chrominance components (usually to prep strongly compressed and chroma subsampled footage for keying).
 * DenoiseCImg: Denoise selected images by non-local patch averaging.
 * DilateCImg/ErodeCImg: Dilate/erode input stream by a rectangular structuring element of specified size and Neumann boundary conditions.
 * DirBlurOFX: Directional blur.
