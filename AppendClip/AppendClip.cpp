@@ -864,8 +864,8 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
             int i = 0;
             int clipNumber = i + kClipSourceOffset;
-            name[0] = (clipNumber < 10) ? ('0' + clipNumber) : ('0' + clipNumber / 10);
-            name[1] = (clipNumber < 10) ?                  0 : ('0' + clipNumber % 10);
+            name[0] = '0' + clipNumber;
+            name[1] = 0;
             srcClip = desc.defineClip(name);
             srcClip->setOptional(true);
         }

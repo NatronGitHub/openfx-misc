@@ -46,7 +46,7 @@ grouping).
 
 ### Draw
 
-* NoiseOFX: Generate simple noise.
+* Rand: Generate a random field of noise.
 * NoiseCImg: Generate different kinds of noise.
 * PlasmaCImg: Generate plasma noise.
 * RadialOFX: Radial ramp.

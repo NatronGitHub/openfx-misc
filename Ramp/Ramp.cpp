@@ -379,12 +379,12 @@ public:
         _processB = fetchBooleanParam(kNatronOfxParamProcessB);
         _processA = fetchBooleanParam(kNatronOfxParamProcessA);
         assert(_processR && _processG && _processB && _processA);
-        _point0 = fetchDouble2DParam(kParamRampPoint0);
-        _point1 = fetchDouble2DParam(kParamRampPoint1);
-        _color0 = fetchRGBAParam(kParamRampColor0);
-        _color1 = fetchRGBAParam(kParamRampColor1);
-        _type = fetchChoiceParam(kParamRampType);
-        _interactive = fetchBooleanParam(kParamRampInteractive);
+        _point0 = fetchDouble2DParam(kParamRampPoint0Old);
+        _point1 = fetchDouble2DParam(kParamRampPoint1Old);
+        _color0 = fetchRGBAParam(kParamRampColor0Old);
+        _color1 = fetchRGBAParam(kParamRampColor1Old);
+        _type = fetchChoiceParam(kParamRampTypeOld);
+        _interactive = fetchBooleanParam(kParamRampInteractiveOld);
         assert(_point0 && _point1 && _color0 && _color1 && _type && _interactive);
 
         _mix = fetchDoubleParam(kParamMix);
@@ -392,7 +392,9 @@ public:
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
 
-        updateVisibility();
+        // update Visibility
+        OFX::InstanceChangedArgs args = {eChangeUserEdit, 0., {0., 0.}};
+        changedParam(args, kParamRampType);
     }
     
 private:
@@ -412,21 +414,6 @@ private:
 
     /* set up and run a processor */
     void setupAndProcess(RampProcessorBase &, const OFX::RenderArguments &args);
-
-    void updateVisibility() {
-        int type_i;
-        _type->getValue(type_i);
-        RampTypeEnum type = (RampTypeEnum)type_i;
-        bool noramp = (type == eRampTypeNone);
-        _color0->setIsSecret(noramp);
-        _point0->setIsSecret(noramp);
-        _point1->setIsSecret(noramp);
-        _interactive->setIsSecret(noramp);
-        _color0->setEnabled(!noramp);
-        _point0->setEnabled(!noramp);
-        _point1->setEnabled(!noramp);
-        _interactive->setEnabled(!noramp);
-    }
 
 private:
     
@@ -680,7 +667,18 @@ RampPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                          const std::string &paramName)
 {
     if (paramName == kParamRampType && args.reason == OFX::eChangeUserEdit) {
-        updateVisibility();
+        int type_i;
+        _type->getValue(type_i);
+        RampTypeEnum type = (RampTypeEnum)type_i;
+        bool noramp = (type == eRampTypeNone);
+        _color0->setIsSecret(noramp);
+        _point0->setIsSecret(noramp);
+        _point1->setIsSecret(noramp);
+        _interactive->setIsSecret(noramp);
+        _color0->setEnabled(!noramp);
+        _point0->setEnabled(!noramp);
+        _point1->setEnabled(!noramp);
+        _interactive->setEnabled(!noramp);
     }
 }
 
@@ -720,7 +718,7 @@ void RampPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     // and scale the transform appropriately.
     // All other functions are usually in canonical coordinates.
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
-    desc.setOverlayInteractDescriptor(new RampOverlayDescriptor);
+    desc.setOverlayInteractDescriptor(new RampOverlayDescriptorOldParams);
     
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
@@ -815,7 +813,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         }
     }
 
-    ofxsRampDescribeParams(desc, page, NULL, eRampTypeLinear);
+    ofxsRampDescribeParams(desc, page, NULL, eRampTypeLinear, /*isOpen=*/true, /*oldParams=*/true);
 
     ofxsMaskMixDescribeParams(desc, page);
 }

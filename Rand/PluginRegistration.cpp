@@ -1,4 +1,4 @@
-#include "Noise.h"
+#include "Rand.h"
 
 namespace OFX
 {
@@ -6,7 +6,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            getNoisePluginID(ids);
+            getRandPluginID(ids);
         }
     }
 }

@@ -59,6 +59,7 @@ static const std::string kGroupShadows = std::string("Shadows");
 static const std::string kGroupMidtones = std::string("Midtones");
 static const std::string kGroupHighlights = std::string("Highlights");
 
+static const std::string kParamEnable= std::string("Enable");
 static const std::string kParamSaturation = std::string("Saturation");
 static const std::string kParamContrast = std::string("Contrast");
 static const std::string kParamGamma = std::string("Gamma");
@@ -102,6 +103,17 @@ namespace {
         void getValueFrom(double time, OFX::RGBAParam* p)
         {
             p->getValueAtTime(time, r, g, b, a);
+        }
+
+        void set(double r_, double g_, double b_, double a_) {
+            r = r_;
+            g = g_;
+            b = b_;
+            a = a_;
+        }
+
+        void set(double v) {
+            r = g = b = a = v;
         }
     };
 
@@ -557,6 +569,7 @@ namespace {
         , gain(0)
         , offset(0) {}
 
+        OFX::BooleanParam* enable;
         OFX::RGBAParam* saturation;
         OFX::RGBAParam* contrast;
         OFX::RGBAParam* gamma;
@@ -647,6 +660,7 @@ private:
 
     void fetchColorControlGroup(const std::string& groupName, ColorControlParamGroup* group) {
         assert(group);
+        group->enable = (groupName == kGroupMaster) ? 0 : fetchBooleanParam(groupName  + kParamEnable);
         group->saturation = fetchRGBAParam(groupName  + kParamSaturation);
         group->contrast = fetchRGBAParam(groupName +  kParamContrast);
         group->gamma = fetchRGBAParam(groupName  + kParamGamma);
@@ -702,11 +716,23 @@ private:
 void ColorCorrectPlugin::getColorCorrectGroupValues(double time, ColorControlGroup* groupValues, ColorCorrectGroupType type)
 {
     ColorControlParamGroup& group = getGroup(type);
-    groupValues->saturation.getValueFrom(time, group.saturation);
-    groupValues->contrast.getValueFrom(time, group.contrast);
-    groupValues->gamma.getValueFrom(time, group.gamma);
-    groupValues->gain.getValueFrom(time, group.gain);
-    groupValues->offset.getValueFrom(time, group.offset);
+    bool enable = true;
+    if (group.enable) {
+        group.enable->getValueAtTime(time, enable);
+    }
+    if (enable) {
+        groupValues->saturation.getValueFrom(time, group.saturation);
+        groupValues->contrast.getValueFrom(time, group.contrast);
+        groupValues->gamma.getValueFrom(time, group.gamma);
+        groupValues->gain.getValueFrom(time, group.gain);
+        groupValues->offset.getValueFrom(time, group.offset);
+    } else {
+        groupValues->saturation.set(1.);
+        groupValues->contrast.set(1.);
+        groupValues->gamma.set(1.);
+        groupValues->gain.set(1.);
+        groupValues->offset.set(0.);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1037,18 +1063,30 @@ defineColorGroup(const std::string& groupName,
                  OFX::ImageEffectDescriptor &desc,
                  bool open)
  {
-     GroupParamDescriptor* param = desc.defineGroupParam(groupName);
-     param->setLabel(groupName);
-     param->setHint(hint);
-     param->setOpen(open);
+     GroupParamDescriptor* group = desc.defineGroupParam(groupName);
+     group->setLabel(groupName);
+     group->setHint(hint);
+     group->setOpen(open);
 
-     defineRGBAScaleParam(desc, groupName + kParamSaturation, kParamSaturation, hint, param, page, 1, 0, 4);
-     defineRGBAScaleParam(desc, groupName + kParamContrast, kParamContrast, hint, param, page, 1, 0, 4);
-     defineRGBAScaleParam(desc, groupName + kParamGamma, kParamGamma, hint, param, page, 1, 0.2, 5);
-     defineRGBAScaleParam(desc, groupName + kParamGain, kParamGain, hint, param, page, 1, 0, 4);
-     defineRGBAScaleParam(desc, groupName + kParamOffset, kParamOffset, hint, param, page, 0, -1, 1);
+     if (groupName != kGroupMaster) {
+         BooleanParamDescriptor *param = desc.defineBooleanParam(groupName + kParamEnable);
+         param->setLabel(kParamEnable);
+         param->setHint("When checked, " + groupName + " correction is enabled.");
+         param->setDefault(true);
+         if (group) {
+             param->setParent(*group);
+         }
+         if (page) {
+             page->addChild(*param);
+         }
+     }
+     defineRGBAScaleParam(desc, groupName + kParamSaturation, kParamSaturation, hint, group, page, 1, 0, 4);
+     defineRGBAScaleParam(desc, groupName + kParamContrast,   kParamContrast,   hint, group, page, 1, 0, 4);
+     defineRGBAScaleParam(desc, groupName + kParamGamma,      kParamGamma,      hint, group, page, 1, 0.2, 5);
+     defineRGBAScaleParam(desc, groupName + kParamGain,       kParamGain,       hint, group, page, 1, 0, 4);
+     defineRGBAScaleParam(desc, groupName + kParamOffset,     kParamOffset,     hint, group, page, 0, -1, 1);
      if (page) {
-         page->addChild(*param);
+         page->addChild(*group);
      }
  }
 
