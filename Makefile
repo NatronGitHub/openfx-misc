@@ -36,13 +36,13 @@ Merge \
 Mirror \
 Multiply \
 MixViews \
-Noise \
 NoOp \
 OneView \
 Position \
 Premult \
 Radial \
 Ramp \
+Rand \
 ReConverge \
 Rectangle \
 Retime \
