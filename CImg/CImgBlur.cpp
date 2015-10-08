@@ -503,9 +503,6 @@ public:
             const float *p2 = &cimg(0,0,0,1);
             const float *p3 = &cimg(0,0,0,2);
             float *px = &cimg0(0,0,0,0), *pz = &cimg0(0,0,0,1);
-#ifdef cimg_use_openmp
-#pragma omp parallel for if (cimg.width()*cimg.height()*cimg.depth()>=32768)
-#endif
             for (unsigned long N = (unsigned long)cimg.width()*cimg.height()*cimg.depth(); N; --N) {
                 const float R = *p1;
                 const float G = *p2;
@@ -567,9 +564,6 @@ public:
             float *p3 = &cimg(0,0,0,2);
             const float *px = &cimg0(0,0,0,0);
             const float *pz = &cimg0(0,0,0,1);
-#ifdef cimg_use_openmp
-#pragma omp parallel for if (cimg.width()*cimg.height()*cimg.depth()>=32768)
-#endif
             for (unsigned long N = (unsigned long)cimg.width()*cimg.height()*cimg.depth(); N; --N) {
                 const float X = *px;
                 const float Y = *p1;
