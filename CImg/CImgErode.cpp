@@ -44,7 +44,7 @@
 "Erode (or dilate) input stream by a rectangular structuring element of specified size and Neumann boundary conditions (pixels out of the image get the value of the nearest pixel).\n" \
 "A negative size will perform a dilation instead of an erosion.\n" \
 "Different sizes can be given for the x and y axis.\n" \
-"Uses the 'erode' and 'dilate' function from the CImg library.\n" \
+"Uses the 'erode' and 'dilate' functions from the CImg library.\n" \
 "CImg is a free, open-source library distributed under the CeCILL-C " \
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.sourceforge.net)."
