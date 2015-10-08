@@ -17,14 +17,14 @@
  * ***** END LICENSE BLOCK ***** */
 
 /*
- * OFX Noise plugin.
+ * OFX Rand plugin.
  */
 
-#ifndef Misc_Noise_h
-#define Misc_Noise_h
+#ifndef Misc_Rand_h
+#define Misc_Rand_h
 
 #include "ofxsImageEffect.h"
 
-void getNoisePluginID(OFX::PluginFactoryArray &ids);
+void getRandPluginID(OFX::PluginFactoryArray &ids);
 
-#endif // Misc_Noise_h
+#endif // Misc_Rand_h

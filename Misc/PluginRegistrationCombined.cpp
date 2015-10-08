@@ -32,13 +32,13 @@
 #include "Mirror.h"
 #include "MixViews.h"
 #include "Multiply.h"
-#include "Noise.h"
 #include "NoOp.h"
 #include "OneView.h"
 #include "Position.h"
 #include "Premult.h"
 #include "Radial.h"
 #include "Ramp.h"
+#include "Rand.h"
 #include "ReConverge.h"
 #include "Rectangle.h"
 #include "Retime.h"
@@ -96,13 +96,13 @@ namespace OFX
             getMirrorPluginID(ids);
             getMixViewsPluginID(ids);
             getMultiplyPluginID(ids);
-            getNoisePluginID(ids);
             getNoOpPluginID(ids);
             getOneViewPluginID(ids);
             getPositionPluginID(ids);
             getPremultPluginIDs(ids);
             getRadialPluginID(ids);
             getRampPluginID(ids);
+            getRandPluginID(ids);
 #ifdef DEBUG
             getReConvergePluginID(ids);
 #endif

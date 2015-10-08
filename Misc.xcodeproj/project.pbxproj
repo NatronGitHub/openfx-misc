@@ -785,8 +785,8 @@
 		1ED4AE9F1973DCAD00EE64C8 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1ED4AEA01973DCAD00EE64C8 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1ED4AEA21973DCAD00EE64C8 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		1ED4AEAB1973DD4800EE64C8 /* Noise.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED4AEA91973DD4800EE64C8 /* Noise.cpp */; };
-		1ED4AEAC1973DD4800EE64C8 /* Noise.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED4AEA91973DD4800EE64C8 /* Noise.cpp */; };
+		1ED4AEAB1973DD4800EE64C8 /* Rand.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED4AEA91973DD4800EE64C8 /* Rand.cpp */; };
+		1ED4AEAC1973DD4800EE64C8 /* Rand.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED4AEA91973DD4800EE64C8 /* Rand.cpp */; };
 		1ED4AEB01973DD5700EE64C8 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED4AEAF1973DD5700EE64C8 /* PluginRegistration.cpp */; };
 		1ED4AEB71973DE1200EE64C8 /* randomGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED4AEB51973DE1100EE64C8 /* randomGenerator.cpp */; };
 		1ED4AEB81973DE1200EE64C8 /* randomGenerator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED4AEB51973DE1100EE64C8 /* randomGenerator.cpp */; };
@@ -2766,11 +2766,11 @@
 		1ED3A2691BBC34B0008128B1 /* net.sf.openfx.TimeBlur.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.TimeBlur.svg; sourceTree = "<group>"; };
 		1ED4569C19BBB0E00019E8CF /* ofxsImageBlenderMasked.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsImageBlenderMasked.h; sourceTree = "<group>"; };
 		1ED4AEA61973DCAD00EE64C8 /* Noise.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Noise.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		1ED4AEA91973DD4800EE64C8 /* Noise.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Noise.cpp; sourceTree = "<group>"; };
+		1ED4AEA91973DD4800EE64C8 /* Rand.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Rand.cpp; sourceTree = "<group>"; };
 		1ED4AEAF1973DD5700EE64C8 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1ED4AEB11973DD6D00EE64C8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1ED4AEB21973DD6D00EE64C8 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		1ED4AEB31973DD6D00EE64C8 /* Noise.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Noise.h; sourceTree = "<group>"; };
+		1ED4AEB31973DD6D00EE64C8 /* Rand.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Rand.h; sourceTree = "<group>"; };
 		1ED4AEB51973DE1100EE64C8 /* randomGenerator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = randomGenerator.cpp; sourceTree = "<group>"; };
 		1ED4AEB61973DE1200EE64C8 /* randomGenerator.H */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = randomGenerator.H; sourceTree = "<group>"; };
 		1ED5372E1A234CDF007966D5 /* ColorTransform.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorTransform.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -3923,13 +3923,13 @@
 				1EB0A47D1AA21ACD00F9C93E /* Mirror */,
 				1EDE1BE1182D8961002392CB /* MixViews */,
 				1EE9B0901A4B2FD900869861 /* Multiply */,
-				1ED4AEA81973DD0B00EE64C8 /* Noise */,
 				1EB9C06E196DD61B003C1849 /* NoOp */,
 				1EDE1BC8182D3F73002392CB /* OneView */,
 				1EB0A45A1AA202AE00F9C93E /* Position */,
 				1E52FFB91955CDDA0000FB79 /* Premult */,
 				1ECA4DDF1A3F3A2C00C5128B /* Radial */,
 				AC60A32419FE995F00375A86 /* Ramp */,
+				1ED4AEA81973DD0B00EE64C8 /* Rand */,
 				1ECE544E185F23BD001ED442 /* ReConverge */,
 				1E0072E81A4041AE00E77042 /* Rectangle */,
 				1E2A93461990EE320061B1F1 /* Retime */,
@@ -4317,18 +4317,18 @@
 			path = Keyer;
 			sourceTree = "<group>";
 		};
-		1ED4AEA81973DD0B00EE64C8 /* Noise */ = {
+		1ED4AEA81973DD0B00EE64C8 /* Rand */ = {
 			isa = PBXGroup;
 			children = (
 				1ED4AEB11973DD6D00EE64C8 /* Info.plist */,
 				1ED4AEB21973DD6D00EE64C8 /* Makefile */,
 				AC6486D51A41A5210088844F /* net.sf.openfx.Noise.png */,
 				1E32848B1A41C21400C9A4E4 /* net.sf.openfx.Noise.svg */,
-				1ED4AEA91973DD4800EE64C8 /* Noise.cpp */,
-				1ED4AEB31973DD6D00EE64C8 /* Noise.h */,
+				1ED4AEA91973DD4800EE64C8 /* Rand.cpp */,
+				1ED4AEB31973DD6D00EE64C8 /* Rand.h */,
 				1ED4AEAF1973DD5700EE64C8 /* PluginRegistration.cpp */,
 			);
-			path = Noise;
+			path = Rand;
 			sourceTree = "<group>";
 		};
 		1ED537191A234CB8007966D5 /* ColorTransform */ = {
@@ -6252,7 +6252,7 @@
 				1EB0A49B1AA21B4200F9C93E /* Mirror.cpp in Sources */,
 				1E8B5D7218B7800800C31FDC /* MixViews.cpp in Sources */,
 				1ED12E5A1A4B319800ABA348 /* Multiply.cpp in Sources */,
-				1ED4AEAC1973DD4800EE64C8 /* Noise.cpp in Sources */,
+				1ED4AEAC1973DD4800EE64C8 /* Rand.cpp in Sources */,
 				1EB9C085196DD697003C1849 /* NoOp.cpp in Sources */,
 				1E8B5D7718B7811500C31FDC /* OneView.cpp in Sources */,
 				1EB0A47C1AA2037700F9C93E /* Position.cpp in Sources */,
@@ -6602,7 +6602,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1ED4AEAB1973DD4800EE64C8 /* Noise.cpp in Sources */,
+				1ED4AEAB1973DD4800EE64C8 /* Rand.cpp in Sources */,
 				1ED4AEB01973DD5700EE64C8 /* PluginRegistration.cpp in Sources */,
 				1ED4AEB71973DE1200EE64C8 /* randomGenerator.cpp in Sources */,
 				1ED4AE991973DCAD00EE64C8 /* ofxsCore.cpp in Sources */,

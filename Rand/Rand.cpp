@@ -17,10 +17,10 @@
  * ***** END LICENSE BLOCK ***** */
 
 /*
- * OFX Noise plugin.
+ * OFX Rand plugin (previously named NoiseOFX).
  */
 
-#include "Noise.h"
+#include "Rand.h"
 
 #include <limits>
 #include <cmath>
@@ -41,10 +41,11 @@
 #endif
 #endif
 
-#define kPluginName "NoiseOFX"
+// Note: this plugin was initially named NoiseOFX, but was renamed to Rand (like the Shake node)
+#define kPluginName "Rand"
 #define kPluginGrouping "Draw"
-#define kPluginDescription "Generate noise."
-#define kPluginIdentifier "net.sf.openfx.Noise"
+#define kPluginDescription "Generate a random field of noise. The field does not resample if you change the resolution or density—you can animate the density without pixels randomly changing."
+#define kPluginIdentifier "net.sf.openfx.Noise" // don't ever change the plugin ID
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -59,6 +60,10 @@
 #define kParamNoiseLevelLabel "Noise"
 #define kParamNoiseLevelHint "How much noise to make."
 
+#define kParamNoiseDensity "density"
+#define kParamNoiseDensityLabel "Density"
+#define kParamNoiseDensityHint "The density from 0 to 1 of the pixels. A lower density mean fewer random pixels."
+
 #define kParamSeed "seed"
 #define kParamSeedLabel "Seed"
 #define kParamSeedHint "Random seed: change this if you want different instances to have different noise."
@@ -69,15 +74,16 @@ using namespace OFX;
 // base class for the noise
 
 /** @brief  Base class used to blend two images together */
-class NoiseGeneratorBase : public OFX::ImageProcessor
+class RandGeneratorBase : public OFX::ImageProcessor
 {
 protected:
     float       _noiseLevel;   // noise amplitude
+    double      _density;
     float       _mean;   // mean value
     uint32_t    _seed;    // base seed
 public:
     /** @brief no arg ctor */
-    NoiseGeneratorBase(OFX::ImageEffect &instance)
+    RandGeneratorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _noiseLevel(0.5f)
     , _mean(0.5f)
@@ -85,14 +91,13 @@ public:
     {
     }
 
-    /** @brief set the scale */
-    void setNoiseLevel(float v) {_noiseLevel = v;}
-
-    /** @brief set the offset */
-    void setNoiseMean(float v) {_mean = v;}
-
-    /** @brief the seed to use */
-    void setSeed(uint32_t v) {_seed = v;}
+    /** @brief set the values */
+    void setValues(float noiseLevel, double density, float mean, uint32_t seed) {
+        _noiseLevel = noiseLevel;
+        _density = density;
+        _mean = mean;
+        _seed = seed;
+    }
 };
 
 static unsigned int hash(unsigned int a)
@@ -107,12 +112,12 @@ static unsigned int hash(unsigned int a)
 
 /** @brief templated class to blend between two images */
 template <class PIX, int nComponents, int max>
-class NoiseGenerator : public NoiseGeneratorBase
+class RandGenerator : public RandGeneratorBase
 {
 public:
     // ctor
-    NoiseGenerator(OFX::ImageEffect &instance)
-    : NoiseGeneratorBase(instance)
+    RandGenerator(OFX::ImageEffect &instance)
+    : RandGeneratorBase(instance)
     {}
 
     // and do some processing
@@ -138,19 +143,28 @@ public:
 #ifdef USE_RANDOMGENERATOR
                 randy.reseed(hash(x + 0x10000*_seed) + y);
 #endif
-                for (int c = 0; c < nComponents; c++) {
-                    // get the random value out of it, scale up by the pixel max level and the noise level
 #ifdef USE_RANDOMGENERATOR
-                    double randValue = _mean + max * noiseLevel * (randy.random()-0.5);
+                double randValue = randy.random();
 #else
-                    double randValue = _mean + max * noiseLevel * (hash(hash(hash(_seed^x)^y)^c)/((double)0x100000000ULL) - 0.5);
+                double randValue = hash(hash(hash(_seed^x)^y)^nComponents)/((double)0x100000000ULL);
 #endif
-
-                    if (max == 1) // implies floating point, so don't clamp
-                        dstPix[c] = PIX(randValue);
-                    else {  // integer base one, clamp it
-                        dstPix[c] = randValue < 0 ? 0 : (randValue > max ? max : PIX(randValue));
+                if (randValue <= _density) {
+                    for (int c = 0; c < nComponents; c++) {
+                        // get the random value out of it, scale up by the pixel max level and the noise level
+#ifdef USE_RANDOMGENERATOR
+                        randValue = randy.random() - 0.5;
+#else
+                        randValue = hash(hash(hash(_seed^x)^y)^c)/((double)0x100000000ULL) - 0.5;
+#endif
+                        randValue = _mean + max * noiseLevel * randValue;
+                        if (max == 1) // implies floating point, so don't clamp
+                            dstPix[c] = PIX(randValue);
+                        else {  // integer base one, clamp it
+                            dstPix[c] = randValue < 0 ? 0 : (randValue > max ? max : PIX(randValue));
+                        }
                     }
+                } else {
+                    std::fill(dstPix, dstPix + nComponents, 0);
                 }
                 dstPix += nComponents;
             }
@@ -161,7 +175,7 @@ public:
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class NoisePlugin : public OFX::ImageEffect
+class RandPlugin : public OFX::ImageEffect
 {
 protected:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -169,11 +183,12 @@ protected:
     OFX::Clip *_dstClip;
 
     OFX::DoubleParam  *_noise;
+    OFX::DoubleParam  *_density;
     OFX::IntParam  *_seed;
 
 public:
     /** @brief ctor */
-    NoisePlugin(OfxImageEffectHandle handle)
+    RandPlugin(OfxImageEffectHandle handle)
     : ImageEffect(handle)
     , _srcClip(0)
     , _dstClip(0)
@@ -190,6 +205,7 @@ public:
                              _srcClip->getPixelComponents() == ePixelComponentRGBA ||
                              _srcClip->getPixelComponents() == ePixelComponentAlpha)));
         _noise   = fetchDoubleParam(kParamNoiseLevel);
+        _density = fetchDoubleParam(kParamNoiseDensity);
         _seed   = fetchIntParam(kParamSeed);
         assert(_noise && _seed);
     }
@@ -201,7 +217,7 @@ public:
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /* set up and run a processor */
-    void setupAndProcess(NoiseGeneratorBase &, const OFX::RenderArguments &args);
+    void setupAndProcess(RandGeneratorBase &, const OFX::RenderArguments &args);
 };
 
 
@@ -214,8 +230,9 @@ public:
 
 /* set up and run a processor */
 void
-NoisePlugin::setupAndProcess(NoiseGeneratorBase &processor, const OFX::RenderArguments &args)
+RandPlugin::setupAndProcess(RandGeneratorBase &processor, const OFX::RenderArguments &args)
 {
+    const double time = args.time;
     // get a dst image
     std::auto_ptr<OFX::Image>  dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
@@ -241,15 +258,22 @@ NoisePlugin::setupAndProcess(NoiseGeneratorBase &processor, const OFX::RenderArg
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
+    double noise;
+    _noise->getValueAtTime(time, noise);
+    double density;
+    _density->getValueAtTime(time, density);
+
+    // set the seed based on the current time, and double it we get difference seeds on different fields
+    uint32_t seed = hash((unsigned)(time)^_seed->getValueAtTime(args.time));
+
     // set the scales
     // noise level depends on the render scale
     // (the following formula is for Gaussian noise only, but we use it as an approximation)
-    double noise = _noise->getValueAtTime(args.time);
-    processor.setNoiseLevel((float)(noise * std::sqrt(args.renderScale.x)));
-    processor.setNoiseMean((float)(noise / 2.));
+    double densityRS = std::min(1., density / (args.renderScale.x * args.renderScale.y));
+    float noiseLevel = (float)(noise * (density / densityRS) * std::sqrt(args.renderScale.x));
+    float mean = (float)(noise * (density / densityRS) / 2.);
 
-    // set the seed based on the current time, and double it we get difference seeds on different fields
-    processor.setSeed(hash((unsigned)(args.time)^_seed->getValueAtTime(args.time)));
+    processor.setValues(noiseLevel, densityRS, mean, seed);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
@@ -257,14 +281,14 @@ NoisePlugin::setupAndProcess(NoiseGeneratorBase &processor, const OFX::RenderArg
 
 /* Override the clip preferences, we need to say we are setting the frame varying flag */
 void
-NoisePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+RandPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     clipPreferences.setOutputFrameVarying(true);
 }
 
 // the overridden render function
 void
-NoisePlugin::render(const OFX::RenderArguments &args)
+RandPlugin::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
@@ -276,19 +300,19 @@ NoisePlugin::render(const OFX::RenderArguments &args)
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
             case OFX::eBitDepthUByte: {
-                NoiseGenerator<unsigned char, 4, 255> fred(*this);
+                RandGenerator<unsigned char, 4, 255> fred(*this);
                 setupAndProcess(fred, args);
             }
                 break;
 
             case OFX::eBitDepthUShort: {
-                NoiseGenerator<unsigned short, 4, 65535> fred(*this);
+                RandGenerator<unsigned short, 4, 65535> fred(*this);
                 setupAndProcess(fred, args);
             }
                 break;
 
             case OFX::eBitDepthFloat: {
-                NoiseGenerator<float, 4, 1> fred(*this);
+                RandGenerator<float, 4, 1> fred(*this);
                 setupAndProcess(fred, args);
             }
                 break;
@@ -298,19 +322,19 @@ NoisePlugin::render(const OFX::RenderArguments &args)
     } else {
         switch (dstBitDepth) {
             case OFX::eBitDepthUByte: {
-                NoiseGenerator<unsigned char, 1, 255> fred(*this);
+                RandGenerator<unsigned char, 1, 255> fred(*this);
                 setupAndProcess(fred, args);
             }
                 break;
 
             case OFX::eBitDepthUShort: {
-                NoiseGenerator<unsigned short, 1, 65535> fred(*this);
+                RandGenerator<unsigned short, 1, 65535> fred(*this);
                 setupAndProcess(fred, args);
             }
                 break;
 
             case OFX::eBitDepthFloat: {
-                NoiseGenerator<float, 1, 1> fred(*this);
+                RandGenerator<float, 1, 1> fred(*this);
                 setupAndProcess(fred, args);
             }
                 break;
@@ -320,11 +344,11 @@ NoisePlugin::render(const OFX::RenderArguments &args)
     }
 }
 
-mDeclarePluginFactory(NoisePluginFactory, {}, {});
+mDeclarePluginFactory(RandPluginFactory, {}, {});
 
 using namespace OFX;
 
-void NoisePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void RandPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -348,7 +372,7 @@ void NoisePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
-void NoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void RandPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
 {
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip( kOfxImageEffectSimpleSourceClipName );
@@ -371,9 +395,25 @@ void NoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamNoiseLevel);
         param->setLabel(kParamNoiseLevelLabel);
         param->setHint(kParamNoiseLevelHint);
-        param->setDefault(0.2);
-        param->setRange(0, 10);
+        param->setDefault(1.);
+        param->setRange(0, kOfxFlagInfiniteMax);
         param->setIncrement(0.1);
+        param->setDisplayRange(0, 1);
+        param->setAnimates(true); // can animate
+        param->setDoubleType(eDoubleTypeScale);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // density
+    {
+        DoubleParamDescriptor *param = desc.defineDoubleParam(kParamNoiseDensity);
+        param->setLabel(kParamNoiseDensityLabel);
+        param->setHint(kParamNoiseDensityHint);
+        param->setDefault(1.);
+        param->setRange(0., 1.);
+        param->setIncrement(0.01);
         param->setDisplayRange(0, 1);
         param->setAnimates(true); // can animate
         param->setDoubleType(eDoubleTypeScale);
@@ -395,13 +435,13 @@ void NoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Con
     }
 }
 
-ImageEffect* NoisePluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect* RandPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
 {
-    return new NoisePlugin(handle);
+    return new RandPlugin(handle);
 }
 
-void getNoisePluginID(OFX::PluginFactoryArray &ids)
+void getRandPluginID(OFX::PluginFactoryArray &ids)
 {
-    static NoisePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+    static RandPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
     ids.push_back(&p);
 }
