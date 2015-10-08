@@ -563,7 +563,8 @@ private:
 namespace {
     struct ColorControlParamGroup {
         ColorControlParamGroup()
-        : saturation(0)
+        : enable(0)
+        , saturation(0)
         , contrast(0)
         , gamma(0)
         , gain(0)

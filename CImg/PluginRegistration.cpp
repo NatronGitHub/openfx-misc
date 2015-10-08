@@ -8,6 +8,7 @@
 #include "CImgExpression.h"
 #include "CImgGuided.h"
 #include "CImgHistEQ.h"
+#include "CImgMedian.h"
 #include "CImgNoise.h"
 #include "CImgPlasma.h"
 #include "CImgRollingGuidance.h"
@@ -33,6 +34,7 @@ namespace OFX
             getCImgErodeSmoothPluginID(ids);
             getCImgGuidedPluginID(ids);
             getCImgHistEQPluginID(ids);
+            getCImgMedianPluginID(ids);
             getCImgNoisePluginID(ids);
             getCImgPlasmaPluginID(ids);
             getCImgRollingGuidancePluginID(ids);

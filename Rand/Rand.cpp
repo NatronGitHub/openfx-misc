@@ -86,6 +86,7 @@ public:
     RandGeneratorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _noiseLevel(0.5f)
+    , _density(1.)
     , _mean(0.5f)
     , _seed(0)
     {
