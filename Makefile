@@ -69,6 +69,7 @@ HAVE_CIMG ?= 1
 ifneq ($(HAVE_CIMG),0)
 # add plugins which may use CImg here
   SUBDIRS += CImg
+  SUBDIRS_NOMULTI += CImg
 endif
 
 all: subdirs
