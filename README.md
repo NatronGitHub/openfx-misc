@@ -116,6 +116,7 @@ matrix.
 * GMICExpr: Quickly generate or process image from mathematical formula evaluated for each pixel.
 * GodRays: Average an image over a range of transforms, or create crepuscular rays.
 * GuidedCImg: Blur image, with the [Guided Image filter](http://research.microsoft.com/en-us/um/people/kahe/publications/pami12guidedfilter.pdf).
+* MedianCImg: Apply a [median filter](https://en.wikipedia.org/wiki/Median_filter) to input images.
 * RollingGuidanceCImg: Filter out details under a given scale using the [Rolling Guidance filter](http://www.cse.cuhk.edu.hk/~leojia/projects/rollguidance/).
 * SharpenInvDiffCImg: Sharpen selected images by inverse diffusion.
 * SharpenShockCImg: Sharpen selected images by shock filters.
