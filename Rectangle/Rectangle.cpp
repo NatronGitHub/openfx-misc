@@ -726,7 +726,10 @@ RectanglePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
         // set the premultiplication of _dstClip if alpha is affected and source is Opaque
         bool processA;
         _processA->getValue(processA);
-        if (processA && _srcClip->isConnected() && _srcClip->getPreMultiplication() == eImageOpaque) {
+        if (processA &&
+            (_dstClip->getPixelComponents() == ePixelComponentRGBA ||
+             _dstClip->getPixelComponents() == ePixelComponentAlpha) &&
+            _srcClip->getPreMultiplication() == eImageOpaque) {
             clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
         }
     }
