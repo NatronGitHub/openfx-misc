@@ -130,6 +130,13 @@
 #define kParamBoundaryDefault eBoundaryDirichlet
 #define kParamBoundaryDefaultLaplacian eBoundaryNeumann
 
+enum BoundaryEnum
+{
+    eBoundaryDirichlet = 0,
+    eBoundaryNeumann,
+    //eBoundaryPeriodic,
+};
+
 #define kParamChrominanceMath "chrominanceMath"
 #define kParamChrominanceMathLabel "Chrominance Math"
 #define kParamChrominanceMathHint "Formula used to compute chrominance from RGB values."
@@ -138,11 +145,10 @@
 #define kParamChrominanceMathOptionCcir601 "CCIR 601"
 #define kParamChrominanceMathOptionCcir601Hint "Use CCIR 601."
 
-enum BoundaryEnum
+enum ChrominanceMathEnum
 {
-    eBoundaryDirichlet = 0,
-    eBoundaryNeumann,
-    //eBoundaryPeriodic,
+    eChrominanceMathRec709,
+    eChrominanceMathCcir601,
 };
 
 #define kParamFilter "filter"
@@ -336,6 +342,7 @@ struct CImgBlurParams
     double sizex, sizey; // sizex takes PixelAspectRatio intor account
     int orderX;
     int orderY;
+    ChrominanceMathEnum chrominanceMath;
     int boundary_i;
     FilterEnum filter;
     bool expandRoD;
@@ -370,7 +377,10 @@ public:
             assert(_orderX && _orderY);
         }
         assert(_size && _uniform);
-        if (blurPlugin != eBlurPluginChromaBlur) {
+        if (blurPlugin == eBlurPluginChromaBlur) {
+            _chrominanceMath = fetchChoiceParam(kParamChrominanceMath);
+            assert(_chrominanceMath);
+        } else {
             _boundary  = fetchChoiceParam(kParamBoundary);
             assert(_boundary);
         }
@@ -400,10 +410,13 @@ public:
         } else {
             params.orderX = params.orderY = 0;
         }
-        if (_blurPlugin != eBlurPluginChromaBlur) {
-            _boundary->getValueAtTime(time, params.boundary_i);
-        } else {
+        if (_blurPlugin == eBlurPluginChromaBlur) {
+            int chrominanceMath_i;
+            _chrominanceMath->getValueAtTime(time, chrominanceMath_i);
+            params.chrominanceMath = (ChrominanceMathEnum)chrominanceMath_i;
             params.boundary_i = 1; // nearest
+        } else {
+            _boundary->getValueAtTime(time, params.boundary_i);
         }
         int filter_i;
         _filter->getValueAtTime(time, filter_i);
@@ -506,25 +519,38 @@ public:
             const float *pg = &cimg(0,0,0,1);
             const float *pb = &cimg(0,0,0,2);
             float *pu = &cimg0(0,0,0,0), *pv = &cimg0(0,0,0,1);
-            for (unsigned long N = (unsigned long)cimg.width()*cimg.height()*cimg.depth(); N; --N) {
-                const float R = *pr;
-                const float G = *pg;
-                const float B = *pb;
-                /// YUV (BT.601)
-                /// ref: https://en.wikipedia.org/wiki/YUV#SDTV_with_BT.601
-                //*pr =  0.299f   * R +0.587f   * G +0.114f  * B;
-                //*pu = -0.14713f * R -0.28886f * G +0.114f  * B;
-                //*pv =  0.615f   * R -0.51499f * G -0.10001 * B;
-                /// YUV (Rec.709)
-                /// ref: https://en.wikipedia.org/wiki/YUV#HDTV_with_BT.709
-                *pr =  0.2126f  * R +0.7152f  * G +0.0722f  * B; //Y
-                *pu = -0.09991f * R -0.33609f * G +0.436f   * B; //U
-                *pv =  0.615f   * R -0.55861f * G -0.05639f * B; //V
-                ++pr;
-                ++pg;
-                ++pb;
-                ++pu;
-                ++pv;
+            if (params.chrominanceMath == eChrominanceMathRec709) {
+                for (unsigned long N = (unsigned long)cimg.width()*cimg.height()*cimg.depth(); N; --N) {
+                    const float R = *pr;
+                    const float G = *pg;
+                    const float B = *pb;
+                    /// YUV (Rec.709)
+                    /// ref: https://en.wikipedia.org/wiki/YUV#HDTV_with_BT.709
+                    *pr =  0.2126f  * R +0.7152f  * G +0.0722f  * B; //Y
+                    *pu = -0.09991f * R -0.33609f * G +0.436f   * B; //U
+                    *pv =  0.615f   * R -0.55861f * G -0.05639f * B; //V
+                    ++pr;
+                    ++pg;
+                    ++pb;
+                    ++pu;
+                    ++pv;
+                }
+            } else {
+                for (unsigned long N = (unsigned long)cimg.width()*cimg.height()*cimg.depth(); N; --N) {
+                    const float R = *pr;
+                    const float G = *pg;
+                    const float B = *pb;
+                    /// YUV (BT.601)
+                    /// ref: https://en.wikipedia.org/wiki/YUV#SDTV_with_BT.601
+                    *pr =  0.299f   * R +0.587f   * G +0.114f  * B;
+                    *pu = -0.14713f * R -0.28886f * G +0.114f  * B;
+                    *pv =  0.615f   * R -0.51499f * G -0.10001 * B;
+                    ++pr;
+                    ++pg;
+                    ++pb;
+                    ++pu;
+                    ++pv;
+                }
             }
 
         }
@@ -567,28 +593,39 @@ public:
             float *pb = &cimg(0,0,0,2);
             const float *pu = &cimg0(0,0,0,0);
             const float *pv = &cimg0(0,0,0,1);
-            for (unsigned long N = (unsigned long)cimg.width()*cimg.height()*cimg.depth(); N; --N) {
-                const float Y = *p1;
-                const float U = *pu;
-                const float V = *pv;
-                /// YUV (BT.601)
-                /// ref: https://en.wikipedia.org/wiki/YUV#SDTV_with_BT.601
-                //*p1 = Y                + 1.13983f * Z,
-                //*p2 = Y - 0.39465f * X - 0.58060f * Z;
-                //*p3 = Y + 2.03211f * X;
-                /// YUV (Rec.709)
-                /// ref: https://en.wikipedia.org/wiki/YUV#HDTV_with_BT.709
-                *pr = Y               +1.28033f * V,
-                *pg = Y -0.21482f * U -0.38059f * V;
-                *pb = Y +2.12798f * U;
-
-                ++p1;
-                ++p2;
-                ++p3;
-                ++px;
-                ++pz;
+            if (params.chrominanceMath == eChrominanceMathRec709) {
+                for (unsigned long N = (unsigned long)cimg.width()*cimg.height()*cimg.depth(); N; --N) {
+                    const float Y = *pr;
+                    const float U = *pu;
+                    const float V = *pv;
+                    /// YUV (Rec.709)
+                    /// ref: https://en.wikipedia.org/wiki/YUV#HDTV_with_BT.709
+                    *pr = Y               +1.28033f * V,
+                    *pg = Y -0.21482f * U -0.38059f * V;
+                    *pb = Y +2.12798f * U;
+                    ++pr;
+                    ++pg;
+                    ++pb;
+                    ++pu;
+                    ++pv;
+                }
+            } else {
+                for (unsigned long N = (unsigned long)cimg.width()*cimg.height()*cimg.depth(); N; --N) {
+                    const float Y = *pr;
+                    const float U = *pu;
+                    const float V = *pv;
+                    /// YUV (BT.601)
+                    /// ref: https://en.wikipedia.org/wiki/YUV#SDTV_with_BT.601
+                    *pr = Y                + 1.13983f * V,
+                    *pg = Y - 0.39465f * U - 0.58060f * V;
+                    *pb = Y + 2.03211f * U;
+                    ++pr;
+                    ++pg;
+                    ++pb;
+                    ++pu;
+                    ++pv;
+                }
             }
-
         }
     }
 
@@ -625,6 +662,7 @@ private:
     OFX::BooleanParam *_uniform;
     OFX::IntParam *_orderX;
     OFX::IntParam *_orderY;
+    OFX::ChoiceParam *_chrominanceMath;
     OFX::ChoiceParam *_boundary;
     OFX::ChoiceParam *_filter;
     OFX::BooleanParam *_expandRoD;
@@ -741,7 +779,19 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
             }
         }
     }
-    if (blurPlugin != eBlurPluginChromaBlur) {
+    if (blurPlugin == eBlurPluginChromaBlur) {
+        OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChrominanceMath);
+        param->setLabel(kParamChrominanceMathLabel);
+        param->setHint(kParamChrominanceMathHint);
+        assert(param->getNOptions() == eChrominanceMathRec709 && param->getNOptions() == 0);
+        param->appendOption(kParamChrominanceMathOptionRec709, kParamChrominanceMathOptionRec709Hint);
+        assert(param->getNOptions() == eChrominanceMathCcir601 && param->getNOptions() == 1);
+        param->appendOption(kParamChrominanceMathOptionCcir601, kParamChrominanceMathOptionCcir601Hint);
+        param->setDefault((int)eChrominanceMathRec709);
+        if (page) {
+            page->addChild(*param);
+        }
+    } else {
         OFX::ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamBoundary);
         param->setLabel(kParamBoundaryLabel);
         param->setHint(kParamBoundaryHint);
