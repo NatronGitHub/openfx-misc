@@ -676,7 +676,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
     OFX::PageParamDescriptor *page = CImgBlurPlugin::describeInContextBegin(desc, context,
                                                                             kSupportsRGBA,
                                                                             kSupportsRGB,
-                                                                            kSupportsAlpha,
+                                                                            blurPlugin == eBlurPluginChromaBlur ? false : kSupportsAlpha,
                                                                             kSupportsTiles);
 
     {
