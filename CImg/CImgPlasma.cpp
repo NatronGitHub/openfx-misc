@@ -55,6 +55,7 @@
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsComponentRemapping 1
 #define kSupportsTiles 0 // Plasma effect can only be computed on the whole image
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -68,6 +69,7 @@
 #endif
 #define kSupportsRGBA true
 #define kSupportsRGB true
+#define kSupportsXY true
 #define kSupportsAlpha true
 
 #define kParamAlpha "alpha"
@@ -114,7 +116,7 @@ class CImgPlasmaPlugin : public CImgFilterPluginHelper<CImgPlasmaParams,true>
 public:
 
     CImgPlasmaPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgPlasmaParams,true>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgPlasmaParams,true>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
     {
         _alpha  = fetchDoubleParam(kParamAlpha);
         _beta  = fetchDoubleParam(kParamBeta);
@@ -207,8 +209,12 @@ void CImgPlasmaPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
     OFX::PageParamDescriptor *page = CImgPlasmaPlugin::describeInContextBegin(desc, context,
                                                                               kSupportsRGBA,
                                                                               kSupportsRGB,
+                                                                              kSupportsXY,
                                                                               kSupportsAlpha,
-                                                                              kSupportsTiles);
+                                                                              kSupportsTiles,
+                                                                              /*processRGB=*/true,
+                                                                              /*processAlpha*/false,
+                                                                              /*processIsSecret=*/false);
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAlpha);

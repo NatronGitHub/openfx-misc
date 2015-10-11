@@ -54,6 +54,7 @@
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsComponentRemapping 1
 #define kSupportsTiles 0 // Histogram must be computed on the whole image
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -67,6 +68,7 @@
 #endif
 #define kSupportsRGBA true
 #define kSupportsRGB true
+#define kSupportsXY true
 #define kSupportsAlpha true
 
 #define kParamNbLevels "nb_levels"
@@ -87,7 +89,7 @@ class CImgHistEQPlugin : public CImgFilterPluginHelper<CImgHistEQParams,false>
 public:
 
     CImgHistEQPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgHistEQParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgHistEQParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
     {
         _nb_levels  = fetchIntParam(kParamNbLevels);
         assert(_nb_levels);
@@ -183,6 +185,7 @@ void CImgHistEQPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
     OFX::PageParamDescriptor *page = CImgHistEQPlugin::describeInContextBegin(desc, context,
                                                                               kSupportsRGBA,
                                                                               kSupportsRGB,
+                                                                              kSupportsXY,
                                                                               kSupportsAlpha,
                                                                               kSupportsTiles,
                                                                               /*processRGB=*/true,

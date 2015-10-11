@@ -277,6 +277,7 @@
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 1 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsComponentRemapping 0 // components may be used in the expression, even if not processed
 #define kSupportsTiles 0 // Expression effect can only be computed on the whole image
 #define kSupportsMultiResolution 0
 #define kSupportsRenderScale 1
@@ -290,6 +291,7 @@
 #endif
 #define kSupportsRGBA true
 #define kSupportsRGB true
+#define kSupportsXY true
 #define kSupportsAlpha true
 
 #define kParamExpression "expression"
@@ -314,7 +316,7 @@ class CImgExpressionPlugin : public CImgFilterPluginHelper<CImgExpressionParams,
 public:
 
     CImgExpressionPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgExpressionParams,true>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgExpressionParams,true>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
     {
         _expr  = fetchStringParam(kParamExpression);
         assert(_expr);
@@ -428,10 +430,14 @@ void CImgExpressionPluginFactory::describeInContext(OFX::ImageEffectDescriptor& 
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgExpressionPlugin::describeInContextBegin(desc, context,
-                                                                              kSupportsRGBA,
-                                                                              kSupportsRGB,
-                                                                              kSupportsAlpha,
-                                                                              kSupportsTiles);
+                                                                                  kSupportsRGBA,
+                                                                                  kSupportsRGB,
+                                                                                  kSupportsXY,
+                                                                                  kSupportsAlpha,
+                                                                                  kSupportsTiles,
+                                                                                  /*processRGB=*/true,
+                                                                                  /*processAlpha*/false,
+                                                                                  /*processIsSecret=*/false);
     {
         OFX::StringParamDescriptor *param = desc.defineStringParam(kParamExpression);
         param->setLabel(kParamExpressionLabel);

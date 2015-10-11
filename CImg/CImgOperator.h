@@ -34,6 +34,7 @@ public:
     CImgOperatorPluginHelperBase(OfxImageEffectHandle handle,
                                  const char* srcAClipName, //!< should be either kOfxImageEffectSimpleSourceClipName or "A" if you want this to be the default output when plugin is disabled
                                  const char* srcBClipName,
+                                 bool supportsComponentRemapping, // true if the number and order of components of the image passed to render() has no importance
                                  bool supportsTiles,
                                  bool supportsMultiResolution,
                                  bool supportsRenderScale,
@@ -49,6 +50,7 @@ public:
                            const char* srcBClipName,
                            bool supportsRGBA,
                            bool supportsRGB,
+                           bool supportsXY,
                            bool supportsAlpha,
                            bool supportsTiles,
                            bool processRGB = true,

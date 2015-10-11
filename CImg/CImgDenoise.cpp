@@ -58,6 +58,7 @@
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsComponentRemapping 1
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -71,6 +72,7 @@
 #endif
 #define kSupportsRGBA true
 #define kSupportsRGB true
+#define kSupportsXY true
 #define kSupportsAlpha true
 
 #define kParamSigmaS "sigma_s"
@@ -122,7 +124,7 @@ class CImgDenoisePlugin : public CImgFilterPluginHelper<CImgDenoiseParams,false>
 public:
 
     CImgDenoisePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgDenoiseParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgDenoiseParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);
@@ -364,10 +366,14 @@ void CImgDenoisePluginFactory::describeInContext(OFX::ImageEffectDescriptor& des
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgDenoisePlugin::describeInContextBegin(desc, context,
-                                                                              kSupportsRGBA,
-                                                                              kSupportsRGB,
-                                                                              kSupportsAlpha,
-                                                                              kSupportsTiles);
+                                                                               kSupportsRGBA,
+                                                                               kSupportsRGB,
+                                                                               kSupportsXY,
+                                                                               kSupportsAlpha,
+                                                                               kSupportsTiles,
+                                                                               /*processRGB=*/true,
+                                                                               /*processAlpha*/false,
+                                                                               /*processIsSecret=*/false);
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);

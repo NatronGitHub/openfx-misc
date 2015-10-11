@@ -53,6 +53,7 @@
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsComponentRemapping 1
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -66,6 +67,7 @@
 #endif
 #define kSupportsRGBA true
 #define kSupportsRGB true
+#define kSupportsXY true
 #define kSupportsAlpha true
 
 #define kParamAmplitude "amplitude"
@@ -156,7 +158,7 @@ class CImgSmoothPlugin : public CImgFilterPluginHelper<CImgSmoothParams,false>
 public:
 
     CImgSmoothPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgSmoothParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgSmoothParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
     {
         _amplitude  = fetchDoubleParam(kParamAmplitude);
         _sharpness  = fetchDoubleParam(kParamSharpness);
@@ -270,8 +272,12 @@ void CImgSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
     OFX::PageParamDescriptor *page = CImgSmoothPlugin::describeInContextBegin(desc, context,
                                                                               kSupportsRGBA,
                                                                               kSupportsRGB,
+                                                                              kSupportsXY,
                                                                               kSupportsAlpha,
-                                                                              kSupportsTiles);
+                                                                              kSupportsTiles,
+                                                                              /*processRGB=*/true,
+                                                                              /*processAlpha*/false,
+                                                                              /*processIsSecret=*/false);
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAmplitude);

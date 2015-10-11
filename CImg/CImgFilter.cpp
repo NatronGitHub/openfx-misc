@@ -25,12 +25,13 @@ thread_local OFX::ImageEffect *tls::gImageEffect = 0;
 
 
 CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle handle,
+                                                       bool supportsComponentRemapping, // true if the number and order of components of the image passed to render() has no importance
                                                        bool supportsTiles,
                                                        bool supportsMultiResolution,
                                                        bool supportsRenderScale,
-                                                       bool defaultUnpremult,
-                                                       bool defaultProcessAlphaOnRGBA,
-                                                       bool isFilter)
+                                                       bool defaultUnpremult/* = true*/,
+                                                       bool defaultProcessAlphaOnRGBA/* = false*/,
+                                                       bool isFilter/* = true*/)
 : ImageEffect(handle)
 , _dstClip(0)
 , _srcClip(0)
@@ -44,6 +45,7 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
 , _mix(0)
 , _maskApply(0)
 , _maskInvert(0)
+, _supportsComponentRemapping(supportsComponentRemapping)
 , _supportsTiles(supportsTiles)
 , _supportsMultiResolution(supportsMultiResolution)
 , _supportsRenderScale(supportsRenderScale)
@@ -127,6 +129,7 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
                                                    OFX::ContextEnum context,
                                                    bool supportsRGBA,
                                                    bool supportsRGB,
+                                                   bool supportsXY,
                                                    bool supportsAlpha,
                                                    bool supportsTiles,
                                                    bool processRGB,
@@ -145,6 +148,9 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
     if (supportsRGB) {
         srcClip->addSupportedComponent(OFX::ePixelComponentRGB);
     }
+    if (supportsXY) {
+        srcClip->addSupportedComponent(OFX::ePixelComponentXY);
+    }
     if (supportsAlpha) {
         srcClip->addSupportedComponent(OFX::ePixelComponentAlpha);
     }
@@ -161,6 +167,9 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
     }
     if (supportsRGB) {
         dstClip->addSupportedComponent(OFX::ePixelComponentRGB);
+    }
+    if (supportsXY) {
+        dstClip->addSupportedComponent(OFX::ePixelComponentXY);
     }
     if (supportsAlpha) {
         dstClip->addSupportedComponent(OFX::ePixelComponentAlpha);

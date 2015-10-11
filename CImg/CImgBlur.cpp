@@ -80,6 +80,7 @@
 #define kPluginVersionMajor 3 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsComponentRemapping 1 // except for ChromaBlur
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -93,7 +94,8 @@
 #endif
 #define kSupportsRGBA true
 #define kSupportsRGB true
-#define kSupportsAlpha true
+#define kSupportsXY true // except for ChromaBlue
+#define kSupportsAlpha true // except for ChromaBlue
 
 #define kDefaultUnpremult false // Blur works on premultiplied RGBA by default
 #define kDefaultProcessAlphaOnRGBA true // Alpha is processed as other channels
@@ -350,7 +352,7 @@ class CImgBlurPlugin : public CImgFilterPluginHelper<CImgBlurParams,false>
 public:
 
     CImgBlurPlugin(OfxImageEffectHandle handle, BlurPluginEnum blurPlugin = eBlurPluginBlur)
-    : CImgFilterPluginHelper<CImgBlurParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, kDefaultUnpremult, kDefaultProcessAlphaOnRGBA)
+    : CImgFilterPluginHelper<CImgBlurParams,false>(handle, blurPlugin == eBlurPluginChromaBlur ? false : kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, kDefaultUnpremult, kDefaultProcessAlphaOnRGBA)
     , _blurPlugin(blurPlugin)
     , _size(0)
     , _uniform(0)
@@ -495,33 +497,34 @@ public:
         if (_blurPlugin == eBlurPluginLaplacian) {
             cimg0 = cimg;
         } else if (_blurPlugin == eBlurPluginChromaBlur) {
+            // ChromaBlur only supports RGBA and RGBA, and components cannot be remapped
             assert(cimg.spectrum() >= 3);
             // allocate chrominance image
             cimg0.resize(cimg.width(), cimg.height(), cimg.depth(), 2);
-            // chrominance (X+Z) goes into cimg0, luminance goes into first channel of cimg
-            float *p1 = &cimg(0,0,0,0);
-            const float *p2 = &cimg(0,0,0,1);
-            const float *p3 = &cimg(0,0,0,2);
-            float *px = &cimg0(0,0,0,0), *pz = &cimg0(0,0,0,1);
+            // chrominance (U+V) goes into cimg0, luminance goes into first channel of cimg
+            float *pr = &cimg(0,0,0,0);
+            const float *pg = &cimg(0,0,0,1);
+            const float *pb = &cimg(0,0,0,2);
+            float *pu = &cimg0(0,0,0,0), *pv = &cimg0(0,0,0,1);
             for (unsigned long N = (unsigned long)cimg.width()*cimg.height()*cimg.depth(); N; --N) {
-                const float R = *p1;
-                const float G = *p2;
-                const float B = *p3;
+                const float R = *pr;
+                const float G = *pg;
+                const float B = *pb;
                 /// YUV (BT.601)
                 /// ref: https://en.wikipedia.org/wiki/YUV#SDTV_with_BT.601
-                //*p1 =  0.299f   * R +0.587f   * G +0.114f  * B;
-                //*px = -0.14713f * R -0.28886f * G +0.114f  * B;
-                //*pz =  0.615f   * R -0.51499f * G -0.10001 * B;
+                //*pr =  0.299f   * R +0.587f   * G +0.114f  * B;
+                //*pu = -0.14713f * R -0.28886f * G +0.114f  * B;
+                //*pv =  0.615f   * R -0.51499f * G -0.10001 * B;
                 /// YUV (Rec.709)
                 /// ref: https://en.wikipedia.org/wiki/YUV#HDTV_with_BT.709
-                *p1 =  0.2126f  * R +0.7152f  * G +0.0722f  * B; //Y
-                *px = -0.09991f * R -0.33609f * G +0.436f   * B; //U
-                *pz =  0.615f   * R -0.55861f * G -0.05639f * B; //V
-                ++p1;
-                ++p2;
-                ++p3;
-                ++px;
-                ++pz;
+                *pr =  0.2126f  * R +0.7152f  * G +0.0722f  * B; //Y
+                *pu = -0.09991f * R -0.33609f * G +0.436f   * B; //U
+                *pv =  0.615f   * R -0.55861f * G -0.05639f * B; //V
+                ++pr;
+                ++pg;
+                ++pb;
+                ++pu;
+                ++pv;
             }
 
         }
@@ -558,16 +561,16 @@ public:
             cimg += cimg0;
         } else if (_blurPlugin == eBlurPluginChromaBlur) {
             // recombine luminance in cimg0 & chrominance in cimg to cimg
-            // chrominance (X+Z) is in cimg0, luminance is in first channel of cimg
-            float *p1 = &cimg(0,0,0,0);
-            float *p2 = &cimg(0,0,0,1);
-            float *p3 = &cimg(0,0,0,2);
-            const float *px = &cimg0(0,0,0,0);
-            const float *pz = &cimg0(0,0,0,1);
+            // chrominance (U+V) is in cimg0, luminance is in first channel of cimg
+            float *pr = &cimg(0,0,0,0);
+            float *pg = &cimg(0,0,0,1);
+            float *pb = &cimg(0,0,0,2);
+            const float *pu = &cimg0(0,0,0,0);
+            const float *pv = &cimg0(0,0,0,1);
             for (unsigned long N = (unsigned long)cimg.width()*cimg.height()*cimg.depth(); N; --N) {
-                const float X = *px;
                 const float Y = *p1;
-                const float Z = *pz;
+                const float U = *pu;
+                const float V = *pv;
                 /// YUV (BT.601)
                 /// ref: https://en.wikipedia.org/wiki/YUV#SDTV_with_BT.601
                 //*p1 = Y                + 1.13983f * Z,
@@ -575,9 +578,9 @@ public:
                 //*p3 = Y + 2.03211f * X;
                 /// YUV (Rec.709)
                 /// ref: https://en.wikipedia.org/wiki/YUV#HDTV_with_BT.709
-                *p1 = Y               +1.28033f * Z,
-                *p2 = Y -0.21482f * X -0.38059f * Z;
-                *p3 = Y +2.12798f * X;
+                *pr = Y               +1.28033f * V,
+                *pg = Y -0.21482f * U -0.38059f * V;
+                *pb = Y +2.12798f * U;
 
                 ++p1;
                 ++p2;
@@ -676,8 +679,12 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
     OFX::PageParamDescriptor *page = CImgBlurPlugin::describeInContextBegin(desc, context,
                                                                             kSupportsRGBA,
                                                                             kSupportsRGB,
+                                                                            blurPlugin == eBlurPluginChromaBlur ? false : kSupportsXY,
                                                                             blurPlugin == eBlurPluginChromaBlur ? false : kSupportsAlpha,
-                                                                            kSupportsTiles);
+                                                                            kSupportsTiles,
+                                                                            /*processRGB=*/true,
+                                                                            /*processAlpha*/false,
+                                                                            /*processIsSecret=*/false);
 
     {
         OFX::Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSize);

@@ -61,6 +61,7 @@
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsComponentRemapping 1
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -74,6 +75,7 @@
 #endif
 #define kSupportsRGBA true
 #define kSupportsRGB true
+#define kSupportsXY true
 #define kSupportsAlpha true
 
 #define kParamRange "range"
@@ -316,7 +318,7 @@ class CImgErodeSmoothPlugin : public CImgFilterPluginHelper<CImgErodeSmoothParam
 public:
 
     CImgErodeSmoothPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgErodeSmoothParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgErodeSmoothParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
     , _range(0)
     , _size(0)
     , _uniform(0)
@@ -588,10 +590,14 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgErodeSmoothPlugin::describeInContextBegin(desc, context,
-                                                                                 kSupportsRGBA,
-                                                                                 kSupportsRGB,
-                                                                                 kSupportsAlpha,
-                                                                                 kSupportsTiles);
+                                                                                   kSupportsRGBA,
+                                                                                   kSupportsRGB,
+                                                                                   kSupportsXY,
+                                                                                   kSupportsAlpha,
+                                                                                   kSupportsTiles,
+                                                                                   /*processRGB=*/true,
+                                                                                   /*processAlpha*/false,
+                                                                                   /*processIsSecret=*/false);
 
     {
         Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamRange);

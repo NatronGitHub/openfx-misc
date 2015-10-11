@@ -147,12 +147,13 @@ class CImgFilterPluginHelperBase : public OFX::ImageEffect
 public:
 
     CImgFilterPluginHelperBase(OfxImageEffectHandle handle,
+                               bool supportsComponentRemapping, // true if the number and order of components of the image passed to render() has no importance
                                bool supportsTiles,
                                bool supportsMultiResolution,
                                bool supportsRenderScale,
-                               bool defaultUnpremult = true,
-                               bool defaultProcessAlphaOnRGBA = false,
-                               bool isFilter = true);
+                               bool defaultUnpremult/* = true*/,
+                               bool defaultProcessAlphaOnRGBA/* = false*/,
+                               bool isFilter/* = true*/);
 
 
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE;
@@ -163,11 +164,12 @@ public:
                            OFX::ContextEnum context,
                            bool supportsRGBA,
                            bool supportsRGB,
+                           bool supportsXY,
                            bool supportsAlpha,
                            bool supportsTiles,
-                           bool processRGB = true,
-                           bool processAlpha = false,
-                           bool processIsSecret = false);
+                           bool processRGB/* = true*/,
+                           bool processAlpha/* = false*/,
+                           bool processIsSecret/* = false*/);
 
     static void
     describeInContextEnd(OFX::ImageEffectDescriptor &desc,
@@ -253,6 +255,7 @@ protected:
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
 
+    bool _supportsComponentRemapping; // true if the number and order of components of the image passed to render() has no importance
     bool _supportsTiles;
     bool _supportsMultiResolution;
     bool _supportsRenderScale;
@@ -266,12 +269,13 @@ class CImgFilterPluginHelper : public CImgFilterPluginHelperBase
 public:
 
     CImgFilterPluginHelper(OfxImageEffectHandle handle,
+                           bool supportsComponentRemapping, // true if the number and order of components of the image passed to render() has no importance
                            bool supportsTiles,
                            bool supportsMultiResolution,
                            bool supportsRenderScale,
-                           bool defaultUnpremult = true,
-                           bool defaultProcessAlphaOnRGBA = false)
-    : CImgFilterPluginHelperBase(handle, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA)
+                           bool defaultUnpremult/* = true*/,
+                           bool defaultProcessAlphaOnRGBA/* = false*/)
+    : CImgFilterPluginHelperBase(handle, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA, /*isFilter=*/true)
     {
     }
 
@@ -308,17 +312,19 @@ public:
                            OFX::ContextEnum context,
                            bool supportsRGBA,
                            bool supportsRGB,
+                           bool supportsXY,
                            bool supportsAlpha,
                            bool supportsTiles,
-                           bool processRGB = true,
-                           bool processAlpha = false,
-                           bool processIsSecret = false)
+                           bool processRGB/* = true*/,
+                           bool processAlpha/* = false*/,
+                           bool processIsSecret/* = false*/)
     {
         return CImgFilterPluginHelperBase::describeInContextBegin(sourceIsOptional,
                                                                   desc,
                                                                   context,
                                                                   supportsRGBA,
                                                                   supportsRGB,
+                                                                  supportsXY,
                                                                   supportsAlpha,
                                                                   supportsTiles,
                                                                   processRGB,
@@ -651,8 +657,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     }
 #endif
 
-    int srcNComponents = ((srcPixelComponents == OFX::ePixelComponentAlpha) ? 1 :
-                          ((srcPixelComponents == OFX::ePixelComponentRGB) ? 3 : 4));
+    int srcNComponents = _srcClip->getPixelComponentCount();
 
     // from here on, we do the following steps:
     // 1- copy & unpremult all channels from srcRoI, from src to a tmp image of size srcRoI
@@ -715,44 +720,66 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     // 2- extract channels to be processed from tmp to a cimg of size srcRoI (and do the interleaved to coplanar conversion)
 
     // allocate the cimg data to hold the src ROI
-    const int cimgSpectrum = ((srcPixelComponents == OFX::ePixelComponentAlpha) ? (int)processA :
-                              ((srcPixelComponents == OFX::ePixelComponentRGB) ? ((int)processR + (int)processG + (int) processB) :
-                               ((int)processR + (int)processG + (int) processB + (int)processA)));
+    int cimgSpectrum;
+    if (!_supportsComponentRemapping) {
+        cimgSpectrum = srcNComponents;
+    } else {
+        switch(srcPixelComponents) {
+            case OFX::ePixelComponentAlpha:
+                cimgSpectrum = (int)processA;
+                break;
+            case OFX::ePixelComponentXY:
+                cimgSpectrum = (int)processR + (int)processG + (int) processB;
+                break;
+            case OFX::ePixelComponentRGB:
+                cimgSpectrum = (int)processR + (int)processG + (int) processB;
+                break;
+            case OFX::ePixelComponentRGBA:
+                cimgSpectrum = (int)processR + (int)processG + (int) processB + (int)processA;
+                break;
+            default:
+                cimgSpectrum = 0;
+        }
+    }
     const int cimgWidth = srcRoI.x2 - srcRoI.x1;
     const int cimgHeight = srcRoI.y2 - srcRoI.y1;
     const size_t cimgSize = cimgWidth * cimgHeight * cimgSpectrum * sizeof(float);
     std::vector<int> srcChannel(cimgSpectrum, -1);
-    std::vector<int> cimgChannel(srcNComponents, -1);
 
-    if (srcNComponents == 1) {
-        if (processA) {
-            assert(cimgSpectrum == 1);
-            srcChannel[0] = 0;
-            cimgChannel[0] = 0;
-        } else {
-            assert(cimgSpectrum == 0);
+    if (!_supportsComponentRemapping) {
+        for (int c = 0; c < srcNComponents; ++c) {
+            srcChannel[c] = c;
         }
+        assert(srcNComponents == cimgSpectrum);
     } else {
-        int c = 0;
-        if (processR) {
-            srcChannel[c] = 0;
-            ++c;
+        if (srcNComponents == 1) {
+            if (processA) {
+                assert(cimgSpectrum == 1);
+                srcChannel[0] = 0;
+            } else {
+                assert(cimgSpectrum == 0);
+            }
+        } else {
+            int c = 0;
+            if (processR) {
+                srcChannel[c] = 0;
+                ++c;
+            }
+            if (processG) {
+                srcChannel[c] = 1;
+                ++c;
+            }
+            if (processB) {
+                srcChannel[c] = 2;
+                ++c;
+            }
+            if (processA && srcNComponents >= 4) {
+                srcChannel[c] = 3;
+                ++c;
+            }
+            assert(c == cimgSpectrum);
         }
-        if (processG) {
-            srcChannel[c] = 1;
-            ++c;
-        }
-        if (processB) {
-            srcChannel[c] = 2;
-            ++c;
-        }
-        if (processA && srcNComponents >= 4) {
-            srcChannel[c] = 3;
-            ++c;
-        }
-        assert(c == cimgSpectrum);
     }
-
     if (cimgSize) { // may be zero if no channel is processed
         std::auto_ptr<OFX::ImageMemory> cimgData(new OFX::ImageMemory(cimgSize, this));
         float *cimgPixelData = (float*)cimgData->lock();

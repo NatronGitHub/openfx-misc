@@ -21,12 +21,13 @@
 CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle handle,
                                                            const char* srcAClipName, //!< should be either kOfxImageEffectSimpleSourceClipName or "A" if you want this to be the default output when plugin is disabled
                                                            const char* srcBClipName,
+                                                           bool supportsComponentRemapping, // true if the number and order of components of the image passed to render() has no importance
                                                            bool supportsTiles,
                                                            bool supportsMultiResolution,
                                                            bool supportsRenderScale,
                                                            bool defaultUnpremult,
                                                            bool defaultProcessAlphaOnRGBA)
-: CImgFilterPluginHelperBase(handle, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA, false)
+: CImgFilterPluginHelperBase(handle, supportsComponentRemapping, supportsTiles, supportsMultiResolution, supportsRenderScale, defaultUnpremult, defaultProcessAlphaOnRGBA, false)
 , _srcAClip(0)
 , _srcBClip(0)
 , _srcAClipName(srcAClipName)
@@ -80,6 +81,7 @@ CImgOperatorPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor 
                                                      const char* srcBClipName,
                                                      bool supportsRGBA,
                                                      bool supportsRGB,
+                                                     bool supportsXY,
                                                      bool supportsAlpha,
                                                      bool supportsTiles,
                                                      bool /*processRGB*/,
@@ -98,6 +100,11 @@ CImgOperatorPluginHelperBase::describeInContextBegin(OFX::ImageEffectDescriptor 
         srcAClip->addSupportedComponent(OFX::ePixelComponentRGB);
         srcBClip->addSupportedComponent(OFX::ePixelComponentRGB);
         dstClip->addSupportedComponent(OFX::ePixelComponentRGB);
+    }
+    if (supportsXY) {
+        srcAClip->addSupportedComponent(OFX::ePixelComponentXY);
+        srcBClip->addSupportedComponent(OFX::ePixelComponentXY);
+        dstClip->addSupportedComponent(OFX::ePixelComponentXY);
     }
     if (supportsAlpha) {
         srcAClip->addSupportedComponent(OFX::ePixelComponentAlpha);

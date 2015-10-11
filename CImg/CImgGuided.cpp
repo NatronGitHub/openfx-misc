@@ -60,6 +60,7 @@
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsComponentRemapping 1
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -73,6 +74,7 @@
 #endif
 #define kSupportsRGBA true
 #define kSupportsRGB true
+#define kSupportsXY true
 #define kSupportsAlpha true
 
 #define kParamRadius "radius"
@@ -99,7 +101,7 @@ class CImgGuidedPlugin : public CImgFilterPluginHelper<CImgGuidedParams,false>
 public:
 
     CImgGuidedPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgGuidedParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgGuidedParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
     {
         _radius  = fetchIntParam(kParamRadius);
         _epsilon  = fetchDoubleParam(kParamEpsilon);
@@ -183,8 +185,12 @@ void CImgGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
     OFX::PageParamDescriptor *page = CImgGuidedPlugin::describeInContextBegin(desc, context,
                                                                               kSupportsRGBA,
                                                                               kSupportsRGB,
+                                                                              kSupportsXY,
                                                                               kSupportsAlpha,
-                                                                              kSupportsTiles);
+                                                                              kSupportsTiles,
+                                                                              /*processRGB=*/true,
+                                                                              /*processAlpha*/false,
+                                                                              /*processIsSecret=*/false);
 
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamRadius);

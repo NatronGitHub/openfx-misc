@@ -54,6 +54,7 @@
 #define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
+#define kSupportsComponentRemapping 1
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -67,6 +68,7 @@
 #endif
 #define kSupportsRGBA true
 #define kSupportsRGB true
+#define kSupportsXY true
 #define kSupportsAlpha true
 
 #define kParamSize "size"
@@ -93,7 +95,7 @@ class CImgMedianPlugin : public CImgFilterPluginHelper<CImgMedianParams,false>
 public:
 
     CImgMedianPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgMedianParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgMedianParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
     {
         _size  = fetchIntParam(kParamSize);
         _threshold  = fetchDoubleParam(kParamThreshold);
@@ -174,8 +176,12 @@ void CImgMedianPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
     OFX::PageParamDescriptor *page = CImgMedianPlugin::describeInContextBegin(desc, context,
                                                                               kSupportsRGBA,
                                                                               kSupportsRGB,
+                                                                              kSupportsXY,
                                                                               kSupportsAlpha,
-                                                                              kSupportsTiles);
+                                                                              kSupportsTiles,
+                                                                              /*processRGB=*/true,
+                                                                              /*processAlpha*/false,
+                                                                              /*processIsSecret=*/false);
 
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamSize);

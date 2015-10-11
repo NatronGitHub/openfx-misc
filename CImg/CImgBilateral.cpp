@@ -67,6 +67,7 @@
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
+#define kSupportsComponentRemapping 1
 #define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
@@ -80,6 +81,7 @@
 #endif
 #define kSupportsRGBA true
 #define kSupportsRGB true
+#define kSupportsXY true
 #define kSupportsAlpha true
 
 #define kParamSigmaS "sigma_s"
@@ -109,7 +111,7 @@ class CImgBilateralPlugin : public CImgFilterPluginHelper<CImgBilateralParams,fa
 public:
 
     CImgBilateralPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgBilateralParams,false>(handle, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale)
+    : CImgFilterPluginHelper<CImgBilateralParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);
@@ -240,10 +242,14 @@ void CImgBilateralPluginFactory::describeInContext(OFX::ImageEffectDescriptor& d
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgBilateralPlugin::describeInContextBegin(desc, context,
-                                                                              kSupportsRGBA,
-                                                                              kSupportsRGB,
-                                                                              kSupportsAlpha,
-                                                                              kSupportsTiles);
+                                                                                 kSupportsRGBA,
+                                                                                 kSupportsRGB,
+                                                                                 kSupportsXY,
+                                                                                 kSupportsAlpha,
+                                                                                 kSupportsTiles,
+                                                                                 /*processRGB=*/true,
+                                                                                 /*processAlpha*/false,
+                                                                                 /*processIsSecret=*/false);
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
@@ -316,6 +322,7 @@ void CImgBilateralGuidedPluginFactory::describeInContext(OFX::ImageEffectDescrip
                                                                                        kClipGuide,
                                                                                        kSupportsRGBA,
                                                                                        kSupportsRGB,
+                                                                                       kSupportsXY,
                                                                                        kSupportsAlpha,
                                                                                        kSupportsTiles);
 
