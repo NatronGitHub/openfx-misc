@@ -40,11 +40,12 @@
 #define kPluginGrouping "Merge"
 #define kPluginDescription \
 "Pixel-by-pixel merge operation between two or more inputs.\n" \
-"Input A is first merged with B (B is non-optional), then A2, if connected, is merged with the intermediary result, then A3, etc.\n" \
-"A complete explanation of the different operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
+"Input A is first merged with B (B is non-optional), then A2, if connected, is merged with the intermediary result, then A3, etc.\n\n" \
+"A complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
 "See also:\n" \
 "- \"Digital Image Compositing\" by Marc Levoy https://graphics.stanford.edu/courses/cs248-06/comp/comp.html\n" \
-"- \"Merge Blend Modes\" by Martin Constable http://opticalenquiry.com/nuke/index.php?title=Merge_Blend_Modes."
+"- \"Merge Blend Modes\" by Martin Constable http://opticalenquiry.com/nuke/index.php?title=Merge_Blend_Modes\n" \
+"- grain-extract and grain-merge are described in http://docs.gimp.org/en/gimp-concepts-layer-modes.html"
 
 #define kPluginGroupingSub "Merge/Merges"
 
@@ -865,58 +866,109 @@ template<MergingFunctionEnum plugin>
 void MergePluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
+
     switch (plugin) {
         case eMergeOver:
             desc.setLabel(kPluginName);
             desc.setPluginGrouping(kPluginGrouping);
-            desc.setPluginDescription(kPluginDescription);
             break;
         case eMergePlus:
             desc.setLabel(kPluginNamePlus);
             desc.setPluginGrouping(kPluginGroupingSub);
-            desc.setPluginDescription(kPluginDescription);
             break;
         case eMergeMatte:
             desc.setLabel(kPluginNameMatte);
             desc.setPluginGrouping(kPluginGroupingSub);
-            desc.setPluginDescription(kPluginDescription);
             break;
         case eMergeMultiply:
             desc.setLabel(kPluginNameMultiply);
             desc.setPluginGrouping(kPluginGroupingSub);
-            desc.setPluginDescription(kPluginDescription);
             break;
         case eMergeIn:
             desc.setLabel(kPluginNameIn);
             desc.setPluginGrouping(kPluginGroupingSub);
-            desc.setPluginDescription(kPluginDescription);
             break;
         case eMergeOut:
             desc.setLabel(kPluginNameOut);
             desc.setPluginGrouping(kPluginGroupingSub);
-            desc.setPluginDescription(kPluginDescription);
             break;
         case eMergeScreen:
             desc.setLabel(kPluginNameScreen);
             desc.setPluginGrouping(kPluginGroupingSub);
-            desc.setPluginDescription(kPluginDescription);
             break;
         case eMergeMax:
             desc.setLabel(kPluginNameMax);
             desc.setPluginGrouping(kPluginGroupingSub);
-            desc.setPluginDescription(kPluginDescription);
             break;
         case eMergeMin:
             desc.setLabel(kPluginNameMin);
             desc.setPluginGrouping(kPluginGroupingSub);
-            desc.setPluginDescription(kPluginDescription);
             break;
         case eMergeDifference:
             desc.setLabel(kPluginNameAbsminus);
             desc.setPluginGrouping(kPluginGroupingSub);
-            desc.setPluginDescription(kPluginDescription);
             break;
     }
+    std::string help = kPluginDescription;
+    // only Natron benefits from the long description, because '<' characters may break the OFX
+    // plugins cache in hosts using the older HostSupport library.
+    if (OFX::getImageEffectHostDescription()->isNatron) {
+        help += "\n\nThe following operators are available:\n";
+        help += "\n* Porter-Duff compositing operators\n";
+        // missing: clear
+        help += getOperationHelp(eMergeCopy) + '\n'; // src
+        // missing: dst
+        help += getOperationHelp(eMergeOver) + '\n'; // src-over
+        help += getOperationHelp(eMergeUnder) + '\n'; // dst-over
+        help += getOperationHelp(eMergeIn) + '\n'; // src-in
+        help += getOperationHelp(eMergeMask) + '\n'; // dst-in
+        help += getOperationHelp(eMergeOut) + '\n'; // src-out
+        help += getOperationHelp(eMergeStencil) + '\n'; // dst-out
+        help += getOperationHelp(eMergeATop) + '\n'; // src-atop
+        // missing: dst-atop
+        help += getOperationHelp(eMergeXOR) + '\n'; // xor
+
+        help += "\n* Blend modes, see https://en.wikipedia.org/wiki/Blend_modes\n";
+        help += "\n  - Multiply and Screen\n";
+        help += getOperationHelp(eMergeMultiply) + '\n';
+        help += getOperationHelp(eMergeScreen) + '\n';
+        help += getOperationHelp(eMergeOverlay) + '\n';
+        help += getOperationHelp(eMergeHardLight) + '\n';
+        help += getOperationHelp(eMergeSoftLight) + '\n';
+        help += "\n  - Dodge and burn\n";
+        help += getOperationHelp(eMergeColorDodge) + '\n';
+        help += getOperationHelp(eMergeColorBurn) + '\n';
+        help += getOperationHelp(eMergePinLight) + '\n';
+        help += getOperationHelp(eMergeDifference) + '\n';
+        help += getOperationHelp(eMergeExclusion) + '\n';
+        help += getOperationHelp(eMergeDivide) + '\n';
+        help += "\n  - Simple arithmetic blend modes\n";
+        help += getOperationHelp(eMergeDivide) + '\n';
+        help += getOperationHelp(eMergePlus) + '\n';// add (http://keithp.com/~keithp/render/protocol.html)
+        help += getOperationHelp(eMergeFrom) + '\n';
+        help += getOperationHelp(eMergeMinus) + '\n';
+        help += getOperationHelp(eMergeDifference) + '\n';
+        help += getOperationHelp(eMergeMin) + '\n';
+        help += getOperationHelp(eMergeMax) + '\n';
+        help += "\n  - Hue, saturation and luminosity\n";
+        help += getOperationHelp(eMergeHue) + '\n';
+        help += getOperationHelp(eMergeSaturation) + '\n';
+        help += getOperationHelp(eMergeColor) + '\n';
+        help += getOperationHelp(eMergeLuminosity) + '\n';
+        help += "\n* Other\n";
+        help += getOperationHelp(eMergeAverage) + '\n';
+        help += getOperationHelp(eMergeConjointOver) + '\n';
+        help += getOperationHelp(eMergeDisjointOver) + '\n';
+        help += getOperationHelp(eMergeFreeze) + '\n';
+        help += getOperationHelp(eMergeGeometric) + '\n';
+        help += getOperationHelp(eMergeGrainExtract) + '\n';
+        help += getOperationHelp(eMergeGrainMerge) + '\n';
+        help += getOperationHelp(eMergeHypot) + '\n';
+        //help += getOperationHelp(eMergeInterpolated) + '\n';
+        help += getOperationHelp(eMergeMatte) + '\n';
+        help += getOperationHelp(eMergeReflect) + '\n';
+    }
+    desc.setPluginDescription(help);
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
@@ -938,13 +990,13 @@ void MergePluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 static void
-addMergeOption(ChoiceParamDescriptor* param, MergingFunctionEnum e, const char* help, bool cascading)
+addMergeOption(ChoiceParamDescriptor* param, MergingFunctionEnum e, bool cascading)
 {
     assert(param->getNOptions() == e);
     if (cascading) {
-        param->appendOption(getOperationGroupString(e) + '/' + getOperationString(e), help);
+        param->appendOption(getOperationGroupString(e) + '/' + getOperationString(e), getOperationDescription(e));
     } else {
-        param->appendOption(getOperationString(e), '(' + getOperationGroupString(e) + ") " + help);
+        param->appendOption(getOperationString(e), /*'(' + getOperationGroupString(e) + ") " +*/ getOperationDescription(e));
     }
 }
 
@@ -1043,46 +1095,46 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setHint(kParamOperationHint);
         bool cascading = false;// OFX::getImageEffectHostDescription()->supportsCascadingChoices;
         param->setCascading(cascading);
-        addMergeOption(param, eMergeATop, "Ab + B(1 - a)", cascading);
-        addMergeOption(param, eMergeAverage, "(A + B) / 2", cascading);
-        addMergeOption(param, eMergeColor, "SetLum(A, Lum(B))", cascading);
-        addMergeOption(param, eMergeColorBurn, "darken B towards A", cascading);
-        addMergeOption(param, eMergeColorDodge, "brighten B towards A", cascading);
-        addMergeOption(param, eMergeConjointOver, "A + B(1-a)/b, A if a > b", cascading);
-        addMergeOption(param, eMergeCopy, "A", cascading);
-        addMergeOption(param, eMergeDifference, "abs(A-B) (a.k.a. absminus)", cascading);
-        addMergeOption(param, eMergeDisjointOver, "A+B(1-a)/b, A+B if a+b < 1", cascading);
-        addMergeOption(param, eMergeDivide, "A/B, 0 if A < 0 and B < 0", cascading);
-        addMergeOption(param, eMergeExclusion, "A+B-2AB", cascading);
-        addMergeOption(param, eMergeFreeze, "1-sqrt(1-A)/B", cascading);
-        addMergeOption(param, eMergeFrom, "B-A", cascading);
-        addMergeOption(param, eMergeGeometric, "2AB/(A+B)", cascading);
-        addMergeOption(param, eMergeGrainExtract, "B - A + 0.5", cascading);
-        addMergeOption(param, eMergeGrainMerge, "B + A - 0.5", cascading);
-        addMergeOption(param, eMergeHardLight, "multiply if A < 0.5, screen if A > 0.5", cascading);
-        addMergeOption(param, eMergeHue, "SetLum(SetSat(A, Sat(B)), Lum(B))", cascading);
-        addMergeOption(param, eMergeHypot, "sqrt(A*A+B*B)", cascading);
-        addMergeOption(param, eMergeIn, "Ab", cascading);
-        //addMergeOption(param, eMergeInterpolated, "(like average but better and slower)", cascading);
-        addMergeOption(param, eMergeLuminosity, "SetLum(B, Lum(A))", cascading);
-        addMergeOption(param, eMergeMask, "Ba", cascading);
-        addMergeOption(param, eMergeMatte, "Aa + B(1-a) (unpremultiplied over)", cascading);
-        addMergeOption(param, eMergeMax, "max(A, B) (a.k.a. lighten)", cascading);
-        addMergeOption(param, eMergeMin, "min(A, B) (a.k.a. darken)", cascading);
-        addMergeOption(param, eMergeMinus, "A-B", cascading);
-        addMergeOption(param, eMergeMultiply, "AB, 0 if A < 0 and B < 0", cascading);
-        addMergeOption(param, eMergeOut, "A(1-b)", cascading);
-        addMergeOption(param, eMergeOver, "A+B(1-a)", cascading);
-        addMergeOption(param, eMergeOverlay, "multiply if B<0.5, screen if B>0.5", cascading);
-        addMergeOption(param, eMergePinLight, "if B >= 0.5 then max(A, 2*B - 1), min(A, B * 2.0 ) else", cascading);
-        addMergeOption(param, eMergePlus, "A+B", cascading);
-        addMergeOption(param, eMergeReflect, "A*A / (1 - B)", cascading);
-        addMergeOption(param, eMergeSaturation, "SetLum(SetSat(B, Sat(A)), Lum(B))", cascading);
-        addMergeOption(param, eMergeScreen, "A+B-AB", cascading);
-        addMergeOption(param, eMergeSoftLight, "burn-in if A < 0.5, lighten if A > 0.5", cascading);
-        addMergeOption(param, eMergeStencil, "B(1-a)", cascading);
-        addMergeOption(param, eMergeUnder, "A(1-b)+B", cascading);
-        addMergeOption(param, eMergeXOR, "A(1-b)+B(1-a)", cascading);
+        addMergeOption(param, eMergeATop, cascading);
+        addMergeOption(param, eMergeAverage, cascading);
+        addMergeOption(param, eMergeColor, cascading);
+        addMergeOption(param, eMergeColorBurn, cascading);
+        addMergeOption(param, eMergeColorDodge, cascading);
+        addMergeOption(param, eMergeConjointOver, cascading);
+        addMergeOption(param, eMergeCopy, cascading);
+        addMergeOption(param, eMergeDifference, cascading);
+        addMergeOption(param, eMergeDisjointOver, cascading);
+        addMergeOption(param, eMergeDivide, cascading);
+        addMergeOption(param, eMergeExclusion, cascading);
+        addMergeOption(param, eMergeFreeze, cascading);
+        addMergeOption(param, eMergeFrom, cascading);
+        addMergeOption(param, eMergeGeometric, cascading);
+        addMergeOption(param, eMergeGrainExtract, cascading);
+        addMergeOption(param, eMergeGrainMerge, cascading);
+        addMergeOption(param, eMergeHardLight, cascading);
+        addMergeOption(param, eMergeHue, cascading);
+        addMergeOption(param, eMergeHypot, cascading);
+        addMergeOption(param, eMergeIn, cascading);
+        //addMergeOption(param, eMergeInterpolated, cascading);
+        addMergeOption(param, eMergeLuminosity, cascading);
+        addMergeOption(param, eMergeMask, cascading);
+        addMergeOption(param, eMergeMatte, cascading);
+        addMergeOption(param, eMergeMax, cascading);
+        addMergeOption(param, eMergeMin, cascading);
+        addMergeOption(param, eMergeMinus, cascading);
+        addMergeOption(param, eMergeMultiply, cascading);
+        addMergeOption(param, eMergeOut, cascading);
+        addMergeOption(param, eMergeOver, cascading);
+        addMergeOption(param, eMergeOverlay, cascading);
+        addMergeOption(param, eMergePinLight, cascading);
+        addMergeOption(param, eMergePlus, cascading);
+        addMergeOption(param, eMergeReflect, cascading);
+        addMergeOption(param, eMergeSaturation, cascading);
+        addMergeOption(param, eMergeScreen, cascading);
+        addMergeOption(param, eMergeSoftLight, cascading);
+        addMergeOption(param, eMergeStencil, cascading);
+        addMergeOption(param, eMergeUnder, cascading);
+        addMergeOption(param, eMergeXOR, cascading);
         param->setDefault(plugin);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
