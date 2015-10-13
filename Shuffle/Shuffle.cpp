@@ -1,4 +1,4 @@
-/* ***** BEGIN LICENSE BLOCK *****
+ /* ***** BEGIN LICENSE BLOCK *****
  * This file is part of openfx-misc <https://github.com/devernay/openfx-misc>,
  * Copyright (C) 2015 INRIA
  *
@@ -1086,7 +1086,9 @@ ShufflePlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::
         int channelIndex;
         OFX::Clip* clip = 0;
         bool ok = getPlaneNeededForParam(time, componentsA, componentsB, params[i], &clip, &ofxPlane, &ofxComp, &channelIndex);
-        assert(ok);
+        if (!ok) {
+            continue;
+        }
         if (ofxComp == kParamOutputOption0 || ofxComp == kParamOutputOption1) {
             continue;
         }
@@ -1155,7 +1157,10 @@ ShufflePlugin::isIdentityInternal(double time, OFX::Clip*& identityClip)
         for (int i = 0; i < 4; ++i) {
             std::string plane;
             bool ok = getPlaneNeededForParam(time, componentsA, componentsB, params[i], &data[i].clip, &plane, &data[i].components, &data[i].index);
-            assert(ok);
+            if (!ok) {
+                //We might have an index in the param different from the actual components if getClipPreferences was not called so far
+                return false;
+            }
             if (!plane.empty()) {
                 //This is not the color plane, no identity
                 return false;
@@ -1435,7 +1440,10 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
                                          componentsA, componentsB,
                                          nDstComponents == 1 ? params[3] : params[i],
                                          &clip, &plane, &ofxComp, &p.channelIndex);
-        assert(ok);
+        if (!ok) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Cannot find requested channels in input");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
         
         p.img = 0;
         if (ofxComp == kParamOutputOption0) {
