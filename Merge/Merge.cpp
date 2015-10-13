@@ -843,14 +843,6 @@ MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
             return false;
         }
     }
-    
-    if (_maskClip && _maskClip->isConnected()) {
-        OfxRectD maskRoD = _maskClip->getRegionOfDefinition(args.time);
-        if (maskRoD.x2 > maskRoD.x1 && maskRoD.y2 > maskRoD.y1) {
-            //There is a mask, do no set identity. The user might just want to do a "Masked" copy of the input
-            return false;
-        }
-    }
 
     // renderWindow intersects no area where a "A" source is applied
     identityClip = _srcClipB;
