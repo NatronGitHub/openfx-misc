@@ -1,4 +1,4 @@
-#include "Dissolve.h"
+#include "TimeDissolve.h"
 
 namespace OFX
 {
@@ -6,7 +6,7 @@ namespace OFX
     {
         void getPluginIDs(OFX::PluginFactoryArray &ids)
         {
-            getDissolvePluginID(ids);
+            getTimeDissolvePluginID(ids);
         }
     }
 }
