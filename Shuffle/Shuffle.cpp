@@ -606,6 +606,9 @@ private:
     OFX::ChoiceParam *_b;
     OFX::ChoiceParam *_a;
     OFX::BooleanParam *_createAlpha;
+    
+    //Small cache only used on main-thread to speed up getclipPreferences
+    std::list<std::string> _currentOutputComps,_currentCompsA,_currentCompsB;
 };
 
 
@@ -734,75 +737,102 @@ addInputChannelOptionsRGBA(T* outputR, OFX::ContextEnum context)
     }
 }
 
+static bool hasListChanged(const std::list<std::string>& oldList, const std::list<std::string>& newList)
+{
+    if (oldList.size() != newList.size()) {
+        return true;
+    }
+    
+    std::list<std::string>::const_iterator itNew = newList.begin();
+    for (std::list<std::string>::const_iterator it = oldList.begin(); it!=oldList.end(); ++it,++itNew) {
+        if (*it != *itNew) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void
 ShufflePlugin::buildChannelMenus(const std::list<std::string> &outputComponents)
 {
     assert(gSupportsDynamicChoices);
-
+    
     std::list<std::string> componentsA = _srcClipA->getComponentsPresent();
     std::list<std::string> componentsB = _srcClipB->getComponentsPresent();
-    _r->resetOptions();
-    _g->resetOptions();
-    _b->resetOptions();
-    _a->resetOptions();
-    
-    OFX::ChoiceParam* params[4] = {_r, _g, _b, _a};
-    
-    //Always add RGBA channels for color plane
-    for (int i = 0; i < 4; ++i) {
-        addInputChannelOptionsRGBA(params[i], getContext());
+    if (hasListChanged(_currentCompsA, componentsA) ||
+        hasListChanged(_currentCompsB, componentsB)) {
+        
+        _currentCompsA = componentsA;
+        _currentCompsB = componentsB;
+        
+        _r->resetOptions();
+        _g->resetOptions();
+        _b->resetOptions();
+        _a->resetOptions();
+        
+        OFX::ChoiceParam* params[4] = {_r, _g, _b, _a};
+        
+        //Always add RGBA channels for color plane
+        for (int i = 0; i < 4; ++i) {
+            addInputChannelOptionsRGBA(params[i], getContext());
+        }
+        
+        
+        appendComponents(kClipA, componentsA, params);
+        appendComponents(kClipB, componentsB, params);
     }
-    
-    
-    appendComponents(kClipA, componentsA, params);
-    appendComponents(kClipB, componentsB, params);
     
     if (gIsMultiPlanar) {
         
-        _outputComponents->resetOptions();
-        
-        ///Pre-process to add color comps first
-        std::list<std::string> compsToAdd;
-        bool foundColor = false;
-        for (std::list<std::string>::const_iterator it = outputComponents.begin(); it!=outputComponents.end(); ++it) {
-            std::string layer, secondLayer;
-            std::vector<std::string> channels;
-            extractChannelsFromComponentString(*it, &layer, &secondLayer, &channels);
-            if (channels.empty()) {
-                continue;
-            }
-            if (layer.empty()) {
-                if (*it == kOfxImageComponentRGBA) {
-                    _outputComponents->appendOption(kShuffleColorRGBA);
-                    foundColor = true;
-                } else if (*it == kOfxImageComponentRGB) {
-                    _outputComponents->appendOption(kShuffleColorRGB);
-                    foundColor = true;
-                } else if (*it == kOfxImageComponentAlpha) {
-                    _outputComponents->appendOption(kShuffleColorAlpha);
-                    foundColor = true;
-                }
-                
-                continue;
-            } else {
-                if (layer == kShuffleMotionForwardPlaneName ||
-                    layer == kShuffleMotionBackwardPlaneName ||
-                    layer == kShuffleDisparityLeftPlaneName ||
-                    layer == kShuffleDisparityRightPlaneName) {
+        if (hasListChanged(_currentOutputComps, outputComponents)) {
+            
+            _currentOutputComps = outputComponents;
+            
+            _outputComponents->resetOptions();
+            
+            ///Pre-process to add color comps first
+            std::list<std::string> compsToAdd;
+            bool foundColor = false;
+            for (std::list<std::string>::const_iterator it = outputComponents.begin(); it!=outputComponents.end(); ++it) {
+                std::string layer, secondLayer;
+                std::vector<std::string> channels;
+                extractChannelsFromComponentString(*it, &layer, &secondLayer, &channels);
+                if (channels.empty()) {
                     continue;
                 }
+                if (layer.empty()) {
+                    if (*it == kOfxImageComponentRGBA) {
+                        _outputComponents->appendOption(kShuffleColorRGBA);
+                        foundColor = true;
+                    } else if (*it == kOfxImageComponentRGB) {
+                        _outputComponents->appendOption(kShuffleColorRGB);
+                        foundColor = true;
+                    } else if (*it == kOfxImageComponentAlpha) {
+                        _outputComponents->appendOption(kShuffleColorAlpha);
+                        foundColor = true;
+                    }
+                    
+                    continue;
+                } else {
+                    if (layer == kShuffleMotionForwardPlaneName ||
+                        layer == kShuffleMotionBackwardPlaneName ||
+                        layer == kShuffleDisparityLeftPlaneName ||
+                        layer == kShuffleDisparityRightPlaneName) {
+                        continue;
+                    }
+                }
+                compsToAdd.push_back(layer);
             }
-            compsToAdd.push_back(layer);
-        }
-        if (!foundColor) {
-            _outputComponents->appendOption(kShuffleColorRGBA);
-        }
-        _outputComponents->appendOption(kShuffleMotionForwardPlaneName);
-        _outputComponents->appendOption(kShuffleMotionBackwardPlaneName);
-        _outputComponents->appendOption(kShuffleDisparityLeftPlaneName);
-        _outputComponents->appendOption(kShuffleDisparityRightPlaneName);
-        for (std::list<std::string>::const_iterator it = compsToAdd.begin(); it!=compsToAdd.end(); ++it) {
-            _outputComponents->appendOption(*it);
+            if (!foundColor) {
+                _outputComponents->appendOption(kShuffleColorRGBA);
+            }
+            _outputComponents->appendOption(kShuffleMotionForwardPlaneName);
+            _outputComponents->appendOption(kShuffleMotionBackwardPlaneName);
+            _outputComponents->appendOption(kShuffleDisparityLeftPlaneName);
+            _outputComponents->appendOption(kShuffleDisparityRightPlaneName);
+            for (std::list<std::string>::const_iterator it = compsToAdd.begin(); it!=compsToAdd.end(); ++it) {
+                _outputComponents->appendOption(*it);
+            }
         }
     }
 }
