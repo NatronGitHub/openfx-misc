@@ -138,6 +138,7 @@ matrix.
 * PreMultOFX/UnpremultOFX: Multiply/divide the selected channels by
 alpha (or another channel).
 * SwitchOFX: Lets you switch between any number of inputs.
+* TimeDissolve: Dissolve from input A to input B over time.
 
 ### Transform
 

@@ -426,6 +426,17 @@
 		1E6CC0881A768BD700173EB3 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E6CC0851A768BC800173EB3 /* PluginRegistration.cpp */; };
 		1E6CC0891A76ADEA00173EB3 /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
 		1E6CC0941A76B1F700173EB3 /* ofxsOGLFontData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F4D198A51840095C8AA /* ofxsOGLFontData.cpp */; };
+		1E6E6FFA1BD4F25D00B5A00F /* TimeDissolve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E6E6FF71BD4F22E00B5A00F /* TimeDissolve.cpp */; settings = {ASSET_TAGS = (); }; };
+		1E6E6FFF1BD4F26700B5A00F /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1E6E70001BD4F26700B5A00F /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1E6E70011BD4F26700B5A00F /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1E6E70021BD4F26700B5A00F /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1E6E70031BD4F26700B5A00F /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1E6E70041BD4F26700B5A00F /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1E6E70051BD4F26700B5A00F /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1E6E70061BD4F26700B5A00F /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1E6E70081BD4F26700B5A00F /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1E6E70111BD4F28400B5A00F /* TimeDissolve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E6E6FF71BD4F22E00B5A00F /* TimeDissolve.cpp */; settings = {ASSET_TAGS = (); }; };
 		1E75A01B1A87A97B005BAA36 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E75A01C1A87A97B005BAA36 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E75A01D1A87A97B005BAA36 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -1779,6 +1790,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1E6E70091BD4F26700B5A00F /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E75A0261A87A97B005BAA36 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -2538,6 +2558,12 @@
 		1E6CC0831A768BC800173EB3 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E6CC0841A768BC800173EB3 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E6CC0851A768BC800173EB3 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		1E6E6FF51BD4F22E00B5A00F /* TimeDissolve.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TimeDissolve.h; sourceTree = "<group>"; };
+		1E6E6FF61BD4F22E00B5A00F /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		1E6E6FF71BD4F22E00B5A00F /* TimeDissolve.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TimeDissolve.cpp; sourceTree = "<group>"; };
+		1E6E6FF81BD4F22E00B5A00F /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1E6E6FF91BD4F22E00B5A00F /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1E6E700F1BD4F26700B5A00F /* TimeDissolve.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TimeDissolve.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E75A0121A87A94D005BAA36 /* CheckerBoard.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CheckerBoard.cpp; sourceTree = "<group>"; };
 		1E75A0131A87A94D005BAA36 /* CheckerBoard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CheckerBoard.h; sourceTree = "<group>"; };
 		1E75A0141A87A94D005BAA36 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -3177,6 +3203,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E6CC0781A768B7200173EB3 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E6E70071BD4F26700B5A00F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E6E70081BD4F26700B5A00F /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3874,6 +3908,7 @@
 				1E5D54C81AB5EC1F00B7B1BE /* FrameRange.ofx.bundle */,
 				1EBB4B8D1B2CA01B0042DBE0 /* SlitScan.ofx.bundle */,
 				1EE72C071B524A6D001B0245 /* TimeBlur.ofx.bundle */,
+				1E6E700F1BD4F26700B5A00F /* TimeDissolve.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -3946,6 +3981,7 @@
 				1E3AC8D818B6211800F228A6 /* Switch */,
 				1EBAEFCA199A81790037B3E6 /* Test */,
 				1EE72BEB1B52499B001B0245 /* TimeBlur */,
+				1E6E6FF41BD4F20F00B5A00F /* TimeDissolve */,
 				1E235FF318369E2B0019C45F /* TimeOffset */,
 				D7704C74195B5E4F002E163E /* TrackerPM */,
 				D7349E8818E7766F0097DB1D /* Transform */,
@@ -4047,6 +4083,18 @@
 				1E6CC0851A768BC800173EB3 /* PluginRegistration.cpp */,
 			);
 			path = ImageStatistics;
+			sourceTree = "<group>";
+		};
+		1E6E6FF41BD4F20F00B5A00F /* TimeDissolve */ = {
+			isa = PBXGroup;
+			children = (
+				1E6E6FF71BD4F22E00B5A00F /* TimeDissolve.cpp */,
+				1E6E6FF51BD4F22E00B5A00F /* TimeDissolve.h */,
+				1E6E6FF61BD4F22E00B5A00F /* PluginRegistration.cpp */,
+				1E6E6FF81BD4F22E00B5A00F /* Info.plist */,
+				1E6E6FF91BD4F22E00B5A00F /* Makefile */,
+			);
+			path = TimeDissolve;
 			sourceTree = "<group>";
 		};
 		1E759FFF1A879F50005BAA36 /* CheckerBoard */ = {
@@ -5055,6 +5103,23 @@
 			productReference = 1E6CC07F1A768B7200173EB3 /* ImageStatistics.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
+		1E6E6FFB1BD4F26700B5A00F /* TimeDissolve.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1E6E700C1BD4F26700B5A00F /* Build configuration list for PBXNativeTarget "TimeDissolve.ofx" */;
+			buildPhases = (
+				1E6E6FFC1BD4F26700B5A00F /* Sources */,
+				1E6E70071BD4F26700B5A00F /* Frameworks */,
+				1E6E70091BD4F26700B5A00F /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TimeDissolve.ofx;
+			productName = basic.ofx;
+			productReference = 1E6E700F1BD4F26700B5A00F /* TimeDissolve.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 		1E75A0171A87A97B005BAA36 /* CheckerBoard.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1E75A0291A87A97B005BAA36 /* Build configuration list for PBXNativeTarget "CheckerBoard.ofx" */;
@@ -5809,6 +5874,7 @@
 				1E3AC8C618B6207600F228A6 /* Switch.ofx */,
 				1EBAEFD0199A81DB0037B3E6 /* Test.ofx */,
 				1EE72BF31B524A6D001B0245 /* TimeBlur.ofx */,
+				1E6E6FFB1BD4F26700B5A00F /* TimeDissolve.ofx */,
 				1E235FF418369E4C0019C45F /* TimeOffset.ofx */,
 				D7BB85B81955C00100A86649 /* TrackerPM.ofx */,
 				D7349E8F18E7767D0097DB1D /* Transform.ofx */,
@@ -6200,6 +6266,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1E6E6FFC1BD4F26700B5A00F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E6E6FFF1BD4F26700B5A00F /* ofxsCore.cpp in Sources */,
+				1E6E70001BD4F26700B5A00F /* ofxsImageEffect.cpp in Sources */,
+				1E6E70011BD4F26700B5A00F /* ofxsInteract.cpp in Sources */,
+				1E6E70021BD4F26700B5A00F /* ofxsLog.cpp in Sources */,
+				1E6E70031BD4F26700B5A00F /* ofxsMultiThread.cpp in Sources */,
+				1E6E70041BD4F26700B5A00F /* ofxsParams.cpp in Sources */,
+				1E6E70051BD4F26700B5A00F /* ofxsProperty.cpp in Sources */,
+				1E6E70111BD4F28400B5A00F /* TimeDissolve.cpp in Sources */,
+				1E6E70061BD4F26700B5A00F /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E75A0181A87A97B005BAA36 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -6260,6 +6342,7 @@
 				1ED12E5A1A4B319800ABA348 /* Multiply.cpp in Sources */,
 				1ED4AEAC1973DD4800EE64C8 /* Rand.cpp in Sources */,
 				1EB9C085196DD697003C1849 /* NoOp.cpp in Sources */,
+				1E6E6FFA1BD4F25D00B5A00F /* TimeDissolve.cpp in Sources */,
 				1E8B5D7718B7811500C31FDC /* OneView.cpp in Sources */,
 				1EB0A47C1AA2037700F9C93E /* Position.cpp in Sources */,
 				1E52FFD01955CE720000FB79 /* Premult.cpp in Sources */,
@@ -7869,6 +7952,28 @@
 			};
 			name = Release;
 		};
+		1E6E700D1BD4F26700B5A00F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = TimeDissolve/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1E6E700E1BD4F26700B5A00F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = TimeDissolve/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
 		1E75A02A1A87A97B005BAA36 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -8997,6 +9102,15 @@
 			buildConfigurations = (
 				1E6CC07D1A768B7200173EB3 /* Debug */,
 				1E6CC07E1A768B7200173EB3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1E6E700C1BD4F26700B5A00F /* Build configuration list for PBXNativeTarget "TimeDissolve.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E6E700D1BD4F26700B5A00F /* Debug */,
+				1E6E700E1BD4F26700B5A00F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

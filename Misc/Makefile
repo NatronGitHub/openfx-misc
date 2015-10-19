@@ -53,6 +53,7 @@ Switch.o \
 TestRender.o \
 TimeBlur.o \
 NoTimeBlur.o \
+TimeDissolve.o \
 TimeOffset.o \
 TrackerPM.o \
 Transform.o \
@@ -249,6 +250,7 @@ VPATH += \
 ../Switch \
 ../Test \
 ../TimeBlur \
+../TimeDissolve \
 ../TimeOffset \
 ../TrackerPM \
 ../Transform \
@@ -311,6 +313,7 @@ CXXFLAGS += \
 -I../Switch \
 -I../Test \
 -I../TimeBlur \
+-I../TimeDissolve \
 -I../TimeOffset \
 -I../TrackerPM \
 -I../Transform \

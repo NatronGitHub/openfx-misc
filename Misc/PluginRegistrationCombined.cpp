@@ -51,6 +51,7 @@
 #include "Switch.h"
 #include "TimeBlur.h"
 #include "NoTimeBlur.h"
+#include "TimeDissolve.h"
 #include "TimeOffset.h"
 #include "TrackerPM.h"
 #include "Transform.h"
@@ -117,6 +118,7 @@ namespace OFX
             getSwitchPluginID(ids);
             getTimeBlurPluginID(ids);
             getNoTimeBlurPluginID(ids);
+            getTimeDissolvePluginID(ids);
             getTimeOffsetPluginID(ids);
             getTrackerPMPluginID(ids);
             getTransformPluginIDs(ids);

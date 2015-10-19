@@ -53,6 +53,7 @@ SideBySide \
 SlitScan \
 Switch \
 TimeBlur \
+TimeDissolve \
 TimeOffset \
 TrackerPM \
 Transform \
