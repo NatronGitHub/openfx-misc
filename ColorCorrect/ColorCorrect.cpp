@@ -1065,9 +1065,11 @@ defineColorGroup(const std::string& groupName,
                  bool open)
  {
      GroupParamDescriptor* group = desc.defineGroupParam(groupName);
-     group->setLabel(groupName);
-     group->setHint(hint);
-     group->setOpen(open);
+     if (group) {
+         group->setLabel(groupName);
+         group->setHint(hint);
+         group->setOpen(open);
+     }
 
      if (groupName != kGroupMaster) {
          BooleanParamDescriptor *param = desc.defineBooleanParam(groupName + kParamEnable);

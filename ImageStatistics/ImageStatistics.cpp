@@ -1631,8 +1631,10 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
 
     {
         GroupParamDescriptor* group = desc.defineGroupParam(kParamGroupRGBA);
-        group->setLabel(kParamGroupRGBA);
-        group->setAsTab();
+        if (group) {
+            group->setLabel(kParamGroupRGBA);
+            group->setAsTab();
+        }
         // min
         {
             RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatMin);
@@ -1640,7 +1642,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setHint(kParamStatMinHint);
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1653,7 +1657,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setHint(kParamStatMaxHint);
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1666,7 +1672,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setHint(kParamStatMeanHint);
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1679,7 +1687,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setHint(kParamStatSDevHint);
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1692,7 +1702,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setHint(kParamStatSkewnessHint);
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1705,7 +1717,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setHint(kParamStatKurtosisHint);
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1717,7 +1731,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setLabel(kParamAnalyzeFrameLabel);
             param->setHint(kParamAnalyzeFrameHint);
             param->setLayoutHint(eLayoutHintNoNewLine);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1728,7 +1744,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeSequence);
             param->setLabel(kParamAnalyzeSequenceLabel);
             param->setHint(kParamAnalyzeSequenceHint);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1740,7 +1758,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setLabel(kParamClearFrameLabel);
             param->setHint(kParamClearFrameHint);
             param->setLayoutHint(eLayoutHintNoNewLine);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1751,7 +1771,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClearSequence);
             param->setLabel(kParamClearSequenceLabel);
             param->setHint(kParamClearSequenceHint);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1760,8 +1782,11 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
 
     {
         GroupParamDescriptor* group = desc.defineGroupParam(kParamGroupHSVL);
-        group->setLabel(kParamGroupHSVL);
-        group->setAsTab();
+        if (group) {
+            group->setLabel(kParamGroupHSVL);
+            group->setAsTab();
+        }
+
         // min
         {
             RGBAParamDescriptor* param = desc.defineRGBAParam(kParamStatHSVLMin);
@@ -1770,7 +1795,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1784,7 +1811,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1798,7 +1827,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1812,7 +1843,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1826,7 +1859,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1840,7 +1875,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setDimensionLabels("h", "s", "v", "l");
             param->setEvaluateOnChange(false);
             param->setAnimates(true);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1852,7 +1889,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setLabel(kParamAnalyzeFrameHSVLLabel);
             param->setHint(kParamAnalyzeFrameHSVLHint);
             param->setLayoutHint(eLayoutHintNoNewLine);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1863,7 +1902,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeSequenceHSVL);
             param->setLabel(kParamAnalyzeSequenceHSVLLabel);
             param->setHint(kParamAnalyzeSequenceHSVLHint);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1875,7 +1916,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             param->setLabel(kParamClearFrameHSVLLabel);
             param->setHint(kParamClearFrameHSVLHint);
             param->setLayoutHint(eLayoutHintNoNewLine);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1886,7 +1929,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClearSequenceHSVL);
             param->setLabel(kParamClearSequenceHSVLLabel);
             param->setHint(kParamClearSequenceHSVLHint);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }

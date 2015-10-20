@@ -365,6 +365,7 @@ public:
     , _uniform(0)
     , _orderX(0)
     , _orderY(0)
+    , _chrominanceMath(0)
     , _boundary(0)
     , _filter(0)
     , _expandRoD(0)

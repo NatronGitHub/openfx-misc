@@ -975,7 +975,9 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setDimensionLabels("x", "y");
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-        param->setParent(*group);
+        if (group) {
+            param->setParent(*group);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -1030,7 +1032,9 @@ static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
     param->setAnimates(true);
     param->setDefault(x,y,z);
     param->setIncrement(0.01);
-    param->setParent(*group);
+    if (group) {
+        param->setParent(*group);
+    }
     if (page) {
         page->addChild(*param);
     }
@@ -1044,8 +1048,10 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     // toPoints
     {
         GroupParamDescriptor* group = desc.defineGroupParam(kGroupTo);
-        group->setLabel(kGroupTo);
-        group->setAsTab();
+        if (group) {
+            group->setLabel(kGroupTo);
+            group->setAsTab();
+        }
 
         defineCornerPinToDouble2DParam(desc, page, group, 0, 0, 0);
         defineCornerPinToDouble2DParam(desc, page, group, 1, 1, 0);
@@ -1071,8 +1077,10 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     // fromPoints
     {
         GroupParamDescriptor* group = desc.defineGroupParam(kGroupFrom);
-        group->setLabel(kGroupFrom);
-        group->setAsTab();
+        if (group) {
+            group->setLabel(kGroupFrom);
+            group->setAsTab();
+        }
 
         defineCornerPinFromsDouble2DParam(desc, page, group, 0, 0, 0);
         defineCornerPinFromsDouble2DParam(desc, page, group, 1, 1, 0);
@@ -1085,7 +1093,9 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
             param->setLabel(kParamCopyInputRoDLabel);
             param->setHint(kParamCopyInputRoDHint);
             param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1096,13 +1106,15 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
             PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyTo);
             param->setLabel(kParamCopyToLabel);
             param->setHint(kParamCopyToHint);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
         }
         
-        if (page) {
+        if (page && group) {
             page->addChild(*group);
         }
     }
@@ -1110,15 +1122,17 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
     // extraMatrix
     {
         GroupParamDescriptor* group = desc.defineGroupParam(kGroupExtraMatrix);
-        group->setLabel(kGroupExtraMatrixLabel);
-        group->setHint(kGroupExtraMatrixHint);
-        group->setOpen(false);
+        if (group) {
+            group->setLabel(kGroupExtraMatrixLabel);
+            group->setHint(kGroupExtraMatrixHint);
+            group->setOpen(false);
+        }
 
         defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow1, 1, 0, 0);
         defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow2, 0, 1, 0);
         defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow3, 0, 0, 1);
 
-        if (page) {
+        if (page && group) {
             page->addChild(*group);
         }
     }

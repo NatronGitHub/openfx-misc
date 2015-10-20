@@ -1060,14 +1060,19 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
     
     {
         GroupParamDescriptor *group = desc.defineGroupParam(kGroupColorReplacement);
-        group->setLabel(kGroupColorReplacementLabel);
-        group->setHint(kGroupColorReplacementHint);
-        group->setEnabled(true);
+        if (group) {
+            group->setLabel(kGroupColorReplacementLabel);
+            group->setHint(kGroupColorReplacementHint);
+            group->setEnabled(true);
+        }
+
         {
             RGBParamDescriptor *param = desc.defineRGBParam(kParamSrcColor);
             param->setLabel(kParamSrcColorLabel);
             param->setHint(kParamSrcColorHint);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1076,22 +1081,27 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             RGBParamDescriptor *param = desc.defineRGBParam(kParamDstColor);
             param->setLabel(kParamDstColorLabel);
             param->setHint(kParamDstColorHint);
-            param->setParent(*group);
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
         }
-        if (page) {
+        if (page && group) {
             page->addChild(*group);
         }
     }
 
     {
         GroupParamDescriptor *group = desc.defineGroupParam(kGroupHue);
-        group->setLabel(kGroupHueLabel);
-        group->setHint(kGroupHueHint);
-        group->setEnabled(true);
+        if (group) {
+            group->setLabel(kGroupHueLabel);
+            group->setHint(kGroupHueHint);
+            group->setEnabled(true);
+        }
+
         {
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamHueRange);
             param->setLabel(kParamHueRangeLabel);
@@ -1100,7 +1110,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setDefault(0., 360.);
             param->setDisplayRange(0., 0., 360., 360.);
             param->setDoubleType(eDoubleTypeAngle);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1111,7 +1123,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setHint(kParamHueRotationHint);
             param->setDisplayRange(-180., 180.);
             param->setDoubleType(eDoubleTypeAngle);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1123,23 +1137,28 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setRange(0., 180.);
             param->setDisplayRange(0., 180.);
             param->setDoubleType(eDoubleTypeAngle);
-            param->setParent(*group);
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
         }
 
-        if (page) {
+        if (page && group) {
             page->addChild(*group);
         }
     }
 
     {
         GroupParamDescriptor *group = desc.defineGroupParam(kGroupSaturation);
-        group->setLabel(kGroupSaturationLabel);
-        group->setHint(kGroupSaturationHint);
-        group->setEnabled(true);
+        if (group) {
+            group->setLabel(kGroupSaturationLabel);
+            group->setHint(kGroupSaturationHint);
+            group->setEnabled(true);
+        }
+
         {
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamSaturationRange);
             param->setLabel(kParamSaturationRangeLabel);
@@ -1147,7 +1166,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
             param->setDefault(0., 1.);
             param->setDisplayRange(0., 0., 1, 1);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1157,7 +1178,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setLabel(kParamSaturationAdjustmentLabel);
             param->setHint(kParamSaturationAdjustmentHint);
             param->setDisplayRange(0., 1.);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1167,23 +1190,28 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setLabel(kParamSaturationRangeRolloffLabel);
             param->setHint(kParamSaturationRangeRolloffHint);
             param->setDisplayRange(0., 1.);
-            param->setParent(*group);
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
         }
 
-        if (page) {
+        if (page && group) {
             page->addChild(*group);
         }
     }
 
     {
         GroupParamDescriptor *group = desc.defineGroupParam(kGroupBrightness);
-        group->setLabel(kGroupBrightnessLabel);
-        group->setHint(kGroupBrightnessHint);
-        group->setEnabled(true);
+        if (group) {
+            group->setLabel(kGroupBrightnessLabel);
+            group->setHint(kGroupBrightnessHint);
+            group->setEnabled(true);
+        }
+
         {
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamBrightnessRange);
             param->setLabel(kParamBrightnessRangeLabel);
@@ -1191,7 +1219,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
             param->setDefault(0., 1.);
             param->setDisplayRange(0., 0., 1, 1);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1201,7 +1231,9 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setLabel(kParamBrightnessAdjustmentLabel);
             param->setHint(kParamBrightnessAdjustmentHint);
             param->setDisplayRange(0., 1.);
-            param->setParent(*group);
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
@@ -1211,14 +1243,16 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setLabel(kParamBrightnessRangeRolloffLabel);
             param->setHint(kParamBrightnessRangeRolloffHint);
             param->setDisplayRange(0., 1.);
-            param->setParent(*group);
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
+            if (group) {
+                param->setParent(*group);
+            }
             if (page) {
                 page->addChild(*param);
             }
         }
 
-        if (page) {
+        if (page && group) {
             page->addChild(*group);
         }
     }
