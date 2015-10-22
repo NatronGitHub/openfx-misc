@@ -27,6 +27,9 @@
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
+#ifdef DEBUG
+#include <iostream>
+#endif
 
 #include "ofxsProcessing.H"
 #include "ofxsMerging.h"
@@ -967,6 +970,9 @@ void MergePluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
         //help += getOperationHelp(eMergeInterpolated) + '\n';
         help += getOperationHelp(eMergeMatte) + '\n';
         help += getOperationHelp(eMergeReflect) + '\n';
+#     ifdef DEBUG
+        std::cout << this->getID() << ": IGNORE THE FOLLOWING WARNING (a shorter description is used for buggy OFX hosts)\n";
+#     endif
     }
     desc.setPluginDescription(help);
 
