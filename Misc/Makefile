@@ -145,6 +145,14 @@ RESOURCES = \
 ../Keyer/net.sf.openfx.KeyerPlugin.svg \
 ../Merge/net.sf.openfx.MergePlugin.png \
 ../Merge/net.sf.openfx.MergePlugin.svg \
+../Merge/net.sf.openfx.MergeDifference.png \
+../Merge/net.sf.openfx.MergeIn.png \
+../Merge/net.sf.openfx.MergeMax.png \
+../Merge/net.sf.openfx.MergeMin.png \
+../Merge/net.sf.openfx.MergeMultiply.png \
+../Merge/net.sf.openfx.MergeOut.png \
+../Merge/net.sf.openfx.MergePlus.png \
+../Merge/net.sf.openfx.MergeScreen.png \
 ../Mirror/net.sf.openfx.Mirror.png \
 ../Mirror/net.sf.openfx.Mirror.svg \
 ../MixViews/net.sf.openfx.mixViewsPlugin.png \
