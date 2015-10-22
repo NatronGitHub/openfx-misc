@@ -61,6 +61,7 @@
 #endif
 
 #define kParamOutputChannels kNatronOfxParamOutputChannels
+#define kParamOutputChannelsChoice kParamOutputChannels "Choice"
 #define kParamOutputChannelsLabel "Output Layer"
 #define kParamOutputChannelsHint "The layer that will be written to in output"
 
@@ -73,19 +74,23 @@
 #define kParamOutputBitDepthOptionFloat "Float (32 bits)"
 
 #define kParamOutputR "outputR"
+#define kParamOutputRChoice kParamOutputR "Choice"
 #define kParamOutputRLabel "R"
 #define kParamOutputRHint "Input channel for the output red channel"
 
 #define kParamOutputG "outputG"
+#define kParamOutputGChoice kParamOutputG "Choice"
 #define kParamOutputGLabel "G"
 #define kParamOutputGHint "Input channel for the output green channel"
 
 #define kParamOutputB "outputB"
+#define kParamOutputBChoice kParamOutputB "Choice"
 #define kParamOutputBLabel "B"
 #define kParamOutputBHint "Input channel for the output blue channel"
 
 
 #define kParamCreateAlpha "createA"
+#define kParamOutputAChoice kParamOutputA "Choice"
 #define kParamCreateAlphaLabel "Create Alpha"
 #define kParamCreateAlphaHint "When input stream is RGB, checking this will create an alpha filled with what is idendicated by the \"A\" parameter."
 
@@ -503,6 +508,7 @@ public:
     , _srcClipA(0)
     , _srcClipB(0)
     , _outputComponents(0)
+    , _outputComponentsString(0)
     , _outputBitDepth(0)
     , _r(0)
     , _g(0)
@@ -532,7 +538,16 @@ public:
         _a = fetchChoiceParam(kParamOutputA);
         
         _createAlpha = fetchBooleanParam(kParamCreateAlpha);
-        //enableComponents();
+        
+        if (gSupportsDynamicChoices) {
+            _outputComponentsString = fetchStringParam(kParamOutputChannelsChoice);
+            _channelParamStrings[0] = fetchStringParam(kParamOutputRChoice);
+            _channelParamStrings[1] = fetchStringParam(kParamOutputGChoice);
+            _channelParamStrings[2] = fetchStringParam(kParamOutputBChoice);
+            _channelParamStrings[3] = fetchStringParam(kParamOutputAChoice);
+        } else {
+            _channelParamStrings[0] = _channelParamStrings[1] = _channelParamStrings[2] = _channelParamStrings[3] = 0;
+        }
     }
 
 private:
@@ -593,6 +608,14 @@ private:
     /* set up and run a processor */
     void setupAndProcess(ShufflerBase &, const OFX::RenderArguments &args);
     void setupAndProcessMultiPlane(MultiPlaneShufflerBase &, const OFX::RenderArguments &args);
+    
+    ///To be called once the components are known via getClipPreferences
+    void setChannelsFromStringParams();
+    void setChannelsFromStringParamsInternal(const std::vector<std::string>& outputChoices,
+                                             const std::vector<std::string>& rChoices,
+                                             const std::vector<std::string>& gChoices,
+                                             const std::vector<std::string>& bChoices,
+                                             const std::vector<std::string>& aChoices);
 
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -600,11 +623,13 @@ private:
     OFX::Clip *_srcClipB;
 
     OFX::ChoiceParam *_outputComponents;
+    OFX::StringParam *_outputComponentsString;
     OFX::ChoiceParam *_outputBitDepth;
     OFX::ChoiceParam *_r;
     OFX::ChoiceParam *_g;
     OFX::ChoiceParam *_b;
     OFX::ChoiceParam *_a;
+    OFX::StringParam* _channelParamStrings[4];
     OFX::BooleanParam *_createAlpha;
     
     //Small cache only used on main-thread to speed up getclipPreferences
@@ -659,7 +684,8 @@ static void extractChannelsFromComponentString(const std::string& comp,
 
 static void appendComponents(const std::string& clipName,
                              const std::list<std::string>& components,
-                             OFX::ChoiceParam** params)
+                             OFX::ChoiceParam** params,
+                             std::vector<std::string>* channelChoices)
 {
     
     std::list<std::string> usedComps;
@@ -685,6 +711,9 @@ static void appendComponents(const std::string& clipName,
                 usedComps.push_back(opt);
                 for (int j = 0; j < 4; ++j) {
                     params[j]->appendOption(opt, channels[i] + " channel from " + ((layer.empty())? std::string() : std::string("layer/view ") + layer + " of ") + "input " + clipName);
+                    if (channelChoices && j == 0) {
+                        channelChoices->push_back(opt);
+                    }
                 }
             }
             
@@ -702,6 +731,9 @@ static void appendComponents(const std::string& clipName,
                     usedComps.push_back(opt);
                     for (int j = 0; j < 4; ++j) {
                         params[j]->appendOption(opt, channels[i] + " channel from layer " + secondLayer + " of input " + clipName);
+                        if (channelChoices && j == 0) {
+                            channelChoices->push_back(opt);
+                        }
                     }
                 }
             }
@@ -711,29 +743,59 @@ static void appendComponents(const std::string& clipName,
 
 template<typename T>
 static void
-addInputChannelOptionsRGBA(T* outputR, OFX::ContextEnum context)
+addInputChannelOptionsRGBA(T* outputR, OFX::ContextEnum context, std::vector<std::string>* outputComponents)
 {
     assert(outputR->getNOptions() == eInputChannelAR);
     outputR->appendOption(kParamOutputOptionAR,kParamOutputOptionARHint);
+    if (outputComponents) {
+        outputComponents->push_back(kParamOutputOptionAR);
+    }
     assert(outputR->getNOptions() == eInputChannelAG);
     outputR->appendOption(kParamOutputOptionAG,kParamOutputOptionAGHint);
+    if (outputComponents) {
+        outputComponents->push_back(kParamOutputOptionAG);
+    }
     assert(outputR->getNOptions() == eInputChannelAB);
     outputR->appendOption(kParamOutputOptionAB,kParamOutputOptionABHint);
+    if (outputComponents) {
+        outputComponents->push_back(kParamOutputOptionAB);
+    }
     assert(outputR->getNOptions() == eInputChannelAA);
     outputR->appendOption(kParamOutputOptionAA,kParamOutputOptionAAHint);
+    if (outputComponents) {
+        outputComponents->push_back(kParamOutputOptionAA);
+    }
     assert(outputR->getNOptions() == eInputChannel0);
     outputR->appendOption(kParamOutputOption0,kParamOutputOption0Hint);
+    if (outputComponents) {
+        outputComponents->push_back(kParamOutputOption0);
+    }
     assert(outputR->getNOptions() == eInputChannel1);
     outputR->appendOption(kParamOutputOption1,kParamOutputOption1Hint);
+    if (outputComponents) {
+        outputComponents->push_back(kParamOutputOption1);
+    }
     if (context == eContextGeneral) {
         assert(outputR->getNOptions() == eInputChannelBR);
         outputR->appendOption(kParamOutputOptionBR,kParamOutputOptionBRHint);
+        if (outputComponents) {
+            outputComponents->push_back(kParamOutputOptionBR);
+        }
         assert(outputR->getNOptions() == eInputChannelBG);
         outputR->appendOption(kParamOutputOptionBG,kParamOutputOptionBGHint);
+        if (outputComponents) {
+            outputComponents->push_back(kParamOutputOptionBG);
+        }
         assert(outputR->getNOptions() == eInputChannelBB);
         outputR->appendOption(kParamOutputOptionBB,kParamOutputOptionBBHint);
+        if (outputComponents) {
+            outputComponents->push_back(kParamOutputOptionBB);
+        }
         assert(outputR->getNOptions() == eInputChannelBA);
         outputR->appendOption(kParamOutputOptionBA,kParamOutputOptionBAHint);
+        if (outputComponents) {
+            outputComponents->push_back(kParamOutputOptionBA);
+        }
     }
 }
 
@@ -759,6 +821,8 @@ ShufflePlugin::buildChannelMenus(const std::list<std::string> &outputComponents)
     
     std::list<std::string> componentsA = _srcClipA->getComponentsPresent();
     std::list<std::string> componentsB = _srcClipB->getComponentsPresent();
+    
+    std::vector<std::string> channelChoices;
     if (hasListChanged(_currentCompsA, componentsA) ||
         hasListChanged(_currentCompsB, componentsB)) {
         
@@ -774,12 +838,13 @@ ShufflePlugin::buildChannelMenus(const std::list<std::string> &outputComponents)
         
         //Always add RGBA channels for color plane
         for (int i = 0; i < 4; ++i) {
-            addInputChannelOptionsRGBA(params[i], getContext());
+            addInputChannelOptionsRGBA(params[i], getContext(), i == 0 ? &channelChoices : 0);
         }
         
-        
-        appendComponents(kClipA, componentsA, params);
-        appendComponents(kClipB, componentsB, params);
+        if (gIsMultiPlanar) {
+            appendComponents(kClipA, componentsA, params, &channelChoices);
+            appendComponents(kClipB, componentsB, params, 0);
+        }
     }
     
     if (gIsMultiPlanar) {
@@ -789,6 +854,8 @@ ShufflePlugin::buildChannelMenus(const std::list<std::string> &outputComponents)
             _currentOutputComps = outputComponents;
             
             _outputComponents->resetOptions();
+            
+            std::vector<std::string> outputChoices;
             
             ///Pre-process to add color comps first
             std::list<std::string> compsToAdd;
@@ -802,13 +869,13 @@ ShufflePlugin::buildChannelMenus(const std::list<std::string> &outputComponents)
                 }
                 if (layer.empty()) {
                     if (*it == kOfxImageComponentRGBA) {
-                        _outputComponents->appendOption(kShuffleColorRGBA);
+                        outputChoices.push_back(kShuffleColorRGBA);
                         foundColor = true;
                     } else if (*it == kOfxImageComponentRGB) {
-                        _outputComponents->appendOption(kShuffleColorRGB);
+                        outputChoices.push_back(kShuffleColorRGB);
                         foundColor = true;
                     } else if (*it == kOfxImageComponentAlpha) {
-                        _outputComponents->appendOption(kShuffleColorAlpha);
+                        outputChoices.push_back(kShuffleColorAlpha);
                         foundColor = true;
                     }
                     
@@ -824,15 +891,19 @@ ShufflePlugin::buildChannelMenus(const std::list<std::string> &outputComponents)
                 compsToAdd.push_back(layer);
             }
             if (!foundColor) {
-                _outputComponents->appendOption(kShuffleColorRGBA);
+                outputChoices.push_back(kShuffleColorRGBA);
             }
-            _outputComponents->appendOption(kShuffleMotionForwardPlaneName);
-            _outputComponents->appendOption(kShuffleMotionBackwardPlaneName);
-            _outputComponents->appendOption(kShuffleDisparityLeftPlaneName);
-            _outputComponents->appendOption(kShuffleDisparityRightPlaneName);
-            for (std::list<std::string>::const_iterator it = compsToAdd.begin(); it!=compsToAdd.end(); ++it) {
+            outputChoices.push_back(kShuffleMotionForwardPlaneName);
+            outputChoices.push_back(kShuffleMotionBackwardPlaneName);
+            outputChoices.push_back(kShuffleDisparityLeftPlaneName);
+            outputChoices.push_back(kShuffleDisparityRightPlaneName);
+            outputChoices.insert(outputChoices.end(), compsToAdd.begin(), compsToAdd.end());
+            
+            for (std::vector<std::string>::const_iterator it = outputChoices.begin(); it!=outputChoices.end(); ++it) {
                 _outputComponents->appendOption(*it);
             }
+            
+            setChannelsFromStringParamsInternal(outputChoices, channelChoices, channelChoices, channelChoices, channelChoices);
         }
     }
 }
@@ -1401,7 +1472,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
     getPlaneNeededInOutput(outputComponents, _outputComponents, &dstOfxPlane, &dstOfxComp);
     
 #ifdef DEBUG
-    // Follow the OpênFX spec:
+    // Follow the OpenFX spec:
     // check that dstComponents is consistent with the result of getClipPreferences
     // (@see getClipPreferences).
     OFX::PixelComponentEnum pixelComps = mapStrToPixelComponentEnum(dstOfxComp);
@@ -1881,12 +1952,21 @@ ShufflePlugin::setChannelsFromRed(double time)
                 std::string chan = opt.substr(base.size());
                 if (chan == ".G" || chan == ".g") {
                     _g->setValue(i);
+                    if (_channelParamStrings[1]) {
+                        _channelParamStrings[1]->setValue(opt);
+                    }
                     gSet = true;
                 } else if (chan == ".B" || chan == ".b") {
                     _b->setValue(i);
+                    if (_channelParamStrings[2]) {
+                        _channelParamStrings[2]->setValue(opt);
+                    }
                     bSet = true;
                 } else if (chan == ".A" || chan == ".a") {
                     _a->setValue(i);
+                    if (_channelParamStrings[3]) {
+                        _channelParamStrings[3]->setValue(opt);
+                    }
                     aSet = true;
                 }
             }
@@ -1898,12 +1978,21 @@ ShufflePlugin::setChannelsFromRed(double time)
         assert(indexOf0 != -1 && indexOf1 != -1);
         if (!gSet) {
             _g->setValue(indexOf0);
+            if (_channelParamStrings[1]) {
+                _channelParamStrings[1]->setValue(kParamOutputOption0);
+            }
         }
         if (!bSet) {
             _b->setValue(indexOf0);
+            if (_channelParamStrings[2]) {
+                _channelParamStrings[2]->setValue(kParamOutputOption0);
+            }
         }
         if (!aSet) {
             _a->setValue(indexOf1);
+            if (_channelParamStrings[3]) {
+                _channelParamStrings[3]->setValue(kParamOutputOption0);
+            }
         }
     }
 }
@@ -1941,12 +2030,147 @@ ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::str
         }
         msg += "\n";
         sendMessage(OFX::Message::eMessageMessage, "", msg);
-    }
+    } else if (paramName == kParamOutputR && args.reason == OFX::eChangeUserEdit && _channelParamStrings[0]) {
 #ifdef OFX_EXTENSIONS_NATRON
-    else if (paramName == kParamOutputR) {
         setChannelsFromRed(args.time);
-    }
 #endif
+        assert(_r);
+        int choice_i;
+        _r->getValueAtTime(args.time, choice_i);
+        std::string optionName;
+        _r->getOption(choice_i, optionName);
+        _channelParamStrings[0]->setValue(optionName);
+    } else if (paramName == kParamOutputG && args.reason == OFX::eChangeUserEdit && _channelParamStrings[1]) {
+        assert(_g);
+        int choice_i;
+        _g->getValueAtTime(args.time, choice_i);
+        std::string optionName;
+        _g->getOption(choice_i, optionName);
+        _channelParamStrings[1]->setValue(optionName);
+    } else if (paramName == kParamOutputB && args.reason == OFX::eChangeUserEdit && _channelParamStrings[2]) {
+        assert(_b);
+        int choice_i;
+        _b->getValueAtTime(args.time, choice_i);
+        std::string optionName;
+        _b->getOption(choice_i, optionName);
+        _channelParamStrings[2]->setValue(optionName);
+    } else if (paramName == kParamOutputA && args.reason == OFX::eChangeUserEdit && _channelParamStrings[3]) {
+        assert(_a);
+        int choice_i;
+        _a->getValueAtTime(args.time, choice_i);
+        std::string optionName;
+        _a->getOption(choice_i, optionName);
+        _channelParamStrings[3]->setValue(optionName);
+    } else if (paramName == kParamOutputChannels && args.reason == OFX::eChangeUserEdit && _outputComponentsString) {
+        int choice_i;
+        _outputComponents->getValueAtTime(args.time, choice_i);
+        std::string optionName;
+        _outputComponents->getOption(choice_i, optionName);
+        _outputComponentsString->setValue(optionName);
+    }
+    
+}
+
+void
+ShufflePlugin::setChannelsFromStringParamsInternal(const std::vector<std::string>& outputChoices,
+                                                   const std::vector<std::string>& rChoices,
+                                                   const std::vector<std::string>& gChoices,
+                                                   const std::vector<std::string>& bChoices,
+                                                   const std::vector<std::string>& aChoices)
+{
+    if (!gSupportsDynamicChoices) {
+        return;
+    }
+    std::string outputComponentsStr;
+    _outputComponentsString->getValue(outputComponentsStr);
+    if (outputComponentsStr.empty()) {
+        int cur_i;
+        _outputComponents->getValue(cur_i);
+        _outputComponents->getOption(cur_i, outputComponentsStr);
+        _outputComponentsString->setValue(outputComponentsStr);
+    } else {
+        int foundOption = -1;
+        for (int i = 0; i < (int)outputChoices.size(); ++i) {
+            if (outputChoices[i] == outputComponentsStr) {
+                foundOption = i;
+                break;
+            }
+        }
+        if (foundOption != -1) {
+            _outputComponents->setValue(foundOption);
+        } else {
+            _outputComponents->setValue(0);
+            _outputComponentsString->setValue(outputChoices[0]);
+        }
+    }
+    
+    
+    OFX::ChoiceParam* choiceParams[4] = {_r, _g, _b, _a};
+    const std::vector<std::string>* channelOptions[4] = {&rChoices, &gChoices, &bChoices, &aChoices};
+    
+    for (int c = 0; c < 4; ++c) {
+        std::string valueStr;
+        _channelParamStrings[c]->getValue(valueStr);
+        if (valueStr.empty()) {
+            int cur_i;
+            choiceParams[c]->getValue(cur_i);
+            choiceParams[c]->getOption(cur_i, valueStr);
+            _channelParamStrings[c]->setValue(valueStr);
+        } else {
+            int foundOption = -1;
+            for (int i = 0; i < (int)channelOptions[c]->size(); ++i) {
+                if (channelOptions[c]->at(i) == valueStr) {
+                    foundOption = i;
+                    break;
+                }
+            }
+            if (foundOption != -1) {
+                choiceParams[c]->setValue(foundOption);
+            } else {
+                choiceParams[c]->setValue(c);
+                _channelParamStrings[c]->setValue(channelOptions[c]->at(c));
+            }
+        }
+    }
+
+}
+
+void
+ShufflePlugin::setChannelsFromStringParams()
+{
+    if (gSupportsDynamicChoices) {
+        return;
+    }
+    int nOpt = _outputComponents->getNOptions();
+    std::vector<std::string> outputComponentsVec(nOpt);
+    for (int i = 0; i < nOpt; ++i) {
+        _outputComponents->getOption(i, outputComponentsVec[i]);
+    }
+
+    nOpt = _r->getNOptions();
+    std::vector<std::string> rComps(nOpt);
+    for (int i = 0; i < nOpt; ++i) {
+        _r->getOption(i, rComps[i]);
+    }
+    
+    nOpt = _g->getNOptions();
+    std::vector<std::string> gComps(nOpt);
+    for (int i = 0; i < nOpt; ++i) {
+        _g->getOption(i, gComps[i]);
+    }
+    
+    nOpt = _b->getNOptions();
+    std::vector<std::string> bComps(nOpt);
+    for (int i = 0; i < nOpt; ++i) {
+        _b->getOption(i, bComps[i]);
+    }
+    
+    nOpt = _a->getNOptions();
+    std::vector<std::string> aComps(nOpt);
+    for (int i = 0; i < nOpt; ++i) {
+        _a->getOption(i, aComps[i]);
+    }
+    setChannelsFromStringParamsInternal(outputComponentsVec, rComps, gComps, bComps, aComps);
 }
 
 void
@@ -2280,7 +2504,7 @@ void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 static void
 addInputChannelOptionsRGBA(ChoiceParamDescriptor* outputR, InputChannelEnum def, OFX::ContextEnum context)
 {
-    addInputChannelOptionsRGBA(outputR, context);
+    addInputChannelOptionsRGBA(outputR, context, 0);
     outputR->setDefault(def);
 }
 
@@ -2372,23 +2596,36 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
             page->addChild(*param);
         }
     } else {
-        ChoiceParamDescriptor *param = desc.defineChoiceParam(kNatronOfxParamOutputChannels);
-        param->setLabel(kParamOutputChannelsLabel);
-        param->setHint(kParamOutputChannelsHint);
+        {
+            ChoiceParamDescriptor *param = desc.defineChoiceParam(kNatronOfxParamOutputChannels);
+            param->setLabel(kParamOutputChannelsLabel);
+            param->setHint(kParamOutputChannelsHint);
 #ifdef OFX_EXTENSIONS_NATRON
-        param->setHostCanAddOptions(true);
+            param->setHostCanAddOptions(true);
 #endif
-        param->appendOption(kShuffleColorRGBA);
-        param->appendOption(kShuffleMotionForwardPlaneName);
-        param->appendOption(kShuffleMotionBackwardPlaneName);
-        param->appendOption(kShuffleDisparityLeftPlaneName);
-        param->appendOption(kShuffleDisparityRightPlaneName);
-        desc.addClipPreferencesSlaveParam(*param);
-        if (page) {
+            param->appendOption(kShuffleColorRGBA);
+            param->appendOption(kShuffleMotionForwardPlaneName);
+            param->appendOption(kShuffleMotionBackwardPlaneName);
+            param->appendOption(kShuffleDisparityLeftPlaneName);
+            param->appendOption(kShuffleDisparityRightPlaneName);
+            if (gSupportsDynamicChoices) {
+                param->setEvaluateOnChange(false);
+                param->setIsPersistant(false);
+            }
+            desc.addClipPreferencesSlaveParam(*param);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        if (gSupportsDynamicChoices) {
+            //Add a hidden string param that will remember the value of the choice
+            OFX::StringParamDescriptor* param = desc.defineStringParam(kParamOutputChannelsChoice);
+            param->setLabel(kParamOutputChannelsLabel "Choice");
+            param->setIsSecret(true);
             page->addChild(*param);
         }
     }
-
+    
     // ouputBitDepth
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputBitDepth);
@@ -2426,33 +2663,72 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     if (gSupportsRGB || gSupportsRGBA) {
         // outputR
         {
-            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputR);
-            param->setLabel(kParamOutputRLabel);
-            param->setHint(kParamOutputRHint);
-            addInputChannelOptionsRGBA(param, eInputChannelAR, context);
-            if (page) {
+            {
+                ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputR);
+                param->setLabel(kParamOutputRLabel);
+                param->setHint(kParamOutputRHint);
+                addInputChannelOptionsRGBA(param, eInputChannelAR, context);
+                if (gSupportsDynamicChoices) {
+                    param->setEvaluateOnChange(false);
+                    param->setIsPersistant(false);
+                }
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+            if (gSupportsDynamicChoices) {
+                //Add a hidden string param that will remember the value of the choice
+                OFX::StringParamDescriptor* param = desc.defineStringParam(kParamOutputRChoice);
+                param->setLabel(kParamOutputRLabel "Choice");
+                param->setIsSecret(true);
                 page->addChild(*param);
             }
         }
-
+        
         // outputG
         {
-            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputG);
-            param->setLabel(kParamOutputGLabel);
-            param->setHint(kParamOutputGHint);
-            addInputChannelOptionsRGBA(param, eInputChannelAG, context);
-            if (page) {
+            {
+                ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputG);
+                param->setLabel(kParamOutputGLabel);
+                param->setHint(kParamOutputGHint);
+                if (gSupportsDynamicChoices) {
+                    param->setEvaluateOnChange(false);
+                    param->setIsPersistant(false);
+                }
+                addInputChannelOptionsRGBA(param, eInputChannelAG, context);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+            if (gSupportsDynamicChoices) {
+                //Add a hidden string param that will remember the value of the choice
+                OFX::StringParamDescriptor* param = desc.defineStringParam(kParamOutputGChoice);
+                param->setLabel(kParamOutputGLabel "Choice");
+                param->setIsSecret(true);
                 page->addChild(*param);
             }
         }
-
+        
         // outputB
         {
-            ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputB);
-            param->setLabel(kParamOutputBLabel);
-            param->setHint(kParamOutputBHint);
-            addInputChannelOptionsRGBA(param, eInputChannelAB, context);
-            if (page) {
+            {
+                ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputB);
+                param->setLabel(kParamOutputBLabel);
+                param->setHint(kParamOutputBHint);
+                if (gSupportsDynamicChoices) {
+                    param->setEvaluateOnChange(false);
+                    param->setIsPersistant(false);
+                }
+                addInputChannelOptionsRGBA(param, eInputChannelAB, context);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
+            if (gSupportsDynamicChoices) {
+                //Add a hidden string param that will remember the value of the choice
+                OFX::StringParamDescriptor* param = desc.defineStringParam(kParamOutputBChoice);
+                param->setLabel(kParamOutputBLabel "Choice");
+                param->setIsSecret(true);
                 page->addChild(*param);
             }
         }
@@ -2473,10 +2749,21 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
             ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputA);
             param->setLabel(kParamOutputALabel);
             param->setHint(kParamOutputAHint);
+            if (gSupportsDynamicChoices) {
+                param->setEvaluateOnChange(false);
+                param->setIsPersistant(false);
+            }
             addInputChannelOptionsRGBA(param, eInputChannelAA, context);
             if (page) {
                 page->addChild(*param);
             }
+        }
+        if (gSupportsDynamicChoices) {
+            //Add a hidden string param that will remember the value of the choice
+            OFX::StringParamDescriptor* param = desc.defineStringParam(kParamOutputAChoice);
+            param->setLabel(kParamOutputALabel "Choice");
+            param->setIsSecret(true);
+            page->addChild(*param);
         }
     }
 
