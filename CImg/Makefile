@@ -50,7 +50,8 @@ CXXFLAGS += -I$(CIMG_INCLUDE)
 # commit d5e8da7bcc594a6df2878d19268c9217689703e6 has the math parser with loops!
 # commit d89fbcf399b3663ce3ebac2ee387642fd64014b6 has abortable functions
 # commit 9e1e9884f3553d84f73dd20a898b4ba53c95af65 is CImg 1.6.5
-CIMGVERSION=9e1e9884f3553d84f73dd20a898b4ba53c95af65
+# commit bb34c1a7d6a0911cbc80c8310f0508301d58780d is CImg 1.6.7
+CIMGVERSION=bb34c1a7d6a0911cbc80c8310f0508301d58780d
 
 CImg.h:
 	curl -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
