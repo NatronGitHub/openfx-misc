@@ -111,8 +111,21 @@ public:
     virtual int getBoundary(const Params& /*params*/) { return 0; }
 
     //static void describe(OFX::ImageEffectDescriptor &desc, bool supportsTiles);
+    
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 };
+
+template <class Params>
+void
+CImgOperatorPluginHelper<Params>::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    //The render function expects all clips to have the same components, but they describe that they
+    //can support everything, so guide the host into providing us something good for the render action
+    OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+    clipPreferences.setClipComponents(*_srcAClip, outputComps);
+    clipPreferences.setClipComponents(*_srcBClip, outputComps);
+}
 
 template <class Params>
 void
