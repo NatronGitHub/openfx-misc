@@ -436,9 +436,13 @@ DissolvePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
 
 /* Override the clip preferences */
 void
-DissolvePlugin::getClipPreferences(OFX::ClipPreferencesSetter &/*clipPreferences*/)
+DissolvePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     updateRange();
+    OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+    for (unsigned i = 0; i < _srcClip.size(); ++i) {
+        clipPreferences.setClipComponents(*_srcClip[i], outputComps);
+    }
 }
 
 void

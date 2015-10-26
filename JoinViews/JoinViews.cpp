@@ -86,6 +86,8 @@ private:
     /** @brief get the frame/views needed for input clips*/
     virtual void getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews) OVERRIDE FINAL;
 
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+
     /* set up and run a processor */
     void setupAndProcess(OFX::PixelProcessorFilterBase &, const OFX::RenderArguments &args);
 
@@ -128,6 +130,14 @@ JoinViewsPlugin::getFrameViewsNeeded(const FrameViewsNeededArguments& args, Fram
     //Always fetch the view 0 on source clips
     frameViews.addFrameViewsNeeded(*_srcLeftClip, range, 0);
     frameViews.addFrameViewsNeeded(*_srcRightClip, range, 0);
+}
+
+void
+JoinViewsPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+    clipPreferences.setClipComponents(*_srcLeftClip, outputComps);
+    clipPreferences.setClipComponents(*_srcRightClip, outputComps);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

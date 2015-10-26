@@ -254,6 +254,7 @@ void
 SwitchPlugin::getClipPreferences(OFX::ClipPreferencesSetter &/*clipPreferences*/)
 {
     updateRange();
+    // note: Switch handles correctly inputs with different components
 }
 
 void

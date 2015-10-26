@@ -774,6 +774,7 @@ ChromaKeyerPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreference
     
     // Output is RGBA
     clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
+    // note: ChromaKeyer handles correctly inputs with different components: it only uses RGB components from both clips
 }
 
 mDeclarePluginFactory(ChromaKeyerPluginFactory, {}, {});

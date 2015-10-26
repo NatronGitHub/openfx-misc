@@ -727,6 +727,7 @@ KeyerPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     
     // Output is RGBA
     clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
+    // note: Keyer handles correctly inputs with different components: it only uses RGB components from both clips
 }
 
 void

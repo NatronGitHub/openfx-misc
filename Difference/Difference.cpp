@@ -175,7 +175,9 @@ public:
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-    
+
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+
     template <int nComponents>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
@@ -312,6 +314,14 @@ DifferencePlugin::render(const OFX::RenderArguments &args)
     }
 }
 
+
+void
+DifferencePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+    clipPreferences.setClipComponents(*_srcClipA, outputComps);
+    clipPreferences.setClipComponents(*_srcClipB, outputComps);
+}
 
 mDeclarePluginFactory(DifferencePluginFactory, {}, {});
 

@@ -255,6 +255,8 @@ private:
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+
     template <int nComponents>
     void renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth);
 
@@ -495,6 +497,15 @@ CopyRectanglePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identit
 
     return false;
 }
+
+void
+CopyRectanglePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+    clipPreferences.setClipComponents(*_srcClipA, outputComps);
+    clipPreferences.setClipComponents(*_srcClipB, outputComps);
+}
+
 
 // the overridden render function
 void

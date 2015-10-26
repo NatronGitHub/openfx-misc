@@ -142,6 +142,8 @@ private:
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
 
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+
 private:
     /* set up and run a processor */
     void setupAndProcess(OFX::ImageBlenderBase &, const OFX::RenderArguments &args);
@@ -726,6 +728,15 @@ AppendClipPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
     }
 }
 
+void
+AppendClipPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+    for (unsigned i = 0; i < _srcClip.size(); ++i) {
+        clipPreferences.setClipComponents(*_srcClip[i], outputComps);
+    }
+}
+
 bool
 AppendClipPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
@@ -874,9 +885,6 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentXY);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
-#ifdef OFX_EXTENSIONS_NATRON
-        srcClip->addSupportedComponent(ePixelComponentXY);
-#endif
         srcClip->setTemporalClipAccess(true);
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);
@@ -900,9 +908,6 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         srcClip->addSupportedComponent(ePixelComponentRGB);
         srcClip->addSupportedComponent(ePixelComponentXY);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
-#ifdef OFX_EXTENSIONS_NATRON
-        srcClip->addSupportedComponent(ePixelComponentXY);
-#endif
         srcClip->setTemporalClipAccess(true);
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);
@@ -924,9 +929,6 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             srcClip->addSupportedComponent(ePixelComponentRGB);
             srcClip->addSupportedComponent(ePixelComponentXY);
             srcClip->addSupportedComponent(ePixelComponentAlpha);
-#ifdef OFX_EXTENSIONS_NATRON
-            srcClip->addSupportedComponent(ePixelComponentXY);
-#endif
             srcClip->setTemporalClipAccess(true );
             srcClip->setSupportsTiles(kSupportsTiles);
             srcClip->setIsMask(false);
@@ -939,9 +941,6 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
-#ifdef OFX_EXTENSIONS_NATRON
-    dstClip->addSupportedComponent(ePixelComponentXY);
-#endif
     dstClip->setSupportsTiles(kSupportsTiles);
 
 
