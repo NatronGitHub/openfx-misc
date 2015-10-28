@@ -31,7 +31,7 @@
 #endif
 
 #define kPluginPositionName "TestPosition"
-#define kPluginPositionGrouping "Transform"
+#define kPluginPositionGrouping "Other/Test"
 #define kPluginPositionDescription "DO NOT USE. Use the Position plugin instead. This is a plugin to test https://github.com/MrKepzie/Natron/issues/522 . A bug happens in Natron if you zoom, change the Translate parameter, and dezoom."
 #define kPluginPositionIdentifier "net.sf.openfx.TestPosition"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
