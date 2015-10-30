@@ -35,7 +35,7 @@
 #define kPluginGrouping "Views"
 #define kPluginDescription "Takes one view from the input."
 #define kPluginIdentifier "net.sf.openfx.oneViewPlugin"
-#define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
+#define kPluginVersionMajor 2 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 1
@@ -52,6 +52,8 @@
 #define kParamViewOptionRight "Right"
 
 using namespace OFX;
+
+static bool gHostSupportsDynamicChoices = false;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -88,8 +90,11 @@ private:
     /** @brief get the frame/views needed for input clips*/
     virtual void getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews) OVERRIDE FINAL;
 
+    virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
+    
     /* set up and run a processor */
     void setupAndProcess(PixelProcessorFilterBase &, const OFX::RenderArguments &args);
+    
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -97,7 +102,40 @@ private:
     OFX::Clip *_srcClip;
 
     OFX::ChoiceParam     *_view;
+    
+    std::vector<std::string> _knownViews;
 };
+
+void
+OneViewPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+{
+    //Rebuild view choice
+    int nViews = getViewCount();
+    std::vector<std::string> views;
+    for (int i = 0; i < nViews; ++i) {
+        std::string view = getViewName(i);
+        views.push_back(view);
+    }
+    
+    if (views.size() == _knownViews.size()) {
+        bool viewsChanged = false;
+        for (std::size_t i = 0; i < _knownViews.size(); ++i) {
+            if (_knownViews[i] != views[i]) {
+                viewsChanged = true;
+                break;
+            }
+        }
+        if (!viewsChanged) {
+            return;
+        }
+    }
+    _knownViews = views;
+    
+    _view->resetOptions();
+    for (std::size_t i = 0; i < views.size(); ++i) {
+        _view->appendOption(views[i]);
+    }
+}
 
 
 void
@@ -293,6 +331,9 @@ void OneViewPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         !OFX::fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true)) {
         throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
     }
+#ifdef OFX_EXTENSIONS_NATRON
+    gHostSupportsDynamicChoices = OFX::getImageEffectHostDescription()->supportsDynamicChoices;
+#endif
 
     // Source clip only in the filter context
     // create the mandated source clip

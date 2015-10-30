@@ -2086,6 +2086,9 @@ ShufflePlugin::setChannelsFromStringParamsInternal(const std::vector<std::string
     if (outputComponentsStr.empty()) {
         int cur_i;
         _outputComponents->getValue(cur_i);
+        if (cur_i >= 0 && cur_i < (int)outputChoices.size()) {
+            outputComponentsStr = outputChoices[cur_i];
+        }
         _outputComponents->getOption(cur_i, outputComponentsStr);
         _outputComponentsString->setValue(outputComponentsStr);
     } else {
@@ -2114,7 +2117,9 @@ ShufflePlugin::setChannelsFromStringParamsInternal(const std::vector<std::string
         if (valueStr.empty()) {
             int cur_i;
             choiceParams[c]->getValue(cur_i);
-            choiceParams[c]->getOption(cur_i, valueStr);
+            if (cur_i >= 0 && cur_i < (int)channelOptions[c]->size()) {
+                valueStr = channelOptions[c]->at(cur_i);
+            }
             _channelParamStrings[c]->setValue(valueStr);
         } else {
             int foundOption = -1;
