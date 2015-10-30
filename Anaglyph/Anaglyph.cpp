@@ -27,6 +27,7 @@
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
+#include <cmath>
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
@@ -299,7 +300,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor, const OFX::RenderArgume
     // set the parameters
     processor.setAmtColour(amtcolour);
     processor.setSwap(swap);
-    processor.setOffset(offset);
+    processor.setOffset(std::floor(offset * args.renderScale.x + 0.5));
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
