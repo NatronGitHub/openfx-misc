@@ -107,7 +107,7 @@ private:
 };
 
 void
-OneViewPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
+OneViewPlugin::getClipPreferences(OFX::ClipPreferencesSetter &/*clipPreferences*/)
 {
     //Rebuild view choice
     int nViews = getViewCount();
