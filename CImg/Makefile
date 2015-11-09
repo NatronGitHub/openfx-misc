@@ -62,8 +62,6 @@ $(OBJECTPATH)/CImgBilateral.o: CImgBilateral.cpp CImg.h
 
 $(OBJECTPATH)/CImgBlur.o: CImgBlur.cpp CImg.h
 
-$(OBJECTPATH)/CImgChromaBlur.o: CImgChromaBlur.cpp CImg.h
-
 $(OBJECTPATH)/CImgDenoise.o: CImgDenoise.cpp CImg.h
 
 $(OBJECTPATH)/CImgDilate.o: CImgDilate.cpp CImg.h
@@ -83,6 +81,8 @@ $(OBJECTPATH)/CImgHistEQ.o: CImgHistEQ.cpp CImg.h
 $(OBJECTPATH)/CImgNoise.o: CImgNoise.cpp CImg.h
 
 $(OBJECTPATH)/CImgMedian.o: CImgMedian.cpp CImg.h
+
+$(OBJECTPATH)/CImgNoise.o: CImgNoise.cpp CImg.h
 
 $(OBJECTPATH)/CImgPlasma.o: CImgPlasma.cpp CImg.h
 
