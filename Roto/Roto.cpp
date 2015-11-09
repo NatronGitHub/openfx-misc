@@ -319,6 +319,7 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
 {
     std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
     if (!dst.get()) {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Could not fetch output image");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     const double time = args.time;
@@ -327,13 +328,13 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     if (dstBitDepth != _dstClip->getPixelDepth() ||
         dstComponents != _dstClip->getPixelComponents()) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
     if (dst->getRenderScale().x != args.renderScale.x ||
         dst->getRenderScale().y != args.renderScale.y ||
         (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-        OFX::throwSuiteStatusException(kOfxStatFailed);
+        OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
     std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
                                         _srcClip->fetchImage(args.time) : 0);
@@ -342,11 +343,11 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
             src->getRenderScale().y != args.renderScale.y ||
             (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+            OFX::throwSuiteStatusException(kOfxStatErrFormat);
         }
         OFX::BitDepthEnum srcBitDepth = src->getPixelDepth();
         if (srcBitDepth != dstBitDepth)
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+            OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
     
     // auto ptr for the mask.
