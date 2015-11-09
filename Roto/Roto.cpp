@@ -356,6 +356,7 @@ RotoPlugin::setupAndProcess(RotoProcessorBase &processor, const OFX::RenderArgum
     // do we do masking
     if (_rotoClip && _rotoClip->isConnected()) {
         if (!mask.get()) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "Error while rendering the roto mask");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
         if (mask.get()) {
