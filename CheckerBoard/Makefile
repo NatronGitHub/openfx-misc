@@ -2,4 +2,5 @@ PLUGINOBJECTS = CheckerBoard.o ofxsRectangleInteract.o ofxsGenerator.o PluginReg
 PLUGINNAME = CheckerBoard
 RESOURCES = net.sf.openfx.CheckerBoardPlugin.png net.sf.openfx.CheckerBoardPlugin.svg
 
-include ../Makefile.master
+TOP_SRCDIR = ..
+include $(TOP_SRCDIR)/Makefile.master

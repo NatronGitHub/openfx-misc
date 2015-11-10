@@ -27,9 +27,8 @@ matrix:
   fast_finish: true
 
 # Travis CI has 1.5 cores per VM, take advantage of it
-# But first, the makefiles have to be fixed: all plugins are using the same .o's
-#env:
-#  - MAKEFLAGS="-j 2"
+env:
+  - MAKEFLAGS="-j 2"
 
 before_install:
   - date -u

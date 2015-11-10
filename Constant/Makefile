@@ -2,4 +2,5 @@ PLUGINOBJECTS = Constant.o ofxsRectangleInteract.o ofxsGenerator.o PluginRegistr
 PLUGINNAME = Constant
 RESOURCES = net.sf.openfx.ConstantPlugin.png net.sf.openfx.ConstantPlugin.svg
 
-include ../Makefile.master
+TOP_SRCDIR = ..
+include $(TOP_SRCDIR)/Makefile.master

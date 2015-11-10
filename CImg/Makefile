@@ -1,46 +1,116 @@
-PLUGINOBJECTS = CImgBilateral.o CImgBlur.o CImgDenoise.o CImgDilate.o CImgEqualize.o CImgErode.o CImgErodeSmooth.o CImgExpression.o CImgGuided.o CImgHistEQ.o CImgMedian.o CImgNoise.o CImgPlasma.o CImgRollingGuidance.o CImgSharpenInvDiff.o CImgSharpenShock.o CImgSmooth.o ofxsLut.o PluginRegistration.o CImgFilter.o CImgOperator.o
+PLUGINOBJECTS = \
+CImgBilateral.o \
+CImgBlur.o \
+CImgDenoise.o \
+CImgDilate.o \
+CImgEqualize.o \
+CImgErode.o \
+CImgErodeSmooth.o \
+CImgExpression.o \
+CImgGuided.o \
+CImgHistEQ.o \
+CImgMedian.o \
+CImgNoise.o \
+CImgPlasma.o \
+CImgRollingGuidance.o \
+CImgSharpenInvDiff.o \
+CImgSharpenShock.o \
+CImgSmooth.o \
+ofxsLut.o \
+PluginRegistrationCombined.o \
+CImgFilter.o \
+CImgOperator.o
+
+# no ofxsInteract.o
+SUPPORTOBJECTS = \
+ofxsMultiThread.o \
+ofxsProperty.o \
+ofxsLog.o \
+ofxsCore.o \
+ofxsPropertyValidation.o \
+ofxsImageEffect.o \
+ofxsParams.o 
+
 PLUGINNAME = CImg
 
 # ls *png *.svg|sort |sed -e 's!$! \\!'
 RESOURCES = \
-net.sf.cimg.CImgBilateral.png \
-net.sf.cimg.CImgBilateral.svg \
-net.sf.cimg.CImgBlur.png \
-net.sf.cimg.CImgBlur.svg \
-net.sf.cimg.CImgDenoise.png \
-net.sf.cimg.CImgDenoise.svg \
-net.sf.cimg.CImgDilate.png \
-net.sf.cimg.CImgDilate.svg \
-net.sf.cimg.CImgEqualize.png \
-net.sf.cimg.CImgEqualize.svg \
-net.sf.cimg.CImgErode.png \
-net.sf.cimg.CImgErode.svg \
-net.sf.cimg.CImgErodeSmooth.png \
-net.sf.cimg.CImgErodeSmooth.svg \
-net.sf.cimg.CImgExpression.png \
-net.sf.cimg.CImgExpression.svg \
-net.sf.cimg.CImgGuided.png \
-net.sf.cimg.CImgGuided.svg \
-net.sf.cimg.CImgHistEQ.png \
-net.sf.cimg.CImgHistEQ.svg \
-net.sf.cimg.CImgLaplacian.png \
-net.sf.cimg.CImgLaplacian.svg \
-net.sf.cimg.CImgNoise.png \
-net.sf.cimg.CImgNoise.svg \
-net.sf.cimg.CImgPlasma.png \
-net.sf.cimg.CImgPlasma.svg \
-net.sf.cimg.CImgRollingGuidance.png \
-net.sf.cimg.CImgRollingGuidance.svg \
-net.sf.cimg.CImgSharpenInvDiff.png \
-net.sf.cimg.CImgSharpenInvDiff.svg \
-net.sf.cimg.CImgSharpenShock.png \
-net.sf.cimg.CImgSmooth.png \
-net.sf.cimg.CImgSmooth.svg \
+Bilateral/net.sf.cimg.CImgBilateral.png \
+Bilateral/net.sf.cimg.CImgBilateral.svg \
+Blur/net.sf.cimg.CImgBlur.png \
+Blur/net.sf.cimg.CImgBlur.svg \
+Blur/net.sf.cimg.CImgLaplacian.png \
+Blur/net.sf.cimg.CImgLaplacian.svg \
+Denoise/net.sf.cimg.CImgDenoise.png \
+Denoise/net.sf.cimg.CImgDenoise.svg \
+Equalize/net.sf.cimg.CImgEqualize.png \
+Equalize/net.sf.cimg.CImgEqualize.svg \
+Erode/net.sf.cimg.CImgDilate.png \
+Erode/net.sf.cimg.CImgDilate.svg \
+Erode/net.sf.cimg.CImgErode.png \
+Erode/net.sf.cimg.CImgErode.svg \
+ErodeSmooth/net.sf.cimg.CImgErodeSmooth.png \
+ErodeSmooth/net.sf.cimg.CImgErodeSmooth.svg \
+Expression/net.sf.cimg.CImgExpression.png \
+Expression/net.sf.cimg.CImgExpression.svg \
+Guided/net.sf.cimg.CImgGuided.png \
+Guided/net.sf.cimg.CImgGuided.svg \
+HistEQ/net.sf.cimg.CImgHistEQ.png \
+HistEQ/net.sf.cimg.CImgHistEQ.svg \
+Noise/net.sf.cimg.CImgNoise.png \
+Noise/net.sf.cimg.CImgNoise.svg \
+Plasma/net.sf.cimg.CImgPlasma.png \
+Plasma/net.sf.cimg.CImgPlasma.svg \
+RollingGuidance/net.sf.cimg.CImgRollingGuidance.png \
+RollingGuidance/net.sf.cimg.CImgRollingGuidance.svg \
+SharpenInvDiff/net.sf.cimg.CImgSharpenInvDiff.png \
+SharpenInvDiff/net.sf.cimg.CImgSharpenInvDiff.svg \
+SharpenShock/net.sf.cimg.CImgSharpenShock.png \
+Smooth/net.sf.cimg.CImgSmooth.png \
+Smooth/net.sf.cimg.CImgSmooth.svg \
 
-include ../Makefile.master
+VPATH += \
+Bilateral \
+Blur \
+Denoise \
+Equalize \
+Erode \
+ErodeSmooth \
+Expression \
+Guided \
+HistEQ \
+Median \
+Noise \
+Plasma \
+RollingGuidance \
+SharpenInvDiff \
+SharpenShock \
+Smooth \
+
+TOP_SRCDIR = ..
+include $(TOP_SRCDIR)/Makefile.master
 
 CIMG_INCLUDE ?= /opt/local/include
-CXXFLAGS += -I$(CIMG_INCLUDE)
+CXXFLAGS += \
+-I$(CIMG_INCLUDE) \
+-I. \
+-IBilateral \
+-IBlur \
+-IDenoise \
+-IEqualize \
+-IErode \
+-IErodeSmooth \
+-IExpression \
+-IGuided \
+-IHistEQ \
+-IMedian \
+-INoise \
+-IPlasma \
+-IRollingGuidance \
+-ISharpenInvDiff \
+-ISharpenShock \
+-ISmooth \
+
 
 # For CImg.h versions,
 # see https://github.com/dtschump/CImg/commits/master/CImg.h
@@ -64,9 +134,9 @@ $(OBJECTPATH)/CImgBlur.o: CImgBlur.cpp CImg.h
 
 $(OBJECTPATH)/CImgDenoise.o: CImgDenoise.cpp CImg.h
 
-$(OBJECTPATH)/CImgDilate.o: CImgDilate.cpp CImg.h
-
 $(OBJECTPATH)/CImgEqualize.o: CImgEqualize.cpp CImg.h
+
+$(OBJECTPATH)/CImgDilate.o: CImgDilate.cpp CImg.h
 
 $(OBJECTPATH)/CImgErode.o: CImgErode.cpp CImg.h
 
@@ -77,8 +147,6 @@ $(OBJECTPATH)/CImgExpression.o: CImgExpression.cpp CImg.h
 $(OBJECTPATH)/CImgGuided.o: CImgGuided.cpp CImg.h
 
 $(OBJECTPATH)/CImgHistEQ.o: CImgHistEQ.cpp CImg.h
-
-$(OBJECTPATH)/CImgNoise.o: CImgNoise.cpp CImg.h
 
 $(OBJECTPATH)/CImgMedian.o: CImgMedian.cpp CImg.h
 

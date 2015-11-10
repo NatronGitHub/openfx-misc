@@ -2,4 +2,5 @@ PLUGINOBJECTS = Ramp.o PluginRegistration.o ofxsOGLTextRenderer.o ofxsOGLFontDat
 PLUGINNAME = Ramp
 RESOURCES = net.sf.openfx.Ramp.png net.sf.openfx.Ramp.svg
 
-include ../Makefile.master
+TOP_SRCDIR = ..
+include $(TOP_SRCDIR)/Makefile.master

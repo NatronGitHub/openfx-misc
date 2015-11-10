@@ -2,4 +2,5 @@ PLUGINOBJECTS = Add.o PluginRegistration.o
 PLUGINNAME = Add
 RESOURCES = net.sf.openfx.AddPlugin.png
 
-include ../Makefile.master
+TOP_SRCDIR = ..
+include $(TOP_SRCDIR)/Makefile.master

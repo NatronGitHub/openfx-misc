@@ -2,4 +2,5 @@ PLUGINOBJECTS = Position.o PluginRegistration.o ofxsOGLTextRenderer.o ofxsOGLFon
 PLUGINNAME = Position
 RESOURCES = net.sf.openfx.Position.png net.sf.openfx.Position.svg
 
-include ../Makefile.master
+TOP_SRCDIR = ..
+include $(TOP_SRCDIR)/Makefile.master

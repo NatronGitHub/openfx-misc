@@ -2,4 +2,5 @@ PLUGINOBJECTS = GodRays.o PluginRegistration.o ofxsTransform3x3.o ofxsTransformI
 PLUGINNAME = GodRays
 RESOURCES = net.sf.openfx.GodRays.png net.sf.openfx.GodRays.svg
 
-include ../Makefile.master
+TOP_SRCDIR = ..
+include $(TOP_SRCDIR)/Makefile.master

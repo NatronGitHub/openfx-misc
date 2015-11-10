@@ -70,7 +70,24 @@ HAVE_CIMG ?= 1
 ifneq ($(HAVE_CIMG),0)
 # add plugins which may use CImg here
   SUBDIRS += CImg
-  SUBDIRS_NOMULTI += CImg
+  SUBDIRS_NOMULTI += \
+CImg/Bilateral \
+CImg/Blur \
+CImg/Denoise \
+CImg/Equalize \
+CImg/Erode \
+CImg/ErodeSmooth \
+CImg/Expression \
+CImg/Guided \
+CImg/HistEQ \
+CImg/Median \
+CImg/Noise \
+CImg/Plasma \
+CImg/RollingGuidance \
+CImg/SharpenInvDiff \
+CImg/SharpenShock \
+CImg/Smooth \
+
 endif
 
 all: subdirs
@@ -83,24 +100,27 @@ nomulti:
 subdirs: $(SUBDIRS)
 
 $(SUBDIRS):
-	$(MAKE) -C $@
+	(cd $@ && $(MAKE))
 
 clean:
-	for i in $(SUBDIRS) $(SUBDIRS_NOMULTI); do \
-	  $(MAKE) -C $$i $@; \
+	@for i in $(SUBDIRS) $(SUBDIRS_NOMULTI); do \
+	  echo "(cd $$i && $(MAKE) $@)"; \
+	  (cd $$i && $(MAKE) $@); \
 	done
 
 install:
-	for i in $(SUBDIRS) ; do \
-	  $(MAKE) -C $$i $@; \
+	@for i in $(SUBDIRS) ; do \
+	  echo "(cd $$i && $(MAKE) $@)"; \
+	  (cd $$i && $(MAKE) $@); \
 	done
 
 install-nomulti:
 	$(MAKE) SUBDIRS="$(SUBDIRS_NOMULTI)" install
 
 uninstall:
-	for i in $(SUBDIRS) ; do \
-	  $(MAKE) -C $$i $@; \
+	@for i in $(SUBDIRS) ; do \
+	  echo "(cd $$i && $(MAKE) $@)"; \
+	  (cd $$i && $(MAKE) $@); \
 	done
 
 uninstall-nomulti:

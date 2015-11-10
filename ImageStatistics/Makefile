@@ -2,4 +2,5 @@ PLUGINOBJECTS = ImageStatistics.o PluginRegistration.o ofxsLut.o ofxsRectangleIn
 PLUGINNAME = ImageStatistics
 RESOURCES = net.sf.openfx.ImageStatistics.png net.sf.openfx.ImageStatistics.svg
 
-include ../Makefile.master
+TOP_SRCDIR = ..
+include $(TOP_SRCDIR)/Makefile.master
