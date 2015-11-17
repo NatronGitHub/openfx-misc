@@ -376,6 +376,9 @@ private:
                 } else {
                     tmpPix[3] = srcPixRGBA[3];
                 }
+                if (nComponents == 1) {
+                    tmpPix[0] = tmpPix[3];
+                }
                 ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
             }
         }
