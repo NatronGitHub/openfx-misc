@@ -95,6 +95,8 @@ private:
     /* set up and run a processor */
     void setupAndProcess(PixelProcessorFilterBase &, const OFX::RenderArguments &args);
     
+    //Cannot be implemented because the OpenFX API does not allow to return an identity view different from the calling view
+    //virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -149,6 +151,7 @@ OneViewPlugin::getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameV
     
     frameViews.addFrameViewsNeeded(*_srcClip,range , view);
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */

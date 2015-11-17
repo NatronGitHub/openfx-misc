@@ -90,6 +90,8 @@ private:
 
     /* set up and run a processor */
     void setupAndProcess(OFX::PixelProcessorFilterBase &, const OFX::RenderArguments &args);
+    
+    virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -138,6 +140,18 @@ JoinViewsPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
     clipPreferences.setClipComponents(*_srcLeftClip, outputComps);
     clipPreferences.setClipComponents(*_srcRightClip, outputComps);
+}
+
+bool
+JoinViewsPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+{
+    identityTime = args.time;
+    if (args.view == 0) {
+        identityClip = _srcLeftClip;
+    } else {
+        identityClip = _srcRightClip;
+    }
+    return true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
