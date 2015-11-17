@@ -200,6 +200,10 @@ OneViewPlugin::setupAndProcess(PixelProcessorFilterBase &processor, const OFX::R
         // see if they have the same depths and bytes and all
         if (srcBitDepth != dstBitDepth || srcComponents != dstComponents)
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+    } else {
+        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to fetch source image");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
     }
 
     // set the images
