@@ -1262,7 +1262,7 @@ ShufflePlugin::isIdentityInternal(double time, OFX::Clip*& identityClip)
                 //We might have an index in the param different from the actual components if getClipPreferences was not called so far
                 return false;
             }
-            if (!plane.empty()) {
+            if (plane != kFnOfxImagePlaneColour) {
                 //This is not the color plane, no identity
                 return false;
             }
