@@ -115,7 +115,7 @@
 #define kParamRetimeFunctionOptionVerticalSlit "Vertical Slit"
 #define kParamRetimeFunctionOptionVerticalSlitHint "A horizontal ramp (alinear function of x) which is 0 at the center of the leftmost image line, and 1 at the center of the rightmost image line."
 #define kParamRetimeFunctionOptionRetimeMap "Retime Map"
-#define kParamRetimeFunctionOptionRetimeMapHint "The single-channel image from the \"Retime Map\" input."
+#define kParamRetimeFunctionOptionRetimeMapHint "The single-channel image from the \"Retime Map\" input (zero if not connected)."
 #define kParamRetimeFunctionDefault eRetimeFunctionHorizontalSlit
 enum RetimeFunctionEnum {
     eRetimeFunctionHorizontalSlit,
