@@ -92,6 +92,54 @@
 #define kParamBboxLabel "Bounding Box"
 #define kParamBboxHint "What to use to produce the output image's bounding box."
 
+#define kParamAChannels       "AChannels"
+#define kParamAChannelsLabel  "A Channels"
+#define kParamAChannelsHint   "Channels to use from A input(s) (other channels are set to zero)."
+#define kParamAChannelsR      "AChannelsR"
+#define kParamAChannelsRLabel "R"
+#define kParamAChannelsRHint  "Use red component from A input(s)."
+#define kParamAChannelsG      "AChannelsG"
+#define kParamAChannelsGLabel "G"
+#define kParamAChannelsGHint  "Use green component from A input(s)."
+#define kParamAChannelsB      "AChannelsB"
+#define kParamAChannelsBLabel "B"
+#define kParamAChannelsBHint  "Use blue component from A input(s)."
+#define kParamAChannelsA      "AChannelsA"
+#define kParamAChannelsALabel "A"
+#define kParamAChannelsAHint  "Use alpha component from A input(s)."
+
+#define kParamBChannels       "BChannels"
+#define kParamBChannelsLabel  "B Channels"
+#define kParamBChannelsHint   "Channels to use from B input (other channels are set to zero)."
+#define kParamBChannelsR      "BChannelsR"
+#define kParamBChannelsRLabel "R"
+#define kParamBChannelsRHint  "Use red component from B input."
+#define kParamBChannelsG      "BChannelsG"
+#define kParamBChannelsGLabel "G"
+#define kParamBChannelsGHint  "Use green component from B input."
+#define kParamBChannelsB      "BChannelsB"
+#define kParamBChannelsBLabel "B"
+#define kParamBChannelsBHint  "Use blue component from B input."
+#define kParamBChannelsA      "BChannelsA"
+#define kParamBChannelsALabel "A"
+#define kParamBChannelsAHint  "Use alpha component from B input."
+
+#define kParamOutputChannels       "OutputChannels"
+#define kParamOutputChannelsLabel  "Output"
+#define kParamOutputChannelsHint   "Channels from result to write to output (other channels are taken from B input)."
+#define kParamOutputChannelsR      "OutputChannelsR"
+#define kParamOutputChannelsRLabel "R"
+#define kParamOutputChannelsRHint  "Write red component to output."
+#define kParamOutputChannelsG      "OutputChannelsG"
+#define kParamOutputChannelsGLabel "G"
+#define kParamOutputChannelsGHint  "Write green component to output."
+#define kParamOutputChannelsB      "OutputChannelsB"
+#define kParamOutputChannelsBLabel "B"
+#define kParamOutputChannelsBHint  "Write blue component to output."
+#define kParamOutputChannelsA      "OutputChannelsA"
+#define kParamOutputChannelsALabel "A"
+#define kParamOutputChannelsAHint  "Write alpha component to output."
+
 #define kClipA "A"
 #define kClipB "B"
 
@@ -326,6 +374,24 @@ public:
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
+
+        _aChannels[0] = fetchBooleanParam(kParamAChannelsR);
+        _aChannels[1] = fetchBooleanParam(kParamAChannelsG);
+        _aChannels[2] = fetchBooleanParam(kParamAChannelsB);
+        _aChannels[3] = fetchBooleanParam(kParamAChannelsA);
+        assert(_aChannels[0] && _aChannels[1] && _aChannels[2] && _aChannels[3]);
+
+        _bChannels[0] = fetchBooleanParam(kParamBChannelsR);
+        _bChannels[1] = fetchBooleanParam(kParamBChannelsG);
+        _bChannels[2] = fetchBooleanParam(kParamBChannelsB);
+        _bChannels[3] = fetchBooleanParam(kParamBChannelsA);
+        assert(_bChannels[0] && _bChannels[1] && _bChannels[2] && _bChannels[3]);
+
+        _outputChannels[0] = fetchBooleanParam(kParamOutputChannelsR);
+        _outputChannels[1] = fetchBooleanParam(kParamOutputChannelsG);
+        _outputChannels[2] = fetchBooleanParam(kParamOutputChannelsB);
+        _outputChannels[3] = fetchBooleanParam(kParamOutputChannelsA);
+        assert(_outputChannels[0] && _outputChannels[1] && _outputChannels[2] && _outputChannels[3]);
     }
     
 private:
@@ -365,6 +431,9 @@ private:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
+    OFX::BooleanParam* _aChannels[4];
+    OFX::BooleanParam* _bChannels[4];
+    OFX::BooleanParam* _outputChannels[4];
 };
 
 
@@ -1071,6 +1140,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
@@ -1170,6 +1240,164 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setDefault(false);
         param->setEnabled(MergeImages2D::isMaskable(eMergeOver));
         param->setHint(kParamAlphaMaskingHint);
+        param->setLayoutHint(eLayoutHintDivider);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+#ifdef OFX_EXTENSIONS_NATRON
+    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
+#endif
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamAChannels);
+        param->setLabel("");
+        param->setHint(kParamAChannelsHint);
+        param->setDefault(kParamAChannelsLabel);
+        param->setStringType(eStringTypeLabel);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsR);
+        param->setLabel(kParamAChannelsRLabel);
+        param->setHint(kParamAChannelsRHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsG);
+        param->setLabel(kParamAChannelsGLabel);
+        param->setHint(kParamAChannelsGHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsB);
+        param->setLabel(kParamAChannelsBLabel);
+        param->setHint(kParamAChannelsBHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsA);
+        param->setLabel(kParamAChannelsALabel);
+        param->setHint(kParamAChannelsAHint);
+        param->setDefault(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamBChannels);
+        param->setLabel("");
+        param->setHint(kParamBChannelsHint);
+        param->setDefault(kParamBChannelsLabel);
+        param->setStringType(eStringTypeLabel);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsR);
+        param->setLabel(kParamBChannelsRLabel);
+        param->setHint(kParamBChannelsRHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsG);
+        param->setLabel(kParamBChannelsGLabel);
+        param->setHint(kParamBChannelsGHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsB);
+        param->setLabel(kParamBChannelsBLabel);
+        param->setHint(kParamBChannelsBHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsA);
+        param->setLabel(kParamBChannelsALabel);
+        param->setHint(kParamBChannelsAHint);
+        param->setDefault(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamOutputChannels);
+        param->setLabel("");
+        param->setHint(kParamOutputChannelsHint);
+        param->setDefault(kParamOutputChannelsLabel);
+        param->setStringType(eStringTypeLabel);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputChannelsR);
+        param->setLabel(kParamOutputChannelsRLabel);
+        param->setHint(kParamOutputChannelsRHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputChannelsG);
+        param->setLabel(kParamOutputChannelsGLabel);
+        param->setHint(kParamOutputChannelsGHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputChannelsB);
+        param->setLabel(kParamOutputChannelsBLabel);
+        param->setHint(kParamOutputChannelsBHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputChannelsA);
+        param->setLabel(kParamOutputChannelsALabel);
+        param->setHint(kParamOutputChannelsAHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintDivider);
         if (page) {
             page->addChild(*param);
         }
