@@ -205,7 +205,7 @@
 		1E31941A19D9B2270027D0E2 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E31941C19D9B2270027D0E2 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1E31942219D9B2560027D0E2 /* CImgSmooth.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E31940A19D9987F0027D0E2 /* CImgSmooth.cpp */; };
-		1E31942319D9B2560027D0E2 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E31940E19D9987F0027D0E2 /* PluginRegistration.cpp */; };
+		1E31942319D9B2560027D0E2 /* PluginRegistrationCombined.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E31940E19D9987F0027D0E2 /* PluginRegistrationCombined.cpp */; };
 		1E3284611A41C0C900C9A4E4 /* net.sf.openfx.anaglyphPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32845F1A41C09E00C9A4E4 /* net.sf.openfx.anaglyphPlugin.svg */; };
 		1E3284621A41C0C900C9A4E4 /* net.sf.openfx.anaglyphPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486CF1A41A4960088844F /* net.sf.openfx.anaglyphPlugin.png */; };
 		1E3284731A41C17500C9A4E4 /* net.sf.openfx.Deinterlace.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774E41A25B8E7008A2B57 /* net.sf.openfx.Deinterlace.png */; };
@@ -426,7 +426,7 @@
 		1E6CC0881A768BD700173EB3 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E6CC0851A768BC800173EB3 /* PluginRegistration.cpp */; };
 		1E6CC0891A76ADEA00173EB3 /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
 		1E6CC0941A76B1F700173EB3 /* ofxsOGLFontData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F4D198A51840095C8AA /* ofxsOGLFontData.cpp */; };
-		1E6E6FFA1BD4F25D00B5A00F /* TimeDissolve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E6E6FF71BD4F22E00B5A00F /* TimeDissolve.cpp */; settings = {ASSET_TAGS = (); }; };
+		1E6E6FFA1BD4F25D00B5A00F /* TimeDissolve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E6E6FF71BD4F22E00B5A00F /* TimeDissolve.cpp */; };
 		1E6E6FFF1BD4F26700B5A00F /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E6E70001BD4F26700B5A00F /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E6E70011BD4F26700B5A00F /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -436,7 +436,7 @@
 		1E6E70051BD4F26700B5A00F /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1E6E70061BD4F26700B5A00F /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E6E70081BD4F26700B5A00F /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		1E6E70111BD4F28400B5A00F /* TimeDissolve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E6E6FF71BD4F22E00B5A00F /* TimeDissolve.cpp */; settings = {ASSET_TAGS = (); }; };
+		1E6E70111BD4F28400B5A00F /* TimeDissolve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E6E6FF71BD4F22E00B5A00F /* TimeDissolve.cpp */; };
 		1E75A01B1A87A97B005BAA36 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E75A01C1A87A97B005BAA36 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E75A01D1A87A97B005BAA36 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -594,7 +594,7 @@
 		1EA0C22719BA12D3006AB602 /* Dissolve.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA0C1FF19BA1234006AB602 /* Dissolve.cpp */; };
 		1EA330AA19E83A33002EFA5B /* CImgPlasma.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA330A819E83A33002EFA5B /* CImgPlasma.cpp */; };
 		1EA330AD19E846F7002EFA5B /* CImgEqualize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA330AB19E846F7002EFA5B /* CImgEqualize.cpp */; };
-		1EA8C5681BC69D9B0000FFBF /* CImgMedian.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA8C5671BC69D8D0000FFBF /* CImgMedian.cpp */; settings = {ASSET_TAGS = (); }; };
+		1EA8C5681BC69D9B0000FFBF /* CImgMedian.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA8C5671BC69D8D0000FFBF /* CImgMedian.cpp */; };
 		1EA92DC31B1DD1B400FE3709 /* CImgExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA92DC11B1DD1B400FE3709 /* CImgExpression.cpp */; };
 		1EAD4AE21A0A68FD00AF834D /* AdjustRoD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */; };
 		1EAD4AE71A0A691700AF834D /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
@@ -969,8 +969,8 @@
 		1EE9B0C71A4B301500869861 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1EE9B0C81A4B301500869861 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1EE9B0CA1A4B301500869861 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
-		1EEAA6C71BBD3C1F00D397F5 /* ofxsRamp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EEAA6C51BBD3C1F00D397F5 /* ofxsRamp.cpp */; settings = {ASSET_TAGS = (); }; };
-		1EEAA6C81BBD3C1F00D397F5 /* ofxsRamp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EEAA6C51BBD3C1F00D397F5 /* ofxsRamp.cpp */; settings = {ASSET_TAGS = (); }; };
+		1EEAA6C71BBD3C1F00D397F5 /* ofxsRamp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EEAA6C51BBD3C1F00D397F5 /* ofxsRamp.cpp */; };
+		1EEAA6C81BBD3C1F00D397F5 /* ofxsRamp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EEAA6C51BBD3C1F00D397F5 /* ofxsRamp.cpp */; };
 		1EF3DBF21B805036006C63CF /* TestOpenGL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EF3DBF01B805036006C63CF /* TestOpenGL.cpp */; };
 		1EF46F34194A394E00825BDF /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EF46F35194A394E00825BDF /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
@@ -2428,8 +2428,8 @@
 		1E181AFD19518DF500FAB9A9 /* Invert.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Invert.cpp; sourceTree = "<group>"; };
 		1E181AFE19518DF500FAB9A9 /* Invert.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Invert.h; sourceTree = "<group>"; };
 		1E181AFF19518DF500FAB9A9 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		1E1DDFEA1A04E432007F45B2 /* CImgGuided.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgGuided.cpp; sourceTree = "<group>"; };
-		1E1DDFEB1A04E432007F45B2 /* CImgGuided.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgGuided.h; sourceTree = "<group>"; };
+		1E1DDFEA1A04E432007F45B2 /* CImgGuided.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgGuided.cpp; path = Guided/CImgGuided.cpp; sourceTree = "<group>"; };
+		1E1DDFEB1A04E432007F45B2 /* CImgGuided.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgGuided.h; path = Guided/CImgGuided.h; sourceTree = "<group>"; };
 		1E1FB8F4190696F200F5515D /* Grade.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Grade.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E235FEA18363C860019C45F /* SideBySide.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SideBySide.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E235FED18363CE70019C45F /* SideBySide.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SideBySide.cpp; sourceTree = "<group>"; };
@@ -2456,17 +2456,17 @@
 		1E31940B19D9987F0027D0E2 /* CImgSmooth.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CImgSmooth.h; sourceTree = "<group>"; };
 		1E31940C19D9987F0027D0E2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E31940D19D9987F0027D0E2 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		1E31940E19D9987F0027D0E2 /* PluginRegistration.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		1E31940E19D9987F0027D0E2 /* PluginRegistrationCombined.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistrationCombined.cpp; sourceTree = "<group>"; };
 		1E31942019D9B2270027D0E2 /* CImg.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CImg.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E32845E1A41C06400C9A4E4 /* net.sf.openfx.Rectangle.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.Rectangle.svg; sourceTree = "<group>"; };
 		1E32845F1A41C09E00C9A4E4 /* net.sf.openfx.anaglyphPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.anaglyphPlugin.svg; sourceTree = "<group>"; };
-		1E3284631A41C0E500C9A4E4 /* net.sf.cimg.CImgBlur.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgBlur.svg; sourceTree = "<group>"; };
-		1E3284641A41C0E500C9A4E4 /* net.sf.cimg.CImgDenoise.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgDenoise.svg; sourceTree = "<group>"; };
-		1E3284651A41C0E500C9A4E4 /* net.sf.cimg.CImgDilate.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgDilate.svg; sourceTree = "<group>"; };
-		1E3284661A41C0E500C9A4E4 /* net.sf.cimg.CImgErode.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgErode.svg; sourceTree = "<group>"; };
-		1E3284671A41C0E500C9A4E4 /* net.sf.cimg.CImgNoise.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgNoise.svg; sourceTree = "<group>"; };
-		1E3284681A41C0E500C9A4E4 /* net.sf.cimg.CImgPlasma.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgPlasma.svg; sourceTree = "<group>"; };
-		1E3284691A41C0E500C9A4E4 /* net.sf.cimg.CImgSmooth.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgSmooth.svg; sourceTree = "<group>"; };
+		1E3284631A41C0E500C9A4E4 /* net.sf.cimg.CImgBlur.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgBlur.svg; path = Blur/net.sf.cimg.CImgBlur.svg; sourceTree = "<group>"; };
+		1E3284641A41C0E500C9A4E4 /* net.sf.cimg.CImgDenoise.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgDenoise.svg; path = Denoise/net.sf.cimg.CImgDenoise.svg; sourceTree = "<group>"; };
+		1E3284651A41C0E500C9A4E4 /* net.sf.cimg.CImgDilate.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgDilate.svg; path = Erode/net.sf.cimg.CImgDilate.svg; sourceTree = "<group>"; };
+		1E3284661A41C0E500C9A4E4 /* net.sf.cimg.CImgErode.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgErode.svg; path = Erode/net.sf.cimg.CImgErode.svg; sourceTree = "<group>"; };
+		1E3284671A41C0E500C9A4E4 /* net.sf.cimg.CImgNoise.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgNoise.svg; path = Noise/net.sf.cimg.CImgNoise.svg; sourceTree = "<group>"; };
+		1E3284681A41C0E500C9A4E4 /* net.sf.cimg.CImgPlasma.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgPlasma.svg; path = Plasma/net.sf.cimg.CImgPlasma.svg; sourceTree = "<group>"; };
+		1E3284691A41C0E500C9A4E4 /* net.sf.cimg.CImgSmooth.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgSmooth.svg; path = Smooth/net.sf.cimg.CImgSmooth.svg; sourceTree = "<group>"; };
 		1E3284711A41C16500C9A4E4 /* net.sf.openfx.Deinterlace.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.Deinterlace.svg; sourceTree = "<group>"; };
 		1E3284751A41C19A00C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.HSVToRGBPlugin.svg; sourceTree = "<group>"; };
 		1E3284761A41C19A00C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.RGBToHSVPlugin.svg; sourceTree = "<group>"; };
@@ -2481,7 +2481,7 @@
 		1E32849E1A41C3DF00C9A4E4 /* net.sf.openfx.SaturationPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.SaturationPlugin.svg; sourceTree = "<group>"; };
 		1E3284A11A41C3FE00C9A4E4 /* net.sf.openfx.sideBySidePlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.sideBySidePlugin.svg; sourceTree = "<group>"; };
 		1E3284A51A41C46D00C9A4E4 /* net.sf.openfx.VectorToColorPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.VectorToColorPlugin.svg; sourceTree = "<group>"; };
-		1E3284BA1A41C6EB00C9A4E4 /* net.sf.cimg.CImgBilateral.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgBilateral.svg; sourceTree = "<group>"; };
+		1E3284BA1A41C6EB00C9A4E4 /* net.sf.cimg.CImgBilateral.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgBilateral.svg; path = Bilateral/net.sf.cimg.CImgBilateral.svg; sourceTree = "<group>"; };
 		1E3284BB1A41C6EB00C9A4E4 /* TODO.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TODO.txt; sourceTree = "<group>"; };
 		1E3451F21906952D0080D699 /* ChromaKeyer.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChromaKeyer.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E3451F3190695850080D699 /* ChromaKeyer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ChromaKeyer.cpp; sourceTree = "<group>"; };
@@ -2600,18 +2600,18 @@
 		1E814CBC19C9836400C2C668 /* net.sf.openfx.TransformMaskedPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.TransformMaskedPlugin.svg; sourceTree = "<group>"; };
 		1E814CBD19C9836400C2C668 /* net.sf.openfx.TransformPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.TransformPlugin.svg; sourceTree = "<group>"; };
 		1E85D2DA18C641FD00060E71 /* fnOfxExtensions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fnOfxExtensions.h; sourceTree = "<group>"; };
-		1E868B6D19E6B8C100B793BA /* CImgBlur.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgBlur.cpp; sourceTree = "<group>"; };
-		1E868B6E19E6B8C100B793BA /* CImgBlur.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgBlur.h; sourceTree = "<group>"; };
-		1E868B7019E6D8CD00B793BA /* CImgBilateral.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgBilateral.cpp; sourceTree = "<group>"; };
-		1E868B7119E6D8CD00B793BA /* CImgBilateral.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgBilateral.h; sourceTree = "<group>"; };
-		1E868B7319E6E10100B793BA /* CImgDilate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgDilate.cpp; sourceTree = "<group>"; };
-		1E868B7419E6E10100B793BA /* CImgDilate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgDilate.h; sourceTree = "<group>"; };
-		1E868B7619E6E28E00B793BA /* CImgErode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgErode.cpp; sourceTree = "<group>"; };
-		1E868B7719E6E28E00B793BA /* CImgErode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgErode.h; sourceTree = "<group>"; };
-		1E868B7919E6E72B00B793BA /* CImgNoise.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgNoise.cpp; sourceTree = "<group>"; };
-		1E868B7A19E6E72B00B793BA /* CImgNoise.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgNoise.h; sourceTree = "<group>"; };
-		1E868B7C19E6F6B500B793BA /* CImgDenoise.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgDenoise.cpp; sourceTree = "<group>"; };
-		1E868B7D19E6F6B500B793BA /* CImgDenoise.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgDenoise.h; sourceTree = "<group>"; };
+		1E868B6D19E6B8C100B793BA /* CImgBlur.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgBlur.cpp; path = Blur/CImgBlur.cpp; sourceTree = "<group>"; };
+		1E868B6E19E6B8C100B793BA /* CImgBlur.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgBlur.h; path = Blur/CImgBlur.h; sourceTree = "<group>"; };
+		1E868B7019E6D8CD00B793BA /* CImgBilateral.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgBilateral.cpp; path = Bilateral/CImgBilateral.cpp; sourceTree = "<group>"; };
+		1E868B7119E6D8CD00B793BA /* CImgBilateral.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgBilateral.h; path = Bilateral/CImgBilateral.h; sourceTree = "<group>"; };
+		1E868B7319E6E10100B793BA /* CImgDilate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgDilate.cpp; path = Erode/CImgDilate.cpp; sourceTree = "<group>"; };
+		1E868B7419E6E10100B793BA /* CImgDilate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgDilate.h; path = Erode/CImgDilate.h; sourceTree = "<group>"; };
+		1E868B7619E6E28E00B793BA /* CImgErode.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgErode.cpp; path = Erode/CImgErode.cpp; sourceTree = "<group>"; };
+		1E868B7719E6E28E00B793BA /* CImgErode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgErode.h; path = Erode/CImgErode.h; sourceTree = "<group>"; };
+		1E868B7919E6E72B00B793BA /* CImgNoise.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgNoise.cpp; path = Noise/CImgNoise.cpp; sourceTree = "<group>"; };
+		1E868B7A19E6E72B00B793BA /* CImgNoise.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgNoise.h; path = Noise/CImgNoise.h; sourceTree = "<group>"; };
+		1E868B7C19E6F6B500B793BA /* CImgDenoise.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgDenoise.cpp; path = Denoise/CImgDenoise.cpp; sourceTree = "<group>"; };
+		1E868B7D19E6F6B500B793BA /* CImgDenoise.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgDenoise.h; path = Denoise/CImgDenoise.h; sourceTree = "<group>"; };
 		1E8B5D4218B7658100C31FDC /* Switch.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Switch.h; sourceTree = "<group>"; };
 		1E8B5D4318B7684A00C31FDC /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1E8B5D4718B769CA00C31FDC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -2640,15 +2640,15 @@
 		1E92573919EC1E1F0018F19A /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1E92573B19EC1E260018F19A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E92573C19EC1E260018F19A /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		1E92574F19ECF38A0018F19A /* CImgRollingGuidance.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgRollingGuidance.cpp; sourceTree = "<group>"; };
-		1E92575019ECF38A0018F19A /* CImgRollingGuidance.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgRollingGuidance.h; sourceTree = "<group>"; };
+		1E92574F19ECF38A0018F19A /* CImgRollingGuidance.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgRollingGuidance.cpp; path = RollingGuidance/CImgRollingGuidance.cpp; sourceTree = "<group>"; };
+		1E92575019ECF38A0018F19A /* CImgRollingGuidance.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgRollingGuidance.h; path = RollingGuidance/CImgRollingGuidance.h; sourceTree = "<group>"; };
 		1E92E8E61AA354AC0070E494 /* net.sf.openfx.FrameBlend.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.FrameBlend.png; sourceTree = "<group>"; };
 		1E92E8E71AA354AC0070E494 /* net.sf.openfx.FrameBlend.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.FrameBlend.svg; sourceTree = "<group>"; };
-		1E9328A21AD40088004B0D91 /* net.sf.cimg.CImgLaplacian.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgLaplacian.png; sourceTree = "<group>"; };
-		1E9328A31AD40088004B0D91 /* net.sf.cimg.CImgLaplacian.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgLaplacian.svg; sourceTree = "<group>"; };
-		1E9328A41AD40088004B0D91 /* net.sf.cimg.CImgSharpenInvDiff.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgSharpenInvDiff.png; sourceTree = "<group>"; };
-		1E9328A51AD40088004B0D91 /* net.sf.cimg.CImgSharpenInvDiff.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgSharpenInvDiff.svg; sourceTree = "<group>"; };
-		1E9328A61AD40088004B0D91 /* net.sf.cimg.CImgSharpenShock.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgSharpenShock.png; sourceTree = "<group>"; };
+		1E9328A21AD40088004B0D91 /* net.sf.cimg.CImgLaplacian.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgLaplacian.png; path = Blur/net.sf.cimg.CImgLaplacian.png; sourceTree = "<group>"; };
+		1E9328A31AD40088004B0D91 /* net.sf.cimg.CImgLaplacian.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgLaplacian.svg; path = Blur/net.sf.cimg.CImgLaplacian.svg; sourceTree = "<group>"; };
+		1E9328A41AD40088004B0D91 /* net.sf.cimg.CImgSharpenInvDiff.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgSharpenInvDiff.png; path = SharpenInvDiff/net.sf.cimg.CImgSharpenInvDiff.png; sourceTree = "<group>"; };
+		1E9328A51AD40088004B0D91 /* net.sf.cimg.CImgSharpenInvDiff.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgSharpenInvDiff.svg; path = SharpenInvDiff/net.sf.cimg.CImgSharpenInvDiff.svg; sourceTree = "<group>"; };
+		1E9328A61AD40088004B0D91 /* net.sf.cimg.CImgSharpenShock.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgSharpenShock.png; path = SharpenShock/net.sf.cimg.CImgSharpenShock.png; sourceTree = "<group>"; };
 		1E9B5F47198A51840095C8AA /* ofxsCopier.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsCopier.h; sourceTree = "<group>"; };
 		1E9B5F48198A51840095C8AA /* ofxsFilter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsFilter.h; sourceTree = "<group>"; };
 		1E9B5F49198A51840095C8AA /* ofxsFormatResolution.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ofxsFormatResolution.h; sourceTree = "<group>"; };
@@ -2680,14 +2680,14 @@
 		1EA0C20219BA1234006AB602 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EA0C20319BA1234006AB602 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1EA0C21519BA1243006AB602 /* Dissolve.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Dissolve.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		1EA330A819E83A33002EFA5B /* CImgPlasma.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgPlasma.cpp; sourceTree = "<group>"; };
-		1EA330A919E83A33002EFA5B /* CImgPlasma.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgPlasma.h; sourceTree = "<group>"; };
-		1EA330AB19E846F7002EFA5B /* CImgEqualize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgEqualize.cpp; sourceTree = "<group>"; };
-		1EA330AC19E846F7002EFA5B /* CImgEqualize.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgEqualize.h; sourceTree = "<group>"; };
-		1EA8C5661BC69D8D0000FFBF /* CImgMedian.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgMedian.h; sourceTree = "<group>"; };
-		1EA8C5671BC69D8D0000FFBF /* CImgMedian.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgMedian.cpp; sourceTree = "<group>"; };
-		1EA92DC11B1DD1B400FE3709 /* CImgExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgExpression.cpp; sourceTree = "<group>"; };
-		1EA92DC21B1DD1B400FE3709 /* CImgExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgExpression.h; sourceTree = "<group>"; };
+		1EA330A819E83A33002EFA5B /* CImgPlasma.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgPlasma.cpp; path = Plasma/CImgPlasma.cpp; sourceTree = "<group>"; };
+		1EA330A919E83A33002EFA5B /* CImgPlasma.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgPlasma.h; path = Plasma/CImgPlasma.h; sourceTree = "<group>"; };
+		1EA330AB19E846F7002EFA5B /* CImgEqualize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgEqualize.cpp; path = Equalize/CImgEqualize.cpp; sourceTree = "<group>"; };
+		1EA330AC19E846F7002EFA5B /* CImgEqualize.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgEqualize.h; path = Equalize/CImgEqualize.h; sourceTree = "<group>"; };
+		1EA8C5661BC69D8D0000FFBF /* CImgMedian.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgMedian.h; path = Median/CImgMedian.h; sourceTree = "<group>"; };
+		1EA8C5671BC69D8D0000FFBF /* CImgMedian.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgMedian.cpp; path = Median/CImgMedian.cpp; sourceTree = "<group>"; };
+		1EA92DC11B1DD1B400FE3709 /* CImgExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgExpression.cpp; path = Expression/CImgExpression.cpp; sourceTree = "<group>"; };
+		1EA92DC21B1DD1B400FE3709 /* CImgExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgExpression.h; path = Expression/CImgExpression.h; sourceTree = "<group>"; };
 		1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AdjustRoD.cpp; sourceTree = "<group>"; };
 		1EAD4AE11A0A68FD00AF834D /* AdjustRoD.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AdjustRoD.h; sourceTree = "<group>"; };
 		1EAD4AF41A0A691700AF834D /* AdjustRoD.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AdjustRoD.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -2757,8 +2757,8 @@
 		1ECE5456185F2429001ED442 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1ECE546B185F2433001ED442 /* DebugProxy.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DebugProxy.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ECE546D185F24A1001ED442 /* ofxhBinary.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ofxhBinary.cpp; path = openfx/HostSupport/src/ofxhBinary.cpp; sourceTree = SOURCE_ROOT; };
-		1ECF2F5119F2CB9F00E91A38 /* CImgErodeSmooth.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgErodeSmooth.cpp; sourceTree = "<group>"; };
-		1ECF2F5219F2CB9F00E91A38 /* CImgErodeSmooth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgErodeSmooth.h; sourceTree = "<group>"; };
+		1ECF2F5119F2CB9F00E91A38 /* CImgErodeSmooth.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgErodeSmooth.cpp; path = ErodeSmooth/CImgErodeSmooth.cpp; sourceTree = "<group>"; };
+		1ECF2F5219F2CB9F00E91A38 /* CImgErodeSmooth.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgErodeSmooth.h; path = ErodeSmooth/CImgErodeSmooth.h; sourceTree = "<group>"; };
 		1ECF2F9E19F51D3400E91A38 /* Keyer.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Keyer.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ECF2FA119F51DA000E91A38 /* Keyer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Keyer.cpp; sourceTree = "<group>"; };
 		1ECF2FA219F51DA000E91A38 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
@@ -2787,8 +2787,8 @@
 		1ED12E5F1A4B31A800ABA348 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1ED12E601A4B31A800ABA348 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1ED12E611A4B31A800ABA348 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
-		1ED3A2641BBC3403008128B1 /* net.sf.cimg.CImgExpression.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgExpression.png; sourceTree = "<group>"; };
-		1ED3A2651BBC3403008128B1 /* net.sf.cimg.CImgExpression.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgExpression.svg; sourceTree = "<group>"; };
+		1ED3A2641BBC3403008128B1 /* net.sf.cimg.CImgExpression.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgExpression.png; path = Expression/net.sf.cimg.CImgExpression.png; sourceTree = "<group>"; };
+		1ED3A2651BBC3403008128B1 /* net.sf.cimg.CImgExpression.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgExpression.svg; path = Expression/net.sf.cimg.CImgExpression.svg; sourceTree = "<group>"; };
 		1ED3A2661BBC34B0008128B1 /* net.sf.openfx.NoTimeBlur.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.NoTimeBlur.png; sourceTree = "<group>"; };
 		1ED3A2671BBC34B0008128B1 /* net.sf.openfx.NoTimeBlur.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.NoTimeBlur.svg; sourceTree = "<group>"; };
 		1ED3A2681BBC34B0008128B1 /* net.sf.openfx.TimeBlur.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.TimeBlur.png; sourceTree = "<group>"; };
@@ -2819,10 +2819,10 @@
 		1ED8513D1AAB6229003F65A3 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
 		1ED851531AAB6245003F65A3 /* Distortion.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Distortion.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1ED8BB4319E677BC005F450E /* CImgFilter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CImgFilter.h; sourceTree = "<group>"; };
-		1ED94FF31BC39B15008680C0 /* net.sf.cimg.CImgEqualize.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgEqualize.png; sourceTree = "<group>"; };
-		1ED94FF41BC39B15008680C0 /* net.sf.cimg.CImgHistEQ.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgHistEQ.png; sourceTree = "<group>"; };
-		1ED94FF51BC39B15008680C0 /* net.sf.cimg.CImgEqualize.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgEqualize.svg; sourceTree = "<group>"; };
-		1ED94FF61BC39B15008680C0 /* net.sf.cimg.CImgHistEQ.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgHistEQ.svg; sourceTree = "<group>"; };
+		1ED94FF31BC39B15008680C0 /* net.sf.cimg.CImgEqualize.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgEqualize.png; path = Equalize/net.sf.cimg.CImgEqualize.png; sourceTree = "<group>"; };
+		1ED94FF41BC39B15008680C0 /* net.sf.cimg.CImgHistEQ.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgHistEQ.png; path = HistEQ/net.sf.cimg.CImgHistEQ.png; sourceTree = "<group>"; };
+		1ED94FF51BC39B15008680C0 /* net.sf.cimg.CImgEqualize.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgEqualize.svg; path = Equalize/net.sf.cimg.CImgEqualize.svg; sourceTree = "<group>"; };
+		1ED94FF61BC39B15008680C0 /* net.sf.cimg.CImgHistEQ.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgHistEQ.svg; path = HistEQ/net.sf.cimg.CImgHistEQ.svg; sourceTree = "<group>"; };
 		1EDE1B8C182D04D9002392CB /* Anaglyph.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Anaglyph.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EDE1B8F182D0552002392CB /* Anaglyph.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Anaglyph.cpp; sourceTree = "<group>"; };
 		1EDE1B90182D0552002392CB /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -2849,10 +2849,10 @@
 		1EDF56A71AA4AF9600E57882 /* net.sf.openfx.MultiplyPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.MultiplyPlugin.png; sourceTree = "<group>"; };
 		1EDF56AA1AA4AFFD00E57882 /* net.sf.openfx.DirBlur.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.DirBlur.png; sourceTree = "<group>"; };
 		1EDF56AB1AA4AFFD00E57882 /* net.sf.openfx.DirBlur.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.DirBlur.svg; sourceTree = "<group>"; };
-		1EE1F77F1A506181002BE24B /* CImgSharpenInvDiff.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgSharpenInvDiff.cpp; sourceTree = "<group>"; };
-		1EE1F7801A506181002BE24B /* CImgSharpenInvDiff.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgSharpenInvDiff.h; sourceTree = "<group>"; };
-		1EE1F7821A506E14002BE24B /* CImgSharpenShock.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgSharpenShock.cpp; sourceTree = "<group>"; };
-		1EE1F7831A506E14002BE24B /* CImgSharpenShock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgSharpenShock.h; sourceTree = "<group>"; };
+		1EE1F77F1A506181002BE24B /* CImgSharpenInvDiff.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgSharpenInvDiff.cpp; path = SharpenInvDiff/CImgSharpenInvDiff.cpp; sourceTree = "<group>"; };
+		1EE1F7801A506181002BE24B /* CImgSharpenInvDiff.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgSharpenInvDiff.h; path = SharpenInvDiff/CImgSharpenInvDiff.h; sourceTree = "<group>"; };
+		1EE1F7821A506E14002BE24B /* CImgSharpenShock.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgSharpenShock.cpp; path = SharpenShock/CImgSharpenShock.cpp; sourceTree = "<group>"; };
+		1EE1F7831A506E14002BE24B /* CImgSharpenShock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgSharpenShock.h; path = SharpenShock/CImgSharpenShock.h; sourceTree = "<group>"; };
 		1EE4A86E19C6EC4200E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ChromaKeyerPlugin.png; sourceTree = "<group>"; };
 		1EE4A87119C6EC8500E6E3AE /* net.sf.openfx.ColorCorrectPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ColorCorrectPlugin.png; sourceTree = "<group>"; };
 		1EE4A87419C6ECDA00E6E3AE /* net.sf.openfx.ConstantPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ConstantPlugin.png; sourceTree = "<group>"; };
@@ -2914,8 +2914,8 @@
 		1EFA60F21A8E1D2000EA4CBF /* net.sf.openfx.ClipTestPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.ClipTestPlugin.svg; sourceTree = "<group>"; };
 		1EFA60F51A8E1D3A00EA4CBF /* net.sf.openfx.ColorMatrixPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ColorMatrixPlugin.png; sourceTree = "<group>"; };
 		1EFA60F61A8E1D3A00EA4CBF /* net.sf.openfx.ColorMatrixPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.ColorMatrixPlugin.svg; sourceTree = "<group>"; };
-		1EFA77141A24DCFA00212DB0 /* CImgHistEQ.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CImgHistEQ.cpp; sourceTree = "<group>"; };
-		1EFA77151A24DCFA00212DB0 /* CImgHistEQ.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CImgHistEQ.h; sourceTree = "<group>"; };
+		1EFA77141A24DCFA00212DB0 /* CImgHistEQ.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgHistEQ.cpp; path = HistEQ/CImgHistEQ.cpp; sourceTree = "<group>"; };
+		1EFA77151A24DCFA00212DB0 /* CImgHistEQ.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CImgHistEQ.h; path = HistEQ/CImgHistEQ.h; sourceTree = "<group>"; };
 		1EFA772C1A24F0BA00212DB0 /* HSVTool.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HSVTool.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EFA77331A24F13300212DB0 /* HSVTool.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HSVTool.cpp; sourceTree = "<group>"; };
 		1EFA77341A24F13300212DB0 /* HSVTool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HSVTool.h; sourceTree = "<group>"; };
@@ -2952,10 +2952,10 @@
 		AC06269E1ABDC95A00B3D105 /* net.sf.openfx.FrameRange.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = net.sf.openfx.FrameRange.svg; sourceTree = "<group>"; };
 		AC0EAC3C1A358A0C00449A77 /* net.sf.openfx.SaturationPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.SaturationPlugin.png; sourceTree = "<group>"; };
 		AC0EAC3E1A358B6E00449A77 /* net.sf.openfx.KeyerPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.KeyerPlugin.png; sourceTree = "<group>"; };
-		AC4774DC1A25B811008A2B57 /* net.sf.cimg.CImgBlur.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgBlur.png; sourceTree = "<group>"; };
-		AC4774DD1A25B811008A2B57 /* net.sf.cimg.CImgDenoise.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgDenoise.png; sourceTree = "<group>"; };
-		AC4774DE1A25B811008A2B57 /* net.sf.cimg.CImgDilate.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgDilate.png; sourceTree = "<group>"; };
-		AC4774DF1A25B811008A2B57 /* net.sf.cimg.CImgErode.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgErode.png; sourceTree = "<group>"; };
+		AC4774DC1A25B811008A2B57 /* net.sf.cimg.CImgBlur.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgBlur.png; path = Blur/net.sf.cimg.CImgBlur.png; sourceTree = "<group>"; };
+		AC4774DD1A25B811008A2B57 /* net.sf.cimg.CImgDenoise.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgDenoise.png; path = Denoise/net.sf.cimg.CImgDenoise.png; sourceTree = "<group>"; };
+		AC4774DE1A25B811008A2B57 /* net.sf.cimg.CImgDilate.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgDilate.png; path = Erode/net.sf.cimg.CImgDilate.png; sourceTree = "<group>"; };
+		AC4774DF1A25B811008A2B57 /* net.sf.cimg.CImgErode.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgErode.png; path = Erode/net.sf.cimg.CImgErode.png; sourceTree = "<group>"; };
 		AC4774E41A25B8E7008A2B57 /* net.sf.openfx.Deinterlace.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.Deinterlace.png; sourceTree = "<group>"; };
 		AC60A32519FE995F00375A86 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AC60A32619FE995F00375A86 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -2965,9 +2965,9 @@
 		AC60A32A19FE995F00375A86 /* Ramp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Ramp.cpp; sourceTree = "<group>"; };
 		AC60A32B19FE995F00375A86 /* Ramp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Ramp.h; sourceTree = "<group>"; };
 		AC6486CF1A41A4960088844F /* net.sf.openfx.anaglyphPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.anaglyphPlugin.png; sourceTree = "<group>"; };
-		AC6486D01A41A4A90088844F /* net.sf.cimg.CImgNoise.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgNoise.png; sourceTree = "<group>"; };
-		AC6486D11A41A4A90088844F /* net.sf.cimg.CImgPlasma.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgPlasma.png; sourceTree = "<group>"; };
-		AC6486D21A41A4A90088844F /* net.sf.cimg.CImgSmooth.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgSmooth.png; sourceTree = "<group>"; };
+		AC6486D01A41A4A90088844F /* net.sf.cimg.CImgNoise.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgNoise.png; path = Noise/net.sf.cimg.CImgNoise.png; sourceTree = "<group>"; };
+		AC6486D11A41A4A90088844F /* net.sf.cimg.CImgPlasma.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgPlasma.png; path = Plasma/net.sf.cimg.CImgPlasma.png; sourceTree = "<group>"; };
+		AC6486D21A41A4A90088844F /* net.sf.cimg.CImgSmooth.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgSmooth.png; path = Smooth/net.sf.cimg.CImgSmooth.png; sourceTree = "<group>"; };
 		AC6486D31A41A4D00088844F /* net.sf.openfx.joinViewsPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.joinViewsPlugin.png; sourceTree = "<group>"; };
 		AC6486D41A41A4D90088844F /* net.sf.openfx.mixViewsPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.mixViewsPlugin.png; sourceTree = "<group>"; };
 		AC6486D51A41A5210088844F /* net.sf.openfx.Noise.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.Noise.png; sourceTree = "<group>"; };
@@ -2977,13 +2977,13 @@
 		AC6486D91A41A5490088844F /* net.sf.openfx.Rectangle.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.Rectangle.png; sourceTree = "<group>"; };
 		AC6486DA1A41A5540088844F /* net.sf.openfx.sideBySidePlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.sideBySidePlugin.png; sourceTree = "<group>"; };
 		AC6486DB1A41A5620088844F /* net.sf.openfx.VectorToColorPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.VectorToColorPlugin.png; sourceTree = "<group>"; };
-		AC64870A1A41BE9D0088844F /* net.sf.cimg.CImgErodeSmooth.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgErodeSmooth.png; sourceTree = "<group>"; };
-		AC64870B1A41BE9D0088844F /* net.sf.cimg.CImgErodeSmooth.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = net.sf.cimg.CImgErodeSmooth.svg; sourceTree = "<group>"; };
-		AC64870D1A41BF670088844F /* net.sf.cimg.CImgBilateral.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgBilateral.png; sourceTree = "<group>"; };
-		AC64870F1A41C0640088844F /* net.sf.cimg.CImgRollingGuidance.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgRollingGuidance.png; sourceTree = "<group>"; };
-		AC6487101A41C0650088844F /* net.sf.cimg.CImgRollingGuidance.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgRollingGuidance.svg; sourceTree = "<group>"; };
-		AC6487121A41C0F00088844F /* net.sf.cimg.CImgGuided.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.cimg.CImgGuided.png; sourceTree = "<group>"; };
-		AC6487131A41C0F00088844F /* net.sf.cimg.CImgGuided.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.cimg.CImgGuided.svg; sourceTree = "<group>"; };
+		AC64870A1A41BE9D0088844F /* net.sf.cimg.CImgErodeSmooth.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgErodeSmooth.png; path = ErodeSmooth/net.sf.cimg.CImgErodeSmooth.png; sourceTree = "<group>"; };
+		AC64870B1A41BE9D0088844F /* net.sf.cimg.CImgErodeSmooth.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; name = net.sf.cimg.CImgErodeSmooth.svg; path = ErodeSmooth/net.sf.cimg.CImgErodeSmooth.svg; sourceTree = "<group>"; };
+		AC64870D1A41BF670088844F /* net.sf.cimg.CImgBilateral.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgBilateral.png; path = Bilateral/net.sf.cimg.CImgBilateral.png; sourceTree = "<group>"; };
+		AC64870F1A41C0640088844F /* net.sf.cimg.CImgRollingGuidance.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgRollingGuidance.png; path = RollingGuidance/net.sf.cimg.CImgRollingGuidance.png; sourceTree = "<group>"; };
+		AC6487101A41C0650088844F /* net.sf.cimg.CImgRollingGuidance.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgRollingGuidance.svg; path = RollingGuidance/net.sf.cimg.CImgRollingGuidance.svg; sourceTree = "<group>"; };
+		AC6487121A41C0F00088844F /* net.sf.cimg.CImgGuided.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgGuided.png; path = Guided/net.sf.cimg.CImgGuided.png; sourceTree = "<group>"; };
+		AC6487131A41C0F00088844F /* net.sf.cimg.CImgGuided.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgGuided.svg; path = Guided/net.sf.cimg.CImgGuided.svg; sourceTree = "<group>"; };
 		ACC5D25B1A2C712E00DE1AAA /* net.sf.openfx.HSVToolPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.HSVToolPlugin.png; sourceTree = "<group>"; };
 		ACC5D25C1A2C713700DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.HSVToRGBPlugin.png; sourceTree = "<group>"; };
 		ACC5D25D1A2C713700DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.RGBToHSVPlugin.png; sourceTree = "<group>"; };
@@ -3651,12 +3651,12 @@
 				1E868B7419E6E10100B793BA /* CImgDilate.h */,
 				1EA330AB19E846F7002EFA5B /* CImgEqualize.cpp */,
 				1EA330AC19E846F7002EFA5B /* CImgEqualize.h */,
-				1EA92DC11B1DD1B400FE3709 /* CImgExpression.cpp */,
-				1EA92DC21B1DD1B400FE3709 /* CImgExpression.h */,
 				1E868B7619E6E28E00B793BA /* CImgErode.cpp */,
 				1E868B7719E6E28E00B793BA /* CImgErode.h */,
 				1ECF2F5119F2CB9F00E91A38 /* CImgErodeSmooth.cpp */,
 				1ECF2F5219F2CB9F00E91A38 /* CImgErodeSmooth.h */,
+				1EA92DC11B1DD1B400FE3709 /* CImgExpression.cpp */,
+				1EA92DC21B1DD1B400FE3709 /* CImgExpression.h */,
 				1E7B38BC1B95DEAB00012B76 /* CImgFilter.cpp */,
 				1ED8BB4319E677BC005F450E /* CImgFilter.h */,
 				1E1DDFEA1A04E432007F45B2 /* CImgGuided.cpp */,
@@ -3714,7 +3714,7 @@
 				1E9328A61AD40088004B0D91 /* net.sf.cimg.CImgSharpenShock.png */,
 				AC6486D21A41A4A90088844F /* net.sf.cimg.CImgSmooth.png */,
 				1E3284691A41C0E500C9A4E4 /* net.sf.cimg.CImgSmooth.svg */,
-				1E31940E19D9987F0027D0E2 /* PluginRegistration.cpp */,
+				1E31940E19D9987F0027D0E2 /* PluginRegistrationCombined.cpp */,
 				1E3284BB1A41C6EB00C9A4E4 /* TODO.txt */,
 			);
 			path = CImg;
@@ -6061,7 +6061,7 @@
 				1EA92DC31B1DD1B400FE3709 /* CImgExpression.cpp in Sources */,
 				1E31942219D9B2560027D0E2 /* CImgSmooth.cpp in Sources */,
 				1EE1F7841A506E14002BE24B /* CImgSharpenShock.cpp in Sources */,
-				1E31942319D9B2560027D0E2 /* PluginRegistration.cpp in Sources */,
+				1E31942319D9B2560027D0E2 /* PluginRegistrationCombined.cpp in Sources */,
 				1EFA77171A24E05F00212DB0 /* ofxsLut.cpp in Sources */,
 				1E31941319D9B2270027D0E2 /* ofxsCore.cpp in Sources */,
 				1E31941419D9B2270027D0E2 /* ofxsImageEffect.cpp in Sources */,
@@ -7721,7 +7721,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
 				CLANG_CXX_LIBRARY = "libstdc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
@@ -7767,7 +7766,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
 				CLANG_CXX_LIBRARY = "libstdc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
