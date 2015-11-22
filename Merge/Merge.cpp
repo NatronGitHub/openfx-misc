@@ -92,6 +92,54 @@
 #define kParamBboxLabel "Bounding Box"
 #define kParamBboxHint "What to use to produce the output image's bounding box."
 
+#define kParamAChannels       "AChannels"
+#define kParamAChannelsLabel  "A Channels"
+#define kParamAChannelsHint   "Channels to use from A input(s) (other channels are set to zero)."
+#define kParamAChannelsR      "AChannelsR"
+#define kParamAChannelsRLabel "R"
+#define kParamAChannelsRHint  "Use red component from A input(s)."
+#define kParamAChannelsG      "AChannelsG"
+#define kParamAChannelsGLabel "G"
+#define kParamAChannelsGHint  "Use green component from A input(s)."
+#define kParamAChannelsB      "AChannelsB"
+#define kParamAChannelsBLabel "B"
+#define kParamAChannelsBHint  "Use blue component from A input(s)."
+#define kParamAChannelsA      "AChannelsA"
+#define kParamAChannelsALabel "A"
+#define kParamAChannelsAHint  "Use alpha component from A input(s)."
+
+#define kParamBChannels       "BChannels"
+#define kParamBChannelsLabel  "B Channels"
+#define kParamBChannelsHint   "Channels to use from B input (other channels are set to zero)."
+#define kParamBChannelsR      "BChannelsR"
+#define kParamBChannelsRLabel "R"
+#define kParamBChannelsRHint  "Use red component from B input."
+#define kParamBChannelsG      "BChannelsG"
+#define kParamBChannelsGLabel "G"
+#define kParamBChannelsGHint  "Use green component from B input."
+#define kParamBChannelsB      "BChannelsB"
+#define kParamBChannelsBLabel "B"
+#define kParamBChannelsBHint  "Use blue component from B input."
+#define kParamBChannelsA      "BChannelsA"
+#define kParamBChannelsALabel "A"
+#define kParamBChannelsAHint  "Use alpha component from B input."
+
+#define kParamOutputChannels       "OutputChannels"
+#define kParamOutputChannelsLabel  "Output"
+#define kParamOutputChannelsHint   "Channels from result to write to output (other channels are taken from B input)."
+#define kParamOutputChannelsR      "OutputChannelsR"
+#define kParamOutputChannelsRLabel "R"
+#define kParamOutputChannelsRHint  "Write red component to output."
+#define kParamOutputChannelsG      "OutputChannelsG"
+#define kParamOutputChannelsGLabel "G"
+#define kParamOutputChannelsGHint  "Write green component to output."
+#define kParamOutputChannelsB      "OutputChannelsB"
+#define kParamOutputChannelsBLabel "B"
+#define kParamOutputChannelsBHint  "Write blue component to output."
+#define kParamOutputChannelsA      "OutputChannelsA"
+#define kParamOutputChannelsALabel "A"
+#define kParamOutputChannelsAHint  "Write alpha component to output."
+
 #define kClipA "A"
 #define kClipB "B"
 
@@ -112,6 +160,9 @@ protected:
     bool _alphaMasking;
     double _mix;
     bool _maskInvert;
+    std::vector<bool> _aChannels;
+    std::vector<bool> _bChannels;
+    std::vector<bool> _outputChannels;
 
 public:
     
@@ -125,6 +176,9 @@ public:
     , _alphaMasking(false)
     , _mix(1.)
     , _maskInvert(false)
+    , _aChannels()
+    , _bChannels()
+    , _outputChannels()
     {
         
     }
@@ -142,11 +196,18 @@ public:
 
     void setValues(int bboxChoice,
                    bool alphaMasking,
-                   double mix)
+                   double mix,
+                   const std::vector<bool> &aChannels,
+                   const std::vector<bool> &bChannels,
+                   const std::vector<bool> &outputChannels)
     {
         _bbox = bboxChoice;
         _alphaMasking = alphaMasking;
         _mix = mix;
+        assert(aChannels.size() == 4 && bChannels.size() == 4 && outputChannels.size() == 4);
+        _aChannels = aChannels;
+        _bChannels = bChannels;
+        _outputChannels = outputChannels;
     }
     
 };
@@ -196,8 +257,8 @@ private:
                         assert(!srcPixB || srcPixB[c] == srcPixB[c]);
 #                     endif
                         // all images are supposed to be black and transparent outside o
-                        tmpA[c] = srcPixA ? ((float)srcPixA[c] / maxValue) : 0.f;
-                        tmpB[c] = srcPixB ? ((float)srcPixB[c] / maxValue) : 0.f;
+                        tmpA[c] = (_aChannels[c] && srcPixA) ? ((float)srcPixA[c] / maxValue) : 0.f;
+                        tmpB[c] = (_bChannels[c] && srcPixB) ? ((float)srcPixB[c] / maxValue) : 0.f;
 #                     ifdef DEBUG
                         // check for NaN
                         assert(tmpA[c] == tmpA[c]);
@@ -206,8 +267,8 @@ private:
                     }
                     if (nComponents != 4) {
                         // set alpha (1 inside, 0 outside)
-                        tmpA[3] = srcPixA ? 1. : 0.;
-                        tmpB[3] = srcPixB ? 1. : 0.;
+                        tmpA[3] = (_aChannels[3] && srcPixA) ? 1. : 0.;
+                        tmpB[3] = (_bChannels[3] && srcPixB) ? 1. : 0.;
                     }
                     // work in float: clamping is done when mixing
                     mergePixel<f, float, 4, 1>(_alphaMasking, tmpA, tmpB, tmpPix);
@@ -238,7 +299,7 @@ private:
                             assert(srcPixA[c] == srcPixA[c]);
 #                     endif
                             // all images are supposed to be black and transparent outside o
-                            tmpA[c] = (float)srcPixA[c] / maxValue;
+                            tmpA[c] = _aChannels[c] ? ((float)srcPixA[c] / maxValue) : 0.f;
 #                         ifdef DEBUG
                             // check for NaN
                             assert(tmpA[c] == tmpA[c]);
@@ -247,14 +308,11 @@ private:
                         if (nComponents != 4) {
                             // set alpha (1 inside, 0 outside)
                             assert(srcPixA);
-                            tmpA[3] = 1.;
-                        }
-                        for (int c = 0; c < 4; ++c) {
-                            tmpB[c] = tmpPix[c];
+                            tmpA[3] = _aChannels[3] ? 1. : 0.;
                         }
 
                         // work in float: clamping is done when mixing
-                        mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, tmpB, tmpPix);
+                        mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, tmpPix, tmpPix);
 
 #                     ifdef DEBUG
                         // check for NaN
@@ -271,9 +329,14 @@ private:
                 for (int c = 0; c < nComponents; ++c) {
                     tmpPix[c] *= maxValue;
                 }
-                
+
                 ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPixB, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
-                
+                for (int c = 0; c < nComponents; ++c) {
+                    if (!_outputChannels[c]) {
+                        dstPix[c] = srcPixB ? srcPixB[c] : 0;
+                    }
+                }
+
                 dstPix += nComponents;
             }
         }
@@ -326,6 +389,24 @@ public:
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
+
+        _aChannels[0] = fetchBooleanParam(kParamAChannelsR);
+        _aChannels[1] = fetchBooleanParam(kParamAChannelsG);
+        _aChannels[2] = fetchBooleanParam(kParamAChannelsB);
+        _aChannels[3] = fetchBooleanParam(kParamAChannelsA);
+        assert(_aChannels[0] && _aChannels[1] && _aChannels[2] && _aChannels[3]);
+
+        _bChannels[0] = fetchBooleanParam(kParamBChannelsR);
+        _bChannels[1] = fetchBooleanParam(kParamBChannelsG);
+        _bChannels[2] = fetchBooleanParam(kParamBChannelsB);
+        _bChannels[3] = fetchBooleanParam(kParamBChannelsA);
+        assert(_bChannels[0] && _bChannels[1] && _bChannels[2] && _bChannels[3]);
+
+        _outputChannels[0] = fetchBooleanParam(kParamOutputChannelsR);
+        _outputChannels[1] = fetchBooleanParam(kParamOutputChannelsG);
+        _outputChannels[2] = fetchBooleanParam(kParamOutputChannelsB);
+        _outputChannels[3] = fetchBooleanParam(kParamOutputChannelsA);
+        assert(_outputChannels[0] && _outputChannels[1] && _outputChannels[2] && _outputChannels[3]);
     }
     
 private:
@@ -365,6 +446,9 @@ private:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
+    OFX::BooleanParam* _aChannels[4];
+    OFX::BooleanParam* _bChannels[4];
+    OFX::BooleanParam* _outputChannels[4];
 };
 
 
@@ -372,24 +456,25 @@ private:
 bool
 MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
+    const double time = args.time;
     if (!_srcClipA->isConnected() && !_srcClipB->isConnected()) {
         return false;
     }
     
-    OfxRectD rodA = _srcClipA->getRegionOfDefinition(args.time);
-    OfxRectD rodB = _srcClipB->getRegionOfDefinition(args.time);
+    OfxRectD rodA = _srcClipA->getRegionOfDefinition(time);
+    OfxRectD rodB = _srcClipB->getRegionOfDefinition(time);
    
     
     int bboxChoice;
     double mix;
-    _mix->getValueAtTime(args.time, mix);
+    _mix->getValueAtTime(time, mix);
     //Do the same as isIdentity otherwise the result of getRegionOfDefinition() might not be coherent with the RoD of the identity clip.
     if (mix == 0.) {
         rod = rodB;
         return true;
     }
     
-    _bbox->getValueAtTime(args.time, bboxChoice);
+    _bbox->getValueAtTime(time, bboxChoice);
     
     switch (bboxChoice) {
         case 0: { //union
@@ -410,7 +495,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
             }
             
             for (unsigned int i = 0; i < _optionalASrcClips.size(); ++i) {
-                OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(args.time);
+                OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(time);
                 if (!_optionalASrcClips[i]->isConnected()) {
                     continue;
                 }
@@ -430,7 +515,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
                 return false;
             }
             for (unsigned int i = 0; i < _optionalASrcClips.size(); ++i) {
-                OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(args.time);
+                OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(time);
                 interesect = OFX::Coords::rectIntersection(rodOptionalA, rod, &rod);
                 if (!interesect) {
                     setPersistentMessage(OFX::Message::eMessageError, "",
@@ -484,7 +569,8 @@ struct OptionalImagesHolder_RAII
 void
 MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
+    const double time = args.time;
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -502,14 +588,14 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     std::auto_ptr<const OFX::Image> srcA((_srcClipA && _srcClipA->isConnected()) ?
-                                         _srcClipA->fetchImage(args.time) : 0);
+                                         _srcClipA->fetchImage(time) : 0);
     std::auto_ptr<const OFX::Image> srcB((_srcClipB && _srcClipB->isConnected()) ?
-                                         _srcClipB->fetchImage(args.time) : 0);
+                                         _srcClipB->fetchImage(time) : 0);
     
     OptionalImagesHolder_RAII optionalImages;
     for (unsigned i = 0; i < _optionalASrcClips.size(); ++i) {
         optionalImages.images.push_back((_optionalASrcClips[i] && _optionalASrcClips[i]->isConnected()) ?
-                                        _optionalASrcClips[i]->fetchImage(args.time) : 0);
+                                        _optionalASrcClips[i]->fetchImage(time) : 0);
         const OFX::Image* optImg = optionalImages.images.back();
         if (optImg) {
             if (optImg->getRenderScale().x != args.renderScale.x ||
@@ -555,13 +641,13 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     }
     
     // auto ptr for the mask.
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(time)) && _maskClip && _maskClip->isConnected());
+    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     
     // do we do masking
     if (doMasking) {
         bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        _maskInvert->getValueAtTime(time, maskInvert);
 
         // say we are masking
         processor.doMasking(true);
@@ -572,11 +658,19 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
 
     int bboxChoice;
     bool alphaMasking;
-    _bbox->getValueAtTime(args.time, bboxChoice);
-    _alphaMasking->getValueAtTime(args.time, alphaMasking);
+    _bbox->getValueAtTime(time, bboxChoice);
+    _alphaMasking->getValueAtTime(time, alphaMasking);
     double mix;
-    _mix->getValueAtTime(args.time, mix);
-    processor.setValues(bboxChoice, alphaMasking, mix);
+    _mix->getValueAtTime(time, mix);
+    std::vector<bool> aChannels(4);
+    std::vector<bool> bChannels(4);
+    std::vector<bool> outputChannels(4);
+    for (int c = 0; c < 4; ++c) {
+        aChannels[c] = _aChannels[c]->getValueAtTime(time);
+        bChannels[c] = _bChannels[c]->getValueAtTime(time);
+        outputChannels[c] = _outputChannels[c]->getValueAtTime(time);
+    }
+    processor.setValues(bboxChoice, alphaMasking, mix, aChannels, bChannels, outputChannels);
     processor.setDstImg(dst.get());
     processor.setSrcImg(srcA.get(), srcB.get(), optionalImages.images);
     processor.setRenderWindow(args.renderWindow);
@@ -611,8 +705,9 @@ template <class PIX, int nComponents, int maxValue>
 void
 MergePlugin::renderForBitDepth(const OFX::RenderArguments &args)
 {
+    const double time = args.time;
     int operation_i;
-    _operation->getValueAtTime(args.time, operation_i);
+    _operation->getValueAtTime(time, operation_i);
     MergingFunctionEnum operation = (MergingFunctionEnum)operation_i;
     std::auto_ptr<MergeProcessorBase> fred;
     switch (operation) {
@@ -793,25 +888,34 @@ MergePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::strin
 bool
 MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
+    const double time = args.time;
     double mix;
-    _mix->getValueAtTime(args.time, mix);
+    _mix->getValueAtTime(time, mix);
 
     if (mix == 0.) {
         identityClip = _srcClipB;
         return true;
     }
     
+    bool outputChannels[4];
+    for (int c = 0; c < 4; ++c) {
+        _outputChannels[c]->getValueAtTime(time, outputChannels[c]);
+    }
+    if (!outputChannels[0] && !outputChannels[1] && !outputChannels[2] && !outputChannels[3]) {
+        identityClip = _srcClipB;
+        return true;
+    }
 
     OfxRectI maskRoD;
     bool maskRoDValid = false;
     
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(time)) && _maskClip && _maskClip->isConnected());
     if (doMasking) {
         bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        _maskInvert->getValueAtTime(time, maskInvert);
         if (!maskInvert) {
             maskRoDValid = true;
-            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
             if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
                 identityClip = _srcClipB;
@@ -829,7 +933,7 @@ MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
         if (!aClips[i]->isConnected()) {
             continue;
         }
-        OfxRectD srcARoD = aClips[i]->getRegionOfDefinition(args.time);
+        OfxRectD srcARoD = aClips[i]->getRegionOfDefinition(time);
         if (srcARoD.x2 <= srcARoD.x1 || srcARoD.y2 <= srcARoD.y1) {
             // RoD is empty
             continue;
@@ -1071,6 +1175,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
 
@@ -1170,6 +1275,164 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setDefault(false);
         param->setEnabled(MergeImages2D::isMaskable(eMergeOver));
         param->setHint(kParamAlphaMaskingHint);
+        param->setLayoutHint(eLayoutHintDivider);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+#ifdef OFX_EXTENSIONS_NATRON
+    desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
+#endif
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamAChannels);
+        param->setLabel("");
+        param->setHint(kParamAChannelsHint);
+        param->setDefault(kParamAChannelsLabel);
+        param->setStringType(eStringTypeLabel);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsR);
+        param->setLabel(kParamAChannelsRLabel);
+        param->setHint(kParamAChannelsRHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsG);
+        param->setLabel(kParamAChannelsGLabel);
+        param->setHint(kParamAChannelsGHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsB);
+        param->setLabel(kParamAChannelsBLabel);
+        param->setHint(kParamAChannelsBHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamAChannelsA);
+        param->setLabel(kParamAChannelsALabel);
+        param->setHint(kParamAChannelsAHint);
+        param->setDefault(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamBChannels);
+        param->setLabel("");
+        param->setHint(kParamBChannelsHint);
+        param->setDefault(kParamBChannelsLabel);
+        param->setStringType(eStringTypeLabel);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsR);
+        param->setLabel(kParamBChannelsRLabel);
+        param->setHint(kParamBChannelsRHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsG);
+        param->setLabel(kParamBChannelsGLabel);
+        param->setHint(kParamBChannelsGHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsB);
+        param->setLabel(kParamBChannelsBLabel);
+        param->setHint(kParamBChannelsBHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBChannelsA);
+        param->setLabel(kParamBChannelsALabel);
+        param->setHint(kParamBChannelsAHint);
+        param->setDefault(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kParamOutputChannels);
+        param->setLabel("");
+        param->setHint(kParamOutputChannelsHint);
+        param->setDefault(kParamOutputChannelsLabel);
+        param->setStringType(eStringTypeLabel);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputChannelsR);
+        param->setLabel(kParamOutputChannelsRLabel);
+        param->setHint(kParamOutputChannelsRHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputChannelsG);
+        param->setLabel(kParamOutputChannelsGLabel);
+        param->setHint(kParamOutputChannelsGHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputChannelsB);
+        param->setLabel(kParamOutputChannelsBLabel);
+        param->setHint(kParamOutputChannelsBHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintNoNewLine);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamOutputChannelsA);
+        param->setLabel(kParamOutputChannelsALabel);
+        param->setHint(kParamOutputChannelsAHint);
+        param->setDefault(true);
+        param->setLayoutHint(eLayoutHintDivider);
         if (page) {
             page->addChild(*param);
         }
