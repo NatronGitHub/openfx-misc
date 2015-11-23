@@ -584,7 +584,8 @@ private:
                                 OFX::Clip** clip,
                                 std::string* ofxPlane,
                                 std::string* ofxComponents,
-                                int* channelIndexInPlane) const;
+                                int* channelIndexInPlane,
+                                bool* isCreatingAlpha) const;
     
     bool getPlaneNeededInOutput(const std::list<std::string>& components,
                                 OFX::ChoiceParam* param,
@@ -593,9 +594,7 @@ private:
     
     void buildChannelMenus(const std::list<std::string> &outputComponents);
     
-    void enableComponents(OFX::PixelComponentEnum outputComponents);
-    
-    void enableComponentsWithDstClipComponents();
+    void enableComponents(OFX::PixelComponentEnum originalOutputComponents, OFX::PixelComponentEnum outputComponentsWithCreateAlpha);
     
 
     /* internal render function */
@@ -916,10 +915,13 @@ ShufflePlugin::getPlaneNeededForParam(double time,
                                       OFX::Clip** clip,
                                       std::string* ofxPlane,
                                       std::string* ofxComponents,
-                                      int* channelIndexInPlane) const
+                                      int* channelIndexInPlane,
+                                      bool* isCreatingAlpha) const
 {
     assert(clip);
     *clip = 0;
+    
+    *isCreatingAlpha = false;
     
     int channelIndex;
     param->getValueAtTime(time, channelIndex);
@@ -990,7 +992,8 @@ ShufflePlugin::getPlaneNeededForParam(double time,
             } else if (comp == kOfxImageComponentRGBA) {
                 *channelIndexInPlane = 3;
             } else {
-                *ofxComponents = kParamOutputOption0;
+                *isCreatingAlpha = true;
+                *ofxComponents = kParamOutputOption1;
                 return true;
             }
         } else {
@@ -1182,11 +1185,12 @@ ShufflePlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::
     
     std::map<OFX::Clip*,std::set<std::string> > clipMap;
     
+    bool isCreatingAlpha;
     for (int i = 0; i < 4; ++i) {
         std::string ofxComp,ofxPlane;
         int channelIndex;
         OFX::Clip* clip = 0;
-        bool ok = getPlaneNeededForParam(time, componentsA, componentsB, params[i], &clip, &ofxPlane, &ofxComp, &channelIndex);
+        bool ok = getPlaneNeededForParam(time, componentsA, componentsB, params[i], &clip, &ofxPlane, &ofxComp, &channelIndex,&isCreatingAlpha);
         if (!ok) {
             continue;
         }
@@ -1257,14 +1261,25 @@ ShufflePlugin::isIdentityInternal(double time, OFX::Clip*& identityClip)
         int expectedIndex = -1;
         for (int i = 0; i < 4; ++i) {
             std::string plane;
-            bool ok = getPlaneNeededForParam(time, componentsA, componentsB, params[i], &data[i].clip, &plane, &data[i].components, &data[i].index);
+            bool isCreatingAlpha;
+            bool ok = getPlaneNeededForParam(time, componentsA, componentsB, params[i], &data[i].clip, &plane, &data[i].components, &data[i].index,&isCreatingAlpha);
             if (!ok) {
                 //We might have an index in the param different from the actual components if getClipPreferences was not called so far
                 return false;
             }
             if (plane != kFnOfxImagePlaneColour) {
-                //This is not the color plane, no identity
-                return false;
+                if (i != 3) {
+                    //This is not the color plane, no identity
+                    return false;
+                } else {
+                    //In this case if the A choice is visible, the user either checked "Create alpha" or he/she set it explicitly to 0 or 1
+                    if (!_a->getIsSecret() &&! isCreatingAlpha) {
+                        return false;
+                    } else {
+                        ///Do not do the checks below
+                        continue;
+                    }
+                }
             }
             if (i > 0) {
                 if (data[i].index != expectedIndex || data[i].components != data[0].components ||
@@ -1532,6 +1547,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
     std::map<OFX::Clip*,std::map<std::string,OFX::Image*> > fetchedPlanes;
     
     std::vector<InputPlaneChannel> planes;
+    bool isCreatingAlpha;
     for (int i = 0; i < nDstComponents; ++i) {
         
         InputPlaneChannel p;
@@ -1540,7 +1556,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
         bool ok = getPlaneNeededForParam(time,
                                          componentsA, componentsB,
                                          nDstComponents == 1 ? params[3] : params[i],
-                                         &clip, &plane, &ofxComp, &p.channelIndex);
+                                         &clip, &plane, &ofxComp, &p.channelIndex,&isCreatingAlpha);
         if (!ok) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Cannot find requested channels in input");
             OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -1789,7 +1805,7 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
 void
 ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-    PixelComponentEnum dstPixelComps;
+    PixelComponentEnum originalDstPixelComps,dstPixelComps;
     if (gIsMultiPlanar && gSupportsDynamicChoices) {
         std::list<std::string> outputComponents = _dstClip->getComponentsPresent();
         buildChannelMenus(outputComponents);
@@ -1797,6 +1813,7 @@ ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
         getPlaneNeededInOutput(outputComponents, _outputComponents, &ofxPlane, &ofxComponents);
         
         dstPixelComps = mapStrToPixelComponentEnum(ofxComponents);
+        originalDstPixelComps = dstPixelComps;
         if (dstPixelComps == OFX::ePixelComponentCustom) {
             int nComps = std::max((int)mapPixelComponentCustomToLayerChannels(ofxComponents).size() - 1, 0);
             switch (nComps) {
@@ -1826,13 +1843,14 @@ ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
         int outputComponents_i;
         _outputComponents->getValue(outputComponents_i);
         dstPixelComps = gOutputComponentsMap[outputComponents_i];
+        originalDstPixelComps = dstPixelComps;
     }
     
     clipPreferences.setClipComponents(*_dstClip, dstPixelComps);
 
     
     //Enable components according to the new dstPixelComps
-    enableComponents(dstPixelComps);
+    enableComponents(originalDstPixelComps,dstPixelComps);
 
     if (getImageEffectHostDescription()->supportsMultipleClipDepths) {
         // set the bitDepth of _dstClip
@@ -2196,14 +2214,9 @@ ShufflePlugin::changedClip(const InstanceChangedArgs &/*args*/, const std::strin
     }
 }
 
-void
-ShufflePlugin::enableComponentsWithDstClipComponents()
-{
-    enableComponents(_dstClip->getPixelComponents());
-}
 
 void
-ShufflePlugin::enableComponents(PixelComponentEnum outputComponents)
+ShufflePlugin::enableComponents(PixelComponentEnum originalOutputComponents, PixelComponentEnum outputComponentsWithCreateAlpha)
 {
     if (!gIsMultiPlanar) {
         int outputComponents_i;
@@ -2259,40 +2272,21 @@ ShufflePlugin::enableComponents(PixelComponentEnum outputComponents)
         bool showCreateAlpha = false;
         if (ofxPlane == kFnOfxImagePlaneColour) {
             //std::string comp = _dstClip->getPixelComponentsProperty();
-            if (outputComponents == OFX::ePixelComponentRGB) {
+            if (outputComponentsWithCreateAlpha == OFX::ePixelComponentRGB) {
                 compNames.push_back("R");
                 compNames.push_back("G");
                 compNames.push_back("B");
                 showCreateAlpha = true;
-            } else if (outputComponents == OFX::ePixelComponentRGBA) {
+            } else if (outputComponentsWithCreateAlpha == OFX::ePixelComponentRGBA) {
                 compNames.push_back("R");
                 compNames.push_back("G");
                 compNames.push_back("B");
                 compNames.push_back("A");
                 
-                std::list<std::string> srcAComponents =  _srcClipA->getComponentsPresent();
-
-                ///Show create alpha only if RGBA is not present in both A and B components
-                bool foundRGBAUpstream = false;
-                for (std::list<std::string>::iterator it = srcAComponents.begin(); it!=srcAComponents.end(); ++it) {
-                    if ((*it) == kOfxImageComponentRGBA) {
-                        foundRGBAUpstream = true;
-                        break;
-                    }
-                }
-                if (!foundRGBAUpstream) {
-                    std::list<std::string> srcBComponents =  _srcClipB->getComponentsPresent();
-                    for (std::list<std::string>::iterator it = srcBComponents.begin(); it!=srcBComponents.end(); ++it) {
-                        if ((*it) == kOfxImageComponentRGBA) {
-                            foundRGBAUpstream = true;
-                            break;
-                        }
-                    }
-                }
-                if (!foundRGBAUpstream) {
+                if (originalOutputComponents != OFX::ePixelComponentRGBA) {
                     showCreateAlpha = true;
                 }
-            } else if (outputComponents == OFX::ePixelComponentAlpha) {
+            } else if (outputComponentsWithCreateAlpha == OFX::ePixelComponentAlpha) {
                 compNames.push_back("Alpha");
             }
 
