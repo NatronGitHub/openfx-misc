@@ -1,7 +1,6 @@
 ABOUT INK
 
-INK is a proportionate colour difference keyer. This OFX plugin is
-free to use and distribute for any purpose. You may obtain the source
+INK is a proportionate colour difference keyer. You may obtain the source
 code from https://github.com/nicholascarroll.
 
 INK’s user interface design and build are complete but some controls

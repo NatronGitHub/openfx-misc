@@ -39,16 +39,15 @@ Version   Date       Author       Description
     1.2   13-NOV-15  N. Carroll   Commented out BG input (all comments marked '//bg')
     1.3   18-NOV-15  N. Carroll   Implemented Black Point, White Point, Invert
     1.4   18-NOV-15  N. Carroll   Implemented Despill Core
+    1.5   26-NOV-15  N. Carroll   Implemented Spill Replacement, Tune Spill Replace
 
-* TODO implement Spill Replacement
-* TODO implement Tune Spill Replace
 * TODO implement Key Amount
 * TODO implement Tune Key Amount
-* TODO implement Matte Balance
-* TODO implement Despill Balance
+* TODO implement Matte and Despill Balance
 * TODO implement Erode and Blur
 
 */
+
 #include "INK.h"
 #include <algorithm>
 #include <cmath>
@@ -74,7 +73,7 @@ CLANG_DIAG_ON(shorten-64-to-32)
 
 #define kPluginIdentifier "com.casanico.INK"
 #define kPluginVersionMajor 1 // Increment this if you have broken backwards compatibility.
-#define kPluginVersionMinor 4
+#define kPluginVersionMinor 5
 
 #define kSupportsTiles 1 
 #define kSupportsMultiResolution 1
@@ -83,9 +82,9 @@ CLANG_DIAG_ON(shorten-64-to-32)
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
-#define kParamKeyColor "keyColour"
-#define kParamKeyColorLabel "Key Colour"
-#define kParamKeyColorHint \
+#define kParamKeyColour "keyColour"
+#define kParamKeyColourLabel "Key Colour"
+#define kParamKeyColourHint \
 "Use the dropper to select the green/blue screen colour."
 
 #define kParamKeyAmount "keyAmount"
@@ -134,20 +133,20 @@ CLANG_DIAG_ON(shorten-64-to-32)
 #define kParamDespillCoreHint "Enabled: the core matte has no effect on despill.\n\nDisabled: the core matte acts as a holdout against despill."
 
 #define kParamReplacementColour "replacementColour"
-#define kParamReplacementColourLabel "* Spill Replacement"
-#define kParamReplacementColourHint "* NOT YET IMPLEMENTED\nAdd this colour to despilled areas of the core matte."
+#define kParamReplacementColourLabel "Spill Replacement"
+#define kParamReplacementColourHint "Add this colour to despilled areas of the core matte."
 
 #define kParamReplacementAmount "replacementAmount"
 #define kParamReplacementAmountLabel "Replacement Amount"
 #define kParamReplacementAmountHint "Fade the replace amount"
 
 #define kParamMatchLuminance "matchLuminance"
-#define kParamMatchLuminanceLabel "Match Luminance"
-#define kParamMatchLuminanceHint "Match the source pixel luminance where spill replacement is occurring"
+#define kParamMatchLuminanceLabel "* Match Luminance"
+#define kParamMatchLuminanceHint "* NOT YET IMPLEMENTED\nMatch the source pixel luminance where spill replacement is occurring"
 
 #define kParamHueRange "hueRange"
-#define kParamHueRangeLabel "Hue Range"
-#define kParamHueRangeHint "Range of hues over which spill replace will be applied (degrees from spill replacement hue)"
+#define kParamHueRangeLabel "* Hue Range"
+#define kParamHueRangeHint "* NOT YET IMPLEMENTED\nRange of hues over which spill replace will be applied (degrees from spill replacement hue)"
 
 #define kParamBlackPoint "blackPoint"
 #define kParamBlackPointLabel "Black Point"
@@ -229,7 +228,7 @@ protected:
   //bg    const OFX::Image *_bgImg;
     const OFX::Image *_coreImg;
     const OFX::Image *_garbageImg;
-    OfxRGBColourD _keyColor;
+    OfxRGBColourD _keyColour;
     double _acceptanceAngle;
     double _tan__acceptanceAngle2;
     double _suppressionAngle;
@@ -288,7 +287,7 @@ public:
     , _xKey(0)
     , _ys(0)
     {
-      _keyColor.r = _keyColor.g = _keyColor.b = 0.;
+      _keyColour.r = _keyColour.g = _keyColour.b = 0.;
       _replacementColour.r = _replacementColour.r = _replacementColour.r = 0;
       _matteBalance.r = _matteBalance.r = _matteBalance.r = 0;
       _despillBalance.r = _despillBalance.r = _despillBalance.r = 0;
@@ -303,9 +302,9 @@ public:
         _garbageImg = garbageImg;
     }
     
-  void setValues(const OfxRGBColourD& keyColor, double acceptanceAngle, double suppressionAngle, double keyBalance, double keyAmount,double midpoint, double shadows, double midtones, double highlights, const OfxRGBColourD& replacementColour, OfxRGBColourD& matteBalance, OfxRGBColourD& despillBalance, double replacementAmount, double matchLuminance, double hueRange, bool despillCore, double blackPoint, bool invert, double whitePoint, double erode, OutputModeEnum outputMode, SourceAlphaEnum sourceAlpha)
+  void setValues(const OfxRGBColourD& keyColour, double acceptanceAngle, double suppressionAngle, double keyBalance, double keyAmount,double midpoint, double shadows, double midtones, double highlights, const OfxRGBColourD& replacementColour, OfxRGBColourD& matteBalance, OfxRGBColourD& despillBalance, double replacementAmount, double matchLuminance, double hueRange, bool despillCore, double blackPoint, bool invert, double whitePoint, double erode, OutputModeEnum outputMode, SourceAlphaEnum sourceAlpha)
     {
-        _keyColor = keyColor;
+        _keyColour = keyColour;
         _acceptanceAngle = acceptanceAngle;
         _suppressionAngle = suppressionAngle;
         _keyBalance = keyBalance;
@@ -339,6 +338,12 @@ double matteMonitor(double v) {
         return .5;
     }
     return 0.;
+}
+
+// Luminance
+double rgb2luminance(double r, double g, double b)
+{
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 template<class PIX, int maxValue>
@@ -414,46 +419,50 @@ private:
                 // clamp core and garbage in the [0,1] range
                 core = max(0.f,min(core,1.f));
                 garbage = max(0.f,min(garbage,1.f));
+		// K is for Key Colour
+		double K[3] = {_keyColour.r, _keyColour.g, _keyColour.b};
+		// R is for Replacement Colour
+		double R[3] = {_replacementColour.r, _replacementColour.g, _replacementColour.b};
 
-		// which channel of the key colour is max
-		int minKey = 0; double minK = _keyColor.r;
-		int midKey = 1; double midK = _keyColor.g;
-		int maxKey = 2; double maxK = _keyColor.b;
-		if(_keyColor.b <= _keyColor.r && _keyColor.r <= _keyColor.g ){
-		  minKey = 2; minK = _keyColor.b;
-		  midKey = 0; midK = _keyColor.r;
-		  maxKey = 1; maxK = _keyColor.g;
-		} else if (_keyColor.r <= _keyColor.b && _keyColor.b <= _keyColor.g ){
-		  minKey = 0; minK = _keyColor.r;
-		  midKey = 2; midK = _keyColor.b;
-		  maxKey = 1; maxK = _keyColor.g;
-		} else if (_keyColor.g <= _keyColor.b && _keyColor.b <= _keyColor.r ){
-		  minKey = 1; minK = _keyColor.g;
-		  midKey = 2; midK = _keyColor.b;
-		  maxKey = 0; maxK = _keyColor.r;
-		} else if (_keyColor.g <= _keyColor.r && _keyColor.r <= _keyColor.b ){
-		  minKey = 1; minK = _keyColor.g;
-		  midKey = 0; midK = _keyColor.r;
-		  maxKey = 2; maxK = _keyColor.b;
-		} else if (_keyColor.b <= _keyColor.g && _keyColor.g <= _keyColor.r ){
-		  minKey = 2; minK = _keyColor.b;
-		  midKey = 1; midK = _keyColor.g;
-		  maxKey = 0; maxK = _keyColor.r;
+	       	// which channel of the key colour is max
+		int minKey = 0; 
+		int midKey = 1; 
+		int maxKey = 2; 
+		if(_keyColour.b <= _keyColour.r && _keyColour.r <= _keyColour.g ){
+		  minKey = 2; 
+		  midKey = 0; 
+		  maxKey = 1; 
+		} else if (_keyColour.r <= _keyColour.b && _keyColour.b <= _keyColour.g ){
+		  minKey = 0; 
+		  midKey = 2; 
+		  maxKey = 1; 
+		} else if (_keyColour.g <= _keyColour.b && _keyColour.b <= _keyColour.r ){
+		  minKey = 1; 
+		  midKey = 2; 
+		  maxKey = 0; 
+		} else if (_keyColour.g <= _keyColour.r && _keyColour.r <= _keyColour.b ){
+		  minKey = 1; 
+		  midKey = 0; 
+		  maxKey = 2; 
+		} else if (_keyColour.b <= _keyColour.g && _keyColour.g <= _keyColour.r ){
+		  minKey = 2; 
+		  midKey = 1; 
+		  maxKey = 0; 
 		}
-		// source pixel
-                double minP = srcPix ? sampleToFloat<PIX,maxValue>(srcPix[minKey]) : 0.;
-		double midP = srcPix ? sampleToFloat<PIX,maxValue>(srcPix[midKey]) : 0.;
-                double maxP = srcPix ? sampleToFloat<PIX,maxValue>(srcPix[maxKey]) : 0.;
+		// P is for source pixel
+                double P[3] = {(srcPix ? sampleToFloat<PIX,maxValue>(srcPix[0]) : 0.),
+			       (srcPix ? sampleToFloat<PIX,maxValue>(srcPix[1]) : 0.),
+			       (srcPix ? sampleToFloat<PIX,maxValue>(srcPix[2]) : 0.)};
+		// source pixel luminance
+		double origLum = rgb2luminance(P[0], P[1], P[2]);
 
 		// background
                 //bg double minBg = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[minKey]) : 0.;
 		//bg double midBg = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[midKey]) : 0.;
                 //bg double maxBg = bgPix ? sampleToFloat<PIX,maxValue>(bgPix[maxKey]) : 0.;
 
-		// source pixel channels
-		double minChan = minP;
-		double midChan = midP;
-		double maxChan = maxP;
+		// output pixel channels
+		double chan[3] = {P[0], P[1], P[2]};
 		double currMatte = 1.;
 		// TUNE KEY AMOUNT TODO
 		double keyAmountRGB = _keyAmount;
@@ -462,26 +471,26 @@ private:
 		  keyAmountRGB *= (1-(double)core);
 		}
 		
-		if (!(midK == 0. && maxK == 0. && minK == 0.) && !(midP == 0. && maxP == 0. && minP == 0.) && !(keyAmountRGB==0.)) {
-		    // solve minChan		
-		    double min1 = (minP/(maxP-_keyBalance*midP)-minK/(maxK-_keyBalance*midK))
-		      / (1+minP/(maxP-_keyBalance*midP)-(2-_keyBalance)*minK/(maxK-_keyBalance*midK));
-		    double min2 = min(minP,(maxP-_keyBalance*midP)*min1/(1-min1));
-		    minChan = max(0.,min(min2,1.));
-		    // solve midChan
-		    double mid1 = (midP/(maxP-(1-_keyBalance)*minP)-midK/(maxK-(1-_keyBalance)*minK))
-		      / (1+midP/(maxP-(1-_keyBalance)*minP)-(1+_keyBalance)*midK/(maxK-(1-_keyBalance)*minK));
-		    double mid2 = min(midP,(maxP-(1-_keyBalance)*minP)*mid1/(1-mid1));
-		    midChan = max(0.,min(mid2,1.));
-	  	    // solve maxChan
-		    double max1 = min(maxP,(_keyBalance*min(midP,(maxP-(1-_keyBalance)*minP)*mid1/(1-mid1))
-		    			  + (1-_keyBalance)*min(minP,(maxP-_keyBalance*midP)*min1/(1-min1))));
-		    maxChan = max(0.,min(max1,1.));
+		if (!(K[minKey] == 0. && K[midKey] == 0. && K[maxKey] == 0.) && !(P[minKey] == 0. && P[midKey] == 0. && P[maxKey] == 0.) && !(keyAmountRGB==0.)) {
+		    // solve chan[minKey]		
+		    double min1 = (P[minKey]/(P[maxKey]-_keyBalance*P[midKey])-K[minKey]/(K[maxKey]-_keyBalance*K[midKey]))
+		      / (1+P[minKey]/(P[maxKey]-_keyBalance*P[midKey])-(2-_keyBalance)*K[minKey]/(K[maxKey]-_keyBalance*K[midKey]));
+		    double min2 = min(P[minKey],(P[maxKey]-_keyBalance*P[midKey])*min1/(1-min1));
+		    chan[minKey] = max(0.,min(min2,1.));
+		    // solve chan[midKey]
+		    double mid1 = (P[midKey]/(P[maxKey]-(1-_keyBalance)*P[minKey])-K[midKey]/(K[maxKey]-(1-_keyBalance)*K[minKey]))
+		      / (1+P[midKey]/(P[maxKey]-(1-_keyBalance)*P[minKey])-(1+_keyBalance)*K[midKey]/(K[maxKey]-(1-_keyBalance)*K[minKey]));
+		    double mid2 = min(P[midKey],(P[maxKey]-(1-_keyBalance)*P[minKey])*mid1/(1-mid1));
+		    chan[midKey] = max(0.,min(mid2,1.));
+	  	    // solve chan[maxKey]
+		    double max1 = min(P[maxKey],(_keyBalance*min(P[midKey],(P[maxKey]-(1-_keyBalance)*P[minKey])*mid1/(1-mid1))
+		    			  + (1-_keyBalance)*min(P[minKey],(P[maxKey]-_keyBalance*P[midKey])*min1/(1-min1))));
+		    chan[maxKey] = max(0.,min(max1,1.));
 		    // solve alpha
-		    double a1 = (1-maxK)+(_keyBalance*midK+(1-_keyBalance)*minK);
+		    double a1 = (1-K[maxKey])+(_keyBalance*K[midKey]+(1-_keyBalance)*K[minKey]);
 		    double a2 = (_keyAmount*_keyAmount)*(1+a1/abs(1-a1));
-		    double a3 =  (1-maxP)-maxP*(a2-(1+((_keyBalance*midP+(1-_keyBalance)*minP))/maxP*(a2)));
-		    double a4 = max(midChan,max(a3,minChan));
+		    double a3 =  (1-P[maxKey])-P[maxKey]*(a2-(1+((_keyBalance*P[midKey]+(1-_keyBalance)*P[minKey]))/P[maxKey]*(a2)));
+		    double a4 = max(chan[midKey],max(a3,chan[minKey]));
 		    currMatte = max(0.,min(a4,1.)); //alpha
 		}
                 double sourceMatte = (_sourceAlpha == eSourceAlphaNormal &&
@@ -490,9 +499,19 @@ private:
 		double combMatte = (currMatte+(double)core - currMatte*(double)core) * (1-garbage) * sourceMatte;
 
 		// apply the garbage and source mattes to RGB
-		minChan *= (1-garbage) * sourceMatte;
-		midChan *= (1-garbage) * sourceMatte;
-		maxChan *= (1-garbage) * sourceMatte;
+		chan[minKey] *= (1-garbage) * sourceMatte;
+		chan[midKey] *= (1-garbage) * sourceMatte;
+		chan[maxKey] *= (1-garbage) * sourceMatte;
+
+		// SPILL REPLACEMENT
+		if (_despillCore) {
+		  chan[minKey] += _replacementAmount * R[minKey] * ((double)core - currMatte*(double)core);
+		  chan[midKey] += _replacementAmount * R[midKey] * ((double)core - currMatte*(double)core);
+		  chan[maxKey] += _replacementAmount * R[maxKey] * ((double)core - currMatte*(double)core);
+		  // match luminance
+		  double newLum = rgb2luminance(chan[0], chan[1], chan[2]);
+		  // hue range
+		}
 		
 		// MATTE POSTPROCESS
 		//invert
@@ -522,24 +541,24 @@ private:
                         }
                         break;
                     case eOutputModePremultiplied:
-                        dstPix[minKey] = floatToSample<PIX,maxValue>(minChan);
-                        dstPix[midKey] = floatToSample<PIX,maxValue>(midChan);
-                        dstPix[maxKey] = floatToSample<PIX,maxValue>(maxChan);
+                        dstPix[0] = floatToSample<PIX,maxValue>(chan[0]);
+                        dstPix[1] = floatToSample<PIX,maxValue>(chan[1]);
+                        dstPix[2] = floatToSample<PIX,maxValue>(chan[2]);
                         break;
                     case eOutputModeUnpremultiplied:
                         if (combMatte == 0.) {
-                            dstPix[midKey] = dstPix[maxKey] = dstPix[minKey] = maxValue;
+                            dstPix[0] = dstPix[1] = dstPix[2] = maxValue;
                         } else {
-                            dstPix[minKey] = floatToSample<PIX,maxValue>(minChan / combMatte);
-                            dstPix[midKey] = floatToSample<PIX,maxValue>(midChan / combMatte);
-                            dstPix[maxKey] = floatToSample<PIX,maxValue>(maxChan / combMatte);
+                            dstPix[0] = floatToSample<PIX,maxValue>(chan[0] / combMatte);
+                            dstPix[1] = floatToSample<PIX,maxValue>(chan[1] / combMatte);
+                            dstPix[2] = floatToSample<PIX,maxValue>(chan[2] / combMatte);
                         }
                         break;
                     //bg case eOutputModeComposite:
                     //bg     // traditional composite.
-		    //bg     dstPix[minKey] = floatToSample<PIX,maxValue>(minChan + minBg*(1-combMatte));
-		    //bg     dstPix[midKey] = floatToSample<PIX,maxValue>(midChan + midBg*(1-combMatte));
-		    //bg     dstPix[maxKey] = floatToSample<PIX,maxValue>(maxChan + maxBg*(1-combMatte));
+		    //bg     dstPix[minKey] = floatToSample<PIX,maxValue>(chan[minKey] + minBg*(1-combMatte));
+		    //bg     dstPix[midKey] = floatToSample<PIX,maxValue>(chan[midKey] + midBg*(1-combMatte));
+		    //bg     dstPix[maxKey] = floatToSample<PIX,maxValue>(chan[maxKey] + maxBg*(1-combMatte));
                     //bg     break;
 		    case eOutputModeMatteMonitor:
 		        dstPix[0] = floatToSample<PIX,maxValue>(matteMonitor(core));
@@ -571,7 +590,7 @@ public:
       //bg  , _bgClip(0)
     , _coreClip(0)
     , _garbageClip(0)
-    , _keyColor(0)
+    , _keyColour(0)
     , _acceptanceAngle(0)
     , _suppressionAngle(0)
     , _keyBalance(0)
@@ -607,7 +626,7 @@ public:
         assert(_coreClip && _coreClip->getPixelComponents() == ePixelComponentAlpha);
         _garbageClip = fetchClip(kClipGarbage);;
         assert(_garbageClip && _garbageClip->getPixelComponents() == ePixelComponentAlpha);
-        _keyColor = fetchRGBParam(kParamKeyColor);
+        _keyColour = fetchRGBParam(kParamKeyColour);
         _acceptanceAngle = fetchDoubleParam(kParamKeyAmount);
         _suppressionAngle = fetchDoubleParam(kParamKeyBalance);
         _keyBalance = fetchDoubleParam(kParamKeyBalance);
@@ -629,7 +648,7 @@ public:
 	_erode = fetchDoubleParam(kParamErode);
         _outputMode = fetchChoiceParam(kParamOutputMode);
         _sourceAlpha = fetchChoiceParam(kParamSourceAlpha);
-        assert(_keyColor && _acceptanceAngle && _suppressionAngle && _keyBalance && _keyAmount && _midpoint && _shadows && _midtones && _highlights && _replacementColour && _matteBalance && _despillBalance && _replacementAmount && _matchLuminance && _hueRange && _despillCore && _blackPoint && _invert && _whitePoint && _outputMode && _sourceAlpha);
+        assert(_keyColour && _acceptanceAngle && _suppressionAngle && _keyBalance && _keyAmount && _midpoint && _shadows && _midtones && _highlights && _replacementColour && _matteBalance && _despillBalance && _replacementAmount && _matchLuminance && _hueRange && _despillCore && _blackPoint && _invert && _whitePoint && _outputMode && _sourceAlpha);
     }
  
 private:
@@ -650,7 +669,7 @@ private:
     OFX::Clip *_coreClip;
     OFX::Clip *_garbageClip;
     
-    OFX::RGBParam* _keyColor;
+    OFX::RGBParam* _keyColour;
     OFX::DoubleParam* _acceptanceAngle;
     OFX::DoubleParam* _suppressionAngle;
     OFX::DoubleParam* _keyBalance;
@@ -756,7 +775,7 @@ INKPlugin::setupAndProcess(INKProcessorBase &processor, const OFX::RenderArgumen
         }
     }
 
-    OfxRGBColourD keyColor;
+    OfxRGBColourD keyColour;
     double acceptanceAngle;
     double suppressionAngle;
     double keyBalance;
@@ -778,7 +797,7 @@ INKPlugin::setupAndProcess(INKProcessorBase &processor, const OFX::RenderArgumen
     double erode;
     int outputModeI;
     int sourceAlphaI;
-    _keyColor->getValueAtTime(args.time, keyColor.r, keyColor.g, keyColor.b);
+    _keyColour->getValueAtTime(args.time, keyColour.r, keyColour.g, keyColour.b);
     _acceptanceAngle->getValueAtTime(args.time, acceptanceAngle);
     _suppressionAngle->getValueAtTime(args.time, suppressionAngle);
     _keyBalance->getValueAtTime(args.time, keyBalance);
@@ -802,7 +821,7 @@ INKPlugin::setupAndProcess(INKProcessorBase &processor, const OFX::RenderArgumen
     OutputModeEnum outputMode = (OutputModeEnum)outputModeI;
     _sourceAlpha->getValueAtTime(args.time, sourceAlphaI);
     SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)sourceAlphaI;
-    processor.setValues(keyColor, acceptanceAngle, suppressionAngle, keyBalance, keyAmount, midpoint, shadows, midtones, highlights, replacementColour, matteBalance, despillBalance, replacementAmount, matchLuminance, hueRange, despillCore, blackPoint, invert, whitePoint, erode, outputMode, sourceAlpha);
+    processor.setValues(keyColour, acceptanceAngle, suppressionAngle, keyBalance, keyAmount, midpoint, shadows, midtones, highlights, replacementColour, matteBalance, despillBalance, replacementAmount, matchLuminance, hueRange, despillCore, blackPoint, invert, whitePoint, erode, outputMode, sourceAlpha);
     processor.setDstImg(dst.get());
     processor.setSrcImgs(src.get(),/*//bg bg.get(),*/ core.get(), garbage.get());
     processor.setRenderWindow(args.renderWindow);
@@ -948,11 +967,11 @@ void INKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    // key color
+    // key colour
     {
-        RGBParamDescriptor* param = desc.defineRGBParam(kParamKeyColor);
-        param->setLabel(kParamKeyColorLabel);
-        param->setHint(kParamKeyColorHint);
+        RGBParamDescriptor* param = desc.defineRGBParam(kParamKeyColour);
+        param->setLabel(kParamKeyColourLabel);
+        param->setHint(kParamKeyColourHint);
         param->setDefault(0., 0., 0.);
         // the following should be the default
         double kmin = -numeric_limits<double>::max();
@@ -1117,9 +1136,9 @@ void INKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
         }
     }
 
-      GroupParamDescriptor* tuneDespill = desc.defineGroupParam("* Tune Spill Replace");
+      GroupParamDescriptor* tuneDespill = desc.defineGroupParam("Tune Spill Replace");
       tuneDespill->setOpen(false);
-      tuneDespill->setHint("* NOT YET IMPLEMENTED\nControl Spill Replacement parameters");
+      tuneDespill->setHint("Control Spill Replacement parameters");
       if (page) {
             page->addChild(*tuneDespill);
         }
