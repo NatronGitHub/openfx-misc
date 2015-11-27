@@ -893,9 +893,12 @@ void
 DistortionPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     //We have to do this because the processing code does not support varying components for uvClip and srcClip
+    OFX::PixelComponentEnum dstComps = _dstClip->getPixelComponents();
     if (_uvClip) {
-        OFX::PixelComponentEnum srcComps = _srcClip->getPixelComponents();
-        clipPreferences.setClipComponents(*_uvClip, srcComps);
+        clipPreferences.setClipComponents(*_uvClip, dstComps);
+    }
+    if (_srcClip) {
+        clipPreferences.setClipComponents(*_srcClip, dstComps);
     }
     
 }
