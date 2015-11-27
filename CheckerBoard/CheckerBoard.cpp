@@ -559,7 +559,7 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     
     PageParamDescriptor *page = desc.definePageParam("Controls");
     
-    generatorDescribeInContext(page, desc, *dstClip, eGeneratorTypeDefault, true,  context);
+    generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentDefault, true,  context);
 
 #define kParamSize "boxsize"
 #define kParamSizeLabel "Size"

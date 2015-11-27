@@ -1057,7 +1057,7 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
 
-    generatorDescribeInContext(page, desc, *dstClip, eGeneratorTypeSize, false,  context);
+    generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentSize, false,  context);
 
 
     // softness
