@@ -38,14 +38,20 @@
 "A collection of simple keyers. These work by computing a foreground key from the RGB values of the input image (see the keyerMode parameter).\n" \
 "This foreground key is is a scalar from 0 to 1. From the foreground key, a background key (or transparency) is computed.\n" \
 "The function that maps the foreground key to the background key is piecewise linear:\n" \
-"- it is 0 below (center-tolerance-softness)\n" \
-"- it is linear between (center-tolerance-softness) and (center-tolerance)\n" \
-" -it is 1 between (center-tolerance)and (center+tolerance)\n" \
-"- it is linear between (center+tolerance) and (center+tolerance+softness)\n" \
-"- it is 0 above (center+tolerance+softness)\n" \
+"- it is 0 below A = (center+toleranceLower+softnessLower)\n" \
+"- it is linear between A = (center+toleranceLower+softnessLower) and B = (center+toleranceLower)\n" \
+" -it is 1 between B = (center+toleranceLower) and C = (center+toleranceUpper)\n" \
+"- it is linear between C = (center+toleranceUpper) and D = (center+toleranceUpper+softnessUpper)\n" \
+"- it is 0 above D = (center+toleranceUpper+softnessUpper)\n" \
 "\n" \
 "Keyer can pull mattes that correspond to the RGB channels, the luminance and the red, green and blue colors. " \
-"One very useful application for a luminance mask is to mask out a sky (almost always it is the brightest thing in a landscape)." \
+"One very useful application for a luminance mask is to mask out a sky (almost always it is the brightest thing in a landscape).\n" \
+"Conversion from A, B, C, D to Keyer parameters is:\n" \
+"softnessLower = (A-B)\n" \
+"toleranceLower = (B-C)/2\n" \
+"center = (B+C)/2\n" \
+"toleranceUpper = (C-B)/2\n" \
+"softnessUpper = (D-C)"
 
 #define kPluginIdentifier "net.sf.openfx.KeyerPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -480,6 +486,7 @@ public:
     , _bgClip(0)
     , _inMaskClip(0)
     , _outMaskClip(0)
+    , _sublabel(0)
     , _keyColor(0)
     , _keyerMode(0)
     , _softnessLower(0)
@@ -503,6 +510,7 @@ public:
         assert(_inMaskClip && _inMaskClip->getPixelComponents() == ePixelComponentAlpha);
         _outMaskClip = fetchClip(kClipOutsidemask);;
         assert(_outMaskClip && _outMaskClip->getPixelComponents() == ePixelComponentAlpha);
+        _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
         _keyColor = fetchRGBParam(kParamKeyColor);
         _keyerMode = fetchChoiceParam(kParamKeyerMode);
         _softnessLower = fetchDoubleParam(kParamSoftnessLower);
@@ -539,6 +547,8 @@ private:
     OFX::Clip *_inMaskClip;
     OFX::Clip *_outMaskClip;
     
+    OFX::StringParam *_sublabel;
+
     OFX::RGBParam* _keyColor;
     OFX::ChoiceParam* _keyerMode;
     OFX::DoubleParam* _softnessLower;
@@ -789,6 +799,9 @@ KeyerPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::strin
         _softnessUpper->setEnabled(keyerMode != eKeyerModeNone && keyerMode != eKeyerModeScreen);
         _despill->setEnabled(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen);
         setThresholdsFromKeyColor(keyColor.r, keyColor.g, keyColor.b, keyerMode);
+        std::string keyerModeString;
+        _keyerMode->getOption(keyerModeI, keyerModeString);
+        _sublabel->setValue(keyerModeString);
     }
 }
 
@@ -860,6 +873,19 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
+
+    // sublabel
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
+        param->setIsSecret(true); // always secret
+        param->setEnabled(false);
+        param->setIsPersistant(true);
+        param->setEvaluateOnChange(false);
+        param->setDefault(kParamKeyerModeOptionLuminance);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 
     // key color
     {
