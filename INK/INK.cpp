@@ -39,7 +39,7 @@ Version   Date       Author       Description
     1.2   13-NOV-15  N. Carroll   Commented out BG input (all comments marked '//bg')
     1.3   18-NOV-15  N. Carroll   Implemented Black Point, White Point, Invert
     1.4   18-NOV-15  N. Carroll   Implemented Despill Core
-    1.5   26-NOV-15  N. Carroll   Implemented Spill Replacement, Tune Spill Replace
+    1.5   26-NOV-15  N. Carroll   Implemented Spill Replacement
 
 * TODO implement Key Amount
 * TODO implement Tune Key Amount
@@ -52,6 +52,7 @@ Version   Date       Author       Description
 #include <algorithm>
 #include <cmath>
 #include <limits>
+
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -130,23 +131,19 @@ CLANG_DIAG_ON(shorten-64-to-32)
 
 #define kParamDespillCore "despillCore"
 #define kParamDespillCoreLabel "Despill Core"
-#define kParamDespillCoreHint "Enabled: the core matte has no effect on despill.\n\nDisabled: the core matte acts as a holdout against despill."
+#define kParamDespillCoreHint "Enabled: Despill even where there is a core matte.\n\nDisabled: the core matte acts as a holdout against despill."
 
 #define kParamReplacementColour "replacementColour"
-#define kParamReplacementColourLabel "Spill Replacement"
-#define kParamReplacementColourHint "Add this colour to despilled areas of the core matte."
+#define kParamReplacementColourLabel "Replacement Colour"
+#define kParamReplacementColourHint "This colour will be added in proportion to the density of the core matte."
 
 #define kParamReplacementAmount "replacementAmount"
 #define kParamReplacementAmountLabel "Replacement Amount"
 #define kParamReplacementAmountHint "Fade the replace amount"
 
 #define kParamMatchLuminance "matchLuminance"
-#define kParamMatchLuminanceLabel "* Match Luminance"
-#define kParamMatchLuminanceHint "* NOT YET IMPLEMENTED\nMatch the source pixel luminance where spill replacement is occurring"
-
-#define kParamHueRange "hueRange"
-#define kParamHueRangeLabel "* Hue Range"
-#define kParamHueRangeHint "* NOT YET IMPLEMENTED\nRange of hues over which spill replace will be applied (degrees from spill replacement hue)"
+#define kParamMatchLuminanceLabel "Match Luminance"
+#define kParamMatchLuminanceHint "Match the despilled pixel luminance where spill replacement is occurring"
 
 #define kParamBlackPoint "blackPoint"
 #define kParamBlackPointLabel "Black Point"
@@ -244,7 +241,6 @@ protected:
   OfxRGBColourD  _despillBalance;
     double _replacementAmount;
     double _matchLuminance;
-   double _hueRange;
     bool _despillCore;
     double _blackPoint;
     bool _invert;
@@ -274,7 +270,6 @@ public:
     , _highlights(0.)
     , _replacementAmount(1.)
         , _matchLuminance(1.)
-      , _hueRange(0.)
     , _despillCore(true)
     , _blackPoint(0.)
     , _invert(false)
@@ -302,7 +297,7 @@ public:
         _garbageImg = garbageImg;
     }
     
-  void setValues(const OfxRGBColourD& keyColour, double acceptanceAngle, double suppressionAngle, double keyBalance, double keyAmount,double midpoint, double shadows, double midtones, double highlights, const OfxRGBColourD& replacementColour, OfxRGBColourD& matteBalance, OfxRGBColourD& despillBalance, double replacementAmount, double matchLuminance, double hueRange, bool despillCore, double blackPoint, bool invert, double whitePoint, double erode, OutputModeEnum outputMode, SourceAlphaEnum sourceAlpha)
+  void setValues(const OfxRGBColourD& keyColour, double acceptanceAngle, double suppressionAngle, double keyBalance, double keyAmount,double midpoint, double shadows, double midtones, double highlights, const OfxRGBColourD& replacementColour, OfxRGBColourD& matteBalance, OfxRGBColourD& despillBalance, double replacementAmount, double matchLuminance,  bool despillCore, double blackPoint, bool invert, double whitePoint, double erode, OutputModeEnum outputMode, SourceAlphaEnum sourceAlpha)
     {
         _keyColour = keyColour;
         _acceptanceAngle = acceptanceAngle;
@@ -318,7 +313,6 @@ public:
 	_despillBalance =  despillBalance;
 	_replacementAmount = replacementAmount;
 	_matchLuminance = matchLuminance;
-	_hueRange = hueRange;
 	_despillCore = despillCore;
         _blackPoint = blackPoint;
         _invert = invert;
@@ -503,14 +497,16 @@ private:
 		chan[midKey] *= (1-garbage) * sourceMatte;
 		chan[maxKey] *= (1-garbage) * sourceMatte;
 
-		// SPILL REPLACEMENT
-		if (_despillCore) {
-		  chan[minKey] += _replacementAmount * R[minKey] * ((double)core - currMatte*(double)core);
-		  chan[midKey] += _replacementAmount * R[midKey] * ((double)core - currMatte*(double)core);
-		  chan[maxKey] += _replacementAmount * R[maxKey] * ((double)core - currMatte*(double)core);
-		  // match luminance
-		  double newLum = rgb2luminance(chan[0], chan[1], chan[2]);
-		  // hue range
+		// SPILL REPLACEMENT		
+		if (_despillCore & !(R[minKey] == 0. && R[midKey] == 0. && R[maxKey] == 0.)) {
+		  // give the spill replace colour the luminance of the despilled pixel
+		  double replaceLum = rgb2luminance(R[0], R[1], R[2]);
+		  double despilledLum = rgb2luminance(chan[0], chan[1], chan[2]);
+		  double lumFactor =  _matchLuminance*(despilledLum/replaceLum-1.)+1.;
+		  // replacement amount
+		  chan[minKey] += lumFactor * _replacementAmount * R[minKey] * ((double)core - currMatte*(double)core);
+		  chan[midKey] += lumFactor * _replacementAmount * R[midKey] * ((double)core - currMatte*(double)core);
+		  chan[maxKey] += lumFactor * _replacementAmount * R[maxKey] * ((double)core - currMatte*(double)core);
 		}
 		
 		// MATTE POSTPROCESS
@@ -529,7 +525,7 @@ private:
 		if (_whitePoint <=0.) {
 		  combMatte = 0.;
 		} else if (_whitePoint <1.) {
-		  combMatte /= _whitePoint; // TODO maybe comp different
+		  combMatte /= _whitePoint; // TODO maybe comp different. why not max?
 		  combMatte = max(0.,min(combMatte,1.));
 		}
 
@@ -604,7 +600,6 @@ public:
     , _despillBalance(0)
     , _replacementAmount(0)
        , _matchLuminance(0)
-         , _hueRange(0)
       , _despillCore(0)
     , _blackPoint(0)
     , _invert(0)
@@ -640,7 +635,6 @@ public:
 	_despillBalance = fetchRGBParam(kParamDespillBalance);
 	_replacementAmount = fetchDoubleParam(kParamReplacementAmount);
 		_matchLuminance = fetchDoubleParam(kParamMatchLuminance);
-	_hueRange = fetchDoubleParam(kParamHueRange);
 	_despillCore = fetchBooleanParam(kParamDespillCore);
         _blackPoint = fetchDoubleParam(kParamBlackPoint);
         _invert = fetchBooleanParam(kParamInvert);
@@ -648,7 +642,7 @@ public:
 	_erode = fetchDoubleParam(kParamErode);
         _outputMode = fetchChoiceParam(kParamOutputMode);
         _sourceAlpha = fetchChoiceParam(kParamSourceAlpha);
-        assert(_keyColour && _acceptanceAngle && _suppressionAngle && _keyBalance && _keyAmount && _midpoint && _shadows && _midtones && _highlights && _replacementColour && _matteBalance && _despillBalance && _replacementAmount && _matchLuminance && _hueRange && _despillCore && _blackPoint && _invert && _whitePoint && _outputMode && _sourceAlpha);
+        assert(_keyColour && _acceptanceAngle && _suppressionAngle && _keyBalance && _keyAmount && _midpoint && _shadows && _midtones && _highlights && _replacementColour && _matteBalance && _despillBalance && _replacementAmount && _matchLuminance && _despillCore && _blackPoint && _invert && _whitePoint && _outputMode && _sourceAlpha);
     }
  
 private:
@@ -683,7 +677,6 @@ private:
   OFX::RGBParam*  _despillBalance;
     OFX::DoubleParam*  _replacementAmount;
       OFX::DoubleParam*  _matchLuminance;
-  OFX::DoubleParam*  _hueRange;
     OFX::BooleanParam* _despillCore;
     OFX::DoubleParam* _blackPoint;
     OFX::BooleanParam* _invert;
@@ -789,7 +782,6 @@ INKPlugin::setupAndProcess(INKProcessorBase &processor, const OFX::RenderArgumen
     OfxRGBColourD despillBalance;
     double replacementAmount;
         double matchLuminance;
-    double hueRange;
     bool despillCore;
     double blackPoint;
     bool invert;
@@ -811,7 +803,6 @@ INKPlugin::setupAndProcess(INKProcessorBase &processor, const OFX::RenderArgumen
     _despillBalance->getValueAtTime(args.time, despillBalance.r, despillBalance.g, despillBalance.b);
     _replacementAmount->getValueAtTime(args.time, replacementAmount);
        _matchLuminance->getValueAtTime(args.time, matchLuminance);
-    _hueRange->getValueAtTime(args.time, hueRange);
     _despillCore->getValueAtTime(args.time, despillCore);
     _blackPoint->getValueAtTime(args.time, blackPoint);
     _invert->getValueAtTime(args.time, invert);
@@ -821,7 +812,7 @@ INKPlugin::setupAndProcess(INKProcessorBase &processor, const OFX::RenderArgumen
     OutputModeEnum outputMode = (OutputModeEnum)outputModeI;
     _sourceAlpha->getValueAtTime(args.time, sourceAlphaI);
     SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)sourceAlphaI;
-    processor.setValues(keyColour, acceptanceAngle, suppressionAngle, keyBalance, keyAmount, midpoint, shadows, midtones, highlights, replacementColour, matteBalance, despillBalance, replacementAmount, matchLuminance, hueRange, despillCore, blackPoint, invert, whitePoint, erode, outputMode, sourceAlpha);
+    processor.setValues(keyColour, acceptanceAngle, suppressionAngle, keyBalance, keyAmount, midpoint, shadows, midtones, highlights, replacementColour, matteBalance, despillBalance, replacementAmount, matchLuminance, despillCore, blackPoint, invert, whitePoint, erode, outputMode, sourceAlpha);
     processor.setDstImg(dst.get());
     processor.setSrcImgs(src.get(),/*//bg bg.get(),*/ core.get(), garbage.get());
     processor.setRenderWindow(args.renderWindow);
@@ -1119,7 +1110,14 @@ void INKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
         }
     }
 
-     // replacement colour
+      GroupParamDescriptor* spillReplace = desc.defineGroupParam("Spill Replacement");
+      spillReplace->setOpen(false);
+      spillReplace->setHint("Control Spill Replacement. Default is none.");
+      if (page) {
+            page->addChild(*spillReplace);
+        }
+
+      // replacement colour
     {
         RGBParamDescriptor* param = desc.defineRGBParam(kParamReplacementColour);
         param->setLabel(kParamReplacementColourLabel);
@@ -1131,21 +1129,10 @@ void INKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
         param->setRange(kmin, kmin, kmin, kmax, kmax, kmax);
         param->setDisplayRange(0., 0., 0., 1., 1., 1.);
         param->setAnimates(true);
-        if (page) {
-            page->addChild(*param);
-        }
+	param->setParent(*spillReplace);
     }
 
-      GroupParamDescriptor* tuneDespill = desc.defineGroupParam("Tune Spill Replace");
-      tuneDespill->setOpen(false);
-      tuneDespill->setHint("Control Spill Replacement parameters");
-      if (page) {
-            page->addChild(*tuneDespill);
-        }
-
     // replace amount
-      // TODO make this proportionate to the density of the core matte
-      // or ratio of core matte to generated matte
     {
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamReplacementAmount);
         param->setLabel(kParamReplacementAmountLabel);
@@ -1154,7 +1141,7 @@ void INKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
         param->setDisplayRange(0., 1.);  
         param->setDefault(1.);    
         param->setAnimates(true);
-	param->setParent(*tuneDespill);
+	param->setParent(*spillReplace);
     }
 
     // luminance
@@ -1166,19 +1153,7 @@ void INKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
         param->setDisplayRange(0., 1.);  
         param->setDefault(1.);    
         param->setAnimates(true);
-	param->setParent(*tuneDespill);
-    }
-    // hue difference
-    {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamHueRange);
-        param->setLabel(kParamHueRangeLabel);
-        param->setHint(kParamHueRangeHint);
-	param->setDoubleType(eDoubleTypeAngle);;
-        param->setRange(0., 180.);
-        param->setDisplayRange(0., 180.);  
-        param->setDefault(180.);    
-        param->setAnimates(true);
-	param->setParent(*tuneDespill);
+	param->setParent(*spillReplace);
     }
 
    
