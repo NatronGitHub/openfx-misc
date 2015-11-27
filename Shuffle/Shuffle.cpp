@@ -1805,7 +1805,8 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
 void
 ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-    PixelComponentEnum originalDstPixelComps,dstPixelComps;
+    PixelComponentEnum originalDstPixelComps = OFX::ePixelComponentNone;
+    PixelComponentEnum dstPixelComps = OFX::ePixelComponentNone;
     if (gIsMultiPlanar && gSupportsDynamicChoices) {
         std::list<std::string> outputComponents = _dstClip->getComponentsPresent();
         buildChannelMenus(outputComponents);
@@ -2611,7 +2612,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
                 param->setEvaluateOnChange(false);
                 param->setIsPersistant(false);
             }
-            desc.addClipPreferencesSlaveParam(*param);
+            desc.addClipPreferencesSlaveParam(*param); // is used as _outputComponents if multiplane
             if (page) {
                 page->addChild(*param);
             }

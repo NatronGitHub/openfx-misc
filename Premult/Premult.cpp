@@ -539,25 +539,9 @@ template<bool isPremult>
 void
 PremultPlugin<isPremult>::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-#if 0
-    // set the premultiplication of _dstClip
-    bool processR, processG, processB, processA;
-    _processR->getValueAtTime(time, processR);
-    _processG->getValueAtTime(time, processG);
-    _processB->getValueAtTime(time, processB);
-    _processA->getValueAtTime(time, processA);
-    int premult_i;
-    _premult->getValueAtTime(time, premult_i);
-    InputChannelEnum premult = InputChannelEnum(premult_i);
-    
-    if (premult == eInputChannelA && processR && processG && processB && !processA) {
-        clipPreferences.setOutputPremultiplication(isPremult ? eImagePreMultiplied : eImageUnPreMultiplied);
-    }
-#else
     // Whatever the input is or the processed channels are, set the output premiltiplication.
     // This allows setting the output premult without changing the image data.
     clipPreferences.setOutputPremultiplication(isPremult ? eImagePreMultiplied : eImageUnPreMultiplied);
-#endif
 }
 
 static std::string premultString(PreMultiplicationEnum e)
@@ -716,7 +700,6 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         param->setHint(premultString+kParamProcessRHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
@@ -727,7 +710,6 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         param->setHint(premultString+kParamProcessGHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
@@ -738,7 +720,6 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         param->setHint(premultString+kParamProcessBHint);
         param->setDefault(true);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
@@ -749,7 +730,6 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         param->setHint(premultString+kParamProcessAHint);
         param->setDefault(false);
         param->setLayoutHint(eLayoutHintNoNewLine);
-        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
@@ -770,7 +750,6 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         assert(param->getNOptions() == eInputChannelA);
         param->appendOption(kParamPremultOptionA, kParamPremultOptionAHint);
         param->setDefault((int)eInputChannelA);
-        desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
         }
