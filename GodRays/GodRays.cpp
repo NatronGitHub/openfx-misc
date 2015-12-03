@@ -513,7 +513,7 @@ public:
 private:
     virtual bool isIdentity(double time) OVERRIDE FINAL;
 
-    virtual bool getInverseTransformCanonical(double time, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
+    virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
 
     void resetCenter(double time);
 
@@ -586,7 +586,7 @@ GodRaysPlugin::isIdentity(double time)
 }
 
 bool
-GodRaysPlugin::getInverseTransformCanonical(double time, double amount, bool invert, OFX::Matrix3x3* invtransform) const
+GodRaysPlugin::getInverseTransformCanonical(double time, int /*view*/, double amount, bool invert, OFX::Matrix3x3* invtransform) const
 {
     // NON-GENERIC
     OfxPointD center;
@@ -817,7 +817,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         invtransformsizealloc = kTransform3x3MotionBlurCount;
 #endif
         invtransform.resize(invtransformsizealloc);
-        invtransformsize = getInverseTransformsBlur(time, args.renderScale, fielded, pixelAspectRatio, invert, 0., 1., &invtransform.front(), 0, invtransformsizealloc);
+        invtransformsize = getInverseTransformsBlur(time, args.renderView, args.renderScale, fielded, pixelAspectRatio, invert, 0., 1., &invtransform.front(), 0, invtransformsizealloc);
         if (invtransformsize == 1) {
             motionblur  = 0.;
         }

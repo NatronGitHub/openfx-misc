@@ -339,7 +339,7 @@ private:
 
     virtual bool isIdentity(double time) OVERRIDE FINAL;
 
-    virtual bool getInverseTransformCanonical(double time, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
+    virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
     
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
@@ -361,7 +361,7 @@ private:
 };
 
 
-bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, double amount, bool invert, OFX::Matrix3x3* invtransform) const
+bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, int /*view*/, double amount, bool invert, OFX::Matrix3x3* invtransform) const
 {
     // in this new version, both from and to are enableds/disabled at the same time
     bool enable[4];

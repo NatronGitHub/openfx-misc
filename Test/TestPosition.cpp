@@ -63,7 +63,7 @@ public:
 private:
     virtual bool isIdentity(double time) OVERRIDE FINAL;
 
-    virtual bool getInverseTransformCanonical(double time, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
+    virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
@@ -87,7 +87,7 @@ TestPositionPlugin::isIdentity(double time)
 }
 
 bool
-TestPositionPlugin::getInverseTransformCanonical(double time, double /*amount*/, bool invert, OFX::Matrix3x3* invtransform) const
+TestPositionPlugin::getInverseTransformCanonical(double time, int view, double /*amount*/, bool invert, OFX::Matrix3x3* invtransform) const
 {
     double x, y;
     _translate->getValueAtTime(time, x, y);

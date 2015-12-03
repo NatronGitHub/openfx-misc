@@ -86,7 +86,7 @@ public:
 private:
     virtual bool isIdentity(double time) OVERRIDE FINAL;
 
-    virtual bool getInverseTransformCanonical(double time, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
+    virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
 
     void resetCenter(double time);
 
@@ -135,7 +135,7 @@ TransformPlugin::isIdentity(double time)
 }
 
 bool
-TransformPlugin::getInverseTransformCanonical(double time, double amount, bool invert, OFX::Matrix3x3* invtransform) const
+TransformPlugin::getInverseTransformCanonical(double time, int /*view*/, double amount, bool invert, OFX::Matrix3x3* invtransform) const
 {
     // NON-GENERIC
     OfxPointD center;
