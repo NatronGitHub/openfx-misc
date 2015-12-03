@@ -239,9 +239,9 @@ SideBySidePlugin::setupAndProcess(SideBySideBase &processor, const OFX::RenderAr
         return;
     }
     std::auto_ptr<const OFX::Image> src1((_srcClip && _srcClip->isConnected()) ?
-                                         _srcClip->fetchStereoscopicImage(args.time, view1) : 0);
+                                         _srcClip->fetchImagePlane(args.time, view1, kFnOfxImagePlaneColour) : 0);
     std::auto_ptr<const OFX::Image> src2((_srcClip && _srcClip->isConnected()) ?
-                                         _srcClip->fetchStereoscopicImage(args.time, view2) : 0);
+                                         _srcClip->fetchImagePlane(args.time, view2, kFnOfxImagePlaneColour) : 0);
 
     // make sure bit depths are sane
     if (src1.get()) {
@@ -354,6 +354,7 @@ SideBySidePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &ar
     //if (getContext() != OFX::eContextFilter)
     //  rois.setRegionOfInterest(*_maskClip, roi);
 }
+
 
 void
 SideBySidePlugin::getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews)
@@ -479,8 +480,8 @@ void SideBySidePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void SideBySidePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
-    if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
-        throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+    if (!OFX::fetchSuite(kFnOfxImageEffectPlaneSuite, 1, true)) {
+        throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
     }
 
     // Source clip only in the filter context

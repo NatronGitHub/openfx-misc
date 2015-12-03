@@ -187,7 +187,7 @@ OneViewPlugin::setupAndProcess(PixelProcessorFilterBase &processor, const OFX::R
     _view->getValueAtTime(args.time, view);
     // fetch main input image
     std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchStereoscopicImage(args.time, view) : 0);
+                                        _srcClip->fetchImagePlane(args.time, view, kFnOfxImagePlaneColour) : 0);
 
     // make sure bit depths are sane
     if (src.get()) {

@@ -203,6 +203,8 @@ private:
     /* set up and run a processor */
     void setupAndProcess(AnaglyphBase &, const OFX::RenderArguments &args);
 
+    virtual void getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews) OVERRIDE FINAL;
+    
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -247,7 +249,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor, const OFX::RenderArgume
 
     // fetch main input image
     std::auto_ptr<const OFX::Image> srcLeft((_srcClip && _srcClip->isConnected()) ?
-                                            _srcClip->fetchStereoscopicImage(args.time, 0) : 0);
+                                            _srcClip->fetchImagePlane(args.time, 0, kFnOfxImagePlaneColour) : 0);
     if (srcLeft.get()) {
         if (srcLeft->getRenderScale().x != args.renderScale.x ||
             srcLeft->getRenderScale().y != args.renderScale.y ||
@@ -257,7 +259,7 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor, const OFX::RenderArgume
         }
     }
     std::auto_ptr<const OFX::Image> srcRight((_srcClip && _srcClip->isConnected()) ?
-                                             _srcClip->fetchStereoscopicImage(args.time, 1) : 0);
+                                             _srcClip->fetchImagePlane(args.time, 1, kFnOfxImagePlaneColour) : 0);
     if (srcRight.get()) {
         if (srcRight->getRenderScale().x != args.renderScale.x ||
             srcRight->getRenderScale().y != args.renderScale.y ||
@@ -306,13 +308,20 @@ AnaglyphPlugin::setupAndProcess(AnaglyphBase &processor, const OFX::RenderArgume
     processor.process();
 }
 
+void
+AnaglyphPlugin::getFrameViewsNeeded(const FrameViewsNeededArguments& args, FrameViewsNeededSetter& frameViews)
+{
+    OfxRangeD range;
+    range.min = range.max = args.time;
+    
+    frameViews.addFrameViewsNeeded(*_srcClip,range , 0);
+    frameViews.addFrameViewsNeeded(*_srcClip,range , 1);
+}
+
 // the overridden render function
 void
 AnaglyphPlugin::render(const OFX::RenderArguments &args)
 {
-    if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
-        OFX::throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
-    }
 
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
@@ -389,6 +398,13 @@ void AnaglyphPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     //if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
     //  throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
     //}
+    
+    //We're using the view calls (i.e: getFrameViewsNeeded)
+    desc.setIsViewAware(true);
+    
+    //We render the same thing on all views
+    desc.setIsViewInvariant(OFX::eViewInvarianceAllViewsInvariant);
+    
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
 #endif
@@ -396,8 +412,8 @@ void AnaglyphPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void AnaglyphPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
-    if (!OFX::fetchSuite(kOfxVegasStereoscopicImageEffectSuite, 1, true)) {
-        throwHostMissingSuiteException(kOfxVegasStereoscopicImageEffectSuite);
+    if (!OFX::fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true)) {
+        throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
     }
 
     // Source clip only in the filter context
