@@ -4,6 +4,7 @@
 # Additions (see corresponding sections below):
 # - Verify Coverity Scan run condition
 # - Verify Coverity Scan script test mode
+# - set TOOL_BASE to a writable directory with more than 1Gb free space
 
 set -e
 
@@ -18,7 +19,8 @@ echo -e "\033[33;1mNote: COVERITY_SCAN_PROJECT_NAME and COVERITY_SCAN_TOKEN are 
 PLATFORM=`uname`
 TOOL_ARCHIVE=/tmp/cov-analysis-${PLATFORM}.tgz
 TOOL_URL=https://scan.coverity.com/download/${PLATFORM}
-TOOL_BASE=/tmp/coverity-scan-analysis
+#TOOL_BASE=/tmp/coverity-scan-analysis
+TOOL_BASE=/home/travis/coverity-scan-analysis
 UPLOAD_URL="https://scan.coverity.com/builds"
 SCAN_URL="https://scan.coverity.com"
 

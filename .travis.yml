@@ -29,9 +29,8 @@ matrix:
   fast_finish: true
 
 before_install:
-  - echo "TRAVIS_REPO_SLUG=$TRAVIS_REPO_SLUG"
-  - echo "TRAVIS_BRANCH=$TRAVIS_BRANCH"
   - env
+  - df
   - date -u
   - uname -a
   - export J='-j3'
@@ -45,7 +44,7 @@ install:
 script:
   - if [[ ${COVERITY_SCAN_BRANCH} == 1 ]];
     then
-      echo "Don't build on coverty_scan branch.";
+      echo "Don't build on coverity_scan branch.";
       exit 0;
     fi
   - make $J CONFIG=debug
