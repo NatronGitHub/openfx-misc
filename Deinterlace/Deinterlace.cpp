@@ -464,9 +464,13 @@ void DeinterlacePlugin::render(const OFX::RenderArguments &args)
 
     if (width < 3 || height < 3) {
         // Video of less than 3 columns or lines is not supported
-        // just copy sc to dst
+        // just copy src to dst
         for (int y=0; y<height; y++) {
-            std::memcpy(dst->getPixelAddress(0,y),src->getPixelAddress(0,y),abs(src->getRowBytes()));
+            if (src.get()) {
+                std::memcpy(dst->getPixelAddress(0,y), src->getPixelAddress(0,y), abs(src->getRowBytes()));
+            } else {
+                std::memcpy(dst->getPixelAddress(0,y), 0, abs(dst->getRowBytes()));
+            }
         }
     } else {
         if (dstComponents == OFX::ePixelComponentRGBA) {
