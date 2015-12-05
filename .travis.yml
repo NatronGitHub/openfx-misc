@@ -9,6 +9,8 @@ env:
    # Coverity script test mode (if true no uploading, avoid reaching the quota)
    # usual processing: false.
    - coverity_scan_script_test_mode=false
+   # Travis CI has 1.5 cores per VM, take advantage of it
+   - MAKEFLAGS="-j 2"
 
 os:
   - linux
@@ -25,10 +27,6 @@ matrix:
     - os: osx
       compiler: gcc
   fast_finish: true
-
-# Travis CI has 1.5 cores per VM, take advantage of it
-env:
-  - MAKEFLAGS="-j 2"
 
 before_install:
   - echo "TRAVIS_REPO_SLUG=$TRAVIS_REPO_SLUG"
