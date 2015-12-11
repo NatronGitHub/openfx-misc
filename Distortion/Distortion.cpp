@@ -197,6 +197,12 @@ enum WrapEnum {
  
  From RV4 <http://www.tweaksoftware.com/static/documentation/rv/rv-4.0.17/html/rv_reference.html#RVLensWarp>
  “brown”, “opencv”, “pfbarrel”, “adobe”, “3de4_anamorphic_degree_6”
+ 
+ Panorama Tools/PtGUI/Hugin/Card3D:
+ http://wiki.panotools.org/Lens_correction_model
+ http://www.ptgui.com/ptguihelp/main_lens.htm
+ http://www.nukepedia.com/written-tutorials/the-lens-distortion-model-in-the-card-node-explained/
+ https://web.archive.org/web/20010409044720/http://www.fh-furtwangen.de/~dersch/barrel/barrel.html
  */
 
 enum DistortionModelEnum {
