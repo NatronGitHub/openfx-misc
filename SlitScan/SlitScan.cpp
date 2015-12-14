@@ -88,8 +88,8 @@
 "- offset for the retime function (default = 0)\n" \
 "- gain for the retime function (default = -10)\n" \
 "- absolute, a boolean indicating that the time map gives absolute frames rather than relative frames\n" \
-"- frame range, only if RetimeMap is connected, because the frame range depends on the images (default = -10..0). If \"absolute\" is checked, this frame range is absolute, else it is relative to the current frame\n" \
-"- filter to handle time offsets that \"fall between\" frames. They can be mapped to the nearest frame, or interpolated between the nearest frames.\n" \
+"- frame range, only if RetimeMap is connected, because the frame range depends on the retime map content (default = -10..0). If \"absolute\" is checked, this frame range is absolute, else it is relative to the current frame\n" \
+"- filter to handle time offsets that \"fall between\" frames. They can be mapped to the nearest frame, or interpolated between the nearest frames (corresponding to a shutter of 1 frame).\n" \
 
 
 #define kPluginIdentifier "net.sf.openfx.SlitScan"
@@ -483,7 +483,7 @@ SlitScanPlugin::render(const OFX::RenderArguments &args)
 
     int retimeFunction_i;
     _retimeFunction->getValueAtTime(time, retimeFunction_i);
-    
+    RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)retimeFunction_i;
 #if 0
 
     if (_retimeMapClip && _retimeMapClip->isConnected()) {
