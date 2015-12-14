@@ -545,6 +545,10 @@ public:
             _channelParamStrings[1] = fetchStringParam(kParamOutputGChoice);
             _channelParamStrings[2] = fetchStringParam(kParamOutputBChoice);
             _channelParamStrings[3] = fetchStringParam(kParamOutputAChoice);
+            
+            //We need to restore the choice params because the host may not call getClipPreference if all clips are disconnected
+            //e.g: this can be from a copy/paste issued from the user
+            setChannelsFromStringParams();
         } else {
             _channelParamStrings[0] = _channelParamStrings[1] = _channelParamStrings[2] = _channelParamStrings[3] = 0;
         }
@@ -2162,7 +2166,7 @@ ShufflePlugin::setChannelsFromStringParamsInternal(const std::vector<std::string
 void
 ShufflePlugin::setChannelsFromStringParams()
 {
-    if (gSupportsDynamicChoices) {
+    if (!gSupportsDynamicChoices) {
         return;
     }
     int nOpt = _outputComponents->getNOptions();
