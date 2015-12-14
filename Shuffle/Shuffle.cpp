@@ -548,7 +548,7 @@ public:
             
             //We need to restore the choice params because the host may not call getClipPreference if all clips are disconnected
             //e.g: this can be from a copy/paste issued from the user
-            setChannelsFromStringParams();
+            setChannelsFromStringParams(false);
         } else {
             _channelParamStrings[0] = _channelParamStrings[1] = _channelParamStrings[2] = _channelParamStrings[3] = 0;
         }
@@ -613,12 +613,13 @@ private:
     void setupAndProcessMultiPlane(MultiPlaneShufflerBase &, const OFX::RenderArguments &args);
     
     ///To be called once the components are known via getClipPreferences
-    void setChannelsFromStringParams();
+    void setChannelsFromStringParams(bool allowReset);
     void setChannelsFromStringParamsInternal(const std::vector<std::string>& outputChoices,
                                              const std::vector<std::string>& rChoices,
                                              const std::vector<std::string>& gChoices,
                                              const std::vector<std::string>& bChoices,
-                                             const std::vector<std::string>& aChoices);
+                                             const std::vector<std::string>& aChoices,
+                                             bool allowReset);
 
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -906,7 +907,7 @@ ShufflePlugin::buildChannelMenus(const std::list<std::string> &outputComponents)
                 _outputComponents->appendOption(*it);
             }
             
-            setChannelsFromStringParamsInternal(outputChoices, channelChoices, channelChoices, channelChoices, channelChoices);
+            setChannelsFromStringParamsInternal(outputChoices, channelChoices, channelChoices, channelChoices, channelChoices,true);
         }
     }
 }
@@ -2099,7 +2100,8 @@ ShufflePlugin::setChannelsFromStringParamsInternal(const std::vector<std::string
                                                    const std::vector<std::string>& rChoices,
                                                    const std::vector<std::string>& gChoices,
                                                    const std::vector<std::string>& bChoices,
-                                                   const std::vector<std::string>& aChoices)
+                                                   const std::vector<std::string>& aChoices,
+                                                   bool allowReset)
 {
     if (!gSupportsDynamicChoices) {
         return;
@@ -2125,8 +2127,10 @@ ShufflePlugin::setChannelsFromStringParamsInternal(const std::vector<std::string
         if (foundOption != -1) {
             _outputComponents->setValue(foundOption);
         } else {
-            _outputComponents->setValue(0);
-            _outputComponentsString->setValue(outputChoices[0]);
+            if (allowReset) {
+                _outputComponents->setValue(0);
+                _outputComponentsString->setValue(outputChoices[0]);
+            }
         }
     }
     
@@ -2155,8 +2159,10 @@ ShufflePlugin::setChannelsFromStringParamsInternal(const std::vector<std::string
             if (foundOption != -1) {
                 choiceParams[c]->setValue(foundOption);
             } else {
-                choiceParams[c]->setValue(c);
-                _channelParamStrings[c]->setValue(channelOptions[c]->at(c));
+                if (allowReset) {
+                    choiceParams[c]->setValue(c);
+                    _channelParamStrings[c]->setValue(channelOptions[c]->at(c));
+                }
             }
         }
     }
@@ -2164,7 +2170,7 @@ ShufflePlugin::setChannelsFromStringParamsInternal(const std::vector<std::string
 }
 
 void
-ShufflePlugin::setChannelsFromStringParams()
+ShufflePlugin::setChannelsFromStringParams(bool allowReset)
 {
     if (!gSupportsDynamicChoices) {
         return;
@@ -2198,7 +2204,7 @@ ShufflePlugin::setChannelsFromStringParams()
     for (int i = 0; i < nOpt; ++i) {
         _a->getOption(i, aComps[i]);
     }
-    setChannelsFromStringParamsInternal(outputComponentsVec, rComps, gComps, bComps, aComps);
+    setChannelsFromStringParamsInternal(outputComponentsVec, rComps, gComps, bComps, aComps,allowReset);
 }
 
 void
