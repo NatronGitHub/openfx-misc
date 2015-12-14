@@ -487,7 +487,10 @@ public:
     , _max(0)
     {
         // NON-GENERIC
-        _translate = fetchDouble2DParam(kParamTransformTranslateOld);
+        if (paramExists(kParamTransformTranslateOld)) {
+            _translate = fetchDouble2DParam(kParamTransformTranslateOld);
+            assert(_translate);
+        }
         _rotate = fetchDoubleParam(kParamTransformRotateOld);
         _scale = fetchDouble2DParam(kParamTransformScaleOld);
         _scaleUniform = fetchBooleanParam(kParamTransformScaleUniformOld);
@@ -496,7 +499,7 @@ public:
         _skewOrder = fetchChoiceParam(kParamTransformSkewOrderOld);
         _center = fetchDouble2DParam(kParamTransformCenterOld);
         _interactive = fetchBooleanParam(kParamTransformInteractiveOld);
-        assert(_translate && _rotate && _scale && _scaleUniform && _skewX && _skewY && _skewOrder && _center && _interactive);
+        assert(_rotate && _scale && _scaleUniform && _skewX && _skewY && _skewOrder && _center && _interactive);
 
         _fromColor = fetchRGBAParam(kParamFromColor);
         _toColor = fetchRGBAParam(kParamToColor);
@@ -557,20 +560,32 @@ bool
 GodRaysPlugin::isIdentity(double time)
 {
     // NON-GENERIC
-    OfxPointD scale;
-    OfxPointD translate;
-    double rotate;
-    double skewX, skewY;
-    _scale->getValueAtTime(time, scale.x, scale.y);
-    bool scaleUniform;
-    _scaleUniform->getValueAtTime(time, scaleUniform);
+    OfxPointD scale = { 1., 1. };
+    OfxPointD translate = { 0., 0. };
+    double rotate = 0.;
+    double skewX = 0., skewY = 0.;
+    if (_scale) {
+        _scale->getValueAtTime(time, scale.x, scale.y);
+    }
+    bool scaleUniform = false;
+    if (_scaleUniform) {
+        _scaleUniform->getValueAtTime(time, scaleUniform);
+    }
     if (scaleUniform) {
         scale.y = scale.x;
     }
-    _translate->getValueAtTime(time, translate.x, translate.y);
-    _rotate->getValueAtTime(time, rotate);
-    _skewX->getValueAtTime(time, skewX);
-    _skewY->getValueAtTime(time, skewY);
+    if (_translate) {
+        _translate->getValueAtTime(time, translate.x, translate.y);
+    }
+    if (_rotate) {
+        _rotate->getValueAtTime(time, rotate);
+    }
+    if (_skewX) {
+        _skewX->getValueAtTime(time, skewX);
+    }
+    if (_skewY) {
+        _skewY->getValueAtTime(time, skewY);
+    }
 
     if (scale.x == 1. && scale.y == 1. && translate.x == 0. && translate.y == 0. && rotate == 0. && skewX == 0. && skewY == 0.) {
         return true;
@@ -589,24 +604,40 @@ bool
 GodRaysPlugin::getInverseTransformCanonical(double time, int /*view*/, double amount, bool invert, OFX::Matrix3x3* invtransform) const
 {
     // NON-GENERIC
-    OfxPointD center;
-    _center->getValueAtTime(time, center.x, center.y);
-    OfxPointD translate;
-    _translate->getValueAtTime(time, translate.x, translate.y);
-    OfxPointD scaleParam;
-    _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
-    bool scaleUniform;
-    _scaleUniform->getValueAtTime(time, scaleUniform);
-    double rotate;
-    _rotate->getValueAtTime(time, rotate);
-    double skewX, skewY;
-    int skewOrder;
-    _skewX->getValueAtTime(time, skewX);
-    _skewY->getValueAtTime(time, skewY);
-    _skewOrder->getValueAtTime(time, skewOrder);
-
-    OfxPointD scale;
+    OfxPointD center = { 0., 0. };
+    if (_center) {
+        _center->getValueAtTime(time, center.x, center.y);
+    }
+    OfxPointD translate = { 0., 0. };
+    if (_translate) {
+        _translate->getValueAtTime(time, translate.x, translate.y);
+    }
+    OfxPointD scaleParam = { 1., 1. };
+    if (_scale) {
+        _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
+    }
+    bool scaleUniform = false;
+    if (_scaleUniform) {
+        _scaleUniform->getValueAtTime(time, scaleUniform);
+    }
+    OfxPointD scale = { 1., 1. };
     ofxsTransformGetScale(scaleParam, scaleUniform, &scale);
+    double rotate = 0.;
+    if (_rotate) {
+        _rotate->getValueAtTime(time, rotate);
+    }
+    double skewX = 0.;
+    if (_skewX) {
+        _skewX->getValueAtTime(time, skewX);
+    }
+    double skewY = 0.;
+    if (_skewY) {
+        _skewY->getValueAtTime(time, skewY);
+    }
+    int skewOrder = 0;
+    if (_skewOrder) {
+        _skewOrder->getValueAtTime(time, skewOrder);
+    }
 
     if (amount != 1.) {
         translate.x *= amount;
@@ -660,28 +691,44 @@ GodRaysPlugin::resetCenter(double time)
         rod.y1 = offset.y;
         rod.y2 = offset.y + size.y;
     }
-    double currentRotation;
-    _rotate->getValueAtTime(time, currentRotation);
+    double currentRotation = 0.;
+    if (_rotate) {
+        _rotate->getValueAtTime(time, currentRotation);
+    }
     double rot = OFX::ofxsToRadians(currentRotation);
 
-    double skewX, skewY;
-    int skewOrder;
-    _skewX->getValueAtTime(time, skewX);
-    _skewY->getValueAtTime(time, skewY);
-    _skewOrder->getValueAtTime(time, skewOrder);
+    double skewX = 0.;
+    if (_skewX) {
+        _skewX->getValueAtTime(time, skewX);
+    }
+    double skewY = 0.;
+    if (_skewY) {
+        _skewY->getValueAtTime(time, skewY);
+    }
+    int skewOrder = 0;
+    if (_skewOrder) {
+        _skewOrder->getValueAtTime(time, skewOrder);
+    }
 
-    OfxPointD scaleParam;
-    _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
-    bool scaleUniform;
-    _scaleUniform->getValueAtTime(time, scaleUniform);
-
-    OfxPointD scale;
+    OfxPointD scaleParam = { 1., 1. };
+    if (_scale) {
+        _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
+    }
+    bool scaleUniform = false;
+    if (_scaleUniform) {
+        _scaleUniform->getValueAtTime(time, scaleUniform);
+    }
+    OfxPointD scale = { 1., 1. };
     ofxsTransformGetScale(scaleParam, scaleUniform, &scale);
 
-    OfxPointD translate;
-    _translate->getValueAtTime(time, translate.x, translate.y);
-    OfxPointD center;
-    _center->getValueAtTime(time, center.x, center.y);
+    OfxPointD translate = { 0., 0. };
+    if (_translate) {
+        _translate->getValueAtTime(time, translate.x, translate.y);
+    }
+    OfxPointD center = { 0., 0. };
+    if (_center) {
+        _center->getValueAtTime(time, center.x, center.y);
+    }
 
     OFX::Matrix3x3 Rinv = (ofxsMatRotation(-rot) *
                            ofxsMatSkewXY(skewX, skewY, skewOrder) *
@@ -689,26 +736,29 @@ GodRaysPlugin::resetCenter(double time)
     OfxPointD newCenter;
     newCenter.x = (rod.x1+rod.x2)/2;
     newCenter.y = (rod.y1+rod.y2)/2;
-    double dxrot = newCenter.x - center.x;
-    double dyrot = newCenter.y - center.y;
-    OFX::Point3D dRot;
-    dRot.x = dxrot;
-    dRot.y = dyrot;
-    dRot.z = 1;
-    dRot = Rinv * dRot;
-    if (dRot.z != 0) {
-        dRot.x /= dRot.z;
-        dRot.y /= dRot.z;
-    }
-    double dx = dRot.x;
-    double dy = dRot.y;
-    OfxPointD newTranslate;
-    newTranslate.x = translate.x + dx - dxrot;
-    newTranslate.y = translate.y + dy - dyrot;
-
     beginEditBlock("resetCenter");
-    _center->setValue(newCenter.x, newCenter.y);
-    _translate->setValue(newTranslate.x,newTranslate.y);
+    if (_center) {
+        _center->setValue(newCenter.x, newCenter.y);
+    }
+    if (_translate) {
+        double dxrot = newCenter.x - center.x;
+        double dyrot = newCenter.y - center.y;
+        OFX::Point3D dRot;
+        dRot.x = dxrot;
+        dRot.y = dyrot;
+        dRot.z = 1;
+        dRot = Rinv * dRot;
+        if (dRot.z != 0) {
+            dRot.x /= dRot.z;
+            dRot.y /= dRot.z;
+        }
+        double dx = dRot.x;
+        double dy = dRot.y;
+        OfxPointD newTranslate;
+        newTranslate.x = translate.x + dx - dxrot;
+        newTranslate.y = translate.y + dy - dyrot;
+        _translate->setValue(newTranslate.x,newTranslate.y);
+    }
     endEditBlock();
 }
 
@@ -799,19 +849,28 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
 
-        bool invert;
-        _invert->getValueAtTime(time, invert);
-
-        _blackOutside->getValueAtTime(time, blackOutside);
-        _mix->getValueAtTime(time, mix);
+        bool invert = false;
+        if (_invert) {
+            _invert->getValueAtTime(time, invert);
+        }
+        if (_blackOutside) {
+            _blackOutside->getValueAtTime(time, blackOutside);
+        }
+        if (_mix) {
+            _mix->getValueAtTime(time, mix);
+        }
 #ifndef USE_STEPS
-        _motionblur->getValueAtTime(time, motionblur);
+        if (_motionblur) {
+            _motionblur->getValueAtTime(time, motionblur);
+        }
 #endif
         const bool fielded = args.fieldToRender == OFX::eFieldLower || args.fieldToRender == OFX::eFieldUpper;
         const double pixelAspectRatio = src->getPixelAspectRatio();
 
 #ifdef USE_STEPS
-        _steps->getValueAtTime(time, steps);
+        if (_steps) {
+            _steps->getValueAtTime(time, steps);
+        }
         invtransformsizealloc = 1 << std::max(0,steps);
 #else
         invtransformsizealloc = kTransform3x3MotionBlurCount;
@@ -851,8 +910,10 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
     bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
     std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     if (doMasking) {
-        bool maskInvert;
-        _maskInvert->getValueAtTime(time, maskInvert);
+        bool maskInvert = false;
+        if (_maskInvert) {
+            _maskInvert->getValueAtTime(time, maskInvert);
+        }
 
         // say we are masking
         processor.doMasking(true);
@@ -868,11 +929,19 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
     double fromColor[4] = {1., 1., 1., 1.};
     double toColor[4] = {1., 1., 1., 1.};
     double gamma[4] = {1., 1., 1., 1.};
-    bool max;
-    _fromColor->getValueAtTime(time, fromColor[0], fromColor[1], fromColor[2], fromColor[3]);
-    _toColor->getValueAtTime(time, toColor[0], toColor[1], toColor[2], toColor[3]);
-    _gamma->getValueAtTime(time, gamma[0], gamma[1], gamma[2], gamma[3]);
-    _max->getValueAtTime(time, max);
+    bool max = false;
+    if (_fromColor) {
+        _fromColor->getValueAtTime(time, fromColor[0], fromColor[1], fromColor[2], fromColor[3]);
+    }
+    if (_toColor) {
+        _toColor->getValueAtTime(time, toColor[0], toColor[1], toColor[2], toColor[3]);
+    }
+    if (_gamma) {
+        _gamma->getValueAtTime(time, gamma[0], gamma[1], gamma[2], gamma[3]);
+    }
+    if (_max) {
+        _max->getValueAtTime(time, max);
+    }
 #ifdef USE_STEPS
     if (invtransformsize > 1) {
         // instruct the processor to use all transforms
@@ -909,8 +978,10 @@ GodRaysPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
     if (!args.renderQualityDraft && _filter) {
         _filter->getValueAtTime(time, filter);
     }
-    bool clamp;
-    _clamp->getValueAtTime(time, clamp);
+    bool clamp = false;
+    if (_clamp) {
+        _clamp->getValueAtTime(time, clamp);
+    }
 
     // as you may see below, some filters don't need explicit clamping, since they are
     // "clamped" by construction.
@@ -1046,7 +1117,7 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
 
     // NON-GENERIC PARAMETERS
     //
-    ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/true, /*oldParams=*/true);
+    ofxsTransformDescribeParams(desc, page, NULL, /*isOpen=*/true, /*oldParams=*/true, /*noTranslate=*/true);
 
     // invert
     {
