@@ -112,20 +112,32 @@ bool
 TransformPlugin::isIdentity(double time)
 {
     // NON-GENERIC
-    OfxPointD scale;
-    OfxPointD translate;
-    double rotate;
-    double skewX, skewY;
-    _scale->getValueAtTime(time, scale.x, scale.y);
-    bool scaleUniform;
-    _scaleUniform->getValueAtTime(time, scaleUniform);
-    if (scaleUniform) {
-        scale.y = scale.x;
+    OfxPointD scaleParam = { 1., 1. };
+    if (_scale) {
+        _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
     }
-    _translate->getValueAtTime(time, translate.x, translate.y);
-    _rotate->getValueAtTime(time, rotate);
-    _skewX->getValueAtTime(time, skewX);
-    _skewY->getValueAtTime(time, skewY);
+    bool scaleUniform = false;
+    if (_scaleUniform) {
+        _scaleUniform->getValueAtTime(time, scaleUniform);
+    }
+    OfxPointD scale = { 1., 1. };
+    ofxsTransformGetScale(scaleParam, scaleUniform, &scale);
+    OfxPointD translate = { 0., 0. };
+    if (_translate) {
+        _translate->getValueAtTime(time, translate.x, translate.y);
+    }
+    double rotate = 0.;
+    if (_rotate) {
+        _rotate->getValueAtTime(time, rotate);
+    }
+    double skewX = 0.;
+    if (_skewX) {
+        _skewX->getValueAtTime(time, skewX);
+    }
+    double skewY = 0.;
+    if (_skewY) {
+        _skewY->getValueAtTime(time, skewY);
+    }
     
     if (scale.x == 1. && scale.y == 1. && translate.x == 0. && translate.y == 0. && rotate == 0. && skewX == 0. && skewY == 0.) {
         return true;
@@ -138,23 +150,40 @@ bool
 TransformPlugin::getInverseTransformCanonical(double time, int /*view*/, double amount, bool invert, OFX::Matrix3x3* invtransform) const
 {
     // NON-GENERIC
-    OfxPointD center;
-    _center->getValueAtTime(time, center.x, center.y);
-    OfxPointD translate;
-    _translate->getValueAtTime(time, translate.x, translate.y);
-    OfxPointD scaleParam;
-    _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
-    bool scaleUniform;
-    _scaleUniform->getValueAtTime(time, scaleUniform);
-    double rotate;
-    _rotate->getValueAtTime(time, rotate);
-    double skewX, skewY;
-    int skewOrder;
-    _skewX->getValueAtTime(time, skewX);
-    _skewY->getValueAtTime(time, skewY);
-    _skewOrder->getValueAtTime(time, skewOrder);
+    OfxPointD center = { 0., 0. };
+    if (_center) {
+        _center->getValueAtTime(time, center.x, center.y);
+    }
+    OfxPointD translate = { 0., 0. };
+    if (_translate) {
+        _translate->getValueAtTime(time, translate.x, translate.y);
+    }
+    OfxPointD scaleParam = { 1., 1. };
+    if (_scale) {
+        _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
+    }
+    bool scaleUniform = false;
+    if (_scaleUniform) {
+        _scaleUniform->getValueAtTime(time, scaleUniform);
+    }
+    double rotate = 0.;
+    if (_rotate) {
+        _rotate->getValueAtTime(time, rotate);
+    }
+    double skewX = 0.;
+    if (_skewX) {
+        _skewX->getValueAtTime(time, skewX);
+    }
+    double skewY = 0.;
+    if (_skewY) {
+        _skewY->getValueAtTime(time, skewY);
+    }
+    int skewOrder = 0;
+    if (_skewOrder) {
+        _skewOrder->getValueAtTime(time, skewOrder);
+    }
 
-    OfxPointD scale;
+    OfxPointD scale = { 1., 1. };
     ofxsTransformGetScale(scaleParam, scaleUniform, &scale);
 
     if (amount != 1.) {
@@ -208,28 +237,45 @@ TransformPlugin::resetCenter(double time)
         rod.y1 = offset.y;
         rod.y2 = offset.y + size.y;
     }
-    double currentRotation;
-    _rotate->getValueAtTime(time, currentRotation);
+    double currentRotation = 0.;
+    if (_rotate) {
+        _rotate->getValueAtTime(time, currentRotation);
+    }
     double rot = OFX::ofxsToRadians(currentRotation);
 
-    double skewX, skewY;
-    int skewOrder;
-    _skewX->getValueAtTime(time, skewX);
-    _skewY->getValueAtTime(time, skewY);
-    _skewOrder->getValueAtTime(time, skewOrder);
+    double skewX = 0.;
+    double skewY = 0.;
+    int skewOrder = 0;
+    if (_skewX) {
+        _skewX->getValueAtTime(time, skewX);
+    }
+    if (_skewY) {
+        _skewY->getValueAtTime(time, skewY);
+    }
+    if (_skewOrder) {
+        _skewOrder->getValueAtTime(time, skewOrder);
+    }
 
-    OfxPointD scaleParam;
-    _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
-    bool scaleUniform;
-    _scaleUniform->getValueAtTime(time, scaleUniform);
+    OfxPointD scaleParam = { 1., 1. };
+    if (_scale) {
+        _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
+    }
+    bool scaleUniform = true;
+    if (_scaleUniform) {
+        _scaleUniform->getValueAtTime(time, scaleUniform);
+    }
 
-    OfxPointD scale;
+    OfxPointD scale = { 1., 1. };
     ofxsTransformGetScale(scaleParam, scaleUniform, &scale);
 
-    OfxPointD translate;
-    _translate->getValueAtTime(time, translate.x, translate.y);
-    OfxPointD center;
-    _center->getValueAtTime(time, center.x, center.y);
+    OfxPointD translate = {0., 0. };
+    if (_translate) {
+        _translate->getValueAtTime(time, translate.x, translate.y);
+    }
+    OfxPointD center = {0., 0. };
+    if (_center) {
+        _center->getValueAtTime(time, center.x, center.y);
+    }
 
     OFX::Matrix3x3 Rinv = (ofxsMatRotation(-rot) *
                            ofxsMatSkewXY(skewX, skewY, skewOrder) *
@@ -237,26 +283,29 @@ TransformPlugin::resetCenter(double time)
     OfxPointD newCenter;
     newCenter.x = (rod.x1+rod.x2)/2;
     newCenter.y = (rod.y1+rod.y2)/2;
-    double dxrot = newCenter.x - center.x;
-    double dyrot = newCenter.y - center.y;
-    OFX::Point3D dRot;
-    dRot.x = dxrot;
-    dRot.y = dyrot;
-    dRot.z = 1;
-    dRot = Rinv * dRot;
-    if (dRot.z != 0) {
-        dRot.x /= dRot.z;
-        dRot.y /= dRot.z;
-    }
-    double dx = dRot.x;
-    double dy = dRot.y;
-    OfxPointD newTranslate;
-    newTranslate.x = translate.x + dx - dxrot;
-    newTranslate.y = translate.y + dy - dyrot;
-
     beginEditBlock("resetCenter");
-    _center->setValue(newCenter.x, newCenter.y);
-    _translate->setValue(newTranslate.x,newTranslate.y);
+    if (_center) {
+        _center->setValue(newCenter.x, newCenter.y);
+    }
+    if (_translate) {
+        double dxrot = newCenter.x - center.x;
+        double dyrot = newCenter.y - center.y;
+        OFX::Point3D dRot;
+        dRot.x = dxrot;
+        dRot.y = dyrot;
+        dRot.z = 1;
+        dRot = Rinv * dRot;
+        if (dRot.z != 0) {
+            dRot.x /= dRot.z;
+            dRot.y /= dRot.z;
+        }
+        double dx = dRot.x;
+        double dy = dRot.y;
+        OfxPointD newTranslate;
+        newTranslate.x = translate.x + dx - dxrot;
+        newTranslate.y = translate.y + dy - dyrot;
+        _translate->setValue(newTranslate.x,newTranslate.y);
+    }
     endEditBlock();
 }
 
