@@ -38,6 +38,8 @@
 #include <cmath>
 #include <iostream>
 #include <sstream>
+#include <set>
+#include <map>
 #include <vector>
 #include <algorithm>
 
@@ -118,17 +120,24 @@ enum DistortionPluginEnum {
 #define kParamChannelULabel "U Channel"
 #define kParamChannelUHint "Input channel for U from UV"
 
+#define kParamChannelUChoice kParamChannelU "Choice"
+
 #define kParamChannelV "channelV"
 #define kParamChannelVLabel "V Channel"
 #define kParamChannelVHint "Input channel for V from UV"
 
-#define kParamChannelOptionR "UV.r"
+#define kParamChannelVChoice kParamChannelV "Choice"
+
+
+#define kClipUV "UV"
+
+#define kParamChannelOptionR kClipUV ".r"
 #define kParamChannelOptionRHint "R channel from UV"
-#define kParamChannelOptionG "UV.g"
+#define kParamChannelOptionG kClipUV ".g"
 #define kParamChannelOptionGHint "G channel from UV"
-#define kParamChannelOptionB "UV.b"
+#define kParamChannelOptionB kClipUV ".b"
 #define kParamChannelOptionBHint "B channel from UV"
-#define kParamChannelOptionA "UV.a"
+#define kParamChannelOptionA kClipUV ".a"
 #define kParamChannelOptionAHint "A channel from UV"
 #define kParamChannelOption0 "0"
 #define kParamChannelOption0Hint "0 constant channel"
@@ -143,6 +152,50 @@ enum InputChannelEnum {
     eInputChannel0,
     eInputChannel1,
 };
+
+/*
+#define kParamOutputChannels kNatronOfxParamOutputChannels
+#define kParamOutputChannelsChoice kParamOutputChannels "Choice"
+#define kParamOutputChannelsLabel "Output Layer"
+#define kParamOutputChannelsHint "The layer that will be written to in output"
+*/
+
+
+
+template <typename T>
+void addInputChannelOptions(T* channelParam, std::vector<std::string>* choices)
+{
+    assert(channelParam->getNOptions() == eInputChannelR);
+    channelParam->appendOption(kParamChannelOptionR, kParamChannelOptionRHint);
+    if (choices) {
+        choices->push_back(kParamChannelOptionR);
+    }
+    assert(channelParam->getNOptions() == eInputChannelG);
+    channelParam->appendOption(kParamChannelOptionG, kParamChannelOptionGHint);
+    if (choices) {
+        choices->push_back(kParamChannelOptionG);
+    }
+    assert(channelParam->getNOptions() == eInputChannelB);
+    channelParam->appendOption(kParamChannelOptionB, kParamChannelOptionBHint);
+    if (choices) {
+        choices->push_back(kParamChannelOptionB);
+    }
+    assert(channelParam->getNOptions() == eInputChannelA);
+    channelParam->appendOption(kParamChannelOptionA, kParamChannelOptionAHint);
+    if (choices) {
+        choices->push_back(kParamChannelOptionA);
+    }
+    assert(channelParam->getNOptions() == eInputChannel0);
+    channelParam->appendOption(kParamChannelOption0, kParamChannelOption0Hint);
+    if (choices) {
+        choices->push_back(kParamChannelOption0);
+    }
+    assert(channelParam->getNOptions() == eInputChannel1);
+    channelParam->appendOption(kParamChannelOption1, kParamChannelOption1Hint);
+    if (choices) {
+        choices->push_back(kParamChannelOption1);
+    }
+}
 
 #define kParamWrapU "wrapU"
 #define kParamWrapULabel "U Wrap Mode"
@@ -165,7 +218,6 @@ enum WrapEnum {
     eWrapMirror,
 };
 
-#define kClipUV "UV"
 
 #define kParamUVOffset "uvOffset"
 #define kParamUVOffsetLabel "UV Offset"
@@ -241,13 +293,32 @@ enum DistortionModelEnum {
 #define kParamAsymmetricLabel "Asymmetric"
 #define kParamAsymmetricHint "Asymmetric distortion (only for anamorphic lens)."
 
+//@Todo sync this code with Shuffle
+#define kDistortionColorAlpha "Alpha"
+#define kDistortionColorRGB "RGB"
+#define kDistortionColorRGBA "RGBA"
+#define kDistortionMotionBackwardPlaneName "Backward"
+#define kDistortionMotionForwardPlaneName "Forward"
+#define kDistortionDisparityLeftPlaneName "DisparityLeft"
+#define kDistortionDisparityRightPlaneName "DisparityRight"
+
+
+static bool gIsMultiPlane;
+
 using namespace OFX;
+
+struct InputPlaneChannel {
+    OFX::Image* img;
+    int channelIndex;
+    bool fillZero;
+    
+    InputPlaneChannel() : img(0), channelIndex(-1), fillZero(true) {}
+};
 
 class DistortionProcessorBase : public OFX::ImageProcessor
 {
 protected:
     const OFX::Image *_srcImg;
-    const OFX::Image *_uvImg;
     const OFX::Image *_maskImg;
     bool _processR;
     bool _processG;
@@ -255,8 +326,7 @@ protected:
     bool _processA;
     bool _transformIsIdentity;
     OFX::Matrix3x3 _srcTransformInverse;
-    InputChannelEnum _uChannel;
-    InputChannelEnum _vChannel;
+    std::vector<InputPlaneChannel> _planeChannels;
     double _uOffset;
     double _vOffset;
     double _uScale;
@@ -285,7 +355,6 @@ public:
     DistortionProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _srcImg(0)
-    , _uvImg(0)
     , _maskImg(0)
     , _processR(true)
     , _processG(true)
@@ -293,8 +362,7 @@ public:
     , _processA(false)
     , _transformIsIdentity(true)
     , _srcTransformInverse()
-    , _uChannel(eInputChannelR)
-    , _vChannel(eInputChannelG)
+    , _planeChannels()
     , _uOffset(0.)
     , _vOffset(0.)
     , _uScale(1.)
@@ -320,7 +388,7 @@ public:
     {
     }
 
-    void setSrcImgs(const OFX::Image *src, const OFX::Image *uv) {_srcImg = src; _uvImg = uv;}
+    void setSrcImgs(const OFX::Image *src) {_srcImg = src;}
 
     void setMaskImg(const OFX::Image *v, bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
 
@@ -332,8 +400,7 @@ public:
                    bool processA,
                    bool transformIsIdentity,
                    const OFX::Matrix3x3 &srcTransformInverse,
-                   InputChannelEnum uChannel,
-                   InputChannelEnum vChannel,
+                   const std::vector<InputPlaneChannel>& planeChannels,
                    double uOffset,
                    double vOffset,
                    double uScale,
@@ -356,8 +423,7 @@ public:
         _processA = processA;
         _transformIsIdentity = transformIsIdentity;
         _srcTransformInverse = srcTransformInverse;
-        _uChannel = uChannel;
-        _vChannel = vChannel;
+        _planeChannels = planeChannels;
         _uOffset = uOffset;
         _vOffset = vOffset;
         _uScale = uScale;
@@ -453,55 +519,7 @@ public:
     }
 
 private:
-    void
-    compFromChannel(InputChannelEnum channel, OFX::Image const **img, int *comp)
-    {
-        switch (channel) {
-            case eInputChannelR:
-                if (_uvImg) {
-                    if (nComponents >= 3) {
-                        *img = _uvImg;
-                        *comp = 0;
-                    }
-                }
-                break;
-            case eInputChannelG:
-                if (_uvImg) {
-                    if (nComponents >= 3) {
-                        *img = _uvImg;
-                        *comp = 1;
-                    }
-                }
-                break;
-            case eInputChannelB:
-                if (_uvImg) {
-                    if (nComponents >= 3) {
-                        *img = _uvImg;
-                        *comp = 2;
-                    }
-                }
-                break;
-            case eInputChannelA:
-                if (_uvImg) {
-                    if (nComponents >= 4) {
-                        *img = _uvImg;
-                        *comp = 3;
-                    } else if (nComponents == 1) {
-                        *img = _uvImg;
-                        *comp = 0;
-                    }
-                }
-                break;
-            case eInputChannel0:
-                *img = 0;
-                *comp = 0;
-                break;
-            case eInputChannel1:
-                *img = 0;
-                *comp = 1;
-                break;
-        }
-    }
+
 
     static inline double wrap(double x, WrapEnum wrap)
     {
@@ -522,12 +540,8 @@ private:
     {
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         assert(_dstImg);
-        const OFX::Image* uImg = 0;
-        const OFX::Image* vImg = 0;
-        int uComp = 0;
-        int vComp = 0;
-        compFromChannel(_uChannel, &uImg, &uComp);
-        compFromChannel(_vChannel, &vImg, &vComp);
+        assert(_planeChannels.size() == 2);
+        
         int srcx1 = 0, srcx2 = 1, srcy1 = 0, srcy2 = 0;
         double f = 0, par = 1.;
         if ((plugin == eDistortionPluginSTMap || plugin == eDistortionPluginLensDistortion) && _srcImg) {
@@ -556,34 +570,50 @@ private:
                 switch (plugin) {
                     case eDistortionPluginSTMap:
                     case eDistortionPluginIDistort: {
-                        const PIX *uvPix = (const PIX *)  (_uvImg ? _uvImg->getPixelAddress(x, y) : 0);
-                        const PIX *uvPix_xn = (const PIX *)  (_uvImg ? _uvImg->getPixelAddress(x+1, y) : 0);
-                        const PIX *uvPix_xp = (const PIX *)  (_uvImg ? _uvImg->getPixelAddress(x-1, y) : 0);
-                        const PIX *uvPix_yn = (const PIX *)  (_uvImg ? _uvImg->getPixelAddress(x, y+1) : 0);
-                        const PIX *uvPix_yp = (const PIX *)  (_uvImg ? _uvImg->getPixelAddress(x, y-1) : 0);
+                        const PIX *uPix = (const PIX *)  (_planeChannels[0].img ? _planeChannels[0].img->getPixelAddress(x, y) : 0);
+                        const PIX *uPix_xn = (const PIX *)  (_planeChannels[0].img ? _planeChannels[0].img->getPixelAddress(x+1, y) : 0);
+                        const PIX *uPix_xp = (const PIX *)  (_planeChannels[0].img ? _planeChannels[0].img->getPixelAddress(x-1, y) : 0);
+                        const PIX *uPix_yn = (const PIX *)  (_planeChannels[0].img ? _planeChannels[0].img->getPixelAddress(x, y+1) : 0);
+                        const PIX *uPix_yp = (const PIX *)  (_planeChannels[0].img ? _planeChannels[0].img->getPixelAddress(x, y-1) : 0);
+                        
+                        
+                        const PIX *vPix,*vPix_xn,*vPix_xp,*vPix_yn,*vPix_yp;
+                        if (_planeChannels[0].img != _planeChannels[1].img) {
+                            vPix = (const PIX *)  (_planeChannels[1].img ? _planeChannels[1].img->getPixelAddress(x, y) : 0);
+                            vPix_xn = (const PIX *)  (_planeChannels[1].img ? _planeChannels[1].img->getPixelAddress(x+1, y) : 0);
+                            vPix_xp = (const PIX *)  (_planeChannels[1].img ? _planeChannels[1].img->getPixelAddress(x-1, y) : 0);
+                            vPix_yn = (const PIX *)  (_planeChannels[1].img ? _planeChannels[1].img->getPixelAddress(x, y+1) : 0);
+                            vPix_yp = (const PIX *)  (_planeChannels[1].img ? _planeChannels[1].img->getPixelAddress(x, y-1) : 0);
+                        } else {
+                            vPix = uPix;
+                            vPix_xn = uPix_xn;
+                            vPix_xp = uPix_xp;
+                            vPix_yn = uPix_yn;
+                            vPix_yp = uPix_yp;
+                        }
                         double u, v, ux, uy, vx, vy;
                         // compute gradients before wrapping
-                        if (!uImg) {
-                            u = uComp;
+                        if (!_planeChannels[0].img) {
+                            u = _planeChannels[0].channelIndex;
                             ux = uy = 0.;
-                        } else if (!uvPix) {
+                        } else if (!uPix) {
                             u = PIX();
                             ux = uy = 0.;
                         } else {
-                            u = uvPix[uComp];
-                            ux = (uvPix_xn && uvPix_xp) ? ((uvPix_xn[uComp] - uvPix_xp[uComp]) / 2.) : 0.;
-                            uy = (uvPix_yn && uvPix_yp) ? ((uvPix_yn[uComp] - uvPix_yp[uComp]) / 2.) : 0.;
+                            u = uPix[_planeChannels[0].channelIndex];
+                            ux = (uPix_xn && uPix_xp) ? ((uPix_xn[_planeChannels[0].channelIndex] - uPix_xp[_planeChannels[0].channelIndex]) / 2.) : 0.;
+                            uy = (uPix_yn && uPix_yp) ? ((uPix_yn[_planeChannels[0].channelIndex] - uPix_yp[_planeChannels[0].channelIndex]) / 2.) : 0.;
                         }
-                        if (!vImg) {
-                            v = vComp;
+                        if (!_planeChannels[1].img) {
+                            v = _planeChannels[1].channelIndex;
                             vx = vy = 0.;
-                        } else if (!uvPix) {
+                        } else if (!vPix) {
                             v = PIX();
                             vx = vy = 0.;
                         } else {
-                            v = uvPix[vComp];
-                            vx = (uvPix_xn && uvPix_xp) ? ((uvPix_xn[vComp] - uvPix_xp[vComp]) / 2.) : 0.;
-                            vy = (uvPix_yn && uvPix_yp) ? ((uvPix_yn[vComp] - uvPix_yp[vComp]) / 2.) : 0.;
+                            v = vPix[_planeChannels[1].channelIndex];
+                            vx = (vPix_xn && vPix_xp) ? ((vPix_xn[_planeChannels[1].channelIndex] - vPix_xp[_planeChannels[1].channelIndex]) / 2.) : 0.;
+                            vy = (vPix_yn && vPix_yp) ? ((vPix_yn[_planeChannels[1].channelIndex] - vPix_yp[_planeChannels[1].channelIndex]) / 2.) : 0.;
                         }
                         u = (u - _uOffset) * _uScale;
                         ux *= _uScale;
@@ -730,6 +760,8 @@ public:
     , _processA(0)
     , _uChannel(0)
     , _vChannel(0)
+    , _uChannelStr(0)
+    , _vChannelStr(0)
     , _uvOffset(0)
     , _uvScale(0)
     , _uWrap(0)
@@ -750,6 +782,7 @@ public:
     , _maskApply(0)
     , _maskInvert(0)
     , _plugin(plugin)
+    , _currentComps()
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -774,6 +807,16 @@ public:
         if (plugin == eDistortionPluginIDistort || plugin == eDistortionPluginSTMap) {
             _uChannel = fetchChoiceParam(kParamChannelU);
             _vChannel = fetchChoiceParam(kParamChannelV);
+            if (gIsMultiPlane) {
+                _uChannelStr = fetchStringParam(kParamChannelUChoice);
+                _vChannelStr = fetchStringParam(kParamChannelVChoice);
+                assert(_uChannelStr && _vChannelStr);
+                
+                //We need to restore the choice params because the host may not call getClipPreference if all clips are disconnected
+                //e.g: this can be from a copy/paste issued from the user
+                setChannelsFromStringParams(false);
+
+            }
             _uvOffset = fetchDouble2DParam(kParamUVOffset);
             _uvScale = fetchDouble2DParam(kParamUVScale);
             assert(_uChannel && _vChannel && _uvOffset && _uvScale);
@@ -783,6 +826,12 @@ public:
                 assert(_uWrap && _vWrap);
             }
         }
+        
+       /* if (gIsMultiPlane) {
+            _outputLayer = fetchChoiceParam(kParamOutputChannels);
+            _outputLayerStr = fetchStringParam(kParamOutputChannelsChoice);
+            assert(_outputLayer && _outputLayerStr);
+        }*/
         if (_plugin == eDistortionPluginLensDistortion) {
             _distortionModel = fetchChoiceParam(kParamDistortionModel);
             _k1 = fetchDoubleParam(kParamK1);
@@ -812,6 +861,8 @@ private:
     virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
 
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+    
+    virtual void getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents) OVERRIDE FINAL;
 
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
@@ -831,35 +882,29 @@ private:
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     /** @brief called when a param has just had its value changed */
-    void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL
-    {
-        if (_plugin == eDistortionPluginLensDistortion) {
-            if (paramName == kParamDistortionModel && args.reason == eChangeUserEdit) {
-                updateVisibility();
-            }
-        }
-    }
+    void changedParam(const InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
-    void updateVisibility()
-    {
-        if (_plugin == eDistortionPluginLensDistortion) {
-            int distortionModel_i;
-            _distortionModel->getValue(distortionModel_i);
-            DistortionModelEnum distortionModel = (DistortionModelEnum)distortionModel_i;
-            switch (distortionModel) {
-                case eDistortionModelNuke:
-                    _k1->setIsSecret(false);
-                    _k2->setIsSecret(false);
-                    _k3->setIsSecret(true);
-                    _p1->setIsSecret(true);
-                    _p2->setIsSecret(true);
-                    _center->setIsSecret(false);
-                    _squeeze->setIsSecret(false);
-                    _asymmetric->setIsSecret(false);
-                    break;
-            }
-        }
-    }
+    void updateVisibility();
+    
+    void buildChannelMenus();
+    ///To be called once the components are known via getClipPreferences
+    void setChannelsFromStringParams(bool allowReset);
+    void setChannelsFromStringParamsInternal(const std::vector<std::string>& choices,bool allowReset);
+    
+    bool getPlaneNeededForParam(double time,
+                                const std::list<std::string>& components,
+                                OFX::ChoiceParam* param,
+                                OFX::Clip** clip,
+                                std::string* ofxPlane,
+                                std::string* ofxComponents,
+                                int* channelIndexInPlane,
+                                bool* isCreatingAlpha) const;
+    
+   /* bool getPlaneNeededInOutput(const std::list<std::string>& components,
+                                OFX::ChoiceParam* param,
+                                std::string* ofxPlane,
+                                std::string* ofxComponents) const;*/
+    
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -872,6 +917,8 @@ private:
     OFX::BooleanParam* _processA;
     OFX::ChoiceParam* _uChannel;
     OFX::ChoiceParam* _vChannel;
+    OFX::StringParam* _uChannelStr;
+    OFX::StringParam* _vChannelStr;
     OFX::Double2DParam *_uvOffset;
     OFX::Double2DParam *_uvScale;
     OFX::ChoiceParam* _uWrap;
@@ -892,6 +939,8 @@ private:
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
     DistortionPluginEnum _plugin;
+    
+    std::list<std::string> _currentComps;
 };
 
 
@@ -899,18 +948,74 @@ void
 DistortionPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     //We have to do this because the processing code does not support varying components for uvClip and srcClip
-    OFX::PixelComponentEnum dstComps = _dstClip->getPixelComponents();
-    if (_uvClip) {
-        clipPreferences.setClipComponents(*_uvClip, dstComps);
-    }
-    if (_srcClip) {
-        clipPreferences.setClipComponents(*_srcClip, dstComps);
-    }
+    OFX::PixelComponentEnum dstPixelComps ;
+    /*if (gIsMultiPlane) {
+        std::list<std::string> outputComponents = _dstClip->getComponentsPresent();
+        buildChannelMenus(outputComponents);
+        std::string ofxPlane,ofxComponents;
+        getPlaneNeededInOutput(outputComponents, _outputLayer, &ofxPlane, &ofxComponents);
+        
+        dstPixelComps = mapStrToPixelComponentEnum(ofxComponents);
+        if (dstPixelComps == OFX::ePixelComponentCustom) {
+            int nComps = std::max((int)mapPixelComponentCustomToLayerChannels(ofxComponents).size() - 1, 0);
+            switch (nComps) {
+                case 1:
+                    dstPixelComps = OFX::ePixelComponentAlpha;
+                    break;
+                case 2:
+                    dstPixelComps = OFX::ePixelComponentXY;
+                    break;
+                case 3:
+                    dstPixelComps = OFX::ePixelComponentRGB;
+                    break;
+                case 4:
+                    dstPixelComps = OFX::ePixelComponentRGBA;
+                default:
+                    break;
+            }
+        }
+    } else {*/
+        dstPixelComps = _dstClip->getPixelComponents();
+    //}
     
+    if (_srcClip) {
+        clipPreferences.setClipComponents(*_srcClip, dstPixelComps);
+    }
+    if (gIsMultiPlane) {
+        buildChannelMenus();
+    }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */
+
+
+class InputImagesHolder_RAII
+{
+    std::vector<OFX::Image*> images;
+public:
+    
+    InputImagesHolder_RAII()
+    : images()
+    {
+        
+    }
+    
+    void appendImage(OFX::Image* img)
+    {
+        images.push_back(img);
+    }
+    
+    ~InputImagesHolder_RAII()
+    {
+        for (std::size_t i = 0; i < images.size(); ++i) {
+            delete images[i];
+        }
+    }
+};
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
@@ -952,22 +1057,128 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
+    
+    InputImagesHolder_RAII imagesHolder;
+    std::vector<InputPlaneChannel> planes;
 
-    std::auto_ptr<const OFX::Image> uv((_uvClip && _uvClip->isConnected()) ?
-                                        _uvClip->fetchImage(time) : 0);
-    if (uv.get()) {
-        if (uv->getRenderScale().x != args.renderScale.x ||
-            uv->getRenderScale().y != args.renderScale.y ||
-            (uv->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && uv->getField() != args.fieldToRender)) {
-            setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
-            OFX::throwSuiteStatusException(kOfxStatFailed);
+    if (gIsMultiPlane) {
+        std::list<std::string> uvComponents;
+        if (_uvClip) {
+            uvComponents = _uvClip->getComponentsPresent();
         }
-        OFX::BitDepthEnum    uvBitDepth      = uv->getPixelDepth();
-        OFX::PixelComponentEnum uvComponents = uv->getPixelComponents();
-        if (uvBitDepth != dstBitDepth || uvComponents != dstComponents) {
-            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        OFX::ChoiceParam* params[2] = {_uChannel, _vChannel};
+        OFX::BitDepthEnum srcBitDepth = eBitDepthNone;
+        
+        std::map<OFX::Clip*,std::map<std::string,OFX::Image*> > fetchedPlanes;
+        
+        bool isCreatingAlpha;
+        for (int i = 0; i < 2; ++i) {
+            
+            InputPlaneChannel p;
+            p.channelIndex = i;
+            p.fillZero = false;
+            if (_uvClip) {
+                OFX::Clip* clip = 0;
+                std::string plane,ofxComp;
+                bool ok = getPlaneNeededForParam(time,
+                                                 uvComponents,
+                                                 params[i],
+                                                 &clip, &plane, &ofxComp, &p.channelIndex,&isCreatingAlpha);
+                if (!ok) {
+                    setPersistentMessage(OFX::Message::eMessageError, "", "Cannot find requested channels in input");
+                    OFX::throwSuiteStatusException(kOfxStatFailed);
+                }
+                
+                p.img = 0;
+                if (ofxComp == kParamChannelOption0) {
+                    p.fillZero = true;
+                } else if (ofxComp == kParamChannelOption1) {
+                    p.fillZero = false;
+                } else {
+                    std::map<std::string,OFX::Image*>& clipPlanes = fetchedPlanes[clip];
+                    std::map<std::string,OFX::Image*>::iterator foundPlane = clipPlanes.find(plane);
+                    if (foundPlane != clipPlanes.end()) {
+                        p.img = foundPlane->second;
+                    } else {
+                        p.img = clip->fetchImagePlane(args.time, args.renderView, plane.c_str());
+                        if (p.img) {
+                            clipPlanes.insert(std::make_pair(plane, p.img));
+                            imagesHolder.appendImage(p.img);
+                        }
+                        
+                    }
+                }
+                
+                if (p.img) {
+                    
+                    if (p.img->getRenderScale().x != args.renderScale.x ||
+                        p.img->getRenderScale().y != args.renderScale.y ||
+                        (p.img->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && p.img->getField() != args.fieldToRender)) {
+                        setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                        OFX::throwSuiteStatusException(kOfxStatFailed);
+                    }
+                    if (srcBitDepth == eBitDepthNone) {
+                        srcBitDepth = p.img->getPixelDepth();
+                    } else {
+                        // both input must have the same bit depth and components
+                        if (srcBitDepth != eBitDepthNone && srcBitDepth != p.img->getPixelDepth()) {
+                            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+                        }
+                    }
+                }
+            }
+            planes.push_back(p);
         }
+    } else { //!gIsMultiPlane
+        
+        int uChannel_i = 0, vChannel_i = 1;
+        if (_uChannel) {
+            _uChannel->getValueAtTime(time, uChannel_i);
+        }
+        if (_vChannel) {
+            _vChannel->getValueAtTime(time, vChannel_i);
+        }
+        
+        
+        OFX::Image* uv = 0;
+        if (uChannel_i <= 3 || vChannel_i <= 3) {
+            uv = (_uvClip && _uvClip->isConnected()) ? _uvClip->fetchImage(time) : 0;
+        }
+        
+        if (uv) {
+            imagesHolder.appendImage(uv);
+            if (uv->getRenderScale().x != args.renderScale.x ||
+                uv->getRenderScale().y != args.renderScale.y ||
+                (uv->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && uv->getField() != args.fieldToRender)) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+            }
+            OFX::BitDepthEnum    uvBitDepth      = uv->getPixelDepth();
+            OFX::PixelComponentEnum uvComponents = uv->getPixelComponents();
+            if (uvBitDepth != dstBitDepth || uvComponents != dstComponents) {
+                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+            }
+        }
+        
+       
+        {
+            InputPlaneChannel u;
+            u.img = uv;
+            u.fillZero = uChannel_i == eInputChannel0;
+            u.channelIndex = uChannel_i <= 3 ? uChannel_i : -1;
+            planes.push_back(u);
+        }
+        {
+            InputPlaneChannel v;
+            v.img = uv;
+            v.fillZero = vChannel_i == eInputChannel0;
+            v.channelIndex = vChannel_i <= 3 ? vChannel_i : -1;
+            planes.push_back(v);
+        }
+
     }
+
+   
     // auto ptr for the mask.
     bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
     std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
@@ -989,7 +1200,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
 
     // set the images
     processor.setDstImg(dst.get());
-    processor.setSrcImgs(src.get(), uv.get());
+    processor.setSrcImgs(src.get());
     // set the render window
     processor.setRenderWindow(args.renderWindow);
     
@@ -998,18 +1209,11 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
     _processG->getValueAtTime(time, processG);
     _processB->getValueAtTime(time, processB);
     _processA->getValueAtTime(time, processA);
-    InputChannelEnum uChannel = eInputChannelR;
-    InputChannelEnum vChannel = eInputChannelG;
     double uScale = 1., vScale = 1.;
     double uOffset = 0., vOffset = 0.;
     WrapEnum uWrap = eWrapClamp;
     WrapEnum vWrap = eWrapClamp;
     if (_plugin == eDistortionPluginIDistort || _plugin == eDistortionPluginSTMap) {
-        int uChannel_i, vChannel_i;
-        _uChannel->getValueAtTime(time, uChannel_i);
-        _vChannel->getValueAtTime(time, vChannel_i);
-        uChannel = (InputChannelEnum)uChannel_i;
-        vChannel = (InputChannelEnum)vChannel_i;
         _uvOffset->getValueAtTime(time, uOffset, vOffset);
         _uvScale->getValueAtTime(time, uScale, vScale);
         if (_plugin == eDistortionPluginSTMap) {
@@ -1079,7 +1283,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
     }
     processor.setValues(processR, processG, processB, processA,
                         transformIsIdentity, srcTransformInverse,
-                        uChannel, vChannel,
+                        planes,
                         uOffset, vOffset,
                         uScale, vScale,
                         uWrap, vWrap,
@@ -1355,6 +1559,639 @@ DistortionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
     return false;
 }
 
+void
+DistortionPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::ClipComponentsSetter& clipComponents)
+{
+    
+    assert(gIsMultiPlane);
+    
+    const double time = args.time;
+    
+    /*std::list<std::string> outputComponents = _dstClip->getComponentsPresent();
+    std::string ofxPlane,ofxComp;
+    getPlaneNeededInOutput(outputComponents, _outputLayer, &ofxPlane, &ofxComp);
+    clipComponents.addClipComponents(*_dstClip, ofxComp);*/
+    OFX::PixelComponentEnum dstPx = _dstClip->getPixelComponents();
+    clipComponents.addClipComponents(*_dstClip, dstPx);
+    clipComponents.addClipComponents(*_srcClip, dstPx);
+    
+    if (_uvClip) {
+        std::list<std::string> components = _uvClip->getComponentsPresent();
+        
+        OFX::ChoiceParam* params[2] = {_uChannel, _vChannel};
+        
+        std::map<OFX::Clip*,std::set<std::string> > clipMap;
+        
+        bool isCreatingAlpha;
+        for (int i = 0; i < 2; ++i) {
+            std::string ofxComp,ofxPlane;
+            int channelIndex;
+            OFX::Clip* clip = 0;
+            bool ok = getPlaneNeededForParam(time, components, params[i], &clip, &ofxPlane, &ofxComp, &channelIndex,&isCreatingAlpha);
+            if (!ok) {
+                continue;
+            }
+            if (ofxComp == kParamChannelOption0 || ofxComp == kParamChannelOption1) {
+                continue;
+            }
+            assert(clip);
+            
+            std::map<OFX::Clip*,std::set<std::string> >::iterator foundClip = clipMap.find(clip);
+            if (foundClip == clipMap.end()) {
+                std::set<std::string> s;
+                s.insert(ofxComp);
+                clipMap.insert(std::make_pair(clip, s));
+                clipComponents.addClipComponents(*clip, ofxComp);
+            } else {
+                std::pair<std::set<std::string>::iterator,bool> ret = foundClip->second.insert(ofxComp);
+                if (ret.second) {
+                    clipComponents.addClipComponents(*clip, ofxComp);
+                }
+            }
+        }
+    }
+
+}
+
+#pragma message WARN("Merge this code for describing single channel selectors with Shuffle")
+static void extractChannelsFromComponentString(const std::string& comp,
+                                               std::string* layer,
+                                               std::string* pairedLayer, //< if disparity or motion vectors
+                                               std::vector<std::string>* channels)
+{
+    if (comp == kOfxImageComponentAlpha) {
+        //*layer = kShuffleColorPlaneName;
+        channels->push_back("A");
+    } else if (comp == kOfxImageComponentRGB) {
+        //*layer = kShuffleColorPlaneName;
+        channels->push_back("R");
+        channels->push_back("G");
+        channels->push_back("B");
+    } else if (comp == kOfxImageComponentRGBA) {
+        //*layer = kShuffleColorPlaneName;
+        channels->push_back("R");
+        channels->push_back("G");
+        channels->push_back("B");
+        channels->push_back("A");
+    } else if (comp == kFnOfxImageComponentMotionVectors) {
+        *layer = kDistortionMotionBackwardPlaneName;
+        *pairedLayer = kDistortionMotionForwardPlaneName;
+        channels->push_back("U");
+        channels->push_back("V");
+    } else if (comp == kFnOfxImageComponentStereoDisparity) {
+        *layer = kDistortionDisparityLeftPlaneName;
+        *pairedLayer = kDistortionDisparityRightPlaneName;
+        channels->push_back("X");
+        channels->push_back("Y");
+#ifdef OFX_EXTENSIONS_NATRON
+    } else if (comp == kNatronOfxImageComponentXY) {
+        channels->push_back("X");
+        channels->push_back("Y");
+    } else {
+        std::vector<std::string> layerChannels = mapPixelComponentCustomToLayerChannels(comp);
+        if (layerChannels.size() >= 1) {
+            *layer = layerChannels[0];
+            channels->assign(layerChannels.begin() + 1, layerChannels.end());
+        }
+#endif
+    }
+}
+
+static void appendComponents(const std::string& clipName,
+                             const std::list<std::string>& components,
+                             OFX::ChoiceParam** params,
+                             std::vector<std::string>* channelChoices)
+{
+    
+    std::list<std::string> usedComps;
+    for (std::list<std::string>::const_iterator it = components.begin(); it!=components.end(); ++it) {
+        std::string layer, secondLayer;
+        std::vector<std::string> channels;
+        extractChannelsFromComponentString(*it, &layer, &secondLayer, &channels);
+        if (channels.empty()) {
+            continue;
+        }
+        if (layer.empty()) {
+            continue;
+        }
+        for (std::size_t i = 0; i < channels.size(); ++i) {
+            std::string opt = clipName + ".";
+            if (!layer.empty()) {
+                opt.append(layer);
+                opt.push_back('.');
+            }
+            opt.append(channels[i]);
+            
+            if (std::find(usedComps.begin(), usedComps.end(), opt) == usedComps.end()) {
+                usedComps.push_back(opt);
+                for (int j = 0; j < 2; ++j) {
+                    params[j]->appendOption(opt, channels[i] + " channel from " + ((layer.empty())? std::string() : std::string("layer/view ") + layer + " of ") + "input " + clipName);
+                    if (channelChoices && j == 0) {
+                        channelChoices->push_back(opt);
+                    }
+                }
+            }
+            
+        }
+        
+        if (!secondLayer.empty()) {
+            for (std::size_t i = 0; i < channels.size(); ++i) {
+                std::string opt = clipName + ".";
+                if (!secondLayer.empty()) {
+                    opt.append(secondLayer);
+                    opt.push_back('.');
+                }
+                opt.append(channels[i]);
+                if (std::find(usedComps.begin(), usedComps.end(), opt) == usedComps.end()) {
+                    usedComps.push_back(opt);
+                    for (int j = 0; j < 4; ++j) {
+                        params[j]->appendOption(opt, channels[i] + " channel from layer " + secondLayer + " of input " + clipName);
+                        if (channelChoices && j == 0) {
+                            channelChoices->push_back(opt);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+static bool hasListChanged(const std::list<std::string>& oldList, const std::list<std::string>& newList)
+{
+    if (oldList.size() != newList.size()) {
+        return true;
+    }
+    
+    std::list<std::string>::const_iterator itNew = newList.begin();
+    for (std::list<std::string>::const_iterator it = oldList.begin(); it!=oldList.end(); ++it,++itNew) {
+        if (*it != *itNew) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void
+DistortionPlugin::setChannelsFromStringParams(bool allowReset)
+{
+    if (!gIsMultiPlane) {
+        return;
+    }
+    int nOpt = _uChannel->getNOptions();
+    std::vector<std::string> componentsVec(nOpt);
+    for (int i = 0; i < nOpt; ++i) {
+        _uChannel->getOption(i, componentsVec[i]);
+    }
+    
+  /*  nOpt = _outputLayer->getNOptions();
+    std::vector<std::string> outputComponentsVec(nOpt);
+    for (int i = 0; i < nOpt; ++i) {
+        _outputLayer->getOption(i, outputComponentsVec[i]);
+    }*/
+    
+    setChannelsFromStringParamsInternal(componentsVec,allowReset);
+}
+
+void
+DistortionPlugin::setChannelsFromStringParamsInternal(const std::vector<std::string>& choices,bool allowReset)
+{
+    if (!gIsMultiPlane) {
+        return;
+    }
+    
+  /*  {
+        std::string outputComponentsStr;
+        _outputLayerStr->getValue(outputComponentsStr);
+        if (outputComponentsStr.empty()) {
+            int cur_i;
+            _outputLayer->getValue(cur_i);
+            if (cur_i >= 0 && cur_i < (int)outputChoices.size()) {
+                outputComponentsStr = outputChoices[cur_i];
+            }
+            _outputLayer->getOption(cur_i, outputComponentsStr);
+            _outputLayerStr->setValue(outputComponentsStr);
+        } else {
+            int foundOption = -1;
+            for (int i = 0; i < (int)outputChoices.size(); ++i) {
+                if (outputChoices[i] == outputComponentsStr) {
+                    foundOption = i;
+                    break;
+                }
+            }
+            if (foundOption != -1) {
+                _outputLayer->setValue(foundOption);
+            } else {
+                if (allowReset) {
+                    _outputLayer->setValue(0);
+                    _outputLayerStr->setValue(outputChoices[0]);
+                }
+            }
+        }
+    }*/
+
+    
+    OFX::ChoiceParam* choiceParams[2] = {_uChannel, _vChannel};
+    OFX::StringParam* choiceParamsString[2] = {_uChannelStr, _vChannelStr};
+    
+    for (int c = 0; c < 2; ++c) {
+        std::string valueStr;
+        choiceParamsString[c]->getValue(valueStr);
+        
+        if (valueStr.empty()) {
+            int cur_i;
+            choiceParams[c]->getValue(cur_i);
+            if (cur_i >= 0 && cur_i < (int)choices.size()) {
+                valueStr = choices[cur_i];
+            }
+            choiceParamsString[c]->setValue(valueStr);
+        } else {
+            int foundOption = -1;
+            for (int i = 0; i < (int)choices.size(); ++i) {
+                if (choices[i] == valueStr) {
+                    foundOption = i;
+                    break;
+                }
+            }
+            if (foundOption != -1) {
+                choiceParams[c]->setValue(foundOption);
+            } else {
+                if (allowReset) {
+                    choiceParams[c]->setValue(c);
+                    choiceParamsString[c]->setValue(choices[c]);
+                }
+            }
+        }
+    }
+}
+
+void
+DistortionPlugin::buildChannelMenus()
+{
+    assert(gIsMultiPlane);
+    
+    bool hasChanged = false;
+   /* std::vector<std::string> outputChoices;
+    if (hasListChanged(_currentOutputComps, outputComponents)) {
+        
+        hasChanged = true;
+        _currentOutputComps = outputComponents;
+        
+        _outputLayer->resetOptions();
+        
+        
+        ///Pre-process to add color comps first
+        std::list<std::string> compsToAdd;
+        bool foundColor = false;
+        for (std::list<std::string>::const_iterator it = outputComponents.begin(); it!=outputComponents.end(); ++it) {
+            std::string layer, secondLayer;
+            std::vector<std::string> channels;
+            extractChannelsFromComponentString(*it, &layer, &secondLayer, &channels);
+            if (channels.empty()) {
+                continue;
+            }
+            if (layer.empty()) {
+                if (*it == kOfxImageComponentRGBA) {
+                    outputChoices.push_back(kDistortionColorRGBA);
+                    foundColor = true;
+                } else if (*it == kOfxImageComponentRGB) {
+                    outputChoices.push_back(kDistortionColorRGB);
+                    foundColor = true;
+                } else if (*it == kOfxImageComponentAlpha) {
+                    outputChoices.push_back(kDistortionColorAlpha);
+                    foundColor = true;
+                }
+                
+                continue;
+            } else {
+                if (layer == kDistortionMotionForwardPlaneName ||
+                    layer == kDistortionMotionBackwardPlaneName ||
+                    layer == kDistortionDisparityLeftPlaneName ||
+                    layer == kDistortionDisparityRightPlaneName) {
+                    continue;
+                }
+            }
+            compsToAdd.push_back(layer);
+        }
+        if (!foundColor) {
+            outputChoices.push_back(kDistortionColorRGBA);
+        }
+        outputChoices.push_back(kDistortionMotionForwardPlaneName);
+        outputChoices.push_back(kDistortionMotionBackwardPlaneName);
+        outputChoices.push_back(kDistortionDisparityLeftPlaneName);
+        outputChoices.push_back(kDistortionDisparityRightPlaneName);
+        outputChoices.insert(outputChoices.end(), compsToAdd.begin(), compsToAdd.end());
+        
+        for (std::vector<std::string>::const_iterator it = outputChoices.begin(); it!=outputChoices.end(); ++it) {
+            _outputLayer->appendOption(*it);
+        }
+        
+    }*/
+
+    
+    if (!_uvClip || !_uChannel || !_vChannel) {
+        return;
+    }
+    
+    std::list<std::string> components = _uvClip->getComponentsPresent();
+    
+    std::vector<std::string> channelChoices;
+    if (hasListChanged(_currentComps, components)) {
+        hasChanged = true;
+        _currentComps = components;
+        
+        OFX::ChoiceParam* params[2] = {_uChannel, _vChannel};
+        
+        //Always add RGBA channels for color plane
+        for (int i = 0; i < 2; ++i) {
+            params[i]->resetOptions();
+            addInputChannelOptions<OFX::ChoiceParam>(params[i], i == 0 ? &channelChoices : 0);
+        }
+        
+        if (gIsMultiPlane) {
+            appendComponents(kClipUV, components, params, &channelChoices);
+        }
+
+    }
+    
+    if (hasChanged) {
+        setChannelsFromStringParamsInternal(channelChoices, true);
+    }
+    
+}
+
+#if 0
+bool
+DistortionPlugin::getPlaneNeededInOutput(const std::list<std::string>& components,
+                                      OFX::ChoiceParam* param,
+                                      std::string* ofxPlane,
+                                      std::string* ofxComponents) const
+{
+    int layer_i;
+    param->getValue(layer_i);
+    std::string layerName;
+    param->getOption(layer_i, layerName);
+    
+    if (layerName.empty() ||
+        layerName == kDistortionColorRGBA ||
+        layerName == kDistortionColorRGB ||
+        layerName == kDistortionColorAlpha) {
+        std::string comp = _dstClip->getPixelComponentsProperty();
+        *ofxComponents = comp;
+        *ofxPlane = kFnOfxImagePlaneColour;
+        return true;
+    } else if (layerName == kDistortionDisparityLeftPlaneName) {
+        *ofxComponents = kFnOfxImageComponentStereoDisparity;
+        *ofxPlane = kFnOfxImagePlaneStereoDisparityLeft;
+        return true;
+    } else if (layerName == kDistortionDisparityRightPlaneName) {
+        *ofxComponents = kFnOfxImageComponentStereoDisparity;
+        *ofxPlane =  kFnOfxImagePlaneStereoDisparityRight;
+        return true;
+    } else if (layerName == kDistortionMotionBackwardPlaneName) {
+        *ofxComponents = kFnOfxImageComponentMotionVectors;
+        *ofxPlane = kFnOfxImagePlaneBackwardMotionVector;
+        return true;
+    } else if (layerName == kDistortionMotionForwardPlaneName) {
+        *ofxComponents = kFnOfxImageComponentMotionVectors;
+        *ofxPlane = kFnOfxImagePlaneForwardMotionVector;
+        return true;
+#ifdef OFX_EXTENSIONS_NATRON
+    } else {
+        //Find in aComponents or bComponents a layer matching the name of the layer
+        for (std::list<std::string>::const_iterator it = components.begin(); it!=components.end(); ++it) {
+            if (it->find(layerName) != std::string::npos) {
+                //We found a matching layer
+                std::string realLayerName;
+                std::vector<std::string> layerChannels = mapPixelComponentCustomToLayerChannels(*it);
+                if (layerChannels.empty()) {
+                    // ignore it
+                    continue;
+                }
+                *ofxPlane = *it;
+                *ofxComponents = *it;
+                return true;
+            }
+        }
+#endif // OFX_EXTENSIONS_NATRON
+    }
+    return false;
+}
+#endif
+
+bool
+DistortionPlugin::getPlaneNeededForParam(double time,
+                                      const std::list<std::string>& components,
+                                      OFX::ChoiceParam* param,
+                                      OFX::Clip** clip,
+                                      std::string* ofxPlane,
+                                      std::string* ofxComponents,
+                                      int* channelIndexInPlane,
+                                      bool* isCreatingAlpha) const
+{
+    assert(clip);
+    *clip = 0;
+    
+    *isCreatingAlpha = false;
+    
+    int channelIndex;
+    param->getValueAtTime(time, channelIndex);
+    std::string channelEncoded;
+    param->getOption(channelIndex, channelEncoded);
+    if (channelEncoded.empty()) {
+        return false;
+    }
+    
+    if (channelEncoded == kParamChannelOption0) {
+        *ofxComponents =  kParamChannelOption0;
+        return true;
+    }
+    
+    if (channelEncoded == kParamChannelOption1) {
+        *ofxComponents = kParamChannelOption1;
+        return true;
+    }
+    
+    std::string clipName = kClipUV;
+    
+    // Must be at least something like "UV."
+    if (channelEncoded.size() < clipName.size() + 1) {
+        return false;
+    }
+    
+    if (channelEncoded.substr(0,clipName.size()) == clipName) {
+        *clip = _uvClip;
+    }
+    
+    if (!*clip) {
+        return false;
+    }
+    
+    std::size_t lastDotPos = channelEncoded.find_last_of('.');
+    if (lastDotPos == std::string::npos || lastDotPos == channelEncoded.size() - 1) {
+        *clip = 0;
+        return false;
+    }
+    
+    std::string chanName = channelEncoded.substr(lastDotPos + 1,std::string::npos);
+    std::string layerName;
+    for (std::size_t i = clipName.size() + 1; i < lastDotPos; ++i) {
+        layerName.push_back(channelEncoded[i]);
+    }
+    
+    if (layerName.empty() ||
+        layerName == kDistortionColorAlpha ||
+        layerName == kDistortionColorRGB ||
+        layerName == kDistortionColorRGBA) {
+        std::string comp = (*clip)->getPixelComponentsProperty();
+        if (chanName == "r" || chanName == "R" || chanName == "x" || chanName == "X") {
+            *channelIndexInPlane = 0;
+        } else if (chanName == "g" || chanName == "G" || chanName == "y" || chanName == "Y") {
+            *channelIndexInPlane = 1;
+        } else if (chanName == "b" || chanName == "B" || chanName == "z" || chanName == "Z") {
+            *channelIndexInPlane = 2;
+        } else if (chanName == "a" || chanName == "A" || chanName == "w" || chanName == "W") {
+            if (comp == kOfxImageComponentAlpha) {
+                *channelIndexInPlane = 0;
+            } else if (comp == kOfxImageComponentRGBA) {
+                *channelIndexInPlane = 3;
+            } else {
+                *isCreatingAlpha = true;
+                *ofxComponents = kParamChannelOption1;
+                return true;
+            }
+        } else {
+            assert(false);
+        }
+        *ofxComponents = comp;
+        *ofxPlane = kFnOfxImagePlaneColour;
+        return true;
+    } else if (layerName == kDistortionDisparityLeftPlaneName) {
+        if (chanName == "x" || chanName == "X") {
+            *channelIndexInPlane = 0;
+        } else if (chanName == "y" || chanName == "Y") {
+            *channelIndexInPlane = 1;
+        } else {
+            assert(false);
+        }
+        *ofxComponents = kFnOfxImageComponentStereoDisparity;
+        *ofxPlane = kFnOfxImagePlaneStereoDisparityLeft;
+        return true;
+    } else if (layerName == kDistortionDisparityRightPlaneName) {
+        if (chanName == "x" || chanName == "X") {
+            *channelIndexInPlane = 0;
+        } else if (chanName == "y" || chanName == "Y") {
+            *channelIndexInPlane = 1;
+        } else {
+            assert(false);
+        }
+        *ofxComponents = kFnOfxImageComponentStereoDisparity;
+        *ofxPlane =  kFnOfxImagePlaneStereoDisparityRight;
+        return true;
+    } else if (layerName == kDistortionMotionBackwardPlaneName) {
+        if (chanName == "u" || chanName == "U") {
+            *channelIndexInPlane = 0;
+        } else if (chanName == "v" || chanName == "V") {
+            *channelIndexInPlane = 1;
+        } else {
+            assert(false);
+        }
+        *ofxComponents = kFnOfxImageComponentMotionVectors;
+        *ofxPlane = kFnOfxImagePlaneBackwardMotionVector;
+        return true;
+    } else if (layerName == kDistortionMotionForwardPlaneName) {
+        if (chanName == "u" || chanName == "U") {
+            *channelIndexInPlane = 0;
+        } else if (chanName == "v" || chanName == "V") {
+            *channelIndexInPlane = 1;
+        } else {
+            assert(false);
+        }
+        *ofxComponents = kFnOfxImageComponentMotionVectors;
+        *ofxPlane = kFnOfxImagePlaneForwardMotionVector;
+        return true;
+#ifdef OFX_EXTENSIONS_NATRON
+    } else {
+        //Find in components a layer matching the name of the layer
+        for (std::list<std::string>::const_iterator it = components.begin(); it!=components.end(); ++it) {
+            //We found a matching layer
+            std::string realLayerName;
+            std::vector<std::string> channels;
+            std::vector<std::string> layerChannels = mapPixelComponentCustomToLayerChannels(*it);
+            if (layerChannels.empty() || layerName != layerChannels[0]) {
+                // ignore it
+                continue;
+            }
+            channels.assign(layerChannels.begin() + 1, layerChannels.end());
+            int foundChannel = -1;
+            for (std::size_t i = 0; i < channels.size(); ++i) {
+                if (channels[i] == chanName) {
+                    foundChannel = i;
+                    break;
+                }
+            }
+            assert(foundChannel != -1);
+            *ofxPlane = *it;
+            *channelIndexInPlane = foundChannel;
+            *ofxComponents = *it;
+            return true;
+            
+        }
+        
+#endif // OFX_EXTENSIONS_NATRON
+    }
+    return false;
+}
+
+
+
+
+void
+DistortionPlugin::updateVisibility()
+{
+    if (_plugin == eDistortionPluginLensDistortion) {
+        int distortionModel_i;
+        _distortionModel->getValue(distortionModel_i);
+        DistortionModelEnum distortionModel = (DistortionModelEnum)distortionModel_i;
+        switch (distortionModel) {
+            case eDistortionModelNuke:
+                _k1->setIsSecret(false);
+                _k2->setIsSecret(false);
+                _k3->setIsSecret(true);
+                _p1->setIsSecret(true);
+                _p2->setIsSecret(true);
+                _center->setIsSecret(false);
+                _squeeze->setIsSecret(false);
+                _asymmetric->setIsSecret(false);
+                break;
+        }
+    }
+}
+
+void
+DistortionPlugin::changedParam(const InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (_plugin == eDistortionPluginLensDistortion) {
+        if (paramName == kParamDistortionModel && args.reason == eChangeUserEdit) {
+            updateVisibility();
+        }
+    } else if (paramName == kParamChannelU && args.reason == OFX::eChangeUserEdit && _uChannelStr) {
+        assert(_uChannel);
+        int choice_i;
+        _uChannel->getValueAtTime(args.time, choice_i);
+        std::string optionName;
+        _uChannel->getOption(choice_i, optionName);
+        _uChannelStr->setValue(optionName);
+    } else if (paramName == kParamChannelV && args.reason == OFX::eChangeUserEdit && _vChannelStr) {
+        assert(_vChannel);
+        int choice_i;
+        _vChannel->getValueAtTime(args.time, choice_i);
+        std::string optionName;
+        _vChannel->getOption(choice_i, optionName);
+        _vChannelStr->setValue(optionName);
+    }
+}
+
 //mDeclarePluginFactory(DistortionPluginFactory, {}, {});
 template<DistortionPluginEnum plugin>
 class DistortionPluginFactory : public OFX::PluginFactoryHelper<DistortionPluginFactory<plugin> >
@@ -1414,25 +2251,22 @@ void DistortionPluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
 #endif
+    
+    
+    gIsMultiPlane = false;
+    
+#if defined(OFX_EXTENSIONS_NUKE) && defined(OFX_EXTENSIONS_NATRON)
+    gIsMultiPlane = OFX::getImageEffectHostDescription()->supportsDynamicChoices && OFX::getImageEffectHostDescription()->isMultiPlanar;
+    if (gIsMultiPlane) {
+        // This enables fetching different planes from the input.
+        // Generally the user will read a multi-layered EXR file in the Reader node and then use the shuffle
+        // to redirect the plane's channels into RGBA color plane.
+        
+        desc.setIsMultiPlanar(true);
+    }
+#endif
 }
 
-static void
-addInputChannelOptions(ChoiceParamDescriptor* channel, InputChannelEnum def)
-{
-    assert(channel->getNOptions() == eInputChannelR);
-    channel->appendOption(kParamChannelOptionR, kParamChannelOptionRHint);
-    assert(channel->getNOptions() == eInputChannelG);
-    channel->appendOption(kParamChannelOptionG, kParamChannelOptionGHint);
-    assert(channel->getNOptions() == eInputChannelB);
-    channel->appendOption(kParamChannelOptionB, kParamChannelOptionBHint);
-    assert(channel->getNOptions() == eInputChannelA);
-    channel->appendOption(kParamChannelOptionA, kParamChannelOptionAHint);
-    assert(channel->getNOptions() == eInputChannel0);
-    channel->appendOption(kParamChannelOption0, kParamChannelOption0Hint);
-    assert(channel->getNOptions() == eInputChannel1);
-    channel->appendOption(kParamChannelOption1, kParamChannelOption1Hint);
-    channel->setDefault(def);
-}
 
 static void
 addWrapOptions(ChoiceParamDescriptor* channel, WrapEnum def)
@@ -1449,6 +2283,13 @@ addWrapOptions(ChoiceParamDescriptor* channel, WrapEnum def)
 template<DistortionPluginEnum plugin>
 void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
+    
+#ifdef OFX_EXTENSIONS_NUKE
+    if (gIsMultiPlane && !OFX::fetchSuite(kFnOfxImageEffectPlaneSuite, 2)) {
+        OFX::throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
+    }
+#endif
+    
     if (plugin ==  eDistortionPluginSTMap) {
         // create the uv clip
         // uv clip is defined first, because the output format is taken from the RoD of the first clip in Nuke
@@ -1550,21 +2391,49 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             param->setLabel(kParamChannelULabel);
             param->setHint(kParamChannelUHint);
             param->setLayoutHint(eLayoutHintNoNewLine);
-            addInputChannelOptions(param, eInputChannelR);
+            addInputChannelOptions<ChoiceParamDescriptor>(param, 0);
+            param->setDefault(eInputChannelR);
+            if (gIsMultiPlane) {
+                param->setEvaluateOnChange(false);
+                param->setIsPersistant(false);
+            }
             if (page) {
                 page->addChild(*param);
             }
         }
+        if (gIsMultiPlane) {
+            //Add a hidden string param that will remember the value of the choice
+            OFX::StringParamDescriptor* param = desc.defineStringParam(kParamChannelUChoice);
+            param->setLabel(kParamChannelUChoice);
+            param->setIsSecret(true);
+            page->addChild(*param);
+        }
+
+        
         {
             ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelV);
             param->setLabel(kParamChannelVLabel);
             param->setHint(kParamChannelVHint);
-            addInputChannelOptions(param, eInputChannelG);
+            addInputChannelOptions<ChoiceParamDescriptor>(param, 0);
+            param->setDefault(eInputChannelG);
+            if (gIsMultiPlane) {
+                param->setEvaluateOnChange(false);
+                param->setIsPersistant(false);
+            }
             if (page) {
                 page->addChild(*param);
             }
         }
+        
+        if (gIsMultiPlane) {
+            //Add a hidden string param that will remember the value of the choice
+            OFX::StringParamDescriptor* param = desc.defineStringParam(kParamChannelVChoice);
+            param->setLabel(kParamChannelVChoice);
+            param->setIsSecret(true);
+            page->addChild(*param);
+        }
 
+        
         {
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamUVOffset);
             param->setLabel(kParamUVOffsetLabel);
@@ -1704,6 +2573,39 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
 
     }
 
+    // outputComponents
+    /*if (gIsMultiPlane) {
+        {
+            ChoiceParamDescriptor *param = desc.defineChoiceParam(kNatronOfxParamOutputChannels);
+            param->setLabel(kParamOutputChannelsLabel);
+            param->setHint(kParamOutputChannelsHint);
+#ifdef OFX_EXTENSIONS_NATRON
+            param->setHostCanAddOptions(true);
+#endif
+            param->appendOption(kDistortionColorRGBA);
+            param->appendOption(kDistortionMotionForwardPlaneName);
+            param->appendOption(kDistortionMotionBackwardPlaneName);
+            param->appendOption(kDistortionDisparityLeftPlaneName);
+            param->appendOption(kDistortionDisparityRightPlaneName);
+            param->setEvaluateOnChange(false);
+            param->setIsPersistant(false);
+            
+            desc.addClipPreferencesSlaveParam(*param); // is used as _outputComponents if multiplane
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        
+        {
+            //Add a hidden string param that will remember the value of the choice
+            OFX::StringParamDescriptor* param = desc.defineStringParam(kParamOutputChannelsChoice);
+            param->setLabel(kParamOutputChannelsLabel "Choice");
+            param->setIsSecret(true);
+            page->addChild(*param);
+        }
+    }*/
+    
+    
     ofxsFilterDescribeParamsInterpolate2D(desc, page, (plugin == eDistortionPluginSTMap));
     ofxsMaskMixDescribeParams(desc, page);
 }
