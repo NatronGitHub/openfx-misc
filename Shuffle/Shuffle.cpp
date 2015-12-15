@@ -1259,9 +1259,17 @@ ShufflePlugin::isIdentityInternal(double time, OFX::Clip*& identityClip)
     } else {
         std::list<std::string> componentsA = _srcClipA->getComponentsPresent();
         std::list<std::string> componentsB = _srcClipB->getComponentsPresent();
+        std::list<std::string> outputsComponents = _dstClip->getComponentsPresent();
         
         OFX::ChoiceParam* params[4] = {_r, _g, _b, _a};
         IdentityChoiceData data[4];
+        
+        
+        std::string dstPlane,dstComponents;
+        getPlaneNeededInOutput(outputsComponents, _outputComponents, &dstPlane, &dstComponents);
+        if (dstPlane != kFnOfxImagePlaneColour) {
+            return false;
+        }
         
         int expectedIndex = -1;
         for (int i = 0; i < 4; ++i) {
