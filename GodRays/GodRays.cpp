@@ -485,6 +485,7 @@ public:
     , _steps(0)
 #endif
     , _max(0)
+    , _srcClipChanged(false)
     {
         // NON-GENERIC
         if (paramExists(kParamTransformTranslateOld)) {
@@ -553,6 +554,7 @@ private:
     RGBAParam* _gamma;
     IntParam* _steps;
     BooleanParam* _max;
+    bool _srcClipChanged; // set to true the first time the user connects src
 };
 
 // overridden is identity
@@ -784,8 +786,12 @@ GodRaysPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::str
 void
 GodRaysPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged &&
+        args.reason == OFX::eChangeUserEdit) {
         resetCenter(args.time);
+        _srcClipChanged = true;
     }
 }
 

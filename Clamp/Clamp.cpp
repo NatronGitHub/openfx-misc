@@ -389,6 +389,7 @@ class ClampPlugin : public OFX::ImageEffect
             : ImageEffect(handle)
             , _dstClip(0)
             , _srcClip(0)
+            , _srcClipChanged(false)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -465,6 +466,7 @@ class ClampPlugin : public OFX::ImageEffect
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
+    bool _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -686,7 +688,10 @@ ClampPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
 void
 ClampPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged &&
+        args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
                 _premult->setValue(false);
@@ -720,6 +725,7 @@ ClampPlugin::changedClip(const InstanceChangedArgs &args, const std::string &cli
             default:
                 break;
         }
+        _srcClipChanged = true;
     }
 }
 

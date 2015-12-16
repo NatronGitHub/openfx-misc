@@ -51,6 +51,7 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
 , _supportsRenderScale(supportsRenderScale)
 , _defaultUnpremult(defaultUnpremult)
 , _defaultProcessAlphaOnRGBA(defaultProcessAlphaOnRGBA)
+, _srcClipChanged(false)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGB ||
@@ -84,7 +85,10 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
 void
 CImgFilterPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged &&
+        args.reason == OFX::eChangeUserEdit) {
         beginEditBlock("changedClip");
         if (_defaultUnpremult) {
             switch (_srcClip->getPreMultiplication()) {
@@ -120,6 +124,7 @@ CImgFilterPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args, co
             }
         }
         endEditBlock();
+        _srcClipChanged = true;
     }
 }
 

@@ -287,6 +287,7 @@ public:
     : ImageEffect(handle)
     , _dstClip(0)
     , _srcClip(0)
+    , _srcClipChanged(false)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -319,6 +320,7 @@ private:
     OFX::Clip *_srcClip;
     OFX::BooleanParam* _premult;
     OFX::ChoiceParam* _premultChannel;
+    bool _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -458,7 +460,10 @@ template <ColorTransformEnum transform>
 void
 ColorTransformPlugin<transform>::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged &&
+        args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
                 _premult->setValue(false);
@@ -470,6 +475,7 @@ ColorTransformPlugin<transform>::changedClip(const InstanceChangedArgs &args, co
                 _premult->setValue(false);
                 break;
         }
+        _srcClipChanged = true;
     }
 }
 

@@ -324,6 +324,7 @@ public:
     , _srcClip(0)
     , _flip(0)
     , _flop(0)
+    , _srcClipChanged(false)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -334,7 +335,7 @@ public:
         if (_srcClip) {
             _flip->setEnabled(_srcClip->getFieldOrder() == eFieldNone);
         }
-}
+    }
 
 private:
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
@@ -353,6 +354,7 @@ private:
 
     BooleanParam* _flip;
     BooleanParam* _flop;
+    bool _srcClipChanged; // set to true the first time the user connects src
 };
 
 // the overridden render function
@@ -498,8 +500,12 @@ MirrorPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, 
 void
 MirrorPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged &&
+        args.reason == OFX::eChangeUserEdit) {
         _flip->setEnabled(_srcClip->getFieldOrder() == eFieldNone);
+        _srcClipChanged = true;
     }
 }
 

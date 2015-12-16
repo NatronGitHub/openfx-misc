@@ -69,6 +69,7 @@ public:
     , _skewOrder(0)
     , _center(0)
     , _interactive(0)
+    , _srcClipChanged(0)
     {
         // NON-GENERIC
         _translate = fetchDouble2DParam(kParamTransformTranslateOld);
@@ -105,6 +106,7 @@ private:
     OFX::ChoiceParam* _skewOrder;
     OFX::Double2DParam* _center;
     OFX::BooleanParam* _interactive;
+    bool _srcClipChanged; // set to true the first time the user connects src
 };
 
 // overridden is identity
@@ -331,8 +333,12 @@ TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::s
 void
 TransformPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged &&
+        args.reason == OFX::eChangeUserEdit) {
         resetCenter(args.time);
+        _srcClipChanged = true;
     }
 }
 

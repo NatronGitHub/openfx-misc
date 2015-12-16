@@ -293,6 +293,7 @@ public:
     , _mix(0)
     , _maskApply(0)
     , _maskInvert(0)
+    , _srcClipChanged(false)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -351,6 +352,7 @@ private:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
+    bool _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -525,7 +527,10 @@ AddPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, dou
 void
 AddPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged &&
+        args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
                 _premult->setValue(false);
@@ -537,6 +542,7 @@ AddPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipN
                 _premult->setValue(false);
                 break;
         }
+        _srcClipChanged = true;
     }
 }
 

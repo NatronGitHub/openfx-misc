@@ -611,6 +611,7 @@ public:
     , _mix(0)
     , _maskApply(0)
     , _maskInvert(0)
+    , _srcClipChanged(false)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -711,6 +712,7 @@ private:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
+    bool _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -982,7 +984,10 @@ void
 ColorCorrectPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
     //std::cout << "changedClip!\n";
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged &&
+        args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
                 _premult->setValue(false);
@@ -994,6 +999,7 @@ ColorCorrectPlugin::changedClip(const InstanceChangedArgs &args, const std::stri
                 _premult->setValue(false);
                 break;
         }
+        _srcClipChanged = true;
     }
     //std::cout << "changedClip OK!\n";
 }

@@ -32,6 +32,7 @@ CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle 
 , _srcBClip(0)
 , _srcAClipName(srcAClipName)
 , _srcBClipName(srcBClipName)
+, _srcClipChanged(false)
 {
     _srcAClip = fetchClip(_srcAClipName);
     assert(_srcAClip && (_srcAClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcAClip->getPixelComponents() == OFX::ePixelComponentRGBA));
@@ -41,7 +42,10 @@ CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle 
 
 void CImgOperatorPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == _srcAClipName && _srcAClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == _srcAClipName &&
+        _srcAClip && _srcAClip->isConnected() &&
+        !_srcClipChanged &&
+        args.reason == OFX::eChangeUserEdit) {
         if (_defaultUnpremult) {
             switch (_srcAClip->getPreMultiplication()) {
                 case OFX::eImageOpaque:
@@ -55,8 +59,12 @@ void CImgOperatorPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &a
                     break;
             }
         }
+        _srcClipChanged = true;
     }
-    if (clipName == _srcBClipName && _srcBClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == _srcBClipName &&
+        _srcBClip && _srcBClip->isConnected() &&
+        !_srcClipChanged &&
+        args.reason == OFX::eChangeUserEdit) {
         if (_defaultUnpremult) {
             switch (_srcBClip->getPreMultiplication()) {
                 case OFX::eImageOpaque:
@@ -70,6 +78,7 @@ void CImgOperatorPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &a
                     break;
             }
         }
+        _srcClipChanged = true;
     }
 }
 

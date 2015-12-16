@@ -316,6 +316,7 @@ class PremultPlugin : public OFX::ImageEffect
     , _processB(0)
     , _processA(0)
     , _premult(0)
+    , _srcClipChanged(false)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -362,6 +363,7 @@ private:
     OFX::BooleanParam* _processB;
     OFX::BooleanParam* _processA;
     OFX::ChoiceParam* _premult;
+    bool _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -585,7 +587,10 @@ template<bool isPremult>
 void
 PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged &&
+        args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
                 break;
@@ -612,6 +617,7 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std
                 }
                 break;
         }
+        _srcClipChanged = true;
     }
 }
 

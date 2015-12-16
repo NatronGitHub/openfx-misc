@@ -574,6 +574,7 @@ public:
     , _mix(0)
     , _maskApply(0)
     , _maskInvert(0)
+    , _srcClipChanged(false)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -654,6 +655,7 @@ private:
     OFX::DoubleParam *_mix;
     OFX::BooleanParam *_maskApply;
     OFX::BooleanParam *_maskInvert;
+    bool _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -964,7 +966,10 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
 void
 HSVToolPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged &&
+        args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
                 _premult->setValue(false);
@@ -976,6 +981,7 @@ HSVToolPlugin::changedClip(const InstanceChangedArgs &args, const std::string &c
                 _premult->setValue(false);
                 break;
         }
+        _srcClipChanged = true;
     }
 }
 

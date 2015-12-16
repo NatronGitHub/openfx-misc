@@ -297,6 +297,7 @@ public:
     , _copyFromButton(0)
     , _copyToButton(0)
     , _copyInputButton(0)
+    //, _srcClipChanged(false)
     {
         // NON-GENERIC
         for (int i = 0; i < 4; ++i) {
@@ -358,6 +359,7 @@ private:
     OFX::PushButtonParam* _copyFromButton;
     OFX::PushButtonParam* _copyToButton;
     OFX::PushButtonParam* _copyInputButton;
+    //bool _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -527,7 +529,10 @@ void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const s
     ///Commented-out because if the corner pin is used as a Tracker export from Natron we want the "From" points to stay the same.
     ///Preventing the call to this function in Natron is really messy and quite inapropriate (because we have to differentiate "regular"
     ///CornerPin nodes from "Exported" ones.) Imho the best is to just do nothing here.
-//    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+//    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+//        _srcClip && _srcClip->isConnected() &&
+//        !_srcClipChanged &&
+//        args.reason == OFX::eChangeUserEdit) {
 //        const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(args.time);
 //        beginEditBlock(kParamCopyInputRoD);
 //        _from[0]->setValue(srcRoD.x1, srcRoD.y1);
@@ -536,6 +541,7 @@ void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const s
 //        _from[3]->setValue(srcRoD.x1, srcRoD.y2);
 //        endEditBlock();
 //        changedTransform(args);
+//        _srcClipChanged = true;
 //    }
 //}
 

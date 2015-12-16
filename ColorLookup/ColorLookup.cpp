@@ -336,6 +336,7 @@ public:
     , _dstClip(0)
     , _srcClip(0)
     , _maskClip(0)
+    , _srcClipChanged(false)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -513,6 +514,7 @@ private:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
+    bool _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -666,7 +668,10 @@ ColorLookupPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityC
 void
 ColorLookupPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged &&
+        args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
                 break;
@@ -677,6 +682,7 @@ ColorLookupPlugin::changedClip(const InstanceChangedArgs &args, const std::strin
                 _premult->setValue(false);
                 break;
         }
+        _srcClipChanged = true;
     }
 }
 
