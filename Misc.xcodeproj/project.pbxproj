@@ -1054,6 +1054,7 @@
 		AC0626A21ABDC96800B3D105 /* net.sf.openfx.FrameRange.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06269E1ABDC95A00B3D105 /* net.sf.openfx.FrameRange.svg */; };
 		AC0EAC3D1A358A2000449A77 /* net.sf.openfx.SaturationPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0EAC3C1A358A0C00449A77 /* net.sf.openfx.SaturationPlugin.png */; };
 		AC0EAC3F1A358B7E00449A77 /* net.sf.openfx.KeyerPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0EAC3E1A358B6E00449A77 /* net.sf.openfx.KeyerPlugin.png */; };
+		AC3525D81C2171380063F0C0 /* ofxsMultiPlane.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC3525D61C216FCE0063F0C0 /* ofxsMultiPlane.cpp */; };
 		AC4774E51A25B8E9008A2B57 /* net.sf.openfx.Deinterlace.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774E41A25B8E7008A2B57 /* net.sf.openfx.Deinterlace.png */; };
 		AC60A33C19FE9C7900375A86 /* Ramp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32A19FE995F00375A86 /* Ramp.cpp */; };
 		AC6486DC1A41A57B0088844F /* net.sf.openfx.anaglyphPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486CF1A41A4960088844F /* net.sf.openfx.anaglyphPlugin.png */; };
@@ -2952,6 +2953,8 @@
 		AC06269E1ABDC95A00B3D105 /* net.sf.openfx.FrameRange.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = net.sf.openfx.FrameRange.svg; sourceTree = "<group>"; };
 		AC0EAC3C1A358A0C00449A77 /* net.sf.openfx.SaturationPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.SaturationPlugin.png; sourceTree = "<group>"; };
 		AC0EAC3E1A358B6E00449A77 /* net.sf.openfx.KeyerPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.KeyerPlugin.png; sourceTree = "<group>"; };
+		AC3525D61C216FCE0063F0C0 /* ofxsMultiPlane.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsMultiPlane.cpp; sourceTree = "<group>"; };
+		AC3525D71C216FCE0063F0C0 /* ofxsMultiPlane.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsMultiPlane.h; sourceTree = "<group>"; };
 		AC4774DC1A25B811008A2B57 /* net.sf.cimg.CImgBlur.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgBlur.png; path = Blur/net.sf.cimg.CImgBlur.png; sourceTree = "<group>"; };
 		AC4774DD1A25B811008A2B57 /* net.sf.cimg.CImgDenoise.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgDenoise.png; path = Denoise/net.sf.cimg.CImgDenoise.png; sourceTree = "<group>"; };
 		AC4774DE1A25B811008A2B57 /* net.sf.cimg.CImgDilate.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgDilate.png; path = Erode/net.sf.cimg.CImgDilate.png; sourceTree = "<group>"; };
@@ -4140,6 +4143,8 @@
 		1E9B5F46198A51590095C8AA /* SupportExt */ = {
 			isa = PBXGroup;
 			children = (
+				AC3525D61C216FCE0063F0C0 /* ofxsMultiPlane.cpp */,
+				AC3525D71C216FCE0063F0C0 /* ofxsMultiPlane.h */,
 				1E3060271B70DA5300A9B507 /* ofxsCoords.h */,
 				1E9B5F47198A51840095C8AA /* ofxsCopier.h */,
 				1E9B5F48198A51840095C8AA /* ofxsFilter.h */,
@@ -6376,6 +6381,7 @@
 				1E9B5F61198A52060095C8AA /* ofxsTransform3x3.cpp in Sources */,
 				1E9B5F63198A52210095C8AA /* ofxsOGLFontData.cpp in Sources */,
 				1E8B5D4C18B76A7500C31FDC /* ofxsCore.cpp in Sources */,
+				AC3525D81C2171380063F0C0 /* ofxsMultiPlane.cpp in Sources */,
 				1E8B5D4D18B76A7500C31FDC /* ofxsImageEffect.cpp in Sources */,
 				1E8B5D4F18B76A7500C31FDC /* ofxsInteract.cpp in Sources */,
 				1E8B5D5018B76A7500C31FDC /* ofxsLog.cpp in Sources */,
