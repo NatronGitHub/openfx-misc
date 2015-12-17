@@ -57,6 +57,8 @@
 #define kParamUpperLabel "Upper"
 #define kParamUpperHint  "Highlight pixels higher than this value."
 
+#define kParamSrcClipChanged "sourceChanged"
+
 using namespace OFX;
 
 
@@ -328,6 +330,8 @@ public:
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
+        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
+        assert(_srcClipChanged);
     }
     
 private:
@@ -358,7 +362,7 @@ private:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
-    bool _srcClipChanged; // set to true the first time the user connects src
+    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -595,7 +599,7 @@ ClipTestPlugin::changedClip(const InstanceChangedArgs &args, const std::string &
 {
     if (clipName == kOfxImageEffectSimpleSourceClipName &&
         _srcClip && _srcClip->isConnected() &&
-        !_srcClipChanged &&
+        !_srcClipChanged->getValue() &&
         args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
@@ -636,7 +640,7 @@ ClipTestPlugin::changedClip(const InstanceChangedArgs &args, const std::string &
             default:
                 break;
         }
-        _srcClipChanged = true;
+        _srcClipChanged->setValue(true);
     }
 }
 
@@ -771,6 +775,16 @@ void ClipTestPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
+
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        param->setDefault(false);
+        param->setIsSecret(true);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 }
 
 OFX::ImageEffect* ClipTestPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

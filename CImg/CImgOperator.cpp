@@ -32,7 +32,6 @@ CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle 
 , _srcBClip(0)
 , _srcAClipName(srcAClipName)
 , _srcBClipName(srcBClipName)
-, _srcClipChanged(false)
 {
     _srcAClip = fetchClip(_srcAClipName);
     assert(_srcAClip && (_srcAClip->getPixelComponents() == OFX::ePixelComponentRGB || _srcAClip->getPixelComponents() == OFX::ePixelComponentRGBA));
@@ -44,7 +43,7 @@ void CImgOperatorPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &a
 {
     if (clipName == _srcAClipName &&
         _srcAClip && _srcAClip->isConnected() &&
-        !_srcClipChanged &&
+        !_srcClipChanged->getValue() &&
         args.reason == OFX::eChangeUserEdit) {
         if (_defaultUnpremult) {
             switch (_srcAClip->getPreMultiplication()) {
@@ -59,11 +58,11 @@ void CImgOperatorPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &a
                     break;
             }
         }
-        _srcClipChanged = true;
+        _srcClipChanged->setValue(true);
     }
     if (clipName == _srcBClipName &&
         _srcBClip && _srcBClip->isConnected() &&
-        !_srcClipChanged &&
+        !_srcClipChanged->getValue() &&
         args.reason == OFX::eChangeUserEdit) {
         if (_defaultUnpremult) {
             switch (_srcBClip->getPreMultiplication()) {
@@ -78,7 +77,7 @@ void CImgOperatorPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &a
                     break;
             }
         }
-        _srcClipChanged = true;
+        _srcClipChanged->setValue(true);
     }
 }
 

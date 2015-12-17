@@ -94,6 +94,8 @@
 #define kParamClampWhiteLabel "Clamp White"
 #define kParamClampWhiteHint "All colors above 1 on output are set to 1."
 
+#define kParamSrcClipChanged "sourceChanged"
+
 using namespace OFX;
 
 namespace {
@@ -392,7 +394,7 @@ public:
     , _mix(0)
     , _maskApply(0)
     , _maskInvert(0)
-    , _srcClipChanged(false)
+    , _srcClipChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -420,7 +422,9 @@ public:
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
-        
+        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
+        assert(_srcClipChanged);
+
         _processR = fetchBooleanParam(kNatronOfxParamProcessR);
         _processG = fetchBooleanParam(kNatronOfxParamProcessG);
         _processB = fetchBooleanParam(kNatronOfxParamProcessB);
@@ -463,7 +467,7 @@ private:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
-    bool _srcClipChanged; // set to true the first time the user connects src
+    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -691,7 +695,7 @@ GradePlugin::changedClip(const InstanceChangedArgs &args, const std::string &cli
 {
     if (clipName == kOfxImageEffectSimpleSourceClipName &&
         _srcClip && _srcClip->isConnected() &&
-        !_srcClipChanged &&
+        !_srcClipChanged->getValue() &&
         args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
@@ -704,7 +708,7 @@ GradePlugin::changedClip(const InstanceChangedArgs &args, const std::string &cli
                 _premult->setValue(false);
                 break;
         }
-        _srcClipChanged = true;
+        _srcClipChanged->setValue(true);
    }
 }
 
@@ -860,6 +864,16 @@ GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
     
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
+
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        param->setDefault(false);
+        param->setIsSecret(true);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 }
 
 OFX::ImageEffect*

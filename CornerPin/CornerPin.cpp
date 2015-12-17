@@ -118,6 +118,8 @@ static const char* const kParamFrom[4] = {
 #define kParamTransformInteractiveLabel "Interactive Update"
 #define kParamTransformInteractiveHint "If checked, update the parameter values during interaction with the image viewer, else update the values when pen is released."
 
+//#define kParamSrcClipChanged "sourceChanged"
+
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
 
 using namespace OFX;
@@ -297,7 +299,7 @@ public:
     , _copyFromButton(0)
     , _copyToButton(0)
     , _copyInputButton(0)
-    //, _srcClipChanged(false)
+    //, _srcClipChanged(0)
     {
         // NON-GENERIC
         for (int i = 0; i < 4; ++i) {
@@ -316,6 +318,8 @@ public:
         _copyToButton = fetchPushButtonParam(kParamCopyTo);
         _copyInputButton = fetchPushButtonParam(kParamCopyInputRoD);
         assert(_copyInputButton && _copyToButton && _copyFromButton);
+        //_srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
+        //assert(_srcClipChanged);
     }
 private:
     
@@ -359,7 +363,7 @@ private:
     OFX::PushButtonParam* _copyFromButton;
     OFX::PushButtonParam* _copyToButton;
     OFX::PushButtonParam* _copyInputButton;
-    //bool _srcClipChanged; // set to true the first time the user connects src
+    //OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -531,7 +535,7 @@ void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const s
     ///CornerPin nodes from "Exported" ones.) Imho the best is to just do nothing here.
 //    if (clipName == kOfxImageEffectSimpleSourceClipName &&
 //        _srcClip && _srcClip->isConnected() &&
-//        !_srcClipChanged &&
+//        !_srcClipChanged->getValue() &&
 //        args.reason == OFX::eChangeUserEdit) {
 //        const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(args.time);
 //        beginEditBlock(kParamCopyInputRoD);
@@ -541,7 +545,7 @@ void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const s
 //        _from[3]->setValue(srcRoD.x1, srcRoD.y2);
 //        endEditBlock();
 //        changedTransform(args);
-//        _srcClipChanged = true;
+//        _srcClipChanged->setValue(true);
 //    }
 //}
 
@@ -1224,6 +1228,18 @@ void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     CornerPinPluginDescribeInContext(desc, context, page);
 
     Transform3x3DescribeInContextEnd(desc, context, page, true, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
+
+    /*
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        param->setDefault(false);
+        param->setIsSecret(true);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    */
 }
 
 OFX::ImageEffect* CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

@@ -23,6 +23,7 @@ thread_local OFX::ImageEffect *tls::gImageEffect = 0;
 
 #endif
 
+#define kParamSrcClipChanged "sourceChanged"
 
 CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle handle,
                                                        bool supportsComponentRemapping, // true if the number and order of components of the image passed to render() has no importance
@@ -51,7 +52,7 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
 , _supportsRenderScale(supportsRenderScale)
 , _defaultUnpremult(defaultUnpremult)
 , _defaultProcessAlphaOnRGBA(defaultProcessAlphaOnRGBA)
-, _srcClipChanged(false)
+, _srcClipChanged(0)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGB ||
@@ -79,6 +80,8 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
     _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
     _maskInvert = fetchBooleanParam(kParamMaskInvert);
     assert(_mix && _maskInvert);
+    _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
+    assert(_srcClipChanged);
 }
 
 
@@ -87,7 +90,7 @@ CImgFilterPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args, co
 {
     if (clipName == kOfxImageEffectSimpleSourceClipName &&
         _srcClip && _srcClip->isConnected() &&
-        !_srcClipChanged &&
+        !_srcClipChanged->getValue() &&
         args.reason == OFX::eChangeUserEdit) {
         beginEditBlock("changedClip");
         if (_defaultUnpremult) {
@@ -124,7 +127,7 @@ CImgFilterPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args, co
             }
         }
         endEditBlock();
-        _srcClipChanged = true;
+        _srcClipChanged->setValue(true);
     }
 }
 
@@ -248,6 +251,15 @@ CImgFilterPluginHelperBase::describeInContextEnd(OFX::ImageEffectDescriptor &des
 {
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
+
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        param->setDefault(false);
+        param->setIsSecret(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 }
 
 

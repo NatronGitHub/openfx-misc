@@ -261,7 +261,7 @@ protected:
     bool _supportsRenderScale;
     bool _defaultUnpremult; //!< unpremult by default
     bool _defaultProcessAlphaOnRGBA; //!< process alpha by default on RGBA images
-    bool _srcClipChanged; // set to true the first time the user connects src
+    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
 
 template <class Params, bool sourceIsOptional>

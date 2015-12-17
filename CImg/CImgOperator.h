@@ -65,7 +65,6 @@ protected:
     // params
     std::string _srcAClipName;
     std::string _srcBClipName;
-    bool _srcClipChanged; // set to true the first time the user connects srcA or srcB
 };
 
 template <class Params>
