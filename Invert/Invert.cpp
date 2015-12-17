@@ -58,6 +58,8 @@
 #define kParamProcessBHint  "Invert blue component."
 #define kParamProcessAHint  "Invert alpha component."
 
+#define kParamSrcClipChanged "sourceChanged"
+
 using namespace OFX;
 
 // Base class for the RGBA and the Alpha processor
@@ -255,6 +257,7 @@ class InvertPlugin : public OFX::ImageEffect
     , _mix(0)
     , _maskApply(0)
     , _maskInvert(0)
+    , _srcClipChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -279,6 +282,8 @@ class InvertPlugin : public OFX::ImageEffect
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
+        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
+        assert(_srcClipChanged);
     }
 
   private:
@@ -311,6 +316,7 @@ class InvertPlugin : public OFX::ImageEffect
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
+    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -513,7 +519,10 @@ void
 InvertPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
     //std::cout << "changedClip!\n";
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged->getValue() &&
+        args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
                 _premult->setValue(false);
@@ -525,6 +534,7 @@ InvertPlugin::changedClip(const InstanceChangedArgs &args, const std::string &cl
                 _premult->setValue(false);
                 break;
         }
+        _srcClipChanged->setValue(true);
     }
     //std::cout << "changedClip! OK\n";
 }
@@ -643,6 +653,16 @@ void InvertPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
     //std::cout << "describeincontext!" << (int)context << " OK\n";
+
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        param->setDefault(false);
+        param->setIsSecret(true);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 }
 
 OFX::ImageEffect* InvertPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

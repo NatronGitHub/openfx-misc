@@ -87,7 +87,7 @@ TestPositionPlugin::isIdentity(double time)
 }
 
 bool
-TestPositionPlugin::getInverseTransformCanonical(double time, int view, double /*amount*/, bool invert, OFX::Matrix3x3* invtransform) const
+TestPositionPlugin::getInverseTransformCanonical(double time, int /*view*/, double /*amount*/, bool invert, OFX::Matrix3x3* invtransform) const
 {
     double x, y;
     _translate->getValueAtTime(time, x, y);

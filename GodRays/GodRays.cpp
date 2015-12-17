@@ -77,6 +77,8 @@
 #define kTransform3x3MotionBlurCount 1000 // number of transforms used in the motion
 #endif
 
+#define kParamSrcClipChanged "sourceChanged"
+
 using namespace OFX;
 
 class GodRaysProcessorBase
@@ -485,6 +487,7 @@ public:
     , _steps(0)
 #endif
     , _max(0)
+    , _srcClipChanged(0)
     {
         // NON-GENERIC
         if (paramExists(kParamTransformTranslateOld)) {
@@ -511,6 +514,8 @@ public:
         _max = fetchBooleanParam(kParamMax);
 
         assert(_fromColor && _toColor && _gamma && _max);
+        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
+        assert(_srcClipChanged);
     }
 
 private:
@@ -553,6 +558,7 @@ private:
     RGBAParam* _gamma;
     IntParam* _steps;
     BooleanParam* _max;
+    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
 
 // overridden is identity
@@ -784,8 +790,12 @@ GodRaysPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::str
 void
 GodRaysPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged->getValue() &&
+        args.reason == OFX::eChangeUserEdit) {
         resetCenter(args.time);
+        _srcClipChanged->setValue(true);
     }
 }
 
@@ -1209,6 +1219,16 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     }
 
     ofxsMaskMixDescribeParams(desc, page);
+
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        param->setDefault(false);
+        param->setIsSecret(true);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 }
 
 OFX::ImageEffect* GodRaysPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

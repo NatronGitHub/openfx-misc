@@ -635,9 +635,11 @@ private:
     OFX::ChoiceParam *_a;
     OFX::StringParam* _channelParamStrings[4];
     OFX::BooleanParam *_createAlpha;
-    
+
     //Small cache only used on main-thread to speed up getclipPreferences
-    std::list<std::string> _currentOutputComps,_currentCompsA,_currentCompsB;
+    std::list<std::string> _currentOutputComps;
+    std::list<std::string> _currentCompsA;
+    std::list<std::string> _currentCompsB;
 };
 
 

@@ -115,6 +115,8 @@
 "Multiply the image by the alpha channel after processing. " \
 "Use to get premultiplied output images."
 
+#define kParamSrcClipChanged "sourceChanged"
+
 using namespace OFX;
 
 enum ColorTransformEnum {
@@ -287,6 +289,7 @@ public:
     : ImageEffect(handle)
     , _dstClip(0)
     , _srcClip(0)
+    , _srcClipChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -298,6 +301,8 @@ public:
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
+        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
+        assert(_srcClipChanged);
     }
     
 private:
@@ -319,6 +324,7 @@ private:
     OFX::Clip *_srcClip;
     OFX::BooleanParam* _premult;
     OFX::ChoiceParam* _premultChannel;
+    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -458,7 +464,10 @@ template <ColorTransformEnum transform>
 void
 ColorTransformPlugin<transform>::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged->getValue() &&
+        args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
                 _premult->setValue(false);
@@ -470,6 +479,7 @@ ColorTransformPlugin<transform>::changedClip(const InstanceChangedArgs &args, co
                 _premult->setValue(false);
                 break;
         }
+        _srcClipChanged->setValue(true);
     }
 }
 
@@ -634,6 +644,16 @@ ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescri
         param->appendOption(kParamPremultChannelA, kParamPremultChannelAHint);
         param->setDefault(3); // alpha
         param->setIsSecret(true); // not yet implemented
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        param->setDefault(false);
+        param->setIsSecret(true);
+        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }

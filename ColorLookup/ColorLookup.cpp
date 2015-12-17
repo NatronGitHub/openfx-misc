@@ -109,6 +109,8 @@ using std::isnan;
 #define kParamClampWhiteLabel "Clamp White"
 #define kParamClampWhiteHint "All colors above 1 on output are set to 1."
 
+#define kParamSrcClipChanged "sourceChanged"
+
 #define kCurveMaster 0
 #define kCurveRed 1
 #define kCurveGreen 2
@@ -336,6 +338,7 @@ public:
     , _dstClip(0)
     , _srcClip(0)
     , _maskClip(0)
+    , _srcClipChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -365,6 +368,8 @@ public:
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
+        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
+        assert(_srcClipChanged);
      }
 
 private:
@@ -513,6 +518,7 @@ private:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
+    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -666,7 +672,10 @@ ColorLookupPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityC
 void
 ColorLookupPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged->getValue() &&
+        args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
                 break;
@@ -677,6 +686,7 @@ ColorLookupPlugin::changedClip(const InstanceChangedArgs &args, const std::strin
                 _premult->setValue(false);
                 break;
         }
+        _srcClipChanged->setValue(true);
     }
 }
 
@@ -919,6 +929,16 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
+
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        param->setDefault(false);
+        param->setIsSecret(true);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 }
 
 OFX::ImageEffect*

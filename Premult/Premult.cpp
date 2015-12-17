@@ -83,6 +83,8 @@
 #define kParamClipInfoLabel "Clip Info..."
 #define kParamClipInfoHint "Display information about the inputs"
 
+#define kParamSrcClipChanged "sourceChanged"
+
 // TODO: sRGB conversions for short and byte types
 
 enum InputChannelEnum {
@@ -316,6 +318,7 @@ class PremultPlugin : public OFX::ImageEffect
     , _processB(0)
     , _processA(0)
     , _premult(0)
+    , _srcClipChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -333,6 +336,8 @@ class PremultPlugin : public OFX::ImageEffect
         assert(_processR && _processG && _processB && _processA);
         _premult = fetchChoiceParam(kParamPremultChannel);
         assert(_premult);
+        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
+        assert(_srcClipChanged);
     }
     
 private:
@@ -362,6 +367,7 @@ private:
     OFX::BooleanParam* _processB;
     OFX::BooleanParam* _processA;
     OFX::ChoiceParam* _premult;
+    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -585,7 +591,10 @@ template<bool isPremult>
 void
 PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged->getValue() &&
+        args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
                 break;
@@ -612,6 +621,7 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std
                 }
                 break;
         }
+        _srcClipChanged->setValue(true);
     }
 }
 
@@ -759,6 +769,16 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClipInfo);
         param->setLabel(kParamClipInfoLabel);
         param->setHint(kParamClipInfoHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        param->setDefault(false);
+        param->setIsSecret(true);
+        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }

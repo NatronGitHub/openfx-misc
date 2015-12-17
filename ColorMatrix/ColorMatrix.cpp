@@ -74,6 +74,7 @@
 #define kParamClampWhiteLabel "Clamp White"
 #define kParamClampWhiteHint "All colors above 1 on output are set to 1."
 
+#define kParamSrcClipChanged "sourceChanged"
 
 using namespace OFX;
 
@@ -322,6 +323,7 @@ public:
     , _dstClip(0)
     , _srcClip(0)
     , _maskClip(0)
+    , _srcClipChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -353,6 +355,8 @@ public:
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
+        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
+        assert(_srcClipChanged);
     }
     
 private:
@@ -390,6 +394,7 @@ private:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
+    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -593,7 +598,10 @@ ColorMatrixPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityC
 void
 ColorMatrixPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged->getValue() &&
+        args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
                 _premult->setValue(false);
@@ -605,6 +613,7 @@ ColorMatrixPlugin::changedClip(const InstanceChangedArgs &args, const std::strin
                 _premult->setValue(false);
                 break;
         }
+        _srcClipChanged->setValue(true);
     }
 }
 
@@ -778,6 +787,16 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
 
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
+
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        param->setDefault(false);
+        param->setIsSecret(true);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 }
 
 OFX::ImageEffect* ColorMatrixPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

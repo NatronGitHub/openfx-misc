@@ -80,6 +80,8 @@ static const std::string kParamOffset = std::string("Offset");
 #define kParamClampWhiteLabel "Clamp White"
 #define kParamClampWhiteHint "All colors above 1 on output are set to 1."
 
+#define kParamSrcClipChanged "sourceChanged"
+
 #define LUT_MAX_PRECISION 100
 
 // Rec.709 luminance:
@@ -611,6 +613,7 @@ public:
     , _mix(0)
     , _maskApply(0)
     , _maskInvert(0)
+    , _srcClipChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -639,7 +642,9 @@ public:
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
-        
+        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
+        assert(_srcClipChanged);
+
         _processR = fetchBooleanParam(kNatronOfxParamProcessR);
         _processG = fetchBooleanParam(kNatronOfxParamProcessG);
         _processB = fetchBooleanParam(kNatronOfxParamProcessB);
@@ -711,6 +716,7 @@ private:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
+    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -982,7 +988,10 @@ void
 ColorCorrectPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
     //std::cout << "changedClip!\n";
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged->getValue() &&
+        args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
                 _premult->setValue(false);
@@ -994,6 +1003,7 @@ ColorCorrectPlugin::changedClip(const InstanceChangedArgs &args, const std::stri
                 _premult->setValue(false);
                 break;
         }
+        _srcClipChanged->setValue(true);
     }
     //std::cout << "changedClip OK!\n";
 }
@@ -1231,6 +1241,16 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
     //std::cout << "describeInCotext! OK\n";
+
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        param->setDefault(false);
+        param->setIsSecret(true);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 }
 
 OFX::ImageEffect* ColorCorrectPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

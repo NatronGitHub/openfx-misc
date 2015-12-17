@@ -41,7 +41,10 @@ CImgOperatorPluginHelperBase::CImgOperatorPluginHelperBase(OfxImageEffectHandle 
 
 void CImgOperatorPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == _srcAClipName && _srcAClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == _srcAClipName &&
+        _srcAClip && _srcAClip->isConnected() &&
+        !_srcClipChanged->getValue() &&
+        args.reason == OFX::eChangeUserEdit) {
         if (_defaultUnpremult) {
             switch (_srcAClip->getPreMultiplication()) {
                 case OFX::eImageOpaque:
@@ -55,8 +58,12 @@ void CImgOperatorPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &a
                     break;
             }
         }
+        _srcClipChanged->setValue(true);
     }
-    if (clipName == _srcBClipName && _srcBClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == _srcBClipName &&
+        _srcBClip && _srcBClip->isConnected() &&
+        !_srcClipChanged->getValue() &&
+        args.reason == OFX::eChangeUserEdit) {
         if (_defaultUnpremult) {
             switch (_srcBClip->getPreMultiplication()) {
                 case OFX::eImageOpaque:
@@ -70,6 +77,7 @@ void CImgOperatorPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &a
                     break;
             }
         }
+        _srcClipChanged->setValue(true);
     }
 }
 

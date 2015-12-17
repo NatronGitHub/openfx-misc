@@ -56,6 +56,8 @@
 #define kParamMirrorFlopLabel "Horizontal (flop)"
 #define kParamMirrorFlopHint "Mirror image (swap left and right)"
 
+#define kParamSrcClipChanged "sourceChanged"
+
 using namespace OFX;
 
 
@@ -324,6 +326,7 @@ public:
     , _srcClip(0)
     , _flip(0)
     , _flop(0)
+    , _srcClipChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -334,7 +337,9 @@ public:
         if (_srcClip) {
             _flip->setEnabled(_srcClip->getFieldOrder() == eFieldNone);
         }
-}
+        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
+        assert(_srcClipChanged);
+    }
 
 private:
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
@@ -353,6 +358,7 @@ private:
 
     BooleanParam* _flip;
     BooleanParam* _flop;
+    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
 
 // the overridden render function
@@ -498,8 +504,12 @@ MirrorPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, 
 void
 MirrorPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && _srcClip && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged->getValue() &&
+        args.reason == OFX::eChangeUserEdit) {
         _flip->setEnabled(_srcClip->getFieldOrder() == eFieldNone);
+        _srcClipChanged->setValue(true);
     }
 }
 
@@ -592,6 +602,16 @@ void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMirrorFlop);
         param->setLabel(kParamMirrorFlopLabel);
         param->setHint(kParamMirrorFlopHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        param->setDefault(false);
+        param->setIsSecret(true);
+        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }
