@@ -419,6 +419,7 @@ void TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);
+        param->setEvaluateOnChange(false);
         if (page) {
             page->addChild(*param);
         }
@@ -459,6 +460,7 @@ void DirBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);
+        param->setEvaluateOnChange(false);
         if (page) {
             page->addChild(*param);
         }

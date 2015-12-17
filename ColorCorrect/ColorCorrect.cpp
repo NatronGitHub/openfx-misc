@@ -1247,6 +1247,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);
+        param->setEvaluateOnChange(false);
         if (page) {
             page->addChild(*param);
         }

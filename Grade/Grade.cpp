@@ -870,6 +870,7 @@ GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);
+        param->setEvaluateOnChange(false);
         if (page) {
             page->addChild(*param);
         }

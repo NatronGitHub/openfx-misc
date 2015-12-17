@@ -793,6 +793,7 @@ void ColorMatrixPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);
+        param->setEvaluateOnChange(false);
         if (page) {
             page->addChild(*param);
         }

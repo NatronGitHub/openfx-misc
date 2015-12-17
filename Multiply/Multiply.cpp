@@ -728,6 +728,7 @@ void MultiplyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);
+        param->setEvaluateOnChange(false);
         if (page) {
             page->addChild(*param);
         }

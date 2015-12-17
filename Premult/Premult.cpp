@@ -779,6 +779,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);
+        param->setEvaluateOnChange(false);
         if (page) {
             page->addChild(*param);
         }

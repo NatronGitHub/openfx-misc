@@ -654,6 +654,7 @@ ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescri
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);
+        param->setEvaluateOnChange(false);
         if (page) {
             page->addChild(*param);
         }

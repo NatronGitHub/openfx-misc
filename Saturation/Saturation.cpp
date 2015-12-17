@@ -816,6 +816,7 @@ SaturationPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);
+        param->setEvaluateOnChange(false);
         if (page) {
             page->addChild(*param);
         }

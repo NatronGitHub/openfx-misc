@@ -1235,6 +1235,7 @@ void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);
+        param->setEvaluateOnChange(false);
         if (page) {
             page->addChild(*param);
         }
