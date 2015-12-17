@@ -674,8 +674,8 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->addSupportedComponent(ePixelComponentRGB);
-    srcClip->addSupportedComponent(ePixelComponentXY);
+    dstClip->addSupportedComponent(ePixelComponentRGB);
+    dstClip->addSupportedComponent(ePixelComponentXY);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
     dstClip->setFieldExtraction(OFX::eFieldExtractBoth);
