@@ -83,7 +83,7 @@
 #define kParamClipInfoLabel "Clip Info..."
 #define kParamClipInfoHint "Display information about the inputs"
 
-#define kParamSrcClipChanged "sourceChanged"
+#define kParamPremultChanged "premultChanged"
 
 // TODO: sRGB conversions for short and byte types
 
@@ -318,7 +318,7 @@ class PremultPlugin : public OFX::ImageEffect
     , _processB(0)
     , _processA(0)
     , _premult(0)
-    , _srcClipChanged(0)
+    , _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -336,8 +336,8 @@ class PremultPlugin : public OFX::ImageEffect
         assert(_processR && _processG && _processB && _processA);
         _premult = fetchChoiceParam(kParamPremultChannel);
         assert(_premult);
-        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
-        assert(_srcClipChanged);
+        _premultChanged = fetchBooleanParam(kParamPremultChanged);
+        assert(_premultChanged);
     }
     
 private:
@@ -356,7 +356,7 @@ private:
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-
+    
   private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -367,7 +367,7 @@ private:
     OFX::BooleanParam* _processB;
     OFX::BooleanParam* _processA;
     OFX::ChoiceParam* _premult;
-    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
+    OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
 
@@ -584,6 +584,8 @@ PremultPlugin<isPremult>::changedParam(const OFX::InstanceChangedArgs &args, con
         }
         msg += "\n";
         sendMessage(OFX::Message::eMessageMessage, "", msg);
+    } else if (paramName == kParamPremult && args.reason == OFX::eChangeUserEdit) {
+        _premultChanged->setValue(true);
     }
 }
 
@@ -593,7 +595,7 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std
 {
     if (clipName == kOfxImageEffectSimpleSourceClipName &&
         _srcClip && _srcClip->isConnected() &&
-        !_srcClipChanged->getValue() &&
+        !_premultChanged->getValue() &&
         args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
@@ -621,9 +623,9 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std
                 }
                 break;
         }
-        _srcClipChanged->setValue(true);
     }
 }
+
 
 //mDeclarePluginFactory(PremultPluginFactory, {}, {});
 
@@ -775,7 +777,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
     }
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);

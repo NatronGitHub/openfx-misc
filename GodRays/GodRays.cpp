@@ -77,7 +77,7 @@
 #define kTransform3x3MotionBlurCount 1000 // number of transforms used in the motion
 #endif
 
-#define kParamSrcClipChanged "sourceChanged"
+#define kParamPremultChanged "premultChanged"
 
 using namespace OFX;
 
@@ -487,7 +487,7 @@ public:
     , _steps(0)
 #endif
     , _max(0)
-    , _srcClipChanged(0)
+    , _premultChanged(0)
     {
         // NON-GENERIC
         if (paramExists(kParamTransformTranslateOld)) {
@@ -514,8 +514,8 @@ public:
         _max = fetchBooleanParam(kParamMax);
 
         assert(_fromColor && _toColor && _gamma && _max);
-        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
-        assert(_srcClipChanged);
+        _premultChanged = fetchBooleanParam(kParamPremultChanged);
+        assert(_premultChanged);
     }
 
 private:
@@ -558,7 +558,7 @@ private:
     RGBAParam* _gamma;
     IntParam* _steps;
     BooleanParam* _max;
-    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
+    OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
 // overridden is identity
@@ -782,6 +782,8 @@ GodRaysPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::str
         paramName == kParamTransformSkewOrderOld ||
         paramName == kParamTransformCenterOld) {
         changedTransform(args);
+    } else if (paramName == kParamPremult && args.reason == OFX::eChangeUserEdit) {
+        _premultChanged->setValue(true);
     } else {
         Transform3x3Plugin::changedParam(args, paramName);
     }
@@ -792,12 +794,11 @@ GodRaysPlugin::changedClip(const InstanceChangedArgs &args, const std::string &c
 {
     if (clipName == kOfxImageEffectSimpleSourceClipName &&
         _srcClip && _srcClip->isConnected() &&
-        !_srcClipChanged->getValue() &&
         args.reason == OFX::eChangeUserEdit) {
         resetCenter(args.time);
-        _srcClipChanged->setValue(true);
     }
 }
+
 
 
 /* set up and run a processor */
@@ -1221,7 +1222,7 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     ofxsMaskMixDescribeParams(desc, page);
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);

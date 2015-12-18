@@ -80,7 +80,7 @@ static const std::string kParamOffset = std::string("Offset");
 #define kParamClampWhiteLabel "Clamp White"
 #define kParamClampWhiteHint "All colors above 1 on output are set to 1."
 
-#define kParamSrcClipChanged "sourceChanged"
+#define kParamPremultChanged "premultChanged"
 
 #define LUT_MAX_PRECISION 100
 
@@ -613,7 +613,7 @@ public:
     , _mix(0)
     , _maskApply(0)
     , _maskInvert(0)
-    , _srcClipChanged(0)
+    , _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -642,8 +642,8 @@ public:
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
-        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
-        assert(_srcClipChanged);
+        _premultChanged = fetchBooleanParam(kParamPremultChanged);
+        assert(_premultChanged);
 
         _processR = fetchBooleanParam(kNatronOfxParamProcessR);
         _processG = fetchBooleanParam(kNatronOfxParamProcessG);
@@ -663,7 +663,7 @@ private:
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
     void fetchColorControlGroup(const std::string& groupName, ColorControlParamGroup* group) {
         assert(group);
         group->enable = (groupName == kGroupMaster) ? 0 : fetchBooleanParam(groupName  + kParamEnable);
@@ -716,7 +716,7 @@ private:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
-    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
+    OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
 
@@ -990,7 +990,7 @@ ColorCorrectPlugin::changedClip(const InstanceChangedArgs &args, const std::stri
     //std::cout << "changedClip!\n";
     if (clipName == kOfxImageEffectSimpleSourceClipName &&
         _srcClip && _srcClip->isConnected() &&
-        !_srcClipChanged->getValue() &&
+        !_premultChanged->getValue() &&
         args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
@@ -1003,11 +1003,18 @@ ColorCorrectPlugin::changedClip(const InstanceChangedArgs &args, const std::stri
                 _premult->setValue(false);
                 break;
         }
-        _srcClipChanged->setValue(true);
     }
     //std::cout << "changedClip OK!\n";
 }
 
+
+void
+ColorCorrectPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kParamPremult && args.reason == OFX::eChangeUserEdit) {
+        _premultChanged->setValue(true);
+    }
+}
 
 mDeclarePluginFactory(ColorCorrectPluginFactory, {}, {});
 
@@ -1243,7 +1250,7 @@ void ColorCorrectPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     //std::cout << "describeInCotext! OK\n";
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);

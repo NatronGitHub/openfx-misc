@@ -374,10 +374,12 @@ public:
         clipPreferences.setOutputFrameVarying(true);
     }
 
-    virtual void changedParam(const OFX::InstanceChangedArgs &/*args*/, const std::string &paramName) OVERRIDE FINAL
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL
     {
         if (paramName == kParamHelp) {
             sendMessage(OFX::Message::eMessageMessage, "", kPluginDescriptionUnsafe);
+        } else {
+            CImgFilterPluginHelper<CImgExpressionParams,true>::changedParam(args, paramName);
         }
     }
 

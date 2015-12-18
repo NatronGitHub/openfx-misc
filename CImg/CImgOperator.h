@@ -42,7 +42,7 @@ public:
                                  bool defaultProcessAlphaOnRGBA = false);
 
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-
+    
     static OFX::PageParamDescriptor*
     describeInContextBegin(OFX::ImageEffectDescriptor &desc,
                            OFX::ContextEnum /*context*/,

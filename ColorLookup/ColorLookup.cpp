@@ -109,7 +109,7 @@ using std::isnan;
 #define kParamClampWhiteLabel "Clamp White"
 #define kParamClampWhiteHint "All colors above 1 on output are set to 1."
 
-#define kParamSrcClipChanged "sourceChanged"
+#define kParamPremultChanged "premultChanged"
 
 #define kCurveMaster 0
 #define kCurveRed 1
@@ -338,7 +338,7 @@ public:
     , _dstClip(0)
     , _srcClip(0)
     , _maskClip(0)
-    , _srcClipChanged(0)
+    , _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
@@ -368,8 +368,8 @@ public:
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
         assert(_mix && _maskInvert);
-        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
-        assert(_srcClipChanged);
+        _premultChanged = fetchBooleanParam(kParamPremultChanged);
+        assert(_premultChanged);
      }
 
 private:
@@ -500,6 +500,8 @@ private:
             if (rmax < rmin) {
                 _range->setValue(rmax, rmin);
             }
+        } else if (paramName == kParamPremult && args.reason == OFX::eChangeUserEdit) {
+            _premultChanged->setValue(true);
         }
     }
 
@@ -518,7 +520,7 @@ private:
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
-    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
+    OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
 
@@ -674,7 +676,7 @@ ColorLookupPlugin::changedClip(const InstanceChangedArgs &args, const std::strin
 {
     if (clipName == kOfxImageEffectSimpleSourceClipName &&
         _srcClip && _srcClip->isConnected() &&
-        !_srcClipChanged->getValue() &&
+        !_premultChanged->getValue() &&
         args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
@@ -686,9 +688,10 @@ ColorLookupPlugin::changedClip(const InstanceChangedArgs &args, const std::strin
                 _premult->setValue(false);
                 break;
         }
-        _srcClipChanged->setValue(true);
     }
 }
+
+
 
 
 using namespace OFX;
@@ -931,7 +934,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     ofxsMaskMixDescribeParams(desc, page);
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);

@@ -118,7 +118,7 @@ static const char* const kParamFrom[4] = {
 #define kParamTransformInteractiveLabel "Interactive Update"
 #define kParamTransformInteractiveHint "If checked, update the parameter values during interaction with the image viewer, else update the values when pen is released."
 
-//#define kParamSrcClipChanged "sourceChanged"
+//#define kParamPremultChanged "premultChanged"
 
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
 
@@ -299,7 +299,7 @@ public:
     , _copyFromButton(0)
     , _copyToButton(0)
     , _copyInputButton(0)
-    //, _srcClipChanged(0)
+    //, _premultChanged(0)
     {
         // NON-GENERIC
         for (int i = 0; i < 4; ++i) {
@@ -318,8 +318,8 @@ public:
         _copyToButton = fetchPushButtonParam(kParamCopyTo);
         _copyInputButton = fetchPushButtonParam(kParamCopyInputRoD);
         assert(_copyInputButton && _copyToButton && _copyFromButton);
-        //_srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
-        //assert(_srcClipChanged);
+        //_premultChanged = fetchBooleanParam(kParamPremultChanged);
+        //assert(_premultChanged);
     }
 private:
     
@@ -363,7 +363,7 @@ private:
     OFX::PushButtonParam* _copyFromButton;
     OFX::PushButtonParam* _copyToButton;
     OFX::PushButtonParam* _copyInputButton;
-    //OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
+    //OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
 
@@ -535,7 +535,7 @@ void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const s
     ///CornerPin nodes from "Exported" ones.) Imho the best is to just do nothing here.
 //    if (clipName == kOfxImageEffectSimpleSourceClipName &&
 //        _srcClip && _srcClip->isConnected() &&
-//        !_srcClipChanged->getValue() &&
+//        !_premultChanged->getValue() &&
 //        args.reason == OFX::eChangeUserEdit) {
 //        const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(args.time);
 //        beginEditBlock(kParamCopyInputRoD);
@@ -545,7 +545,7 @@ void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const s
 //        _from[3]->setValue(srcRoD.x1, srcRoD.y2);
 //        endEditBlock();
 //        changedTransform(args);
-//        _srcClipChanged->setValue(true);
+//        _premultChanged->setValue(true);
 //    }
 //}
 
@@ -1231,7 +1231,7 @@ void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
 
     /*
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);

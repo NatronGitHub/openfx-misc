@@ -115,7 +115,7 @@
 "Multiply the image by the alpha channel after processing. " \
 "Use to get premultiplied output images."
 
-#define kParamSrcClipChanged "sourceChanged"
+#define kParamPremultChanged "premultChanged"
 
 using namespace OFX;
 
@@ -289,7 +289,7 @@ public:
     : ImageEffect(handle)
     , _dstClip(0)
     , _srcClip(0)
-    , _srcClipChanged(0)
+    , _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -301,8 +301,8 @@ public:
         _premult = fetchBooleanParam(kParamPremult);
         _premultChannel = fetchChoiceParam(kParamPremultChannel);
         assert(_premult && _premultChannel);
-        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
-        assert(_srcClipChanged);
+        _premultChanged = fetchBooleanParam(kParamPremultChanged);
+        assert(_premultChanged);
     }
     
 private:
@@ -317,14 +317,15 @@ private:
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+    
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
     OFX::BooleanParam* _premult;
     OFX::ChoiceParam* _premultChannel;
-    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
+    OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
 };
 
 
@@ -466,7 +467,7 @@ ColorTransformPlugin<transform>::changedClip(const InstanceChangedArgs &args, co
 {
     if (clipName == kOfxImageEffectSimpleSourceClipName &&
         _srcClip && _srcClip->isConnected() &&
-        !_srcClipChanged->getValue() &&
+        !_premultChanged->getValue() &&
         args.reason == OFX::eChangeUserEdit) {
         switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
@@ -479,7 +480,16 @@ ColorTransformPlugin<transform>::changedClip(const InstanceChangedArgs &args, co
                 _premult->setValue(false);
                 break;
         }
-        _srcClipChanged->setValue(true);
+    }
+}
+
+
+template <ColorTransformEnum transform>
+void
+ColorTransformPlugin<transform>::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kParamPremult && args.reason == OFX::eChangeUserEdit) {
+        _premultChanged->setValue(true);
     }
 }
 
@@ -650,7 +660,7 @@ ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescri
     }
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);

@@ -23,7 +23,8 @@ thread_local OFX::ImageEffect *tls::gImageEffect = 0;
 
 #endif
 
-#define kParamSrcClipChanged "sourceChanged"
+#define kParamPremultChanged "premultChanged"
+
 
 CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle handle,
                                                        bool supportsComponentRemapping, // true if the number and order of components of the image passed to render() has no importance
@@ -52,7 +53,7 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
 , _supportsRenderScale(supportsRenderScale)
 , _defaultUnpremult(defaultUnpremult)
 , _defaultProcessAlphaOnRGBA(defaultProcessAlphaOnRGBA)
-, _srcClipChanged(0)
+, _premultChanged(0)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGB ||
@@ -80,8 +81,8 @@ CImgFilterPluginHelperBase::CImgFilterPluginHelperBase(OfxImageEffectHandle hand
     _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
     _maskInvert = fetchBooleanParam(kParamMaskInvert);
     assert(_mix && _maskInvert);
-    _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
-    assert(_srcClipChanged);
+    _premultChanged = fetchBooleanParam(kParamPremultChanged);
+    assert(_premultChanged);
 }
 
 
@@ -90,10 +91,9 @@ CImgFilterPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args, co
 {
     if (clipName == kOfxImageEffectSimpleSourceClipName &&
         _srcClip && _srcClip->isConnected() &&
-        !_srcClipChanged->getValue() &&
         args.reason == OFX::eChangeUserEdit) {
         beginEditBlock("changedClip");
-        if (_defaultUnpremult) {
+        if (_defaultUnpremult && !_premultChanged->getValue()) {
             switch (_srcClip->getPreMultiplication()) {
                 case OFX::eImageOpaque:
                     _premult->setValue(false);
@@ -127,7 +127,14 @@ CImgFilterPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args, co
             }
         }
         endEditBlock();
-        _srcClipChanged->setValue(true);
+    }
+}
+
+void
+CImgFilterPluginHelperBase::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kParamPremult && args.reason == OFX::eChangeUserEdit) {
+        _premultChanged->setValue(true);
     }
 }
 
@@ -253,7 +260,7 @@ CImgFilterPluginHelperBase::describeInContextEnd(OFX::ImageEffectDescriptor &des
     ofxsMaskMixDescribeParams(desc, page);
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);

@@ -43,9 +43,8 @@ void CImgOperatorPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &a
 {
     if (clipName == _srcAClipName &&
         _srcAClip && _srcAClip->isConnected() &&
-        !_srcClipChanged->getValue() &&
         args.reason == OFX::eChangeUserEdit) {
-        if (_defaultUnpremult) {
+        if (_defaultUnpremult && !_premultChanged->getValue()) {
             switch (_srcAClip->getPreMultiplication()) {
                 case OFX::eImageOpaque:
                     _premult->setValue(false);
@@ -58,11 +57,10 @@ void CImgOperatorPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &a
                     break;
             }
         }
-        _srcClipChanged->setValue(true);
     }
     if (clipName == _srcBClipName &&
         _srcBClip && _srcBClip->isConnected() &&
-        !_srcClipChanged->getValue() &&
+        !_premultChanged->getValue() &&
         args.reason == OFX::eChangeUserEdit) {
         if (_defaultUnpremult) {
             switch (_srcBClip->getPreMultiplication()) {
@@ -77,9 +75,9 @@ void CImgOperatorPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &a
                     break;
             }
         }
-        _srcClipChanged->setValue(true);
     }
 }
+
 
 
 OFX::PageParamDescriptor*

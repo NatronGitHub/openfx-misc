@@ -157,6 +157,8 @@ public:
 
 
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE;
+    
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE;
 
     static OFX::PageParamDescriptor*
     describeInContextBegin(bool sourceIsOptional,
@@ -261,7 +263,7 @@ protected:
     bool _supportsRenderScale;
     bool _defaultUnpremult; //!< unpremult by default
     bool _defaultProcessAlphaOnRGBA; //!< process alpha by default on RGBA images
-    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
+    OFX::BooleanParam* _premultChanged; // set to true the when user changes premult
 };
 
 template <class Params, bool sourceIsOptional>
