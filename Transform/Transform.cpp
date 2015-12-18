@@ -49,7 +49,7 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kParamPremultChanged "premultChanged"
+#define kSrcClipChanged "srcClipChanged"
 
 using namespace OFX;
 
@@ -71,7 +71,7 @@ public:
     , _skewOrder(0)
     , _center(0)
     , _interactive(0)
-    , _premultChanged(0)
+    , _srcClipChanged(0)
     {
         // NON-GENERIC
         _translate = fetchDouble2DParam(kParamTransformTranslateOld);
@@ -84,8 +84,9 @@ public:
         _center = fetchDouble2DParam(kParamTransformCenterOld);
         _interactive = fetchBooleanParam(kParamTransformInteractiveOld);
         assert(_translate && _rotate && _scale && _scaleUniform && _skewX && _skewY && _skewOrder && _center && _interactive);
-        _premultChanged = fetchBooleanParam(kParamPremultChanged);
-        assert(_premultChanged);
+        _srcClipChanged = fetchBooleanParam(kSrcClipChanged);
+        assert(_srcClipChanged);
+        
     }
 
 private:
@@ -110,7 +111,7 @@ private:
     OFX::ChoiceParam* _skewOrder;
     OFX::Double2DParam* _center;
     OFX::BooleanParam* _interactive;
-    OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
+    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
 
 // overridden is identity
@@ -330,7 +331,7 @@ TransformPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::s
         paramName == kParamTransformCenterOld) {
         changedTransform(args);
     } else if (paramName == kParamPremult && args.reason == OFX::eChangeUserEdit) {
-        _premultChanged->setValue(true);
+        _srcClipChanged->setValue(true);
     } else {
         Transform3x3Plugin::changedParam(args, paramName);
     }
@@ -380,6 +381,18 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     TransformPluginDescribeInContext(desc, context, page);
 
     Transform3x3DescribeInContextEnd(desc, context, page, false, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
+    
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kSrcClipChanged);
+        param->setDefault(false);
+        param->setIsSecret(true);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
 }
 
 OFX::ImageEffect* TransformPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
@@ -413,7 +426,7 @@ void TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     Transform3x3DescribeInContextEnd(desc, context, page, true, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kSrcClipChanged);
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);
@@ -454,7 +467,7 @@ void DirBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     Transform3x3DescribeInContextEnd(desc, context, page, true, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeDirBlur);
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kSrcClipChanged);
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);
