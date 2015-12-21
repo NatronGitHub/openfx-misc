@@ -23,6 +23,7 @@
 #include "Merge.h"
 
 #include <cmath>
+#include <cstring>
 #include <algorithm>
 #ifdef _WINDOWS
 #include <windows.h>
@@ -30,6 +31,7 @@
 #ifdef DEBUG
 #include <iostream>
 #endif
+
 
 #include "ofxsProcessing.H"
 #include "ofxsMerging.h"
