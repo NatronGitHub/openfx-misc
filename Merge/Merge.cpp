@@ -25,6 +25,7 @@
 #include <cmath>
 #include <cstring>
 #include <algorithm>
+#include <bitset>
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -150,6 +151,20 @@
 using namespace OFX;
 using namespace MergeImages2D;
 
+/*
+ For explanations on why we use bitset instead of vector<bool>, see:
+
+ D. Kalev. What You Should Know about vector<bool>.
+ http://www.informit.com/guides/content.aspx?g=cplusplus&seqNum=98
+
+ S. D. Meyers. Effective STL: 50 Specific Ways to Improve Your Use of the Standard Template Library.
+ Item 18: "Avoid using vector<bool>".
+ Professional Computing Series. Addison-Wesley, Boston, 4 edition, 2004
+
+ V. Pieterse et al. Performance of C++ Bit-vector Implementations
+ http://www.cs.up.ac.za/cs/vpieterse/pub/PieterseEtAl_SAICSIT2010.pdf
+ */
+
 class MergeProcessorBase : public OFX::ImageProcessor
 {
 protected:
@@ -162,9 +177,9 @@ protected:
     bool _alphaMasking;
     double _mix;
     bool _maskInvert;
-    bool* _aChannels;
-    bool* _bChannels;
-    bool* _outputChannels;
+    std::bitset<4> _aChannels;
+    std::bitset<4> _bChannels;
+    std::bitset<4> _outputChannels;
 
 public:
     
@@ -199,13 +214,14 @@ public:
     void setValues(int bboxChoice,
                    bool alphaMasking,
                    double mix,
-                   bool* aChannels,
-                   bool* bChannels,
-                   bool* outputChannels)
+                   std::bitset<4> aChannels,
+                   std::bitset<4> bChannels,
+                   std::bitset<4> outputChannels)
     {
         _bbox = bboxChoice;
         _alphaMasking = alphaMasking;
         _mix = mix;
+        assert(aChannels.size() == 4 && bChannels.size() == 4 && outputChannels.size() == 4);
         _aChannels = aChannels;
         _bChannels = bChannels;
         _outputChannels = outputChannels;
@@ -663,9 +679,9 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     _alphaMasking->getValueAtTime(time, alphaMasking);
     double mix;
     _mix->getValueAtTime(time, mix);
-    bool aChannels[4];
-    bool bChannels[4];
-    bool outputChannels[4];
+    std::bitset<4> aChannels;
+    std::bitset<4> bChannels;
+    std::bitset<4> outputChannels;
     for (std::size_t c = 0; c < 4; ++c) {
         aChannels[c] = _aChannels[c]->getValueAtTime(time);
         bChannels[c] = _bChannels[c]->getValueAtTime(time);
