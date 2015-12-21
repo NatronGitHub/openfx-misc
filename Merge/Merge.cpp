@@ -146,7 +146,6 @@
 #define kClipB "B"
 
 #define kMaximumAInputs 64
-#define kMaximumOptionalAInputs 63
 
 using namespace OFX;
 using namespace MergeImages2D;
@@ -157,7 +156,7 @@ protected:
     const OFX::Image *_srcImgA;
     const OFX::Image *_srcImgB;
     const OFX::Image *_maskImg;
-    const OFX::Image** _optionalAImages;
+    std::vector<const OFX::Image*> _optionalAImages;
     bool  _doMasking;
     int _bbox;
     bool _alphaMasking;
@@ -187,7 +186,7 @@ public:
     }
     
     void setSrcImg(const OFX::Image *A, const OFX::Image *B,
-                   const OFX::Image** optionalAImages) {
+                   const std::vector<const OFX::Image*>& optionalAImages) {
         _srcImgA = A;
         _srcImgB = B;
         _optionalAImages = optionalAImages;
@@ -247,6 +246,9 @@ private:
                 const PIX *srcPixA = (const PIX *)  (_srcImgA ? _srcImgA->getPixelAddress(x, y) : 0);
                 const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
                 
+                assert(_optionalAImages.size() == 0 || _optionalAImages.size() == (kMaximumAInputs - 1));
+                
+                
                 if (srcPixA || srcPixB) {
 
                     for (int c = 0; c < nComponents; ++c) {
@@ -287,41 +289,39 @@ private:
                 }
 #             endif
 
-                for (unsigned int i = 0; i < kMaximumOptionalAInputs; ++i) {
+                for (unsigned int i = 0; i < _optionalAImages.size(); ++i) {
                     srcPixA = (const PIX *)  (_optionalAImages[i] ? _optionalAImages[i]->getPixelAddress(x, y) : 0);
                     
-                    if (!srcPixA) {
-                        continue;
-                    }
-                    
-                    for (int c = 0; c < nComponents; ++c) {
+                    if (srcPixA) {
+                        
+                        for (int c = 0; c < nComponents; ++c) {
 #                     ifdef DEBUG
-                        // check for NaN
-                        assert(srcPixA[c] == srcPixA[c]);
+                            // check for NaN
+                            assert(srcPixA[c] == srcPixA[c]);
 #                     endif
-                        // all images are supposed to be black and transparent outside o
-                        tmpA[c] = _aChannels[c] ? ((float)srcPixA[c] / maxValue) : 0.f;
+                            // all images are supposed to be black and transparent outside o
+                            tmpA[c] = _aChannels[c] ? ((float)srcPixA[c] / maxValue) : 0.f;
 #                         ifdef DEBUG
-                        // check for NaN
-                        assert(tmpA[c] == tmpA[c]);
+                            // check for NaN
+                            assert(tmpA[c] == tmpA[c]);
 #                         endif
-                    }
-                    if (nComponents != 4) {
-                        // set alpha (1 inside, 0 outside)
-                        assert(srcPixA);
-                        tmpA[3] = _aChannels[3] ? 1. : 0.;
-                    }
-                    
-                    // work in float: clamping is done when mixing
-                    mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, tmpPix, tmpPix);
-                    
+                        }
+                        if (nComponents != 4) {
+                            // set alpha (1 inside, 0 outside)
+                            assert(srcPixA);
+                            tmpA[3] = _aChannels[3] ? 1. : 0.;
+                        }
+
+                        // work in float: clamping is done when mixing
+                        mergePixel<f, float, nComponents, 1>(_alphaMasking, tmpA, tmpPix, tmpPix);
+
 #                     ifdef DEBUG
-                    // check for NaN
-                    for (int c = 0; c < 4; ++c) {
-                        assert(tmpPix[c] == tmpPix[c]);
-                    }
+                        // check for NaN
+                        for (int c = 0; c < 4; ++c) {
+                            assert(tmpPix[c] == tmpPix[c]);
+                        }
 #                     endif
-                    
+                    }
                 }
                 
                 // tmpPix has 4 components, but we only need the first nComponents
@@ -366,7 +366,7 @@ public:
         assert(_srcClipA && (_srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentAlpha));
         
         if (numerousInputs) {
-            _optionalASrcClips.resize(kMaximumOptionalAInputs);
+            _optionalASrcClips.resize(kMaximumAInputs - 1);
             for (int i = 2; i <= kMaximumAInputs; ++i) {
                 std::stringstream ss;
                 ss << kClipA << i;
@@ -543,17 +543,17 @@ namespace {
 // To ensure that images are always freed even in case of exceptions, use a RAII class.
 struct OptionalImagesHolder_RAII
 {
-    const OFX::Image* images[kMaximumOptionalAInputs];
+    std::vector<const OFX::Image*> images;
     
     OptionalImagesHolder_RAII()
     : images()
     {
-        memset(images, 0, kMaximumOptionalAInputs * sizeof(const OFX::Image*));
+        
     }
     
     ~OptionalImagesHolder_RAII()
     {
-        for (unsigned int i = 0; i < kMaximumOptionalAInputs; ++i) {
+        for (unsigned int i = 0; i < images.size(); ++i) {
             delete images[i];
         }
     }
@@ -594,13 +594,10 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
                                          _srcClipB->fetchImage(time) : 0);
     
     OptionalImagesHolder_RAII optionalImages;
-    
-    assert(kMaximumOptionalAInputs == _optionalASrcClips.size() || _optionalASrcClips.empty());
-    
-    for (unsigned i = 0; i < kMaximumOptionalAInputs; ++i) {
-        const OFX::Image* optImg = (_optionalASrcClips[i] && _optionalASrcClips[i]->isConnected()) ?
-                                        _optionalASrcClips[i]->fetchImage(time) : 0;
-        optionalImages.images[i] = optImg;
+    for (unsigned i = 0; i < _optionalASrcClips.size(); ++i) {
+        optionalImages.images.push_back((_optionalASrcClips[i] && _optionalASrcClips[i]->isConnected()) ?
+                                        _optionalASrcClips[i]->fetchImage(time) : 0);
+        const OFX::Image* optImg = optionalImages.images.back();
         if (optImg) {
             if (optImg->getRenderScale().x != args.renderScale.x ||
                 optImg->getRenderScale().y != args.renderScale.y ||
