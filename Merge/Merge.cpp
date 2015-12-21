@@ -289,7 +289,7 @@ private:
                 }
 #             endif
 
-                for (unsigned int i = 0; i < _optionalAImages.size(); ++i) {
+                for (size_t i = 0; i < _optionalAImages.size(); ++i) {
                     srcPixA = (const PIX *)  (_optionalAImages[i] ? _optionalAImages[i]->getPixelAddress(x, y) : 0);
                     
                     if (srcPixA) {
@@ -495,7 +495,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
                 }
             }
             
-            for (unsigned int i = 0; i < _optionalASrcClips.size(); ++i) {
+            for (size_t i = 0; i < _optionalASrcClips.size(); ++i) {
                 OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(time);
                 if (!_optionalASrcClips[i]->isConnected()) {
                     continue;
@@ -515,7 +515,7 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
                 setPersistentMessage(OFX::Message::eMessageError, "", "Input images intersection is empty.");
                 return false;
             }
-            for (unsigned int i = 0; i < _optionalASrcClips.size(); ++i) {
+            for (size_t i = 0; i < _optionalASrcClips.size(); ++i) {
                 OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(time);
                 interesect = OFX::Coords::rectIntersection(rodOptionalA, rod, &rod);
                 if (!interesect) {
@@ -553,7 +553,7 @@ struct OptionalImagesHolder_RAII
     
     ~OptionalImagesHolder_RAII()
     {
-        for (unsigned int i = 0; i < images.size(); ++i) {
+        for (size_t i = 0; i < images.size(); ++i) {
             delete images[i];
         }
     }
@@ -594,7 +594,7 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
                                          _srcClipB->fetchImage(time) : 0);
     
     OptionalImagesHolder_RAII optionalImages;
-    for (unsigned i = 0; i < _optionalASrcClips.size(); ++i) {
+    for (size_t i = 0; i < _optionalASrcClips.size(); ++i) {
         optionalImages.images.push_back((_optionalASrcClips[i] && _optionalASrcClips[i]->isConnected()) ?
                                         _optionalASrcClips[i]->fetchImage(time) : 0);
         const OFX::Image* optImg = optionalImages.images.back();
@@ -869,7 +869,7 @@ MergePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
     clipPreferences.setClipComponents(*_srcClipA, outputComps);
     clipPreferences.setClipComponents(*_srcClipB, outputComps);
-    for (unsigned i = 0; i < _optionalASrcClips.size(); ++i) {
+    for (size_t i = 0; i < _optionalASrcClips.size(); ++i) {
         clipPreferences.setClipComponents(*_optionalASrcClips[i], outputComps);
     }
 }
@@ -930,7 +930,7 @@ MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
 
     std::vector<OFX::Clip *> aClips = _optionalASrcClips;
     aClips.push_back(_srcClipA);
-    for (unsigned int i = 0; i < aClips.size(); ++i) {
+    for (size_t i = 0; i < aClips.size(); ++i) {
         if (!aClips[i]->isConnected()) {
             continue;
         }
