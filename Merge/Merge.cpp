@@ -160,9 +160,9 @@ protected:
     bool _alphaMasking;
     double _mix;
     bool _maskInvert;
-    std::vector<bool> _aChannels;
-    std::vector<bool> _bChannels;
-    std::vector<bool> _outputChannels;
+    bool* _aChannels;
+    bool* _bChannels;
+    bool* _outputChannels;
 
 public:
     
@@ -197,14 +197,13 @@ public:
     void setValues(int bboxChoice,
                    bool alphaMasking,
                    double mix,
-                   const std::vector<bool> &aChannels,
-                   const std::vector<bool> &bChannels,
-                   const std::vector<bool> &outputChannels)
+                   bool* aChannels,
+                   bool* bChannels,
+                   bool* outputChannels)
     {
         _bbox = bboxChoice;
         _alphaMasking = alphaMasking;
         _mix = mix;
-        assert(aChannels.size() == 4 && bChannels.size() == 4 && outputChannels.size() == 4);
         _aChannels = aChannels;
         _bChannels = bChannels;
         _outputChannels = outputChannels;
@@ -662,9 +661,9 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     _alphaMasking->getValueAtTime(time, alphaMasking);
     double mix;
     _mix->getValueAtTime(time, mix);
-    std::vector<bool> aChannels(4);
-    std::vector<bool> bChannels(4);
-    std::vector<bool> outputChannels(4);
+    bool aChannels[4];
+    bool bChannels[4];
+    bool outputChannels[4];
     for (int c = 0; c < 4; ++c) {
         aChannels[c] = _aChannels[c]->getValueAtTime(time);
         bChannels[c] = _bChannels[c]->getValueAtTime(time);
