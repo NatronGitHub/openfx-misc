@@ -420,6 +420,10 @@ void DeinterlacePlugin::render(const OFX::RenderArguments &args)
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
+    } else {
+        //All the code below expects src to be valid 
+        setPersistentMessage(OFX::Message::eMessageError, "", "Failed to fetch input image");
+        OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     if (srcp.get()) {
         if (srcp->getRenderScale().x != args.renderScale.x ||
