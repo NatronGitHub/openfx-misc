@@ -181,9 +181,10 @@ public:
 
     void grade(double* v, double wp, double bp, double white, double black, double mutiply, double offset, double gamma)
     {
-        double A = mutiply * (white - black) / (wp - bp);
+        double d = wp - bp;
+        double A = d != 0 ? mutiply * (white - black) / d : 0;
         double B = offset + black - A * bp;
-        *v = std::pow((A * *v) + B, 1. / gamma);
+        *v = gamma != 0 ? std::pow((A * *v) + B, 1. / gamma) : 0;
     }
     
     template<bool processR, bool processG, bool processB, bool processA>
