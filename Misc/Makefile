@@ -60,6 +60,7 @@ Transform.o \
 VectorToColor.o \
 ofxsGenerator.o \
 ofxsLut.o \
+ofxsMultiPlane.o \
 ofxsOGLTextRenderer.o \
 ofxsOGLFontData.o  \
 ofxsRamp.o  \
