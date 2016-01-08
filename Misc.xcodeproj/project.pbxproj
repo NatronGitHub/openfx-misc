@@ -1066,6 +1066,24 @@
 		AC0626A21ABDC96800B3D105 /* net.sf.openfx.FrameRange.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC06269E1ABDC95A00B3D105 /* net.sf.openfx.FrameRange.svg */; };
 		AC0EAC3D1A358A2000449A77 /* net.sf.openfx.SaturationPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0EAC3C1A358A0C00449A77 /* net.sf.openfx.SaturationPlugin.png */; };
 		AC0EAC3F1A358B7E00449A77 /* net.sf.openfx.KeyerPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC0EAC3E1A358B6E00449A77 /* net.sf.openfx.KeyerPlugin.png */; };
+		AC29F7A91C3FE91C006B0019 /* Reformat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC29F7A71C3FE81B006B0019 /* Reformat.cpp */; };
+		AC29F7AF1C3FE922006B0019 /* ofxsTransform3x3.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F57198A51840095C8AA /* ofxsTransform3x3.cpp */; };
+		AC29F7B01C3FE922006B0019 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		AC29F7B11C3FE922006B0019 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		AC29F7B21C3FE922006B0019 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		AC29F7B31C3FE922006B0019 /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		AC29F7B41C3FE922006B0019 /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		AC29F7B51C3FE922006B0019 /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		AC29F7B61C3FE922006B0019 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		AC29F7B71C3FE922006B0019 /* ofxsShutter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE72C0F1B5253A4001B0245 /* ofxsShutter.cpp */; };
+		AC29F7B81C3FE922006B0019 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		AC29F7BA1C3FE922006B0019 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		AC29F7C71C3FE936006B0019 /* Reformat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC29F7A71C3FE81B006B0019 /* Reformat.cpp */; };
+		AC29F7C81C3FE93A006B0019 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC29F7A61C3FE81B006B0019 /* PluginRegistration.cpp */; };
+		AC29F7C91C400C11006B0019 /* net.sf.openfx.Reformat.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC29F7A51C3FE81B006B0019 /* net.sf.openfx.Reformat.svg */; };
+		AC29F7CA1C400C13006B0019 /* net.sf.openfx.Reformat.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC29F7A41C3FE81B006B0019 /* net.sf.openfx.Reformat.png */; };
+		AC29F7CB1C400C1E006B0019 /* net.sf.openfx.Reformat.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC29F7A51C3FE81B006B0019 /* net.sf.openfx.Reformat.svg */; };
+		AC29F7CC1C400C22006B0019 /* net.sf.openfx.Reformat.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC29F7A41C3FE81B006B0019 /* net.sf.openfx.Reformat.png */; };
 		AC3525D81C2171380063F0C0 /* ofxsMultiPlane.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC3525D61C216FCE0063F0C0 /* ofxsMultiPlane.cpp */; };
 		AC4774E51A25B8E9008A2B57 /* net.sf.openfx.Deinterlace.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774E41A25B8E7008A2B57 /* net.sf.openfx.Deinterlace.png */; };
 		AC60A33C19FE9C7900375A86 /* Ramp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32A19FE995F00375A86 /* Ramp.cpp */; };
@@ -2271,6 +2289,8 @@
 				1E814CCC19C983A700C2C668 /* net.sf.openfx.Unpremult.svg in CopyFiles */,
 				1E814CD719C9849C00C2C668 /* net.sf.openfx.Retime.png in CopyFiles */,
 				1E814CD819C9849F00C2C668 /* net.sf.openfx.Retime.svg in CopyFiles */,
+				AC29F7CC1C400C22006B0019 /* net.sf.openfx.Reformat.png in CopyFiles */,
+				AC29F7CB1C400C1E006B0019 /* net.sf.openfx.Reformat.svg in CopyFiles */,
 				ACC8477E1A0A3F9300B3FAFE /* net.sf.openfx.Ramp.png in CopyFiles */,
 				ACC8477F1A0A3F9500B3FAFE /* net.sf.openfx.Ramp.svg in CopyFiles */,
 				1EE4A8C119C6EF7D00E6E3AE /* net.sf.openfx.RotoPlugin.png in CopyFiles */,
@@ -2359,6 +2379,17 @@
 			files = (
 				1E3284A61A41C47F00C9A4E4 /* net.sf.openfx.VectorToColorPlugin.png in CopyFiles */,
 				1E3284A71A41C47F00C9A4E4 /* net.sf.openfx.VectorToColorPlugin.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC29F7BB1C3FE922006B0019 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				AC29F7C91C400C11006B0019 /* net.sf.openfx.Reformat.svg in CopyFiles */,
+				AC29F7CA1C400C13006B0019 /* net.sf.openfx.Reformat.png in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2980,6 +3011,15 @@
 		AC06269E1ABDC95A00B3D105 /* net.sf.openfx.FrameRange.svg */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = net.sf.openfx.FrameRange.svg; sourceTree = "<group>"; };
 		AC0EAC3C1A358A0C00449A77 /* net.sf.openfx.SaturationPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.SaturationPlugin.png; sourceTree = "<group>"; };
 		AC0EAC3E1A358B6E00449A77 /* net.sf.openfx.KeyerPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.KeyerPlugin.png; sourceTree = "<group>"; };
+		AC29F7A21C3FE81B006B0019 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AC29F7A31C3FE81B006B0019 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		AC29F7A41C3FE81B006B0019 /* net.sf.openfx.Reformat.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.Reformat.png; sourceTree = "<group>"; };
+		AC29F7A51C3FE81B006B0019 /* net.sf.openfx.Reformat.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.Reformat.svg; sourceTree = "<group>"; };
+		AC29F7A61C3FE81B006B0019 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		AC29F7A71C3FE81B006B0019 /* Reformat.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Reformat.cpp; sourceTree = "<group>"; };
+		AC29F7A81C3FE81B006B0019 /* Reformat.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Reformat.h; sourceTree = "<group>"; };
+		AC29F7C51C3FE922006B0019 /* Reformat.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Reformat.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		AC29F7C61C3FE923006B0019 /* Transform.ofx copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Transform.ofx copy-Info.plist"; path = "/Users/alexandre/development/openfx-misc/Transform.ofx copy-Info.plist"; sourceTree = "<absolute>"; };
 		AC3525D61C216FCE0063F0C0 /* ofxsMultiPlane.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsMultiPlane.cpp; sourceTree = "<group>"; };
 		AC3525D71C216FCE0063F0C0 /* ofxsMultiPlane.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsMultiPlane.h; sourceTree = "<group>"; };
 		AC4774DC1A25B811008A2B57 /* net.sf.cimg.CImgBlur.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgBlur.png; path = Blur/net.sf.cimg.CImgBlur.png; sourceTree = "<group>"; };
@@ -3518,6 +3558,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AC29F7B91C3FE922006B0019 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AC29F7BA1C3FE922006B0019 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D721EC0E191120B30069DB1D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -3892,6 +3940,7 @@
 				1E551ED217994DEF00A4135C /* Sources */,
 				1E551EDA17994E8100A4135C /* Frameworks */,
 				1E551EC217994D4000A4135C /* Products */,
+				AC29F7C61C3FE923006B0019 /* Transform.ofx copy-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -3960,6 +4009,7 @@
 				1EE72C071B524A6D001B0245 /* TimeBlur.ofx.bundle */,
 				1E6E700F1BD4F26700B5A00F /* TimeDissolve.ofx.bundle */,
 				1E2D33EE1C3FB9A3004E2F03 /* MatteMonitor.ofx.bundle */,
+				AC29F7C51C3FE922006B0019 /* Reformat.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -4024,6 +4074,7 @@
 				1ED4AEA81973DD0B00EE64C8 /* Rand */,
 				1ECE544E185F23BD001ED442 /* ReConverge */,
 				1E0072E81A4041AE00E77042 /* Rectangle */,
+				AC29F7A11C3FE81B006B0019 /* Reformat */,
 				1E2A93461990EE320061B1F1 /* Retime */,
 				D721EBFC1911209B0069DB1D /* Roto */,
 				1E69C9EC1A2B2EC10099D609 /* Saturation */,
@@ -4653,6 +4704,20 @@
 				1EFBC9951A23A22D00086E7A /* PluginRegistration.cpp */,
 			);
 			path = VectorToColor;
+			sourceTree = "<group>";
+		};
+		AC29F7A11C3FE81B006B0019 /* Reformat */ = {
+			isa = PBXGroup;
+			children = (
+				AC29F7A21C3FE81B006B0019 /* Info.plist */,
+				AC29F7A31C3FE81B006B0019 /* Makefile */,
+				AC29F7A41C3FE81B006B0019 /* net.sf.openfx.Reformat.png */,
+				AC29F7A51C3FE81B006B0019 /* net.sf.openfx.Reformat.svg */,
+				AC29F7A61C3FE81B006B0019 /* PluginRegistration.cpp */,
+				AC29F7A71C3FE81B006B0019 /* Reformat.cpp */,
+				AC29F7A81C3FE81B006B0019 /* Reformat.h */,
+			);
+			path = Reformat;
 			sourceTree = "<group>";
 		};
 		AC60A32419FE995F00375A86 /* Ramp */ = {
@@ -5749,6 +5814,23 @@
 			productReference = 1EFBC9931A23A1EB00086E7A /* VectorToColor.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
+		AC29F7AA1C3FE922006B0019 /* Reformat.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AC29F7C21C3FE922006B0019 /* Build configuration list for PBXNativeTarget "Reformat.ofx" */;
+			buildPhases = (
+				AC29F7AB1C3FE922006B0019 /* Sources */,
+				AC29F7B91C3FE922006B0019 /* Frameworks */,
+				AC29F7BB1C3FE922006B0019 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Reformat.ofx;
+			productName = basic.ofx;
+			productReference = AC29F7C51C3FE922006B0019 /* Reformat.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 		D721EC02191120B30069DB1D /* Roto.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D721EC10191120B30069DB1D /* Build configuration list for PBXNativeTarget "Roto.ofx" */;
@@ -5950,6 +6032,7 @@
 				1E235FF418369E4C0019C45F /* TimeOffset.ofx */,
 				D7BB85B81955C00100A86649 /* TrackerPM.ofx */,
 				D7349E8F18E7767D0097DB1D /* Transform.ofx */,
+				AC29F7AA1C3FE922006B0019 /* Reformat.ofx */,
 				1EFBC97F1A23A1EB00086E7A /* VectorToColor.ofx */,
 				1E8B5D4A18B76A7500C31FDC /* Misc.ofx */,
 			);
@@ -6439,6 +6522,7 @@
 				AC60A33C19FE9C7900375A86 /* Ramp.cpp in Sources */,
 				1E0E4EA2194CAF9E0072248F /* ReConverge.cpp in Sources */,
 				1E0072F71A40421100E77042 /* Rectangle.cpp in Sources */,
+				AC29F7A91C3FE91C006B0019 /* Reformat.cpp in Sources */,
 				1E2A935C1990EEB60061B1F1 /* Retime.cpp in Sources */,
 				D721EC17191120F30069DB1D /* Roto.cpp in Sources */,
 				1E0072EE1A4041DF00E77042 /* Radial.cpp in Sources */,
@@ -7019,6 +7103,25 @@
 				1EFBC9881A23A1EB00086E7A /* ofxsParams.cpp in Sources */,
 				1EFBC9891A23A1EB00086E7A /* ofxsProperty.cpp in Sources */,
 				1EFBC98A1A23A1EB00086E7A /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AC29F7AB1C3FE922006B0019 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AC29F7C81C3FE93A006B0019 /* PluginRegistration.cpp in Sources */,
+				AC29F7C71C3FE936006B0019 /* Reformat.cpp in Sources */,
+				AC29F7AF1C3FE922006B0019 /* ofxsTransform3x3.cpp in Sources */,
+				AC29F7B01C3FE922006B0019 /* ofxsCore.cpp in Sources */,
+				AC29F7B11C3FE922006B0019 /* ofxsImageEffect.cpp in Sources */,
+				AC29F7B21C3FE922006B0019 /* ofxsInteract.cpp in Sources */,
+				AC29F7B31C3FE922006B0019 /* ofxsLog.cpp in Sources */,
+				AC29F7B41C3FE922006B0019 /* ofxsMultiThread.cpp in Sources */,
+				AC29F7B51C3FE922006B0019 /* ofxsParams.cpp in Sources */,
+				AC29F7B61C3FE922006B0019 /* ofxsProperty.cpp in Sources */,
+				AC29F7B71C3FE922006B0019 /* ofxsShutter.cpp in Sources */,
+				AC29F7B81C3FE922006B0019 /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -8853,6 +8956,28 @@
 			};
 			name = Release;
 		};
+		AC29F7C31C3FE922006B0019 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		AC29F7C41C3FE922006B0019 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
 		D721EC11191120B30069DB1D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -9528,6 +9653,15 @@
 			buildConfigurations = (
 				1EFBC9911A23A1EB00086E7A /* Debug */,
 				1EFBC9921A23A1EB00086E7A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AC29F7C21C3FE922006B0019 /* Build configuration list for PBXNativeTarget "Reformat.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AC29F7C31C3FE922006B0019 /* Debug */,
+				AC29F7C41C3FE922006B0019 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

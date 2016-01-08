@@ -42,6 +42,7 @@
 #include "Rand.h"
 #include "ReConverge.h"
 #include "Rectangle.h"
+#include "Reformat.h"
 #include "Retime.h"
 #include "ColorLookup.h"
 #include "Roto.h"
@@ -110,6 +111,7 @@ namespace OFX
             getReConvergePluginID(ids);
 #endif
             getRectanglePluginID(ids);
+            getReformatPluginIDs(ids);
             getRetimePluginID(ids);
             getColorLookupPluginID(ids);
             getRotoPluginID(ids);

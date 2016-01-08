@@ -46,6 +46,7 @@ Ramp \
 Rand \
 ReConverge \
 Rectangle \
+Reformat \
 Retime \
 Roto \
 Saturation \

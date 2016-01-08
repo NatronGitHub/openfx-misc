@@ -43,9 +43,10 @@ Ramp.o \
 Rand.o \
 ReConverge.o \
 Rectangle.o \
+Reformat.o \
 Retime.o \
-ColorLookup.o \
 Roto.o \
+ColorLookup.o \
 Saturation.o \
 Shuffle.o \
 SideBySide.o \
@@ -180,6 +181,8 @@ $(TOP_SRCDIR)/Ramp/net.sf.openfx.Ramp.png \
 $(TOP_SRCDIR)/Ramp/net.sf.openfx.Ramp.svg \
 $(TOP_SRCDIR)/Rectangle/net.sf.openfx.Rectangle.png \
 $(TOP_SRCDIR)/Rectangle/net.sf.openfx.Rectangle.svg \
+$(TOP_SRCDIR)/Reformat/net.sf.openfx.Reformat.png \
+$(TOP_SRCDIR)/Reformat/net.sf.openfx.Reformat.svg \
 $(TOP_SRCDIR)/Retime/net.sf.openfx.Retime.png \
 $(TOP_SRCDIR)/Retime/net.sf.openfx.Retime.svg \
 $(TOP_SRCDIR)/Roto/net.sf.openfx.RotoPlugin.png \
@@ -253,6 +256,7 @@ $(TOP_SRCDIR)/Ramp \
 $(TOP_SRCDIR)/Rand \
 $(TOP_SRCDIR)/ReConverge \
 $(TOP_SRCDIR)/Rectangle \
+$(TOP_SRCDIR)/Reformat \
 $(TOP_SRCDIR)/Retime \
 $(TOP_SRCDIR)/ColorLookup \
 $(TOP_SRCDIR)/Roto \
@@ -318,6 +322,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/Rand \
 -I$(TOP_SRCDIR)/ReConverge \
 -I$(TOP_SRCDIR)/Rectangle \
+-I$(TOP_SRCDIR)/Reformat \
 -I$(TOP_SRCDIR)/Retime \
 -I$(TOP_SRCDIR)/Roto \
 -I$(TOP_SRCDIR)/Saturation \
