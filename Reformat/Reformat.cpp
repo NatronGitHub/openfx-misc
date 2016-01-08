@@ -80,8 +80,17 @@ enum ReformatTypeEnum
 
 #define kSrcClipChanged "srcClipChanged"
 
+#define kParamDisableConcat "disableConcat"
+#define kParamDisableConcatLabel "Disable Concatenation"
+#define kParamDisableConcatHint "Disable the transform concatenation for this node to force it to be rendered.\n" \
+"This can be useful for example when connecting a Reformat node to a Read node and then connecting the Reformat to a STMap node: " \
+"Since the STMap concatenates transforms, it would just pick the pixels from the Read node directly instead of the resized image, being " \
+"in this case much slower."
+
 using namespace OFX;
 
+
+static bool gHostCanTransform;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -98,6 +107,7 @@ public:
     , _scaleUniform(0)
     , _preservePAR(0)
     , _srcClipChanged(0)
+    , _disableConcat(0)
     {
         
         _filter = fetchChoiceParam(kParamFilterType);
@@ -112,6 +122,9 @@ public:
         _scaleUniform = fetchBooleanParam(kParamScaleUniform);
         _preservePAR = fetchBooleanParam(kParamPreservePAR);
         _srcClipChanged = fetchBooleanParam(kSrcClipChanged);
+        if (gHostCanTransform) {
+            _disableConcat = fetchBooleanParam(kParamDisableConcat);
+        }
         assert(_type && _format && _size && _scale && _scaleUniform && _preservePAR && _srcClipChanged);
         
         refreshVisibility();
@@ -140,6 +153,7 @@ private:
     OFX::BooleanParam* _scaleUniform;
     OFX::BooleanParam *_preservePAR;
     OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
+    OFX::BooleanParam* _disableConcat;
 };
 
 // overridden is identity
@@ -335,6 +349,12 @@ ReformatPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::st
 {
     if (paramName == kParamType) {
         refreshVisibility();
+    } else if (paramName == kParamDisableConcat) {
+        if (_disableConcat) {
+            bool concatDisabled;
+            _disableConcat->getValue(concatDisabled);
+            setCanTransform(!concatDisabled);
+        }
     } else {
         Transform3x3Plugin::changedParam(args, paramName);
     }
@@ -440,6 +460,14 @@ void ReformatPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
     desc.setSupportsMultipleClipPARs(true);
     Transform3x3Describe(desc, false);
+    
+    gHostCanTransform = false;
+    
+#ifdef OFX_EXTENSIONS_NUKE
+    if (OFX::getImageEffectHostDescription()->canTransform) {
+        gHostCanTransform = true;
+    }
+#endif
 }
 
 void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
@@ -572,9 +600,20 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setIsSecret(true);
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
-        if (page) {
-            page->addChild(*param);
-        }
+        page->addChild(*param);
+        
+    }
+    
+    // Disable concat
+    if (gHostCanTransform) {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamDisableConcat);
+        param->setLabel(kParamDisableConcatLabel);
+        param->setHint(kParamDisableConcatHint);
+        param->setDefault(false);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(true);
+        page->addChild(*param);
+
     }
 
 }
