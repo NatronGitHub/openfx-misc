@@ -876,7 +876,8 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         }
 #endif
         const bool fielded = args.fieldToRender == OFX::eFieldLower || args.fieldToRender == OFX::eFieldUpper;
-        const double pixelAspectRatio = src->getPixelAspectRatio();
+        const double srcpixelAspectRatio = src->getPixelAspectRatio();
+        const double dstpixelAspectRatio = dst->getPixelAspectRatio();
 
 #ifdef USE_STEPS
         if (_steps) {
@@ -887,7 +888,7 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
         invtransformsizealloc = kTransform3x3MotionBlurCount;
 #endif
         invtransform.resize(invtransformsizealloc);
-        invtransformsize = getInverseTransformsBlur(time, args.renderView, args.renderScale, fielded, pixelAspectRatio, invert, 0., 1., &invtransform.front(), 0, invtransformsizealloc);
+        invtransformsize = getInverseTransformsBlur(time, args.renderView, args.renderScale, fielded, srcpixelAspectRatio, dstpixelAspectRatio, invert, 0., 1., &invtransform.front(), 0, invtransformsizealloc);
         if (invtransformsize == 1) {
             motionblur  = 0.;
         }
