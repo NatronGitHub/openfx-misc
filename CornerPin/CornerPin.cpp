@@ -104,11 +104,13 @@ static const char* const kParamFrom[4] = {
 #define kParamCopyInputRoDHint "Copy the values from the source region of definition into the \"to\" points."
 
 #define kParamOverlayPoints "overlayPoints"
-#define kParamOverlayPointsLabel "Overlay points"
+#define kParamOverlayPointsLabel "Overlay Points"
 #define kParamOverlayPointsHint "Whether to display the \"from\" or the \"to\" points in the overlay"
+#define kParamOverlayPointsOptionTo "To"
+#define kParamOverlayPointsOptionFrom "From"
 
 #define kGroupExtraMatrix "transformMatrix"
-#define kGroupExtraMatrixLabel "Extra matrix"
+#define kGroupExtraMatrixLabel "Extra Matrix"
 #define kGroupExtraMatrixHint "This matrix gets concatenated to the transform defined by the other parameters."
 #define kParamExtraMatrixRow1 "row1"
 #define kParamExtraMatrixRow2 "row2"
@@ -1152,8 +1154,8 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOverlayPoints);
         param->setLabel(kParamOverlayPointsLabel);
         param->setHint(kParamOverlayPointsHint);
-        param->appendOption("To");
-        param->appendOption("From");
+        param->appendOption(kParamOverlayPointsOptionTo);
+        param->appendOption(kParamOverlayPointsOptionFrom);
         param->setDefault(0);
         param->setEvaluateOnChange(false);
         if (page) {
