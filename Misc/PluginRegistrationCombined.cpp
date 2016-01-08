@@ -28,6 +28,7 @@
 #include "Invert.h"
 #include "JoinViews.h"
 #include "Keyer.h"
+#include "MatteMonitor.h"
 #include "Merge.h"
 #include "Mirror.h"
 #include "MixViews.h"
@@ -93,6 +94,7 @@ namespace OFX
             getInvertPluginID(ids);
             getJoinViewsPluginID(ids);
             getKeyerPluginID(ids);
+            getMatteMonitorPluginID(ids);
             getMergePluginID(ids);
             getMirrorPluginID(ids);
             getMixViewsPluginID(ids);

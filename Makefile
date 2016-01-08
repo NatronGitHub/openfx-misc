@@ -32,6 +32,7 @@ ImageStatistics \
 Invert \
 JoinViews \
 Keyer \
+MatteMonitor \
 Merge \
 Mirror \
 Multiply \

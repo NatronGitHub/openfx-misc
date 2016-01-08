@@ -130,6 +130,9 @@ JoinViews/PluginRegistration.cpp
 Keyer/Keyer.cpp
 Keyer/Keyer.h
 Keyer/PluginRegistration.cpp
+MatteMonitor/MatteMonitor.cpp
+MatteMonitor/MatteMonitor.h
+MatteMonitor/PluginRegistration.cpp
 Merge/Merge.cpp
 Merge/Merge.h
 Merge/PluginRegistration.cpp

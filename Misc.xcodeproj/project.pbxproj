@@ -195,6 +195,18 @@
 		1E2A935B1990EEB60061B1F1 /* Retime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E2A935A1990EEB60061B1F1 /* Retime.cpp */; };
 		1E2A935C1990EEB60061B1F1 /* Retime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E2A935A1990EEB60061B1F1 /* Retime.cpp */; };
 		1E2A935E1990EEC70061B1F1 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E2A935D1990EEC70061B1F1 /* PluginRegistration.cpp */; };
+		1E2D33DE1C3FB9A3004E2F03 /* PluginRegistration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1ED12E611A4B31A800ABA348 /* PluginRegistration.cpp */; };
+		1E2D33DF1C3FB9A3004E2F03 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1E2D33E01C3FB9A3004E2F03 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1E2D33E11C3FB9A3004E2F03 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1E2D33E21C3FB9A3004E2F03 /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1E2D33E31C3FB9A3004E2F03 /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1E2D33E41C3FB9A3004E2F03 /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1E2D33E51C3FB9A3004E2F03 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1E2D33E61C3FB9A3004E2F03 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1E2D33E81C3FB9A3004E2F03 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1E2D33F01C3FB9F5004E2F03 /* MatteMonitor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E2D33D81C3FB257004E2F03 /* MatteMonitor.cpp */; };
+		1E2D33F11C3FBA05004E2F03 /* MatteMonitor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E2D33D81C3FB257004E2F03 /* MatteMonitor.cpp */; };
 		1E31941319D9B2270027D0E2 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E31941419D9B2270027D0E2 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E31941519D9B2270027D0E2 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -1615,6 +1627,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1E2D33E91C3FB9A3004E2F03 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E3284601A41C0B700C9A4E4 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -2452,6 +2473,12 @@
 		1E2A935F1990EED40061B1F1 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E2A93601990EED40061B1F1 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E2A93611990EED40061B1F1 /* Retime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Retime.h; sourceTree = "<group>"; };
+		1E2D33D61C3FB257004E2F03 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1E2D33D71C3FB257004E2F03 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1E2D33D81C3FB257004E2F03 /* MatteMonitor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MatteMonitor.cpp; sourceTree = "<group>"; };
+		1E2D33D91C3FB257004E2F03 /* MatteMonitor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MatteMonitor.h; sourceTree = "<group>"; };
+		1E2D33DA1C3FB257004E2F03 /* PluginRegistration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PluginRegistration.cpp; sourceTree = "<group>"; };
+		1E2D33EE1C3FB9A3004E2F03 /* MatteMonitor.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MatteMonitor.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E3060271B70DA5300A9B507 /* ofxsCoords.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsCoords.h; sourceTree = "<group>"; };
 		1E31940A19D9987F0027D0E2 /* CImgSmooth.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CImgSmooth.cpp; sourceTree = "<group>"; };
 		1E31940B19D9987F0027D0E2 /* CImgSmooth.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CImgSmooth.h; sourceTree = "<group>"; };
@@ -3113,6 +3140,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1E2D33E71C3FB9A3004E2F03 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E2D33E81C3FB9A3004E2F03 /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E31941B19D9B2270027D0E2 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -3640,6 +3675,18 @@
 			path = Retime;
 			sourceTree = "<group>";
 		};
+		1E2D33D51C3FB21A004E2F03 /* MatteMonitor */ = {
+			isa = PBXGroup;
+			children = (
+				1E2D33D81C3FB257004E2F03 /* MatteMonitor.cpp */,
+				1E2D33D91C3FB257004E2F03 /* MatteMonitor.h */,
+				1E2D33D61C3FB257004E2F03 /* Info.plist */,
+				1E2D33D71C3FB257004E2F03 /* Makefile */,
+				1E2D33DA1C3FB257004E2F03 /* PluginRegistration.cpp */,
+			);
+			path = MatteMonitor;
+			sourceTree = "<group>";
+		};
 		1E31940919D998450027D0E2 /* CImg */ = {
 			isa = PBXGroup;
 			children = (
@@ -3912,6 +3959,7 @@
 				1EBB4B8D1B2CA01B0042DBE0 /* SlitScan.ofx.bundle */,
 				1EE72C071B524A6D001B0245 /* TimeBlur.ofx.bundle */,
 				1E6E700F1BD4F26700B5A00F /* TimeDissolve.ofx.bundle */,
+				1E2D33EE1C3FB9A3004E2F03 /* MatteMonitor.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -3962,6 +4010,7 @@
 				1E181AE919518BF900FAB9A9 /* Invert */,
 				1EDE1BAF182D39DA002392CB /* JoinViews */,
 				1ECF2FA019F51D6700E91A38 /* Keyer */,
+				1E2D33D51C3FB21A004E2F03 /* MatteMonitor */,
 				D74121CA18F9C99300A81F8B /* Merge */,
 				1EB0A47D1AA21ACD00F9C93E /* Mirror */,
 				1EDE1BE1182D8961002392CB /* MixViews */,
@@ -4901,6 +4950,23 @@
 			name = Retime.ofx;
 			productName = basic.ofx;
 			productReference = 1E2A93581990EE690061B1F1 /* Retime.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
+		1E2D33DB1C3FB9A3004E2F03 /* MatteMonitor.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1E2D33EB1C3FB9A3004E2F03 /* Build configuration list for PBXNativeTarget "MatteMonitor.ofx" */;
+			buildPhases = (
+				1E2D33DC1C3FB9A3004E2F03 /* Sources */,
+				1E2D33E71C3FB9A3004E2F03 /* Frameworks */,
+				1E2D33E91C3FB9A3004E2F03 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MatteMonitor.ofx;
+			productName = basic.ofx;
+			productReference = 1E2D33EE1C3FB9A3004E2F03 /* MatteMonitor.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
 		1E31940F19D9B2270027D0E2 /* CImg.ofx */ = {
@@ -5857,6 +5923,7 @@
 				1E181AEA19518CCF00FAB9A9 /* Invert.ofx */,
 				1EDE1B9D182D3985002392CB /* JoinViews.ofx */,
 				1ECF2F8A19F51D3400E91A38 /* Keyer.ofx */,
+				1E2D33DB1C3FB9A3004E2F03 /* MatteMonitor.ofx */,
 				D74121D418F9CF3D00A81F8B /* Merge.ofx */,
 				1EB0A4831AA21B1300F9C93E /* Mirror.ofx */,
 				1EDE1BCF182D8941002392CB /* MixViews.ofx */,
@@ -6041,6 +6108,23 @@
 				1E2A93501990EE690061B1F1 /* ofxsParams.cpp in Sources */,
 				1E2A93511990EE690061B1F1 /* ofxsProperty.cpp in Sources */,
 				1E2A93521990EE690061B1F1 /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E2D33DC1C3FB9A3004E2F03 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E2D33F01C3FB9F5004E2F03 /* MatteMonitor.cpp in Sources */,
+				1E2D33DE1C3FB9A3004E2F03 /* PluginRegistration.cpp in Sources */,
+				1E2D33DF1C3FB9A3004E2F03 /* ofxsCore.cpp in Sources */,
+				1E2D33E01C3FB9A3004E2F03 /* ofxsImageEffect.cpp in Sources */,
+				1E2D33E11C3FB9A3004E2F03 /* ofxsInteract.cpp in Sources */,
+				1E2D33E21C3FB9A3004E2F03 /* ofxsLog.cpp in Sources */,
+				1E2D33E31C3FB9A3004E2F03 /* ofxsMultiThread.cpp in Sources */,
+				1E2D33E41C3FB9A3004E2F03 /* ofxsParams.cpp in Sources */,
+				1E2D33E51C3FB9A3004E2F03 /* ofxsProperty.cpp in Sources */,
+				1E2D33E61C3FB9A3004E2F03 /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -6346,6 +6430,7 @@
 				1E8B5D7218B7800800C31FDC /* MixViews.cpp in Sources */,
 				1ED12E5A1A4B319800ABA348 /* Multiply.cpp in Sources */,
 				1ED4AEAC1973DD4800EE64C8 /* Rand.cpp in Sources */,
+				1E2D33F11C3FBA05004E2F03 /* MatteMonitor.cpp in Sources */,
 				1EB9C085196DD697003C1849 /* NoOp.cpp in Sources */,
 				1E6E6FFA1BD4F25D00B5A00F /* TimeDissolve.cpp in Sources */,
 				1E8B5D7718B7811500C31FDC /* OneView.cpp in Sources */,
@@ -7575,6 +7660,28 @@
 				INFOPLIST_FILE = Retime/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = Retime.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+		1E2D33EC1C3FB9A3004E2F03 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = MatteMonitor/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1E2D33ED1C3FB9A3004E2F03 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = MatteMonitor/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
@@ -8980,6 +9087,15 @@
 			buildConfigurations = (
 				1E2A93561990EE690061B1F1 /* Debug */,
 				1E2A93571990EE690061B1F1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1E2D33EB1C3FB9A3004E2F03 /* Build configuration list for PBXNativeTarget "MatteMonitor.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1E2D33EC1C3FB9A3004E2F03 /* Debug */,
+				1E2D33ED1C3FB9A3004E2F03 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

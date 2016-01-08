@@ -29,6 +29,7 @@ ImageStatistics.o \
 Invert.o \
 JoinViews.o \
 Keyer.o \
+MatteMonitor.o \
 Merge.o \
 Mirror.o \
 MixViews.o \
@@ -238,6 +239,7 @@ $(TOP_SRCDIR)/ImageStatistics \
 $(TOP_SRCDIR)/Invert \
 $(TOP_SRCDIR)/JoinViews \
 $(TOP_SRCDIR)/Keyer \
+$(TOP_SRCDIR)/MatteMonitor \
 $(TOP_SRCDIR)/Merge \
 $(TOP_SRCDIR)/Mirror \
 $(TOP_SRCDIR)/MixViews \
@@ -302,6 +304,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/Invert \
 -I$(TOP_SRCDIR)/JoinViews \
 -I$(TOP_SRCDIR)/Keyer \
+-I$(TOP_SRCDIR)/MatteMonitor \
 -I$(TOP_SRCDIR)/Merge \
 -I$(TOP_SRCDIR)/Mirror \
 -I$(TOP_SRCDIR)/Multiply \

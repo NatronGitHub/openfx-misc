@@ -125,6 +125,7 @@ matrix.
 ### Keyer
 
 * ChromaKeyerOFX: Apply chroma keying, as described in "Video Demystified" by Keith Jack.  
+* MatteMonitor: A Matte Monitor, as described in "Digital Compositing for Film and Video" by Steve Wright.
 * DifferenceOFX: Produce a rough matte from the difference of two
   images.
 * KeyerOFX: A collection of simple keyers. 
