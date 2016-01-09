@@ -152,7 +152,7 @@ public:
         assert(_type && _format && _size && _scale && _scaleUniform && _preservePAR && _srcClipChanged && _flip && _flop && _turn && _centered);
         
         refreshVisibility();
-        
+        refreshDynamicProps();
     }
 
 private:
@@ -168,6 +168,8 @@ private:
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
     
     void refreshVisibility();
+    
+    void refreshDynamicProps();
     
     // NON-GENERIC
     OFX::ChoiceParam *_type;
@@ -413,13 +415,19 @@ ReformatPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::st
     if (paramName == kParamType) {
         refreshVisibility();
     } else if (paramName == kParamDisableConcat) {
-        if (_disableConcat) {
-            bool concatDisabled;
-            _disableConcat->getValue(concatDisabled);
-            setCanTransform(!concatDisabled);
-        }
+        refreshDynamicProps();
     } else {
         Transform3x3Plugin::changedParam(args, paramName);
+    }
+}
+
+void
+ReformatPlugin::refreshDynamicProps()
+{
+    if (_disableConcat) {
+        bool concatDisabled;
+        _disableConcat->getValue(concatDisabled);
+        setCanTransform(!concatDisabled);
     }
 }
 

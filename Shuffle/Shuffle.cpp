@@ -1531,24 +1531,27 @@ ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::str
         sendMessage(OFX::Message::eMessageMessage, "", msg);
     }
     
-    OFX::MultiPlane::ChangedParamRetCode trappedRParam =
-    OFX::MultiPlane::checkIfChangedParamCalledOnDynamicChoice(paramName, args.reason, _channelParam[0], _channelParamStrings[0]);
-    if (trappedRParam != OFX::MultiPlane::eChangedParamRetCodeNoChange) {
-        if (trappedRParam == OFX::MultiPlane::eChangedParamRetCodeChoiceParamChanged) {
+    
+    if (gIsMultiPlanar && gSupportsDynamicChoices) {
+        OFX::MultiPlane::ChangedParamRetCode trappedRParam =
+        OFX::MultiPlane::checkIfChangedParamCalledOnDynamicChoice(paramName, args.reason, _channelParam[0], _channelParamStrings[0]);
+        if (trappedRParam != OFX::MultiPlane::eChangedParamRetCodeNoChange) {
+            if (trappedRParam == OFX::MultiPlane::eChangedParamRetCodeChoiceParamChanged) {
 #ifdef OFX_EXTENSIONS_NATRON
-            setChannelsFromRed(args.time);
+                setChannelsFromRed(args.time);
 #endif
-        }
-        return;
-    }
-    for (int i = 1; i < 4; ++i) {
-        if (OFX::MultiPlane::checkIfChangedParamCalledOnDynamicChoice(paramName, args.reason, _channelParam[i], _channelParamStrings[i])) {
+            }
             return;
         }
-    }
-    
-    if (OFX::MultiPlane::checkIfChangedParamCalledOnDynamicChoice(paramName, args.reason, _outputComponents, _outputComponentsString)) {
-        return;
+        for (int i = 1; i < 4; ++i) {
+            if (OFX::MultiPlane::checkIfChangedParamCalledOnDynamicChoice(paramName, args.reason, _channelParam[i], _channelParamStrings[i])) {
+                return;
+            }
+        }
+        
+        if (OFX::MultiPlane::checkIfChangedParamCalledOnDynamicChoice(paramName, args.reason, _outputComponents, _outputComponentsString)) {
+            return;
+        }
     }
 }
 

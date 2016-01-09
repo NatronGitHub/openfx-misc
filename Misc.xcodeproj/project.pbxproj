@@ -1084,6 +1084,7 @@
 		AC29F7CA1C400C13006B0019 /* net.sf.openfx.Reformat.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC29F7A41C3FE81B006B0019 /* net.sf.openfx.Reformat.png */; };
 		AC29F7CB1C400C1E006B0019 /* net.sf.openfx.Reformat.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC29F7A51C3FE81B006B0019 /* net.sf.openfx.Reformat.svg */; };
 		AC29F7CC1C400C22006B0019 /* net.sf.openfx.Reformat.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC29F7A41C3FE81B006B0019 /* net.sf.openfx.Reformat.png */; };
+		AC29F7CD1C415925006B0019 /* ofxsMultiPlane.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC3525D61C216FCE0063F0C0 /* ofxsMultiPlane.cpp */; };
 		AC3525D81C2171380063F0C0 /* ofxsMultiPlane.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC3525D61C216FCE0063F0C0 /* ofxsMultiPlane.cpp */; };
 		AC4774E51A25B8E9008A2B57 /* net.sf.openfx.Deinterlace.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774E41A25B8E7008A2B57 /* net.sf.openfx.Deinterlace.png */; };
 		AC60A33C19FE9C7900375A86 /* Ramp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AC60A32A19FE995F00375A86 /* Ramp.cpp */; };
@@ -6908,6 +6909,7 @@
 				1ED851451AAB6245003F65A3 /* ofxsInteract.cpp in Sources */,
 				1ED851461AAB6245003F65A3 /* ofxsLog.cpp in Sources */,
 				1ED851471AAB6245003F65A3 /* ofxsMultiThread.cpp in Sources */,
+				AC29F7CD1C415925006B0019 /* ofxsMultiPlane.cpp in Sources */,
 				1ED851481AAB6245003F65A3 /* ofxsParams.cpp in Sources */,
 				1ED851571AAB6487003F65A3 /* PluginRegistration.cpp in Sources */,
 				1ED851491AAB6245003F65A3 /* ofxsProperty.cpp in Sources */,
