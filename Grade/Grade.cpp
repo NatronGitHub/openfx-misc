@@ -181,10 +181,20 @@ public:
 
     void grade(double* v, double wp, double bp, double white, double black, double mutiply, double offset, double gamma)
     {
+        if (gamma == 0) {
+            *v = 0;
+            return;
+        }
         double d = wp - bp;
         double A = d != 0 ? mutiply * (white - black) / d : 0;
         double B = offset + black - A * bp;
-        *v = gamma != 0 ? std::pow((A * *v) + B, 1. / gamma) : 0;
+        double invgamma = 1. / gamma;
+        A = (A * *v) + B;
+        if (A < 0 && std::floor(invgamma + 0.5) != invgamma) {
+            *v = 0; // pow would produce NaNs in that case
+        } else {
+            *v = std::pow(A, invgamma);
+        }
     }
     
     template<bool processR, bool processG, bool processB, bool processA>
