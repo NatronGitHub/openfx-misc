@@ -38,7 +38,8 @@
 #define kPluginDescription \
 "A Matte Monitor: make alpha values that are strictly between 0 and 1 more visible.\n"\
 "After applying a Keyer, a scaling operation is usually applied to clean the matte. However, it is difficult to visualize on the output values that are very close to 0 or 1, but not equal. This plugin can be used to better visualize these values: connect it to the output of the scaling operator, then to a viewer, and visualize the alpha channel.\n"\
-"Alpha values <= 0 and >= 1 are leaved untouched, and alpha values in between are stretched towards 0.5 (using the slope parameter), making them more visible.\n"\
+"Alpha values lower or equal to 0 and greater or equal to 1 are leaved untouched, and alpha values in between are stretched " \
+"towards 0.5 (using the slope parameter), making them more visible.\n"\
 "The output of this plugin should not be used for firther processing, but only for viewing.\n"\
 "The Matte Monitor is described in \"Digital Compositing for Film and Video\" by Steve Wright (Sec. 3.1).\n"\
 "See also the video at http://www.vfxio.com/images/movies/Comp_Tip_2.mov\n"

@@ -78,6 +78,22 @@ enum ReformatTypeEnum
 #define kParamScaleUniformLabel "Uniform"
 #define kParamScaleUniformHint "Use the X scale for both directions"
 
+#define kParamReformatCenter "reformatCentered"
+#define kParamReformatCenterLabel "Center"
+#define kParamReformatCenterHint "Center the image before applying the transformation, otherwise it will be transformed around it's lower-left corner."
+
+#define kParamFlip "flip"
+#define kParamFlipLabel "Flip"
+#define kParamFlipHint "Mirror the image vertically"
+
+#define kParamFlop "flop"
+#define kParamFlopLabel "Flop"
+#define kParamFlopHint "Mirror the image horizontally"
+
+#define kParamTurn "turn"
+#define kParamTurnLabel "Turn"
+#define kParamTurnHint "Rotate the image by 90 degrees"
+
 #define kSrcClipChanged "srcClipChanged"
 
 #define kParamDisableConcat "disableConcat"
@@ -108,6 +124,10 @@ public:
     , _preservePAR(0)
     , _srcClipChanged(0)
     , _disableConcat(0)
+    , _centered(0)
+    , _flip(0)
+    , _flop(0)
+    , _turn(0)
     {
         
         _filter = fetchChoiceParam(kParamFilterType);
@@ -125,7 +145,11 @@ public:
         if (gHostCanTransform) {
             _disableConcat = fetchBooleanParam(kParamDisableConcat);
         }
-        assert(_type && _format && _size && _scale && _scaleUniform && _preservePAR && _srcClipChanged);
+        _centered = fetchBooleanParam(kParamReformatCenter);
+        _flip = fetchBooleanParam(kParamFlip);
+        _flop = fetchBooleanParam(kParamFlop);
+        _turn = fetchBooleanParam(kParamTurn);
+        assert(_type && _format && _size && _scale && _scaleUniform && _preservePAR && _srcClipChanged && _flip && _flop && _turn && _centered);
         
         refreshVisibility();
         
@@ -154,6 +178,10 @@ private:
     OFX::BooleanParam *_preservePAR;
     OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
     OFX::BooleanParam* _disableConcat;
+    OFX::BooleanParam* _centered;
+    OFX::BooleanParam* _flip;
+    OFX::BooleanParam* _flop;
+    OFX::BooleanParam* _turn;
 };
 
 // overridden is identity
@@ -162,6 +190,14 @@ ReformatPlugin::isIdentity(double time)
 {
     // must clear persistent message in isIdentity, or render() is not called by Nuke after an error
     clearPersistentMessage();
+    
+    bool flip,flop,turn;
+    _flip->getValueAtTime(time, flip);
+    _flop->getValueAtTime(time, flop);
+    _turn->getValueAtTime(time, turn);
+    if (flip || flop || turn) {
+        return false;
+    }
     
     int type_i;
     _type->getValue(type_i);
@@ -231,7 +267,8 @@ ReformatPlugin::getInverseTransformCanonical(double time, int /*view*/, double /
     bool scaleUniform = false;
 
     //compute the scale depending upon the type
-    
+    OfxRectD srcRoD = _srcClip->getRegionOfDefinition(time);
+
     int type_i;
     _type->getValue(type_i);
     ReformatTypeEnum type = (ReformatTypeEnum)type_i;
@@ -245,8 +282,6 @@ ReformatPlugin::getInverseTransformCanonical(double time, int /*view*/, double /
             size_t w,h;
             getFormatResolution((OFX::EParamFormat)index, &w, &h, &par);
             
-            
-            OfxRectD srcRoD = _srcClip->getRegionOfDefinition(time);
             
             double srcH = srcRoD.y2 - srcRoD.y1;
             double srcW = srcRoD.x2 - srcRoD.x1;
@@ -279,7 +314,6 @@ ReformatPlugin::getInverseTransformCanonical(double time, int /*view*/, double /
             bool preservePar;
             _preservePAR->getValue(preservePar);
             
-            OfxRectD srcRoD = _srcClip->getRegionOfDefinition(time);
             double srcPar = _srcClip->getPixelAspectRatio();
             OfxPointD renderScale = {1., 1.};
             
@@ -327,17 +361,46 @@ ReformatPlugin::getInverseTransformCanonical(double time, int /*view*/, double /
     OfxPointD scale = { 1., 1. };
     ofxsTransformGetScale(scaleParam, scaleUniform, &scale);
     
+    bool flip,flop,turn;
+    _flip->getValueAtTime(time, flip);
+    _flop->getValueAtTime(time, flop);
+    _turn->getValueAtTime(time, turn);
     
-    if (!invert) {
-        *invtransform = Matrix3x3(1. / scale.x, 0., 0.,
-                                  0., 1. / scale.y, 0.,
-                                  0., 0., 1.);
-    } else {
-        *invtransform = Matrix3x3(scale.x, 0., 0.,
-                                  0., scale.y, 0.,
-                                  0., 0., 1.);
-
+    double rot = 0;
+    if (turn) {
+        rot = OFX::ofxsToRadians(90);
     }
+    if (flip) {
+        scale.y = -scale.y;
+    }
+    if (flop) {
+        scale.x = -scale.x;
+    }
+    
+    bool useCenter;
+    _centered->getValueAtTime(time, useCenter);
+    
+    
+    if (useCenter) {
+        OfxPointD center = {0., 0.};
+        center.x = (srcRoD.x1 + srcRoD.x2) / 2.;
+        center.y = (srcRoD.y1 + srcRoD.y2) / 2.;
+        
+        if (!invert) {
+            *invtransform = ofxsMatTranslation(center.x, center.y) * ofxsMatRotation(rot) * ofxsMatScale(1. / scale.x, 1. / scale.y) * ofxsMatTranslation(-center.x, -center.y);
+        } else {
+            *invtransform = ofxsMatTranslation(center.x, center.y) * ofxsMatRotation(-rot) * ofxsMatScale(scale.x,scale.y) * ofxsMatTranslation(-center.x, -center.y);
+            
+        }
+    } else {
+        if (!invert) {
+            *invtransform = ofxsMatRotation(rot) * ofxsMatScale(1. / scale.x, 1. / scale.y);
+        } else {
+            *invtransform = ofxsMatRotation(-rot) * ofxsMatScale(scale.x,scale.y);
+        }
+    }
+    
+    
     
     
     return true;
@@ -460,7 +523,6 @@ void ReformatPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
     desc.setSupportsMultipleClipPARs(true);
     Transform3x3Describe(desc, false);
-    
     gHostCanTransform = false;
     
 #ifdef OFX_EXTENSIONS_NUKE
@@ -588,6 +650,53 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setAnimates(true);
         page->addChild(*param);
     
+    }
+    
+    // center
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamReformatCenter);
+        param->setLabel(kParamReformatCenterLabel);
+        param->setHint(kParamReformatCenterHint);
+        param->setDefault(true);
+        param->setAnimates(true);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        page->addChild(*param);
+        
+    }
+    
+    // flip
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamFlip);
+        param->setLabel(kParamFlipLabel);
+        param->setHint(kParamFlipHint);
+        param->setDefault(false);
+        param->setAnimates(true);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        page->addChild(*param);
+        
+    }
+    
+    // flop
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamFlop);
+        param->setLabel(kParamFlopLabel);
+        param->setHint(kParamFlopHint);
+        param->setDefault(false);
+        param->setAnimates(true);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        page->addChild(*param);
+        
+    }
+    
+    // turn
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamTurn);
+        param->setLabel(kParamTurnLabel);
+        param->setHint(kParamTurnHint);
+        param->setDefault(false);
+        param->setAnimates(true);
+        page->addChild(*param);
+        
     }
 
     // clamp, filter, black outside
