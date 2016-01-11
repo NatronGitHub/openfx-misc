@@ -72,6 +72,12 @@ public:
     , _srcClipChanged(0)
     {
         // NON-GENERIC
+        if (isDirBlur) {
+            _amount = fetchDoubleParam(kParamTransform3x3Amount);
+            _centered = fetchBooleanParam(kParamTransform3x3Centered);
+            _fading = fetchDoubleParam(kParamTransform3x3Fading);
+        }
+        
         _translate = fetchDouble2DParam(kParamTransformTranslateOld);
         _rotate = fetchDoubleParam(kParamTransformRotateOld);
         _scale = fetchDouble2DParam(kParamTransformScaleOld);
