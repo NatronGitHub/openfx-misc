@@ -24,8 +24,6 @@
 
 #ifdef DEBUG
 
-#include "ReConverge.h"
-
 #include <cstdio>
 #include <cstdlib>
 
@@ -504,10 +502,8 @@ OFX::ImageEffect* ReConvergePluginFactory::createInstance(OfxImageEffectHandle h
     return new ReConvergePlugin(handle);
 }
 
-void getReConvergePluginID(OFX::PluginFactoryArray &ids)
-{
-    static ReConvergePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static ReConvergePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 
 #endif

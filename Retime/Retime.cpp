@@ -30,8 +30,6 @@
  - retiming based on optical flow computation will be done separately
  */
 
-#include "Retime.h"
-
 #include <cmath> // for floor
 #include <cfloat> // for FLT_MAX
 #include <cassert>
@@ -762,8 +760,6 @@ ImageEffect* RetimePluginFactory::createInstance(OfxImageEffectHandle handle, Co
     return new RetimePlugin(handle, supportsParametricParameter);
 }
 
-void getRetimePluginID(OFX::PluginFactoryArray &ids)
-{
-    static RetimePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static RetimePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

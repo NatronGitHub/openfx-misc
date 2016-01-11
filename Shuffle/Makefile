@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Shuffle.o ofxsMultiPlane.o PluginRegistration.o
+PLUGINOBJECTS = Shuffle.o ofxsMultiPlane.o
 PLUGINNAME = Shuffle
 RESOURCES = net.sf.openfx.ShufflePlugin.png net.sf.openfx.ShufflePlugin.svg
 

@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Add.o PluginRegistration.o
+PLUGINOBJECTS = Add.o
 PLUGINNAME = Add
 RESOURCES = net.sf.openfx.AddPlugin.png
 

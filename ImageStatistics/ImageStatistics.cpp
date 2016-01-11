@@ -20,8 +20,6 @@
  * OFX ImageStatistics plugin.
  */
 
-#include "ImageStatistics.h"
-
 #include <cmath>
 #include <climits>
 #include <algorithm>
@@ -1940,9 +1938,5 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
 }
 
 
-void getImageStatisticsPluginID(OFX::PluginFactoryArray &ids)
-{
-    static ImageStatisticsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
-
+static ImageStatisticsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

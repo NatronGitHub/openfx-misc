@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
 CImgNoise.o \
-PluginRegistration.o \
 CImgFilter.o \
 
 # no ofxsInteract.o

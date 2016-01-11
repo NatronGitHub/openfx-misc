@@ -1,4 +1,4 @@
-PLUGINOBJECTS = NoOp.o PluginRegistration.o
+PLUGINOBJECTS = NoOp.o
 PLUGINNAME = NoOp
 RESOURCES = net.sf.openfx.NoOpPlugin.png net.sf.openfx.NoOpPlugin.svg
 

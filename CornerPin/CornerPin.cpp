@@ -32,8 +32,6 @@
    action. Should the host be doing this instead?
 */
 
-#include "CornerPin.h"
-
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -1252,14 +1250,7 @@ OFX::ImageEffect* CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHan
 
 
 
-void getCornerPinPluginIDs(OFX::PluginFactoryArray &ids)
-{
-    {
-        static CornerPinPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static CornerPinMaskedPluginFactory p(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-}
+static CornerPinPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static CornerPinMaskedPluginFactory p2(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p1)
+mRegisterPluginFactoryInstance(p2)

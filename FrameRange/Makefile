@@ -1,4 +1,4 @@
-PLUGINOBJECTS = FrameRange.o PluginRegistration.o
+PLUGINOBJECTS = FrameRange.o
 PLUGINNAME = FrameRange
 RESOURCES = net.sf.openfx.FrameRange.png net.sf.openfx.FrameRange.svg
 

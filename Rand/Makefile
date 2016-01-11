@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Rand.o randomGenerator.o PluginRegistration.o
+PLUGINOBJECTS = Rand.o randomGenerator.o
 PLUGINNAME = Rand
 RESOURCES = net.sf.openfx.Noise.png net.sf.openfx.Noise.svg
 

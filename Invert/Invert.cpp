@@ -20,8 +20,6 @@
  * OFX Invert plugin.
  */
 
-#include "Invert.h"
-
 //#include <iostream>
 #ifdef _WINDOWS
 #include <windows.h>
@@ -681,9 +679,6 @@ OFX::ImageEffect* InvertPluginFactory::createInstance(OfxImageEffectHandle handl
 }
 
 
-void getInvertPluginID(OFX::PluginFactoryArray &ids)
-{
-    static InvertPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static InvertPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

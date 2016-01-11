@@ -21,8 +21,6 @@
  * Make an anaglyph image out of the inputs.
  */
 
-#include "Anaglyph.h"
-
 #include <algorithm>
 #ifdef _WINDOWS
 #include <windows.h>
@@ -475,9 +473,7 @@ OFX::ImageEffect* AnaglyphPluginFactory::createInstance(OfxImageEffectHandle han
     return new AnaglyphPlugin(handle);
 }
 
-void getAnaglyphPluginID(OFX::PluginFactoryArray &ids)
-{
-    static AnaglyphPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static AnaglyphPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

@@ -20,8 +20,6 @@
  * OFX CopyRectangle plugin.
  */
 
-#include "CopyRectangle.h"
-
 #include <cmath>
 #include <algorithm>
 
@@ -705,9 +703,7 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
     ofxsMaskMixDescribeParams(desc, page);
 }
 
-void getCopyRectanglePluginID(OFX::PluginFactoryArray &ids)
-{
-    static CopyRectanglePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static CopyRectanglePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

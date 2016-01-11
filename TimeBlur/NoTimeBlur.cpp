@@ -2,8 +2,6 @@
  * OFX NoTimeBlur plugin.
  */
 
-#include "NoTimeBlur.h"
-
 #include <cmath>
 #ifdef _WINDOWS
 #include <windows.h>
@@ -284,8 +282,6 @@ OFX::ImageEffect* NoTimeBlurPluginFactory::createInstance(OfxImageEffectHandle h
     return new NoTimeBlurPlugin(handle);
 }
 
-void getNoTimeBlurPluginID(OFX::PluginFactoryArray &ids)
-{
-    static NoTimeBlurPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static NoTimeBlurPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

@@ -20,8 +20,6 @@
  * OFX Chroma Keyer plugin.
  */
 
-#include "ChromaKeyer.h"
-
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -973,8 +971,6 @@ OFX::ImageEffect* ChromaKeyerPluginFactory::createInstance(OfxImageEffectHandle 
     return new ChromaKeyerPlugin(handle);
 }
 
-void getChromaKeyerPluginID(OFX::PluginFactoryArray &ids)
-{
-    static ChromaKeyerPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static ChromaKeyerPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

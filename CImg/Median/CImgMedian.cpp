@@ -20,8 +20,6 @@
  * OFX CImgMedian plugin.
  */
 
-#include "CImgMedian.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -215,8 +213,5 @@ OFX::ImageEffect* CImgMedianPluginFactory::createInstance(OfxImageEffectHandle h
 }
 
 
-void getCImgMedianPluginID(OFX::PluginFactoryArray &ids)
-{
-    static CImgMedianPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static CImgMedianPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

@@ -20,8 +20,6 @@
  * OFX CImgEqualize plugin.
  */
 
-#include "CImgEqualize.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -232,8 +230,5 @@ OFX::ImageEffect* CImgEqualizePluginFactory::createInstance(OfxImageEffectHandle
 }
 
 
-void getCImgEqualizePluginID(OFX::PluginFactoryArray &ids)
-{
-    static CImgEqualizePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static CImgEqualizePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

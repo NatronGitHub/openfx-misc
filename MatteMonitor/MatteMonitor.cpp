@@ -20,8 +20,6 @@
  * OFX MatteMonitor plugin.
  */
 
-#include "MatteMonitor.h"
-
 #include <cmath>
 #include <cstring>
 #include <algorithm>
@@ -372,9 +370,6 @@ OFX::ImageEffect* MatteMonitorPluginFactory::createInstance(OfxImageEffectHandle
     return new MatteMonitorPlugin(handle);
 }
 
-void getMatteMonitorPluginID(OFX::PluginFactoryArray &ids)
-{
-    static MatteMonitorPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
 
+static MatteMonitorPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

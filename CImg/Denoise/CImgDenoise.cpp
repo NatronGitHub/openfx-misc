@@ -20,8 +20,6 @@
  * OFX CImgDenoise plugin.
  */
 
-#include "CImgDenoise.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -451,8 +449,5 @@ OFX::ImageEffect* CImgDenoisePluginFactory::createInstance(OfxImageEffectHandle 
 }
 
 
-void getCImgDenoisePluginID(OFX::PluginFactoryArray &ids)
-{
-    static CImgDenoisePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static CImgDenoisePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

@@ -20,8 +20,6 @@
  * OFX Roto plugin.
  */
 
-#include "Roto.h"
-
 #include <cmath>
 #include <algorithm>
 
@@ -676,9 +674,6 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
     }
 }
 
-void getRotoPluginID(OFX::PluginFactoryArray &ids)
-{
-    static RotoPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
 
+static RotoPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

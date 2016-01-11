@@ -20,8 +20,6 @@
  * OFX Crop plugin.
  */
 
-#include "Crop.h"
-
 #include <cmath>
 #include <algorithm>
 
@@ -754,9 +752,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     }
 }
 
-void getCropPluginID(OFX::PluginFactoryArray &ids)
-{
-    static CropPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static CropPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

@@ -20,8 +20,6 @@
  * OFX CImgSharpenShock plugin.
  */
 
-#include "CImgSharpenShock.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -376,9 +374,5 @@ OFX::ImageEffect* CImgSharpenShockPluginFactory::createInstance(OfxImageEffectHa
 }
 
 
-void getCImgSharpenShockPluginID(OFX::PluginFactoryArray &ids)
-{
-    static CImgSharpenShockPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
-
+static CImgSharpenShockPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

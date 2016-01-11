@@ -20,8 +20,6 @@
  * OFX Grade plugin.
  */
 
-#include "Grade.h"
-
 #include <cmath>
 #include <algorithm>
 #ifdef _WINDOWS
@@ -903,9 +901,7 @@ GradePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum
     return new GradePlugin(handle);
 }
 
-void getGradePluginID(OFX::PluginFactoryArray &ids)
-{
-    static GradePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static GradePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

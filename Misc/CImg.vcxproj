@@ -237,7 +237,6 @@ xcopy $(SolutionDir)..\CImg\net.sf.cimg.CImgSmooth.png $(OutDir)$(ProjectName).o
     <ClCompile Include="..\CImg\CImgSharpenInvDiff.cpp" />
     <ClCompile Include="..\CImg\CImgSharpenShock.cpp" />
     <ClCompile Include="..\CImg\CImgSmooth.cpp" />
-    <ClCompile Include="..\CImg\PluginRegistration.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\CImg\CImgBilateral.h" />

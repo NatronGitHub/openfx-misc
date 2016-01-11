@@ -20,7 +20,6 @@
  * OFX TestPosition plugin.
  */
 
-#include "TestPosition.h"
 #include "ofxsTransform3x3.h"
 #include "ofxsTransformInteract.h"
 
@@ -166,12 +165,5 @@ TestPositionPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::Cont
 }
 
 
-
-
-void getTestPositionPluginID(OFX::PluginFactoryArray &ids)
-{
-    {
-        static TestPositionPluginFactory p(kPluginPositionIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-}
+static TestPositionPluginFactory p(kPluginPositionIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

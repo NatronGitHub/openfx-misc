@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ColorLookup.o PluginRegistration.o
+PLUGINOBJECTS = ColorLookup.o
 PLUGINNAME = ColorLookup
 RESOURCES = net.sf.openfx.ColorLookupPlugin.png net.sf.openfx.ColorLookupPlugin.svg
 

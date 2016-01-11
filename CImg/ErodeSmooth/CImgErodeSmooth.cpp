@@ -20,8 +20,6 @@
  * OFX CImgErodeSmooth plugin.
  */
 
-#include "CImgErodeSmooth.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -700,8 +698,5 @@ OFX::ImageEffect* CImgErodeSmoothPluginFactory::createInstance(OfxImageEffectHan
 }
 
 
-void getCImgErodeSmoothPluginID(OFX::PluginFactoryArray &ids)
-{
-    static CImgErodeSmoothPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static CImgErodeSmoothPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

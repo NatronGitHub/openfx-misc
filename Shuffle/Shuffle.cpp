@@ -20,8 +20,6 @@
  * OFX Shuffle plugin.
  */
 
-#include "Shuffle.h"
-
 #include <cmath>
 #include <set>
 #include <algorithm>
@@ -2076,9 +2074,6 @@ OFX::ImageEffect* ShufflePluginFactory::createInstance(OfxImageEffectHandle hand
     return new ShufflePlugin(handle, context);
 }
 
-void getShufflePluginID(OFX::PluginFactoryArray &ids)
-{
-    static ShufflePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
 
+static ShufflePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Switch.o PluginRegistration.o
+PLUGINOBJECTS = Switch.o
 PLUGINNAME = Switch
 RESOURCES = net.sf.openfx.switchPlugin.png net.sf.openfx.switchPlugin.svg
 

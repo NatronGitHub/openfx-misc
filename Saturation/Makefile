@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Saturation.o PluginRegistration.o
+PLUGINOBJECTS = Saturation.o
 PLUGINNAME = Saturation
 RESOURCES = net.sf.openfx.SaturationPlugin.png net.sf.openfx.SaturationPlugin.svg
 

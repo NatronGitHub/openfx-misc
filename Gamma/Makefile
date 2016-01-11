@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Gamma.o PluginRegistration.o
+PLUGINOBJECTS = Gamma.o
 PLUGINNAME = Gamma
 RESOURCES = net.sf.openfx.GammaPlugin.png
 

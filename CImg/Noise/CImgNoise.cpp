@@ -20,8 +20,6 @@
  * OFX CImgNoise plugin.
  */
 
-#include "CImgNoise.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -255,8 +253,5 @@ OFX::ImageEffect* CImgNoisePluginFactory::createInstance(OfxImageEffectHandle ha
 }
 
 
-void getCImgNoisePluginID(OFX::PluginFactoryArray &ids)
-{
-    static CImgNoisePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static CImgNoisePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

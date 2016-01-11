@@ -20,8 +20,6 @@
  * OFX Keyer plugin.
  */
 
-#include "Keyer.h"
-
 #include <cmath>
 #include <limits>
 #include <algorithm>
@@ -1057,8 +1055,6 @@ OFX::ImageEffect* KeyerPluginFactory::createInstance(OfxImageEffectHandle handle
     return new KeyerPlugin(handle);
 }
 
-void getKeyerPluginID(OFX::PluginFactoryArray &ids)
-{
-    static KeyerPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static KeyerPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

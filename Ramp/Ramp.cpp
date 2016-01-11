@@ -20,8 +20,6 @@
  * OFX Ramp plugin.
  */
 
-#include "Ramp.h"
-
 #include <cmath>
 #include <algorithm>
 
@@ -821,9 +819,6 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     ofxsMaskMixDescribeParams(desc, page);
 }
 
-void getRampPluginID(OFX::PluginFactoryArray &ids)
-{
-    static RampPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
 
+static RampPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
 CImgHistEQ.o \
-PluginRegistration.o \
 CImgFilter.o \
 ofxsLut.o
 

@@ -22,8 +22,6 @@
  * This can also reverse the order of the input frames so that last one is first.
  */
 
-#include "TimeOffset.h"
-
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 
@@ -279,8 +277,6 @@ ImageEffect* TimeOffsetPluginFactory::createInstance(OfxImageEffectHandle handle
     return new TimeOffsetPlugin(handle);
 }
 
-void getTimeOffsetPluginID(OFX::PluginFactoryArray &ids)
-{
-    static TimeOffsetPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static TimeOffsetPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

@@ -20,8 +20,6 @@
  * OFX CImgExpression plugin.
  */
 
-#include "CImgExpression.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -468,8 +466,5 @@ OFX::ImageEffect* CImgExpressionPluginFactory::createInstance(OfxImageEffectHand
 }
 
 
-void getCImgExpressionPluginID(OFX::PluginFactoryArray &ids)
-{
-    static CImgExpressionPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static CImgExpressionPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

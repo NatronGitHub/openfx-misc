@@ -20,8 +20,6 @@
  * OFX CImgErode plugin.
  */
 
-#include "CImgErode.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -207,8 +205,5 @@ OFX::ImageEffect* CImgErodePluginFactory::createInstance(OfxImageEffectHandle ha
 }
 
 
-void getCImgErodePluginID(OFX::PluginFactoryArray &ids)
-{
-    static CImgErodePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static CImgErodePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

@@ -20,8 +20,6 @@
  * OFX AdjustRoD plugin.
  */
 
-#include "AdjustRoD.h"
-
 #include <cmath>
 #include <algorithm>
 
@@ -367,9 +365,6 @@ void AdjustRoDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
 }
 
-void getAdjustRoDPluginID(OFX::PluginFactoryArray &ids)
-{
-    static AdjustRoDPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static AdjustRoDPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

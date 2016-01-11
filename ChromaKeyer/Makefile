@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ChromaKeyer.o PluginRegistration.o
+PLUGINOBJECTS = ChromaKeyer.o
 PLUGINNAME = ChromaKeyer
 RESOURCES = net.sf.openfx.ChromaKeyerPlugin.png net.sf.openfx.ChromaKeyerPlugin.svg
 

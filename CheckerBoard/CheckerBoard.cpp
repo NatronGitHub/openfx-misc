@@ -20,8 +20,6 @@
  * OFX CheckerBoard plugin.
  */
 
-#include "CheckerBoard.h"
-
 #include <cmath>
 #include <algorithm>
 #include <climits>
@@ -701,8 +699,6 @@ ImageEffect* CheckerBoardPluginFactory::createInstance(OfxImageEffectHandle hand
     return new CheckerBoardPlugin(handle);
 }
 
-void getCheckerBoardPluginID(OFX::PluginFactoryArray &ids)
-{
-    static CheckerBoardPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static CheckerBoardPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

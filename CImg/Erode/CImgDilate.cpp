@@ -20,8 +20,6 @@
  * OFX CImgDilate plugin.
  */
 
-#include "CImgDilate.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -206,8 +204,5 @@ OFX::ImageEffect* CImgDilatePluginFactory::createInstance(OfxImageEffectHandle h
 }
 
 
-void getCImgDilatePluginID(OFX::PluginFactoryArray &ids)
-{
-    static CImgDilatePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static CImgDilatePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

@@ -1,4 +1,4 @@
-PLUGINOBJECTS = SlitScan.o PluginRegistration.o
+PLUGINOBJECTS = SlitScan.o
 PLUGINNAME = SlitScan
 RESOURCES = net.sf.openfx.SlitScan.png net.sf.openfx.SlitScan.svg
 

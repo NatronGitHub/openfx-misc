@@ -20,8 +20,6 @@
  * OFX Deinterlace plugin.
  */
 
-#include "Deinterlace.h"
-
 #include <cstring> // for memcpy
 #include <cmath>
 #include <algorithm>
@@ -775,8 +773,6 @@ ImageEffect* DeinterlacePluginFactory::createInstance(OfxImageEffectHandle handl
     return new DeinterlacePlugin(handle);
 }
 
-void getDeinterlacePluginID(OFX::PluginFactoryArray &ids) 
-{
-    static DeinterlacePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-} 
+
+static DeinterlacePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

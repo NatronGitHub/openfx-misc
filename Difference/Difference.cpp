@@ -20,8 +20,6 @@
  * OFX Difference plugin.
  */
 
-#include "Difference.h"
-
 #include <cmath>
 #include <algorithm>
 #ifdef _WINDOWS
@@ -418,8 +416,5 @@ OFX::ImageEffect* DifferencePluginFactory::createInstance(OfxImageEffectHandle h
 }
 
 
-void getDifferencePluginID(OFX::PluginFactoryArray &ids)
-{
-    static DifferencePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static DifferencePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

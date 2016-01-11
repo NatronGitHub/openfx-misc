@@ -1,4 +1,4 @@
-PLUGINOBJECTS = AdjustRoD.o PluginRegistration.o
+PLUGINOBJECTS = AdjustRoD.o
 PLUGINNAME = AdjustRoD
 RESOURCES = net.sf.openfx.AdjustRoDPlugin.png net.sf.openfx.AdjustRoDPlugin.svg
 

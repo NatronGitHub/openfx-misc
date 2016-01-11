@@ -21,7 +21,6 @@
  */
 
 // NOTE: This plugin is very similar to Rectangle. Any changes made here should probably be made in Rectangle.
-#include "Radial.h"
 
 #include <cmath>
 #include <algorithm>
@@ -979,9 +978,6 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     ofxsMaskMixDescribeParams(desc, page);
 }
 
-void getRadialPluginID(OFX::PluginFactoryArray &ids)
-{
-    static RadialPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
 
+static RadialPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

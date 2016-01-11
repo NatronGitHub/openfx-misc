@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
 CImgBilateral.o \
-PluginRegistration.o \
 CImgFilter.o \
 CImgOperator.o \
 

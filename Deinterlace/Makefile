@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Deinterlace.o PluginRegistration.o
+PLUGINOBJECTS = Deinterlace.o
 PLUGINNAME = Deinterlace
 RESOURCES = net.sf.openfx.Deinterlace.png net.sf.openfx.Deinterlace.svg
 

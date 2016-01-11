@@ -20,8 +20,6 @@
  * OFX CImgBilateral plugin.
  */
 
-#include "CImgBilateral.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -359,14 +357,8 @@ OFX::ImageEffect* CImgBilateralGuidedPluginFactory::createInstance(OfxImageEffec
     return new CImgBilateralGuidedPlugin(handle);
 }
 
-void getCImgBilateralPluginID(OFX::PluginFactoryArray &ids)
-{
-    {
-        static CImgBilateralPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static CImgBilateralGuidedPluginFactory p(kPluginGuidedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-}
+
+static CImgBilateralPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static CImgBilateralGuidedPluginFactory p2(kPluginGuidedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p1)
+mRegisterPluginFactoryInstance(p2)

@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Keyer.o PluginRegistration.o
+PLUGINOBJECTS = Keyer.o
 PLUGINNAME = Keyer
 RESOURCES = net.sf.openfx.KeyerPlugin.png net.sf.openfx.KeyerPlugin.svg
 

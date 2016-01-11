@@ -20,8 +20,6 @@
  * OFX Merge plugin.
  */
 
-#include "Merge.h"
-
 #include <cmath>
 #include <cstring>
 #include <algorithm>
@@ -1470,47 +1468,25 @@ MergePluginFactory<plugin>::createInstance(OfxImageEffectHandle handle, OFX::Con
     return new MergePlugin(handle, numerousInputs);
 }
 
-void getMergePluginID(OFX::PluginFactoryArray &ids)
-{
-    {
-        static MergePluginFactory<eMergeOver> p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static MergePluginFactory<eMergePlus> p(std::string(kPluginIdentifierSub) + "Plus", kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static MergePluginFactory<eMergeMatte> p(std::string(kPluginIdentifierSub) + "Matte", kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static MergePluginFactory<eMergeMultiply> p(std::string(kPluginIdentifierSub) + "Multiply", kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static MergePluginFactory<eMergeIn> p(std::string(kPluginIdentifierSub) + "In", kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static MergePluginFactory<eMergeOut> p(std::string(kPluginIdentifierSub) + "Out", kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static MergePluginFactory<eMergeScreen> p(std::string(kPluginIdentifierSub) + "Screen", kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static MergePluginFactory<eMergeMax> p(std::string(kPluginIdentifierSub) + "Max", kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static MergePluginFactory<eMergeMin> p(std::string(kPluginIdentifierSub) + "Min", kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static MergePluginFactory<eMergeDifference> p(std::string(kPluginIdentifierSub) + "Difference", kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-}
+
+static MergePluginFactory<eMergeOver>        p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergePlus>        p2(kPluginIdentifierSub"Plus", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergeMatte>       p3(kPluginIdentifierSub"Matte", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergeMultiply>    p4(kPluginIdentifierSub"Multiply", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergeIn>          p5(kPluginIdentifierSub"In", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergeOut>         p6(kPluginIdentifierSub"Out", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergeScreen>      p7(kPluginIdentifierSub"Screen", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergeMax>         p8(kPluginIdentifierSub"Max", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergeMin>         p9(kPluginIdentifierSub"Min", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergeDifference> p10(kPluginIdentifierSub"Difference", kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p1)
+mRegisterPluginFactoryInstance(p2)
+mRegisterPluginFactoryInstance(p3)
+mRegisterPluginFactoryInstance(p4)
+mRegisterPluginFactoryInstance(p5)
+mRegisterPluginFactoryInstance(p6)
+mRegisterPluginFactoryInstance(p7)
+mRegisterPluginFactoryInstance(p8)
+mRegisterPluginFactoryInstance(p9)
+mRegisterPluginFactoryInstance(p10)
 

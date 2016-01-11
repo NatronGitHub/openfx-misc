@@ -20,8 +20,6 @@
  * OFX ClipTest plugin.
  */
 
-#include "ClipTest.h"
-
 #include <cmath>
 #include <cstring>
 #ifdef _WINDOWS
@@ -802,9 +800,6 @@ OFX::ImageEffect* ClipTestPluginFactory::createInstance(OfxImageEffectHandle han
     return new ClipTestPlugin(handle);
 }
 
-void getClipTestPluginID(OFX::PluginFactoryArray &ids)
-{
-    static ClipTestPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static ClipTestPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

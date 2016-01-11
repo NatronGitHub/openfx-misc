@@ -20,8 +20,6 @@
  * OFX CImgGuided plugin.
  */
 
-#include "CImgGuided.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -225,8 +223,5 @@ OFX::ImageEffect* CImgGuidedPluginFactory::createInstance(OfxImageEffectHandle h
 }
 
 
-void getCImgGuidedPluginID(OFX::PluginFactoryArray &ids)
-{
-    static CImgGuidedPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static CImgGuidedPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

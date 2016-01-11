@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Mirror.o PluginRegistration.o
+PLUGINOBJECTS = Mirror.o
 PLUGINNAME = Mirror
 RESOURCES = net.sf.openfx.Mirror.png net.sf.openfx.Mirror.svg
 

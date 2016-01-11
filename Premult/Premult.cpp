@@ -20,8 +20,6 @@
  * OFX Premult plugin.
  */
 
-#include "Premult.h"
-
 #include <limits>
 #include <algorithm>
 
@@ -796,15 +794,7 @@ PremultPluginFactory<isPremult>::createInstance(OfxImageEffectHandle handle, OFX
 }
 
 
-void getPremultPluginIDs(OFX::PluginFactoryArray &ids)
-{
-    {
-        static PremultPluginFactory<true> p(kPluginPremultIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static PremultPluginFactory<false> p(kPluginUnpremultIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-}
-
+static PremultPluginFactory<true> p1(kPluginPremultIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static PremultPluginFactory<false> p2(kPluginUnpremultIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p1)
+mRegisterPluginFactoryInstance(p2)

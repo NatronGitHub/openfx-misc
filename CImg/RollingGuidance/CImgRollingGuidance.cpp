@@ -20,8 +20,6 @@
  * OFX CImgRollingGuidance plugin.
  */
 
-#include "CImgRollingGuidance.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -261,8 +259,5 @@ OFX::ImageEffect* CImgRollingGuidancePluginFactory::createInstance(OfxImageEffec
 }
 
 
-void getCImgRollingGuidancePluginID(OFX::PluginFactoryArray &ids)
-{
-    static CImgRollingGuidancePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static CImgRollingGuidancePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ReConverge.o PluginRegistration.o ofxsOGLTextRenderer.o ofxsOGLFontData.o
+PLUGINOBJECTS = ReConverge.o ofxsOGLTextRenderer.o ofxsOGLFontData.o
 PLUGINNAME = ReConverge
 
 TOP_SRCDIR = ..

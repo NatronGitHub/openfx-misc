@@ -20,8 +20,6 @@
  * OFX HSVTool plugin.
  */
 
-#include "HSVTool.h"
-
 #include <cmath>
 #include <algorithm>
 #ifdef _WINDOWS
@@ -1338,9 +1336,6 @@ HSVToolPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEn
     return new HSVToolPlugin(handle);
 }
 
-void getHSVToolPluginID(OFX::PluginFactoryArray &ids)
-{
-    static HSVToolPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
 
+static HSVToolPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

@@ -21,8 +21,6 @@
  * Switch between inputs.
  */
 
-#include "Switch.h"
-
 #include <string>
 #include <algorithm>
 
@@ -413,8 +411,6 @@ OFX::ImageEffect* SwitchPluginFactory::createInstance(OfxImageEffectHandle handl
     return new SwitchPlugin(handle, numerousInputs);
 }
 
-void getSwitchPluginID(OFX::PluginFactoryArray &ids)
-{
-    static SwitchPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static SwitchPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

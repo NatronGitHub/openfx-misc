@@ -20,8 +20,6 @@
  * OFX Gamma plugin.
  */
 
-#include "Gamma.h"
-
 #include <cmath>
 #include <cstring>
 #include <algorithm>
@@ -751,9 +749,7 @@ OFX::ImageEffect* GammaPluginFactory::createInstance(OfxImageEffectHandle handle
     return new GammaPlugin(handle);
 }
 
-void getGammaPluginID(OFX::PluginFactoryArray &ids)
-{
-    static GammaPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static GammaPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

@@ -1,4 +1,4 @@
-PLUGINOBJECTS = TrackerPM.o ofxsTracking.o ofxsOGLFontData.o ofxsOGLTextRenderer.o PluginRegistration.o
+PLUGINOBJECTS = TrackerPM.o ofxsTracking.o ofxsOGLFontData.o ofxsOGLTextRenderer.o
 PLUGINNAME = TrackerPM
 RESOURCES = net.sf.openfx.TrackerPM.png net.sf.openfx.TrackerPM.svg
 

@@ -20,8 +20,6 @@
  * OFX ColorMatrix plugin.
  */
 
-#include "ColorMatrix.h"
-
 #include <cmath>
 #include <cstring>
 #ifdef _WINDOWS
@@ -813,9 +811,7 @@ OFX::ImageEffect* ColorMatrixPluginFactory::createInstance(OfxImageEffectHandle 
     return new ColorMatrixPlugin(handle);
 }
 
-void getColorMatrixPluginID(OFX::PluginFactoryArray &ids)
-{
-    static ColorMatrixPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static ColorMatrixPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

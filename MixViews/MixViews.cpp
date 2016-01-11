@@ -21,8 +21,6 @@
  * Mix two views together.
  */
 
-#include "MixViews.h"
-
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -392,8 +390,6 @@ OFX::ImageEffect* MixViewsPluginFactory::createInstance(OfxImageEffectHandle han
     return new MixViewsPlugin(handle);
 }
 
-void getMixViewsPluginID(OFX::PluginFactoryArray &ids)
-{
-    static MixViewsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static MixViewsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

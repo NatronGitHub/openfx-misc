@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Invert.o PluginRegistration.o
+PLUGINOBJECTS = Invert.o
 PLUGINNAME = Invert
 RESOURCES = net.sf.openfx.Invert.png net.sf.openfx.Invert.svg
 

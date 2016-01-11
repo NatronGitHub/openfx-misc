@@ -20,8 +20,6 @@
  * OFX Constant plugin.
  */
 
-#include "Constant.h"
-
 #include <cmath>
 #ifdef _WINDOWS
 #include <windows.h>
@@ -422,14 +420,7 @@ ConstantPluginFactory<solid>::createInstance(OfxImageEffectHandle handle, Contex
     return new ConstantPlugin(handle, solid);
 }
 
-void getConstantPluginID(OFX::PluginFactoryArray &ids)
-{
-    {
-        static ConstantPluginFactory<false> p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static ConstantPluginFactory<true> p(kPluginSolidIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-}
+static ConstantPluginFactory<false> p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static ConstantPluginFactory<true> p2(kPluginSolidIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p1)
+mRegisterPluginFactoryInstance(p2)

@@ -20,8 +20,6 @@
  * OFX TimeDissolve plugin.
  */
 
-#include "TimeDissolve.h"
-
 #include <cmath>
 #include <algorithm>
 
@@ -560,11 +558,6 @@ TimeDissolvePluginFactory::createInstance(OfxImageEffectHandle handle,
     return new TimeDissolvePlugin(handle, supportsParametricParameter);
 }
 
-void
-getTimeDissolvePluginID(OFX::PluginFactoryArray &ids)
-{
-    static TimeDissolvePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 
-    ids.push_back(&p);
-}
-
+static TimeDissolvePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

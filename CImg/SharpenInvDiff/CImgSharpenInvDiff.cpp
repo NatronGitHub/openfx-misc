@@ -20,8 +20,6 @@
  * OFX CImgSharpenInvDiff plugin.
  */
 
-#include "CImgSharpenInvDiff.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -278,9 +276,5 @@ OFX::ImageEffect* CImgSharpenInvDiffPluginFactory::createInstance(OfxImageEffect
 }
 
 
-void getCImgSharpenInvDiffPluginID(OFX::PluginFactoryArray &ids)
-{
-    static CImgSharpenInvDiffPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
-
+static CImgSharpenInvDiffPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

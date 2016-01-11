@@ -20,8 +20,6 @@
  * OFX Saturation plugin.
  */
 
-#include "Saturation.h"
-
 #include <cmath>
 #include <algorithm>
 #ifdef _WINDOWS
@@ -838,9 +836,6 @@ SaturationPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::Contex
     return new SaturationPlugin(handle);
 }
 
-void getSaturationPluginID(OFX::PluginFactoryArray &ids)
-{
-    static SaturationPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
 
+static SaturationPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

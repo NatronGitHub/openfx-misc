@@ -1,4 +1,4 @@
-PLUGINOBJECTS = TimeDissolve.o PluginRegistration.o
+PLUGINOBJECTS = TimeDissolve.o
 PLUGINNAME = TimeDissolve
 #RESOURCES = net.sf.openfx.TimeDissolvePlugin.png net.sf.openfx.TimeDissolvePlugin.svg
 

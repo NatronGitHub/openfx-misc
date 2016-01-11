@@ -23,8 +23,6 @@
 // TODO:
 // - show progress
 
-#include "FrameBlend.h"
-
 #include <cmath> // for floor
 #include <climits> // for kOfxFlagInfiniteMax
 #include <cassert>
@@ -1174,9 +1172,7 @@ OFX::ImageEffect* FrameBlendPluginFactory::createInstance(OfxImageEffectHandle h
     return new FrameBlendPlugin(handle);
 }
 
-void getFrameBlendPluginID(OFX::PluginFactoryArray &ids)
-{
-    static FrameBlendPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static FrameBlendPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

@@ -21,8 +21,6 @@
  * JoinView inputs to make a stereo output.
  */
 
-#include "JoinViews.h"
-
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -381,9 +379,7 @@ OFX::ImageEffect* JoinViewsPluginFactory::createInstance(OfxImageEffectHandle ha
     return new JoinViewsPlugin(handle);
 }
 
-void getJoinViewsPluginID(OFX::PluginFactoryArray &ids)
-{
-    static JoinViewsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static JoinViewsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

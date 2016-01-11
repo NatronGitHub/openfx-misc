@@ -1,4 +1,4 @@
-PLUGINOBJECTS = OneView.o PluginRegistration.o
+PLUGINOBJECTS = OneView.o
 PLUGINNAME = OneView
 RESOURCES = net.sf.openfx.oneViewPlugin.png net.sf.openfx.oneViewPlugin.svg
 

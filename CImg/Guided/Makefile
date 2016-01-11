@@ -1,6 +1,5 @@
 PLUGINOBJECTS = \
 CImgGuided.o \
-PluginRegistration.o \
 CImgFilter.o \
 
 # no ofxsInteract.o

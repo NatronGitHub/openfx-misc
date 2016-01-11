@@ -20,8 +20,6 @@
  * OFX CImgSmooth plugin.
  */
 
-#include "CImgSmooth.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -407,8 +405,5 @@ OFX::ImageEffect* CImgSmoothPluginFactory::createInstance(OfxImageEffectHandle h
 }
 
 
-void getCImgSmoothPluginID(OFX::PluginFactoryArray &ids)
-{
-    static CImgSmoothPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static CImgSmoothPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

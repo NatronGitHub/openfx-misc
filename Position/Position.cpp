@@ -20,8 +20,6 @@
  * OFX Position plugin.
  */
 
-#include "Position.h"
-
 #include <cmath>
 #include <iostream>
 #ifdef _WINDOWS
@@ -399,10 +397,6 @@ PositionPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextE
     return new PositionPlugin(handle);
 }
 
-void getPositionPluginID(OFX::PluginFactoryArray &ids)
-{
-    {
-        static PositionPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-}
+
+static PositionPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

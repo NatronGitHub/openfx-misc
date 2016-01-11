@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Grade.o PluginRegistration.o
+PLUGINOBJECTS = Grade.o
 PLUGINNAME = Grade
 RESOURCES = net.sf.openfx.GradePlugin.png net.sf.openfx.GradePlugin.svg
 

@@ -20,7 +20,6 @@
  * OFX FrameRange plugin.
  */
 
-#include "FrameRange.h"
 
 #include <algorithm> // for std::max
 #ifdef _WINDOWS
@@ -277,8 +276,6 @@ OFX::ImageEffect* FrameRangePluginFactory::createInstance(OfxImageEffectHandle h
     return new FrameRangePlugin(handle);
 }
 
-void getFrameRangePluginID(OFX::PluginFactoryArray &ids)
-{
-    static FrameRangePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static FrameRangePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

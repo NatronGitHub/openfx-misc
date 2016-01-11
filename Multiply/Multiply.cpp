@@ -20,8 +20,6 @@
  * OFX Multiply plugin.
  */
 
-#include "Multiply.h"
-
 #include <cmath>
 #include <cstring>
 #ifdef _WINDOWS
@@ -748,9 +746,7 @@ OFX::ImageEffect* MultiplyPluginFactory::createInstance(OfxImageEffectHandle han
     return new MultiplyPlugin(handle);
 }
 
-void getMultiplyPluginID(OFX::PluginFactoryArray &ids)
-{
-    static MultiplyPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static MultiplyPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

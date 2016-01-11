@@ -1,4 +1,4 @@
-PLUGINOBJECTS = FrameBlend.o PluginRegistration.o
+PLUGINOBJECTS = FrameBlend.o
 PLUGINNAME = FrameBlend
 RESOURCES = net.sf.openfx.FrameBlend.png net.sf.openfx.FrameBlend.svg
 

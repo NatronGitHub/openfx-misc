@@ -20,8 +20,6 @@
  * OFX CImgHistEQ plugin.
  */
 
-#include "CImgHistEQ.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -211,8 +209,5 @@ OFX::ImageEffect* CImgHistEQPluginFactory::createInstance(OfxImageEffectHandle h
 }
 
 
-void getCImgHistEQPluginID(OFX::PluginFactoryArray &ids)
-{
-    static CImgHistEQPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static CImgHistEQPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

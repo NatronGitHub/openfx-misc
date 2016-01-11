@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Dissolve.o PluginRegistration.o
+PLUGINOBJECTS = Dissolve.o
 PLUGINNAME = Dissolve
 RESOURCES = net.sf.openfx.DissolvePlugin.png net.sf.openfx.DissolvePlugin.svg
 

@@ -1,4 +1,4 @@
-PLUGINOBJECTS = CopyRectangle.o ofxsRectangleInteract.o PluginRegistration.o
+PLUGINOBJECTS = CopyRectangle.o ofxsRectangleInteract.o
 PLUGINNAME = CopyRectangle
 #RESOURCES = net.sf.openfx.CopyRectanglePlugin.png net.sf.openfx.CopyRectanglePlugin.svg
 

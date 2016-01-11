@@ -20,8 +20,6 @@
  * OFX ColorLookup plugin
  */
 
-#include "ColorLookup.h"
-
 #include <cmath>
 #include <algorithm>
 #ifdef _WINDOWS
@@ -951,9 +949,7 @@ ColorLookupPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::Conte
     return new ColorLookupPlugin(handle);
 }
 
-void getColorLookupPluginID(OFX::PluginFactoryArray &ids)
-{
-    static ColorLookupPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static ColorLookupPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

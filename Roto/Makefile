@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Roto.o PluginRegistration.o
+PLUGINOBJECTS = Roto.o
 PLUGINNAME = Roto
 RESOURCES = net.sf.openfx.RotoPlugin.png net.sf.openfx.RotoPlugin.svg
 

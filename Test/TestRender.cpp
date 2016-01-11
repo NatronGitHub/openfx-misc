@@ -20,8 +20,6 @@
  * OFX TestRender plugin.
  */
 
-#include "TestRender.h"
-
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -919,48 +917,20 @@ OFX::ImageEffect* TestRenderPluginFactory<supportsTiles,supportsMultiResolution,
     return new TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>(handle);
 }
 
-
-void getTestRenderPluginID(OFX::PluginFactoryArray &ids)
-{
-    {
-        std::string id = kPluginIdentifier"_TiOK_MrOK_RsOK";
-        static TestRenderPluginFactory<true,true,true> p(id, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        std::string id = kPluginIdentifier"_TiOK_MrOK_RsNo";
-        static TestRenderPluginFactory<true,true,false> p(id, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        std::string id = kPluginIdentifier"_TiOK_MrNo_RsOK";
-        static TestRenderPluginFactory<true,false,true> p(id, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        std::string id = kPluginIdentifier"_TiOK_MrNo_RsNo";
-        static TestRenderPluginFactory<true,false,false> p(id, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        std::string id = kPluginIdentifier"_TiNo_MrOK_RsOK";
-        static TestRenderPluginFactory<false,true,true> p(id, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        std::string id = kPluginIdentifier"_TiNo_MrOK_RsNo";
-        static TestRenderPluginFactory<false,true,false> p(id, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        std::string id = kPluginIdentifier"_TiNo_MrNo_RsOK";
-        static TestRenderPluginFactory<false,false,true> p(id, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        std::string id = kPluginIdentifier"_TiNo_MrNo_RsNo";
-        static TestRenderPluginFactory<false,false,false> p(id, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-}
+static TestRenderPluginFactory<true,true,true> p1(kPluginIdentifier"_TiOK_MrOK_RsOK", kPluginVersionMajor, kPluginVersionMinor);
+static TestRenderPluginFactory<true,true,false> p2(kPluginIdentifier"_TiOK_MrOK_RsNo", kPluginVersionMajor, kPluginVersionMinor);
+static TestRenderPluginFactory<true,false,true> p3(kPluginIdentifier"_TiOK_MrNo_RsOK", kPluginVersionMajor, kPluginVersionMinor);
+static TestRenderPluginFactory<true,false,false> p4(kPluginIdentifier"_TiOK_MrNo_RsNo", kPluginVersionMajor, kPluginVersionMinor);
+static TestRenderPluginFactory<false,true,true> p5(kPluginIdentifier"_TiNo_MrOK_RsOK", kPluginVersionMajor, kPluginVersionMinor);
+static TestRenderPluginFactory<false,true,false> p6(kPluginIdentifier"_TiNo_MrOK_RsNo", kPluginVersionMajor, kPluginVersionMinor);
+static TestRenderPluginFactory<false,false,true> p7(kPluginIdentifier"_TiNo_MrNo_RsOK", kPluginVersionMajor, kPluginVersionMinor);
+static TestRenderPluginFactory<false,false,false> p8(kPluginIdentifier"_TiNo_MrNo_RsNo", kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p1)
+mRegisterPluginFactoryInstance(p2)
+mRegisterPluginFactoryInstance(p3)
+mRegisterPluginFactoryInstance(p4)
+mRegisterPluginFactoryInstance(p5)
+mRegisterPluginFactoryInstance(p6)
+mRegisterPluginFactoryInstance(p7)
+mRegisterPluginFactoryInstance(p8)
 

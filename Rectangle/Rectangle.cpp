@@ -21,7 +21,6 @@
  */
 
 // NOTE: This plugin is very similar to Radial. Any changes made here should probably be made in Radial.
-#include "Rectangle.h"
 
 #include <cmath>
 #include <climits>
@@ -1121,9 +1120,6 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ofxsMaskMixDescribeParams(desc, page);
 }
 
-void getRectanglePluginID(OFX::PluginFactoryArray &ids)
-{
-    static RectanglePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
 
+static RectanglePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

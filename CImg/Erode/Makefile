@@ -1,7 +1,6 @@
 PLUGINOBJECTS = \
 CImgDilate.o \
 CImgErode.o \
-PluginRegistration.o \
 CImgFilter.o \
 
 # no ofxsInteract.o

@@ -20,8 +20,6 @@
  * OFX Dissolve plugin.
  */
 
-#include "Dissolve.h"
-
 #include <cmath>
 #include <algorithm>
 
@@ -612,11 +610,7 @@ DissolvePluginFactory::createInstance(OfxImageEffectHandle handle,
     return new DissolvePlugin(handle, numerousInputs);
 }
 
-void
-getDissolvePluginID(OFX::PluginFactoryArray &ids)
-{
-    static DissolvePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 
-    ids.push_back(&p);
-}
+static DissolvePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

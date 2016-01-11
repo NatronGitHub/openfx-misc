@@ -20,8 +20,6 @@
  * OFX TimeBlur plugin.
  */
 
-#include "TimeBlur.h"
-
 #include <cmath> // for floor
 #include <climits> // for kOfxFlagInfiniteMax
 #include <cassert>
@@ -576,9 +574,6 @@ OFX::ImageEffect* TimeBlurPluginFactory::createInstance(OfxImageEffectHandle han
     return new TimeBlurPlugin(handle);
 }
 
-void getTimeBlurPluginID(OFX::PluginFactoryArray &ids)
-{
-    static TimeBlurPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
 
+static TimeBlurPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

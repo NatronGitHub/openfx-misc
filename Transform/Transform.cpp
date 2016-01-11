@@ -20,8 +20,6 @@
  * OFX Transform & DirBlur plugins.
  */
 
-#include "Transform.h"
-
 #include <cmath>
 #include <iostream>
 #ifdef _WINDOWS
@@ -484,20 +482,9 @@ OFX::ImageEffect* DirBlurPluginFactory::createInstance(OfxImageEffectHandle hand
 }
 
 
-
-
-void getTransformPluginIDs(OFX::PluginFactoryArray &ids)
-{
-    {
-        static TransformPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static TransformMaskedPluginFactory p(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static DirBlurPluginFactory p(kPluginDirBlurIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-}
+static TransformPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static TransformMaskedPluginFactory p2(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static DirBlurPluginFactory p3(kPluginDirBlurIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p1)
+mRegisterPluginFactoryInstance(p2)
+mRegisterPluginFactoryInstance(p3)

@@ -20,8 +20,6 @@
  * OFX FrameHold plugin.
  */
 
-#include "FrameHold.h"
-
 #include <cmath>
 #include <stdio.h> // for snprintf & _snprintf
 #ifdef _WINDOWS
@@ -306,8 +304,6 @@ ImageEffect* FrameHoldPluginFactory::createInstance(OfxImageEffectHandle handle,
     return new FrameHoldPlugin(handle);
 }
 
-void getFrameHoldPluginID(OFX::PluginFactoryArray &ids)
-{
-    static FrameHoldPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static FrameHoldPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

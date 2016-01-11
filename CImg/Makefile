@@ -17,7 +17,6 @@ CImgSharpenInvDiff.o \
 CImgSharpenShock.o \
 CImgSmooth.o \
 ofxsLut.o \
-PluginRegistrationCombined.o \
 CImgFilter.o \
 CImgOperator.o
 

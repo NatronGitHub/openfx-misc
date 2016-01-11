@@ -1,4 +1,4 @@
-PLUGINOBJECTS = MatteMonitor.o PluginRegistration.o
+PLUGINOBJECTS = MatteMonitor.o
 PLUGINNAME = MatteMonitor
 #RESOURCES = net.sf.openfx.MatteMonitorPlugin.png
 

@@ -20,8 +20,6 @@
  * OFX GodRays plugin.
  */
 
-#include "GodRays.h"
-
 #include <cmath>
 #include <iostream>
 #include <algorithm>
@@ -1240,10 +1238,5 @@ OFX::ImageEffect* GodRaysPluginFactory::createInstance(OfxImageEffectHandle hand
 }
 
 
-void getGodRaysPluginID(OFX::PluginFactoryArray &ids)
-{
-    {
-        static GodRaysPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-}
+static GodRaysPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

@@ -20,8 +20,6 @@
  * OFX TestGroups plugin.
  */
 
-#include "TestGroups.h"
-
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -591,12 +589,5 @@ OFX::ImageEffect* TestGroupsPluginFactory::createInstance(OfxImageEffectHandle h
 }
 
 
-void getTestGroupsPluginID(OFX::PluginFactoryArray &ids)
-{
-    {
-        std::string id = kPluginIdentifier;
-        static TestGroupsPluginFactory p(id, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-}
-
+static TestGroupsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

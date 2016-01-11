@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Multiply.o PluginRegistration.o
+PLUGINOBJECTS = Multiply.o
 PLUGINNAME = Multiply
 RESOURCES = net.sf.openfx.MultiplyPlugin.png
 

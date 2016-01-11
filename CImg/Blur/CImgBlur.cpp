@@ -20,8 +20,6 @@
  * OFX CImgBlur and CImgLaplacian plugins.
  */
 
-#include "CImgBlur.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -895,18 +893,9 @@ OFX::ImageEffect* CImgChromaBlurPluginFactory::createInstance(OfxImageEffectHand
 }
 
 
-void getCImgBlurPluginID(OFX::PluginFactoryArray &ids)
-{
-    {
-        static CImgBlurPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static CImgLaplacianPluginFactory p(kPluginIdentifierLaplacian, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static CImgChromaBlurPluginFactory p(kPluginIdentifierChromaBlur, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-}
+static CImgBlurPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static CImgLaplacianPluginFactory p2(kPluginIdentifierLaplacian, kPluginVersionMajor, kPluginVersionMinor);
+static CImgChromaBlurPluginFactory p3(kPluginIdentifierChromaBlur, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p1)
+mRegisterPluginFactoryInstance(p2)
+mRegisterPluginFactoryInstance(p3)

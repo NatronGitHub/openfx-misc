@@ -21,8 +21,6 @@
  * Put the left and right view of the input next to each other.
  */
 
-#include "SideBySide.h"
-
 #include <algorithm>
 #ifdef _WINDOWS
 #include <windows.h>
@@ -552,8 +550,6 @@ OFX::ImageEffect* SideBySidePluginFactory::createInstance(OfxImageEffectHandle h
     return new SideBySidePlugin(handle);
 }
 
-void getSideBySidePluginID(OFX::PluginFactoryArray &ids)
-{
-    static SideBySidePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static SideBySidePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

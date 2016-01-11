@@ -20,8 +20,6 @@
  * OFX Add plugin.
  */
 
-#include "Add.h"
-
 #include <cmath>
 #include <cstring>
 #ifdef _WINDOWS
@@ -694,9 +692,6 @@ OFX::ImageEffect* AddPluginFactory::createInstance(OfxImageEffectHandle handle, 
     return new AddPlugin(handle);
 }
 
-void getAddPluginID(OFX::PluginFactoryArray &ids)
-{
-    static AddPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static AddPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

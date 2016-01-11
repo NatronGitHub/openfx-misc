@@ -20,8 +20,6 @@
  * OFX CImgPlasma plugin.
  */
 
-#include "CImgPlasma.h"
-
 #include <memory>
 #include <cmath>
 #include <cstring>
@@ -271,8 +269,5 @@ OFX::ImageEffect* CImgPlasmaPluginFactory::createInstance(OfxImageEffectHandle h
 }
 
 
-void getCImgPlasmaPluginID(OFX::PluginFactoryArray &ids)
-{
-    static CImgPlasmaPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static CImgPlasmaPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

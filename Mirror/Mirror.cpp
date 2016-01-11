@@ -20,8 +20,6 @@
  * OFX Mirror plugin.
  */
 
-#include "Mirror.h"
-
 #include <cstring> // for memcpy
 #include <cmath>
 #include <iostream>
@@ -625,10 +623,6 @@ MirrorPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnu
     return new MirrorPlugin(handle);
 }
 
-void getMirrorPluginID(OFX::PluginFactoryArray &ids)
-{
-    {
-        static MirrorPluginFactory p(kPluginMirrorIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-}
+
+static MirrorPluginFactory p(kPluginMirrorIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

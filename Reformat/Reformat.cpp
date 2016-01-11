@@ -20,8 +20,6 @@
  * OFX Transform & DirBlur plugins.
  */
 
-#include "Reformat.h"
-
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -741,11 +739,5 @@ OFX::ImageEffect* ReformatPluginFactory::createInstance(OfxImageEffectHandle han
 }
 
 
-
-void getReformatPluginIDs(OFX::PluginFactoryArray &ids)
-{
-    
-    static ReformatPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-    
-}
+static ReformatPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

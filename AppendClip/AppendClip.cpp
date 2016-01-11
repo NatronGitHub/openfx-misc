@@ -20,8 +20,6 @@
  * OFX AppendClip plugin.
  */
 
-#include "AppendClip.h"
-
 #include <cmath>
 #include <algorithm>
 
@@ -1016,13 +1014,7 @@ AppendClipPluginFactory::createInstance(OfxImageEffectHandle handle,
     return new AppendClipPlugin(handle, numerousInputs);
 }
 
-void
-getAppendClipPluginID(OFX::PluginFactoryArray &ids)
-{
-    {
-        static AppendClipPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 
-        ids.push_back(&p);
-    }
-}
+static AppendClipPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

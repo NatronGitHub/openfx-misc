@@ -1,4 +1,4 @@
-PLUGINOBJECTS = SideBySide.o PluginRegistration.o
+PLUGINOBJECTS = SideBySide.o
 PLUGINNAME = SideBySide
 RESOURCES = net.sf.openfx.sideBySidePlugin.png net.sf.openfx.sideBySidePlugin.svg
 

@@ -3,7 +3,7 @@ PLUGINOBJECTS = \
 	TestPosition.o \
 	TestGroups.o \
 	TestOpenGL.o TestOpenGLRenderGL.o  TestOpenGLRenderMesa.o \
-	PluginRegistration.o ofxsTransform3x3.o ofxsShutter.o
+	ofxsTransform3x3.o ofxsShutter.o
 
 PLUGINNAME = Test
 

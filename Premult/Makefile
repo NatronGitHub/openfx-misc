@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Premult.o PluginRegistration.o
+PLUGINOBJECTS = Premult.o
 PLUGINNAME = Premult
 RESOURCES = net.sf.openfx.Premult.png  net.sf.openfx.Premult.svg net.sf.openfx.Unpremult.png net.sf.openfx.Unpremult.svg
 

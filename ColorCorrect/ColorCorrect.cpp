@@ -20,8 +20,6 @@
  * OFX ColorCorrect plugin.
  */
 
-#include "ColorCorrect.h"
-
 #include <cmath>
 #include <algorithm>
 //#include <iostream>
@@ -1270,9 +1268,7 @@ OFX::ImageEffect* ColorCorrectPluginFactory::createInstance(OfxImageEffectHandle
     return new ColorCorrectPlugin(handle, supportsParametricParameter);
 }
 
-void getColorCorrectPluginID(OFX::PluginFactoryArray &ids)
-{
-    static ColorCorrectPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static ColorCorrectPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

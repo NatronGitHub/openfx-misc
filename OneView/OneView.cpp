@@ -21,8 +21,6 @@
  * Takes one view from the input.
  */
 
-#include "OneView.h"
-
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -384,8 +382,6 @@ OFX::ImageEffect* OneViewPluginFactory::createInstance(OfxImageEffectHandle hand
     return new OneViewPlugin(handle);
 }
 
-void getOneViewPluginID(OFX::PluginFactoryArray &ids)
-{
-    static OneViewPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static OneViewPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

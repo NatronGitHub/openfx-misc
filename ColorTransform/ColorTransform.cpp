@@ -20,8 +20,6 @@
  * OFX ColorTransform plugin.
  */
 
-#include "ColorTransform.h"
-
 #include <cmath>
 #ifdef _WINDOWS
 #include <windows.h>
@@ -678,77 +676,47 @@ ColorTransformPluginFactory<transform>::createInstance(OfxImageEffectHandle hand
     return new ColorTransformPlugin<transform>(handle);
 }
 
-void getColorTransformPluginIDs(OFX::PluginFactoryArray &ids)
-{
-    {
-        // RGBtoHSV
-        static ColorTransformPluginFactory<eColorTransformRGBToHSV> p(kPluginRGBToHSVIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        // HSVtoRGB
-        static ColorTransformPluginFactory<eColorTransformHSVToRGB> p(kPluginHSVToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        // RGBtoHSL
-        static ColorTransformPluginFactory<eColorTransformRGBToHSL> p(kPluginRGBToHSLIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        // HSLtoRGB
-        static ColorTransformPluginFactory<eColorTransformHSLToRGB> p(kPluginHSLToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        // RGBtoHSI
-        static ColorTransformPluginFactory<eColorTransformRGBToHSI> p(kPluginRGBToHSIIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        // HSItoRGB
-        static ColorTransformPluginFactory<eColorTransformHSIToRGB> p(kPluginHSIToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        // RGBtoYCbCr
-        static ColorTransformPluginFactory<eColorTransformRGBToYCbCr> p(kPluginRGBToYCbCrIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        // YCbCrtoRGB
-        static ColorTransformPluginFactory<eColorTransformYCbCrToRGB> p(kPluginYCbCrToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        // RGBtoYUV
-        static ColorTransformPluginFactory<eColorTransformRGBToYUV> p(kPluginRGBToYUVIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        // YUVtoRGB
-        static ColorTransformPluginFactory<eColorTransformYUVToRGB> p(kPluginYUVToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        // RGBtoXYZ
-        static ColorTransformPluginFactory<eColorTransformRGBToXYZ> p(kPluginRGBToXYZIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        // XYZtoRGB
-        static ColorTransformPluginFactory<eColorTransformXYZToRGB> p(kPluginXYZToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        // RGBtoLab
-        static ColorTransformPluginFactory<eColorTransformRGBToLab> p(kPluginRGBToLabIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        // LabtoRGB
-        static ColorTransformPluginFactory<eColorTransformLabToRGB> p(kPluginLabToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-}
+// RGBtoHSV
+static ColorTransformPluginFactory<eColorTransformRGBToHSV> p1(kPluginRGBToHSVIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// HSVtoRGB
+static ColorTransformPluginFactory<eColorTransformHSVToRGB> p2(kPluginHSVToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// RGBtoHSL
+static ColorTransformPluginFactory<eColorTransformRGBToHSL> p3(kPluginRGBToHSLIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// HSLtoRGB
+static ColorTransformPluginFactory<eColorTransformHSLToRGB> p4(kPluginHSLToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// RGBtoHSI
+static ColorTransformPluginFactory<eColorTransformRGBToHSI> p5(kPluginRGBToHSIIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// HSItoRGB
+static ColorTransformPluginFactory<eColorTransformHSIToRGB> p6(kPluginHSIToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// RGBtoYCbCr
+static ColorTransformPluginFactory<eColorTransformRGBToYCbCr> p7(kPluginRGBToYCbCrIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// YCbCrtoRGB
+static ColorTransformPluginFactory<eColorTransformYCbCrToRGB> p8(kPluginYCbCrToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// RGBtoYUV
+static ColorTransformPluginFactory<eColorTransformRGBToYUV> p9(kPluginRGBToYUVIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// YUVtoRGB
+static ColorTransformPluginFactory<eColorTransformYUVToRGB> p10(kPluginYUVToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// RGBtoXYZ
+static ColorTransformPluginFactory<eColorTransformRGBToXYZ> p11(kPluginRGBToXYZIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// XYZtoRGB
+static ColorTransformPluginFactory<eColorTransformXYZToRGB> p12(kPluginXYZToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// RGBtoLab
+static ColorTransformPluginFactory<eColorTransformRGBToLab> p13(kPluginRGBToLabIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// LabtoRGB
+static ColorTransformPluginFactory<eColorTransformLabToRGB> p14(kPluginLabToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+
+mRegisterPluginFactoryInstance(p1)
+mRegisterPluginFactoryInstance(p2)
+mRegisterPluginFactoryInstance(p3)
+mRegisterPluginFactoryInstance(p4)
+mRegisterPluginFactoryInstance(p5)
+mRegisterPluginFactoryInstance(p6)
+mRegisterPluginFactoryInstance(p7)
+mRegisterPluginFactoryInstance(p8)
+mRegisterPluginFactoryInstance(p9)
+mRegisterPluginFactoryInstance(p10)
+mRegisterPluginFactoryInstance(p11)
+mRegisterPluginFactoryInstance(p12)
+mRegisterPluginFactoryInstance(p13)
+mRegisterPluginFactoryInstance(p14)
 

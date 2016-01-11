@@ -20,8 +20,6 @@
  * Basic tracker with exhaustive search algorithm OFX plugin.
  */
 
-#include "TrackerPM.h"
-
 #include <cmath>
 #include <map>
 #include <limits>
@@ -1035,19 +1033,12 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 }
 
 
-
 OFX::ImageEffect* TrackerPMPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
 {
     return new TrackerPMPlugin(handle);
 }
 
 
-
-
-
-void getTrackerPMPluginID(OFX::PluginFactoryArray &ids)
-{
-    static TrackerPMPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static TrackerPMPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

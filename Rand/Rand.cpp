@@ -20,8 +20,6 @@
  * OFX Rand plugin (previously named NoiseOFX).
  */
 
-#include "Rand.h"
-
 #include <limits>
 #include <cmath>
 #include "ofxsImageEffect.h"
@@ -441,8 +439,6 @@ ImageEffect* RandPluginFactory::createInstance(OfxImageEffectHandle handle, Cont
     return new RandPlugin(handle);
 }
 
-void getRandPluginID(OFX::PluginFactoryArray &ids)
-{
-    static RandPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static RandPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Radial.o PluginRegistration.o ofxsGenerator.o ofxsRectangleInteract.o
+PLUGINOBJECTS = Radial.o ofxsGenerator.o ofxsRectangleInteract.o
 PLUGINNAME = Radial
 RESOURCES = net.sf.openfx.Radial.png net.sf.openfx.Radial.svg
 

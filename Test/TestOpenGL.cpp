@@ -460,10 +460,7 @@ TestOpenGLPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::Contex
 }
 
 
-void getTestOpenGLPluginID(OFX::PluginFactoryArray &ids)
-{
-    static TestOpenGLPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static TestOpenGLPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 
 #endif // OFX_SUPPORTS_OPENGLRENDER

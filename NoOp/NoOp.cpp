@@ -21,8 +21,6 @@
  * Does nothing.
  */
 
-#include "NoOp.h"
-
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -818,8 +816,6 @@ OFX::ImageEffect* NoOpPluginFactory::createInstance(OfxImageEffectHandle handle,
     return new NoOpPlugin(handle);
 }
 
-void getNoOpPluginID(OFX::PluginFactoryArray &ids)
-{
-    static NoOpPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+
+static NoOpPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)

@@ -1,4 +1,4 @@
-PLUGINOBJECTS = ColorTransform.o ofxsLut.o PluginRegistration.o
+PLUGINOBJECTS = ColorTransform.o ofxsLut.o
 PLUGINNAME = ColorTransform
 RESOURCES = \
 net.sf.openfx.RGBToHSVPlugin.png \

@@ -20,8 +20,6 @@
  * OFX Clamp plugin.
  */
 
-#include "Clamp.h"
-
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -951,9 +949,6 @@ OFX::ImageEffect* ClampPluginFactory::createInstance(OfxImageEffectHandle handle
 }
 
 
-void getClampPluginID(OFX::PluginFactoryArray &ids)
-{
-    static ClampPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static ClampPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 

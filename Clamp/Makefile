@@ -1,4 +1,4 @@
-PLUGINOBJECTS = Clamp.o PluginRegistration.o
+PLUGINOBJECTS = Clamp.o
 PLUGINNAME = Clamp
 RESOURCES = net.sf.openfx.Clamp.png net.sf.openfx.Clamp.svg
 

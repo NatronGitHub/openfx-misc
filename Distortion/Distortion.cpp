@@ -33,8 +33,6 @@
 */
 // This node concatenates transforms upstream.
 
-#include "Distortion.h"
-
 #include <cmath>
 #include <iostream>
 #include <sstream>
@@ -1954,18 +1952,10 @@ OFX::ImageEffect* DistortionPluginFactory<plugin>::createInstance(OfxImageEffect
     return new DistortionPlugin(handle, plugin);
 }
 
-void getDistortionPluginIDs(OFX::PluginFactoryArray &ids)
-{
-    {
-        static DistortionPluginFactory<eDistortionPluginIDistort> p(kPluginIDistortIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static DistortionPluginFactory<eDistortionPluginSTMap> p(kPluginSTMapIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-    {
-        static DistortionPluginFactory<eDistortionPluginLensDistortion> p(kPluginLensDistortionIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-        ids.push_back(&p);
-    }
-}
+
+static DistortionPluginFactory<eDistortionPluginIDistort> p1(kPluginIDistortIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static DistortionPluginFactory<eDistortionPluginSTMap> p2(kPluginSTMapIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+static DistortionPluginFactory<eDistortionPluginLensDistortion> p3(kPluginLensDistortionIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p1)
+mRegisterPluginFactoryInstance(p2)
+mRegisterPluginFactoryInstance(p3)

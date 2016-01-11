@@ -20,8 +20,6 @@
  * OFX VectorToColor plugin.
  */
 
-#include "VectorToColor.h"
-
 #include <cmath>
 #ifdef _WINDOWS
 #include <windows.h>
@@ -513,9 +511,6 @@ VectorToColorPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::Con
     return new VectorToColorPlugin(handle);
 }
 
-void getVectorToColorPluginID(OFX::PluginFactoryArray &ids)
-{
-    static VectorToColorPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
 
+static VectorToColorPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
