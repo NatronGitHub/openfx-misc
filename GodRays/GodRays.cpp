@@ -905,9 +905,9 @@ GodRaysPlugin::setupAndProcess(GodRaysProcessorBase &processor,
             srcTransformMat.h = srcTransform[7];
             srcTransformMat.i = srcTransform[8];
             // invert it
-            double det = ofxsMatDeterminant(srcTransformMat);
+            double det = srcTransformMat.determinant();
             if (det != 0.) {
-                OFX::Matrix3x3 srcTransformInverse = ofxsMatInverse(srcTransformMat, det);
+                OFX::Matrix3x3 srcTransformInverse = srcTransformMat.inverse(det);
 
                 for (size_t i = 0; i < invtransformsize; ++i) {
                     invtransform[i] = srcTransformInverse * invtransform[i];

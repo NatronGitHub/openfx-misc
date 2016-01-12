@@ -1155,9 +1155,9 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
         srcTransformMat.h = srcTransform[7];
         srcTransformMat.i = srcTransform[8];
         // invert it
-        double det = ofxsMatDeterminant(srcTransformMat);
+        double det = srcTransformMat.determinant();
         if (det != 0.) {
-            srcTransformInverse = ofxsMatInverse(srcTransformMat, det);
+            srcTransformInverse = srcTransformMat.inverse(det);
         } else {
             transformIsIdentity = true; // no transform
         }

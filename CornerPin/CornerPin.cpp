@@ -125,164 +125,6 @@ static const char* const kParamFrom[4] = {
 using namespace OFX;
 
 
-/**
- * \brief Compute the cross-product of two vectors
- *
- */
-inline OFX::Point3D
-crossprod(const OFX::Point3D& a, const OFX::Point3D& b)
-{
-    OFX::Point3D c;
-    c.x = a.y * b.z - a.z * b.y;
-    c.y = a.z * b.x - a.x * b.z;
-    c.z = a.x * b.y - a.y * b.x;
-    return c;
-}
-
-/**
- * brief Constructs a 3x3  matrix
- **/
-inline OFX::Matrix3x3
-matrix33_from_columns(const OFX::Point3D &m0, const OFX::Point3D &m1, const OFX::Point3D &m2) {
-    OFX::Matrix3x3 M;
-    M.a = m0.x; M.b = m1.x; M.c = m2.x;
-    M.d = m0.y; M.e = m1.y; M.f = m2.y;
-    M.g = m0.z; M.h = m1.z; M.i = m2.z;
-    return M;
-}
-
-/**
- * \brief Compute a homography from 4 points correspondences
- * \param p1 source point
- * \param p2 source point
- * \param p3 source point
- * \param p4 source point
- * \param q1 target point
- * \param q2 target point
- * \param q3 target point
- * \param q4 target point
- * \return the homography matrix that maps pi's to qi's
- *
- Using four point-correspondences pi ↔ pi^, we can set up an equation system to solve for the homography matrix H.
- An algorithm to obtain these parameters requiring only the inversion of a 3 × 3 equation system is as follows.
- From the four point-correspondences pi ↔ pi^ with (i ∈ {1, 2, 3, 4}),
- compute h1 = (p1 × p2 ) × (p3 × p4 ), h2 = (p1 × p3 ) × (p2 × p4 ), h3 = (p1 × p4 ) × (p2 × p3 ).
- Also compute h1^ , h2^ , h3^ using the same principle from the points pi^.
- Now, the homography matrix H can be obtained easily from
- H · [h1 h2 h3] = [h1^ h2^ h3^],
- which only requires the inversion of the matrix [h1 h2 h3].
- 
- Algo from:
- http://www.dirk-farin.net/publications/phd/text/AB_EfficientComputationOfHomographiesFromFourCorrespondences.pdf
- */
-inline bool
-homography_from_four_points(const OFX::Point3D &p1, const OFX::Point3D &p2, const OFX::Point3D &p3, const OFX::Point3D &p4,
-                            const OFX::Point3D &q1, const OFX::Point3D &q2, const OFX::Point3D &q3, const OFX::Point3D &q4,
-                            OFX::Matrix3x3 *H)
-{
-    OFX::Matrix3x3 invHp;
-    OFX::Matrix3x3 Hp = matrix33_from_columns(crossprod(crossprod(p1,p2),crossprod(p3,p4)),
-                                        crossprod(crossprod(p1,p3),crossprod(p2,p4)),
-                                        crossprod(crossprod(p1,p4),crossprod(p2,p3)));
-    double detHp = ofxsMatDeterminant(Hp);
-    if (detHp == 0.) {
-        return false;
-    }
-    OFX::Matrix3x3  Hq = matrix33_from_columns(crossprod(crossprod(q1,q2),crossprod(q3,q4)),
-                                        crossprod(crossprod(q1,q3),crossprod(q2,q4)),
-                                        crossprod(crossprod(q1,q4),crossprod(q2,q3)));
-    double detHq = ofxsMatDeterminant(Hq);
-    if (detHq == 0.) {
-        return false;
-    }
-    invHp = ofxsMatInverse(Hp,detHp);
-    *H = Hq * invHp;
-    return true;
-}
-
-inline bool
-affine_from_three_points(const OFX::Point3D &p1, const OFX::Point3D &p2, const OFX::Point3D &p3,
-                            const OFX::Point3D &q1, const OFX::Point3D &q2, const OFX::Point3D &q3,
-                            OFX::Matrix3x3 *H)
-{
-    OFX::Matrix3x3 invHp;
-    OFX::Matrix3x3 Hp = matrix33_from_columns(p1,p2,p3);
-    double detHp = ofxsMatDeterminant(Hp);
-    if (detHp == 0.) {
-        return false;
-    }
-    OFX::Matrix3x3  Hq = matrix33_from_columns(q1,q2,q3);
-    double detHq = ofxsMatDeterminant(Hq);
-    if (detHq == 0.) {
-        return false;
-    }
-    invHp = ofxsMatInverse(Hp,detHp);
-    *H = Hq * invHp;
-    return true;
-}
-
-inline bool
-similarity_from_two_points(const OFX::Point3D &p1, const OFX::Point3D &p2,
-                           const OFX::Point3D &q1, const OFX::Point3D &q2,
-                           OFX::Matrix3x3 *H)
-{
-    // Generate a third point so that p1p3 is orthogonal to p1p2, and compute the affine transform
-    OFX::Point3D p3, q3;
-    p3.x = p1.x - (p2.y - p1.y);
-    p3.y = p1.y + (p2.x - p1.x);
-    p3.z = 1.;
-    q3.x = q1.x - (q2.y - q1.y);
-    q3.y = q1.y + (q2.x - q1.x);
-    q3.z = 1.;
-    return affine_from_three_points(p1, p2, p3, q1, q2, q3, H);
-    /*
-     there is probably a better solution.
-     we have to solve for H in
-                  [x1 x2]
-     [ h1 -h2 h3] [y1 y2]   [x1' x2']
-     [ h2  h1 h4] [ 1  1] = [y1' y2']
-
-     which is equivalent to
-     [x1 -y1 1 0] [h1]   [x1']
-     [x2 -y2 1 0] [h2]   [x2']
-     [y1  x1 0 1] [h3] = [y1']
-     [y2  x2 0 1] [h4]   [y2']
-     The 4x4 matrix should be easily invertible
-     
-     with(linalg);
-     M := Matrix([[x1, -y1, 1, 0], [x2, -y2, 1, 0], [y1, x1, 0, 1], [y2, x2, 0, 1]]);
-     inverse(M);
-     */
-    /*
-    double det = p1.x*p1.x - 2*p2.x*p1.x + p2.x*p2.x +p1.y*p1.y -2*p1.y*p2.y +p2.y*p2.y;
-    if (det == 0.) {
-        return false;
-    }
-    double h1 = (p1.x-p2.x)*(q1.x-q2.x) + (p1.y-p2.y)*(q1.y-q2.y);
-    double h2 = (p1.x-p2.x)*(q1.y-q2.y) - (p1.y-p2.y)*(q1.x-q2.x);
-    double h3 =
-     todo...
-     */
-}
-
-
-
-inline bool
-translation_from_one_point(const OFX::Point3D &p1,
-                           const OFX::Point3D &q1,
-                           OFX::Matrix3x3 *H)
-{
-    H->a = 1.;
-    H->b = 0.;
-    H->c = q1.x - p1.x;
-    H->d = 0.;
-    H->e = 1.;
-    H->f = q1.y - p1.y;
-    H->g = 0.;
-    H->h = 0.;
-    H->i = 1.;
-    return true;
-}
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -410,16 +252,16 @@ bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, int /*view*/, d
 
     switch (k) {
         case 4:
-            success = homography_from_four_points(p[0][0], p[0][1], p[0][2], p[0][3], p[1][0], p[1][1], p[1][2], p[1][3], &homo3x3);
+            success = homo3x3.setHomographyFromFourPoints(p[0][0], p[0][1], p[0][2], p[0][3], p[1][0], p[1][1], p[1][2], p[1][3]);
             break;
         case 3:
-            success = affine_from_three_points(p[0][0], p[0][1], p[0][2], p[1][0], p[1][1], p[1][2], &homo3x3);
+            success = homo3x3.setAffineFromThreePoints(p[0][0], p[0][1], p[0][2], p[1][0], p[1][1], p[1][2]);
             break;
         case 2:
-            success = similarity_from_two_points(p[0][0], p[0][1], p[1][0], p[1][1], &homo3x3);
+            success = homo3x3.setSimilarityFromTwoPoints(p[0][0], p[0][1], p[1][0], p[1][1]);
             break;
         case 1:
-            success = translation_from_one_point(p[0][0], p[1][0], &homo3x3);
+            success = homo3x3.setTranslationFromOnePoint(p[0][0], p[1][0]);
             break;
     }
     if (!success) {
