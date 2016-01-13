@@ -492,7 +492,8 @@ ReformatPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 void
 ReformatPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName && args.reason == OFX::eChangeUserEdit) {
+    if (clipName == kOfxImageEffectSimpleSourceClipName && args.reason == OFX::eChangeUserEdit && !_srcClipChanged->getValue()) {
+        _srcClipChanged->setValue(true);
         OfxRectD srcRod = _srcClip->getRegionOfDefinition(args.time);
         double srcpar = _srcClip->getPixelAspectRatio();
         
