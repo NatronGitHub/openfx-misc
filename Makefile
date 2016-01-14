@@ -97,23 +97,23 @@ all: subdirs
 .PHONY: nomulti subdirs clean install install-nomulti uninstall uninstall-nomulti $(SUBDIRS)
 
 nomulti:
-	$(MAKE) SUBDIRS="$(SUBDIRS_NOMULTI)"
+	$(MAKE) $(MFLAGS) SUBDIRS="$(SUBDIRS_NOMULTI)"
 
 subdirs: $(SUBDIRS)
 
 $(SUBDIRS):
-	(cd $@ && $(MAKE))
+	(cd $@ && $(MAKE) $(MFLAGS))
 
 clean:
 	@for i in $(SUBDIRS) $(SUBDIRS_NOMULTI); do \
-	  echo "(cd $$i && $(MAKE) $@)"; \
-	  (cd $$i && $(MAKE) $@); \
+	  echo "(cd $$i && $(MAKE) $(MFLAGS) $@)"; \
+	  (cd $$i && $(MAKE) $(MFLAGS) $@); \
 	done
 
 install:
 	@for i in $(SUBDIRS) ; do \
-	  echo "(cd $$i && $(MAKE) $@)"; \
-	  (cd $$i && $(MAKE) $@); \
+	  echo "(cd $$i && $(MAKE) $(MFLAGS) $@)"; \
+	  (cd $$i && $(MAKE) $(MFLAGS) $@); \
 	done
 
 install-nomulti:
@@ -121,9 +121,9 @@ install-nomulti:
 
 uninstall:
 	@for i in $(SUBDIRS) ; do \
-	  echo "(cd $$i && $(MAKE) $@)"; \
-	  (cd $$i && $(MAKE) $@); \
+	  echo "(cd $$i && $(MAKE) $(MFLAGS) $@)"; \
+	  (cd $$i && $(MAKE) $(MFLAGS) $@); \
 	done
 
 uninstall-nomulti:
-	$(MAKE) SUBDIRS="$(SUBDIRS_NOMULTI)" uninstall
+	$(MAKE) $(MFLAGS) SUBDIRS="$(SUBDIRS_NOMULTI)" uninstall
