@@ -260,8 +260,6 @@ private:
                 const PIX *srcPixA = (const PIX *)  (_srcImgA ? _srcImgA->getPixelAddress(x, y) : 0);
                 const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
                 
-                assert(_optionalAImages.size() == 0 || _optionalAImages.size() == (kMaximumAInputs - 1));
-                
                 
                 if (srcPixA || srcPixB) {
 
@@ -609,9 +607,13 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
     
     OptionalImagesHolder_RAII optionalImages;
     for (std::size_t i = 0; i < _optionalASrcClips.size(); ++i) {
-        optionalImages.images.push_back((_optionalASrcClips[i] && _optionalASrcClips[i]->isConnected()) ?
-                                        _optionalASrcClips[i]->fetchImage(time) : 0);
-        const OFX::Image* optImg = optionalImages.images.back();
+    
+        const OFX::Image* optImg = (_optionalASrcClips[i] && _optionalASrcClips[i]->isConnected()) ?
+        _optionalASrcClips[i]->fetchImage(time) : 0;
+        if (optImg) {
+            optionalImages.images.push_back(optImg);
+        }
+
         if (optImg) {
             if (optImg->getRenderScale().x != args.renderScale.x ||
                 optImg->getRenderScale().y != args.renderScale.y ||
