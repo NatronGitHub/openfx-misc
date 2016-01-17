@@ -48,7 +48,7 @@ Version   Date       Author       Description
 #endif
 
 
-#include "ofxsProcessing.h"
+#include "ofxsProcessing.H"
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
 #include "exprtk.hpp"
