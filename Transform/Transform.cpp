@@ -47,7 +47,7 @@
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kSrcClipChanged "srcClipChanged"
+#define kParamSrcClipChanged "srcClipChanged"
 
 using namespace OFX;
 
@@ -88,7 +88,7 @@ public:
         _center = fetchDouble2DParam(kParamTransformCenterOld);
         _interactive = fetchBooleanParam(kParamTransformInteractiveOld);
         assert(_translate && _rotate && _scale && _scaleUniform && _skewX && _skewY && _skewOrder && _center && _interactive);
-        _srcClipChanged = fetchBooleanParam(kSrcClipChanged);
+        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
         assert(_srcClipChanged);
         
     }
@@ -387,7 +387,7 @@ void TransformPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     Transform3x3DescribeInContextEnd(desc, context, page, false, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
     
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kSrcClipChanged);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);
@@ -430,7 +430,7 @@ void TransformMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
     Transform3x3DescribeInContextEnd(desc, context, page, true, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kSrcClipChanged);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);
@@ -471,7 +471,7 @@ void DirBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     Transform3x3DescribeInContextEnd(desc, context, page, true, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeDirBlur);
 
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kSrcClipChanged);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);

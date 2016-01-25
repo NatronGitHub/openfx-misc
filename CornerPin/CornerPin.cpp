@@ -118,7 +118,7 @@ static const char* const kParamFrom[4] = {
 #define kParamTransformInteractiveLabel "Interactive Update"
 #define kParamTransformInteractiveHint "If checked, update the parameter values during interaction with the image viewer, else update the values when pen is released."
 
-//#define kParamPremultChanged "premultChanged"
+#define kParamSrcClipChanged "srcClipChanged"
 
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
 
@@ -141,7 +141,7 @@ public:
     , _copyFromButton(0)
     , _copyToButton(0)
     , _copyInputButton(0)
-    //, _premultChanged(0)
+    , _srcClipChanged(0)
     {
         // NON-GENERIC
         for (int i = 0; i < 4; ++i) {
@@ -160,8 +160,8 @@ public:
         _copyToButton = fetchPushButtonParam(kParamCopyTo);
         _copyInputButton = fetchPushButtonParam(kParamCopyInputRoD);
         assert(_copyInputButton && _copyToButton && _copyFromButton);
-        //_premultChanged = fetchBooleanParam(kParamPremultChanged);
-        //assert(_premultChanged);
+        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
+        assert(_srcClipChanged);
     }
 private:
     
@@ -191,7 +191,7 @@ private:
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
-    //virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
 private:
     // NON-GENERIC
@@ -205,7 +205,7 @@ private:
     OFX::PushButtonParam* _copyFromButton;
     OFX::PushButtonParam* _copyToButton;
     OFX::PushButtonParam* _copyInputButton;
-    //OFX::BooleanParam* _premultChanged; // set to true the first time the user connects src
+    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
 };
 
 
@@ -323,31 +323,43 @@ static void copyPoint(OFX::Double2DParam* from, OFX::Double2DParam* to)
 
 void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
+    // If any parameter is set by the user, set srcClipChanged to true so that from/to is not reset when
+    // connecting the input.
+    //printf("srcClipChanged=%s\n", _srcClipChanged->getValue() ? "true" : "false");
     if (paramName == kParamCopyInputRoD) {
-        if (_srcClip) {
+        if (_srcClip && _srcClip->isConnected()) {
+            beginEditBlock(paramName);
             const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(args.time);
-            beginEditBlock(kParamCopyInputRoD);
             _from[0]->setValue(srcRoD.x1, srcRoD.y1);
             _from[1]->setValue(srcRoD.x2, srcRoD.y1);
             _from[2]->setValue(srcRoD.x2, srcRoD.y2);
             _from[3]->setValue(srcRoD.x1, srcRoD.y2);
-            endEditBlock();
             changedTransform(args);
+            if (args.reason == OFX::eChangeUserEdit && !_srcClipChanged->getValue()) {
+                _srcClipChanged->setValue(true);
+            }
+            endEditBlock();
         }
     } else if (paramName == kParamCopyFrom) {
-        beginEditBlock(kParamCopyFrom);
+        beginEditBlock(paramName);
         for (int i=0; i<4; ++i) {
             copyPoint(_from[i],_to[i]);
         }
-        endEditBlock();
         changedTransform(args);
+        if (args.reason == OFX::eChangeUserEdit && !_srcClipChanged->getValue()) {
+            _srcClipChanged->setValue(true);
+        }
+        endEditBlock();
     } else if (paramName == kParamCopyTo) {
-        beginEditBlock(kParamCopyTo);
+        beginEditBlock(paramName);
         for (int i=0; i<4; ++i) {
             copyPoint(_to[i],_from[i]);
         }
-        endEditBlock();
         changedTransform(args);
+        if (args.reason == OFX::eChangeUserEdit && !_srcClipChanged->getValue()) {
+            _srcClipChanged->setValue(true);
+        }
+        endEditBlock();
     } else if (paramName == kParamTo[0] ||
                paramName == kParamTo[1] ||
                paramName == kParamTo[2] ||
@@ -363,33 +375,41 @@ void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const s
                paramName == kParamExtraMatrixRow1 ||
                paramName == kParamExtraMatrixRow2 ||
                paramName == kParamExtraMatrixRow3) {
+        beginEditBlock(paramName);
         changedTransform(args);
+        if (args.reason == OFX::eChangeUserEdit && !_srcClipChanged->getValue()) {
+            _srcClipChanged->setValue(true);
+        }
+        endEditBlock();
     } else {
         Transform3x3Plugin::changedParam(args, paramName);
     }
 }
 
-//void
-//CornerPinPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
-//{
-    ///Commented-out because if the corner pin is used as a Tracker export from Natron we want the "From" points to stay the same.
-    ///Preventing the call to this function in Natron is really messy and quite inapropriate (because we have to differentiate "regular"
-    ///CornerPin nodes from "Exported" ones.) Imho the best is to just do nothing here.
-//    if (clipName == kOfxImageEffectSimpleSourceClipName &&
-//        _srcClip && _srcClip->isConnected() &&
-//        !_premultChanged->getValue() &&
-//        args.reason == OFX::eChangeUserEdit) {
-//        const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(args.time);
-//        beginEditBlock(kParamCopyInputRoD);
-//        _from[0]->setValue(srcRoD.x1, srcRoD.y1);
-//        _from[1]->setValue(srcRoD.x2, srcRoD.y1);
-//        _from[2]->setValue(srcRoD.x2, srcRoD.y2);
-//        _from[3]->setValue(srcRoD.x1, srcRoD.y2);
-//        endEditBlock();
-//        changedTransform(args);
-//        _premultChanged->setValue(true);
-//    }
-//}
+void
+CornerPinPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+{
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        !_srcClipChanged->getValue() &&
+        args.reason == OFX::eChangeUserEdit) {
+        const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(args.time);
+        beginEditBlock(clipName);
+        _from[0]->setValue(srcRoD.x1, srcRoD.y1);
+        _from[1]->setValue(srcRoD.x2, srcRoD.y1);
+        _from[2]->setValue(srcRoD.x2, srcRoD.y2);
+        _from[3]->setValue(srcRoD.x1, srcRoD.y2);
+        _to[0]->setValue(srcRoD.x1, srcRoD.y1);
+        _to[1]->setValue(srcRoD.x2, srcRoD.y1);
+        _to[2]->setValue(srcRoD.x2, srcRoD.y2);
+        _to[3]->setValue(srcRoD.x1, srcRoD.y2);
+        changedTransform(args);
+        if (args.reason == OFX::eChangeUserEdit && !_srcClipChanged->getValue()) {
+            _srcClipChanged->setValue(true);
+        }
+        endEditBlock();
+    }
+}
 
 class CornerPinTransformInteract : public OFX::OverlayInteract
 {
@@ -1037,6 +1057,17 @@ void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     CornerPinPluginDescribeInContext(desc, context, page);
 
     Transform3x3DescribeInContextEnd(desc, context, page, false, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
+
+    // srcClipChanged
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
+        param->setDefault(false);
+        param->setIsSecret(true);
+        param->setAnimates(false);
+        param->setEvaluateOnChange(false);
+        page->addChild(*param);
+
+    }
 }
 
 
@@ -1071,18 +1102,16 @@ void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
 
     Transform3x3DescribeInContextEnd(desc, context, page, true, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur);
 
-    /*
+    // srcClipChanged
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPremultChanged);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
-        if (page) {
-            page->addChild(*param);
-        }
+        page->addChild(*param);
+
     }
-    */
 }
 
 OFX::ImageEffect* CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)

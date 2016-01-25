@@ -92,7 +92,7 @@ enum ReformatTypeEnum
 #define kParamTurnLabel "Turn"
 #define kParamTurnHint "Rotate the image by 90 degrees"
 
-#define kSrcClipChanged "srcClipChanged"
+#define kParamSrcClipChanged "srcClipChanged"
 
 #define kParamDisableConcat "disableConcat"
 #define kParamDisableConcatLabel "Disable Concatenation"
@@ -139,7 +139,7 @@ public:
         _scale = fetchDouble2DParam(kParamScale);
         _scaleUniform = fetchBooleanParam(kParamScaleUniform);
         _preservePAR = fetchBooleanParam(kParamPreservePAR);
-        _srcClipChanged = fetchBooleanParam(kSrcClipChanged);
+        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
         if (gHostCanTransform) {
             _disableConcat = fetchBooleanParam(kParamDisableConcat);
         }
@@ -711,7 +711,7 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     
     // srcClipChanged
     {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kSrcClipChanged);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
         param->setDefault(false);
         param->setIsSecret(true);
         param->setAnimates(false);
