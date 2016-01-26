@@ -116,6 +116,8 @@ public:
     : Transform3x3Plugin(handle, false, eTransform3x3ParamsTypeNone)
     , _type(0)
     , _format(0)
+    , _formatSize(0)
+    , _formatPar(0)
     , _size(0)
     , _scale(0)
     , _scaleUniform(0)
@@ -134,7 +136,9 @@ public:
         
         // NON-GENERIC
         _type = fetchChoiceParam(kParamType);
-        _format = fetchChoiceParam(kParamFormat);
+        _format = fetchChoiceParam(kNatronParamFormatChoice);
+        _formatSize = fetchInt2DParam(kNatronParamFormatSize);
+        _formatPar = fetchDoubleParam(kNatronParamFormatPar);
         _size = fetchInt2DParam(kParamSize);
         _scale = fetchDouble2DParam(kParamScale);
         _scaleUniform = fetchBooleanParam(kParamScaleUniform);
@@ -147,7 +151,7 @@ public:
         _flip = fetchBooleanParam(kParamFlip);
         _flop = fetchBooleanParam(kParamFlop);
         _turn = fetchBooleanParam(kParamTurn);
-        assert(_type && _format && _size && _scale && _scaleUniform && _preservePAR && _srcClipChanged && _flip && _flop && _turn && _centered);
+        assert(_type && _format && _formatSize && _formatPar && _size && _scale && _scaleUniform && _preservePAR && _srcClipChanged && _flip && _flop && _turn && _centered);
         
         refreshVisibility();
         refreshDynamicProps();
@@ -172,6 +176,8 @@ private:
     // NON-GENERIC
     OFX::ChoiceParam *_type;
     OFX::ChoiceParam *_format;
+    OFX::Int2DParam *_formatSize;
+    OFX::DoubleParam* _formatPar;
     OFX::Int2DParam *_size;
     OFX::Double2DParam *_scale;
     OFX::BooleanParam* _scaleUniform;
@@ -206,11 +212,10 @@ ReformatPlugin::isIdentity(double time)
         case eReformatTypeFormat: {
             OfxRectD srcRoD = _srcClip->getRegionOfDefinition(time);
             double srcPAR = _srcClip->getPixelAspectRatio();
-            int index;
-            _format->getValue(index);
             double par;
-            size_t w,h;
-            getFormatResolution((OFX::EParamFormat)index, &w, &h, &par);
+            int w,h;
+            _formatSize->getValue(w,h);
+            _formatPar->getValue(par);
             if (srcPAR != par) {
                 return false;
             }
@@ -275,12 +280,11 @@ ReformatPlugin::getInverseTransformCanonical(double time, int /*view*/, double /
     switch (type) {
         case eReformatTypeFormat: {
             //specific output format
-            int index;
-            _format->getValue(index);
             double par;
+            int w,h;
             
-            size_t w,h;
-            getFormatResolution((OFX::EParamFormat)index, &w, &h, &par);
+            _formatPar->getValue(par);
+            _formatSize->getValue(w,h);
             
             
             double srcH = srcRoD.y2 - srcRoD.y1;
@@ -414,6 +418,17 @@ ReformatPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::st
         refreshVisibility();
     } else if (paramName == kParamDisableConcat) {
         refreshDynamicProps();
+    } else if (paramName == kNatronParamFormatChoice) {
+      //the host does not handle the format itself, do it ourselves
+        int format_i;
+        _format->getValue(format_i);
+        size_t w,h;
+        double par = -1;
+        getFormatResolution((OFX::EParamFormat)format_i, &w, &h, &par);
+        assert(par != -1);
+        _formatPar->setValue(par);
+        _formatSize->setValue(w, h);
+        
     } else {
         Transform3x3Plugin::changedParam(args, paramName);
     }
@@ -468,17 +483,14 @@ ReformatPlugin::refreshVisibility()
 void
 ReformatPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-    double par;
     int type_i;
     _type->getValue(type_i);
     ReformatTypeEnum type = (ReformatTypeEnum)type_i;
     switch (type) {
         case eReformatTypeFormat: {
             //specific output format
-            int index;
-            _format->getValue(index);
-            size_t w,h;
-            getFormatResolution((OFX::EParamFormat)index, &w, &h, &par);
+            double par;
+            _formatPar->getValue(par);
             clipPreferences.setPixelAspectRatio(*_dstClip, par);
             break;
         }
@@ -501,9 +513,10 @@ ReformatPlugin::changedClip(const InstanceChangedArgs &args, const std::string &
         ///switch to size mode and set the size accordingly
         bool foundFormat = false;
         for (int i = (int)eParamFormatPCVideo; i < (int)eParamFormatSquare2k ; ++i) {
-            std::size_t w,h;
+            int w,h;
             double par;
-            getFormatResolution((OFX::EParamFormat)i, &w, &h, &par);
+            _formatPar->getValue(par);
+            _formatSize->getValue(w, h);
             if (w == (srcRod.x2 - srcRod.x1) && h == (srcRod.y2 - srcRod.y1) && par == srcpar) {
                 _format->setValue((OFX::EParamFormat)i);
                 _type->setValue((int)eReformatTypeFormat);
@@ -563,7 +576,7 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     
     // format
     {
-        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFormat);
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kNatronParamFormatChoice);
         param->setLabel(kParamFormatLabel);
         param->setAnimates(false);
         assert(param->getNOptions() == eParamFormatPCVideo);
@@ -598,12 +611,32 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->appendOption(kParamFormatSquare1kLabel);
         assert(param->getNOptions() == eParamFormatSquare2k);
         param->appendOption(kParamFormatSquare2kLabel);
-        param->setDefault(0);
+        param->setDefault(eParamFormatPCVideo);
         param->setHint(kParamFormatHint);
         desc.addClipPreferencesSlaveParam(*param);
         page->addChild(*param);
     }
     
+    {
+        std::size_t w,h;
+        double par;
+        getFormatResolution(eParamFormatPCVideo, &w, &h, &par);
+        {
+            Int2DParamDescriptor* param = desc.defineInt2DParam(kNatronParamFormatSize);
+            param->setLabel(kNatronParamFormatSize);
+            param->setIsSecret(true);
+            param->setDefault(w, h);
+            page->addChild(*param);
+        }
+        
+        {
+            DoubleParamDescriptor* param = desc.defineDoubleParam(kNatronParamFormatPar);
+            param->setLabel(kNatronParamFormatPar);
+            param->setIsSecret(true);
+            param->setDefault(par);
+            page->addChild(*param);
+        }
+    }
     // size
     {
         Int2DParamDescriptor* param = desc.defineInt2DParam(kParamSize);
