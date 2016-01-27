@@ -541,6 +541,7 @@ void ReformatPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
+    desc.setSupportsMultiResolution(true);
     desc.setSupportsMultipleClipPARs(true);
     Transform3x3Describe(desc, false);
     gHostCanTransform = false;
