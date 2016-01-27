@@ -311,13 +311,14 @@ void OneViewPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
-    //We only render color plane
+    // We only render color plane
     desc.setIsMultiPlanar(false);
     
-    //We're using the view calls (i.e: getFrameViewsNeeded)
+    // We're using the view calls (i.e: getFrameViewsNeeded)
+    // Nuke also requires this to be told to put the "view" paramareter in the render args.
     desc.setIsViewAware(true);
     
-    //We render the same thing on all views
+    // We render the same thing on all views
     desc.setIsViewInvariant(OFX::eViewInvarianceAllViewsInvariant);
     
     // returning an error here crashes Nuke

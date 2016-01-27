@@ -117,7 +117,7 @@ static OfxImageEffectSuiteV1imageMemoryUnlock imageMemoryUnlockNthFunc(int nth);
 typedef OfxStatus (*FnOfxImageEffectPlaneSuiteV1clipGetImagePlane)(OfxImageClipHandle clip,
                                                                    OfxTime       time,
                                                                    const char   *plane,
-                                                                   OfxRectD     *region,
+                                                                   const OfxRectD *region,
                                                                    OfxPropertySetHandle   *imageHandle);
 
 static FnOfxImageEffectPlaneSuiteV1clipGetImagePlane clipGetImagePlaneV1NthFunc(int nth);
@@ -127,7 +127,7 @@ typedef OfxStatus (*FnOfxImageEffectPlaneSuiteV2clipGetImagePlane)(OfxImageClipH
                                OfxTime       time,
                                int           view,
                                const char   *plane,
-                               OfxRectD     *region,
+                               const OfxRectD *region,
                                OfxPropertySetHandle   *imageHandle);
 typedef OfxStatus (*FnOfxImageEffectPlaneSuiteV2clipGetRegionOfDefinition)(OfxImageClipHandle clip,
                                        OfxTime            time,
@@ -2165,7 +2165,7 @@ static OfxStatus
 clipGetImagePlaneV1Nth(OfxImageClipHandle clip,
                        OfxTime       time,
                        const char   *plane,
-                       OfxRectD     *region,
+                       const OfxRectD *region,
                        OfxPropertySetHandle   *imageHandle)
 {
     OfxStatus st;
@@ -2213,7 +2213,7 @@ clipGetImagePlaneNth(OfxImageClipHandle clip,
                      OfxTime       time,
                      int           view,
                      const char   *plane,
-                     OfxRectD     *region,
+                     const OfxRectD *region,
                      OfxPropertySetHandle   *imageHandle)
 {
     OfxStatus st;
