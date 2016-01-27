@@ -422,7 +422,7 @@ ReformatPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::st
       //the host does not handle the format itself, do it ourselves
         int format_i;
         _format->getValue(format_i);
-        size_t w,h;
+        int w,h;
         double par = -1;
         getFormatResolution((OFX::EParamFormat)format_i, &w, &h, &par);
         assert(par != -1);
@@ -619,7 +619,7 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
     }
     
     {
-        std::size_t w,h;
+        int w,h;
         double par;
         getFormatResolution(eParamFormatPCVideo, &w, &h, &par);
         {
