@@ -637,7 +637,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
         param->setLabel(kNatronOfxParamProcessRLabel);
         param->setHint(kNatronOfxParamProcessRHint);
         param->setDefault(false);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -647,7 +647,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
         param->setLabel(kNatronOfxParamProcessGLabel);
         param->setHint(kNatronOfxParamProcessGHint);
         param->setDefault(false);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -657,7 +657,7 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
         param->setLabel(kNatronOfxParamProcessBLabel);
         param->setHint(kNatronOfxParamProcessBHint);
         param->setDefault(false);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }

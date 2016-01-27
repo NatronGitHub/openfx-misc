@@ -817,7 +817,7 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setLabel(kNatronOfxParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -827,7 +827,7 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setLabel(kNatronOfxParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -837,7 +837,7 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setLabel(kNatronOfxParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -856,7 +856,7 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setLabel(kParamMinimumLabel);
         param->setHint(kParamMinimumHint);
         param->setDefault(0., 0., 0., 0.);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -875,7 +875,7 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setLabel(kParamMaximumLabel);
         param->setHint(kParamMaximumHint);
         param->setDefault(1., 1., 1., 1.);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -894,7 +894,7 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setLabel(kParamMinClampToLabel);
         param->setHint(kParamMinClampToHint);
         param->setDefault(0., 0., 0., 0.);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -913,7 +913,7 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setLabel(kParamMaxClampToLabel);
         param->setHint(kParamMaxClampToHint);
         param->setDefault(1., 1., 1., 1.);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }

@@ -987,7 +987,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamLastFrameHint);
         param->setDefault(0);
         param->setEnabled(false);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }

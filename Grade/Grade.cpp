@@ -815,7 +815,7 @@ GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         param->setLabel(kNatronOfxParamProcessRLabel);
         param->setHint(kNatronOfxParamProcessRHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -825,7 +825,7 @@ GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         param->setLabel(kNatronOfxParamProcessGLabel);
         param->setHint(kNatronOfxParamProcessGHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -835,7 +835,7 @@ GradePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Con
         param->setLabel(kNatronOfxParamProcessBLabel);
         param->setHint(kNatronOfxParamProcessBHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }

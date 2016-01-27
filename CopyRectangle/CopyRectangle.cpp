@@ -589,7 +589,9 @@ static void defineComponentParam(OFX::ImageEffectDescriptor &desc,PageParamDescr
     param->setLabel(label);
     param->setDefault(true);
     param->setHint("Copy " + name);
-    param->setLayoutHint(!newLine ? OFX::eLayoutHintNoNewLine : OFX::eLayoutHintNormal);
+    if (!newLine) {
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
+    }
     if (page) {
         page->addChild(*param);
     }

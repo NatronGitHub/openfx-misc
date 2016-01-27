@@ -635,7 +635,7 @@ ColorTransformPluginFactory<transform>::describeInContext(OFX::ImageEffectDescri
             param->setLabel(kParamPremultXXXToRGBLabel);
             param->setHint(kParamPremultXXXToRGBHint);
         }
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

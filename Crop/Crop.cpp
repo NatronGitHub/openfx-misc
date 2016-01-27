@@ -720,7 +720,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setHint(kParamReformatHint);
         param->setDefault(false);
         param->setAnimates(true);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -731,7 +731,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamIntersect);
         param->setLabel(kParamIntersectLabel);
         param->setHint(kParamIntersectHint);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         param->setDefault(false);
         param->setAnimates(true);
         if (page) {

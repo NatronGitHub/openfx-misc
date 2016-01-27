@@ -209,7 +209,7 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
         param->setHint(kNatronOfxParamProcessRHint);
         param->setDefault(processRGB);
         param->setIsSecret(processIsSecret);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -220,7 +220,7 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
         param->setHint(kNatronOfxParamProcessGHint);
         param->setDefault(processRGB);
         param->setIsSecret(processIsSecret);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -231,7 +231,7 @@ CImgFilterPluginHelperBase::describeInContextBegin(bool sourceIsOptional,
         param->setHint(kNatronOfxParamProcessBHint);
         param->setDefault(processRGB);
         param->setIsSecret(processIsSecret);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }

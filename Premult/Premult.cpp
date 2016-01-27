@@ -709,7 +709,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         param->setLabel(kNatronOfxParamProcessRLabel);
         param->setHint(premultString+kParamProcessRHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -719,7 +719,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         param->setLabel(kNatronOfxParamProcessGLabel);
         param->setHint(premultString+kParamProcessGHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -729,7 +729,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         param->setLabel(kNatronOfxParamProcessBLabel);
         param->setHint(premultString+kParamProcessBHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -739,7 +739,7 @@ void PremultPluginFactory<isPremult>::describeInContext(OFX::ImageEffectDescript
         param->setLabel(kNatronOfxParamProcessALabel);
         param->setHint(premultString+kParamProcessAHint);
         param->setDefault(false);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }

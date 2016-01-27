@@ -255,7 +255,7 @@ void FrameRangePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setDefault(1,1);
         param->setAnimates(false);
         param->setDimensionLabels("first", "last");
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }

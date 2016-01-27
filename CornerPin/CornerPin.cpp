@@ -846,7 +846,7 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
         param->setIncrement(1.);
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setDimensionLabels("x", "y");
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         if (group) {
             param->setParent(*group);
         }
@@ -964,7 +964,7 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
             PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamCopyInputRoD);
             param->setLabel(kParamCopyInputRoDLabel);
             param->setHint(kParamCopyInputRoDHint);
-            param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+            param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
             if (group) {
                 param->setParent(*group);
             }

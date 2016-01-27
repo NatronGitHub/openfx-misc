@@ -858,7 +858,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetMaster);
         param->setLabel(kParamSetMasterLabel);
         param->setHint(kParamSetMasterHint);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -867,7 +867,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetRGB);
         param->setLabel(kParamSetRGBLabel);
         param->setHint(kParamSetRGBHint);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -876,7 +876,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamSetRGBA);
         param->setLabel(kParamSetRGBALabel);
         param->setHint(kParamSetRGBAHint);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }

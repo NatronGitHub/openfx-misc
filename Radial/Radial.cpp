@@ -880,7 +880,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setLabel(kNatronOfxParamProcessRLabel);
         param->setHint(kNatronOfxParamProcessRHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -890,7 +890,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setLabel(kNatronOfxParamProcessGLabel);
         param->setHint(kNatronOfxParamProcessGHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -900,7 +900,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setLabel(kNatronOfxParamProcessBLabel);
         param->setHint(kNatronOfxParamProcessBHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -928,7 +928,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setRange(0., 1.);
         param->setDisplayRange(0., 1.);
         param->setDigits(2);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }

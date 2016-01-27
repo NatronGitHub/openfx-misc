@@ -1725,7 +1725,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
         param->setLabel(kNatronOfxParamProcessRLabel);
         param->setHint(kNatronOfxParamProcessRHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1735,7 +1735,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
         param->setLabel(kNatronOfxParamProcessGLabel);
         param->setHint(kNatronOfxParamProcessGHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1745,7 +1745,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
         param->setLabel(kNatronOfxParamProcessBLabel);
         param->setHint(kNatronOfxParamProcessBHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1767,18 +1767,21 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
         clipsForChannels.push_back(kClipUV);
         
         if (gIsMultiPlane) {
-            OFX::ChoiceParamDescriptor* u = OFX::MultiPlane::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelU, kParamChannelULabel, kParamChannelUHint);
-            u->setLayoutHint(eLayoutHintNoNewLine);
-            u->setDefault(eInputChannelR);
-            
-            OFX::ChoiceParamDescriptor* v = OFX::MultiPlane::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelV, kParamChannelVLabel, kParamChannelVHint);
-            v->setDefault(eInputChannelG);
+            {
+                ChoiceParamDescriptor* param = OFX::MultiPlane::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelU, kParamChannelULabel, kParamChannelUHint);
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                param->setDefault(eInputChannelR);
+            }
+            {
+                ChoiceParamDescriptor* param = OFX::MultiPlane::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelV, kParamChannelVLabel, kParamChannelVHint);
+                param->setDefault(eInputChannelG);
+            }
         } else {
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelU);
                 param->setLabel(kParamChannelULabel);
                 param->setHint(kParamChannelUHint);
-                param->setLayoutHint(eLayoutHintNoNewLine);
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
                 OFX::MultiPlane::addInputChannelOptionsRGBA(param, clipsForChannels, true, 0);
                 param->setDefault(eInputChannelR);
                 if (page) {
@@ -1830,7 +1833,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamWrapU);
                 param->setLabel(kParamWrapULabel);
                 param->setHint(kParamWrapUHint);
-                param->setLayoutHint(eLayoutHintNoNewLine);
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
                 addWrapOptions(param, eWrapClamp);
                 if (page) {
                     page->addChild(*param);
@@ -1865,7 +1868,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             param->setLabel(kParamK1Label);
             param->setHint(kParamK1Hint);
             param->setDisplayRange(-0.3, 0.3);
-            //param->setLayoutHint(eLayoutHintNoNewLine);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
             if (page) {
                 page->addChild(*param);
             }
@@ -1875,7 +1878,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             param->setLabel(kParamK2Label);
             param->setHint(kParamK2Hint);
             param->setDisplayRange(-0.1, 0.1);
-            //param->setLayoutHint(eLayoutHintNoNewLine);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
             if (page) {
                 page->addChild(*param);
             }
@@ -1894,7 +1897,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             param->setLabel(kParamP1Label);
             param->setHint(kParamP1Hint);
             param->setDisplayRange(-0.1, 0.1);
-            //param->setLayoutHint(eLayoutHintNoNewLine);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
             if (page) {
                 page->addChild(*param);
             }

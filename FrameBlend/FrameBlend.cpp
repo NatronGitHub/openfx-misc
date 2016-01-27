@@ -1052,7 +1052,7 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setLabel(kNatronOfxParamProcessRLabel);
         param->setHint(kNatronOfxParamProcessRHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1062,7 +1062,7 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setLabel(kNatronOfxParamProcessGLabel);
         param->setHint(kNatronOfxParamProcessGHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1072,7 +1072,7 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setLabel(kNatronOfxParamProcessBLabel);
         param->setHint(kNatronOfxParamProcessBHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1094,7 +1094,7 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setDimensionLabels("min", "max");
         param->setDefault(-5, 0);
         param->setAnimates(true); // can animate
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1106,7 +1106,7 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setHint(kParamAbsoluteHint);
         param->setDefault(false);
         param->setAnimates(true); // can animate
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }

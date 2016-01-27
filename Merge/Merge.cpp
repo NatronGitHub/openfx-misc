@@ -1262,7 +1262,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         addMergeOption(param, eMergeXOR, cascading);
         param->setDefault(plugin);
         param->setAnimates(true);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1307,7 +1307,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setHint(kParamAChannelsHint);
         param->setDefault(kParamAChannelsLabel);
         param->setStringType(eStringTypeLabel);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1317,7 +1317,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamAChannelsRLabel);
         param->setHint(kParamAChannelsRHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1327,7 +1327,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamAChannelsGLabel);
         param->setHint(kParamAChannelsGHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1337,7 +1337,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamAChannelsBLabel);
         param->setHint(kParamAChannelsBHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1358,7 +1358,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setHint(kParamBChannelsHint);
         param->setDefault(kParamBChannelsLabel);
         param->setStringType(eStringTypeLabel);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1368,7 +1368,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamBChannelsRLabel);
         param->setHint(kParamBChannelsRHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1378,7 +1378,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamBChannelsGLabel);
         param->setHint(kParamBChannelsGHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1388,7 +1388,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamBChannelsBLabel);
         param->setHint(kParamBChannelsBHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1409,7 +1409,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setHint(kParamOutputChannelsHint);
         param->setDefault(kParamOutputChannelsLabel);
         param->setStringType(eStringTypeLabel);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1419,7 +1419,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamOutputChannelsRLabel);
         param->setHint(kParamOutputChannelsRHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1429,7 +1429,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamOutputChannelsGLabel);
         param->setHint(kParamOutputChannelsGHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -1439,7 +1439,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamOutputChannelsBLabel);
         param->setHint(kParamOutputChannelsBHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }

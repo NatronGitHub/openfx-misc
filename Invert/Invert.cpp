@@ -622,7 +622,7 @@ void InvertPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setLabel(kNatronOfxParamProcessRLabel);
         param->setHint(kParamProcessRHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -632,7 +632,7 @@ void InvertPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setLabel(kNatronOfxParamProcessGLabel);
         param->setHint(kParamProcessGHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
@@ -642,7 +642,7 @@ void InvertPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setLabel(kNatronOfxParamProcessBLabel);
         param->setHint(kParamProcessBHint);
         param->setDefault(true);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }

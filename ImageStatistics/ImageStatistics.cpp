@@ -1728,7 +1728,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeFrame);
             param->setLabel(kParamAnalyzeFrameLabel);
             param->setHint(kParamAnalyzeFrameHint);
-            param->setLayoutHint(eLayoutHintNoNewLine);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
             if (group) {
                 param->setParent(*group);
             }
@@ -1755,7 +1755,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClearFrame);
             param->setLabel(kParamClearFrameLabel);
             param->setHint(kParamClearFrameHint);
-            param->setLayoutHint(eLayoutHintNoNewLine);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
             if (group) {
                 param->setParent(*group);
             }
@@ -1886,7 +1886,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamAnalyzeFrameHSVL);
             param->setLabel(kParamAnalyzeFrameHSVLLabel);
             param->setHint(kParamAnalyzeFrameHSVLHint);
-            param->setLayoutHint(eLayoutHintNoNewLine);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
             if (group) {
                 param->setParent(*group);
             }
@@ -1913,7 +1913,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamClearFrameHSVL);
             param->setLabel(kParamClearFrameHSVLLabel);
             param->setHint(kParamClearFrameHSVLHint);
-            param->setLayoutHint(eLayoutHintNoNewLine);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
             if (group) {
                 param->setParent(*group);
             }

@@ -620,7 +620,7 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         param->setDefaultCoordinateSystem(eCoordinatesCanonical); // Nuke defaults to Normalized for XY and XYAbsolute!
         param->setDigits(1);
         param->setIncrement(0.1);
-        param->setLayoutHint(eLayoutHintNoNewLine);
+        param->setLayoutHint(eLayoutHintNoNewLine, 1);
         if (page) {
             page->addChild(*param);
         }
