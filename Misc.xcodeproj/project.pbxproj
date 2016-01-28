@@ -2838,7 +2838,6 @@
 		AC29F7A51C3FE81B006B0019 /* net.sf.openfx.Reformat.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.Reformat.svg; sourceTree = "<group>"; };
 		AC29F7A71C3FE81B006B0019 /* Reformat.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Reformat.cpp; sourceTree = "<group>"; };
 		AC29F7C51C3FE922006B0019 /* Reformat.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Reformat.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		AC29F7C61C3FE923006B0019 /* Transform.ofx copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "Transform.ofx copy-Info.plist"; path = "/Users/alexandre/development/openfx-misc/Transform.ofx copy-Info.plist"; sourceTree = "<absolute>"; };
 		AC3525D61C216FCE0063F0C0 /* ofxsMultiPlane.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsMultiPlane.cpp; sourceTree = "<group>"; };
 		AC3525D71C216FCE0063F0C0 /* ofxsMultiPlane.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsMultiPlane.h; sourceTree = "<group>"; };
 		AC4774DC1A25B811008A2B57 /* net.sf.cimg.CImgBlur.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgBlur.png; path = Blur/net.sf.cimg.CImgBlur.png; sourceTree = "<group>"; };
@@ -3696,7 +3695,6 @@
 				1E551ED217994DEF00A4135C /* Sources */,
 				1E551EDA17994E8100A4135C /* Frameworks */,
 				1E551EC217994D4000A4135C /* Products */,
-				AC29F7C61C3FE923006B0019 /* Transform.ofx copy-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
