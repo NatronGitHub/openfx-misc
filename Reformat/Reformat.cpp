@@ -23,6 +23,7 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include <algorithm>
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -42,64 +43,95 @@
 
 #define kParamType "reformatType"
 #define kParamTypeLabel "Type"
-#define kParamTypeHint "Format: Converts between formats, the image is resized to fit in the target format. " \
-"Size: Scales to fit into a box of a given width and height. " \
-"Scale: Scales the image."
-#define kParamTypeOptionFormat "Format"
-#define kParamTypeOptionSize "Size"
+#define kParamTypeHint "To Format: Converts between formats, the image is resized to fit in the target format. " \
+"To Box: Scales to fit into a box of a given width and height. " \
+"Scale: Scales the image (rounding to integer pixel sizes)."
+#define kParamTypeOptionToFormat "To Format"
+#define kParamTypeOptionToBox "To Box"
 #define kParamTypeOptionScale "Scale"
 
 enum ReformatTypeEnum
 {
-    eReformatTypeFormat = 0,
-    eReformatTypeSize,
+    eReformatTypeToFormat = 0,
+    eReformatTypeToBox,
     eReformatTypeScale,
 };
 
-#define kParamFormat "format"
+#define kParamFormat kNatronParamFormatChoice
 #define kParamFormatLabel "Format"
 #define kParamFormatHint "The output format"
+#define kParamFormatDefault eParamFormatPCVideo
 
-#define kParamSize "reformatSize"
-#define kParamSizeLabel "Size"
-#define kParamSizeHint "The output size"
+#define kParamBoxSize kNatronParamFormatSize
+#define kParamBoxSizeLabel "Size"
+#define kParamBoxSizeHint "The output dimensions of the image in pixels."
 
-#define kParamPreservePAR "preservePAR"
-#define kParamPreservePARLabel "Preserve PAR"
-#define kParamPreservePARHint "Preserve Pixel Aspect Ratio (PAR). When checked, one direction will be clipped."
+#define kParamBoxFixed "boxFixed"
+#define kParamBoxFixedLabel "Force This Shape"
+#define kParamBoxFixedHint "If checked, the output image is cropped to this size. Else, image is resized according to the resize type but the whole image is kept."
+
+#define kParamBoxPAR kNatronParamFormatPar
+#define kParamBoxPARLabel "Pixel Aspect Ratio"
+#define kParamBoxPARHint "Output pixel aspect ratio."
 
 #define kParamScale "reformatScale"
 #define kParamScaleLabel "Scale"
-#define kParamScaleHint "The scale factor to apply to the image."
+#define kParamScaleHint "The scale factor to apply to the image. The scale factor is rounded slightly, so that the output image is an integer number of pixels in the direction chosen under resize type."
 
 #define kParamScaleUniform "reformatScaleUniform"
 #define kParamScaleUniformLabel "Uniform"
 #define kParamScaleUniformHint "Use the X scale for both directions"
 
+#define kParamResize "resize"
+#define kParamResizeLabel "Resize Type"
+#define kParamResizeHint "Format: Converts between formats, the image is resized to fit in the target format. " \
+"Size: Scales to fit into a box of a given width and height. " \
+"Scale: Scales the image."
+#define kParamResizeOptionNone "None"
+#define kParamResizeOptionNoneHint "Do not resize the original."
+#define kParamResizeOptionWidth "Width"
+#define kParamResizeOptionWidthHint "Scale the original so that its width fits the output width, while preserving the aspect ratio."
+#define kParamResizeOptionHeight "Height"
+#define kParamResizeOptionHeightHint "Scale the original so that its height fits the output height, while preserving the aspect ratio."
+#define kParamResizeOptionFit "Fit"
+#define kParamResizeOptionFitHint "Scale the original so that its smallest size fits the output width or height, while preserving the aspect ratio."
+#define kParamResizeOptionFill "Fill"
+#define kParamResizeOptionFillHint "Scale the original so that its longest size fits the output width or height, while preserving the aspect ratio."
+#define kParamResizeOptionDistort "Distort"
+#define kParamResizeOptionDistortHint "Scale the original so that both sides fit the output dimensions. This does not preserve the aspect ratio."
+
+enum ResizeEnum
+{
+    eResizeNone = 0,
+    eResizeWidth,
+    eResizeHeight,
+    eResizeFit,
+    eResizeFill,
+    eResizeDistort,
+};
+
+
 #define kParamReformatCenter "reformatCentered"
 #define kParamReformatCenterLabel "Center"
-#define kParamReformatCenterHint "Center the image before applying the transformation, otherwise it will be transformed around it's lower-left corner."
+#define kParamReformatCenterHint "Translate the center of the image to the center of the output. Otherwise, the lower left corner is left untouched."
 
 #define kParamFlip "flip"
 #define kParamFlipLabel "Flip"
-#define kParamFlipHint "Mirror the image vertically"
+#define kParamFlipHint "Mirror the image vertically."
 
 #define kParamFlop "flop"
 #define kParamFlopLabel "Flop"
-#define kParamFlopHint "Mirror the image horizontally"
+#define kParamFlopHint "Mirror the image horizontally."
 
 #define kParamTurn "turn"
 #define kParamTurnLabel "Turn"
-#define kParamTurnHint "Rotate the image by 90 degrees"
+#define kParamTurnHint "Rotate the image by 90 degrees counter-clockwise."
 
-#define kParamSrcClipChanged "srcClipChanged"
-
-#define kParamDisableConcat "disableConcat"
-#define kParamDisableConcatLabel "Disable Concatenation"
-#define kParamDisableConcatHint "Disable the transform concatenation for this node to force it to be rendered.\n" \
-"This can be useful for example when connecting a Reformat node to a Read node and then connecting the Reformat to a STMap node: " \
-"Since the STMap concatenates transforms, it would just pick the pixels from the Read node directly instead of the resized image, being " \
-"in this case much slower."
+#define kParamPreserveBoundingBox "preserveBB"
+#define kParamPreserveBoundingBoxLabel "Preserve Bounding Box"
+#define kParamPreserveBoundingBoxHint \
+"If checked, preserve the whole image bounding box and concatenate transform downstream.\n" \
+"Normally, all pixels outside of the outside format are clipped off. If this is checked, the whole image RoD is kept, and transforms can be concatenated downstream (by default, transforms are only concatenated upstream)."
 
 using namespace OFX;
 
@@ -116,15 +148,14 @@ public:
     : Transform3x3Plugin(handle, false, eTransform3x3ParamsTypeNone)
     , _type(0)
     , _format(0)
-    , _formatSize(0)
-    , _formatPar(0)
-    , _size(0)
+    , _boxSize(0)
+    , _boxFixed(0)
+    , _boxPAR(0)
     , _scale(0)
     , _scaleUniform(0)
-    , _preservePAR(0)
-    , _srcClipChanged(0)
-    , _disableConcat(0)
-    , _centered(0)
+    , _preserveBB(0)
+    , _resize(0)
+    , _center(0)
     , _flip(0)
     , _flop(0)
     , _turn(0)
@@ -136,346 +167,430 @@ public:
         
         // NON-GENERIC
         _type = fetchChoiceParam(kParamType);
-        _format = fetchChoiceParam(kNatronParamFormatChoice);
-        _formatSize = fetchInt2DParam(kNatronParamFormatSize);
-        _formatPar = fetchDoubleParam(kNatronParamFormatPar);
-        _size = fetchInt2DParam(kParamSize);
+        _format = fetchChoiceParam(kParamFormat);
+        _boxSize = fetchInt2DParam(kParamBoxSize);
+        _boxFixed = fetchBooleanParam(kParamBoxFixed);
+        _boxPAR = fetchDoubleParam(kParamBoxPAR);
         _scale = fetchDouble2DParam(kParamScale);
         _scaleUniform = fetchBooleanParam(kParamScaleUniform);
-        _preservePAR = fetchBooleanParam(kParamPreservePAR);
-        _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
-        if (gHostCanTransform) {
-            _disableConcat = fetchBooleanParam(kParamDisableConcat);
-        }
-        _centered = fetchBooleanParam(kParamReformatCenter);
+        _preserveBB = fetchBooleanParam(kParamPreserveBoundingBox);
+        _resize = fetchChoiceParam(kParamResize);
+        _center = fetchBooleanParam(kParamReformatCenter);
         _flip = fetchBooleanParam(kParamFlip);
         _flop = fetchBooleanParam(kParamFlop);
         _turn = fetchBooleanParam(kParamTurn);
-        assert(_type && _format && _formatSize && _formatPar && _size && _scale && _scaleUniform && _preservePAR && _srcClipChanged && _flip && _flop && _turn && _centered);
-        
+        assert(_type && _format && _boxSize && _boxFixed && _boxPAR && _scale && _scaleUniform && _preserveBB && _resize && _center && _flip && _flop && _turn);
+
+        _boxSize_saved = _boxSize->getValue();
+        _boxPAR_saved = _boxPAR->getValue();
+        _boxFixed_saved = _boxFixed->getValue();
+
         refreshVisibility();
         refreshDynamicProps();
+
+        // try to guess the output format from the project size
+        double projectPAR = getProjectPixelAspectRatio();
+        OfxPointD projectSize = getProjectSize();
+
+        ///Try to find a format matching the project format in which case we switch to format mode otherwise
+        ///switch to size mode and set the size accordingly
+        bool foundFormat = false;
+        for (int i = 0; i < (int)eParamFormatCount ; ++i) {
+            int width = 0, height = 0;
+            double par = -1.;
+            getFormatResolution((OFX::EParamFormat)i, &width, &height, &par);
+            assert(par != -1);
+            if (width * par == projectSize.x && height == projectSize.y && std::abs(par - projectPAR) < 0.01) {
+                _type->setValue((int)eReformatTypeToFormat);
+                _format->setValue((OFX::EParamFormat)i);
+                _boxSize->setValue(width, height);
+                _boxPAR->setValue(par);
+                foundFormat = true;
+                break;
+            }
+        }
+        if (!foundFormat) {
+            _type->setValue((int)eReformatTypeToBox);
+            _boxSize->setValue(projectSize.x / projectPAR, projectSize.y);
+            _boxPAR->setValue(projectPAR);
+            _boxFixed->setValue(true);
+            _boxSize_saved.x = projectSize.x / projectPAR;
+            _boxSize_saved.y = projectSize.y;
+            _boxPAR_saved = projectPAR;
+            _boxFixed_saved = true;
+        }
     }
 
 private:
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+
     virtual bool isIdentity(double time) OVERRIDE FINAL;
 
     virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
-    /** @brief called when a clip has just been changed in some way (a rewire maybe) */
-    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
     
     void refreshVisibility();
     
     void refreshDynamicProps();
-    
+
+    void setBoxValues(double time);
+
+
     // NON-GENERIC
     OFX::ChoiceParam *_type;
     OFX::ChoiceParam *_format;
-    OFX::Int2DParam *_formatSize;
-    OFX::DoubleParam* _formatPar;
-    OFX::Int2DParam *_size;
+    OFX::Int2DParam *_boxSize;
+    OFX::BooleanParam* _boxFixed;
+    OFX::DoubleParam* _boxPAR;
     OFX::Double2DParam *_scale;
     OFX::BooleanParam* _scaleUniform;
-    OFX::BooleanParam *_preservePAR;
-    OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
-    OFX::BooleanParam* _disableConcat;
-    OFX::BooleanParam* _centered;
+    OFX::BooleanParam* _preserveBB;
+    OFX::ChoiceParam *_resize;
+    OFX::BooleanParam* _center;
     OFX::BooleanParam* _flip;
     OFX::BooleanParam* _flop;
     OFX::BooleanParam* _turn;
+
+    // saved values for user-specified box
+    OfxPointI _boxSize_saved;
+    double _boxPAR_saved;
+    bool _boxFixed_saved;
 };
+
+// override the rod call
+bool
+ReformatPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
+                                          OfxRectD &rod)
+{
+    const double time = args.time;
+    bool ret = Transform3x3Plugin::getRegionOfDefinition(args, rod);
+    if (!ret ||
+        _preserveBB->getValue()) {
+        return ret;
+    }
+    // intersect with format RoD
+    OfxRectD formatrod;
+    formatrod.x1 = formatrod.y1 = 0.;
+    OfxPointI boxSize = _boxSize->getValueAtTime(time);
+    double boxPAR = _boxPAR->getValueAtTime(time);
+
+    // convert the source RoD to pixels
+    OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+    double srcPar = _srcClip->getPixelAspectRatio();
+    OfxRectI srcRodPixel;
+    OfxPointD rs = {1., 1.};
+    Coords::toPixelNearest(srcRod, rs, srcPar, &srcRodPixel);
+    int srcw = srcRodPixel.x2 - srcRodPixel.x1;
+    int srch = srcRodPixel.y2 - srcRodPixel.y1;
+    // if turn, inverse both dimensions
+    if (_turn->getValueAtTime(time)) {
+        std::swap(srcw, srch);
+    }
+    // if fit or fill, determine if it should be fit to width or height
+    ResizeEnum resize = (ResizeEnum)_resize->getValueAtTime(time);
+    if (resize == eResizeFit) {
+        if (boxSize.x * srch > boxSize.y * srcw) {
+            resize = eResizeHeight;
+        } else {
+            resize = eResizeWidth;
+        }
+    } else if (resize == eResizeFill) {
+        if (boxSize.x * srch > boxSize.y * srcw) {
+            resize = eResizeWidth;
+        } else {
+            resize = eResizeHeight;
+        }
+    }
+
+    if (resize == eResizeNone ||
+        resize == eResizeDistort ||
+        _boxFixed->getValue()) {
+        // easy case
+        formatrod.x2 = boxSize.x * boxPAR;
+        formatrod.y2 = boxSize.y;
+    } else if (resize == eResizeWidth) {
+        double scale = boxSize.x / (double)srcw;
+        formatrod.x2 = boxSize.x * boxPAR;
+        int dsth = std::floor(srch * scale + 0.5);
+        int offset = _center->getValueAtTime(time) ? (boxSize.y - dsth) / 2 : 0;
+        formatrod.y1 = offset;
+        formatrod.y2 = offset + dsth;
+    } else if (resize == eResizeHeight) {
+        double scale = boxSize.y / (double)srch;
+        int dstw = std::floor(srcw * scale + 0.5);
+        int offset = _center->getValueAtTime(time) ? (boxSize.x - dstw) / 2 : 0;
+        formatrod.x1 = offset * boxPAR;
+        formatrod.x2 = (offset + dstw) * boxPAR;
+        formatrod.y2 = boxSize.y;
+    }
+    Coords::rectIntersection(rod, formatrod, &rod);
+    return true;
+}
 
 // overridden is identity
 bool
-ReformatPlugin::isIdentity(double time)
+ReformatPlugin::isIdentity(const double time)
 {
     // must clear persistent message in isIdentity, or render() is not called by Nuke after an error
     clearPersistentMessage();
-    
-    bool flip,flop,turn;
-    _flip->getValueAtTime(time, flip);
-    _flop->getValueAtTime(time, flop);
-    _turn->getValueAtTime(time, turn);
-    if (flip || flop || turn) {
+
+    if (_center->getValueAtTime(time) || _flip->getValueAtTime(time) ||
+        _flop->getValueAtTime(time)   || _turn->getValueAtTime(time)) {
         return false;
     }
-    
-    int type_i;
-    _type->getValue(type_i);
-    ReformatTypeEnum type = (ReformatTypeEnum)type_i;
-    switch (type) {
-        case eReformatTypeFormat: {
-            OfxRectD srcRoD = _srcClip->getRegionOfDefinition(time);
-            double srcPAR = _srcClip->getPixelAspectRatio();
-            double par;
-            int w,h;
-            _formatSize->getValue(w,h);
-            _formatPar->getValue(par);
-            if (srcPAR != par) {
-                return false;
-            }
-            OfxPointD rsOne;
-            rsOne.x = rsOne.y = 1.;
-            OfxRectI srcRoDPixel;
-            OFX::Coords::toPixelEnclosing(srcRoD, rsOne, srcPAR, &srcRoDPixel);
-            if (srcRoDPixel.x1 == 0 && srcRoDPixel.y1 == 0 && srcRoDPixel.x2 == (int)w && srcRoD.y2 == (int)h) {
-                return true;
-            }
-            break;
-        }
-        case eReformatTypeSize: {
-            OfxRectD srcRoD = _srcClip->getRegionOfDefinition(time);
-            double srcPAR = _srcClip->getPixelAspectRatio();
-            OfxPointD rsOne;
-            rsOne.x = rsOne.y = 1.;
-            OfxRectI srcRoDPixel;
-            OFX::Coords::toPixelEnclosing(srcRoD, rsOne, srcPAR, &srcRoDPixel);
-            
-            int w,h;
-            _size->getValue(w, h);
-            if (srcRoDPixel.x1 == 0 && srcRoDPixel.y1 == 0 && srcRoDPixel.x2 == w && srcRoDPixel.y2 == h) {
-                return true;
-            }
-            break;
-        }
-        case eReformatTypeScale: {
-            OfxPointD scaleParam = { 1., 1. };
-            _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
-            
-            bool scaleUniform;
-            _scaleUniform->getValueAtTime(time, scaleUniform);
-            
-            OfxPointD scale = { 1., 1. };
-            ofxsTransformGetScale(scaleParam, scaleUniform, &scale);
-            
-            if (scale.x == 1. && scale.y == 1.) {
-                return true;
-            }
 
-            break;
-        }
+    if ((ResizeEnum)_resize->getValueAtTime(time) == eResizeNone) {
+        return true;
     }
+
     return false;
 }
 
 bool
-ReformatPlugin::getInverseTransformCanonical(double time, int /*view*/, double /*amount*/, bool invert, OFX::Matrix3x3* invtransform) const
+ReformatPlugin::getInverseTransformCanonical(const double time,
+                                             const int /*view*/,
+                                             const double /*amount*/,
+                                             const bool invert,
+                                             OFX::Matrix3x3* invtransform) const
 {
-    // NON-GENERIC
-    OfxPointD scaleParam = { 1., 1. };
+    ResizeEnum resize = (ResizeEnum)_resize->getValueAtTime(time);
+    bool center = _center->getValueAtTime(time);
+    bool flip = _flip->getValueAtTime(time);
+    bool flop = _flop->getValueAtTime(time);
+    bool turn = _turn->getValueAtTime(time);
+    if (resize == eResizeNone &&
+        !(center || flip || flop || turn)) {
+        invtransform->setIdentity();
+        return true;
+    }
+    // same as getRegionOfDefinition, but without rounding, and without conversion to pixels
 
-    bool scaleUniform = false;
+    OfxPointI boxSize = _boxSize->getValueAtTime(time);
+    double boxPAR = _boxPAR->getValueAtTime(time);
+    OfxRectD boxRod = { 0., 0., boxSize.x * boxPAR, boxSize.y};
 
-    //compute the scale depending upon the type
-    OfxRectD srcRoD = _srcClip->getRegionOfDefinition(time);
-
-    int type_i;
-    _type->getValue(type_i);
-    ReformatTypeEnum type = (ReformatTypeEnum)type_i;
-    switch (type) {
-        case eReformatTypeFormat: {
-            //specific output format
-            double par;
-            int w,h;
-            
-            _formatPar->getValue(par);
-            _formatSize->getValue(w,h);
-            
-            
-            double srcH = srcRoD.y2 - srcRoD.y1;
-            double srcW = srcRoD.x2 - srcRoD.x1;
-            ///Don't crash if we were provided weird RoDs
-            if (srcH < 1 || srcW < 1) {
-                return false;
-            }
-            
-            OfxRectD canonicalFormat;
-            OfxRectI pixelFormat;
-            pixelFormat.x1 = pixelFormat.y1 = 0;
-            pixelFormat.x2 = w;
-            pixelFormat.y2 = h;
-            OfxPointD renderScale = {1.,1.};
-            OFX::Coords::toCanonical(pixelFormat, renderScale, par, &canonicalFormat);
-            
-            double dstH = (double)canonicalFormat.y2 - canonicalFormat.y1;
-            double dstW = (double)canonicalFormat.x2 - canonicalFormat.x1;
-            
-            scaleParam.x = dstW / srcW;
-            scaleParam.y = dstH / srcH;
-          
-            
-        }   break;
-            
-        case eReformatTypeSize: {
-            //size
-            int w,h;
-            _size->getValue(w, h);
-            bool preservePar;
-            _preservePAR->getValue(preservePar);
-            
-            double srcPar = _srcClip->getPixelAspectRatio();
-            OfxPointD renderScale = {1., 1.};
-            
-            OfxRectI pixelSize;
-            pixelSize.x1 = pixelSize.y1 = 0.;
-            pixelSize.x2 = w;
-            pixelSize.y2 = h;
-            
-            OfxRectD canonicalSize;
-            OFX::Coords::toCanonical(pixelSize, renderScale, srcPar, &canonicalSize);
-            
-            double srcW = srcRoD.x2 - srcRoD.x1;
-            double srcH = srcRoD.y2 - srcRoD.y1 ;
-            double dstW = canonicalSize.x2 - canonicalSize.x1;
-            double dstH = canonicalSize.y2 - canonicalSize.y1;
-            
-            ///Don't crash if we were provided weird RoDs
-            if (srcH < 1 || srcW < 1) {
-                return false;
-            }
-    
-            
-            if (preservePar) {
-                
-                if ((double)dstW / srcW < (double)dstH / srcH) {
-                    ///Keep the given width, recompute the height
-                    dstH = (int)(srcH * dstW / srcW);
-                } else {
-                    ///Keep the given height,recompute the width
-                    dstW = (int)(srcW * dstH / srcH);
-                }
-                
-            }
-            scaleParam.x = dstH / srcW;
-            scaleParam.y = dstW / srcH;
-            
-        }   break;
-            
-        case eReformatTypeScale: {
-            _scale->getValueAtTime(time, scaleParam.x, scaleParam.y);
-            _scaleUniform->getValueAtTime(time, scaleUniform);
-        }   break;
+    OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+    double srcw = srcRod.x2 - srcRod.x1;
+    double srch = srcRod.y2 - srcRod.y1;
+    // if turn, inverse both dimensions
+    if (_turn->getValueAtTime(time)) {
+        std::swap(srcw, srch);
+    }
+    // if fit or fill, determine if it should be fit to width or height
+    if (resize == eResizeFit) {
+        if (boxRod.x2 * srch > boxRod.y2 * srcw) {
+            resize = eResizeHeight;
+        } else {
+            resize = eResizeWidth;
+        }
+    } else if (resize == eResizeFill) {
+        if (boxRod.x2 * srch > boxRod.y2 * srcw) {
+            resize = eResizeWidth;
+        } else {
+            resize = eResizeHeight;
+        }
     }
 
-    OfxPointD scale = { 1., 1. };
-    ofxsTransformGetScale(scaleParam, scaleUniform, &scale);
-    
-    bool flip,flop,turn;
-    _flip->getValueAtTime(time, flip);
-    _flop->getValueAtTime(time, flop);
-    _turn->getValueAtTime(time, turn);
-    
-    double rot = 0;
-    if (turn) {
-        rot = OFX::ofxsToRadians(90);
+    OfxRectD formatrod;
+    formatrod.x1 = formatrod.y1 = 0.;
+    if (resize == eResizeNone ||
+        resize == eResizeDistort) {
+        // easy case
+        formatrod.x2 = boxRod.x2;
+        formatrod.y2 = boxRod.y2;
+    } else if (resize == eResizeWidth) {
+        double scale = boxRod.x2 / srcw;
+        formatrod.x2 = boxRod.x2;
+        double dsth = srch * scale;
+        double offset = _center->getValueAtTime(time) ? (boxRod.y2 - dsth) / 2 : 0;
+        formatrod.y1 = offset;
+        formatrod.y2 = offset + dsth;
+    } else if (resize == eResizeHeight) {
+        double scale = boxRod.y2 / srch;
+        double dstw = srcw * scale;
+        double offset = _center->getValueAtTime(time) ? (boxRod.x2 - dstw) / 2 : 0;
+        formatrod.x1 = offset;
+        formatrod.x2 = offset + dstw;
+        formatrod.y2 = boxRod.y2;
     }
+
     if (flip) {
-        scale.y = -scale.y;
+        std::swap(srcRod.y1, srcRod.y2);
     }
     if (flop) {
-        scale.x = -scale.x;
+        std::swap(srcRod.x1, srcRod.x2);
     }
-    
-    bool useCenter;
-    _centered->getValueAtTime(time, useCenter);
-    
-    
-    if (useCenter) {
-        OfxPointD center = {0., 0.};
-        center.x = (srcRoD.x1 + srcRoD.x2) / 2.;
-        center.y = (srcRoD.y1 + srcRoD.y2) / 2.;
-        
-        if (!invert) {
-            *invtransform = ofxsMatTranslation(center.x, center.y) * ofxsMatRotation(rot) * ofxsMatScale(1. / scale.x, 1. / scale.y) * ofxsMatTranslation(-center.x, -center.y);
+    if (!invert) {
+        // now, compute the transform from formatrod to srcRod
+        if (!_turn->getValueAtTime(time)) {
+            // simple case: no rotation
+            // x <- srcRod.x1 + (x - formatrod.x1) * (srcRod.x2 - srcRod.x1) / (formatrod.x2 - formatrod.x1)
+            // y <- srcRod.y1 + (y - formatrod.y1) * (srcRod.y2 - srcRod.y1) / (formatrod.y2 - formatrod.y1)
+            double ax = (srcRod.x2 - srcRod.x1) / (formatrod.x2 - formatrod.x1);
+            double ay = (srcRod.y2 - srcRod.y1) / (formatrod.y2 - formatrod.y1);
+            invtransform->a = ax; invtransform->b =  0; invtransform->c = srcRod.x1 - formatrod.x1 * ax;
+            invtransform->d =  0; invtransform->e = ay; invtransform->f = srcRod.y1 - formatrod.y1 * ay;
+            invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
+
         } else {
-            *invtransform = ofxsMatTranslation(center.x, center.y) * ofxsMatRotation(-rot) * ofxsMatScale(scale.x,scale.y) * ofxsMatTranslation(-center.x, -center.y);
-            
+            // rotation 90 degrees counterclockwise
+            // x <- srcRod.x1 + (y - formatrod.y1) * (srcRod.x2 - srcRod.x1) / (formatrod.y2 - formatrod.y1)
+            // y <- srcRod.y1 + (formatrod.x2 - x) * (srcRod.y2 - srcRod.y1) / (formatrod.x2 - formatrod.x1)
+            double ax = (srcRod.x2 - srcRod.x1) / (formatrod.y2 - formatrod.y1);
+            double ay = (srcRod.y2 - srcRod.y1) / (formatrod.x2 - formatrod.x1);
+            invtransform->a =  0; invtransform->b = ax; invtransform->c = srcRod.x1 - formatrod.y1 * ax;
+            invtransform->d =-ay; invtransform->e =  0; invtransform->f = srcRod.y1 + formatrod.x2 * ay;
+            invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
         }
-    } else {
-        if (!invert) {
-            *invtransform = ofxsMatRotation(rot) * ofxsMatScale(1. / scale.x, 1. / scale.y);
+    } else { // invert
+        // now, compute the transform from srcRod to formatrod
+        if (!_turn->getValueAtTime(time)) {
+            // simple case: no rotation
+            // x <- formatrod.x1 + (x - srcRod.x1) * (formatrod.x2 - formatrod.x1) / (srcRod.x2 - srcRod.x1)
+            // y <- formatrod.y1 + (y - srcRod.y1) * (formatrod.y2 - formatrod.y1) / (srcRod.y2 - srcRod.y1)
+            double ax = (formatrod.x2 - formatrod.x1) / (srcRod.x2 - srcRod.x1);
+            double ay = (formatrod.y2 - formatrod.y1) / (srcRod.y2 - srcRod.y1);
+            invtransform->a = ax; invtransform->b =  0; invtransform->c = formatrod.x1 - srcRod.x1 * ax;
+            invtransform->d =  0; invtransform->e = ay; invtransform->f = formatrod.y1 - srcRod.y1 * ay;
+            invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
+
         } else {
-            *invtransform = ofxsMatRotation(-rot) * ofxsMatScale(scale.x,scale.y);
+            // rotation 90 degrees counterclockwise
+            // x <- formatrod.x1 + (srcRod.y2 - y) * (formatrod.x2 - formatrod.x1) / (srcRod.y2 - srcRod.y1)
+            // y <- formatrod.y1 + (x - srcRod.x1) * (formatrod.y2 - formatrod.y1) / (srcRod.x2 - srcRod.x1)
+            double ax = (formatrod.x2 - formatrod.x1) / (srcRod.y2 - srcRod.y1);
+            double ay = (formatrod.y2 - formatrod.y1) / (srcRod.x2 - srcRod.x1);
+            invtransform->a =  0; invtransform->b =-ax; invtransform->c = formatrod.x1 + srcRod.y2 * ax;
+            invtransform->d = ay; invtransform->e =  0; invtransform->f = formatrod.y1 - srcRod.x1 * ay;
+            invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
         }
     }
-    
-    
-    
-    
+
     return true;
 }
 
+void ReformatPlugin::setBoxValues(const double time)
+{
+    ReformatTypeEnum type = (ReformatTypeEnum)_type->getValue();
+
+    switch (type) {
+        case eReformatTypeToFormat: {
+            EParamFormat format = (EParamFormat)_format->getValue();
+            assert(0 <= (int)format && (int)format < eParamFormatCount);
+            int w = 0, h = 0;
+            double par = -1;
+            getFormatResolution(format, &w, &h, &par);
+            assert(par != -1);
+            _boxSize->setValue(w, h);
+            _boxPAR->setValue(par);
+            _boxFixed->setValue(true);
+            break;
+        }
+        case eReformatTypeToBox:
+            _boxSize->setValue(_boxSize_saved);
+            _boxPAR->setValue(_boxPAR_saved);
+            _boxFixed->setValue(_boxFixed_saved);
+            // nothing to do, the user sets the box
+            break;
+        case eReformatTypeScale: {
+            OfxPointD scale = _scale->getValue();
+            if (_scaleUniform->getValue()) {
+                scale.y = scale.x;
+            }
+            double srcPar = _srcClip->getPixelAspectRatio();
+            OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+            // scale the RoD
+            srcRod.x1 *= scale.x;
+            srcRod.x2 *= scale.x;
+            srcRod.y1 *= scale.y;
+            srcRod.y2 *= scale.y;
+            // round to the nearest pixel size
+            OfxRectI srcRodPixel;
+            OfxPointD rs = {1., 1.};
+            Coords::toPixelNearest(srcRod, rs, srcPar, &srcRodPixel);
+            int w = srcRodPixel.x2 - srcRodPixel.x1;
+            int h = srcRodPixel.y2 - srcRodPixel.y1;
+            _boxSize->setValue(w, h);
+            _boxPAR->setValue(srcPar);
+            _boxFixed->setValue(true);
+        }
+    }
+}
 
 void
 ReformatPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
     if (paramName == kParamType) {
         refreshVisibility();
-    } else if (paramName == kParamDisableConcat) {
-        refreshDynamicProps();
-    } else if (paramName == kNatronParamFormatChoice) {
-      //the host does not handle the format itself, do it ourselves
-        int format_i;
-        _format->getValue(format_i);
-        int w,h;
-        double par = -1;
-        getFormatResolution((OFX::EParamFormat)format_i, &w, &h, &par);
-        assert(par != -1);
-        _formatPar->setValue(par);
-        _formatSize->setValue(w, h);
-        
-    } else {
-        Transform3x3Plugin::changedParam(args, paramName);
+        ReformatTypeEnum type = (ReformatTypeEnum)_type->getValue();
+        if (type == eReformatTypeToBox) {
+            // restore saved values
+            _boxSize->setValue(_boxSize_saved);
+            _boxPAR->setValue(_boxPAR_saved);
+            _boxFixed->setValue(_boxFixed_saved);
+        }
     }
+    if (paramName == kParamType || paramName == kParamFormat || paramName == kParamScale || paramName == kParamScaleUniform) {
+        setBoxValues(args.time);
+        return;
+    }
+    if (paramName == kParamBoxSize && args.reason == eChangeUserEdit) {
+        _boxSize_saved = _boxSize->getValue();
+        return;
+    }
+    if (paramName == kParamBoxPAR && args.reason == eChangeUserEdit) {
+        _boxPAR_saved = _boxPAR->getValue();
+    }
+    if (paramName == kParamBoxFixed && args.reason == eChangeUserEdit) {
+        _boxFixed_saved = _boxFixed->getValue();
+    }
+
+    if (paramName == kParamPreserveBoundingBox) {
+        refreshDynamicProps();
+        return;
+    }
+    return Transform3x3Plugin::changedParam(args, paramName);
 }
 
 void
 ReformatPlugin::refreshDynamicProps()
 {
-    if (_disableConcat) {
-        bool concatDisabled;
-        _disableConcat->getValue(concatDisabled);
-        setCanTransform(!concatDisabled);
-    }
+    setCanTransform(_preserveBB->getValue());
 }
 
 void
 ReformatPlugin::refreshVisibility()
 {
-    int type_i;
-    _type->getValue(type_i);
-    ReformatTypeEnum type = (ReformatTypeEnum)type_i;
+    ReformatTypeEnum type = (ReformatTypeEnum)_type->getValue();
     switch (type) {
-        case eReformatTypeFormat:
-            //specific output format
-            _size->setIsSecret(true);
-            _preservePAR->setIsSecret(true);
+        case eReformatTypeToFormat:
+            _format->setIsSecret(false);
+            _boxSize->setIsSecret(true);
+            _boxPAR->setIsSecret(true);
+            _boxFixed->setIsSecret(true);
             _scale->setIsSecret(true);
             _scaleUniform->setIsSecret(true);
-            _format->setIsSecret(false);
             break;
             
-        case eReformatTypeSize:
-            //size
-            _size->setIsSecret(false);
-            _preservePAR->setIsSecret(false);
+        case eReformatTypeToBox:
+            _format->setIsSecret(true);
+            _boxSize->setIsSecret(false);
+            _boxPAR->setIsSecret(false);
+            _boxFixed->setIsSecret(false);
             _scale->setIsSecret(true);
             _scaleUniform->setIsSecret(true);
-            _format->setIsSecret(true);
             break;
             
         case eReformatTypeScale:
-            //scaled
-            _size->setIsSecret(true);
-            _preservePAR->setIsSecret(true);
+            _format->setIsSecret(true);
+            _boxSize->setIsSecret(true);
+            _boxPAR->setIsSecret(true);
+            _boxFixed->setIsSecret(true);
             _scale->setIsSecret(false);
             _scaleUniform->setIsSecret(false);
-            _format->setIsSecret(true);
             break;
     }
 }
@@ -487,47 +602,18 @@ ReformatPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     _type->getValue(type_i);
     ReformatTypeEnum type = (ReformatTypeEnum)type_i;
     switch (type) {
-        case eReformatTypeFormat: {
-            //specific output format
+        case eReformatTypeToFormat:
+        case eReformatTypeToBox: {
+            //specific output PAR
             double par;
-            _formatPar->getValue(par);
+            _boxPAR->getValue(par);
             clipPreferences.setPixelAspectRatio(*_dstClip, par);
             break;
         }
-        case eReformatTypeSize:
+
         case eReformatTypeScale:
             // don't change the pixel aspect ratio
             break;
-    }
-}
-
-void
-ReformatPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
-{
-    if (clipName == kOfxImageEffectSimpleSourceClipName && args.reason == OFX::eChangeUserEdit && !_srcClipChanged->getValue()) {
-        _srcClipChanged->setValue(true);
-        OfxRectD srcRod = _srcClip->getRegionOfDefinition(args.time);
-        double srcpar = _srcClip->getPixelAspectRatio();
-        
-        ///Try to find a format matching the project format in which case we switch to format mode otherwise
-        ///switch to size mode and set the size accordingly
-        bool foundFormat = false;
-        for (int i = (int)eParamFormatPCVideo; i < (int)eParamFormatSquare2k ; ++i) {
-            int w,h;
-            double par;
-            _formatPar->getValue(par);
-            _formatSize->getValue(w, h);
-            if (w == (srcRod.x2 - srcRod.x1) && h == (srcRod.y2 - srcRod.y1) && par == srcpar) {
-                _format->setValue((OFX::EParamFormat)i);
-                _type->setValue((int)eReformatTypeFormat);
-                foundFormat = true;
-            }
-        }
-        _size->setValue((int)srcRod.x2 - srcRod.x1, (int)srcRod.y2 - srcRod.y1);
-        if (!foundFormat) {
-            _type->setValue((int)eReformatTypeSize);
-        }
-        
     }
 }
 
@@ -563,22 +649,25 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamType);
         param->setLabel(kParamTypeLabel);
         param->setHint(kParamTypeHint);
-        assert(param->getNOptions() == eReformatTypeFormat);
-        param->appendOption(kParamTypeOptionFormat);
-        assert(param->getNOptions() == eReformatTypeSize);
-        param->appendOption(kParamTypeOptionSize);
+        assert(param->getNOptions() == eReformatTypeToFormat);
+        param->appendOption(kParamTypeOptionToFormat);
+        assert(param->getNOptions() == eReformatTypeToBox);
+        param->appendOption(kParamTypeOptionToBox);
         assert(param->getNOptions() == eReformatTypeScale);
         param->appendOption(kParamTypeOptionScale);
         param->setAnimates(false);
         param->setDefault(0);
         desc.addClipPreferencesSlaveParam(*param);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     
     // format
     {
-        ChoiceParamDescriptor* param = desc.defineChoiceParam(kNatronParamFormatChoice);
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFormat);
         param->setLabel(kParamFormatLabel);
+        param->setHint(kParamFormatHint);
         param->setAnimates(false);
         assert(param->getNOptions() == eParamFormatPCVideo);
         param->appendOption(kParamFormatPCVideoLabel);
@@ -612,59 +701,49 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->appendOption(kParamFormatSquare1kLabel);
         assert(param->getNOptions() == eParamFormatSquare2k);
         param->appendOption(kParamFormatSquare2kLabel);
-        param->setDefault(eParamFormatPCVideo);
+        assert(param->getNOptions() == eParamFormatCount);
+        param->setDefault(kParamFormatDefault);
         param->setHint(kParamFormatHint);
         desc.addClipPreferencesSlaveParam(*param);
-        page->addChild(*param);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     
     {
-        int w,h;
-        double par;
-        getFormatResolution(eParamFormatPCVideo, &w, &h, &par);
-        {
-            Int2DParamDescriptor* param = desc.defineInt2DParam(kNatronParamFormatSize);
-            param->setLabel(kNatronParamFormatSize);
-            param->setIsSecret(true);
-            param->setDefault(w, h);
-            page->addChild(*param);
-        }
-        
-        {
-            DoubleParamDescriptor* param = desc.defineDoubleParam(kNatronParamFormatPar);
-            param->setLabel(kNatronParamFormatPar);
-            param->setIsSecret(true);
-            param->setDefault(par);
-            page->addChild(*param);
-        }
-    }
-    // size
-    {
-        Int2DParamDescriptor* param = desc.defineInt2DParam(kParamSize);
-        param->setLabel(kParamSizeLabel);
-        param->setHint(kParamSizeHint);
+        Int2DParamDescriptor* param = desc.defineInt2DParam(kParamBoxSize);
+        param->setLabel(kParamBoxSizeLabel);
+        param->setHint(kParamBoxSizeHint);
         param->setDefault(200, 200);
-        param->setDisplayRange(0, 0, 10000, 10000);
-        param->setAnimates(false);
-        //param->setIsSecret(true); // done in the plugin constructor
-        param->setRange(1, 1, std::numeric_limits<int>::max(), std::numeric_limits<int>::max());
-        param->setLayoutHint(eLayoutHintNoNewLine);
-        page->addChild(*param);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
+        if (page) {
+            page->addChild(*param);
+        }
     }
-    
-    // preserve par
     {
-        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPreservePAR);
-        param->setLabel(kParamPreservePARLabel);
-        param->setHint(kParamPreservePARHint);
-        param->setAnimates(false);
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamBoxFixed);
+        param->setLabel(kParamBoxFixedLabel);
+        param->setHint(kParamBoxFixedHint);
         param->setDefault(false);
-        //param->setIsSecret(true); // done in the plugin constructor
-        param->setDefault(true);
-        page->addChild(*param);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
-    
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamBoxPAR);
+        param->setLabel(kParamBoxPARLabel);
+        param->setHint(kParamBoxPARHint);
+        param->setRange(0.,10);
+        param->setDisplayRange(0.5,2.);
+        param->setDefault(1.);
+        desc.addClipPreferencesSlaveParam(*param);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
     // scale
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamScale);
@@ -676,11 +755,13 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setRange(-10000., -10000., 10000., 10000.);
         param->setDisplayRange(0.1, 0.1, 10, 10);
         param->setIncrement(0.01);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-        page->addChild(*param);
-        
+        param->setUseHostNativeOverlayHandle(false);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
+        if (page) {
+            page->addChild(*param);
+        }
     }
-    
+
     // scaleUniform
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamScaleUniform);
@@ -689,10 +770,37 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         // don't check it by default: it is easy to obtain Uniform scaling using the slider or the interact
         param->setDefault(true);
         param->setAnimates(true);
-        page->addChild(*param);
-    
+        param->setLayoutHint(OFX::eLayoutHintDivider);
+        if (page) {
+            page->addChild(*param);
+        }
     }
-    
+
+    // resize
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamResize);
+        param->setLabel(kParamResizeLabel);
+        param->setHint(kParamResizeHint);
+        param->setAnimates(false);
+        assert(param->getNOptions() == eResizeNone);
+        param->appendOption(kParamResizeOptionNone, kParamResizeOptionNoneHint);
+        assert(param->getNOptions() == eResizeWidth);
+        param->appendOption(kParamResizeOptionWidth, kParamResizeOptionWidthHint);
+        assert(param->getNOptions() == eResizeHeight);
+        param->appendOption(kParamResizeOptionHeight, kParamResizeOptionHeightHint);
+        assert(param->getNOptions() == eResizeFit);
+        param->appendOption(kParamResizeOptionFit, kParamResizeOptionFitHint);
+        assert(param->getNOptions() == eResizeFill);
+        param->appendOption(kParamResizeOptionFill, kParamResizeOptionFillHint);
+        assert(param->getNOptions() == eResizeDistort);
+        param->appendOption(kParamResizeOptionDistort, kParamResizeOptionDistortHint);
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
+        param->setDefault((int)eResizeWidth);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
     // center
     {
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamReformatCenter);
@@ -700,9 +808,10 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setHint(kParamReformatCenterHint);
         param->setDefault(true);
         param->setAnimates(true);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-        page->addChild(*param);
-        
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     
     // flip
@@ -712,9 +821,10 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setHint(kParamFlipHint);
         param->setDefault(false);
         param->setAnimates(true);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-        page->addChild(*param);
-        
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     
     // flop
@@ -724,9 +834,10 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setHint(kParamFlopHint);
         param->setDefault(false);
         param->setAnimates(true);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine);
-        page->addChild(*param);
-        
+        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
+        if (page) {
+            page->addChild(*param);
+        }
     }
     
     // turn
@@ -736,36 +847,26 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setHint(kParamTurnHint);
         param->setDefault(false);
         param->setAnimates(true);
-        page->addChild(*param);
-        
+        param->getPropertySet().propSetInt(kOfxParamPropLayoutPadWidth, 1, false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // Preserve bounding box
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamPreserveBoundingBox);
+        param->setLabel(kParamPreserveBoundingBoxLabel);
+        param->setHint(kParamPreserveBoundingBoxHint);
+        param->setDefault(false);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
     }
 
     // clamp, filter, black outside
     ofxsFilterDescribeParamsInterpolate2D(desc, page, /*blackOutsideDefault*/false);
-    
-    // srcClipChanged
-    {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamSrcClipChanged);
-        param->setDefault(false);
-        param->setIsSecret(true);
-        param->setAnimates(false);
-        param->setEvaluateOnChange(false);
-        page->addChild(*param);
-        
-    }
-    
-    // Disable concat
-    if (gHostCanTransform) {
-        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamDisableConcat);
-        param->setLabel(kParamDisableConcatLabel);
-        param->setHint(kParamDisableConcatHint);
-        param->setDefault(false);
-        param->setAnimates(false);
-        param->setEvaluateOnChange(true);
-        page->addChild(*param);
-
-    }
-
 }
 
 OFX::ImageEffect* ReformatPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
