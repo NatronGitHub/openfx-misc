@@ -5673,6 +5673,7 @@
 				1ECA4DE01A3F3A6500C5128B /* Ramp.ofx */,
 				1ECE543C185F2374001ED442 /* ReConverge.ofx */,
 				1E0072D11A40417F00E77042 /* Rectangle.ofx */,
+				AC29F7AA1C3FE922006B0019 /* Reformat.ofx */,
 				1E2A93471990EE690061B1F1 /* Retime.ofx */,
 				D721EC02191120B30069DB1D /* Roto.ofx */,
 				1E69C9ED1A2B2EDD0099D609 /* Saturation.ofx */,
@@ -5686,7 +5687,6 @@
 				1E235FF418369E4C0019C45F /* TimeOffset.ofx */,
 				D7BB85B81955C00100A86649 /* TrackerPM.ofx */,
 				D7349E8F18E7767D0097DB1D /* Transform.ofx */,
-				AC29F7AA1C3FE922006B0019 /* Reformat.ofx */,
 				1EFBC97F1A23A1EB00086E7A /* VectorToColor.ofx */,
 				1E8B5D4A18B76A7500C31FDC /* Misc.ofx */,
 			);
@@ -8554,7 +8554,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_FILE = Reformat/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;
@@ -8565,7 +8565,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
-				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_FILE = Reformat/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;
