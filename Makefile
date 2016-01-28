@@ -17,6 +17,7 @@ CopyRectangle \
 CornerPin \
 Crop \
 Deinterlace \
+Despill \
 Difference \
 Dissolve \
 FrameBlend \
