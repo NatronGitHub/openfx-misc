@@ -1,0 +1,12 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 128 128" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:1.41421;">
+    <g id="Py Despill">
+        <g transform="matrix(1,0,0,1,-2.07478,-3.81596)">
+            <rect x="20.1" y="21.841" width="91.95" height="91.95" style="fill:rgb(128,128,128);"/>
+        </g>
+        <g transform="matrix(1,0,0,1,-2.07478,-3.81596)">
+            <path d="M20.1,21.841L112.05,21.841L20.1,113.791L20.1,21.841Z" style="fill:rgb(142,189,141);"/>
+        </g>
+    </g>
+</svg>

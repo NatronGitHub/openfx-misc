@@ -13,6 +13,7 @@ Constant.o \
 CopyRectangle.o \
 CornerPin.o \
 Crop.o \
+Despill.o \
 Deinterlace.o \
 Difference.o \
 Dissolve.o \
@@ -98,6 +99,8 @@ $(TOP_SRCDIR)/ColorLookup/net.sf.openfx.ColorLookupPlugin.png \
 $(TOP_SRCDIR)/ColorLookup/net.sf.openfx.ColorLookupPlugin.svg \
 $(TOP_SRCDIR)/ColorMatrix/net.sf.openfx.ColorMatrixPlugin.png \
 $(TOP_SRCDIR)/ColorMatrix/net.sf.openfx.ColorMatrixPlugin.svg \
+$(TOP_SRCDIR)/Despill/net.sf.openfx.DespillPlugin.png \
+$(TOP_SRCDIR)/Despill/net.sf.openfx.DespillPlugin.svg \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.HSVToRGBPlugin.png \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.HSVToRGBPlugin.svg \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.LABToRGBPlugin.png \
@@ -225,6 +228,7 @@ $(TOP_SRCDIR)/Constant \
 $(TOP_SRCDIR)/CopyRectangle \
 $(TOP_SRCDIR)/CornerPin \
 $(TOP_SRCDIR)/Crop \
+$(TOP_SRCDIR)/Despill \
 $(TOP_SRCDIR)/Deinterlace \
 $(TOP_SRCDIR)/Difference \
 $(TOP_SRCDIR)/Dissolve \
@@ -292,6 +296,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/CornerPin \
 -I$(TOP_SRCDIR)/Crop \
 -I$(TOP_SRCDIR)/Deinterlace \
+-I$(TOP_SRCDIR)/Despill \
 -I$(TOP_SRCDIR)/Difference \
 -I$(TOP_SRCDIR)/Dissolve \
 -I$(TOP_SRCDIR)/FrameBlend \
