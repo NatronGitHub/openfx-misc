@@ -356,9 +356,7 @@ public:
         }
         _exponent->getValueAtTime(time, params.exponent);
         _boundary->getValueAtTime(time, params.boundary_i);
-        int filter_i;
-        _filter->getValueAtTime(time, filter_i);
-        params.filter = (FilterEnum)filter_i;
+        params.filter = (FilterEnum)_filter->getValueAtTime(time);
         _expandRoD->getValueAtTime(time, params.expandRoD);
     }
 

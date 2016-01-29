@@ -671,11 +671,11 @@ private:
 void
 HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
+    const double time = args.time;
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    const double time = args.time;
     OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
     if (dstBitDepth != _dstClip->getPixelDepth() ||
@@ -690,9 +690,7 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    int outputAlpha_i;
-    _outputAlpha->getValueAtTime(args.time, outputAlpha_i);
-    OutputAlphaEnum outputAlpha = (OutputAlphaEnum)outputAlpha_i;
+    OutputAlphaEnum outputAlpha = (OutputAlphaEnum)_outputAlpha->getValueAtTime(time);
     if (outputAlpha != eOutputAlphaSource) {
         if (dstComponents != OFX::ePixelComponentRGBA) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host dit not take into account output components");
@@ -702,7 +700,7 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
     }
 
     std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
+                                        _srcClip->fetchImage(time) : 0);
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -713,15 +711,11 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
         // set the components of _dstClip
-        int outputAlpha_i;
-        _outputAlpha->getValueAtTime(time, outputAlpha_i);
-        OutputAlphaEnum outputAlpha = (OutputAlphaEnum)outputAlpha_i;
-
         if (srcBitDepth != dstBitDepth || (outputAlpha == eOutputAlphaSource && srcComponents != dstComponents)) {            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(time)) && _maskClip && _maskClip->isConnected());
+    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if (doMasking) {
         if (mask.get()) {
             if (mask->getRenderScale().x != args.renderScale.x ||
@@ -732,7 +726,7 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
             }
         }
         bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        _maskInvert->getValueAtTime(time, maskInvert);
         processor.doMasking(true);
         processor.setMaskImg(mask.get(), maskInvert);
     }
@@ -754,15 +748,15 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
     _brightnessRangeRolloff->getValueAtTime(time, values.valRolloff);
 
     bool clampBlack,clampWhite;
-    _clampBlack->getValueAtTime(args.time, clampBlack);
-    _clampWhite->getValueAtTime(args.time, clampWhite);
+    _clampBlack->getValueAtTime(time, clampBlack);
+    _clampWhite->getValueAtTime(time, clampWhite);
 
     bool premult;
     int premultChannel;
-    _premult->getValueAtTime(args.time, premult);
-    _premultChannel->getValueAtTime(args.time, premultChannel);
+    _premult->getValueAtTime(time, premult);
+    _premultChannel->getValueAtTime(time, premultChannel);
     double mix;
-    _mix->getValueAtTime(args.time, mix);
+    _mix->getValueAtTime(time, mix);
     
     processor.setValues(values, clampBlack, clampWhite, outputAlpha, premult, premultChannel, mix);
     processor.process();
@@ -829,8 +823,8 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip,
     if (!_srcClip) {
         return false;
     }
-    double mix;
-    _mix->getValueAtTime(args.time, mix);
+    const double time = args.time;
+    double mix = _mix->getValueAtTime(time);
 
     if (mix == 0.) {
         identityClip = _srcClip;
@@ -840,18 +834,16 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip,
 
     if (_srcClip->getPixelComponents() == ePixelComponentRGBA) {
         // check cases where alpha is affected, even if colors don't change
-        int outputAlpha_i;
-        _outputAlpha->getValueAtTime(args.time, outputAlpha_i);
-        OutputAlphaEnum outputAlpha = (OutputAlphaEnum)outputAlpha_i;
+        OutputAlphaEnum outputAlpha = (OutputAlphaEnum)_outputAlpha->getValueAtTime(time);
         if (outputAlpha != eOutputAlphaSource) {
             double hueMin, hueMax;
-            _hueRange->getValueAtTime(args.time, hueMin, hueMax);
+            _hueRange->getValueAtTime(time, hueMin, hueMax);
             bool alphaHue = (hueMin != 0. || hueMax != 360.);
             double satMin, satMax;
-            _saturationRange->getValueAtTime(args.time, satMin, satMax);
+            _saturationRange->getValueAtTime(time, satMin, satMax);
             bool alphaSat = (satMin != 0. || satMax != 1.);
             double valMin, valMax;
-            _brightnessRange->getValueAtTime(args.time, valMin, valMax);
+            _brightnessRange->getValueAtTime(time, valMin, valMax);
             bool alphaVal = (valMin != 0. || valMax != 1.);
             switch(outputAlpha) {
                 // coverity[dead_error_begin]
@@ -898,23 +890,23 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip,
 
     // isIdentity=true if hueRotation, satAdjust and valAdjust = 0.
     double hueRotation;
-    _hueRotation->getValueAtTime(args.time, hueRotation);
+    _hueRotation->getValueAtTime(time, hueRotation);
     double saturationAdjustment;
-    _saturationAdjustment->getValueAtTime(args.time, saturationAdjustment);
+    _saturationAdjustment->getValueAtTime(time, saturationAdjustment);
     double brightnessAdjustment;
-    _brightnessAdjustment->getValueAtTime(args.time, brightnessAdjustment);
+    _brightnessAdjustment->getValueAtTime(time, brightnessAdjustment);
     if (hueRotation == 0. && saturationAdjustment == 0. && brightnessAdjustment == 0.) {
         identityClip = _srcClip;
         return true;
     }
 
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(time)) && _maskClip && _maskClip->isConnected());
     if (doMasking) {
         bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        _maskInvert->getValueAtTime(time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
             if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
                 identityClip = _srcClip;
@@ -929,10 +921,11 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip,
 void
 HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &paramName)
 {
+    const double time = args.time;
     if (paramName == kParamSrcColor && args.reason == OFX::eChangeUserEdit) {
         // - when setting srcColor: compute hueRange, satRange, valRange (as empty ranges), set rolloffs to (50,0.3,0.3)
         double r, g, b;
-        _srcColor->getValueAtTime(args.time, r, g, b);
+        _srcColor->getValueAtTime(time, r, g, b);
         float h, s, v;
         OFX::Color::rgb_to_hsv((float)r, (float)g, (float)b, &h, &s, &v);
         _hueRange->setValue(h, h);
@@ -945,11 +938,11 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
     if (paramName == kParamDstColor && args.reason == OFX::eChangeUserEdit) {
         // - when setting dstColor: compute hueRotation, satAdjust and valAdjust
         double r, g, b;
-        _srcColor->getValueAtTime(args.time, r, g, b);
+        _srcColor->getValueAtTime(time, r, g, b);
         float h, s, v;
         OFX::Color::rgb_to_hsv((float)r, (float)g, (float)b, &h, &s, &v);
         double tor, tog, tob;
-        _dstColor->getValueAtTime(args.time, tor, tog, tob);
+        _dstColor->getValueAtTime(time, tor, tog, tob);
         float toh, tos, tov;
         OFX::Color::rgb_to_hsv((float)tor, (float)tog, (float)tob, &toh, &tos, &tov);
         double dh = toh - h;
@@ -995,9 +988,7 @@ void
 HSVToolPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     // set the components of _dstClip
-    int outputAlpha_i;
-    _outputAlpha->getValue(outputAlpha_i);
-    OutputAlphaEnum outputAlpha = (OutputAlphaEnum)outputAlpha_i;
+    OutputAlphaEnum outputAlpha = (OutputAlphaEnum)_outputAlpha->getValue();
     if (outputAlpha != eOutputAlphaSource) {
         // output must be RGBA, output image is unpremult
         clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
@@ -1309,6 +1300,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
         assert(param->getNOptions() == (int)eOutputAlphaAll);
         param->appendOption(kParamOutputAlphaOptionAll, kParamOutputAlphaOptionAllHint);
         param->setDefault((int)eOutputAlphaHue);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

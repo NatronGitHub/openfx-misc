@@ -280,17 +280,13 @@ TimeBlurPlugin::setupAndProcess(TimeBlurProcessorBase &processor, const OFX::Ren
     float *accumulatorData = NULL;
 
     // compute range
-    double shutter = 0.;
-    _shutter->getValueAtTime(time, shutter);
-    int shutteroffset_i = 0;
-    _shutteroffset->getValueAtTime(time, shutteroffset_i);
-    double shuttercustomoffset = 0.;
-    _shuttercustomoffset->getValueAtTime(time, shuttercustomoffset);
+    double shutter = _shutter->getValueAtTime(time);
+    ShutterOffsetEnum shutteroffset = (ShutterOffsetEnum)_shutteroffset->getValueAtTime(time);
+    double shuttercustomoffset = _shuttercustomoffset->getValueAtTime(time);
     OfxRangeD range;
-    OFX::shutterRange(time, shutter, (ShutterOffsetEnum)shutteroffset_i, shuttercustomoffset, &range);
+    OFX::shutterRange(time, shutter, shutteroffset, shuttercustomoffset, &range);
 
-    int divisions;
-    _divisions->getValueAtTime(time, divisions);
+    int divisions = _divisions->getValueAtTime(time);
     double interval = divisions >= 1 ? (range.max-range.min)/divisions : 1.;
 
     const OfxRectI& renderWindow = args.renderWindow;
@@ -422,10 +418,8 @@ TimeBlurPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip
             return false;
         }
     }
-    int shutteroffset_i = 0;
-    _shutteroffset->getValueAtTime(time, shutteroffset_i);
-    double shuttercustomoffset = 0.;
-    _shuttercustomoffset->getValueAtTime(time, shuttercustomoffset);
+    ShutterOffsetEnum shutteroffset_i = (ShutterOffsetEnum)_shutteroffset->getValueAtTime(time);
+    double shuttercustomoffset = _shuttercustomoffset->getValueAtTime(time);
     OfxRangeD range;
     OFX::shutterRange(time, shutter, (ShutterOffsetEnum)shutteroffset_i, shuttercustomoffset, &range);
 
@@ -440,16 +434,12 @@ TimeBlurPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
 {
     const double time = args.time;
     // compute range
-    double shutter = 0.;
-    _shutter->getValueAtTime(time, shutter);
-    int shutteroffset_i = 0;
-    _shutteroffset->getValueAtTime(time, shutteroffset_i);
-    double shuttercustomoffset = 0.;
-    _shuttercustomoffset->getValueAtTime(time, shuttercustomoffset);
+    double shutter = _shutter->getValueAtTime(time);
+    ShutterOffsetEnum shutteroffset_i = (ShutterOffsetEnum)_shutteroffset->getValueAtTime(time);
+    double shuttercustomoffset = _shuttercustomoffset->getValueAtTime(time);
     OfxRangeD range;
     OFX::shutterRange(time, shutter, (ShutterOffsetEnum)shutteroffset_i, shuttercustomoffset, &range);
-    int divisions;
-    _divisions->getValueAtTime(time, divisions);
+    int divisions = _divisions->getValueAtTime(time);
     if (shutter == 0 || divisions <= 1) {
         range.max = range.min;
         frames.setFramesNeeded(*_srcClip, range);
@@ -476,16 +466,12 @@ TimeBlurPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
 {
     const double time = args.time;
     // compute range
-    double shutter = 0.;
-    _shutter->getValueAtTime(time, shutter);
-    int shutteroffset_i = 0;
-    _shutteroffset->getValueAtTime(time, shutteroffset_i);
-    double shuttercustomoffset = 0.;
-    _shuttercustomoffset->getValueAtTime(time, shuttercustomoffset);
+    double shutter = _shutter->getValueAtTime(time);
+    ShutterOffsetEnum shutteroffset = (ShutterOffsetEnum)_shutteroffset->getValueAtTime(time);
+    double shuttercustomoffset = _shuttercustomoffset->getValueAtTime(time);
     OfxRangeD range;
-    OFX::shutterRange(time, shutter, (ShutterOffsetEnum)shutteroffset_i, shuttercustomoffset, &range);
-    int divisions;
-    _divisions->getValueAtTime(time, divisions);
+    OFX::shutterRange(time, shutter, shutteroffset, shuttercustomoffset, &range);
+    int divisions = _divisions->getValueAtTime(time);
     double interval = divisions > 1 ? (range.max-range.min)/divisions : 1.;
 
     rod = _srcClip->getRegionOfDefinition(range.min);

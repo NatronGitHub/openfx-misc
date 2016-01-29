@@ -515,8 +515,7 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor, const OFX::RenderArgum
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
-    int type_i;
-    _type->getValueAtTime(time, type_i);
+    RampTypeEnum type = (RampTypeEnum)_type->getValueAtTime(time);
     
     OfxPointD point0,point1;
     _point0->getValueAtTime(args.time, point0.x, point0.y);
@@ -535,7 +534,7 @@ RampPlugin::setupAndProcess(RampProcessorBase &processor, const OFX::RenderArgum
     double mix;
     _mix->getValueAtTime(args.time, mix);
 
-    processor.setValues((RampTypeEnum)type_i,
+    processor.setValues(type,
                         color0, color1,
                         point0, point1,
                         mix,
@@ -668,9 +667,7 @@ RampPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                          const std::string &paramName)
 {
     if (paramName == kParamRampType && args.reason == OFX::eChangeUserEdit) {
-        int type_i;
-        _type->getValue(type_i);
-        RampTypeEnum type = (RampTypeEnum)type_i;
+        RampTypeEnum type = (RampTypeEnum)_type->getValueAtTime(args.time);
         bool noramp = (type == eRampTypeNone);
         _color0->setIsSecret(noramp);
         _point0->setIsSecret(noramp);
@@ -808,6 +805,7 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setLabel(kNatronOfxParamProcessALabel);
         param->setHint(kNatronOfxParamProcessAHint);
         param->setDefault(true);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

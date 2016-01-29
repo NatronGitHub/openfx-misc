@@ -790,9 +790,7 @@ template <class PIX, int nComponents, int maxValue>
 void
 FrameBlendPlugin::renderForBitDepth(const OFX::RenderArguments &args)
 {
-    int operation_i;
-    _operation->getValueAtTime(args.time, operation_i);
-    OperationEnum operation = (OperationEnum)operation_i;
+    OperationEnum operation = (OperationEnum)_operation->getValueAtTime(args.time);
 
     switch (operation) {
         case eOperationAverage:

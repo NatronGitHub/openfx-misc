@@ -427,9 +427,7 @@ PremultPlugin<isPremult>::setupAndProcess(PremultBase &processor, const OFX::Ren
     _processG->getValueAtTime(args.time, processG);
     _processB->getValueAtTime(args.time, processB);
     _processA->getValueAtTime(args.time, processA);
-    int premult_i;
-    _premult->getValueAtTime(time, premult_i);
-    InputChannelEnum premult = InputChannelEnum(premult_i);
+    InputChannelEnum premult = (InputChannelEnum)_premult->getValueAtTime(time);
     processor.setValues(processR, processG, processB, processA, premult);
     
     // set the images
@@ -504,6 +502,7 @@ template<bool isPremult>
 bool
 PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
+    const double time = args.time;
     if (!_srcClip) {
         return false;
     }
@@ -523,10 +522,8 @@ PremultPlugin<isPremult>::isIdentity(const IsIdentityArguments &args, Clip * &id
     _processG->getValueAtTime(args.time, processG);
     _processB->getValueAtTime(args.time, processB);
     _processA->getValueAtTime(args.time, processA);
-    int premult_i;
-   _premult->getValueAtTime(args.time, premult_i);
-    InputChannelEnum premult = InputChannelEnum(premult_i);
-    
+    InputChannelEnum premult = (InputChannelEnum)_premult->getValueAtTime(time);
+
     if (premult == eInputChannelNone || (!processR && !processG && !processB && !processA)) {
         // no processing: identity
         identityClip = _srcClip;

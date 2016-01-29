@@ -729,9 +729,7 @@ TrackerPMPlugin::trackInternalForDepth(OfxTime refTime,
                                        const OfxRectD& trackSearchBounds,
                                        const OFX::Image* otherImg)
 {
-    int scoreI;
-    _score->getValueAtTime(refTime, scoreI);
-    TrackerScoreEnum typeE = (TrackerScoreEnum)scoreI;
+    TrackerScoreEnum typeE = (TrackerScoreEnum)_score->getValueAtTime(refTime);
 
     switch (typeE) {
         case eTrackerSSD: {

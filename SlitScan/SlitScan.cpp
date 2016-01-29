@@ -263,9 +263,7 @@ SlitScanPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
     double tmin, tmax;
     bool retimeAbsolute;
     _retimeAbsolute->getValueAtTime(time, retimeAbsolute);
-    int retimeFunction_i;
-    _retimeFunction->getValueAtTime(time, retimeFunction_i);
-    RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)retimeFunction_i;
+    RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)_retimeFunction->getValueAtTime(time);
     if (retimeFunction == eRetimeFunctionRetimeMap) {
         int t1, t2;
         _frameRange->getValueAtTime(time, t1, t2);
@@ -286,9 +284,7 @@ SlitScanPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
             tmin += time;
             tmax += time;
         }
-        int filter_i;
-        _filter->getValueAtTime(time, filter_i);
-        FilterEnum filter = (FilterEnum)filter_i;
+        FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
         if (filter == eFilterNearest) {
             tmin = std::floor(tmin + 0.5);
             tmax = std::floor(tmax + 0.5);
@@ -312,9 +308,7 @@ SlitScanPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &id
     double retimeGain;
     _retimeGain->getValueAtTime(time, retimeGain);
 
-    int retimeFunction_i;
-    _retimeFunction->getValueAtTime(time, retimeFunction_i);
-    RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)retimeFunction_i;
+    RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)_retimeFunction->getValueAtTime(time);
     if (retimeFunction == eRetimeFunctionRetimeMap && !(_retimeMapClip && _retimeMapClip->isConnected())) {
         // no retime map, equivalent to value = 0 everywhere
         retimeGain = 0.;
@@ -326,10 +320,8 @@ SlitScanPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &id
         bool retimeAbsolute;
         _retimeAbsolute->getValueAtTime(time, retimeAbsolute);
         identityTime = retimeAbsolute ? retimeOffset : (time + retimeOffset);
-        int filter_i;
         if (identityTime != (int)identityTime) {
-            _filter->getValueAtTime(time, filter_i);
-            FilterEnum filter = (FilterEnum)filter_i;
+            FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
             if (filter == eFilterNearest) {
                 identityTime = std::floor(identityTime + 0.5);
             } else {
@@ -481,9 +473,7 @@ SlitScanPlugin::render(const OFX::RenderArguments &args)
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
 
-    int retimeFunction_i;
-    _retimeFunction->getValueAtTime(time, retimeFunction_i);
-    RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)retimeFunction_i;
+    RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)_retimeFunction->getValueAtTime(time);
 #if 0
 
     if (_retimeMapClip && _retimeMapClip->isConnected()) {
@@ -491,9 +481,7 @@ SlitScanPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
         return;
     } else {
-        int filter_i;
-        _filter->getValueAtTime(time, filter_i);
-        FilterEnum filter = (FilterEnum)filter_i;
+        FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
 
         switch (filter) {
             case eFilterNearest:

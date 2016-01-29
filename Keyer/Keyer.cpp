@@ -571,7 +571,8 @@ private:
 void
 KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
+    const double time = args.time;
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -589,9 +590,9 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArg
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
+                                        _srcClip->fetchImage(time) : 0);
     std::auto_ptr<const OFX::Image> bg((_bgClip && _bgClip->isConnected()) ?
-                                       _bgClip->fetchImage(args.time) : 0);
+                                       _bgClip->fetchImage(time) : 0);
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -622,7 +623,7 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArg
     
     // auto ptr for the masks.
     std::auto_ptr<const OFX::Image> inMask((_inMaskClip && _inMaskClip->isConnected()) ?
-                                           _inMaskClip->fetchImage(args.time) : 0);
+                                           _inMaskClip->fetchImage(time) : 0);
     if (inMask.get()) {
         if (inMask->getRenderScale().x != args.renderScale.x ||
             inMask->getRenderScale().y != args.renderScale.y ||
@@ -632,7 +633,7 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArg
         }
     }
     std::auto_ptr<const OFX::Image> outMask((_outMaskClip && _outMaskClip->isConnected()) ?
-                                            _outMaskClip->fetchImage(args.time) : 0);
+                                            _outMaskClip->fetchImage(time) : 0);
     if (outMask.get()) {
         if (outMask->getRenderScale().x != args.renderScale.x ||
             outMask->getRenderScale().y != args.renderScale.y ||
@@ -643,28 +644,16 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArg
     }
 
     OfxRGBColourD keyColor;
-    int keyerModeI;
-    double softnessLower;
-    double toleranceLower;
-    double center;
-    double toleranceUpper;
-    double softnessUpper;
-    double despill;
-    int outputModeI;
-    int sourceAlphaI;
-    _keyColor->getValueAtTime(args.time, keyColor.r, keyColor.g, keyColor.b);
-    _keyerMode->getValueAtTime(args.time, keyerModeI);
-    KeyerModeEnum keyerMode = (KeyerModeEnum)keyerModeI;
-    _softnessLower->getValueAtTime(args.time, softnessLower);
-    _toleranceLower->getValueAtTime(args.time, toleranceLower);
-    _center->getValueAtTime(args.time, center);
-    _toleranceUpper->getValueAtTime(args.time, toleranceUpper);
-    _softnessUpper->getValueAtTime(args.time, softnessUpper);
-    _despill->getValueAtTime(args.time, despill);
-    _outputMode->getValueAtTime(args.time, outputModeI);
-    OutputModeEnum outputMode = (OutputModeEnum)outputModeI;
-    _sourceAlpha->getValueAtTime(args.time, sourceAlphaI);
-    SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)sourceAlphaI;
+    _keyColor->getValueAtTime(time, keyColor.r, keyColor.g, keyColor.b);
+    KeyerModeEnum keyerMode = (KeyerModeEnum)_keyerMode->getValueAtTime(time);
+    double softnessLower = _softnessLower->getValueAtTime(time);
+    double toleranceLower = _toleranceLower->getValueAtTime(time);
+    double center = _center->getValueAtTime(time);
+    double toleranceUpper = _toleranceUpper->getValueAtTime(time);
+    double softnessUpper = _softnessUpper->getValueAtTime(time);
+    double despill = _despill->getValueAtTime(time);
+    OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
+    SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)_sourceAlpha->getValueAtTime(time);
     processor.setValues(keyColor, keyerMode, softnessLower, toleranceLower, center, toleranceUpper, softnessUpper, despill, outputMode, sourceAlpha);
     processor.setDstImg(dst.get());
     processor.setSrcImgs(src.get(), bg.get(), inMask.get(), outMask.get());
@@ -717,10 +706,7 @@ void
 KeyerPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     // set the premultiplication of _dstClip
-    int outputModeI;
-    OutputModeEnum outputMode;
-    _outputMode->getValue(outputModeI);
-    outputMode = (OutputModeEnum)outputModeI;
+    OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValue();
 
     switch(outputMode) {
         case eOutputModeIntermediate:
@@ -776,20 +762,17 @@ KeyerPlugin::setThresholdsFromKeyColor(double r, double g, double b, KeyerModeEn
 void
 KeyerPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
+    const double time = args.time;
     if (paramName == kParamKeyColor && args.reason == eChangeUserEdit) {
         OfxRGBColourD keyColor;
-        _keyColor->getValueAtTime(args.time, keyColor.r, keyColor.g, keyColor.b);
-        int keyerModeI;
-        _keyerMode->getValueAtTime(args.time, keyerModeI);
-        KeyerModeEnum keyerMode = (KeyerModeEnum)keyerModeI;
+        _keyColor->getValueAtTime(time, keyColor.r, keyColor.g, keyColor.b);
+        KeyerModeEnum keyerMode = (KeyerModeEnum)_keyerMode->getValueAtTime(time);
         setThresholdsFromKeyColor(keyColor.r, keyColor.g, keyColor.b, keyerMode);
     }
     if (paramName == kParamKeyerMode && args.reason == eChangeUserEdit) {
         OfxRGBColourD keyColor;
-        _keyColor->getValueAtTime(args.time, keyColor.r, keyColor.g, keyColor.b);
-        int keyerModeI;
-        _keyerMode->getValueAtTime(args.time, keyerModeI);
-        KeyerModeEnum keyerMode = (KeyerModeEnum)keyerModeI;
+        _keyColor->getValueAtTime(time, keyColor.r, keyColor.g, keyColor.b);
+        KeyerModeEnum keyerMode = (KeyerModeEnum)_keyerMode->getValueAtTime(time);
         _softnessLower->setEnabled(keyerMode != eKeyerModeNone);
         _toleranceLower->setEnabled(keyerMode != eKeyerModeNone);
         _center->setEnabled(keyerMode != eKeyerModeNone);
@@ -798,7 +781,7 @@ KeyerPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::strin
         _despill->setEnabled(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen);
         setThresholdsFromKeyColor(keyColor.r, keyColor.g, keyColor.b, keyerMode);
         std::string keyerModeString;
-        _keyerMode->getOption(keyerModeI, keyerModeString);
+        _keyerMode->getOption((int)keyerMode, keyerModeString);
         _sublabel->setValue(keyerModeString);
     }
 }
@@ -1024,7 +1007,7 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         assert(param->getNOptions() == (int)eOutputModeComposite);
         param->appendOption(kParamOutputModeOptionComposite, kParamOutputModeOptionCompositeHint);
         param->setDefault((int)eOutputModeIntermediate);
-        param->setAnimates(true);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

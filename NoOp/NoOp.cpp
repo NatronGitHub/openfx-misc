@@ -535,12 +535,9 @@ void
 NoOpPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     // set the premultiplication of _dstClip
-    bool setPremult;
-    _setPremult->getValue(setPremult);
+    bool setPremult = _setPremult->getValue();
     if (setPremult) {
-        int premult_i;
-        _premult->getValue(premult_i);
-        PreMultiplicationEnum premult = (PreMultiplicationEnum)premult_i;
+        PreMultiplicationEnum premult = (PreMultiplicationEnum)_premult->getValue();
 
         clipPreferences.setOutputPremultiplication(premult);
     }
@@ -549,9 +546,7 @@ NoOpPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
         bool setFieldOrder;
         _setFieldOrder->getValue(setFieldOrder);
         if (setFieldOrder) {
-            int fieldOrder_i;
-            _fieldOrder->getValue(fieldOrder_i);
-            FieldEnum fieldOrder = (FieldEnum)fieldOrder_i;
+            FieldEnum fieldOrder = (FieldEnum)_fieldOrder->getValue();
 
             clipPreferences.setOutputFielding(fieldOrder);
         }

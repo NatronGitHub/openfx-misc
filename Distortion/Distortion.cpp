@@ -1126,12 +1126,8 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
         _uvOffset->getValueAtTime(time, uOffset, vOffset);
         _uvScale->getValueAtTime(time, uScale, vScale);
         if (_plugin == eDistortionPluginSTMap) {
-            int uWrap_i = 0;
-            int vWrap_i = 0;
-            _uWrap->getValueAtTime(time, uWrap_i);
-            uWrap = (WrapEnum)uWrap_i;
-            _vWrap->getValueAtTime(time, vWrap_i);
-            vWrap = (WrapEnum)vWrap_i;
+            uWrap = (WrapEnum)_uWrap->getValueAtTime(time);
+            vWrap = (WrapEnum)_vWrap->getValueAtTime(time);
         }
     }
     bool blackOutside;
@@ -1170,9 +1166,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
     DistortionModelEnum distortionModel = eDistortionModelNuke;
     double par = 1., k1 = 0., k2 = 0., k3 = 0., p1 = 0., p2 = 0., cx = 0., cy = 0., squeeze = 1., ax = 0., ay = 0.;
     if (_plugin == eDistortionPluginLensDistortion) {
-        int distortionModel_i;
-        _distortionModel->getValueAtTime(time, distortionModel_i);
-        distortionModel = (DistortionModelEnum)distortionModel_i;
+        distortionModel = (DistortionModelEnum)_distortionModel->getValueAtTime(time);
         switch (distortionModel) {
             case eDistortionModelNuke:
                 if (_srcClip) {
@@ -1208,18 +1202,18 @@ void
 DistortionPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
 {
     const double time = args.time;
-    int filter = args.renderQualityDraft ? eFilterImpulse : eFilterCubic;
+    FilterEnum filter = args.renderQualityDraft ? eFilterImpulse : eFilterCubic;
     if (!args.renderQualityDraft && _filter) {
-        _filter->getValueAtTime(time, filter);
+        filter = (FilterEnum)_filter->getValueAtTime(time);
     }
     bool clamp = false;
     if (_clamp) {
-        _clamp->getValueAtTime(time, clamp);
+        clamp = _clamp->getValueAtTime(time);
     }
 
     // as you may see below, some filters don't need explicit clamping, since they are
     // "clamped" by construction.
-    switch ( (FilterEnum)filter ) {
+    switch (filter) {
         case eFilterImpulse: {
             DistortionProcessor<PIX, nComponents, maxValue, plugin, eFilterImpulse, false> fred(*this);
             setupAndProcess(fred, args);
@@ -1531,9 +1525,7 @@ void
 DistortionPlugin::updateVisibility()
 {
     if (_plugin == eDistortionPluginLensDistortion) {
-        int distortionModel_i;
-        _distortionModel->getValue(distortionModel_i);
-        DistortionModelEnum distortionModel = (DistortionModelEnum)distortionModel_i;
+        DistortionModelEnum distortionModel = (DistortionModelEnum)_distortionModel->getValue();
         switch (distortionModel) {
             case eDistortionModelNuke:
                 _k1->setIsSecret(false);

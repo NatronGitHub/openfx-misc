@@ -984,9 +984,9 @@ void
 GodRaysPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
 {
     const double time = args.time;
-    int filter = args.renderQualityDraft ? eFilterImpulse : eFilterCubic;
+    FilterEnum filter = args.renderQualityDraft ? eFilterImpulse : eFilterCubic;
     if (!args.renderQualityDraft && _filter) {
-        _filter->getValueAtTime(time, filter);
+        filter = (FilterEnum)_filter->getValueAtTime(time);
     }
     bool clamp = false;
     if (_clamp) {
@@ -995,7 +995,7 @@ GodRaysPlugin::renderInternalForBitDepth(const OFX::RenderArguments &args)
 
     // as you may see below, some filters don't need explicit clamping, since they are
     // "clamped" by construction.
-    switch ( (FilterEnum)filter ) {
+    switch (filter) {
         case eFilterImpulse: {
             GodRaysProcessor<PIX, nComponents, maxValue, eFilterImpulse, false> fred(*this);
             setupAndProcess(fred, args);

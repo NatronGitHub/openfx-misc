@@ -118,9 +118,7 @@ NoTimeBlurPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
 
-    int rounding_i;
-    _rounding->getValueAtTime(time, rounding_i);
-    RoundingEnum rounding = (RoundingEnum)rounding_i;
+    RoundingEnum rounding = (RoundingEnum)_rounding->getValueAtTime(time);
     double srcTime = time;
     switch (rounding) {
         case eRoundingRint:
@@ -157,9 +155,7 @@ bool
 NoTimeBlurPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
 {
     const double time = args.time;
-    int rounding_i;
-    _rounding->getValueAtTime(time, rounding_i);
-    RoundingEnum rounding = (RoundingEnum)rounding_i;
+    RoundingEnum rounding = (RoundingEnum)_rounding->getValueAtTime(time);
     double srcTime = time;
     switch (rounding) {
         case eRoundingRint:

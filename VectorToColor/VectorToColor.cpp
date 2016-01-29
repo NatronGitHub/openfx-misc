@@ -290,7 +290,8 @@ private:
 void
 VectorToColorPlugin::setupAndProcess(VectorToColorProcessorBase &processor, const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
+    const double time = args.time;
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -308,7 +309,7 @@ VectorToColorPlugin::setupAndProcess(VectorToColorProcessorBase &processor, cons
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
+                                        _srcClip->fetchImage(time) : 0);
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -327,19 +328,12 @@ VectorToColorPlugin::setupAndProcess(VectorToColorProcessorBase &processor, cons
     processor.setSrcImg(src.get());
     processor.setRenderWindow(args.renderWindow);
     
-    int xChannel_i, yChannel_i;
-    _xChannel->getValueAtTime(args.time, xChannel_i);
-    _yChannel->getValueAtTime(args.time, yChannel_i);
-    InputChannelEnum xChannel = (InputChannelEnum)xChannel_i;
-    InputChannelEnum yChannel = (InputChannelEnum)yChannel_i;
-    bool opposite;
-    _opposite->getValueAtTime(args.time, opposite);
-    bool inverseY;
-    _inverseY->getValueAtTime(args.time, inverseY);
-    bool modulateV;
-    _modulateV->getValueAtTime(args.time, modulateV);
-    bool hsvOutput;
-    _hsvOutput->getValueAtTime(args.time, hsvOutput);
+    InputChannelEnum xChannel = (InputChannelEnum)_xChannel->getValueAtTime(time);
+    InputChannelEnum yChannel = (InputChannelEnum)_yChannel->getValueAtTime(time);
+    bool opposite = _opposite->getValueAtTime(time);
+    bool inverseY = _inverseY->getValueAtTime(time);
+    bool modulateV = _modulateV->getValueAtTime(time);
+    bool hsvOutput = _hsvOutput->getValueAtTime(time);
     processor.setValues(xChannel, yChannel, opposite, inverseY, modulateV, hsvOutput);
     processor.process();
 }

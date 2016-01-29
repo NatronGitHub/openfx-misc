@@ -723,9 +723,7 @@ void
 MergePlugin::renderForBitDepth(const OFX::RenderArguments &args)
 {
     const double time = args.time;
-    int operation_i;
-    _operation->getValueAtTime(time, operation_i);
-    MergingFunctionEnum operation = (MergingFunctionEnum)operation_i;
+    MergingFunctionEnum operation = (MergingFunctionEnum)_operation->getValueAtTime(time);
     std::auto_ptr<MergeProcessorBase> fred;
     switch (operation) {
         case eMergeATop:
@@ -894,11 +892,10 @@ void
 MergePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
     if (paramName == kParamOperation) {
-        int operation_i;
-        _operation->getValueAtTime(args.time, operation_i);
+        MergingFunctionEnum operation = (MergingFunctionEnum)_operation->getValueAtTime(args.time);
         // depending on the operation, enable/disable alpha masking
-        _alphaMasking->setEnabled(MergeImages2D::isMaskable((MergingFunctionEnum)operation_i));
-        _operationString->setValue(MergeImages2D::getOperationString((MergingFunctionEnum)operation_i));
+        _alphaMasking->setEnabled(MergeImages2D::isMaskable(operation));
+        _operationString->setValue(MergeImages2D::getOperationString(operation));
     }
 }
 

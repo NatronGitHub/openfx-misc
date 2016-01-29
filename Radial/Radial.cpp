@@ -910,6 +910,7 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setLabel(kNatronOfxParamProcessALabel);
         param->setHint(kNatronOfxParamProcessAHint);
         param->setDefault(true);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

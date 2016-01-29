@@ -646,9 +646,7 @@ ReformatPlugin::refreshVisibility()
 void
 ReformatPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
-    int type_i;
-    _type->getValue(type_i);
-    ReformatTypeEnum type = (ReformatTypeEnum)type_i;
+    ReformatTypeEnum type = (ReformatTypeEnum)_type->getValue();
     switch (type) {
         case eReformatTypeToFormat:
         case eReformatTypeToBox: {
@@ -704,7 +702,7 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         assert(param->getNOptions() == eReformatTypeScale);
         param->appendOption(kParamTypeOptionScale);
         param->setDefault(0);
-        param->setAnimates(true);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -751,7 +749,7 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         assert(param->getNOptions() == eParamFormatCount);
         param->setDefault(kParamFormatDefault);
         param->setHint(kParamFormatHint);
-        param->setAnimates(true);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -786,7 +784,7 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setRange(0.,10);
         param->setDisplayRange(0.5,2.);
         param->setDefault(1.);
-        param->setAnimates(true);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);

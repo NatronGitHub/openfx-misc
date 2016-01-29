@@ -440,11 +440,11 @@ private:
 void
 SaturationPlugin::setupAndProcess(SaturationProcessorBase &processor, const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
+    const double time = args.time;
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    const double time = args.time;
     OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
     OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
     if (dstBitDepth != _dstClip->getPixelDepth() ||
@@ -459,7 +459,7 @@ SaturationPlugin::setupAndProcess(SaturationProcessorBase &processor, const OFX:
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
+                                        _srcClip->fetchImage(time) : 0);
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -473,8 +473,8 @@ SaturationPlugin::setupAndProcess(SaturationProcessorBase &processor, const OFX:
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
-    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(time)) && _maskClip && _maskClip->isConnected());
+    std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if (doMasking) {
         if (mask.get()) {
             if (mask->getRenderScale().x != args.renderScale.x ||
@@ -485,7 +485,7 @@ SaturationPlugin::setupAndProcess(SaturationProcessorBase &processor, const OFX:
             }
         }
         bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        _maskInvert->getValueAtTime(time, maskInvert);
         processor.doMasking(true);
         processor.setMaskImg(mask.get(), maskInvert);
     }
@@ -495,19 +495,17 @@ SaturationPlugin::setupAndProcess(SaturationProcessorBase &processor, const OFX:
     processor.setRenderWindow(args.renderWindow);
     
     double saturation;
-    _saturation->getValueAtTime(args.time, saturation);
-    int luminanceMath_i;
-    _luminanceMath->getValueAtTime(args.time, luminanceMath_i);
-    LuminanceMathEnum luminanceMath = (LuminanceMathEnum)luminanceMath_i;
+    _saturation->getValueAtTime(time, saturation);
+    LuminanceMathEnum luminanceMath = (LuminanceMathEnum)_luminanceMath->getValueAtTime(time);
     bool clampBlack,clampWhite;
-    _clampBlack->getValueAtTime(args.time, clampBlack);
-    _clampWhite->getValueAtTime(args.time, clampWhite);
+    _clampBlack->getValueAtTime(time, clampBlack);
+    _clampWhite->getValueAtTime(time, clampWhite);
     bool premult;
     int premultChannel;
-    _premult->getValueAtTime(args.time, premult);
-    _premultChannel->getValueAtTime(args.time, premultChannel);
+    _premult->getValueAtTime(time, premult);
+    _premultChannel->getValueAtTime(time, premultChannel);
     double mix;
-    _mix->getValueAtTime(args.time, mix);
+    _mix->getValueAtTime(time, mix);
     
     bool processR, processG, processB, processA;
     _processR->getValueAtTime(time, processR);
@@ -580,8 +578,9 @@ SaturationPlugin::render(const OFX::RenderArguments &args)
 bool
 SaturationPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
+    const double time = args.time;
     double mix;
-    _mix->getValueAtTime(args.time, mix);
+    _mix->getValueAtTime(time, mix);
 
     if (mix == 0.) {
         identityClip = _srcClip;
@@ -593,10 +592,10 @@ SaturationPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
         bool processG;
         bool processB;
         bool processA;
-        _processR->getValueAtTime(args.time, processR);
-        _processG->getValueAtTime(args.time, processG);
-        _processB->getValueAtTime(args.time, processB);
-        _processA->getValueAtTime(args.time, processA);
+        _processR->getValueAtTime(time, processR);
+        _processG->getValueAtTime(time, processG);
+        _processB->getValueAtTime(time, processB);
+        _processA->getValueAtTime(time, processA);
         if (!processR && !processG && !processB && !processA) {
             identityClip = _srcClip;
             return true;
@@ -604,26 +603,26 @@ SaturationPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
     }
 
     bool clampBlack,clampWhite;
-    _clampBlack->getValueAtTime(args.time, clampBlack);
-    _clampWhite->getValueAtTime(args.time, clampWhite);
+    _clampBlack->getValueAtTime(time, clampBlack);
+    _clampWhite->getValueAtTime(time, clampWhite);
     if (clampBlack || clampWhite) {
         return false;
     }
 
     double saturation;
-    _saturation->getValueAtTime(args.time, saturation);
+    _saturation->getValueAtTime(time, saturation);
     if (saturation == 1) {
         identityClip = _srcClip;
         return true;
     }
 
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(time)) && _maskClip && _maskClip->isConnected());
     if (doMasking) {
         bool maskInvert;
-        _maskInvert->getValueAtTime(args.time, maskInvert);
+        _maskInvert->getValueAtTime(time, maskInvert);
         if (!maskInvert) {
             OfxRectI maskRoD;
-            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
+            OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
             if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
                 identityClip = _srcClip;

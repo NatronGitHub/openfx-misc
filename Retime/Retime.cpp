@@ -357,9 +357,7 @@ RetimePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
         }
     }
 
-    int filter_i;
-    _filter->getValueAtTime(time, filter_i);
-    FilterEnum filter = (FilterEnum)filter_i;
+    FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
 
     OfxRangeD range;
     if (sourceTime == (int)sourceTime || filter == eFilterNone) {
@@ -421,10 +419,8 @@ RetimePlugin::isIdentityInternal(OfxTime time, OFX::Clip* &identityClip, OfxTime
             }
         }
     }
-    int filter_i;
-    _filter->getValueAtTime(time, filter_i);
-    FilterEnum filter = (FilterEnum)filter_i;
-    
+    FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
+
     if (sourceTime == (int)sourceTime || filter == eFilterNone) {
         identityClip = _srcClip;
         identityTime = sourceTime;
@@ -539,9 +535,7 @@ RetimePlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-    int filter_i;
-    _filter->getValueAtTime(time, filter_i);
-    FilterEnum filter = (FilterEnum)filter_i;
+    FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
 
 #ifdef DEBUG
     if (sourceTime == (int)sourceTime || filter == eFilterNone || filter == eFilterNearest) {

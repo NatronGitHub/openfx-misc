@@ -410,16 +410,12 @@ public:
             params.orderX = params.orderY = 0;
         }
         if (_blurPlugin == eBlurPluginChromaBlur) {
-            int chrominanceMath_i;
-            _chrominanceMath->getValueAtTime(time, chrominanceMath_i);
-            params.chrominanceMath = (ChrominanceMathEnum)chrominanceMath_i;
+            params.chrominanceMath = (ChrominanceMathEnum)_chrominanceMath->getValueAtTime(time);
             params.boundary_i = 1; // nearest
         } else {
             _boundary->getValueAtTime(time, params.boundary_i);
         }
-        int filter_i;
-        _filter->getValueAtTime(time, filter_i);
-        params.filter = (FilterEnum)filter_i;
+        params.filter = (FilterEnum)_filter->getValueAtTime(time);
         if (_blurPlugin != eBlurPluginChromaBlur) {
             _expandRoD->getValueAtTime(time, params.expandRoD);
         } else {

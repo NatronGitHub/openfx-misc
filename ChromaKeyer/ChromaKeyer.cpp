@@ -614,7 +614,8 @@ private:
 void
 ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
+    const double time = args.time;
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -632,9 +633,9 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
+                                        _srcClip->fetchImage(time) : 0);
     std::auto_ptr<const OFX::Image> bg((_bgClip && _bgClip->isConnected()) ?
-                                       _bgClip->fetchImage(args.time) : 0);
+                                       _bgClip->fetchImage(time) : 0);
     if (src.get()) {
         OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
         //OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
@@ -665,7 +666,7 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
     
     // auto ptr for the masks.
     std::auto_ptr<const OFX::Image> inMask((_inMaskClip && _inMaskClip->isConnected()) ?
-                                           _inMaskClip->fetchImage(args.time) : 0);
+                                           _inMaskClip->fetchImage(time) : 0);
     if (inMask.get()) {
         if (inMask->getRenderScale().x != args.renderScale.x ||
             inMask->getRenderScale().y != args.renderScale.y ||
@@ -675,7 +676,7 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
         }
     }
     std::auto_ptr<const OFX::Image> outMask((_outMaskClip && _outMaskClip->isConnected()) ?
-                                            _outMaskClip->fetchImage(args.time) : 0);
+                                            _outMaskClip->fetchImage(time) : 0);
     if (outMask.get()) {
         if (outMask->getRenderScale().x != args.renderScale.x ||
             outMask->getRenderScale().y != args.renderScale.y ||
@@ -686,21 +687,13 @@ ChromaKeyerPlugin::setupAndProcess(ChromaKeyerProcessorBase &processor, const OF
     }
 
     OfxRGBColourD keyColor;
-    double acceptanceAngle;
-    double suppressionAngle;
-    double keyLift;
-    double keyGain;
-    int outputModeI;
-    int sourceAlphaI;
-    _keyColor->getValueAtTime(args.time, keyColor.r, keyColor.g, keyColor.b);
-    _acceptanceAngle->getValueAtTime(args.time, acceptanceAngle);
-    _suppressionAngle->getValueAtTime(args.time, suppressionAngle);
-    _keyLift->getValueAtTime(args.time, keyLift);
-    _keyGain->getValueAtTime(args.time, keyGain);
-    _outputMode->getValueAtTime(args.time, outputModeI);
-    OutputModeEnum outputMode = (OutputModeEnum)outputModeI;
-    _sourceAlpha->getValueAtTime(args.time, sourceAlphaI);
-    SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)sourceAlphaI;
+    _keyColor->getValueAtTime(time, keyColor.r, keyColor.g, keyColor.b);
+    double acceptanceAngle = _acceptanceAngle->getValueAtTime(time);
+    double suppressionAngle = _suppressionAngle->getValueAtTime(time);
+    double keyLift = _keyLift->getValueAtTime(time);
+    double keyGain = _keyGain->getValueAtTime(time);
+    OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
+    SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)_sourceAlpha->getValueAtTime(time);
     processor.setValues(keyColor, acceptanceAngle, suppressionAngle, keyLift, keyGain, outputMode, sourceAlpha);
     processor.setDstImg(dst.get());
     processor.setSrcImgs(src.get(), bg.get(), inMask.get(), outMask.get());
@@ -754,10 +747,7 @@ void
 ChromaKeyerPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     // set the premultiplication of _dstClip
-    int outputModeI;
-    OutputModeEnum outputMode;
-    _outputMode->getValue(outputModeI);
-    outputMode = (OutputModeEnum)outputModeI;
+    OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValue();
 
     switch(outputMode) {
         case eOutputModeIntermediate:
@@ -940,7 +930,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         assert(param->getNOptions() == (int)eOutputModeComposite);
         param->appendOption(kParamOutputModeOptionComposite, kParamOutputModeOptionCompositeHint);
         param->setDefault((int)eOutputModeComposite);
-        param->setAnimates(true);
+        param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
