@@ -374,8 +374,9 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
     bool flip = _flip->getValueAtTime(time);
     bool flop = _flop->getValueAtTime(time);
     bool turn = _turn->getValueAtTime(time);
+    bool boxFixed = _boxFixed->getValueAtTime(time);
     if (resize == eResizeNone &&
-        !(center || flip || flop || turn)) {
+        !((center && boxFixed) || flip || flop || turn)) {
         invtransform->setIdentity();
         return true;
     }
@@ -410,11 +411,22 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
         }
     }
 
-    bool boxFixed = _boxFixed->getValueAtTime(time);
     OfxRectD dstRod;
     dstRod.x1 = dstRod.y1 = 0.;
-    if (resize == eResizeNone ||
-        resize == eResizeDistort) {
+    if (resize == eResizeNone) {
+        if (center && boxFixed) {
+            // translate the source
+            double xoff = ((boxRod.x1 + boxRod.x2) - (srcRod.x1 + srcRod.x2)) / 2;
+            double yoff = ((boxRod.y1 + boxRod.y2) - (srcRod.y1 + srcRod.y2)) / 2;
+            dstRod.x1 = srcRod.x1 + xoff;
+            dstRod.x2 = srcRod.x2 + xoff;
+            dstRod.y1 = srcRod.y1 + yoff;
+            dstRod.y2 = srcRod.y2 + yoff;
+        } else {
+            // identity, with RoD = dstRod for flip/flop/turn
+            srcRod = dstRod = boxRod;
+        }
+    } else if (resize == eResizeDistort) {
         // easy case
         dstRod.x2 = boxRod.x2;
         dstRod.y2 = boxRod.y2;
