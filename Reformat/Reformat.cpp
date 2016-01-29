@@ -688,8 +688,8 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->appendOption(kParamTypeOptionToBox);
         assert(param->getNOptions() == eReformatTypeScale);
         param->appendOption(kParamTypeOptionScale);
-        param->setAnimates(false);
         param->setDefault(0);
+        param->setAnimates(true);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -701,7 +701,6 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFormat);
         param->setLabel(kParamFormatLabel);
         param->setHint(kParamFormatHint);
-        param->setAnimates(false);
         assert(param->getNOptions() == eParamFormatPCVideo);
         param->appendOption(kParamFormatPCVideoLabel);
         assert(param->getNOptions() == eParamFormatNTSC);
@@ -737,6 +736,7 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         assert(param->getNOptions() == eParamFormatCount);
         param->setDefault(kParamFormatDefault);
         param->setHint(kParamFormatHint);
+        param->setAnimates(true);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -758,7 +758,7 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamBoxFixedLabel);
         param->setHint(kParamBoxFixedHint);
         param->setDefault(false);
-        param->setAnimates(false);
+        param->setAnimates(true);
         if (page) {
             page->addChild(*param);
         }
@@ -771,6 +771,7 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setRange(0.,10);
         param->setDisplayRange(0.5,2.);
         param->setDefault(1.);
+        param->setAnimates(true);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
             page->addChild(*param);
@@ -814,7 +815,6 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamResize);
         param->setLabel(kParamResizeLabel);
         param->setHint(kParamResizeHint);
-        param->setAnimates(false);
         assert(param->getNOptions() == eResizeNone);
         param->appendOption(kParamResizeOptionNone, kParamResizeOptionNoneHint);
         assert(param->getNOptions() == eResizeWidth);
@@ -829,6 +829,7 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->appendOption(kParamResizeOptionDistort, kParamResizeOptionDistortHint);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         param->setDefault((int)eResizeWidth);
+        param->setAnimates(true);
         if (page) {
             page->addChild(*param);
         }
@@ -892,7 +893,7 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamPreserveBoundingBoxLabel);
         param->setHint(kParamPreserveBoundingBoxHint);
         param->setDefault(false);
-        param->setAnimates(false);
+        param->setAnimates(true);
         if (page) {
             page->addChild(*param);
         }
