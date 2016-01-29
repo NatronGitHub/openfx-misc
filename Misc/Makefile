@@ -99,8 +99,8 @@ $(TOP_SRCDIR)/ColorLookup/net.sf.openfx.ColorLookupPlugin.png \
 $(TOP_SRCDIR)/ColorLookup/net.sf.openfx.ColorLookupPlugin.svg \
 $(TOP_SRCDIR)/ColorMatrix/net.sf.openfx.ColorMatrixPlugin.png \
 $(TOP_SRCDIR)/ColorMatrix/net.sf.openfx.ColorMatrixPlugin.svg \
-$(TOP_SRCDIR)/Despill/net.sf.openfx.DespillPlugin.png \
-$(TOP_SRCDIR)/Despill/net.sf.openfx.DespillPlugin.svg \
+$(TOP_SRCDIR)/Despill/net.sf.openfx.Despill.png \
+$(TOP_SRCDIR)/Despill/net.sf.openfx.Despill.svg \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.HSVToRGBPlugin.png \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.HSVToRGBPlugin.svg \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.LABToRGBPlugin.png \
