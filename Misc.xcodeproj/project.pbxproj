@@ -585,8 +585,8 @@
 		1EA7BCA51C5AA7450026C46A /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1EA7BCB31C5AA7950026C46A /* Despill.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA7BCAE1C5AA7820026C46A /* Despill.cpp */; };
 		1EA7BCB41C5AA7980026C46A /* Despill.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA7BCAE1C5AA7820026C46A /* Despill.cpp */; };
-		1EA7BCB51C5AA82A0026C46A /* net.sf.openfx.DespillPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA7BCB11C5AA7820026C46A /* net.sf.openfx.DespillPlugin.png */; };
-		1EA7BCB61C5AA82D0026C46A /* net.sf.openfx.DespillPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA7BCB21C5AA7820026C46A /* net.sf.openfx.DespillPlugin.svg */; };
+		1EA7BCB51C5AA82A0026C46A /* net.sf.openfx.Despill.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA7BCB11C5AA7820026C46A /* net.sf.openfx.Despill.png */; };
+		1EA7BCB61C5AA82D0026C46A /* net.sf.openfx.Despill.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EA7BCB21C5AA7820026C46A /* net.sf.openfx.Despill.svg */; };
 		1EA8C5681BC69D9B0000FFBF /* CImgMedian.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA8C5671BC69D8D0000FFBF /* CImgMedian.cpp */; };
 		1EA92DC31B1DD1B400FE3709 /* CImgExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EA92DC11B1DD1B400FE3709 /* CImgExpression.cpp */; };
 		1EAD4AE21A0A68FD00AF834D /* AdjustRoD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */; };
@@ -1820,8 +1820,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
-				1EA7BCB51C5AA82A0026C46A /* net.sf.openfx.DespillPlugin.png in CopyFiles */,
-				1EA7BCB61C5AA82D0026C46A /* net.sf.openfx.DespillPlugin.svg in CopyFiles */,
+				1EA7BCB51C5AA82A0026C46A /* net.sf.openfx.Despill.png in CopyFiles */,
+				1EA7BCB61C5AA82D0026C46A /* net.sf.openfx.Despill.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2645,8 +2645,8 @@
 		1EA7BCAE1C5AA7820026C46A /* Despill.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Despill.cpp; sourceTree = "<group>"; };
 		1EA7BCAF1C5AA7820026C46A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1EA7BCB01C5AA7820026C46A /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		1EA7BCB11C5AA7820026C46A /* net.sf.openfx.DespillPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.DespillPlugin.png; sourceTree = "<group>"; };
-		1EA7BCB21C5AA7820026C46A /* net.sf.openfx.DespillPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.DespillPlugin.svg; sourceTree = "<group>"; };
+		1EA7BCB11C5AA7820026C46A /* net.sf.openfx.Despill.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.Despill.png; sourceTree = "<group>"; };
+		1EA7BCB21C5AA7820026C46A /* net.sf.openfx.Despill.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.Despill.svg; sourceTree = "<group>"; };
 		1EA8C5671BC69D8D0000FFBF /* CImgMedian.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgMedian.cpp; path = Median/CImgMedian.cpp; sourceTree = "<group>"; };
 		1EA92DC11B1DD1B400FE3709 /* CImgExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgExpression.cpp; path = Expression/CImgExpression.cpp; sourceTree = "<group>"; };
 		1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AdjustRoD.cpp; sourceTree = "<group>"; };
@@ -4090,8 +4090,8 @@
 				1EA7BCAE1C5AA7820026C46A /* Despill.cpp */,
 				1EA7BCAF1C5AA7820026C46A /* Info.plist */,
 				1EA7BCB01C5AA7820026C46A /* Makefile */,
-				1EA7BCB11C5AA7820026C46A /* net.sf.openfx.DespillPlugin.png */,
-				1EA7BCB21C5AA7820026C46A /* net.sf.openfx.DespillPlugin.svg */,
+				1EA7BCB11C5AA7820026C46A /* net.sf.openfx.Despill.png */,
+				1EA7BCB21C5AA7820026C46A /* net.sf.openfx.Despill.svg */,
 			);
 			path = Despill;
 			sourceTree = "<group>";

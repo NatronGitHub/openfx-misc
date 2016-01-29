@@ -33,18 +33,18 @@
 #include "ofxsCoords.h"
 #include "ofxNatron.h"
 
-#define kPluginName "DespillOFX"
+#define kPluginName "Despill"
 #define kPluginGrouping "Keyer"
-#define kPluginDescription "This node is used to remove the unwanted color contamination of the foreground (spill) " \
-"caused by the reflected color of the bluescreen/greenscreen. " \
+#define kPluginDescription "Remove the unwanted color contamination of the foreground (spill) " \
+"caused by the reflected color of the bluescreen/greenscreen.\n" \
 "While a despill operation often only removes green (for greenscreens) this despill also enables adding red and blue to the spill area. " \
 "A lot of Keyers already have implemented their own despill methods. " \
 "However, in a lot of cases it is useful to seperate the keying process in 2 tasks to get more control over the final result. " \
 "Normally these tasks are the generation of the alpha mask and the spill correction. " \
-"The generated alpha Mask (Key) is then used to merge the despilled forground over the new background. " \
-"This despill node is based on Steve Wright's unspill method found in 'Digital compositing for Film and video'. "
+"The generated alpha Mask (Key) is then used to merge the despilled forground over the new background.\n" \
+"This effect is based on the unspill operations described in section 4.5 of \"Digital Compositing for Film and Video\" by Steve Wright (Focal Press)."
 
-#define kPluginIdentifier "net.sf.openfx.DespillPlugin"
+#define kPluginIdentifier "net.sf.openfx.Despill"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
@@ -58,6 +58,14 @@
 #define kParamScreenType "screenType"
 #define kParamScreenTypeLabel "Screen Type"
 #define kParamScreenTypeHint "Select the screen type according to your footage"
+#define kParamScreenTypeOptionGreen "Greenscreen"
+#define kParamScreenTypeOptionBlue "Bluescreen"
+enum ScreenTypeEnum
+{
+    eScreenTypeGreenScreen,
+    eScreenTypeBlueScreen
+
+};
 
 #define kParamSpillMapMix "spillmapMix"
 #define kParamSpillMapMixLabel "Spillmap Mix"
@@ -79,7 +87,7 @@
 "It works by lowering the values that will be subtracted from green or blue."
 
 #define kParamOutputSpillMap "outputSpillMap"
-#define kParamOutputSpillMapLabel "Spillmap To Alpha"
+#define kParamOutputSpillMapLabel "Spillmap to Alpha"
 #define kParamOutputSpillMapHint "If checked, this will output the spillmap in the alpha channel."
 
 #define kParamScaleRed "scaleRed"
@@ -98,12 +106,6 @@
 #define kParamBrightnessLabel "Brightness"
 #define kParamBrightnessHint "Controls the brightness of the spill while trying to preserve the colors."
 
-enum ScreenTypeEnum
-{
-    eScreenTypeGreenScreen,
-    eScreenTypeBlueScreen
-    
-};
 
 using namespace OFX;
 
@@ -456,10 +458,7 @@ template <class PIX, int nComponents, int maxValue>
 void
 DespillPlugin::renderForBitDepth(const OFX::RenderArguments &args)
 {
-    int screen_i;
-    _screenType->getValue(screen_i);
-    
-    ScreenTypeEnum s = (ScreenTypeEnum)screen_i;
+    ScreenTypeEnum s = (ScreenTypeEnum)_screenType->getValue();
     switch (s) {
         case eScreenTypeGreenScreen: {
             DespillProcessor<PIX, nComponents, maxValue, eScreenTypeGreenScreen> fred(*this);
@@ -560,9 +559,11 @@ DespillPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamScreenType);
         param->setLabel(kParamScreenTypeLabel);
         param->setHint(kParamScreenTypeHint);
-        param->appendOption("Greencreen");
-        param->appendOption("Bluescreen");
-        param->setDefault(eScreenTypeGreenScreen);
+        assert(param->getNOptions() == eScreenTypeGreenScreen);
+        param->appendOption(kParamScreenTypeOptionGreen);
+        assert(param->getNOptions() == eScreenTypeBlueScreen);
+        param->appendOption(kParamScreenTypeOptionBlue);
+        param->setDefault((int)eScreenTypeGreenScreen);
         if (page) {
             page->addChild(*param);
         }

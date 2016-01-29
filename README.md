@@ -125,6 +125,9 @@ matrix.
 ### Keyer
 
 * ChromaKeyerOFX: Apply chroma keying, as described in "Video Demystified" by Keith Jack.  
+* Despill: Remove the unwanted color contamination of the foreground (spill) caused by the
+  reflected color of the bluescreen/greenscreen, as described in "Digital Compositing for
+  Film and Video" by Steve Wright.
 * MatteMonitor: A Matte Monitor, as described in "Digital Compositing for Film and Video" by Steve Wright.
 * DifferenceOFX: Produce a rough matte from the difference of two
   images.
@@ -151,6 +154,7 @@ alpha (or another channel).
 * LensDistortionOFX: Apply nonlinear lens distortion.
 * MirrorOFX: Flip or flop the image.
 * PositionOFX: Translate image by an integer number of pixels.
+* Reformat: Convert image to a different image format and size.
 * STMapOFX: Move pixels around an image, based on a UVmap.
 * TrackerPM: Point tracker based on pattern matching using an exhaustive search within an image region.
 * TransformOFX and TransformMaskedOFX: Translate / Rotate / Scale a 2D 
