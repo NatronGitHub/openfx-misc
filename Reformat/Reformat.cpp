@@ -265,6 +265,10 @@ bool
 ReformatPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
                                           OfxRectD &rod)
 {
+    if (!_srcClip || !_srcClip->isConnected()) {
+        return false;
+    }
+
     const double time = args.time;
     bool ret = Transform3x3Plugin::getRegionOfDefinition(args, rod);
     if (!ret ||
@@ -279,6 +283,9 @@ ReformatPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
 
     // convert the source RoD to pixels
     OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+    if (Coords::rectIsEmpty(srcRod)) {
+        return false;
+    }
     double srcPar = _srcClip->getPixelAspectRatio();
     OfxRectI srcRodPixel;
     OfxPointD rs = {1., 1.};
@@ -356,6 +363,10 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
                                              const bool invert,
                                              OFX::Matrix3x3* invtransform) const
 {
+    if (!_srcClip || !_srcClip->isConnected()) {
+        return false;
+    }
+
     ResizeEnum resize = (ResizeEnum)_resize->getValueAtTime(time);
     bool center = _center->getValueAtTime(time);
     bool flip = _flip->getValueAtTime(time);
@@ -373,6 +384,9 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
     OfxRectD boxRod = { 0., 0., boxSize.x * boxPAR, boxSize.y};
 
     OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
+    if (Coords::rectIsEmpty(srcRod)) {
+        return false;
+    }
     double srcw = srcRod.x2 - srcRod.x1;
     double srch = srcRod.y2 - srcRod.y1;
     // if turn, inverse both dimensions
@@ -416,7 +430,11 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
         formatrod.x2 = offset + dstw;
         formatrod.y2 = boxRod.y2;
     }
+    assert(!Coords::rectIsEmpty(formatrod));
 
+    // flip/flop.
+    // be careful, srcRod may be empty after this, because bounds are swapped,
+    // but this is used for transform computation
     if (flip) {
         std::swap(srcRod.y1, srcRod.y2);
     }
@@ -424,6 +442,10 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
         std::swap(srcRod.x1, srcRod.x2);
     }
     if (!invert) {
+        if (formatrod.x1 == formatrod.x2 ||
+            formatrod.y1 == formatrod.y2) {
+            return false;
+        }
         // now, compute the transform from formatrod to srcRod
         if (!_turn->getValueAtTime(time)) {
             // simple case: no rotation
@@ -431,6 +453,7 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
             // y <- srcRod.y1 + (y - formatrod.y1) * (srcRod.y2 - srcRod.y1) / (formatrod.y2 - formatrod.y1)
             double ax = (srcRod.x2 - srcRod.x1) / (formatrod.x2 - formatrod.x1);
             double ay = (srcRod.y2 - srcRod.y1) / (formatrod.y2 - formatrod.y1);
+            assert(ax == ax && ay == ay);
             invtransform->a = ax; invtransform->b =  0; invtransform->c = srcRod.x1 - formatrod.x1 * ax;
             invtransform->d =  0; invtransform->e = ay; invtransform->f = srcRod.y1 - formatrod.y1 * ay;
             invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
@@ -441,11 +464,16 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
             // y <- srcRod.y1 + (formatrod.x2 - x) * (srcRod.y2 - srcRod.y1) / (formatrod.x2 - formatrod.x1)
             double ax = (srcRod.x2 - srcRod.x1) / (formatrod.y2 - formatrod.y1);
             double ay = (srcRod.y2 - srcRod.y1) / (formatrod.x2 - formatrod.x1);
+            assert(ax == ax && ay == ay);
             invtransform->a =  0; invtransform->b = ax; invtransform->c = srcRod.x1 - formatrod.y1 * ax;
             invtransform->d =-ay; invtransform->e =  0; invtransform->f = srcRod.y1 + formatrod.x2 * ay;
             invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
         }
     } else { // invert
+        if (srcRod.x1 == srcRod.x2 ||
+            srcRod.y1 == srcRod.y2) {
+            return false;
+        }
         // now, compute the transform from srcRod to formatrod
         if (!_turn->getValueAtTime(time)) {
             // simple case: no rotation
@@ -453,6 +481,7 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
             // y <- formatrod.y1 + (y - srcRod.y1) * (formatrod.y2 - formatrod.y1) / (srcRod.y2 - srcRod.y1)
             double ax = (formatrod.x2 - formatrod.x1) / (srcRod.x2 - srcRod.x1);
             double ay = (formatrod.y2 - formatrod.y1) / (srcRod.y2 - srcRod.y1);
+            assert(ax == ax && ay == ay);
             invtransform->a = ax; invtransform->b =  0; invtransform->c = formatrod.x1 - srcRod.x1 * ax;
             invtransform->d =  0; invtransform->e = ay; invtransform->f = formatrod.y1 - srcRod.y1 * ay;
             invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
@@ -463,11 +492,15 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
             // y <- formatrod.y1 + (x - srcRod.x1) * (formatrod.y2 - formatrod.y1) / (srcRod.x2 - srcRod.x1)
             double ax = (formatrod.x2 - formatrod.x1) / (srcRod.y2 - srcRod.y1);
             double ay = (formatrod.y2 - formatrod.y1) / (srcRod.x2 - srcRod.x1);
+            assert(ax == ax && ay == ay);
             invtransform->a =  0; invtransform->b =-ax; invtransform->c = formatrod.x1 + srcRod.y2 * ax;
             invtransform->d = ay; invtransform->e =  0; invtransform->f = formatrod.y1 - srcRod.x1 * ay;
             invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
         }
     }
+    assert(invtransform->a == invtransform->a && invtransform->b == invtransform->b && invtransform->c == invtransform->c &&
+           invtransform->d == invtransform->d && invtransform->e == invtransform->e && invtransform->f == invtransform->f &&
+           invtransform->g == invtransform->g && invtransform->h == invtransform->h && invtransform->i == invtransform->i);
 
     return true;
 }
