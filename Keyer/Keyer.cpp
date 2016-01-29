@@ -30,6 +30,10 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 
+#ifndef M_PI
+#define M_PI        3.14159265358979323846264338327950288   /* pi             */
+#endif
+
 #define kPluginName "KeyerOFX"
 #define kPluginGrouping "Keyer"
 #define kPluginDescription \
@@ -115,8 +119,10 @@ enum KeyerModeEnum {
 #define kParamDespillLabel "Despill"
 #define kParamDespillHint "Reduces color spill on the foreground object (Screen mode only). Between 0 and 1, only mixed foreground/background regions are despilled. Above 1, foreground regions are despilled too."
 
-
-
+#define kParamDespillAngle "despillAngle"
+#define kParamDespillAngleLabel "Despill Angle"
+#define kParamDespillAngleHint "Opening of the cone centered around the keyColor where colors are despilled. A larger angle means that more colors are modified."
+#define kParamDespillAngleDefault 120
 
 #define kParamOutputMode "show"
 #define kParamOutputModeLabel "Output Mode"
@@ -184,6 +190,7 @@ protected:
     double _toleranceUpper;
     double _softnessUpper;
     double _despill;
+    double _despillClosing;
     OutputModeEnum _outputMode;
     SourceAlphaEnum _sourceAlpha;
 
@@ -201,7 +208,8 @@ public:
     , _center(0.)
     , _toleranceUpper(0.)
     , _softnessUpper(0.5)
-    , _despill(true)
+    , _despill(0.)
+    , _despillClosing(0)
     , _outputMode(eOutputModeComposite)
     , _sourceAlpha(eSourceAlphaIgnore)
     {
@@ -216,7 +224,7 @@ public:
         _outMaskImg = outMaskImg;
     }
     
-    void setValues(const OfxRGBColourD& keyColor, KeyerModeEnum keyerMode, double softnessLower, double toleranceLower, double center, double toleranceUpper, double softnessUpper, double despill, OutputModeEnum outputMode, SourceAlphaEnum sourceAlpha)
+    void setValues(const OfxRGBColourD& keyColor, KeyerModeEnum keyerMode, double softnessLower, double toleranceLower, double center, double toleranceUpper, double softnessUpper, double despill, double despillAngle, OutputModeEnum outputMode, SourceAlphaEnum sourceAlpha)
     {
         _keyColor = keyColor;
         _keyerMode = keyerMode;
@@ -227,10 +235,12 @@ public:
             _toleranceUpper = 1.;
             _softnessUpper = 1.;
             _despill = despill;
+            _despillClosing = std::tan((90 - 0.5*despillAngle) * M_PI /180.);
         } else {
             _toleranceUpper = toleranceUpper;
             _softnessUpper = softnessUpper;
             _despill = (_keyerMode == eKeyerModeNone) ? despill : 0.;
+            _despillClosing = (_keyerMode == eKeyerModeNone) ? std::tan((90 - 0.5*despillAngle) * M_PI /180.) : 0.;
         }
         _outputMode = outputMode;
         _sourceAlpha = sourceAlpha;
@@ -360,7 +370,10 @@ private:
 
                     double Kfg;
                     double scalarProd = 0.;
-                    double norm2 = 0.;
+                    double norm2 = 0.; // squared norm of fg
+                    // d is the norm of projection of fg orthogonal to keyColor.
+                    // It is norm(fg) if fg is orthogonal to keyColor, and zero if
+                    // fg is in the direction of keycolor
                     double d = 0.;
                     switch (_keyerMode) {
                         case eKeyerModeLuminance: {
@@ -408,12 +421,24 @@ private:
                     if ((_despill > 0.) && (_keyerMode == eKeyerModeNone || _keyerMode == eKeyerModeScreen) && _outputMode != eOutputModeIntermediate && keyColorNorm2 > 0.) {
                         double keyColorNorm = std::sqrt(keyColorNorm2);
                         // color in the direction of keyColor
-                        if (scalarProd/keyColorNorm > d) {
-                            // maxdespill:
+                        if (scalarProd/keyColorNorm > d * _despillClosing) {
+                            // maxdespill is between 0 and 1:
                             // if despill in [0,1]: only outside regions are despilled
                             // if despill in [1,2]: inside regions are despilled too
+                            assert(0 <= Kbg && Kbg <= 1);
+                            assert(0 <= _despill && _despill <= 2);
                             double maxdespill = Kbg*std::min(_despill,1.) + (1-Kbg)*std::max(0., _despill-1);
-                            double colorshift = maxdespill*(scalarProd/keyColorNorm - d);
+                            assert(0 <= maxdespill && maxdespill <= 1);
+
+                            //// first solution: despill proportionally to the distance to the the despill cone
+                            //// in the direction on -_keyColor
+                            //double colorshift = maxdespill*(scalarProd/keyColorNorm - d * _despillClosing);
+
+                            // second solution: subtract maxdespill * _keyColor, clamping to the despill cone
+                            double colorshift = maxdespill*std::max(keyColorNorm, (scalarProd/keyColorNorm - d * _despillClosing));
+                            // clamp: don't go beyond the despill cone
+                            colorshift = std::min(colorshift, scalarProd/keyColorNorm - d * _despillClosing);
+                            assert(colorshift >= 0);
                             fgr -= colorshift * _keyColor.r / keyColorNorm;
                             fgg -= colorshift * _keyColor.g / keyColorNorm;
                             fgb -= colorshift * _keyColor.b / keyColorNorm;
@@ -493,6 +518,7 @@ public:
     , _toleranceUpper(0)
     , _softnessUpper(0)
     , _despill(0)
+    , _despillAngle(0)
     , _outputMode(0)
     , _sourceAlpha(0)
     {
@@ -517,10 +543,20 @@ public:
         _toleranceUpper = fetchDoubleParam(kParamToleranceUpper);
         _softnessUpper = fetchDoubleParam(kParamSoftnessUpper);
         _despill = fetchDoubleParam(kParamDespill);
-        assert(_keyColor && _keyerMode && _softnessLower && _toleranceLower && _center && _toleranceUpper && _softnessUpper && _despill);
+        _despillAngle = fetchDoubleParam(kParamDespillAngle);
+        assert(_keyColor && _keyerMode && _softnessLower && _toleranceLower && _center && _toleranceUpper && _softnessUpper && _despill && _despillAngle);
         _outputMode = fetchChoiceParam(kParamOutputMode);
         _sourceAlpha = fetchChoiceParam(kParamSourceAlpha);
         assert(_outputMode && _sourceAlpha);
+
+        KeyerModeEnum keyerMode = (KeyerModeEnum)_keyerMode->getValue();
+        _softnessLower->setEnabled(keyerMode != eKeyerModeNone);
+        _toleranceLower->setEnabled(keyerMode != eKeyerModeNone);
+        _center->setEnabled(keyerMode != eKeyerModeNone);
+        _toleranceUpper->setEnabled(keyerMode != eKeyerModeNone && keyerMode != eKeyerModeScreen);
+        _softnessUpper->setEnabled(keyerMode != eKeyerModeNone && keyerMode != eKeyerModeScreen);
+        _despill->setEnabled(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen);
+        _despillAngle->setEnabled(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen);
     }
  
 private:
@@ -555,6 +591,7 @@ private:
     OFX::DoubleParam* _toleranceUpper;
     OFX::DoubleParam* _softnessUpper;
     OFX::DoubleParam* _despill;
+    OFX::DoubleParam* _despillAngle;
 
     OFX::ChoiceParam* _outputMode;
     OFX::ChoiceParam* _sourceAlpha;
@@ -652,9 +689,10 @@ KeyerPlugin::setupAndProcess(KeyerProcessorBase &processor, const OFX::RenderArg
     double toleranceUpper = _toleranceUpper->getValueAtTime(time);
     double softnessUpper = _softnessUpper->getValueAtTime(time);
     double despill = _despill->getValueAtTime(time);
+    double despillAngle = _despillAngle->getValueAtTime(time);
     OutputModeEnum outputMode = (OutputModeEnum)_outputMode->getValueAtTime(time);
     SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)_sourceAlpha->getValueAtTime(time);
-    processor.setValues(keyColor, keyerMode, softnessLower, toleranceLower, center, toleranceUpper, softnessUpper, despill, outputMode, sourceAlpha);
+    processor.setValues(keyColor, keyerMode, softnessLower, toleranceLower, center, toleranceUpper, softnessUpper, despill, despillAngle, outputMode, sourceAlpha);
     processor.setDstImg(dst.get());
     processor.setSrcImgs(src.get(), bg.get(), inMask.get(), outMask.get());
     processor.setRenderWindow(args.renderWindow);
@@ -779,6 +817,7 @@ KeyerPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::strin
         _toleranceUpper->setEnabled(keyerMode != eKeyerModeNone && keyerMode != eKeyerModeScreen);
         _softnessUpper->setEnabled(keyerMode != eKeyerModeNone && keyerMode != eKeyerModeScreen);
         _despill->setEnabled(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen);
+        _despillAngle->setEnabled(keyerMode == eKeyerModeNone || keyerMode == eKeyerModeScreen);
         setThresholdsFromKeyColor(keyColor.r, keyColor.g, keyColor.b, keyerMode);
         std::string keyerModeString;
         _keyerMode->getOption((int)keyerMode, keyerModeString);
@@ -987,7 +1026,21 @@ void KeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setRange(0.,2.);
         param->setDisplayRange(0.,2.);
         param->setDefault(1.);
-        param->setEnabled((kParamKeyerModeDefault == eKeyerModeScreen) || (kParamKeyerModeDefault == eKeyerModeNone));
+        //param->setEnabled((kParamKeyerModeDefault == eKeyerModeScreen) || (kParamKeyerModeDefault == eKeyerModeNone));
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // despillAngle
+    {
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamDespillAngle);
+        param->setLabel(kParamDespillAngleLabel);
+        param->setHint(kParamDespillAngleHint);
+        param->setRange(0., 180.);
+        param->setDisplayRange(0., 180.);
+        param->setDefault(120.);
+        //param->setEnabled((kParamKeyerModeDefault == eKeyerModeScreen) || (kParamKeyerModeDefault == eKeyerModeNone));
         if (page) {
             page->addChild(*param);
         }
