@@ -128,10 +128,11 @@ enum ResizeEnum
 #define kParamTurnHint "Rotate the image by 90 degrees counter-clockwise."
 
 #define kParamPreserveBoundingBox "preserveBB"
-#define kParamPreserveBoundingBoxLabel "Preserve Bounding Box"
+#define kParamPreserveBoundingBoxLabel "Preserve BBox & Concat"
 #define kParamPreserveBoundingBoxHint \
-"If checked, preserve the whole image bounding box and concatenate transform downstream.\n" \
-"Normally, all pixels outside of the outside format are clipped off. If this is checked, the whole image RoD is kept, and transforms can be concatenated downstream (by default, transforms are only concatenated upstream)."
+"If checked, preserve the whole image bounding box and concatenate transforms downstream.\n" \
+"Normally, all pixels outside of the outside format are clipped off. If this is checked, the whole image RoD is kept.\n" \
+"By default, transforms are only concatenated upstream, i.e. the image is rendered by this effect by concatenating upstream transforms (e.g. CornerPin, Transform...), and the original image is resampled only once. If checked, and there are concatenating transform effects downstream, the image is rendered by the last consecutive concatenating effect."
 
 using namespace OFX;
 
@@ -185,9 +186,6 @@ public:
         _boxPAR_saved = _boxPAR->getValue();
         _boxFixed_saved = _boxFixed->getValue();
 
-        refreshVisibility();
-        refreshDynamicProps();
-
         // try to guess the output format from the project size
         double projectPAR = getProjectPixelAspectRatio();
         OfxPointD projectSize = getProjectSize();
@@ -219,6 +217,9 @@ public:
             _boxPAR_saved = projectPAR;
             _boxFixed_saved = true;
         }
+
+        refreshVisibility();
+        refreshDynamicProps();
     }
 
 private:
@@ -312,9 +313,10 @@ ReformatPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         }
     }
 
+    bool boxFixed = _boxFixed->getValue();
     if (resize == eResizeNone ||
         resize == eResizeDistort ||
-        _boxFixed->getValue()) {
+        boxFixed) {
         // easy case
         formatrod.x2 = boxSize.x * boxPAR;
         formatrod.y2 = boxSize.y;
@@ -322,13 +324,13 @@ ReformatPlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
         double scale = boxSize.x / (double)srcw;
         formatrod.x2 = boxSize.x * boxPAR;
         int dsth = std::floor(srch * scale + 0.5);
-        int offset = _center->getValueAtTime(time) ? (boxSize.y - dsth) / 2 : 0;
+        int offset = 0;//_center->getValueAtTime(time) ? (boxSize.y - dsth) / 2 : 0;
         formatrod.y1 = offset;
         formatrod.y2 = offset + dsth;
     } else if (resize == eResizeHeight) {
         double scale = boxSize.y / (double)srch;
         int dstw = std::floor(srcw * scale + 0.5);
-        int offset = _center->getValueAtTime(time) ? (boxSize.x - dstw) / 2 : 0;
+        int offset = 0;//_center->getValueAtTime(time) ? (boxSize.x - dstw) / 2 : 0;
         formatrod.x1 = offset * boxPAR;
         formatrod.x2 = (offset + dstw) * boxPAR;
         formatrod.y2 = boxSize.y;
@@ -408,29 +410,30 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
         }
     }
 
-    OfxRectD formatrod;
-    formatrod.x1 = formatrod.y1 = 0.;
+    bool boxFixed = _boxFixed->getValueAtTime(time);
+    OfxRectD dstRod;
+    dstRod.x1 = dstRod.y1 = 0.;
     if (resize == eResizeNone ||
         resize == eResizeDistort) {
         // easy case
-        formatrod.x2 = boxRod.x2;
-        formatrod.y2 = boxRod.y2;
+        dstRod.x2 = boxRod.x2;
+        dstRod.y2 = boxRod.y2;
     } else if (resize == eResizeWidth) {
         double scale = boxRod.x2 / srcw;
-        formatrod.x2 = boxRod.x2;
+        dstRod.x2 = boxRod.x2;
         double dsth = srch * scale;
-        double offset = _center->getValueAtTime(time) ? (boxRod.y2 - dsth) / 2 : 0;
-        formatrod.y1 = offset;
-        formatrod.y2 = offset + dsth;
+        double offset = (center && boxFixed) ? (boxRod.y2 - dsth) / 2 : 0;
+        dstRod.y1 = offset;
+        dstRod.y2 = offset + dsth;
     } else if (resize == eResizeHeight) {
         double scale = boxRod.y2 / srch;
         double dstw = srcw * scale;
-        double offset = _center->getValueAtTime(time) ? (boxRod.x2 - dstw) / 2 : 0;
-        formatrod.x1 = offset;
-        formatrod.x2 = offset + dstw;
-        formatrod.y2 = boxRod.y2;
+        double offset = (center && boxFixed) ? (boxRod.x2 - dstw) / 2 : 0;
+        dstRod.x1 = offset;
+        dstRod.x2 = offset + dstw;
+        dstRod.y2 = boxRod.y2;
     }
-    assert(!Coords::rectIsEmpty(formatrod));
+    assert(!Coords::rectIsEmpty(dstRod));
 
     // flip/flop.
     // be careful, srcRod may be empty after this, because bounds are swapped,
@@ -442,31 +445,31 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
         std::swap(srcRod.x1, srcRod.x2);
     }
     if (!invert) {
-        if (formatrod.x1 == formatrod.x2 ||
-            formatrod.y1 == formatrod.y2) {
+        if (dstRod.x1 == dstRod.x2 ||
+            dstRod.y1 == dstRod.y2) {
             return false;
         }
-        // now, compute the transform from formatrod to srcRod
+        // now, compute the transform from dstRod to srcRod
         if (!_turn->getValueAtTime(time)) {
             // simple case: no rotation
-            // x <- srcRod.x1 + (x - formatrod.x1) * (srcRod.x2 - srcRod.x1) / (formatrod.x2 - formatrod.x1)
-            // y <- srcRod.y1 + (y - formatrod.y1) * (srcRod.y2 - srcRod.y1) / (formatrod.y2 - formatrod.y1)
-            double ax = (srcRod.x2 - srcRod.x1) / (formatrod.x2 - formatrod.x1);
-            double ay = (srcRod.y2 - srcRod.y1) / (formatrod.y2 - formatrod.y1);
+            // x <- srcRod.x1 + (x - dstRod.x1) * (srcRod.x2 - srcRod.x1) / (dstRod.x2 - dstRod.x1)
+            // y <- srcRod.y1 + (y - dstRod.y1) * (srcRod.y2 - srcRod.y1) / (dstRod.y2 - dstRod.y1)
+            double ax = (srcRod.x2 - srcRod.x1) / (dstRod.x2 - dstRod.x1);
+            double ay = (srcRod.y2 - srcRod.y1) / (dstRod.y2 - dstRod.y1);
             assert(ax == ax && ay == ay);
-            invtransform->a = ax; invtransform->b =  0; invtransform->c = srcRod.x1 - formatrod.x1 * ax;
-            invtransform->d =  0; invtransform->e = ay; invtransform->f = srcRod.y1 - formatrod.y1 * ay;
+            invtransform->a = ax; invtransform->b =  0; invtransform->c = srcRod.x1 - dstRod.x1 * ax;
+            invtransform->d =  0; invtransform->e = ay; invtransform->f = srcRod.y1 - dstRod.y1 * ay;
             invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
 
         } else {
             // rotation 90 degrees counterclockwise
-            // x <- srcRod.x1 + (y - formatrod.y1) * (srcRod.x2 - srcRod.x1) / (formatrod.y2 - formatrod.y1)
-            // y <- srcRod.y1 + (formatrod.x2 - x) * (srcRod.y2 - srcRod.y1) / (formatrod.x2 - formatrod.x1)
-            double ax = (srcRod.x2 - srcRod.x1) / (formatrod.y2 - formatrod.y1);
-            double ay = (srcRod.y2 - srcRod.y1) / (formatrod.x2 - formatrod.x1);
+            // x <- srcRod.x1 + (y - dstRod.y1) * (srcRod.x2 - srcRod.x1) / (dstRod.y2 - dstRod.y1)
+            // y <- srcRod.y1 + (dstRod.x2 - x) * (srcRod.y2 - srcRod.y1) / (dstRod.x2 - dstRod.x1)
+            double ax = (srcRod.x2 - srcRod.x1) / (dstRod.y2 - dstRod.y1);
+            double ay = (srcRod.y2 - srcRod.y1) / (dstRod.x2 - dstRod.x1);
             assert(ax == ax && ay == ay);
-            invtransform->a =  0; invtransform->b = ax; invtransform->c = srcRod.x1 - formatrod.y1 * ax;
-            invtransform->d =-ay; invtransform->e =  0; invtransform->f = srcRod.y1 + formatrod.x2 * ay;
+            invtransform->a =  0; invtransform->b = ax; invtransform->c = srcRod.x1 - dstRod.y1 * ax;
+            invtransform->d =-ay; invtransform->e =  0; invtransform->f = srcRod.y1 + dstRod.x2 * ay;
             invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
         }
     } else { // invert
@@ -474,27 +477,27 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
             srcRod.y1 == srcRod.y2) {
             return false;
         }
-        // now, compute the transform from srcRod to formatrod
+        // now, compute the transform from srcRod to dstRod
         if (!_turn->getValueAtTime(time)) {
             // simple case: no rotation
-            // x <- formatrod.x1 + (x - srcRod.x1) * (formatrod.x2 - formatrod.x1) / (srcRod.x2 - srcRod.x1)
-            // y <- formatrod.y1 + (y - srcRod.y1) * (formatrod.y2 - formatrod.y1) / (srcRod.y2 - srcRod.y1)
-            double ax = (formatrod.x2 - formatrod.x1) / (srcRod.x2 - srcRod.x1);
-            double ay = (formatrod.y2 - formatrod.y1) / (srcRod.y2 - srcRod.y1);
+            // x <- dstRod.x1 + (x - srcRod.x1) * (dstRod.x2 - dstRod.x1) / (srcRod.x2 - srcRod.x1)
+            // y <- dstRod.y1 + (y - srcRod.y1) * (dstRod.y2 - dstRod.y1) / (srcRod.y2 - srcRod.y1)
+            double ax = (dstRod.x2 - dstRod.x1) / (srcRod.x2 - srcRod.x1);
+            double ay = (dstRod.y2 - dstRod.y1) / (srcRod.y2 - srcRod.y1);
             assert(ax == ax && ay == ay);
-            invtransform->a = ax; invtransform->b =  0; invtransform->c = formatrod.x1 - srcRod.x1 * ax;
-            invtransform->d =  0; invtransform->e = ay; invtransform->f = formatrod.y1 - srcRod.y1 * ay;
+            invtransform->a = ax; invtransform->b =  0; invtransform->c = dstRod.x1 - srcRod.x1 * ax;
+            invtransform->d =  0; invtransform->e = ay; invtransform->f = dstRod.y1 - srcRod.y1 * ay;
             invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
 
         } else {
             // rotation 90 degrees counterclockwise
-            // x <- formatrod.x1 + (srcRod.y2 - y) * (formatrod.x2 - formatrod.x1) / (srcRod.y2 - srcRod.y1)
-            // y <- formatrod.y1 + (x - srcRod.x1) * (formatrod.y2 - formatrod.y1) / (srcRod.x2 - srcRod.x1)
-            double ax = (formatrod.x2 - formatrod.x1) / (srcRod.y2 - srcRod.y1);
-            double ay = (formatrod.y2 - formatrod.y1) / (srcRod.x2 - srcRod.x1);
+            // x <- dstRod.x1 + (srcRod.y2 - y) * (dstRod.x2 - dstRod.x1) / (srcRod.y2 - srcRod.y1)
+            // y <- dstRod.y1 + (x - srcRod.x1) * (dstRod.y2 - dstRod.y1) / (srcRod.x2 - srcRod.x1)
+            double ax = (dstRod.x2 - dstRod.x1) / (srcRod.y2 - srcRod.y1);
+            double ay = (dstRod.y2 - dstRod.y1) / (srcRod.x2 - srcRod.x1);
             assert(ax == ax && ay == ay);
-            invtransform->a =  0; invtransform->b =-ax; invtransform->c = formatrod.x1 + srcRod.y2 * ax;
-            invtransform->d = ay; invtransform->e =  0; invtransform->f = formatrod.y1 - srcRod.x1 * ay;
+            invtransform->a =  0; invtransform->b =-ax; invtransform->c = dstRod.x1 + srcRod.y2 * ax;
+            invtransform->d = ay; invtransform->e =  0; invtransform->f = dstRod.y1 - srcRod.x1 * ay;
             invtransform->g =  0; invtransform->h =  0; invtransform->i = 1.;
         }
     }
