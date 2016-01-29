@@ -16,6 +16,7 @@ Constant \
 CopyRectangle \
 CornerPin \
 Crop \
+Despill \
 Deinterlace \
 Despill \
 Difference \
