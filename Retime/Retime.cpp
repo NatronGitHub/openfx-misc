@@ -715,7 +715,7 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
             param->setRange(0, 10);
             param->setIncrement(0.1);
             param->setDisplayRange(0, 10);
-            param->setAnimates(false); // no animation here!
+            param->setAnimates(false); // used in getTimeDomain()
             param->setDoubleType(eDoubleTypeScale);
 
             // add param to page

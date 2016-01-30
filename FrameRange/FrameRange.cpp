@@ -256,6 +256,7 @@ void FrameRangePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setAnimates(false);
         param->setDimensionLabels("first", "last");
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        param->setAnimates(false); // used in getTimeDomain()
         if (page) {
             page->addChild(*param);
         }

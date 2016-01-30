@@ -950,6 +950,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamFadeInLabel);
         param->setHint(kParamFadeInHint);
         param->setDisplayRange(0, 50);
+        param->setAnimates(false); // used in getTimeDomain()
         if (page) {
             page->addChild(*param);
         }
@@ -959,6 +960,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamFadeOutLabel);
         param->setHint(kParamFadeOutHint);
         param->setDisplayRange(0, 50);
+        param->setAnimates(false); // used in getTimeDomain()
         if (page) {
             page->addChild(*param);
         }
@@ -968,6 +970,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamCrossDissolveLabel);
         param->setHint(kParamCrossDissolveHint);
         param->setDisplayRange(0, 50);
+        param->setAnimates(false); // used in getTimeDomain()
         if (page) {
             page->addChild(*param);
         }
@@ -977,6 +980,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamFirstFrameLabel);
         param->setHint(kParamFirstFrameHint);
         param->setDefault(1);
+        param->setAnimates(false); // used in getTimeDomain()
         if (page) {
             page->addChild(*param);
         }
@@ -988,6 +992,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefault(0);
         param->setEnabled(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
+        param->setAnimates(false); // used in getTimeDomain()
         if (page) {
             page->addChild(*param);
         }

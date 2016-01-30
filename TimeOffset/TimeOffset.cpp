@@ -252,7 +252,7 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         // keep default range (kOfxFlagInfiniteMin..INT_MAX)
         // no display range
         // param->setDisplayRange(0, 0);
-        param->setAnimates(true);
+        param->setAnimates(false); // used in getTimeDomain()
         if (page) {
             page->addChild(*param);
         }
