@@ -193,29 +193,32 @@ private:
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
             
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                
                 double spillmap;
-                tmpPix[0] = (double)srcPix[0] / maxValue;
-                tmpPix[1] = (double)srcPix[1] / maxValue;
-                tmpPix[2] = (double)srcPix[2] / maxValue;
-                if (screen == eScreenTypeGreenScreen) {
-                    spillmap = std::max(tmpPix[1] - (tmpPix[0] * _spillMix + tmpPix[2] * (1 - _spillMix)) * (1 - _spillExpand), 0.);
+                if (srcPix) {
+                    tmpPix[0] = (double)srcPix[0] / maxValue;
+                    tmpPix[1] = (double)srcPix[1] / maxValue;
+                    tmpPix[2] = (double)srcPix[2] / maxValue;
+                    tmpPix[3] = (double)srcPix[3] / maxValue;
+                    if (screen == eScreenTypeGreenScreen) {
+                        spillmap = std::max(tmpPix[1] - (tmpPix[0] * _spillMix + tmpPix[2] * (1 - _spillMix)) * (1 - _spillExpand), 0.);
+                    } else {
+                        spillmap = std::max(tmpPix[2] - (tmpPix[0] * _spillMix + tmpPix[1] * (1 - _spillMix)) * (1 - _spillExpand), 0.);
+                    }
+
+                    tmpPix[0] = std::max(tmpPix[0] + spillmap * _redScale + _brightness * spillmap,0.);
+                    tmpPix[1] = std::max(tmpPix[1] + spillmap * _greenScale + _brightness * spillmap,0.) ;
+                    tmpPix[2] = std::max(tmpPix[2] + spillmap * _blueScale + _brightness * spillmap,0.);
                 } else {
-                    spillmap = std::max(tmpPix[2] - (tmpPix[0] * _spillMix + tmpPix[1] * (1 - _spillMix)) * (1 - _spillExpand), 0.);
+                    tmpPix[0] = tmpPix[1] = tmpPix[2] = tmpPix[3] = 0.;
+                    spillmap = 0.;
                 }
-                
-                tmpPix[0] = std::max(tmpPix[0] + spillmap * _redScale + _brightness * spillmap,0.);
-                tmpPix[1] = std::max(tmpPix[1] + spillmap * _greenScale + _brightness * spillmap,0.) ;
-                tmpPix[2] = std::max(tmpPix[2] + spillmap * _blueScale + _brightness * spillmap,0.);
-                
                 
                 ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _maskImg != 0, _maskImg, _mix, _maskInvert, dstPix);
               
                 if (_outputToAlpha) {
                     assert(nComponents == 4);
-                    dstPix[3] = ofxsClampIfInt<PIX,maxValue>(spillmap, 0, maxValue);
+                    dstPix[3] = ofxsClampIfInt<PIX,maxValue>(spillmap * maxValue, 0, maxValue);
                 }
                
                 // increment the dst pixel
