@@ -21,6 +21,7 @@
  */
 
 #include <cmath>
+#include <cfloat>
 #include <algorithm>
 
 #include "ofxsProcessing.H"
@@ -353,7 +354,7 @@ void AdjustRoDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDefaultCoordinateSystem(eCoordinatesNormalised);
         param->setDefault(0., 0.);
         param->setIncrement(1.);
-        param->setRange(0., 0., kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
+        param->setRange(0., 0., DBL_MAX, DBL_MAX);
         param->setDisplayRange(0., 0., 1000., 1000.);
         param->setDimensionLabels("w", "h");
         param->setIncrement(1.);

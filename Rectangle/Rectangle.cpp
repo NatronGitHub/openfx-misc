@@ -1067,7 +1067,7 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setHint(kParamSoftnessHint);
         param->setDefault(0.);
         param->setIncrement(0.01);
-        param->setRange(0., INT_MAX);
+        param->setRange(0., DBL_MAX);
         param->setDisplayRange(0., 100.);
         param->setDigits(2);
         if (page) {

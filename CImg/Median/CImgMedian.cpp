@@ -23,6 +23,7 @@
 #include <memory>
 #include <cmath>
 #include <cstring>
+#include <cfloat>
 #include <algorithm>
 #ifdef _WINDOWS
 #include <windows.h>
@@ -196,7 +197,7 @@ void CImgMedianPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamThreshold);
         param->setLabel(kParamThresholdLabel);
         param->setHint(kParamThresholdHint);
-        param->setRange(0, kOfxFlagInfiniteMax);
+        param->setRange(0, DBL_MAX);
         param->setDisplayRange(0, 1);
         param->setDefault(0.);
         if (page) {

@@ -25,6 +25,7 @@
 
 #include <cmath> // for floor
 #include <climits> // for kOfxFlagInfiniteMax
+#include <cfloat>
 #include <cassert>
 #include <algorithm>
 

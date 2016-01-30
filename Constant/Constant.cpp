@@ -25,6 +25,7 @@
 #include <windows.h>
 #endif
 #include <climits>
+#include <cfloat>
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
@@ -392,7 +393,7 @@ void ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor 
         param->setLabel(kParamColorLabel);
         param->setHint(kParamColorHint);
         param->setDefault(0.0, 0.0, 0.0);
-        param->setRange(kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
+        param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0, 0, 0, 1, 1, 1);
         param->setAnimates(true); // can animate
         if (page) {
@@ -403,7 +404,7 @@ void ConstantPluginFactory<solid>::describeInContext(OFX::ImageEffectDescriptor 
         param->setLabel(kParamColorLabel);
         param->setHint(kParamColorHint);
         param->setDefault(0.0, 0.0, 0.0, 0.0);
-        param->setRange(kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMin, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
+        param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(0, 0, 0, 0, 1, 1, 1, 1);
         param->setAnimates(true); // can animate
         if (page) {

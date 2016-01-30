@@ -22,6 +22,8 @@
 
 #include <limits>
 #include <cmath>
+#include <cfloat>
+
 #include "ofxsImageEffect.h"
 #include "ofxsMultiThread.h"
 
@@ -395,7 +397,7 @@ void RandPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Cont
         param->setLabel(kParamNoiseLevelLabel);
         param->setHint(kParamNoiseLevelHint);
         param->setDefault(1.);
-        param->setRange(0, kOfxFlagInfiniteMax);
+        param->setRange(0, DBL_MAX);
         param->setIncrement(0.1);
         param->setDisplayRange(0, 1);
         param->setAnimates(true); // can animate

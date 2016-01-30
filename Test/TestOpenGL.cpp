@@ -24,6 +24,8 @@
 
 #include "TestOpenGL.h"
 
+#include <cfloat>
+
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -318,7 +320,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         // say we are a scaling parameter
         param->setDoubleType(eDoubleTypeScale);
         param->setDefault(1., 1.);
-        param->setRange(0., 0., kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
+        param->setRange(0., 0., DBL_MAX, DBL_MAX);
         param->setDisplayRange(0., 0., 10., 10.);
         param->setIncrement(0.01);
         if (page) {
@@ -333,7 +335,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         // say we are a scaling parameter
         param->setDoubleType(eDoubleTypeScale);
         param->setDefault(1., 1.);
-        param->setRange(0., 0., kOfxFlagInfiniteMax, kOfxFlagInfiniteMax);
+        param->setRange(0., 0., DBL_MAX, DBL_MAX);
         param->setDisplayRange(0., 0., 10., 10.);
         param->setIncrement(0.01);
         if (page) {
@@ -361,7 +363,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         // say we are a scaling parameter
         param->setDoubleType(eDoubleTypeScale);
         param->setDefault(1.);
-        param->setRange(0., kOfxFlagInfiniteMax);
+        param->setRange(0., DBL_MAX);
         param->setDisplayRange(0., 10.);
         param->setIncrement(0.01);
         if (page) {
@@ -376,7 +378,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         // say we are a angle parameter
         param->setDoubleType(eDoubleTypeAngle);
         param->setDefault(0.);
-        param->setRange(kOfxFlagInfiniteMin, kOfxFlagInfiniteMax);
+        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(-180., 180.);
         param->setIncrement(1.);
         if (page) {
@@ -390,7 +392,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         // say we are a angle parameter
         param->setDoubleType(eDoubleTypeAngle);
         param->setDefault(0.);
-        param->setRange(kOfxFlagInfiniteMin, kOfxFlagInfiniteMax);
+        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(-180., 180.);
         param->setIncrement(1.);
         if (page) {
@@ -404,7 +406,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         // say we are a angle parameter
         param->setDoubleType(eDoubleTypeAngle);
         param->setDefault(0.);
-        param->setRange(kOfxFlagInfiniteMin, kOfxFlagInfiniteMax);
+        param->setRange(-DBL_MAX, DBL_MAX);
         param->setDisplayRange(-180., 180.);
         param->setIncrement(1.);
         if (page) {

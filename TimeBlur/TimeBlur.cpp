@@ -21,7 +21,7 @@
  */
 
 #include <cmath> // for floor
-#include <climits> // for kOfxFlagInfiniteMax
+#include <climits> // for INT_MAX
 #include <cassert>
 #include <algorithm>
 #ifdef DEBUG
@@ -544,7 +544,7 @@ void TimeBlurPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamDivisionsLabel);
         param->setHint(kParamDivisionsHint);
         param->setDefault(10);
-        param->setRange(1, kOfxFlagInfiniteMax);
+        param->setRange(1, INT_MAX);
         param->setDisplayRange(1, 10);
         param->setAnimates(true); // can animate
         if (page) {
