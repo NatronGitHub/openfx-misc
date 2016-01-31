@@ -81,6 +81,7 @@ grouping).
 offset of an image.
 * ColorLookupOFX: Apply a parametric lookup curve to each channel 
 separately. 
+* ColorSuppress: Remove a color/tint, or create a mask from that color.
 * EqualizeCImg: Equalize the histogram.
 * GradeOFX: Modify the tonal spread of an image from the white and
 black points.

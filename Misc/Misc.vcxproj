@@ -81,7 +81,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Distortion;$(SolutionDir)..\Position;$(SolutionDir)..\FrameBlend;$(SolutionDir)..\FrameHold;$(SolutionDir)..\FrameRange;$(SolutionDir)..\Test;$(SolutionDir)..\AppendClip;$(SolutionDir)..\Mirror;$(SolutionDir)..\CheckerBoard;$(SolutionDir)..\ImageStatistics;$(SolutionDir)..\Radial;$(SolutionDir)..\Rectangle;$(SolutionDir)..\Clamp;$(SolutionDir)..\GodRays;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\SlitScan;$(SolutionDir)..\MatteMonitor;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\ColorTransform;$(SolutionDir)..\Multiply;$(SolutionDir)..\Gamma;$(SolutionDir)..\ClipTest;$(SolutionDir)..\Add;$(SolutionDir)..\Keyer;$(SolutionDir)..\TimeBlur;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Distortion;$(SolutionDir)..\Position;$(SolutionDir)..\FrameBlend;$(SolutionDir)..\FrameHold;$(SolutionDir)..\FrameRange;$(SolutionDir)..\Test;$(SolutionDir)..\AppendClip;$(SolutionDir)..\Mirror;$(SolutionDir)..\CheckerBoard;$(SolutionDir)..\ImageStatistics;$(SolutionDir)..\Radial;$(SolutionDir)..\Rectangle;$(SolutionDir)..\Clamp;$(SolutionDir)..\GodRays;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\SlitScan;$(SolutionDir)..\MatteMonitor;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\ColorSuppress;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Despill;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\ColorTransform;$(SolutionDir)..\Multiply;$(SolutionDir)..\Gamma;$(SolutionDir)..\ClipTest;$(SolutionDir)..\Add;$(SolutionDir)..\Keyer;$(SolutionDir)..\TimeBlur;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>OFX_EXTENSIONS_VEGAS;OFX_EXTENSIONS_TUTTLE;OFX_EXTENSIONS_NUKE;OFX_EXTENSIONS_NATRON;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;WIN32;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -210,7 +210,7 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Distortion;$(SolutionDir)..\Position;$(SolutionDir)..\FrameBlend;$(SolutionDir)..\FrameHold;$(SolutionDir)..\FrameRange;$(SolutionDir)..\Test;$(SolutionDir)..\AppendClip;$(SolutionDir)..\Mirror;$(SolutionDir)..\CheckerBoard;$(SolutionDir)..\ImageStatistics;$(SolutionDir)..\Radial;$(SolutionDir)..\Rectangle;$(SolutionDir)..\Clamp;$(SolutionDir)..\GodRays;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\SlitScan;$(SolutionDir)..\MatteMonitor;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\ColorTransform;$(SolutionDir)..\Multiply;$(SolutionDir)..\Gamma;$(SolutionDir)..\ClipTest;$(SolutionDir)..\Add;$(SolutionDir)..\Keyer;$(SolutionDir)..\TimeBlur;$(SolutionDir)..\AdjustRoD;$(SolutionDir)..\Ramp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Distortion;$(SolutionDir)..\Position;$(SolutionDir)..\FrameBlend;$(SolutionDir)..\FrameHold;$(SolutionDir)..\FrameRange;$(SolutionDir)..\Test;$(SolutionDir)..\AppendClip;$(SolutionDir)..\Mirror;$(SolutionDir)..\CheckerBoard;$(SolutionDir)..\ImageStatistics;$(SolutionDir)..\Radial;$(SolutionDir)..\Rectangle;$(SolutionDir)..\Clamp;$(SolutionDir)..\GodRays;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\SlitScan;$(SolutionDir)..\MatteMonitor;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\ColorSuppress;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Despill;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\ColorTransform;$(SolutionDir)..\Multiply;$(SolutionDir)..\Gamma;$(SolutionDir)..\ClipTest;$(SolutionDir)..\Add;$(SolutionDir)..\Keyer;$(SolutionDir)..\TimeBlur;$(SolutionDir)..\AdjustRoD;$(SolutionDir)..\Ramp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>OFX_EXTENSIONS_VEGAS;OFX_EXTENSIONS_TUTTLE;OFX_EXTENSIONS_NUKE;OFX_EXTENSIONS_NATRON;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;WIN64;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
@@ -341,7 +341,7 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OFX_EXTENSIONS_VEGAS;OFX_EXTENSIONS_TUTTLE;OFX_EXTENSIONS_NUKE;OFX_EXTENSIONS_NATRON;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;WIN32;NOMINMAX;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Distortion;$(SolutionDir)..\Position;$(SolutionDir)..\FrameBlend;$(SolutionDir)..\FrameHold;$(SolutionDir)..\FrameRange;$(SolutionDir)..\Test;$(SolutionDir)..\AppendClip;$(SolutionDir)..\Mirror;$(SolutionDir)..\CheckerBoard;$(SolutionDir)..\ImageStatistics;$(SolutionDir)..\Radial;$(SolutionDir)..\Rectangle;$(SolutionDir)..\Clamp;$(SolutionDir)..\GodRays;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\SlitScan;$(SolutionDir)..\MatteMonitor;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\ColorTransform;$(SolutionDir)..\Multiply;$(SolutionDir)..\Gamma;$(SolutionDir)..\ClipTest;$(SolutionDir)..\Add;$(SolutionDir)..\Keyer;$(SolutionDir)..\TimeBlur;$(SolutionDir)..\AdjustRoD;$(SolutionDir)..\Ramp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Distortion;$(SolutionDir)..\Position;$(SolutionDir)..\FrameBlend;$(SolutionDir)..\FrameHold;$(SolutionDir)..\FrameRange;$(SolutionDir)..\Test;$(SolutionDir)..\AppendClip;$(SolutionDir)..\Mirror;$(SolutionDir)..\CheckerBoard;$(SolutionDir)..\ImageStatistics;$(SolutionDir)..\Radial;$(SolutionDir)..\Rectangle;$(SolutionDir)..\Clamp;$(SolutionDir)..\GodRays;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\SlitScan;$(SolutionDir)..\MatteMonitor;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\ColorSuppress;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Despill;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\ColorTransform;$(SolutionDir)..\Multiply;$(SolutionDir)..\Gamma;$(SolutionDir)..\ClipTest;$(SolutionDir)..\Add;$(SolutionDir)..\Keyer;$(SolutionDir)..\TimeBlur;$(SolutionDir)..\AdjustRoD;$(SolutionDir)..\Ramp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -474,7 +474,7 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>OFX_EXTENSIONS_VEGAS;OFX_EXTENSIONS_TUTTLE;OFX_EXTENSIONS_NUKE;OFX_EXTENSIONS_NATRON;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;WIN64;NOMINMAX;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Distortion;$(SolutionDir)..\Position;$(SolutionDir)..\FrameBlend;$(SolutionDir)..\FrameHold;$(SolutionDir)..\FrameRange;$(SolutionDir)..\Test;$(SolutionDir)..\AppendClip;$(SolutionDir)..\Mirror;$(SolutionDir)..\CheckerBoard;$(SolutionDir)..\ImageStatistics;$(SolutionDir)..\Radial;$(SolutionDir)..\Rectangle;$(SolutionDir)..\Clamp;$(SolutionDir)..\GodRays;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\SlitScan;$(SolutionDir)..\MatteMonitor;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\ColorTransform;$(SolutionDir)..\Multiply;$(SolutionDir)..\Gamma;$(SolutionDir)..\ClipTest;$(SolutionDir)..\Add;$(SolutionDir)..\Keyer;$(SolutionDir)..\TimeBlur;$(SolutionDir)..\AdjustRoD;$(SolutionDir)..\Ramp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\openfx\include;$(SolutionDir)..\openfx\Support\include;$(SolutionDir)..\openfx\Support\Plugins\include;$(SolutionDir)..\Distortion;$(SolutionDir)..\Position;$(SolutionDir)..\FrameBlend;$(SolutionDir)..\FrameHold;$(SolutionDir)..\FrameRange;$(SolutionDir)..\Test;$(SolutionDir)..\AppendClip;$(SolutionDir)..\Mirror;$(SolutionDir)..\CheckerBoard;$(SolutionDir)..\ImageStatistics;$(SolutionDir)..\Radial;$(SolutionDir)..\Rectangle;$(SolutionDir)..\Clamp;$(SolutionDir)..\GodRays;$(SolutionDir)..\Saturation;$(SolutionDir)..\Switch;$(SolutionDir)..\TimeOffset;$(SolutionDir)..\ColorLookup;$(SolutionDir)..\SideBySide;$(SolutionDir)..\SlitScan;$(SolutionDir)..\MatteMonitor;$(SolutionDir)..\MixViews;$(SolutionDir)..\OneView;$(SolutionDir)..\JoinViews;$(SolutionDir)..\Anaglyph;$(SolutionDir)..\ColorCorrect;$(SolutionDir)..\Grade;$(SolutionDir)..\Transform;$(SolutionDir)..\Merge;$(SolutionDir)..\ChromaKeyer;$(SolutionDir)..\Roto;$(SolutionDir)..\CornerPin;$(SolutionDir);$(SolutionDir)..\Crop;$(SolutionDir)..\CopyRectangle;$(SolutionDir)..\Invert;$(SolutionDir)..\ReConverge;$(SolutionDir)..\Shuffle;$(SolutionDir)..\Difference;$(SolutionDir)..\Constant;$(SolutionDir)..\Premult;$(SolutionDir)..\TrackerPM;$(SolutionDir)..\NoOp;$(SolutionDir)..\Noise;$(SolutionDir)..\SupportExt;$(SolutionDir)..\ColorMatrix;$(SolutionDir)..\ColorSuppress;$(SolutionDir)..\Deinterlace;$(SolutionDir)..\Despill;$(SolutionDir)..\Dissolve;$(SolutionDir)..\Retime;$(SolutionDir)..\HSVTool;$(SolutionDir)..\VectorToColor;$(SolutionDir)..\ColorTransform;$(SolutionDir)..\Multiply;$(SolutionDir)..\Gamma;$(SolutionDir)..\ClipTest;$(SolutionDir)..\Add;$(SolutionDir)..\Keyer;$(SolutionDir)..\TimeBlur;$(SolutionDir)..\AdjustRoD;$(SolutionDir)..\Ramp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -612,12 +612,14 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     <ClCompile Include="..\ColorCorrect\ColorCorrect.cpp" />
     <ClCompile Include="..\ColorLookup\ColorLookup.cpp" />
     <ClCompile Include="..\ColorMatrix\ColorMatrix.cpp" />
+    <ClCompile Include="..\ColorSuppress\ColorSuppress.cpp" />
     <ClCompile Include="..\ColorTransform\ColorTransform.cpp" />
     <ClCompile Include="..\Constant\Constant.cpp" />
     <ClCompile Include="..\CopyRectangle\CopyRectangle.cpp" />
     <ClCompile Include="..\CornerPin\CornerPin.cpp" />
     <ClCompile Include="..\Crop\Crop.cpp" />
     <ClCompile Include="..\Deinterlace\Deinterlace.cpp" />
+    <ClCompile Include="..\Despill\Despill.cpp" />
     <ClCompile Include="..\Difference\Difference.cpp" />
     <ClCompile Include="..\Dissolve\Dissolve.cpp" />
     <ClCompile Include="..\FrameBlend\FrameBlend.cpp" />
@@ -666,67 +668,6 @@ xcopy $(SolutionDir)..\VectorToColor\net.sf.openfx.VectorToColorPlugin.png $(Out
     <ClCompile Include="randomGenerator.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Add\Add.h" />
-    <ClInclude Include="..\AdjustRoD\AdjustRoD.h" />
-    <ClInclude Include="..\Anaglyph\Anaglyph.h" />
-    <ClInclude Include="..\AppendClip\AppendClip.h" />
-    <ClInclude Include="..\CheckerBoard\CheckerBoard.h" />
-    <ClInclude Include="..\ChromaKeyer\ChromaKeyer.h" />
-    <ClInclude Include="..\Clamp\Clamp.h" />
-    <ClInclude Include="..\ClipTest\ClipTest.h" />
-    <ClInclude Include="..\ColorCorrect\ColorCorrect.h" />
-    <ClInclude Include="..\ColorLookup\ColorLookup.h" />
-    <ClInclude Include="..\ColorMatrix\ColorMatrix.h" />
-    <ClInclude Include="..\ColorTransform\ColorTransform.h" />
-    <ClInclude Include="..\Constant\Constant.h" />
-    <ClInclude Include="..\CopyRectangle\CopyRectangle.h" />
-    <ClInclude Include="..\CornerPin\CornerPin.h" />
-    <ClInclude Include="..\Crop\Crop.h" />
-    <ClInclude Include="..\Deinterlace\Deinterlace.h" />
-    <ClInclude Include="..\Difference\Difference.h" />
-    <ClInclude Include="..\Dissolve\Dissolve.h" />
-    <ClInclude Include="..\FrameBlend\FrameBlend.h" />
-    <ClInclude Include="..\FrameHold\FrameHold.h" />
-    <ClInclude Include="..\FrameRange\FrameRange.h" />
-    <ClInclude Include="..\Gamma\Gamma.h" />
-    <ClInclude Include="..\GodRays\GodRays.h" />
-    <ClInclude Include="..\Grade\Grade.h" />
-    <ClInclude Include="..\HSVTool\HSVTool.h" />
-    <ClInclude Include="..\Distortion\Distortion.h" />
-    <ClInclude Include="..\ImageStatistics\ImageStatistics.h" />
-    <ClInclude Include="..\Invert\Invert.h" />
-    <ClInclude Include="..\JoinViews\JoinViews.h" />
-    <ClInclude Include="..\Keyer\Keyer.h" />
-    <ClInclude Include="..\MatteMonitor\MatteMonitor.h" />
-    <ClInclude Include="..\Merge\Merge.h" />
-    <ClInclude Include="..\Mirror\Mirror.h" />
-    <ClInclude Include="..\MixViews\MixViews.h" />
-    <ClInclude Include="..\Multiply\Multiply.h" />
-    <ClInclude Include="..\Noise\Noise.h" />
-    <ClInclude Include="..\NoOp\NoOp.h" />
-    <ClInclude Include="..\OneView\OneView.h" />
-    <ClInclude Include="..\Position\Position.h" />
-    <ClInclude Include="..\Premult\Premult.h" />
-    <ClInclude Include="..\Radial\Radial.h" />
-    <ClInclude Include="..\Ramp\Ramp.h" />
-    <ClInclude Include="..\ReConverge\ReConverge.h" />
-    <ClInclude Include="..\Rectangle\Rectangle.h" />
-    <ClInclude Include="..\Retime\Retime.h" />
-    <ClInclude Include="..\Roto\Roto.h" />
-    <ClInclude Include="..\Saturation\Saturation.h" />
-    <ClInclude Include="..\Shuffle\Shuffle.h" />
-    <ClInclude Include="..\SideBySide\SideBySide.h" />
-    <ClInclude Include="..\SlitScan\SlitScan.h" />
-    <ClInclude Include="..\Switch\Switch.h" />
-    <ClInclude Include="..\Test\TestGroups.h" />
-    <ClInclude Include="..\Test\TestPosition.h" />
-    <ClInclude Include="..\Test\TestRender.h" />
-    <ClInclude Include="..\TimeBlur\NoTimeBlur.h" />
-    <ClInclude Include="..\TimeBlur\TimeBlur.h" />
-    <ClInclude Include="..\TimeOffset\TimeOffset.h" />
-    <ClInclude Include="..\TrackerPM\TrackerPM.h" />
-    <ClInclude Include="..\Transform\Transform.h" />
-    <ClInclude Include="..\VectorToColor\VectorToColor.h" />
     <ClInclude Include="randomGenerator.H" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

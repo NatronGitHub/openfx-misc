@@ -15,22 +15,25 @@
 			dependencies = (
 				1ED12E661A4B356300ABA348 /* PBXTargetDependency */,
 				1EAD4AF91A0A697500AF834D /* PBXTargetDependency */,
-				1E5D54CD1AB5ED9D00B7B1BE /* PBXTargetDependency */,
 				1E0E4EAC194CB2C30072248F /* PBXTargetDependency */,
-				1E31942719D9B6E70027D0E2 /* PBXTargetDependency */,
+				1E5D54CD1AB5ED9D00B7B1BE /* PBXTargetDependency */,
 				1E5D54861AB592C500B7B1BE /* PBXTargetDependency */,
 				1E0E4EAE194CB2C30072248F /* PBXTargetDependency */,
+				1E31942719D9B6E70027D0E2 /* PBXTargetDependency */,
 				1ED537411A237203007966D5 /* PBXTargetDependency */,
 				1ED12E681A4B356800ABA348 /* PBXTargetDependency */,
 				1E0E4EB0194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4EC6194CB2C30072248F /* PBXTargetDependency */,
 				1EA0C21A19BA12A0006AB602 /* PBXTargetDependency */,
+				1EAFE3E01C5D08AE00F9E4E4 /* PBXTargetDependency */,
+				1ED5373F1A2371EB007966D5 /* PBXTargetDependency */,
 				1E0E4EB2194CB2C30072248F /* PBXTargetDependency */,
 				1E52FFD61955D3130000FB79 /* PBXTargetDependency */,
 				1E0E4EB4194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4EB6194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4EA6194CB2970072248F /* PBXTargetDependency */,
 				1EA0C21C19BA12A0006AB602 /* PBXTargetDependency */,
+				1EAFE3E21C5D08E400F9E4E4 /* PBXTargetDependency */,
 				1E0E4EB8194CB2C30072248F /* PBXTargetDependency */,
 				1EA0C21E19BA12A0006AB602 /* PBXTargetDependency */,
 				1E5D54881AB592C500B7B1BE /* PBXTargetDependency */,
@@ -40,12 +43,12 @@
 				1ED12E6A1A4B357000ABA348 /* PBXTargetDependency */,
 				1EC1B5D61A9C99BC001D7020 /* PBXTargetDependency */,
 				1E0E4EBA194CB2C30072248F /* PBXTargetDependency */,
-				1ED5373F1A2371EB007966D5 /* PBXTargetDependency */,
 				1EFA774C1A25D63100212DB0 /* PBXTargetDependency */,
 				1E6CC08B1A76ADFC00173EB3 /* PBXTargetDependency */,
 				1E52FFD81955D3130000FB79 /* PBXTargetDependency */,
 				1E0E4EBC194CB2C30072248F /* PBXTargetDependency */,
 				1EAD4AFB1A0A698E00AF834D /* PBXTargetDependency */,
+				1EAFE3E41C5D08F700F9E4E4 /* PBXTargetDependency */,
 				1E0E4EBE194CB2C30072248F /* PBXTargetDependency */,
 				1E5D548C1AB592C500B7B1BE /* PBXTargetDependency */,
 				1E0E4EC0194CB2C30072248F /* PBXTargetDependency */,
@@ -68,6 +71,7 @@
 				1E0E4ECE194CB2C30072248F /* PBXTargetDependency */,
 				1EA0C22619BA12A0006AB602 /* PBXTargetDependency */,
 				1E2868D11B832AD200B18774 /* PBXTargetDependency */,
+				1EAFE3E61C5D091B00F9E4E4 /* PBXTargetDependency */,
 				1E0E4ED0194CB2C30072248F /* PBXTargetDependency */,
 				D733F7031959803600028B57 /* PBXTargetDependency */,
 				1E0E4ED2194CB2C30072248F /* PBXTargetDependency */,
@@ -600,6 +604,19 @@
 		1EAD4AEE1A0A691700AF834D /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1EAD4AF01A0A691700AF834D /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1EAD4AF61A0A695500AF834D /* AdjustRoD.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */; };
+		1EAFE3C81C5D083700F9E4E4 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1EAFE3C91C5D083700F9E4E4 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1EAFE3CA1C5D083700F9E4E4 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1EAFE3CB1C5D083700F9E4E4 /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1EAFE3CC1C5D083700F9E4E4 /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1EAFE3CD1C5D083700F9E4E4 /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1EAFE3CE1C5D083700F9E4E4 /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1EAFE3CF1C5D083700F9E4E4 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1EAFE3D11C5D083700F9E4E4 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1EAFE3D31C5D083700F9E4E4 /* net.sf.openfx.ColorMatrixPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60F51A8E1D3A00EA4CBF /* net.sf.openfx.ColorMatrixPlugin.png */; };
+		1EAFE3D41C5D083700F9E4E4 /* net.sf.openfx.ColorMatrixPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EFA60F61A8E1D3A00EA4CBF /* net.sf.openfx.ColorMatrixPlugin.svg */; };
+		1EAFE3DE1C5D089F00F9E4E4 /* ColorSuppress.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EAFE3DB1C5D087900F9E4E4 /* ColorSuppress.cpp */; };
+		1EAFE3E71C5D092900F9E4E4 /* ColorSuppress.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EAFE3DB1C5D087900F9E4E4 /* ColorSuppress.cpp */; };
 		1EB0A4401AA1EDB100F9C93E /* TestPosition.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0A43E1AA1EDB100F9C93E /* TestPosition.cpp */; };
 		1EB0A4431AA1F03C00F9C93E /* TestGroups.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0A4411AA1F03C00F9C93E /* TestGroups.cpp */; };
 		1EB0A4441AA2002700F9C93E /* ofxsTransform3x3.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F57198A51840095C8AA /* ofxsTransform3x3.cpp */; };
@@ -1486,6 +1503,34 @@
 			remoteGlobalIDString = 1ECF2F8A19F51D3400E91A38;
 			remoteInfo = Keyer.ofx;
 		};
+		1EAFE3DF1C5D08AE00F9E4E4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1EAFE3C51C5D083700F9E4E4;
+			remoteInfo = ColorSuppress.ofx;
+		};
+		1EAFE3E11C5D08E400F9E4E4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1EA7BC991C5AA7450026C46A;
+			remoteInfo = Despill.ofx;
+		};
+		1EAFE3E31C5D08F700F9E4E4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E2D33DB1C3FB9A3004E2F03;
+			remoteInfo = MatteMonitor.ofx;
+		};
+		1EAFE3E51C5D091B00F9E4E4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1E6E6FFB1BD4F26700B5A00F;
+			remoteInfo = TimeDissolve.ofx;
+		};
 		1EB0A43C1AA1ECD300F9C93E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
@@ -1822,6 +1867,17 @@
 			files = (
 				1EA7BCB51C5AA82A0026C46A /* net.sf.openfx.Despill.png in CopyFiles */,
 				1EA7BCB61C5AA82D0026C46A /* net.sf.openfx.Despill.svg in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EAFE3D21C5D083700F9E4E4 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 7;
+			files = (
+				1EAFE3D31C5D083700F9E4E4 /* net.sf.openfx.ColorMatrixPlugin.png in CopyFiles */,
+				1EAFE3D41C5D083700F9E4E4 /* net.sf.openfx.ColorMatrixPlugin.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2651,6 +2707,10 @@
 		1EA92DC11B1DD1B400FE3709 /* CImgExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgExpression.cpp; path = Expression/CImgExpression.cpp; sourceTree = "<group>"; };
 		1EAD4AE01A0A68FD00AF834D /* AdjustRoD.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AdjustRoD.cpp; sourceTree = "<group>"; };
 		1EAD4AF41A0A691700AF834D /* AdjustRoD.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AdjustRoD.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EAFE3D81C5D083700F9E4E4 /* ColorSuppress.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorSuppress.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EAFE3DB1C5D087900F9E4E4 /* ColorSuppress.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ColorSuppress.cpp; sourceTree = "<group>"; };
+		1EAFE3DC1C5D087900F9E4E4 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1EAFE3DD1C5D087900F9E4E4 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1EB0A43E1AA1EDB100F9C93E /* TestPosition.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestPosition.cpp; sourceTree = "<group>"; };
 		1EB0A4411AA1F03C00F9C93E /* TestGroups.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestGroups.cpp; sourceTree = "<group>"; };
 		1EB0A45B1AA202DF00F9C93E /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -3164,6 +3224,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				1EAD4AF01A0A691700AF834D /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EAFE3D01C5D083700F9E4E4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EAFE3D11C5D083700F9E4E4 /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3803,6 +3871,7 @@
 				1E2D33EE1C3FB9A3004E2F03 /* MatteMonitor.ofx.bundle */,
 				AC29F7C51C3FE922006B0019 /* Reformat.ofx.bundle */,
 				1EA7BCAC1C5AA7450026C46A /* Despill.ofx.bundle */,
+				1EAFE3D81C5D083700F9E4E4 /* ColorSuppress.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -3832,6 +3901,7 @@
 				D7B4C95D18D9DA410004137D /* ColorCorrect */,
 				1E3E3CB117995CB1005F2132 /* ColorLookup */,
 				1E10A6F51997BFD000EE87A1 /* ColorMatrix */,
+				1EAFE3DA1C5D085A00F9E4E4 /* ColorSuppress */,
 				1ED537191A234CB8007966D5 /* ColorTransform */,
 				1E59336B194A0C3F00804448 /* Constant */,
 				D73030FE19518ACE0024BCA4 /* CopyRectangle */,
@@ -4094,6 +4164,16 @@
 				1EA7BCB21C5AA7820026C46A /* net.sf.openfx.Despill.svg */,
 			);
 			path = Despill;
+			sourceTree = "<group>";
+		};
+		1EAFE3DA1C5D085A00F9E4E4 /* ColorSuppress */ = {
+			isa = PBXGroup;
+			children = (
+				1EAFE3DB1C5D087900F9E4E4 /* ColorSuppress.cpp */,
+				1EAFE3DC1C5D087900F9E4E4 /* Info.plist */,
+				1EAFE3DD1C5D087900F9E4E4 /* Makefile */,
+			);
+			path = ColorSuppress;
 			sourceTree = "<group>";
 		};
 		1EB0A45A1AA202AE00F9C93E /* Position */ = {
@@ -5064,6 +5144,23 @@
 			productReference = 1EAD4AF41A0A691700AF834D /* AdjustRoD.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
+		1EAFE3C51C5D083700F9E4E4 /* ColorSuppress.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1EAFE3D51C5D083700F9E4E4 /* Build configuration list for PBXNativeTarget "ColorSuppress.ofx" */;
+			buildPhases = (
+				1EAFE3C61C5D083700F9E4E4 /* Sources */,
+				1EAFE3D01C5D083700F9E4E4 /* Frameworks */,
+				1EAFE3D21C5D083700F9E4E4 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ColorSuppress.ofx;
+			productName = basic.ofx;
+			productReference = 1EAFE3D81C5D083700F9E4E4 /* ColorSuppress.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 		1EB0A4601AA202EC00F9C93E /* Position.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1EB0A4751AA202EC00F9C93E /* Build configuration list for PBXNativeTarget "Position.ofx" */;
@@ -5707,6 +5804,7 @@
 				1E3451FD190695DC0080D699 /* ColorCorrect.ofx */,
 				1E3E3CA317995BEE005F2132 /* ColorLookup.ofx */,
 				1E10A6F61997BFE400EE87A1 /* ColorMatrix.ofx */,
+				1EAFE3C51C5D083700F9E4E4 /* ColorSuppress.ofx */,
 				1ED5371A1A234CDF007966D5 /* ColorTransform.ofx */,
 				1E59336C194A0C6300804448 /* Constant.ofx */,
 				D730310519518B6B0024BCA4 /* CopyRectangle.ofx */,
@@ -6245,6 +6343,7 @@
 				1EE72C131B5253A4001B0245 /* ofxsShutter.cpp in Sources */,
 				1E75A0341A87BA37005BAA36 /* ofxsGenerator.cpp in Sources */,
 				1EC1B4F91A964209001D7020 /* ofxsTransformInteract.cpp in Sources */,
+				1EAFE3E71C5D092900F9E4E4 /* ColorSuppress.cpp in Sources */,
 				1ED5373D1A2370D3007966D5 /* ofxsLut.cpp in Sources */,
 				1E9B5F5C198A51D40095C8AA /* ofxsRectangleInteract.cpp in Sources */,
 				1E9B5F5F198A51F40095C8AA /* ofxsOGLTextRenderer.cpp in Sources */,
@@ -6324,6 +6423,22 @@
 				1EAD4AEC1A0A691700AF834D /* ofxsParams.cpp in Sources */,
 				1EAD4AED1A0A691700AF834D /* ofxsProperty.cpp in Sources */,
 				1EAD4AEE1A0A691700AF834D /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1EAFE3C61C5D083700F9E4E4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EAFE3DE1C5D089F00F9E4E4 /* ColorSuppress.cpp in Sources */,
+				1EAFE3C81C5D083700F9E4E4 /* ofxsCore.cpp in Sources */,
+				1EAFE3C91C5D083700F9E4E4 /* ofxsImageEffect.cpp in Sources */,
+				1EAFE3CA1C5D083700F9E4E4 /* ofxsInteract.cpp in Sources */,
+				1EAFE3CB1C5D083700F9E4E4 /* ofxsLog.cpp in Sources */,
+				1EAFE3CC1C5D083700F9E4E4 /* ofxsMultiThread.cpp in Sources */,
+				1EAFE3CD1C5D083700F9E4E4 /* ofxsParams.cpp in Sources */,
+				1EAFE3CE1C5D083700F9E4E4 /* ofxsProperty.cpp in Sources */,
+				1EAFE3CF1C5D083700F9E4E4 /* ofxsPropertyValidation.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -7185,6 +7300,26 @@
 			target = 1ECF2F8A19F51D3400E91A38 /* Keyer.ofx */;
 			targetProxy = 1EAD4AFA1A0A698E00AF834D /* PBXContainerItemProxy */;
 		};
+		1EAFE3E01C5D08AE00F9E4E4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1EAFE3C51C5D083700F9E4E4 /* ColorSuppress.ofx */;
+			targetProxy = 1EAFE3DF1C5D08AE00F9E4E4 /* PBXContainerItemProxy */;
+		};
+		1EAFE3E21C5D08E400F9E4E4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1EA7BC991C5AA7450026C46A /* Despill.ofx */;
+			targetProxy = 1EAFE3E11C5D08E400F9E4E4 /* PBXContainerItemProxy */;
+		};
+		1EAFE3E41C5D08F700F9E4E4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1E2D33DB1C3FB9A3004E2F03 /* MatteMonitor.ofx */;
+			targetProxy = 1EAFE3E31C5D08F700F9E4E4 /* PBXContainerItemProxy */;
+		};
+		1EAFE3E61C5D091B00F9E4E4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1E6E6FFB1BD4F26700B5A00F /* TimeDissolve.ofx */;
+			targetProxy = 1EAFE3E51C5D091B00F9E4E4 /* PBXContainerItemProxy */;
+		};
 		1EB0A43D1AA1ECD300F9C93E /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 1EBAEFD0199A81DB0037B3E6 /* Test.ofx */;
@@ -7997,6 +8132,28 @@
 				INFOPLIST_FILE = AdjustRoD/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
 				PRODUCT_NAME = AdjustRoD.ofx;
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
+		1EAFE3D61C5D083700F9E4E4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = ColorSuppress/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1EAFE3D71C5D083700F9E4E4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				INFOPLIST_FILE = ColorSuppress/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;
 			};
 			name = Release;
@@ -9113,6 +9270,15 @@
 			buildConfigurations = (
 				1EAD4AF21A0A691700AF834D /* Debug */,
 				1EAD4AF31A0A691700AF834D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1EAFE3D51C5D083700F9E4E4 /* Build configuration list for PBXNativeTarget "ColorSuppress.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1EAFE3D61C5D083700F9E4E4 /* Debug */,
+				1EAFE3D71C5D083700F9E4E4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -28,6 +28,7 @@ ClipTest/ClipTest.cpp
 ColorCorrect/ColorCorrect.cpp
 ColorLookup/ColorLookup.cpp
 ColorMatrix/ColorMatrix.cpp
+ColorSuppress/ColorSuppress.cpp
 ColorTransform/ColorTransform.cpp
 Constant/Constant.cpp
 CopyRectangle/CopyRectangle.cpp

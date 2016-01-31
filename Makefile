@@ -12,6 +12,7 @@ ClipTest \
 ColorCorrect \
 ColorLookup \
 ColorMatrix \
+ColorSuppress \
 Constant \
 CopyRectangle \
 CornerPin \

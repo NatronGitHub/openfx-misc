@@ -9,6 +9,7 @@ Clamp.o \
 ClipTest.o \
 ColorCorrect.o \
 ColorMatrix.o \
+ColorSuppress.o \
 Constant.o \
 CopyRectangle.o \
 CornerPin.o \
@@ -224,6 +225,7 @@ $(TOP_SRCDIR)/Clamp \
 $(TOP_SRCDIR)/ClipTest \
 $(TOP_SRCDIR)/ColorCorrect \
 $(TOP_SRCDIR)/ColorMatrix \
+$(TOP_SRCDIR)/ColorSuppress \
 $(TOP_SRCDIR)/Constant \
 $(TOP_SRCDIR)/CopyRectangle \
 $(TOP_SRCDIR)/CornerPin \
