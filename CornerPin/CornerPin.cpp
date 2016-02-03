@@ -30,7 +30,7 @@
    may get the concatenated transform from upstream, the untransformed source image,
    concatenate its own transform and apply the resulting transform in its render
    action. Should the host be doing this instead?
-*/
+ */
 
 #include <cmath>
 #include <cfloat>
@@ -52,11 +52,11 @@
 #define kPluginMaskedName "CornerPinMaskedOFX"
 #define kPluginGrouping "Transform"
 #define kPluginDescription \
-"Allows an image to fit another in translation, rotation and scale.\n" \
-"The resulting transform is a translation if 1 point is enabled, a " \
-"similarity if 2 are enabled, an affine transform if 3 are enabled, " \
-"and a homography if they are all enabled.\n"\
-"This plugin concatenates transforms."
+    "Allows an image to fit another in translation, rotation and scale.\n" \
+    "The resulting transform is a translation if 1 point is enabled, a " \
+    "similarity if 2 are enabled, an affine transform if 3 are enabled, " \
+    "and a homography if they are all enabled.\n" \
+    "This plugin concatenates transforms."
 #define kPluginIdentifier "net.sf.openfx.CornerPinPlugin"
 #define kPluginMaskedIdentifier "net.sf.openfx.CornerPinMaskedPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -73,7 +73,6 @@ static const char* const kParamTo[4] = {
     "to3",
     "to4"
 };
-
 static const char* const kParamEnable[4] = {
     "enable1",
     "enable2",
@@ -128,23 +127,23 @@ static const char* const kParamFrom[4] = {
 using namespace OFX;
 
 
-
-
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class CornerPinPlugin : public Transform3x3Plugin
+class CornerPinPlugin
+    : public Transform3x3Plugin
 {
 public:
     /** @brief ctor */
-    CornerPinPlugin(OfxImageEffectHandle handle, bool masked)
-    : Transform3x3Plugin(handle, masked, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur)
-    , _extraMatrixRow1(0)
-    , _extraMatrixRow2(0)
-    , _extraMatrixRow3(0)
-    , _copyFromButton(0)
-    , _copyToButton(0)
-    , _copyInputButton(0)
-    , _srcClipChanged(0)
+    CornerPinPlugin(OfxImageEffectHandle handle,
+                    bool masked)
+        : Transform3x3Plugin(handle, masked, OFX::Transform3x3Plugin::eTransform3x3ParamsTypeMotionBlur)
+        , _extraMatrixRow1(0)
+        , _extraMatrixRow2(0)
+        , _extraMatrixRow3(0)
+        , _copyFromButton(0)
+        , _copyToButton(0)
+        , _copyInputButton(0)
+        , _srcClipChanged(0)
     {
         // NON-GENERIC
         for (int i = 0; i < 4; ++i) {
@@ -166,31 +165,29 @@ public:
         _srcClipChanged = fetchBooleanParam(kParamSrcClipChanged);
         assert(_srcClipChanged);
     }
+
 private:
-    
+
     OFX::Matrix3x3 getExtraMatrix(OfxTime time) const
     {
         OFX::Matrix3x3 ret;
-        _extraMatrixRow1->getValueAtTime(time,ret.a, ret.b, ret.c);
-        _extraMatrixRow2->getValueAtTime(time,ret.d, ret.e, ret.f);
-        _extraMatrixRow3->getValueAtTime(time,ret.g, ret.h, ret.i);
+
+        _extraMatrixRow1->getValueAtTime(time, ret.a, ret.b, ret.c);
+        _extraMatrixRow2->getValueAtTime(time, ret.d, ret.e, ret.f);
+        _extraMatrixRow3->getValueAtTime(time, ret.g, ret.h, ret.i);
+
         return ret;
     }
-    
-    bool getHomography(OfxTime time,const OfxPointD& scale,
+
+    bool getHomography(OfxTime time, const OfxPointD & scale,
                        bool inverseTransform,
-                       const OFX::Point3D& p1,
-                       const OFX::Point3D& p2,
-                       const OFX::Point3D& p3,
-                       const OFX::Point3D& p4,
-                       OFX::Matrix3x3& m);
-
-
-
+                       const OFX::Point3D & p1,
+                       const OFX::Point3D & p2,
+                       const OFX::Point3D & p3,
+                       const OFX::Point3D & p4,
+                       OFX::Matrix3x3 & m);
     virtual bool isIdentity(double time) OVERRIDE FINAL;
-
     virtual bool getInverseTransformCanonical(double time, int view, double amount, bool invert, OFX::Matrix3x3* invtransform) const OVERRIDE FINAL;
-    
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
@@ -204,7 +201,6 @@ private:
     OFX::Double3DParam* _extraMatrixRow2;
     OFX::Double3DParam* _extraMatrixRow3;
     OFX::Double2DParam* _from[4];
-    
     OFX::PushButtonParam* _copyFromButton;
     OFX::PushButtonParam* _copyToButton;
     OFX::PushButtonParam* _copyInputButton;
@@ -212,7 +208,12 @@ private:
 };
 
 
-bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, int /*view*/, double amount, bool invert, OFX::Matrix3x3* invtransform) const
+bool
+CornerPinPlugin::getInverseTransformCanonical(OfxTime time,
+                                              int /*view*/,
+                                              double amount,
+                                              bool invert,
+                                              OFX::Matrix3x3* invtransform) const
 {
     // in this new version, both from and to are enableds/disabled at the same time
     bool enable[4];
@@ -221,7 +222,7 @@ bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, int /*view*/, d
     int t = invert ? 1 : 0;
     int k = 0;
 
-    for (int i=0; i < 4; ++i) {
+    for (int i = 0; i < 4; ++i) {
         _enable[i]->getValueAtTime(time, enable[i]);
         if (enable[i]) {
             _from[i]->getValueAtTime(time, p[f][k].x, p[f][k].y);
@@ -233,7 +234,7 @@ bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, int /*view*/, d
 
     if (amount != 1.) {
         int k = 0;
-        for (int i=0; i < 4; ++i) {
+        for (int i = 0; i < 4; ++i) {
             if (enable[i]) {
                 p[t][k].x = p[f][k].x + amount * (p[t][k].x - p[f][k].x);
                 p[t][k].y = p[f][k].y + amount * (p[t][k].y - p[f][k].y);
@@ -250,22 +251,23 @@ bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, int /*view*/, d
     if (k == 0) {
         // no points, only apply extraMat;
         *invtransform = getExtraMatrix(time);
+
         return true;
     }
 
     switch (k) {
-        case 4:
-            success = homo3x3.setHomographyFromFourPoints(p[0][0], p[0][1], p[0][2], p[0][3], p[1][0], p[1][1], p[1][2], p[1][3]);
-            break;
-        case 3:
-            success = homo3x3.setAffineFromThreePoints(p[0][0], p[0][1], p[0][2], p[1][0], p[1][1], p[1][2]);
-            break;
-        case 2:
-            success = homo3x3.setSimilarityFromTwoPoints(p[0][0], p[0][1], p[1][0], p[1][1]);
-            break;
-        case 1:
-            success = homo3x3.setTranslationFromOnePoint(p[0][0], p[1][0]);
-            break;
+    case 4:
+        success = homo3x3.setHomographyFromFourPoints(p[0][0], p[0][1], p[0][2], p[0][3], p[1][0], p[1][1], p[1][2], p[1][3]);
+        break;
+    case 3:
+        success = homo3x3.setAffineFromThreePoints(p[0][0], p[0][1], p[0][2], p[1][0], p[1][1], p[1][2]);
+        break;
+    case 2:
+        success = homo3x3.setSimilarityFromTwoPoints(p[0][0], p[0][1], p[1][0], p[1][1]);
+        break;
+    case 1:
+        success = homo3x3.setTranslationFromOnePoint(p[0][0], p[1][0]);
+        break;
     }
     if (!success) {
         ///cannot compute the homography when 3 points are aligned
@@ -276,19 +278,20 @@ bool CornerPinPlugin::getInverseTransformCanonical(OfxTime time, int /*view*/, d
     *invtransform = homo3x3 * extraMat;
 
     return true;
-}
-
+} // CornerPinPlugin::getInverseTransformCanonical
 
 // overridden is identity
-bool CornerPinPlugin::isIdentity(double time)
+bool
+CornerPinPlugin::isIdentity(double time)
 {
     OFX::Matrix3x3 extraMat = getExtraMatrix(time);
-    if (!extraMat.isIdentity()) {
+
+    if ( !extraMat.isIdentity() ) {
         return false;
     }
 
     // extraMat is identity.
-    
+
     // The transform is identity either if no point is enabled, or if
     // all enabled from's are equal to their counterpart to
     for (int i = 0; i < 4; ++i) {
@@ -298,7 +301,7 @@ bool CornerPinPlugin::isIdentity(double time)
             OfxPointD p, q;
             _from[i]->getValueAtTime(time, p.x, p.y);
             _to[i]->getValueAtTime(time, q.x, q.y);
-            if ((p.x != q.x) || (p.y != q.y)) {
+            if ( (p.x != q.x) || (p.y != q.y) ) {
                 return false;
             }
         }
@@ -306,7 +309,6 @@ bool CornerPinPlugin::isIdentity(double time)
 
     return true;
 }
-
 
 static void
 copyPoint(OFX::Double2DParam* from,
@@ -331,79 +333,82 @@ copyPoint(OFX::Double2DParam* from,
     to->copyFrom(*from, 0, NULL);
 }
 
-void CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+void
+CornerPinPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+                              const std::string &paramName)
 {
     // If any parameter is set by the user, set srcClipChanged to true so that from/to is not reset when
     // connecting the input.
     //printf("srcClipChanged=%s\n", _srcClipChanged->getValue() ? "true" : "false");
     if (paramName == kParamCopyInputRoD) {
-        if (_srcClip && _srcClip->isConnected()) {
+        if ( _srcClip && _srcClip->isConnected() ) {
             beginEditBlock(paramName);
-            const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(args.time);
+            const OfxRectD & srcRoD = _srcClip->getRegionOfDefinition(args.time);
             _from[0]->setValue(srcRoD.x1, srcRoD.y1);
             _from[1]->setValue(srcRoD.x2, srcRoD.y1);
             _from[2]->setValue(srcRoD.x2, srcRoD.y2);
             _from[3]->setValue(srcRoD.x1, srcRoD.y2);
             changedTransform(args);
-            if (args.reason == OFX::eChangeUserEdit && !_srcClipChanged->getValue()) {
+            if ( (args.reason == OFX::eChangeUserEdit) && !_srcClipChanged->getValue() ) {
                 _srcClipChanged->setValue(true);
             }
             endEditBlock();
         }
     } else if (paramName == kParamCopyFrom) {
         beginEditBlock(paramName);
-        for (int i=0; i<4; ++i) {
-            copyPoint(_from[i],_to[i]);
+        for (int i = 0; i < 4; ++i) {
+            copyPoint(_from[i], _to[i]);
         }
         changedTransform(args);
-        if (args.reason == OFX::eChangeUserEdit && !_srcClipChanged->getValue()) {
+        if ( (args.reason == OFX::eChangeUserEdit) && !_srcClipChanged->getValue() ) {
             _srcClipChanged->setValue(true);
         }
         endEditBlock();
     } else if (paramName == kParamCopyTo) {
         beginEditBlock(paramName);
-        for (int i=0; i<4; ++i) {
-            copyPoint(_to[i],_from[i]);
+        for (int i = 0; i < 4; ++i) {
+            copyPoint(_to[i], _from[i]);
         }
         changedTransform(args);
-        if (args.reason == OFX::eChangeUserEdit && !_srcClipChanged->getValue()) {
+        if ( (args.reason == OFX::eChangeUserEdit) && !_srcClipChanged->getValue() ) {
             _srcClipChanged->setValue(true);
         }
         endEditBlock();
-    } else if (paramName == kParamTo[0] ||
-               paramName == kParamTo[1] ||
-               paramName == kParamTo[2] ||
-               paramName == kParamTo[3] ||
-               paramName == kParamEnable[0] ||
-               paramName == kParamEnable[1] ||
-               paramName == kParamEnable[2] ||
-               paramName == kParamEnable[3] ||
-               paramName == kParamFrom[0] ||
-               paramName == kParamFrom[1] ||
-               paramName == kParamFrom[2] ||
-               paramName == kParamFrom[3] ||
-               paramName == kParamExtraMatrixRow1 ||
-               paramName == kParamExtraMatrixRow2 ||
-               paramName == kParamExtraMatrixRow3) {
+    } else if ( (paramName == kParamTo[0]) ||
+                ( paramName == kParamTo[1]) ||
+                ( paramName == kParamTo[2]) ||
+                ( paramName == kParamTo[3]) ||
+                ( paramName == kParamEnable[0]) ||
+                ( paramName == kParamEnable[1]) ||
+                ( paramName == kParamEnable[2]) ||
+                ( paramName == kParamEnable[3]) ||
+                ( paramName == kParamFrom[0]) ||
+                ( paramName == kParamFrom[1]) ||
+                ( paramName == kParamFrom[2]) ||
+                ( paramName == kParamFrom[3]) ||
+                ( paramName == kParamExtraMatrixRow1) ||
+                ( paramName == kParamExtraMatrixRow2) ||
+                ( paramName == kParamExtraMatrixRow3) ) {
         beginEditBlock(paramName);
         changedTransform(args);
-        if (args.reason == OFX::eChangeUserEdit && !_srcClipChanged->getValue()) {
+        if ( (args.reason == OFX::eChangeUserEdit) && !_srcClipChanged->getValue() ) {
             _srcClipChanged->setValue(true);
         }
         endEditBlock();
     } else {
         Transform3x3Plugin::changedParam(args, paramName);
     }
-}
+} // CornerPinPlugin::changedParam
 
 void
-CornerPinPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+CornerPinPlugin::changedClip(const InstanceChangedArgs &args,
+                             const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName &&
-        _srcClip && _srcClip->isConnected() &&
-        !_srcClipChanged->getValue() &&
-        args.reason == OFX::eChangeUserEdit) {
-        const OfxRectD& srcRoD = _srcClip->getRegionOfDefinition(args.time);
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
+         _srcClip && _srcClip->isConnected() &&
+         !_srcClipChanged->getValue() &&
+         ( args.reason == OFX::eChangeUserEdit) ) {
+        const OfxRectD & srcRoD = _srcClip->getRegionOfDefinition(args.time);
         beginEditBlock(clipName);
         _from[0]->setValue(srcRoD.x1, srcRoD.y1);
         _from[1]->setValue(srcRoD.x2, srcRoD.y1);
@@ -414,26 +419,28 @@ CornerPinPlugin::changedClip(const InstanceChangedArgs &args, const std::string 
         _to[2]->setValue(srcRoD.x2, srcRoD.y2);
         _to[3]->setValue(srcRoD.x1, srcRoD.y2);
         changedTransform(args);
-        if (args.reason == OFX::eChangeUserEdit && !_srcClipChanged->getValue()) {
+        if ( (args.reason == OFX::eChangeUserEdit) && !_srcClipChanged->getValue() ) {
             _srcClipChanged->setValue(true);
         }
         endEditBlock();
     }
 }
 
-class CornerPinTransformInteract : public OFX::OverlayInteract
+class CornerPinTransformInteract
+    : public OFX::OverlayInteract
 {
 public:
-    
-    CornerPinTransformInteract(OfxInteractHandle handle, OFX::ImageEffect* effect)
-    : OFX::OverlayInteract(handle)
-    , _plugin(dynamic_cast<CornerPinPlugin*>(effect))
-    , _invert(0)
-    , _overlayPoints(0)
-    , _interactive(0)
-    , _dragging(-1)
-    , _hovering(-1)
-    , _lastMousePos()
+
+    CornerPinTransformInteract(OfxInteractHandle handle,
+                               OFX::ImageEffect* effect)
+        : OFX::OverlayInteract(handle)
+        , _plugin( dynamic_cast<CornerPinPlugin*>(effect) )
+        , _invert(0)
+        , _overlayPoints(0)
+        , _interactive(0)
+        , _dragging(-1)
+        , _hovering(-1)
+        , _lastMousePos()
     {
         assert(_plugin);
         for (int i = 0; i < 4; ++i) {
@@ -471,19 +478,19 @@ public:
     virtual void loseFocus(const FocusArgs &args) OVERRIDE FINAL;
 
 private:
-    
+
     /**
      * @brief Returns true if the points that should be used by the overlay are
      * the "from" points, otherwise the overlay is assumed to use the "to" points.
      **/
     /*
-    bool isFromPoints(double time) const
-    {
+       bool isFromPoints(double time) const
+       {
         int v;
         _overlayPoints->getValueAtTime(time, v);
         return v == 1;
-    }
-*/
+       }
+     */
     CornerPinPlugin* _plugin;
     OFX::Double2DParam* _to[4];
     OFX::Double2DParam* _from[4];
@@ -491,11 +498,9 @@ private:
     OFX::BooleanParam* _invert;
     OFX::ChoiceParam* _overlayPoints;
     OFX::BooleanParam* _interactive;
-
     int _dragging; // -1: idle, else dragging point number
     int _hovering; // -1: idle, else hovering point number
     OfxPointD _lastMousePos;
-
     OfxPointD _toDrag[4];
     OfxPointD _fromDrag[4];
     bool _enableDrag[4];
@@ -503,15 +508,18 @@ private:
     bool _interactiveDrag;
 };
 
-
-
-
-static bool isNearby(const OfxPointD& p, double x, double y, double tolerance, const OfxPointD& pscale)
+static bool
+isNearby(const OfxPointD & p,
+         double x,
+         double y,
+         double tolerance,
+         const OfxPointD & pscale)
 {
-    return std::fabs(p.x-x) <= tolerance*pscale.x &&  std::fabs(p.y-y) <= tolerance*pscale.y;
+    return std::fabs(p.x - x) <= tolerance * pscale.x &&  std::fabs(p.y - y) <= tolerance * pscale.y;
 }
 
-bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
+bool
+CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
 {
 #if 0 //def DEBUG
     const OfxPointD &pscale = args.pixelScale;
@@ -521,15 +529,17 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
     std::cout << "pixelScale: " << pscale.x << ',' << pscale.y << std::endl;
 #endif
     const double time = args.time;
-    OfxRGBColourD color = { 0.8, 0.8, 0.8 };
+    OfxRGBColourD color = {
+        0.8, 0.8, 0.8
+    };
     getSuggestedColour(color);
     GLdouble projection[16];
     glGetDoublev( GL_PROJECTION_MATRIX, projection);
     GLint viewport[4];
     glGetIntegerv(GL_VIEWPORT, viewport);
     OfxPointD shadow; // how much to translate GL_PROJECTION to get exactly one pixel on screen
-    shadow.x = 2./(projection[0] * viewport[2]);
-    shadow.y = 2./(projection[5] * viewport[3]);
+    shadow.x = 2. / (projection[0] * viewport[2]);
+    shadow.y = 2. / (projection[5] * viewport[3]);
 
     OfxPointD to[4];
     OfxPointD from[4];
@@ -582,9 +592,9 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
     glEnable(GL_LINE_SMOOTH);
     //glEnable(GL_POINT_SMOOTH);
     glEnable(GL_BLEND);
-    glHint(GL_LINE_SMOOTH_HINT,GL_DONT_CARE);
+    glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
     glLineWidth(1.5f);
-    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glPointSize(POINT_SIZE);
     // Draw everything twice
@@ -598,7 +608,7 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
         glTranslated(direction * shadow.x, -direction * shadow.y, 0);
         glMatrixMode(GL_MODELVIEW); // Modelview should be used on Nuke
 
-        glColor3f((float)(color.r/2)*l, (float)(color.g/2)*l, (float)(color.b/2)*l);
+        glColor3f( (float)(color.r / 2) * l, (float)(color.g / 2) * l, (float)(color.b / 2) * l );
         glBegin(GL_LINES);
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
@@ -607,7 +617,7 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
             }
         }
         glEnd();
-        glColor3f((float)color.r*l, (float)color.g*l, (float)color.b*l);
+        glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
         glBegin(GL_LINE_LOOP);
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
@@ -618,16 +628,16 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
         glBegin(GL_POINTS);
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
-                if (_hovering == i || _dragging == i) {
-                    glColor3f(0.f*l, 1.f*l, 0.f*l);
+                if ( (_hovering == i) || (_dragging == i) ) {
+                    glColor3f(0.f * l, 1.f * l, 0.f * l);
                 } else {
-                    glColor3f((float)color.r*l, (float)color.g*l, (float)color.b*l);
+                    glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
                 }
                 glVertex2d(p[i].x, p[i].y);
             }
         }
         glEnd();
-        glColor3f((float)color.r*l, (float)color.g*l, (float)color.b*l);
+        glColor3f( (float)color.r * l, (float)color.g * l, (float)color.b * l );
         for (int i = enableBegin; i < enableEnd; ++i) {
             if (enable[i]) {
                 TextRenderer::bitmapString(p[i].x, p[i].y, useFrom ? kParamFrom[i] : kParamTo[i]);
@@ -638,13 +648,13 @@ bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
     //glPopAttrib();
 
     return true;
-}
+} // CornerPinTransformInteract::draw
 
-bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
+bool
+CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
 {
     const OfxPointD &pscale = args.pixelScale;
     const double time = args.time;
-
     OfxPointD to[4];
     OfxPointD from[4];
     bool enable[4];
@@ -711,14 +721,14 @@ bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
                     _toDrag[i] = to[i];
                 }
                 valuesChanged = true;
-            } else if (isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale)) {
+            } else if ( isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale) ) {
                 _hovering = i;
                 didSomething = true;
             }
         }
     }
 
-    if (_dragging != -1 && _interactiveDrag && valuesChanged) {
+    if ( (_dragging != -1) && _interactiveDrag && valuesChanged ) {
         // no need to redraw overlay since it is slave to the paramaters
         if (useFrom) {
             _from[_dragging]->setValue(from[_dragging].x, from[_dragging].y);
@@ -730,15 +740,15 @@ bool CornerPinTransformInteract::penMotion(const OFX::PenArgs &args)
     }
 
     _lastMousePos = args.penPosition;
-    
-    return didSomething || valuesChanged;
-}
 
-bool CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
+    return didSomething || valuesChanged;
+} // CornerPinTransformInteract::penMotion
+
+bool
+CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
 {
     const OfxPointD &pscale = args.pixelScale;
     const double time = args.time;
-
     OfxPointD to[4];
     OfxPointD from[4];
     bool enable[4];
@@ -791,7 +801,7 @@ bool CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
 
     for (int i = enableBegin; i < enableEnd; ++i) {
         if (enable[i]) {
-            if (isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale)) {
+            if ( isNearby(args.penPosition, p[i].x, p[i].y, POINT_TOLERANCE, pscale) ) {
                 _dragging = i;
                 didSomething = true;
             }
@@ -803,19 +813,20 @@ bool CornerPinTransformInteract::penDown(const OFX::PenArgs &args)
     _useFromDrag = useFrom;
 
     if (didSomething) {
-    _effect->redrawOverlays();
+        _effect->redrawOverlays();
     }
 
     _lastMousePos = args.penPosition;
 
     return didSomething;
-}
+} // CornerPinTransformInteract::penDown
 
-bool CornerPinTransformInteract::penUp(const OFX::PenArgs &/*args*/)
+bool
+CornerPinTransformInteract::penUp(const OFX::PenArgs & /*args*/)
 {
     bool didSomething = _dragging != -1;
 
-    if (!_interactiveDrag && _dragging != -1) {
+    if ( !_interactiveDrag && (_dragging != -1) ) {
         // no need to redraw overlay since it is slave to the paramaters
         if (_useFromDrag) {
             _from[_dragging]->setValue(_fromDrag[_dragging].x, _fromDrag[_dragging].y);
@@ -833,7 +844,7 @@ bool CornerPinTransformInteract::penUp(const OFX::PenArgs &/*args*/)
 
 /** @brief Called when the interact is loses input focus */
 void
-CornerPinTransformInteract::loseFocus(const FocusArgs &/*args*/)
+CornerPinTransformInteract::loseFocus(const FocusArgs & /*args*/)
 {
     _dragging = -1;
     _hovering = -1;
@@ -842,14 +853,18 @@ CornerPinTransformInteract::loseFocus(const FocusArgs &/*args*/)
 
 using namespace OFX;
 
-class CornerPinOverlayDescriptor : public DefaultEffectOverlayDescriptor<CornerPinOverlayDescriptor, CornerPinTransformInteract> {};
+class CornerPinOverlayDescriptor
+    : public DefaultEffectOverlayDescriptor<CornerPinOverlayDescriptor, CornerPinTransformInteract>
+{
+};
 
-static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
-                                           PageParamDescriptor *page,
-                                           GroupParamDescriptor* group,
-                                           int i,
-                                           double x,
-                                           double y)
+static void
+defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
+                               PageParamDescriptor *page,
+                               GroupParamDescriptor* group,
+                               int i,
+                               double x,
+                               double y)
 {
     // size
     {
@@ -886,14 +901,16 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
     }
 }
 
-static void defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
-                                              PageParamDescriptor *page,
-                                              GroupParamDescriptor* group,
-                                              int i,
-                                              double x,
-                                              double y)
+static void
+defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
+                                  PageParamDescriptor *page,
+                                  GroupParamDescriptor* group,
+                                  int i,
+                                  double x,
+                                  double y)
 {
     Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamFrom[i]);
+
     param->setLabel(kParamFrom[i]);
     param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
     param->setAnimates(true);
@@ -909,18 +926,20 @@ static void defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
     }
 }
 
-static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
-                                 PageParamDescriptor *page,
-                                 GroupParamDescriptor* group,
-                                 const std::string& name,
-                                 double x,
-                                 double y,
-                                 double z)
+static void
+defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
+                     PageParamDescriptor *page,
+                     GroupParamDescriptor* group,
+                     const std::string & name,
+                     double x,
+                     double y,
+                     double z)
 {
     Double3DParamDescriptor* param = desc.defineDouble3DParam(name);
+
     param->setLabel("");
     param->setAnimates(true);
-    param->setDefault(x,y,z);
+    param->setDefault(x, y, z);
     param->setIncrement(0.01);
     if (group) {
         param->setParent(*group);
@@ -931,7 +950,9 @@ static void defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
 }
 
 static void
-CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/, PageParamDescriptor *page)
+CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc,
+                                 OFX::ContextEnum /*context*/,
+                                 PageParamDescriptor *page)
 {
     // NON-GENERIC PARAMETERS
     //
@@ -1003,12 +1024,12 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
                 page->addChild(*param);
             }
         }
-        
+
         if (page && group) {
             page->addChild(*group);
         }
     }
-    
+
     // extraMatrix
     {
         GroupParamDescriptor* group = desc.defineGroupParam(kGroupExtraMatrix);
@@ -1051,11 +1072,11 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextE
             page->addChild(*param);
         }
     }
-}
+} // CornerPinPluginDescribeInContext
 
 mDeclarePluginFactory(CornerPinPluginFactory, {}, {});
-
-void CornerPinPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+CornerPinPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -1067,7 +1088,9 @@ void CornerPinPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setOverlayInteractDescriptor(new CornerPinOverlayDescriptor);
 }
 
-void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void
+CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                          OFX::ContextEnum context)
 {
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, false);
@@ -1084,22 +1107,19 @@ void CornerPinPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
         page->addChild(*param);
-
     }
 }
 
-
-OFX::ImageEffect* CornerPinPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+CornerPinPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                       OFX::ContextEnum /*context*/)
 {
     return new CornerPinPlugin(handle, false);
 }
 
-
-
-
 mDeclarePluginFactory(CornerPinMaskedPluginFactory, {}, {});
-
-void CornerPinMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+CornerPinMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginMaskedName);
@@ -1111,7 +1131,9 @@ void CornerPinMaskedPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setOverlayInteractDescriptor(new CornerPinOverlayDescriptor);
 }
 
-void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void
+CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                                OFX::ContextEnum context)
 {
     // make some pages and to things in
     PageParamDescriptor *page = Transform3x3DescribeInContextBegin(desc, context, true);
@@ -1128,16 +1150,15 @@ void CornerPinMaskedPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setAnimates(false);
         param->setEvaluateOnChange(false);
         page->addChild(*param);
-
     }
 }
 
-OFX::ImageEffect* CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+CornerPinMaskedPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                             OFX::ContextEnum /*context*/)
 {
     return new CornerPinPlugin(handle, true);
 }
-
-
 
 static CornerPinPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 static CornerPinMaskedPluginFactory p2(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
