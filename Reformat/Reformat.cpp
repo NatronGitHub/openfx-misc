@@ -840,7 +840,6 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->appendOption(kParamResizeOptionFill, kParamResizeOptionFillHint);
         assert(param->getNOptions() == eResizeDistort);
         param->appendOption(kParamResizeOptionDistort, kParamResizeOptionDistortHint);
-        param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         param->setDefault((int)eResizeWidth);
         param->setAnimates(true);
         if (page) {
