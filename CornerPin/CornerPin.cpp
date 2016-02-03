@@ -307,20 +307,27 @@ bool CornerPinPlugin::isIdentity(double time)
     return true;
 }
 
-static void copyPoint(OFX::Double2DParam* from, OFX::Double2DParam* to)
+
+static void
+copyPoint(OFX::Double2DParam* from,
+          OFX::Double2DParam* to)
 {
-//    OfxPointD p;
-//    unsigned int keyCount = from->getNumKeys();
-//    to->deleteAllKeys();
-//    for (unsigned int i = 0; i < keyCount; ++i) {
-//        OfxTime time = from->getKeyTime(i);
-//        from->getValueAtTime(time, p.x, p.y);
-//        to->setValueAtTime(time, p.x, p.y);
-//    }
-//    if (keyCount == 0) {
-//        from->getValueAtTime(time, p.x, p.y);
-//        to->setValue(p.x, p.y);
-//    }
+    // because some hosts (e.g. Resolve) have a faulty paramCopy, we first copy
+    // all keys and values
+    OfxPointD p;
+    unsigned int keyCount = from->getNumKeys();
+
+    to->deleteAllKeys();
+    for (unsigned int i = 0; i < keyCount; ++i) {
+        OfxTime time = from->getKeyTime(i);
+        from->getValueAtTime(time, p.x, p.y);
+        to->setValueAtTime(time, p.x, p.y);
+    }
+    if (keyCount == 0) {
+        from->getValue(p.x, p.y);
+        to->setValue(p.x, p.y);
+    }
+    // OfxParameterSuiteV1::paramCopy (does not work under Resolve)
     to->copyFrom(*from, 0, NULL);
 }
 
