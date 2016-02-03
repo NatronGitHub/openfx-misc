@@ -203,6 +203,7 @@ void CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& de
         param->setLabel(kParamMinLabel);
         param->setHint(kParamMinHint);
         param->setDefault(kParamMinDefault);
+        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 1.);
         param->setIncrement(0.001);
         if (page) {
@@ -214,6 +215,7 @@ void CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& de
         param->setLabel(kParamMaxLabel);
         param->setHint(kParamMaxHint);
         param->setDefault(kParamMaxDefault);
+        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 1.);
         param->setIncrement(0.001);
         if (page) {

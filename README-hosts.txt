@@ -5,7 +5,7 @@ Host-specific OpenFX bugs and caveats:
 OFX API version 1.3
 hostName=DaVinciResolveLite
 hostLabel=DaVinci Resolve Lite
-hostVersion=11.1.4 (11.1.4)
+hostVersion=12.2.0 (12.2)
 hostIsBackground=0
 supportsOverlays=1
 supportsMultiResolution=0
@@ -34,11 +34,12 @@ supportsCascadingChoices=0
 supportsChannelSelector=0
 suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,OfxMessageSuite,OfxMessageSuiteV2,OfxProgressSuite,OfxTimeLineSuite
 
-- doesn't support symbolic links in /Library/OFX/Plugins (on OS X)
+- version 11 of Resove Lite (from Mac App Store) does not support symbolic links in /Library/OFX/Plugins
 - in Generators, even if the source clip is defined, it can not be fetched by the plug-in
 - all defined clips will appear connected but give black and transparent (NULL) images. This is a problem for Mask clips, so a "Mask" boolean param must be added 
 - kOfxImagePropField property is always kOfxImageFieldNone on OFX images
-- The display range has to be defined for all Double params (kOfxParamTypeDouble, kOfxParamTypeDouble2D, kOfxParamTypeDouble3D), or a default range of (-1,1) is used, and values cannot lie outsideof this range !
+- The range AND display range has to be defined for all Double params (kOfxParamTypeDouble, kOfxParamTypeDouble2D, kOfxParamTypeDouble3D), or a default range of (-1,1) is used, and values cannot lie outsideof this range !
+- The range AND display range has to be defined for Int params (kOfxParamTypeInteger), or a default range of (0,0) is used, and values cannot lie outsideof this range !
 - kOfxParamPropDefaultCoordinateSystem=kOfxParamCoordinatesNormalised isn't supported (although API version 1.3 is claimed)
 - kOfxParamTypeInteger2D kOfxParamTypeInteger3D are not supported (crash when opening the parameters page), at least in Generators
 

@@ -22,7 +22,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
+#include <cfloat>
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -844,8 +844,8 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setHint(kParamKeyColorHint);
         param->setDefault(0., 0., 0.);
         // the following should be the default
-        double kmin = -std::numeric_limits<double>::max();
-        double kmax = std::numeric_limits<double>::max();
+        double kmin = -DBL_MAX;
+        double kmax = DBL_MAX;
         param->setRange(kmin, kmin, kmin, kmax, kmax, kmax);
         param->setDisplayRange(0., 0., 0., 1., 1., 1.);
         param->setAnimates(true);
@@ -905,7 +905,7 @@ void ChromaKeyerPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         DoubleParamDescriptor* param = desc.defineDoubleParam(kParamKeyGain);
         param->setLabel(kParamKeyGainLabel);
         param->setHint(kParamKeyGainHint);
-        param->setRange(0., std::numeric_limits<double>::max());
+        param->setRange(0., DBL_MAX);
         param->setDisplayRange(0., 2.);
         param->setIncrement(0.01);
         param->setDefault(1.);

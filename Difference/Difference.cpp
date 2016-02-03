@@ -21,6 +21,7 @@
  */
 
 #include <cmath>
+#include <cfloat>
 #include <algorithm>
 #ifdef _WINDOWS
 #include <windows.h>
@@ -389,6 +390,7 @@ void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setHint(kParamOffsetHint);
         param->setDefault(0.);
         param->setIncrement(0.005);
+        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 1.);
         if (page) {
             page->addChild(*param);
@@ -402,6 +404,7 @@ void DifferencePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setHint(kParamGainHint);
         param->setDefault(1.);
         param->setIncrement(0.005);
+        param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 1.);
         param->setDoubleType(eDoubleTypeScale);
         if (page) {

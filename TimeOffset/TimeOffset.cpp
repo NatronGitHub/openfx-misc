@@ -251,7 +251,8 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setDefault(0);
         // keep default range (INT_MIN..INT_MAX)
         // no display range
-        // param->setDisplayRange(0, 0);
+        param->setRange(INT_MIN, INT_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+        param->setDisplayRange(INT_MIN, INT_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setAnimates(false); // used in getTimeDomain()
         if (page) {
             page->addChild(*param);

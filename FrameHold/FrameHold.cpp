@@ -263,9 +263,8 @@ void FrameHoldPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamFirstFrameLabel);
         param->setHint(kParamFirstFrameHint);
         param->setDefault(0);
-        // keep default range (INT_MIN..INT_MAX)
-        // no display range
-        // param->setDisplayRange(0, 0);
+        param->setRange(INT_MIN, INT_MAX);
+        param->setDisplayRange(INT_MIN, INT_MAX);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);
@@ -278,6 +277,8 @@ void FrameHoldPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamIncrementLabel);
         param->setHint(kParamIncrementHint);
         param->setDefault(0);
+        param->setRange(0, INT_MAX);
+        param->setDisplayRange(0, INT_MAX);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);

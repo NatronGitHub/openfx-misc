@@ -860,6 +860,7 @@ ColorSuppressPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamRedSuppressLabel);
         param->setHint(kParamRedSuppressHint);
         param->setDefault(0.0);
+        param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0.0, 1.0);
         if (page) {
             page->addChild(*param);
@@ -870,6 +871,7 @@ ColorSuppressPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamGreenSuppressLabel);
         param->setHint(kParamGreenSuppressHint);
         param->setDefault(0.0);
+        param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0.0, 1.0);
         if (page) {
             page->addChild(*param);
@@ -880,6 +882,7 @@ ColorSuppressPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamBlueSuppressLabel);
         param->setHint(kParamBlueSuppressHint);
         param->setDefault(0.0);
+        param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0.0, 1.0);
         if (page) {
             page->addChild(*param);
@@ -890,6 +893,7 @@ ColorSuppressPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamCyanSuppressLabel);
         param->setHint(kParamCyanSuppressHint);
         param->setDefault(0.0);
+        param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0.0, 1.0);
         if (page) {
             page->addChild(*param);
@@ -900,6 +904,7 @@ ColorSuppressPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamMagentaSuppressLabel);
         param->setHint(kParamMagentaSuppressHint);
         param->setDefault(0.0);
+        param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0.0, 1.0);
         if (page) {
             page->addChild(*param);
@@ -910,6 +915,7 @@ ColorSuppressPluginFactory::describeInContext(ImageEffectDescriptor &desc,
         param->setLabel(kParamYellowSuppressLabel);
         param->setHint(kParamYellowSuppressHint);
         param->setDefault(0.0);
+        param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0.0, 1.0);
         if (page) {
             page->addChild(*param);

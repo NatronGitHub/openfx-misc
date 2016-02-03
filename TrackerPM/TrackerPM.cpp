@@ -888,6 +888,7 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDoubleType(eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(eCoordinatesNormalised);
         param->setDefault(0.5, 0.5);
+        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setIncrement(1.);
         param->setEvaluateOnChange(false); // The tracker is identity always
@@ -908,6 +909,7 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDoubleType(eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(eCoordinatesCanonical);
         param->setDefault(0, 0);
+        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         param->setIncrement(1.);
         param->setEvaluateOnChange(false); // The tracker is identity always
@@ -924,6 +926,7 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDoubleType(eDoubleTypeXY);
         param->setDefaultCoordinateSystem(eCoordinatesCanonical);
         param->setDefault(-15,-15);
+        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-50., -50., 50., 50.);
         param->setIncrement(1.);
         //param->setIsSecret(true);
@@ -944,6 +947,7 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDoubleType(eDoubleTypeXY);
         param->setDefaultCoordinateSystem(eCoordinatesCanonical);
         param->setDefault(15, 15);
+        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-50., -50., 50., 50.);
         param->setIncrement(1.);
         //innerTopRight->setIsSecret(true);
@@ -964,6 +968,7 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDoubleType(eDoubleTypeXY);
         param->setDefaultCoordinateSystem(eCoordinatesCanonical);
         param->setDefault(-25,-25);
+        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-100., -100., 100., 100.);
         param->setIncrement(1.);
         //param->setIsSecret(true);
@@ -984,6 +989,7 @@ void TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setDoubleType(eDoubleTypeXY);
         param->setDefaultCoordinateSystem(eCoordinatesCanonical);
         param->setDefault(25, 25);
+        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-100., -100., 100., 100.);
         param->setIncrement(1.);
         //param->setIsSecret(true);

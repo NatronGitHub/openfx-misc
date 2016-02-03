@@ -1109,6 +1109,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setHint(kParamHueRangeHint);
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
             param->setDefault(0., 360.);
+            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 0., 360., 360.);
             param->setDoubleType(eDoubleTypeAngle);
             if (group) {
@@ -1122,6 +1123,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamHueRotation);
             param->setLabel(kParamHueRotationLabel);
             param->setHint(kParamHueRotationHint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-180., 180.);
             param->setDoubleType(eDoubleTypeAngle);
             if (group) {
@@ -1166,6 +1168,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setHint(kParamSaturationRangeHint);
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
             param->setDefault(0., 1.);
+            param->setRange(0., 0., 1., 1.);
             param->setDisplayRange(0., 0., 1, 1);
             if (group) {
                 param->setParent(*group);
@@ -1178,6 +1181,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSaturationAdjustment);
             param->setLabel(kParamSaturationAdjustmentLabel);
             param->setHint(kParamSaturationAdjustmentHint);
+            param->setRange(-1., 1.);
             param->setDisplayRange(0., 1.);
             if (group) {
                 param->setParent(*group);
@@ -1190,6 +1194,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSaturationRangeRolloff);
             param->setLabel(kParamSaturationRangeRolloffLabel);
             param->setHint(kParamSaturationRangeRolloffHint);
+            param->setRange(0., 1.);
             param->setDisplayRange(0., 1.);
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
             if (group) {
@@ -1219,6 +1224,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setHint(kParamBrightnessRangeHint);
             param->setDimensionLabels("", ""); // the two values have the same meaning (they just define a range)
             param->setDefault(0., 1.);
+            param->setRange(0., 0., DBL_MAX, DBL_MAX);
             param->setDisplayRange(0., 0., 1, 1);
             if (group) {
                 param->setParent(*group);
@@ -1231,6 +1237,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBrightnessAdjustment);
             param->setLabel(kParamBrightnessAdjustmentLabel);
             param->setHint(kParamBrightnessAdjustmentHint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 1.);
             if (group) {
                 param->setParent(*group);
@@ -1243,6 +1250,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBrightnessRangeRolloff);
             param->setLabel(kParamBrightnessRangeRolloffLabel);
             param->setHint(kParamBrightnessRangeRolloffHint);
+            param->setRange(0., DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 1.);
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
             if (group) {

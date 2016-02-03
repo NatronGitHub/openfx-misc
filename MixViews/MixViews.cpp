@@ -374,8 +374,8 @@ void MixViewsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamMixLabel);
         param->setHint(kParamMixHint);
         param->setDefault(0.);
-        param->setRange(0., 1.);
         param->setIncrement(0.01);
+        param->setRange(0., 1.);
         param->setDisplayRange(0., 1.);
         param->setDoubleType(eDoubleTypeScale);
         param->setAnimates(true);

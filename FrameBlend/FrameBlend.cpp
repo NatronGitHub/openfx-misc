@@ -24,7 +24,7 @@
 // - show progress
 
 #include <cmath> // for floor
-#include <climits> // for kOfxFlagInfiniteMax
+#include <climits> // for INT_MAX
 #include <cfloat>
 #include <cassert>
 #include <algorithm>
@@ -1124,7 +1124,7 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         IntParamDescriptor *param = desc.defineIntParam(kParamFrameIntervalName);
         param->setLabel(kParamFrameIntervalLabel);
         param->setHint(kParamFrameIntervalHint);
-        param->setRange(1, kOfxFlagInfiniteMax);
+        param->setRange(1, INT_MAX);
         param->setDisplayRange(1, 10);
         param->setDefault(1);
         param->setAnimates(true); // can animate

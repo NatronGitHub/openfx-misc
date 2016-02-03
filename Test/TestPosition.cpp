@@ -24,6 +24,7 @@
 #include "ofxsTransformInteract.h"
 
 #include <cmath>
+#include <cfloat>
 #include <iostream>
 #ifdef _WINDOWS
 #include <windows.h>
@@ -144,6 +145,7 @@ void TestPositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
         param->setDoubleType(eDoubleTypeXYAbsolute);
         param->setDefaultCoordinateSystem(eCoordinatesNormalised);
         param->setDefault(0., 0.);
+        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
         if (param->getHostHasNativeOverlayHandle()) {
             param->setUseHostNativeOverlayHandle(true);

@@ -601,6 +601,7 @@ void CImgErodeSmoothPluginFactory::describeInContext(OFX::ImageEffectDescriptor&
         param->setDimensionLabels("min", "max");
         param->setHint(kParamRangeHint);
         param->setDefault(0., 1.);
+        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 0., 1., 1.);
         param->setAnimates(true);
         if (page) {

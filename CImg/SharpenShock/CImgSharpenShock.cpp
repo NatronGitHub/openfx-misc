@@ -313,6 +313,7 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAmplitude);
         param->setLabel(kParamAmplitudeLabel);
         param->setHint(kParamAmplitudeHint);
+        param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0, 1.5 /*400/255*/);
         param->setDefault(kParamAmplitudeDefault);
         param->setIncrement(0.01);
@@ -324,6 +325,7 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamEdgeThreshold);
         param->setLabel(kParamEdgeThresholdLabel);
         param->setHint(kParamEdgeThresholdHint);
+        param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0, 0.7);
         param->setDefault(kParamEdgeThresholdDefault);
         param->setIncrement(0.01);
@@ -335,6 +337,7 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamGradientSmoothness);
         param->setLabel(kParamGradientSmoothnessLabel);
         param->setHint(kParamGradientSmoothnessHint);
+        param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0, 10.);
         param->setDefault(kParamGradientSmoothnessDefault);
         param->setIncrement(0.01);
@@ -346,6 +349,7 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamTensorSmoothness);
         param->setLabel(kParamTensorSmoothnessLabel);
         param->setHint(kParamTensorSmoothnessHint);
+        param->setRange(0, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0, 10.);
         param->setDefault(kParamTensorSmoothnessDefault);
         param->setIncrement(0.01);
@@ -357,7 +361,7 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamIterations);
         param->setLabel(kParamIterationsLabel);
         param->setHint(kParamIterationsHint);
-        param->setRange(0, 10);
+        param->setRange(0, INT_MAX);
         param->setDisplayRange(0, 10);
         param->setDefault(kParamIterationsDefault);
         if (page) {

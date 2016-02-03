@@ -776,6 +776,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setDimensionLabels("min", "max");
         param->setHint(kParamRangeHint);
         param->setDefault(0., 1.);
+        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 0., 1., 1.);
         param->setAnimates(true);
         if (page) {
@@ -836,6 +837,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamSource);
         param->setLabel(kParamSourceLabel);
         param->setHint(kParamSourceHint);
+        param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 0., 0., 0., 4., 4., 4., 4.);
         param->setEvaluateOnChange(false);
         param->setIsPersistant(false);
@@ -847,6 +849,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(kParamTarget);
         param->setLabel(kParamTargetLabel);
         param->setHint(kParamTargetHint);
+        param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 0., 0., 0., 4., 4., 4., 4.);
         param->setEvaluateOnChange(false);
         param->setIsPersistant(false);

@@ -1173,6 +1173,7 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         param->setLabel(kParamGammaLabel);
         param->setHint(kParamGammaHint);
         param->setDefault(1.,1.,1.,1.);
+        param->setRange(0., 0., 0., 0., DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0.2, 0.2, 0.2, 0.2, 5., 5., 5., 5.);
         if (page) {
             page->addChild(*param);
@@ -1186,6 +1187,7 @@ void GodRaysPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         param->setLabel(kParamStepsLabel);
         param->setHint(kParamStepsHint);
         param->setDefault(5);
+        param->setRange(0, INT_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0, 10);
         if (page) {
             page->addChild(*param);

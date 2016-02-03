@@ -1801,6 +1801,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             param->setLabel(kParamUVOffsetLabel);
             param->setHint(kParamUVOffsetHint);
             param->setDefault(0., 0.);
+            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 0., 1., 1.);
             param->setDimensionLabels("U", "V");
             if (page) {
@@ -1813,6 +1814,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             param->setHint(kParamUVScaleHint);
             param->setDoubleType(eDoubleTypeScale);
             param->setDefault(1., 1.);
+            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 0., 100., 100.);
             param->setDimensionLabels("U", "V");
             if (page) {
@@ -1859,6 +1861,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamK1);
             param->setLabel(kParamK1Label);
             param->setHint(kParamK1Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.3, 0.3);
             param->setLayoutHint(eLayoutHintNoNewLine, 1);
             if (page) {
@@ -1869,6 +1872,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamK2);
             param->setLabel(kParamK2Label);
             param->setHint(kParamK2Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.1, 0.1);
             param->setLayoutHint(eLayoutHintNoNewLine, 1);
             if (page) {
@@ -1879,6 +1883,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamK3);
             param->setLabel(kParamK3Label);
             param->setHint(kParamK3Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.1, 0.1);
             if (page) {
                 page->addChild(*param);
@@ -1888,6 +1893,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamP1);
             param->setLabel(kParamP1Label);
             param->setHint(kParamP1Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.1, 0.1);
             param->setLayoutHint(eLayoutHintNoNewLine, 1);
             if (page) {
@@ -1898,6 +1904,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamP2);
             param->setLabel(kParamP2Label);
             param->setHint(kParamP2Hint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.1, 0.1);
             if (page) {
                 page->addChild(*param);
@@ -1907,6 +1914,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamCenter);
             param->setLabel(kParamCenterLabel);
             param->setHint(kParamCenterHint);
+            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-1, -1, 1, 1);
             if (page) {
                 page->addChild(*param);
@@ -1917,6 +1925,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             param->setLabel(kParamSqueezeLabel);
             param->setHint(kParamSqueezeHint);
             param->setDefault(1.);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 1.);
             if (page) {
                 page->addChild(*param);
@@ -1926,6 +1935,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamAsymmetric);
             param->setLabel(kParamAsymmetricLabel);
             param->setHint(kParamAsymmetricHint);
+            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, -0.5, 0.5, 0.5);
             if (page) {
                 page->addChild(*param);

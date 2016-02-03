@@ -665,6 +665,7 @@ void AddPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
         param->setLabel(kParamValueLabel);
         param->setHint(kParamValueHint);
         param->setDefault(0.0, 0.0, 0.0, 0.0);
+        param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0, 0, 0, 0, 4, 4, 4, 4);
         param->setAnimates(true); // can animate
         if (page) {

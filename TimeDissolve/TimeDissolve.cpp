@@ -496,8 +496,8 @@ TimeDissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamInLabel);
         param->setHint(kParamInHint);
         param->setDefault(1);
-        //param->setRange(0, 1);
-        //param->setDisplayRange(0, 1);
+        param->setRange(INT_MIN, INT_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+        param->setDisplayRange(INT_MIN, INT_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         if (page) {
             page->addChild(*param);
         }
@@ -507,8 +507,8 @@ TimeDissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->setLabel(kParamOutLabel);
         param->setHint(kParamOutHint);
         param->setDefault(10);
-        //param->setRange(0, 1);
-        //param->setDisplayRange(0, 1);
+        param->setRange(INT_MIN, INT_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+        param->setDisplayRange(INT_MIN, INT_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         if (page) {
             page->addChild(*param);
         }

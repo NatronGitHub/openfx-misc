@@ -33,8 +33,11 @@
 */
 
 #include <cmath>
-#include <iostream>
+#include <cfloat>
 #include <vector>
+#ifdef DEBUG
+#include <iostream>
+#endif
 
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
@@ -503,7 +506,13 @@ static bool isNearby(const OfxPointD& p, double x, double y, double tolerance, c
 
 bool CornerPinTransformInteract::draw(const OFX::DrawArgs &args)
 {
-    //const OfxPointD &pscale = args.pixelScale;
+#if 0 //def DEBUG
+    const OfxPointD &pscale = args.pixelScale;
+    // kOfxInteractPropPixelScale gives the size of a screen pixel in canonical coordinates.
+    // - it is correct under Nuke and Natron
+    // - it is always (1,1) under Resolve
+    std::cout << "pixelScale: " << pscale.x << ',' << pscale.y << std::endl;
+#endif
     const double time = args.time;
     OfxRGBColourD color = { 0.8, 0.8, 0.8 };
     getSuggestedColour(color);
@@ -840,11 +849,12 @@ static void defineCornerPinToDouble2DParam(OFX::ImageEffectDescriptor &desc,
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamTo[i]);
         param->setLabel(kParamTo[i]);
         param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-        param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
         param->setAnimates(true);
-        param->setDefault(x, y);
         param->setIncrement(1.);
+        param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
         param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
+        param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+        param->setDefault(x, y);
         param->setDimensionLabels("x", "y");
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         if (group) {
@@ -879,11 +889,12 @@ static void defineCornerPinFromsDouble2DParam(OFX::ImageEffectDescriptor &desc,
     Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamFrom[i]);
     param->setLabel(kParamFrom[i]);
     param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
-    param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
     param->setAnimates(true);
-    param->setDefault(x, y);
     param->setIncrement(1.);
-    param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
+    param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+    param->setDisplayRange(-10000, -10000, 10000, 10000);
+    param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+    param->setDefault(x, y);
     param->setDimensionLabels("x", "y");
     param->setParent(*group);
     if (page) {

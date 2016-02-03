@@ -773,6 +773,7 @@ void defineRGBAScaleParam(OFX::ImageEffectDescriptor &desc,
     param->setLabel(label);
     param->setHint(hint);
     param->setDefault(def,def,def,def);
+    param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
     param->setDisplayRange(min,min,min,min,max,max,max,max);
     if (page) {
         page->addChild(*param);

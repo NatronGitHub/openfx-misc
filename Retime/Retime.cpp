@@ -658,8 +658,8 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
             param->setLabel(kParamSpeedLabel);
             param->setHint(kParamSpeedHint);
             param->setDefault(1);
-            param->setRange(-FLT_MAX, FLT_MAX);
             param->setIncrement(0.05);
+            param->setRange(-DBL_MAX, DBL_MAX);
             param->setDisplayRange(0.1, 10.);
             param->setAnimates(true); // can animate
             param->setDoubleType(eDoubleTypeScale);
@@ -712,8 +712,8 @@ void RetimePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, Co
             param->setLabel(kParamDurationLabel);
             param->setHint(kParamDurationHint);
             param->setDefault(1);
-            param->setRange(0, 10);
             param->setIncrement(0.1);
+            param->setRange(0, 10);
             param->setDisplayRange(0, 10);
             param->setAnimates(false); // used in getTimeDomain()
             param->setDoubleType(eDoubleTypeScale);

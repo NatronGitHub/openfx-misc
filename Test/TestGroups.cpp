@@ -544,16 +544,16 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     OFX::DoubleParamDescriptor* customSAR = desc.defineDoubleParam( "kParamCustomSAR" );
     customSAR->setLabel( "Custom SAR" );
     customSAR->setDefault( 1.0 );
-    customSAR->setDisplayRange( 0., 3. );
     customSAR->setRange( 0., 10. );
+    customSAR->setDisplayRange( 0., 3. );
     customSAR->setHint( "Choose a custom value to override the file SAR (Storage Aspect Ratio). Maximum value: 10." );
     customSAR->setParent( *videoGroup );
 
     OFX::IntParamDescriptor* streamIndex = desc.defineIntParam( "kParamVideoStreamIndex" );
     streamIndex->setLabel( "kParamVideoStreamIndexLabel" );
     streamIndex->setDefault( 0 );
-    streamIndex->setDisplayRange( 0., 16. );
     streamIndex->setRange( 0., 100. );
+    streamIndex->setDisplayRange( 0., 16. );
     streamIndex->setHint( "Choose a custom value to decode the video stream you want. Maximum value: 100." );
     streamIndex->setParent( *videoGroup );
 

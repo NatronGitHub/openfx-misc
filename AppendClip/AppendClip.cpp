@@ -22,6 +22,9 @@
 
 #include <cmath>
 #include <algorithm>
+#ifdef DEBUG
+#include <iostream>
+#endif
 
 #include "ofxsImageEffect.h"
 #include "ofxsMultiThread.h"
@@ -518,8 +521,8 @@ AppendClipPlugin::setupAndProcess(OFX::ImageBlenderBase &processor,
     }
     assert(clip0 != clip1);
     if (clip1 == -1 && alpha0 == 1.) {
-        // should never happen, since it's identity
-        assert(0);
+        // should never happen, since it's identity, but it still may happen (Resolve)
+        //assert(0);
         std::auto_ptr<const OFX::Image> src((_srcClip[clip0] && _srcClip[clip0]->isConnected()) ?
                                             _srcClip[clip0]->fetchImage(t0) : 0);
         if (src.get()) {
@@ -949,6 +952,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         IntParamDescriptor *param = desc.defineIntParam(kParamFadeIn);
         param->setLabel(kParamFadeInLabel);
         param->setHint(kParamFadeInHint);
+        param->setRange(0, INT_MAX); // Resolve requires range and display range
         param->setDisplayRange(0, 50);
         param->setAnimates(false); // used in getTimeDomain()
         if (page) {
@@ -959,6 +963,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         IntParamDescriptor *param = desc.defineIntParam(kParamFadeOut);
         param->setLabel(kParamFadeOutLabel);
         param->setHint(kParamFadeOutHint);
+        param->setRange(0, INT_MAX); // Resolve requires range and display range
         param->setDisplayRange(0, 50);
         param->setAnimates(false); // used in getTimeDomain()
         if (page) {
@@ -969,6 +974,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         IntParamDescriptor *param = desc.defineIntParam(kParamCrossDissolve);
         param->setLabel(kParamCrossDissolveLabel);
         param->setHint(kParamCrossDissolveHint);
+        param->setRange(0, INT_MAX); // Resolve requires range and display range
         param->setDisplayRange(0, 50);
         param->setAnimates(false); // used in getTimeDomain()
         if (page) {
@@ -979,6 +985,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         IntParamDescriptor *param = desc.defineIntParam(kParamFirstFrame);
         param->setLabel(kParamFirstFrameLabel);
         param->setHint(kParamFirstFrameHint);
+        param->setRange(INT_MIN, INT_MAX); // Resolve requires range and display range
         param->setDefault(1);
         param->setAnimates(false); // used in getTimeDomain()
         if (page) {
@@ -989,6 +996,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         IntParamDescriptor *param = desc.defineIntParam(kParamLastFrame);
         param->setLabel(kParamLastFrameLabel);
         param->setHint(kParamLastFrameHint);
+        param->setRange(INT_MIN, INT_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDefault(0);
         param->setEnabled(false);
         param->setLayoutHint(eLayoutHintNoNewLine, 1);
