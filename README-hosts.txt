@@ -38,6 +38,7 @@ suites=OfxImageEffectSuite,OfxPropertySuite,OfxParameterSuite,OfxMemorySuite,Ofx
 - in Generators, even if the source clip is defined, it can not be fetched by the plug-in
 - all defined clips will appear connected but give black and transparent (NULL) images. This is a problem for Mask clips, so a "Mask" boolean param must be added 
 - kOfxImagePropField property is always kOfxImageFieldNone on OFX images
+- OfxParameterSuiteV1::paramCopy doesn nothing, keys and values have to be copied explicitely (see CornerPin)
 - The range AND display range has to be defined for all Double params (kOfxParamTypeDouble, kOfxParamTypeDouble2D, kOfxParamTypeDouble3D), or a default range of (-1,1) is used, and values cannot lie outsideof this range !
 - The range AND display range has to be defined for Int params (kOfxParamTypeInteger), or a default range of (0,0) is used, and values cannot lie outsideof this range !
 - kOfxParamPropDefaultCoordinateSystem=kOfxParamCoordinatesNormalised isn't supported (although API version 1.3 is claimed)
