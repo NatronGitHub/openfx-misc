@@ -1653,7 +1653,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
 {
     
 #ifdef OFX_EXTENSIONS_NUKE
-    if (gIsMultiPlane && !OFX::fetchSuite(kFnOfxImageEffectPlaneSuite, 2)) {
+    if (gIsMultiPlane && !OFX::fetchSuite(kFnOfxImageEffectPlaneSuite, 2, true)) {
         OFX::throwHostMissingSuiteException(kFnOfxImageEffectPlaneSuite);
     }
 #endif
