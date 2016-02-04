@@ -697,7 +697,9 @@ ClampPlugin::changedClip(const InstanceChangedArgs &args, const std::string &cli
         args.reason == OFX::eChangeUserEdit) {
         
         if (!_premultChanged->getValue()) {
-            switch (_srcClip->getPreMultiplication()) {
+            if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
+                _premult->setValue(false);
+            } else switch (_srcClip->getPreMultiplication()) {
                 case eImageOpaque:
                     _premult->setValue(false);
                     break;

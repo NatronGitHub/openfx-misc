@@ -94,7 +94,9 @@ CImgFilterPluginHelperBase::changedClip(const OFX::InstanceChangedArgs &args, co
         args.reason == OFX::eChangeUserEdit) {
         beginEditBlock("changedClip");
         if (_defaultUnpremult && !_premultChanged->getValue()) {
-            switch (_srcClip->getPreMultiplication()) {
+            if (_srcClip->getPixelComponents() != OFX::ePixelComponentRGBA) {
+                _premult->setValue(false);
+            } else switch (_srcClip->getPreMultiplication()) {
                 case OFX::eImageOpaque:
                     _premult->setValue(false);
                     break;

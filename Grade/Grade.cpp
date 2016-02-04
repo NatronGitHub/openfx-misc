@@ -708,7 +708,9 @@ GradePlugin::changedClip(const InstanceChangedArgs &args, const std::string &cli
         _srcClip && _srcClip->isConnected() &&
         !_premultChanged->getValue() &&
         args.reason == OFX::eChangeUserEdit) {
-        switch (_srcClip->getPreMultiplication()) {
+        if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
+            _premult->setValue(false);
+        } else switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
                 _premult->setValue(false);
                 break;

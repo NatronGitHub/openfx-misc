@@ -592,11 +592,24 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std
         _srcClip && _srcClip->isConnected() &&
         !_premultChanged->getValue() &&
         args.reason == OFX::eChangeUserEdit) {
-        switch (_srcClip->getPreMultiplication()) {
+        if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
+            _processR->setValue(false);
+            _processG->setValue(false);
+            _processB->setValue(false);
+            _processA->setValue(false);
+        } else switch (_srcClip->getPreMultiplication()) {
             case eImageOpaque:
+                _processR->setValue(false);
+                _processG->setValue(false);
+                _processB->setValue(false);
+                _processA->setValue(false);
                 break;
             case eImagePreMultiplied:
                 if (isPremult) {
+                    _processR->setValue(false);
+                    _processG->setValue(false);
+                    _processB->setValue(false);
+                    _processA->setValue(false);
                     //_premult->setValue(eInputChannelNone);
                 } else {
                     _processR->setValue(true);
@@ -608,6 +621,10 @@ PremultPlugin<isPremult>::changedClip(const InstanceChangedArgs &args, const std
                 break;
             case eImageUnPreMultiplied:
                 if (!isPremult) {
+                    _processR->setValue(false);
+                    _processG->setValue(false);
+                    _processB->setValue(false);
+                    _processA->setValue(false);
                     //_premult->setValue(eInputChannelNone);
                 } else {
                     _processR->setValue(true);
