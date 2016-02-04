@@ -207,7 +207,7 @@ public:
         _mix = mix;
     }
 
-private:
+protected:
     double luminance (double r,
                       double g,
                       double b)
