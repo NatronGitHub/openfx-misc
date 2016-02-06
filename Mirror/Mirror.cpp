@@ -591,6 +591,7 @@ void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMirrorFlip);
         param->setLabel(kParamMirrorFlipLabel);
         param->setHint(kParamMirrorFlipHint);
+        param->setAnimates(true);
         if (page) {
             page->addChild(*param);
         }
@@ -600,6 +601,7 @@ void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMirrorFlop);
         param->setLabel(kParamMirrorFlopLabel);
         param->setHint(kParamMirrorFlopHint);
+        param->setAnimates(true);
         if (page) {
             page->addChild(*param);
         }
