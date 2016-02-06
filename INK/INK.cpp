@@ -42,9 +42,17 @@ Version   Date       Author       Description
     1.5   26-NOV-15  N. Carroll   Implemented Spill Replacement
 
 * TODO implement Key Amount
+need to modulate keyAmountRGB by Key Colour
+current code only works when K[mid] = (K[min]+K[max])/2
+
 * TODO implement Tune Key Amount
+
 * TODO implement Matte and Despill Balance
+use the ratios between matte balance's channels for this
+not their absolute values
+
 * TODO implement Erode and Blur
+use cimg
 
 */
 
@@ -413,10 +421,6 @@ private:
                 // clamp core and garbage in the [0,1] range
                 core = max(0.f,min(core,1.f));
                 garbage = max(0.f,min(garbage,1.f));
-		// K is for Key Colour
-		double K[3] = {_keyColour.r, _keyColour.g, _keyColour.b};
-		// R is for Replacement Colour
-		double R[3] = {_replacementColour.r, _replacementColour.g, _replacementColour.b};
 
 	       	// which channel of the key colour is max
 		int minKey = 0; 
@@ -443,6 +447,10 @@ private:
 		  midKey = 1; 
 		  maxKey = 0; 
 		}
+		// K is for Key Colour
+		double K[3] = {_keyColour.r, _keyColour.g, _keyColour.b};
+		// R is for Replacement Colour
+		double R[3] = {_replacementColour.r, _replacementColour.g, _replacementColour.b};
 		// P is for source pixel
                 double P[3] = {(srcPix ? sampleToFloat<PIX,maxValue>(srcPix[0]) : 0.),
 			       (srcPix ? sampleToFloat<PIX,maxValue>(srcPix[1]) : 0.),
@@ -464,31 +472,33 @@ private:
 		if (!_despillCore) {
 		  keyAmountRGB *= (1-(double)core);
 		}
-		
-		if (!(K[minKey] == 0. && K[midKey] == 0. && K[maxKey] == 0.) && !(P[minKey] == 0. && P[midKey] == 0. && P[maxKey] == 0.) && !(keyAmountRGB==0.)) {
+		if (!(K[minKey] == 0. && K[midKey] == 0. && K[maxKey] == 0.) &&
+		    !(P[minKey] == 0. && P[midKey] == 0. && P[maxKey] == 0.) && !(keyAmountRGB==0.)) {
 		    // solve chan[minKey]		
 		    double min1 = (P[minKey]/(P[maxKey]-_keyBalance*P[midKey])-K[minKey]/(K[maxKey]-_keyBalance*K[midKey]))
 		      / (1+P[minKey]/(P[maxKey]-_keyBalance*P[midKey])-(2-_keyBalance)*K[minKey]/(K[maxKey]-_keyBalance*K[midKey]));
 		    double min2 = min(P[minKey],(P[maxKey]-_keyBalance*P[midKey])*min1/(1-min1));
-		    chan[minKey] = max(0.,min(min2,1.));
+		    double min3 = P[minKey] - keyAmountRGB*keyAmountRGB*(P[minKey] - min2);
+		    chan[minKey] = max(0.,min(min3,1.));
 		    // solve chan[midKey]
 		    double mid1 = (P[midKey]/(P[maxKey]-(1-_keyBalance)*P[minKey])-K[midKey]/(K[maxKey]-(1-_keyBalance)*K[minKey]))
 		      / (1+P[midKey]/(P[maxKey]-(1-_keyBalance)*P[minKey])-(1+_keyBalance)*K[midKey]/(K[maxKey]-(1-_keyBalance)*K[minKey]));
 		    double mid2 = min(P[midKey],(P[maxKey]-(1-_keyBalance)*P[minKey])*mid1/(1-mid1));
-		    chan[midKey] = max(0.,min(mid2,1.));
+		    double mid3 = P[midKey] - keyAmountRGB*keyAmountRGB*(P[midKey] - mid2);
+		    chan[midKey] = max(0.,min(mid3,1.));
 	  	    // solve chan[maxKey]
 		    double max1 = min(P[maxKey],(_keyBalance*min(P[midKey],(P[maxKey]-(1-_keyBalance)*P[minKey])*mid1/(1-mid1))
-		    			  + (1-_keyBalance)*min(P[minKey],(P[maxKey]-_keyBalance*P[midKey])*min1/(1-min1))));
-		    chan[maxKey] = max(0.,min(max1,1.));
+						 + (1-_keyBalance)*min(P[minKey],(P[maxKey]-_keyBalance*P[midKey])*min1/(1-min1))));
+		    double max2 = P[maxKey] - keyAmountRGB*keyAmountRGB*(P[maxKey] - max1);
+		    chan[maxKey] = max(0.,min(max2,1.));
 		    // solve alpha
 		    double a1 = (1-K[maxKey])+(_keyBalance*K[midKey]+(1-_keyBalance)*K[minKey]);
 		    double a2 = (_keyAmount*_keyAmount)*(1+a1/abs(1-a1));
-		    double a3 =  (1-P[maxKey])-P[maxKey]*(a2-(1+((_keyBalance*P[midKey]+(1-_keyBalance)*P[minKey]))/P[maxKey]*(a2)));
+		    double a3 =  (1-P[maxKey])-P[maxKey]*(a2-(1+(_keyBalance*P[midKey]+(1-_keyBalance)*P[minKey])/P[maxKey]*a2));
 		    double a4 = max(chan[midKey],max(a3,chan[minKey]));
 		    currMatte = max(0.,min(a4,1.)); //alpha
 		}
-                double sourceMatte = (_sourceAlpha == eSourceAlphaNormal &&
-                                    srcPix) ? sampleToFloat<PIX,maxValue>(srcPix[3]) : 1.;
+                double sourceMatte = (_sourceAlpha == eSourceAlphaNormal && srcPix) ? sampleToFloat<PIX,maxValue>(srcPix[3]) : 1.;
 		// add core and garbage mattes and source alpha option 'Multiply'
 		double combMatte = (currMatte+(double)core - currMatte*(double)core) * (1-garbage) * sourceMatte;
 
