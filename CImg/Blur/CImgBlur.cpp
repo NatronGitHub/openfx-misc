@@ -478,7 +478,7 @@ public:
             params.bloomSharpness = _bloomSharpness->getValueAtTime(time);
             params.bloomOrder = std::max(0, _bloomOrder->getValueAtTime(time));
         } else {
-            params.bloomSharpness = 0.;
+            params.bloomSharpness = 1.;
             params.bloomOrder = 0;
         }
         if (_blurPlugin == eBlurPluginChromaBlur) {
@@ -641,10 +641,11 @@ public:
             }
             cimg_library::CImg<float>& cimg_blur = (_blurPlugin == eBlurPluginChromaBlur ||
                                                     _blurPlugin == eBlurPluginBloom) ? cimg0: cimg;
+            double scale = ipow(params.bloomSharpness, i);
             if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
-                float sigmax = (float)(sx * ipow(params.bloomSharpness, i) / 2.4);
-                float sigmay = (float)(sy * ipow(params.bloomSharpness, i) / 2.4);
-                if (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0) {
+                float sigmax = (float)(sx * scale / 2.4);
+                float sigmay = (float)(sy * scale / 2.4);
+                if (_blurPlugin != eBlurPluginBloom && sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0) {
                     return;
                 }
                 // VanVliet filter was inexistent before 1.53, and buggy before CImg.h from
@@ -661,9 +662,9 @@ public:
             } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
                 int iter = (params.filter == eFilterBox ? 1 :
                             (params.filter == eFilterTriangle ? 2 : 3));
-                box(cimg_blur, sx, iter, params.orderX, 'x', (bool)params.boundary_i);
+                box(cimg_blur, sx * scale, iter, params.orderX, 'x', (bool)params.boundary_i);
                 if (abort()) { return; }
-                box(cimg_blur, sy, iter, params.orderY, 'y', (bool)params.boundary_i);
+                box(cimg_blur, sy * scale, iter, params.orderY, 'y', (bool)params.boundary_i);
             } else {
                 assert(false);
             }
@@ -732,16 +733,18 @@ public:
             sx *= scale;
             sy *= scale;
         }
+        bool ret = false;
         if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
             float sigmax = (float)(sx / 2.4);
             float sigmay = (float)(sy / 2.4);
-            return (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0);
+            ret = (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0);
         } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
-            return (sx <= 1 && sy <= 1 && params.orderX == 0 && params.orderY == 0);
+            ret = (sx <= 1 && sy <= 1 && params.orderX == 0 && params.orderY == 0);
         } else {
             assert(false);
         }
-        return false;
+
+        return ret;
     };
 
     // 0: Black/Dirichlet, 1: Nearest/Neumann, 2: Repeat/Periodic
