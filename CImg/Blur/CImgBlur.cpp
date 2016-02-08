@@ -477,6 +477,12 @@ public:
         if (_blurPlugin == eBlurPluginBloom) {
             params.bloomSharpness = _bloomSharpness->getValueAtTime(time);
             params.bloomOrder = std::max(0, _bloomOrder->getValueAtTime(time));
+            if (params.bloomSharpness <= 1.) {
+                params.bloomOrder = 0;
+            }
+            if (params.bloomOrder == 0) {
+                params.bloomSharpness = 1.;
+            }
         } else {
             params.bloomSharpness = 1.;
             params.bloomOrder = 0;
