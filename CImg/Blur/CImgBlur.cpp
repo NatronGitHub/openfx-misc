@@ -68,9 +68,25 @@
 "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
 "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
+#define kPluginNameBloom          "BloomCImg"
+#define kPluginGroupingBloom      "Filter"
+#define kPluginDescriptionBloom \
+"Apply a Bloom filter (Kawase 2004) that sums multiple blur filters of different radii,\n" \
+"resulting in a larger but sharper glare than a simple blur.\n" \
+"The blur radii follow a geometric progression (of common ratio 2 in the original implementation, " \
+"bloomSharpness in this implementation), and a total of 2*order+1 blur kernels are summed up (order=2 " \
+"in the original implementation, and the kernels are Gaussian).\n" \
+"The blur filter can be a quasi-Gaussian, a Gaussian, a box, a triangle or a quadratic filter.\n" \
+"Ref.: Masaki Kawase, \"Practical Implementation of High Dynamic Range Rendering\", GDC 2004.\n" \
+"Uses the 'vanvliet' and 'deriche' functions from the CImg library.\n" \
+"CImg is a free, open-source library distributed under the CeCILL-C " \
+"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+"It can be used in commercial applications (see http://cimg.sourceforge.net)."
+
 #define kPluginIdentifier    "net.sf.cimg.CImgBlur"
 #define kPluginIdentifierLaplacian    "net.sf.cimg.CImgLaplacian"
 #define kPluginIdentifierChromaBlur    "net.sf.cimg.CImgChromaBlur"
+#define kPluginIdentifierBloom    "net.sf.cimg.CImgBloom"
 // History:
 // version 1.0: initial version
 // version 2.0: size now has two dimensions
@@ -115,6 +131,16 @@
 #define kParamOrderY "orderY"
 #define kParamOrderYLabel "Y derivation order"
 #define kParamOrderYHint "Derivation order in the Y direction. (orderX=0,orderY=0) does smoothing, (orderX=0,orderY=1) computes the X component of the image gradient."
+
+#define kParamBloomSharpness "bloomSharpness"
+#define kParamBloomSharpnessLabel "Sharpness"
+#define kParamBloomSharpnessHint "Sharpness of the bloom filter. A sharpness of 1 corresponds to the original blur kernel. A higher sharpness gives a blur kernel with a narrower base and a heavier tail. The original implementation uses a value of 2."
+#define kParamBloomSharpnessDefault 2.
+
+#define kParamBloomOrder "bloomOrder"
+#define kParamBloomOrderLabel "Order"
+#define kParamBloomOrderHint "Order of the bloom filter, used to compute the number of blur kernels (bloomOrder*2+1). The original implementation uses a value of 2."
+#define kParamBloomOrderDefault 2
 
 #define kParamBoundary "boundary"
 #define kParamBoundaryLabel "Border Conditions" //"Boundary Conditions"
@@ -179,6 +205,36 @@ enum FilterEnum
 typedef float T;
 using namespace cimg_library;
 
+// Exponentiation by squaring
+// works with positive or negative integer exponents
+namespace {
+template<typename T>
+T
+ipow(T base, int exp)
+{
+    T result = T(1);
+    if (exp >= 0) {
+        while (exp) {
+            if (exp & 1) {
+                result *= base;
+            }
+            exp >>= 1;
+            base *= base;
+        }
+    } else {
+        exp = -exp;
+        while (exp) {
+            if (exp & 1) {
+                result /= base;
+            }
+            exp >>= 1;
+            base *= base;
+        }
+    }
+
+    return result;
+}
+}
 
 static inline
 T get_data(T *data, const int N, const unsigned long off, const bool boundary_conditions, const int x)
@@ -340,6 +396,8 @@ struct CImgBlurParams
     double sizex, sizey; // sizex takes PixelAspectRatio intor account
     int orderX;
     int orderY;
+    double bloomSharpness;
+    int bloomOrder;
     ChrominanceMathEnum chrominanceMath;
     int boundary_i;
     FilterEnum filter;
@@ -350,6 +408,7 @@ enum BlurPluginEnum {
     eBlurPluginBlur,
     eBlurPluginLaplacian,
     eBlurPluginChromaBlur,
+    eBlurPluginBloom
 };
 
 class CImgBlurPlugin : public CImgFilterPluginHelper<CImgBlurParams,false>
@@ -363,6 +422,8 @@ public:
     , _uniform(0)
     , _orderX(0)
     , _orderY(0)
+    , _bloomSharpness(0)
+    , _bloomOrder(0)
     , _chrominanceMath(0)
     , _boundary(0)
     , _filter(0)
@@ -370,12 +431,17 @@ public:
     {
         _size  = fetchDouble2DParam(kParamSize);
         _uniform = fetchBooleanParam(kParamUniform);
+        assert(_size && _uniform);
         if (blurPlugin == eBlurPluginBlur) {
             _orderX = fetchIntParam(kParamOrderX);
             _orderY = fetchIntParam(kParamOrderY);
             assert(_orderX && _orderY);
         }
-        assert(_size && _uniform);
+        if (blurPlugin == eBlurPluginBloom) {
+            _bloomSharpness = fetchDoubleParam(kParamBloomSharpness);
+            _bloomOrder = fetchIntParam(kParamBloomOrder);
+            assert(_bloomSharpness && _bloomOrder);
+        }
         if (blurPlugin == eBlurPluginChromaBlur) {
             _chrominanceMath = fetchChoiceParam(kParamChrominanceMath);
             assert(_chrominanceMath);
@@ -394,8 +460,7 @@ public:
     virtual void getValuesAtTime(double time, CImgBlurParams& params) OVERRIDE FINAL
     {
         _size->getValueAtTime(time, params.sizex, params.sizey);
-        bool uniform;
-        _uniform->getValueAtTime(time, uniform);
+        bool uniform = _uniform->getValueAtTime(time);
         if (uniform) {
             params.sizey = params.sizex;
         }
@@ -404,29 +469,38 @@ public:
             params.sizex /= par;
         }
         if (_blurPlugin == eBlurPluginBlur) {
-            _orderX->getValueAtTime(time, params.orderX);
-            _orderY->getValueAtTime(time, params.orderY);
+            params.orderX = std::max(0, _orderX->getValueAtTime(time));
+            params.orderY = std::max(0, _orderY->getValueAtTime(time));
         } else {
             params.orderX = params.orderY = 0;
+        }
+        if (_blurPlugin == eBlurPluginBloom) {
+            params.bloomSharpness = _bloomSharpness->getValueAtTime(time);
+            params.bloomOrder = std::max(0, _bloomOrder->getValueAtTime(time));
+        } else {
+            params.bloomSharpness = 0.;
+            params.bloomOrder = 0;
         }
         if (_blurPlugin == eBlurPluginChromaBlur) {
             params.chrominanceMath = (ChrominanceMathEnum)_chrominanceMath->getValueAtTime(time);
             params.boundary_i = 1; // nearest
         } else {
-            _boundary->getValueAtTime(time, params.boundary_i);
+            params.boundary_i = _boundary->getValueAtTime(time);
         }
         params.filter = (FilterEnum)_filter->getValueAtTime(time);
-        if (_blurPlugin != eBlurPluginChromaBlur) {
-            _expandRoD->getValueAtTime(time, params.expandRoD);
-        } else {
-            params.expandRoD = false;
-        }
+        params.expandRoD = (_blurPlugin == eBlurPluginChromaBlur) ? false : _expandRoD->getValueAtTime(time);
     }
 
     bool getRegionOfDefinition(const OfxRectI& srcRoD, const OfxPointD& renderScale, const CImgBlurParams& params, OfxRectI* dstRoD) OVERRIDE FINAL
     {
         double sx = renderScale.x * params.sizex;
         double sy = renderScale.y * params.sizey;
+        if (_blurPlugin == eBlurPluginBloom) {
+            // size of the largest blur kernel
+            double scale = ipow(params.bloomSharpness, params.bloomOrder);
+            sx *= scale;
+            sy *= scale;
+        }
         if (params.expandRoD && !isEmpty(srcRoD)) {
             if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
                 float sigmax = (float)(sx / 2.4);
@@ -467,6 +541,12 @@ public:
     {
         double sx = renderScale.x * params.sizex;
         double sy = renderScale.y * params.sizey;
+        if (_blurPlugin == eBlurPluginBloom) {
+            // size of the largest blur kernel
+            double scale = ipow(params.bloomSharpness, params.bloomOrder);
+            sx *= scale;
+            sy *= scale;
+        }
         if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
             float sigmax = (float)(sx / 2.4);
             float sigmay = (float)(sy / 2.4);
@@ -502,6 +582,7 @@ public:
         double sx = args.renderScale.x * params.sizex;
         double sy = args.renderScale.y * params.sizey;
         CImg<float> cimg0;
+        CImg<float> cimg1;
         if (_blurPlugin == eBlurPluginLaplacian) {
             cimg0 = cimg;
         } else if (_blurPlugin == eBlurPluginChromaBlur) {
@@ -547,35 +628,50 @@ public:
                     ++pv;
                 }
             }
+        } else if (_blurPlugin == eBlurPluginBloom) {
+            // allocate a zero-valued result image to store the sum
+            cimg1.assign(cimg.width(), cimg.height(), cimg.depth(), cimg.spectrum(), 0.);
+        }
 
-        }
-        cimg_library::CImg<float>& cimg_blur = (_blurPlugin == eBlurPluginChromaBlur) ? cimg0: cimg;
-        if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
-            float sigmax = (float)(sx / 2.4);
-            float sigmay = (float)(sy / 2.4);
-            if (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0) {
-                return;
+        // the loop is used only for BloomCImg, other filters only do one iteration
+        for (int i = -params.bloomOrder; i <= params.bloomOrder; ++i) {
+            if (_blurPlugin == eBlurPluginBloom) {
+                // copy original image
+                cimg0 = cimg;
             }
-            // VanVliet filter was inexistent before 1.53, and buggy before CImg.h from
-            // 57ffb8393314e5102c00e5f9f8fa3dcace179608 Thu Dec 11 10:57:13 2014 +0100
-            if (params.filter == eFilterGaussian) {
-                cimg_blur.vanvliet(sigmax, params.orderX, 'x', (bool)params.boundary_i);
+            cimg_library::CImg<float>& cimg_blur = (_blurPlugin == eBlurPluginChromaBlur ||
+                                                    _blurPlugin == eBlurPluginBloom) ? cimg0: cimg;
+            if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
+                float sigmax = (float)(sx * ipow(params.bloomSharpness, i) / 2.4);
+                float sigmay = (float)(sy * ipow(params.bloomSharpness, i) / 2.4);
+                if (sigmax < 0.1 && sigmay < 0.1 && params.orderX == 0 && params.orderY == 0) {
+                    return;
+                }
+                // VanVliet filter was inexistent before 1.53, and buggy before CImg.h from
+                // 57ffb8393314e5102c00e5f9f8fa3dcace179608 Thu Dec 11 10:57:13 2014 +0100
+                if (params.filter == eFilterGaussian) {
+                    cimg_blur.vanvliet(sigmax, params.orderX, 'x', (bool)params.boundary_i);
+                    if (abort()) { return; }
+                    cimg_blur.vanvliet(sigmay, params.orderY, 'y', (bool)params.boundary_i);
+                } else {
+                    cimg_blur.deriche(sigmax, params.orderX, 'x', (bool)params.boundary_i);
+                    if (abort()) { return; }
+                    cimg_blur.deriche(sigmay, params.orderY, 'y', (bool)params.boundary_i);
+                }
+            } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
+                int iter = (params.filter == eFilterBox ? 1 :
+                            (params.filter == eFilterTriangle ? 2 : 3));
+                box(cimg_blur, sx, iter, params.orderX, 'x', (bool)params.boundary_i);
                 if (abort()) { return; }
-                cimg_blur.vanvliet(sigmay, params.orderY, 'y', (bool)params.boundary_i);
+                box(cimg_blur, sy, iter, params.orderY, 'y', (bool)params.boundary_i);
             } else {
-                cimg_blur.deriche(sigmax, params.orderX, 'x', (bool)params.boundary_i);
-                if (abort()) { return; }
-                cimg_blur.deriche(sigmay, params.orderY, 'y', (bool)params.boundary_i);
+                assert(false);
             }
-        } else if (params.filter == eFilterBox || params.filter == eFilterTriangle || params.filter == eFilterQuadratic) {
-            int iter = (params.filter == eFilterBox ? 1 :
-                        (params.filter == eFilterTriangle ? 2 : 3));
-            box(cimg_blur, sx, iter, params.orderX, 'x', (bool)params.boundary_i);
-            if (abort()) { return; }
-            box(cimg_blur, sy, iter, params.orderY, 'y', (bool)params.boundary_i);
-        } else {
-            assert(false);
-        }
+            if (_blurPlugin == eBlurPluginBloom) {
+                // accumulate result
+                cimg1 += cimg0;
+            }
+       }
 
         if (_blurPlugin == eBlurPluginLaplacian) {
             cimg *= -1;
@@ -621,6 +717,8 @@ public:
                     ++pv;
                 }
             }
+        } else if (_blurPlugin == eBlurPluginBloom) {
+            cimg = cimg1 / (params.bloomOrder * 2 + 1);
         }
     }
 
@@ -628,6 +726,12 @@ public:
     {
         double sx = args.renderScale.x * params.sizex;
         double sy = args.renderScale.y * params.sizey;
+        if (_blurPlugin == eBlurPluginBloom) {
+            // size of the largest blur kernel
+            double scale = ipow(params.bloomSharpness, params.bloomOrder);
+            sx *= scale;
+            sy *= scale;
+        }
         if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
             float sigmax = (float)(sx / 2.4);
             float sigmay = (float)(sy / 2.4);
@@ -657,6 +761,8 @@ private:
     OFX::BooleanParam *_uniform;
     OFX::IntParam *_orderX;
     OFX::IntParam *_orderY;
+    OFX::DoubleParam *_bloomSharpness;
+    OFX::IntParam *_bloomOrder;
     OFX::ChoiceParam *_chrominanceMath;
     OFX::ChoiceParam *_boundary;
     OFX::ChoiceParam *_filter;
@@ -680,6 +786,10 @@ CImgBlurPlugin::describe(OFX::ImageEffectDescriptor& desc, int /*majorVersion*/,
         case eBlurPluginChromaBlur:
             desc.setLabel(kPluginNameChromaBlur);
             desc.setPluginDescription(kPluginDescriptionChromaBlur);
+            break;
+        case eBlurPluginBloom:
+            desc.setLabel(kPluginNameBloom);
+            desc.setPluginDescription(kPluginDescriptionBloom);
             break;
     }
     desc.setPluginGrouping(kPluginGrouping);
@@ -769,6 +879,30 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
             param->setHint(kParamOrderYHint);
             param->setRange(0, 2);
             param->setDisplayRange(0, 2);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+    }
+    if (blurPlugin == eBlurPluginBloom) {
+        {
+            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBloomSharpness);
+            param->setLabel(kParamBloomSharpnessLabel);
+            param->setHint(kParamBloomSharpnessHint);
+            param->setRange(1., DBL_MAX);
+            param->setDisplayRange(1., 4.);
+            param->setDefault(kParamBloomSharpnessDefault);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            OFX::IntParamDescriptor *param = desc.defineIntParam(kParamBloomOrder);
+            param->setLabel(kParamBloomOrderLabel);
+            param->setHint(kParamBloomOrderHint);
+            param->setRange(0, INT_MAX);
+            param->setDisplayRange(0, 5);
+            param->setDefault(kParamBloomOrderDefault);
             if (page) {
                 page->addChild(*param);
             }
@@ -889,9 +1023,28 @@ OFX::ImageEffect* CImgChromaBlurPluginFactory::createInstance(OfxImageEffectHand
 }
 
 
+mDeclarePluginFactory(CImgBloomPluginFactory, {}, {});
+
+void CImgBloomPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+{
+    return CImgBlurPlugin::describe(desc, getMajorVersion(), getMinorVersion(), eBlurPluginBloom);
+}
+
+void CImgBloomPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+{
+    return CImgBlurPlugin::describeInContext(desc, context, getMajorVersion(), getMinorVersion(), eBlurPluginBloom);
+}
+
+OFX::ImageEffect* CImgBloomPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+{
+    return new CImgBlurPlugin(handle, eBlurPluginBloom);
+}
+
 static CImgBlurPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 static CImgLaplacianPluginFactory p2(kPluginIdentifierLaplacian, kPluginVersionMajor, kPluginVersionMinor);
 static CImgChromaBlurPluginFactory p3(kPluginIdentifierChromaBlur, kPluginVersionMajor, kPluginVersionMinor);
+static CImgBloomPluginFactory p4(kPluginIdentifierBloom, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
+mRegisterPluginFactoryInstance(p4)
