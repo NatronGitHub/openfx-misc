@@ -74,7 +74,7 @@
 "Apply a Bloom filter (Kawase 2004) that sums multiple blur filters of different radii,\n" \
 "resulting in a larger but sharper glare than a simple blur.\n" \
 "The blur radii follow a geometric progression (of common ratio 2 in the original implementation, " \
-"bloomSharpness in this implementation), and a total of 2*order+1 blur kernels are summed up (order=2 " \
+"bloomRatio in this implementation), and a total of bloomCount blur kernels are summed up (bloomCount=5 " \
 "in the original implementation, and the kernels are Gaussian).\n" \
 "The blur filter can be a quasi-Gaussian, a Gaussian, a box, a triangle or a quadratic filter.\n" \
 "Ref.: Masaki Kawase, \"Practical Implementation of High Dynamic Range Rendering\", GDC 2004.\n" \
@@ -132,15 +132,15 @@
 #define kParamOrderYLabel "Y derivation order"
 #define kParamOrderYHint "Derivation order in the Y direction. (orderX=0,orderY=0) does smoothing, (orderX=0,orderY=1) computes the X component of the image gradient."
 
-#define kParamBloomSharpness "bloomSharpness"
-#define kParamBloomSharpnessLabel "Sharpness"
-#define kParamBloomSharpnessHint "Sharpness of the bloom filter. A sharpness of 1 corresponds to the original blur kernel. A higher sharpness gives a blur kernel with a narrower base and a heavier tail. The original implementation uses a value of 2."
-#define kParamBloomSharpnessDefault 2.
+#define kParamBloomRatio "bloomRatio"
+#define kParamBloomRatioLabel "Ratio"
+#define kParamBloomRatioHint "Ratio between successive kernel sizes of the bloom filter. A ratio of 1 gives no Bloom effect, just the original blur. A higher ratio gives a blur kernel with a heavier tail. The original implementation uses a value of 2."
+#define kParamBloomRatioDefault 2.
 
-#define kParamBloomOrder "bloomOrder"
-#define kParamBloomOrderLabel "Order"
-#define kParamBloomOrderHint "Order of the bloom filter, used to compute the number of blur kernels (bloomOrder*2+1). The original implementation uses a value of 2."
-#define kParamBloomOrderDefault 2
+#define kParamBloomCount "bloomCount"
+#define kParamBloomCountLabel "Count"
+#define kParamBloomCountHint "Number of blur kernels of the bloom filter. The original implementation uses a value of 5. Higher values give a wider of heavier tail (the size of the largest blur kernel is 2**bloomCount * size). A count of 1 is just the original blur."
+#define kParamBloomCountDefault 5
 
 #define kParamBoundary "boundary"
 #define kParamBoundaryLabel "Border Conditions" //"Boundary Conditions"
@@ -153,6 +153,7 @@
 #define kParamBoundaryOptionPeriodicHint "Image is considered to be periodic out of the image domain."
 #define kParamBoundaryDefault eBoundaryDirichlet
 #define kParamBoundaryDefaultLaplacian eBoundaryNeumann
+#define kParamBoundaryDefaultBloom eBoundaryNeumann
 
 enum BoundaryEnum
 {
@@ -189,6 +190,7 @@ enum ChrominanceMathEnum
 #define kParamFilterOptionQuadratic "Quadratic"
 #define kParamFilterOptionQuadraticHint "Quadratic filter - FIR (finite support / impulsional response)."
 #define kParamFilterDefault eFilterGaussian
+#define kParamFilterDefaultBloom eFilterQuasiGaussian
 enum FilterEnum
 {
     eFilterQuasiGaussian = 0,
@@ -396,8 +398,8 @@ struct CImgBlurParams
     double sizex, sizey; // sizex takes PixelAspectRatio intor account
     int orderX;
     int orderY;
-    double bloomSharpness;
-    int bloomOrder;
+    double bloomRatio;
+    int bloomCount;
     ChrominanceMathEnum chrominanceMath;
     int boundary_i;
     FilterEnum filter;
@@ -422,8 +424,8 @@ public:
     , _uniform(0)
     , _orderX(0)
     , _orderY(0)
-    , _bloomSharpness(0)
-    , _bloomOrder(0)
+    , _bloomRatio(0)
+    , _bloomCount(0)
     , _chrominanceMath(0)
     , _boundary(0)
     , _filter(0)
@@ -438,9 +440,9 @@ public:
             assert(_orderX && _orderY);
         }
         if (blurPlugin == eBlurPluginBloom) {
-            _bloomSharpness = fetchDoubleParam(kParamBloomSharpness);
-            _bloomOrder = fetchIntParam(kParamBloomOrder);
-            assert(_bloomSharpness && _bloomOrder);
+            _bloomRatio = fetchDoubleParam(kParamBloomRatio);
+            _bloomCount = fetchIntParam(kParamBloomCount);
+            assert(_bloomRatio && _bloomCount);
         }
         if (blurPlugin == eBlurPluginChromaBlur) {
             _chrominanceMath = fetchChoiceParam(kParamChrominanceMath);
@@ -475,17 +477,17 @@ public:
             params.orderX = params.orderY = 0;
         }
         if (_blurPlugin == eBlurPluginBloom) {
-            params.bloomSharpness = _bloomSharpness->getValueAtTime(time);
-            params.bloomOrder = std::max(0, _bloomOrder->getValueAtTime(time));
-            if (params.bloomSharpness <= 1.) {
-                params.bloomOrder = 0;
+            params.bloomRatio = _bloomRatio->getValueAtTime(time);
+            params.bloomCount = std::max(1, _bloomCount->getValueAtTime(time));
+            if (params.bloomRatio <= 1.) {
+                params.bloomCount = 1;
             }
-            if (params.bloomOrder == 0) {
-                params.bloomSharpness = 1.;
+            if (params.bloomCount == 1) {
+                params.bloomRatio = 1.;
             }
         } else {
-            params.bloomSharpness = 1.;
-            params.bloomOrder = 0;
+            params.bloomRatio = 1.;
+            params.bloomCount = 1;
         }
         if (_blurPlugin == eBlurPluginChromaBlur) {
             params.chrominanceMath = (ChrominanceMathEnum)_chrominanceMath->getValueAtTime(time);
@@ -503,7 +505,7 @@ public:
         double sy = renderScale.y * params.sizey;
         if (_blurPlugin == eBlurPluginBloom) {
             // size of the largest blur kernel
-            double scale = ipow(params.bloomSharpness, params.bloomOrder);
+            double scale = ipow(params.bloomRatio, (params.bloomCount - 1));
             sx *= scale;
             sy *= scale;
         }
@@ -549,7 +551,7 @@ public:
         double sy = renderScale.y * params.sizey;
         if (_blurPlugin == eBlurPluginBloom) {
             // size of the largest blur kernel
-            double scale = ipow(params.bloomSharpness, params.bloomOrder);
+            double scale = ipow(params.bloomRatio, (params.bloomCount - 1));
             sx *= scale;
             sy *= scale;
         }
@@ -640,14 +642,14 @@ public:
         }
 
         // the loop is used only for BloomCImg, other filters only do one iteration
-        for (int i = -params.bloomOrder; i <= params.bloomOrder; ++i) {
+        for (int i = 0; i < params.bloomCount; ++i) {
             if (_blurPlugin == eBlurPluginBloom) {
                 // copy original image
                 cimg0 = cimg;
             }
             cimg_library::CImg<float>& cimg_blur = (_blurPlugin == eBlurPluginChromaBlur ||
                                                     _blurPlugin == eBlurPluginBloom) ? cimg0: cimg;
-            double scale = ipow(params.bloomSharpness, i);
+            double scale = ipow(params.bloomRatio, i);
             if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
                 float sigmax = (float)(sx * scale / 2.4);
                 float sigmay = (float)(sy * scale / 2.4);
@@ -725,7 +727,7 @@ public:
                 }
             }
         } else if (_blurPlugin == eBlurPluginBloom) {
-            cimg = cimg1 / (params.bloomOrder * 2 + 1);
+            cimg = cimg1 / params.bloomCount;
         }
     }
 
@@ -735,7 +737,7 @@ public:
         double sy = args.renderScale.y * params.sizey;
         if (_blurPlugin == eBlurPluginBloom) {
             // size of the largest blur kernel
-            double scale = ipow(params.bloomSharpness, params.bloomOrder);
+            double scale = ipow(params.bloomRatio, (params.bloomCount - 1));
             sx *= scale;
             sy *= scale;
         }
@@ -770,8 +772,8 @@ private:
     OFX::BooleanParam *_uniform;
     OFX::IntParam *_orderX;
     OFX::IntParam *_orderY;
-    OFX::DoubleParam *_bloomSharpness;
-    OFX::IntParam *_bloomOrder;
+    OFX::DoubleParam *_bloomRatio;
+    OFX::IntParam *_bloomCount;
     OFX::ChoiceParam *_chrominanceMath;
     OFX::ChoiceParam *_boundary;
     OFX::ChoiceParam *_filter;
@@ -895,23 +897,23 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
     }
     if (blurPlugin == eBlurPluginBloom) {
         {
-            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBloomSharpness);
-            param->setLabel(kParamBloomSharpnessLabel);
-            param->setHint(kParamBloomSharpnessHint);
+            OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBloomRatio);
+            param->setLabel(kParamBloomRatioLabel);
+            param->setHint(kParamBloomRatioHint);
             param->setRange(1., DBL_MAX);
             param->setDisplayRange(1., 4.);
-            param->setDefault(kParamBloomSharpnessDefault);
+            param->setDefault(kParamBloomRatioDefault);
             if (page) {
                 page->addChild(*param);
             }
         }
         {
-            OFX::IntParamDescriptor *param = desc.defineIntParam(kParamBloomOrder);
-            param->setLabel(kParamBloomOrderLabel);
-            param->setHint(kParamBloomOrderHint);
-            param->setRange(0, INT_MAX);
-            param->setDisplayRange(0, 5);
-            param->setDefault(kParamBloomOrderDefault);
+            OFX::IntParamDescriptor *param = desc.defineIntParam(kParamBloomCount);
+            param->setLabel(kParamBloomCountLabel);
+            param->setHint(kParamBloomCountHint);
+            param->setRange(1, INT_MAX);
+            param->setDisplayRange(1, 10);
+            param->setDefault(kParamBloomCountDefault);
             if (page) {
                 page->addChild(*param);
             }
@@ -941,6 +943,8 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
         //param->appendOption(kParamBoundaryOptionPeriodic, kParamBoundaryOptionPeriodicHint);
         if (blurPlugin == eBlurPluginLaplacian) {
             param->setDefault((int)kParamBoundaryDefaultLaplacian);
+        } else if (blurPlugin == eBlurPluginBloom) {
+            param->setDefault((int)kParamBoundaryDefaultBloom);
         } else {
             param->setDefault((int)kParamBoundaryDefault);
         }
@@ -962,7 +966,11 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
         param->appendOption(kParamFilterOptionTriangle, kParamFilterOptionTriangleHint);
         assert(param->getNOptions() == eFilterQuadratic && param->getNOptions() == 4);
         param->appendOption(kParamFilterOptionQuadratic, kParamFilterOptionQuadraticHint);
-        param->setDefault((int)kParamFilterDefault);
+        if (blurPlugin == eBlurPluginBloom) {
+            param->setDefault((int)kParamFilterDefaultBloom);
+        } else {
+            param->setDefault((int)kParamFilterDefault);
+        }
         if (page) {
             page->addChild(*param);
         }
@@ -971,7 +979,7 @@ CImgBlurPlugin::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::Context
         OFX::BooleanParamDescriptor *param = desc.defineBooleanParam(kParamExpandRoD);
         param->setLabel(kParamExpandRoDLabel);
         param->setHint(kParamExpandRoDHint);
-        param->setDefault(true);
+        param->setDefault(blurPlugin != eBlurPluginBloom); // the expanded RoD of Bloom may be very large
         if (page) {
             page->addChild(*param);
         }
