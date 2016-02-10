@@ -528,7 +528,9 @@ public:
         
         //Refresh output components secretness
         std::string layerName;
-        _outputLayerString->getValue(layerName);
+        if (_outputLayerString) {
+            _outputLayerString->getValue(layerName);
+        }
         
         std::string ofxComponents;
         if (layerName.empty() ||
