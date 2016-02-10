@@ -1922,7 +1922,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
 
     // outputComponents
     if (gIsMultiPlanar && gSupportsDynamicChoices) {
-        OFX::MultiPlane::describeInContextAddOutputLayerChoice(desc, page);
+        OFX::MultiPlane::describeInContextAddOutputLayerChoice(false, desc, page);
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputComponents);
