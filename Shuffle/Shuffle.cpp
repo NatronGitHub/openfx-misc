@@ -57,13 +57,6 @@
 #define kParamOutputComponentsOptionRGB "RGB"
 #define kParamOutputComponentsOptionAlpha "Alpha"
 
-enum OutputComponentChoiceEnum
-{
-    eOutputComponentChoiceRGBA,
-    eOutputComponentChoiceRGB,
-    eOutputComponentChoiceAlpha,
-};
-
 #define kParamOutputChannels kNatronOfxParamOutputChannels
 #define kParamOutputChannelsChoice kParamOutputChannels "Choice"
 #define kParamOutputChannelsLabel "Output Layer"
@@ -570,6 +563,8 @@ private:
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
 private:
+    
+    void setOutputComponentsParam(OFX::PixelComponentEnum comps);
     
     bool isIdentityInternal(double time, OFX::Clip*& identityClip);
     
@@ -1298,18 +1293,7 @@ ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
             //If color plane, select the value chosen by the user from the output components choice
             int comps_i;
             _outputComponents->getValue(comps_i);
-            OutputComponentChoiceEnum compsE = (OutputComponentChoiceEnum)comps_i;
-            switch (compsE) {
-                case eOutputComponentChoiceAlpha:
-                    dstPixelComps = OFX::ePixelComponentAlpha;
-                    break;
-                case eOutputComponentChoiceRGB:
-                    dstPixelComps = OFX::ePixelComponentRGB;
-                    break;
-                case eOutputComponentChoiceRGBA:
-                    dstPixelComps = OFX::ePixelComponentRGBA;
-                    break;
-            }
+            dstPixelComps = gOutputComponentsMap[comps_i];
         }
     } else {
         // set the components of _dstClip
@@ -1485,6 +1469,24 @@ ShufflePlugin::setChannelsFromRed(double time)
 }
 
 void
+ShufflePlugin::setOutputComponentsParam(OFX::PixelComponentEnum components)
+{
+    assert(components == OFX::ePixelComponentRGB || components == OFX::ePixelComponentRGBA || components == OFX::ePixelComponentAlpha);
+    int index = -1;
+    for (int i = 0; i < 4; ++i) {
+        if (gOutputComponentsMap[i] == OFX::ePixelComponentNone) {
+            break;
+        }
+        if (gOutputComponentsMap[i] == components) {
+            index = i;
+            break;
+        }
+    }
+    assert(index != -1);
+    _outputComponents->setValue(index);
+}
+
+void
 ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
 {
     //Commented out as it cannot be done here: enableComponents() relies on the clip components but the clip
@@ -1534,11 +1536,11 @@ ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::str
         }
         bool secret = false;
         if (ofxComponents == kOfxImageComponentAlpha) {
-            _outputComponents->setValue((int)eOutputComponentChoiceAlpha);
+            setOutputComponentsParam(OFX::ePixelComponentAlpha);
         } else if (ofxComponents == kOfxImageComponentRGB) {
-            _outputComponents->setValue((int)eOutputComponentChoiceRGB);;
+            setOutputComponentsParam(OFX::ePixelComponentRGB);
         } else if (ofxComponents == kOfxImageComponentRGBA) {
-            _outputComponents->setValue((int)eOutputComponentChoiceRGBA);;
+            setOutputComponentsParam(OFX::ePixelComponentRGBA);
         } else {
             secret = true;
         }
