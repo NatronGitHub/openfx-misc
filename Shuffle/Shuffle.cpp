@@ -1841,6 +1841,9 @@ void ShufflePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     
 #ifdef OFX_EXTENSIONS_NATRON
     gSupportsDynamicChoices = OFX::getImageEffectHostDescription()->supportsDynamicChoices;
+    
+    //Do not add channel selectors, it is pointless
+    desc.setChannelSelector(OFX::ePixelComponentNone);
 #else
     gSupportsDynamicChoices = false;
 #endif
