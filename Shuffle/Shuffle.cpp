@@ -2004,8 +2004,8 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     }
     
     std::vector<std::string> clipsForChannels(2);
-    clipsForChannels.push_back(kClipA);
-    clipsForChannels.push_back(kClipB);
+    clipsForChannels[0] = kClipA;
+    clipsForChannels[1] = kClipB;
     
     if (gSupportsRGB || gSupportsRGBA) {
         // outputR
