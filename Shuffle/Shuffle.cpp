@@ -1312,6 +1312,24 @@ ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
         BitDepthEnum outputBitDepth = gOutputBitDepthMap[_outputBitDepth->getValue()];
         clipPreferences.setClipBitDepth(*_dstClip, outputBitDepth);
     }
+    
+    bool aIsPremultiplied = _srcClipA->getPreMultiplication() == OFX::eImagePreMultiplied && _srcClipA->isConnected();
+    bool bIsPremultiplied = _srcClipB->getPreMultiplication() == OFX::eImagePreMultiplied && _srcClipB->isConnected();
+    if (aIsPremultiplied || bIsPremultiplied) {
+        //If the A input or the B input is premultiplied warn that it may yield wrong results
+        std::stringstream error;
+        if (aIsPremultiplied && bIsPremultiplied) {
+            error << "Input A and B have their RGB channels premultiplied by their Alpha channel.";
+        } else if (aIsPremultiplied && !bIsPremultiplied) {
+            error << "Input A has its RGB channels premultiplied by its Alpha channel.";
+        } else if (!aIsPremultiplied && bIsPremultiplied) {
+            error << "Input B has its RGB channels premultiplied by its Alpha channel.";
+        }
+        error << "You should be careful when copying any of these channels. To be safer, unpremultiply them first.";
+        setPersistentMessage(OFX::Message::eMessageWarning, "", error.str());
+    } else {
+        clearPersistentMessage();
+    }
 }
 
 static std::string
