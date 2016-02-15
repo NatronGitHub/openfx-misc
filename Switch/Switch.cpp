@@ -39,7 +39,20 @@
 
 #define kPluginName "SwitchOFX"
 #define kPluginGrouping "Merge"
-#define kPluginDescription "Lets you switch between any number of inputs.\n"\
+#define kPluginDescription \
+"Lets you switch between any number of inputs.\n" \
+"The selected input number may be manually selected using the \"which\" parameter, or " \
+"selected automatically if \"automatic\" is checked.\n" \
+"Automatic selection works by selecting, at any given time, the first input which is " \
+"connected and has a non-empty region of definition.\n" \
+"A typical use case is a graph where an edited movie is used as input, then split into " \
+"shots using one FrameRange plugin per shot (with \"before\" and \"after\" set to \"Black\"), " \
+"followed by a different processing for each shot (e.g. stabilization, color correction, cropping), " \
+"and all outputs are gathered into an edited movie using a single \"Switch\" plug-in in " \
+"automatic mode. In this graph, no plug-in shifts time, and thus there is no risk of " \
+"desynchronization, whereas using \"AppendClip\" instead of \"Switch\" may shift time if there is an " \
+"error in one of the FrameRange ranges (a typical error is to use the same frame number as the " \
+"last frame of shot n and the first frame of shot n+1).\n" \
 "This plugin concatenates transforms."
 #define kPluginIdentifier "net.sf.openfx.switchPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
