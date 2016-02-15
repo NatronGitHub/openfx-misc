@@ -29,6 +29,7 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
+#include "ofxNatron.h"
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
@@ -69,11 +70,14 @@ public:
     , _dstClip(0)
     , _srcClip(0)
     , _frameRange(0)
+    , _sublabel(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
         _frameRange = fetchInt2DParam(kParamFrameRange);
         assert(_frameRange);
+        _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
+        assert(_sublabel);
     }
 
 private:
@@ -89,6 +93,8 @@ private:
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
+    virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
+
       /* override the time domain action, only for the general context */
     virtual bool getTimeDomain(OfxRangeD &range) OVERRIDE FINAL;
 
@@ -98,6 +104,7 @@ private:
     OFX::Clip *_srcClip;
 
     OFX::Int2DParam *_frameRange;
+    OFX::StringParam *_sublabel;
 };
 
 
@@ -149,7 +156,27 @@ FrameRangePlugin::changedParam(const OFX::InstanceChangedArgs &/*args*/, const s
     if (paramName == kParamReset && _srcClip && _srcClip->isConnected()) {
         OfxRangeD range = _srcClip->getFrameRange();
         _frameRange->setValue((int)range.min, (int)range.max);
+        char label[80];
+        snprintf(label, sizeof(label), "%g - %g", range.min, range.max);
+        _sublabel->setValue(label);
     }
+}
+
+void
+FrameRangePlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+{
+    //std::cout << "changedClip!\n";
+    if (clipName == kOfxImageEffectSimpleSourceClipName &&
+        _srcClip && _srcClip->isConnected() &&
+        args.reason == OFX::eChangeUserEdit) {
+        int min, max;
+        _frameRange->getValue(min, max);
+        if (min == 1 && max == 1) {
+            OfxRangeD range = _srcClip->getFrameRange();
+            _frameRange->setValue((int)range.min, (int)range.max);
+        }
+    }
+    //std::cout << "changedClip OK!\n";
 }
 
 /* override the time domain action, only for the general context */
@@ -266,6 +293,18 @@ void FrameRangePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamReset);
         param->setLabel(kParamResetLabel);
         param->setHint(kParamResetHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    // sublabel
+    {
+        StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
+        param->setIsSecret(true); // always secret
+        param->setEnabled(false);
+        param->setIsPersistant(true);
+        param->setEvaluateOnChange(false);
+        param->setDefault("1 - 1");
         if (page) {
             page->addChild(*param);
         }
