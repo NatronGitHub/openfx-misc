@@ -1756,7 +1756,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
         plugin == eDistortionPluginSTMap) {
         
         std::vector<std::string> clipsForChannels(1);
-        clipsForChannels.push_back(kClipUV);
+        clipsForChannels[0] = kClipUV;
         
         if (gIsMultiPlane) {
             {

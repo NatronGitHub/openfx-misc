@@ -31,6 +31,7 @@
 #include "ofxsMacros.h"
 #include "ofxNatron.h"
 #include "ofxsCopier.h"
+#include "ofxsCoords.h"
 
 #ifdef OFX_EXTENSIONS_NUKE
 #include "nuke/fnOfxExtensions.h"
@@ -56,8 +57,13 @@
 #define kParamWhichHint \
 "The input to display. Each input is displayed at the value corresponding to the number of the input. For example, setting which to 4 displays the image from input 4."
 
+#define kParamAutomatic "automatic"
+#define kParamAutomaticLabel "Automatic"
+#define kParamAutomaticHint \
+"When checked, automatically switch to the first connected input with a non-empty region of definition. This can be used to recompose a single clip from effects applied to different frame ranges."
+
 #define kClipSourceCount 16
-#define kClipSourceCountNumerous 64
+#define kClipSourceCountNumerous 128
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -90,17 +96,34 @@ private:
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const OFX::InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
 private:
 
     void updateRange()
     {
         int maxconnected = 1;
         for (unsigned i = 2; i < _srcClip.size(); ++i) {
-            if (_srcClip[i]->isConnected()) {
+            if (_srcClip[i] && _srcClip[i]->isConnected()) {
                 maxconnected = i;
             }
         }
         _which->setDisplayRange(0, maxconnected);
+    }
+
+    // return the first connected input with a non-empty RoD
+    int getInputAutomatic(double time)
+    {
+        unsigned i;
+        for (i = 0; i < _srcClip.size(); ++i) {
+            if (_srcClip[i] && _srcClip[i]->isConnected()) {
+                OfxRectD rod = _srcClip[i]->getRegionOfDefinition(time);
+                if (!OFX::Coords::rectIsEmpty(rod)) {
+                    return (int)i;
+                }
+            }
+        }
+        return 0; // no input
     }
 
     // do not need to delete these, the ImageEffect is managing them for us
@@ -108,6 +131,7 @@ private:
     std::vector<OFX::Clip *> _srcClip;
 
     OFX::IntParam *_which;
+    OFX::BooleanParam* _automatic;
 };
 
 SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle, bool numerousInputs)
@@ -115,6 +139,7 @@ SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle, bool numerousInputs)
 , _dstClip(0)
 , _srcClip(numerousInputs ? kClipSourceCountNumerous : kClipSourceCount)
 , _which(0)
+, _automatic(0)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentAlpha || _dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA));
@@ -122,34 +147,43 @@ SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle, bool numerousInputs)
         if (getContext() == OFX::eContextFilter && i == 0) {
             _srcClip[i] = fetchClip(kOfxImageEffectSimpleSourceClipName);
         } else {
-            char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-            name[0] = (i < 10) ? ('0' + i) : ('0' + i / 10);
-            name[1] = (i < 10) ?         0 : ('0' + i % 10);
+            assert(i < 1000);
+            char name[4] = { 0, 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
+            name[0] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
+            name[1] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
+            name[1] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
             _srcClip[i] = fetchClip(name);
         }
         assert(_srcClip[i]);
     }
     _which  = fetchIntParam(kParamWhich);
-    assert(_which);
+    _automatic = fetchBooleanParam(kParamAutomatic);
+    assert(_which && _automatic);
 
     updateRange();
+    _which->setEnabled(!_automatic->getValue());
 }
 
 void
 SwitchPlugin::render(const OFX::RenderArguments &args)
 {
+    const double time = args.time;
     // do nothing as this should never be called as isIdentity should always be trapped
     assert(false);
 
     // copy input to output
-    int input;
-    _which->getValueAtTime(args.time, input);
-    input = std::max(0, std::min(input, (int)_srcClip.size()-1));
+    int input = 0;
+    if (_automatic->getValueAtTime(time)) {
+        input = getInputAutomatic(time);
+    } else {
+        input = _which->getValueAtTime(time);
+        input = std::max(0, std::min(input, (int)_srcClip.size()-1));
+    }
     OFX::Clip *srcClip = _srcClip[input];
     assert(kSupportsMultipleClipPARs   || !srcClip || srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !srcClip || srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     // do the rendering
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
+    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
     if (!dst.get()) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -162,7 +196,7 @@ SwitchPlugin::render(const OFX::RenderArguments &args)
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
     std::auto_ptr<const OFX::Image> src((srcClip && srcClip->isConnected()) ?
-                                        srcClip->fetchImage(args.time) : 0);
+                                        srcClip->fetchImage(time) : 0);
     if (src.get()) {
         if (src->getRenderScale().x != args.renderScale.x ||
             src->getRenderScale().y != args.renderScale.y ||
@@ -183,9 +217,14 @@ SwitchPlugin::render(const OFX::RenderArguments &args)
 bool
 SwitchPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &/*identityTime*/)
 {
+    const double time = args.time;
     int input;
-    _which->getValueAtTime(args.time, input);
-    input = std::max(0, std::min(input, (int)_srcClip.size()-1));
+    if (_automatic->getValueAtTime(time)) {
+        input = getInputAutomatic(time);
+    } else {
+        input = _which->getValueAtTime(time);
+        input = std::max(0, std::min(input, (int)_srcClip.size()-1));
+    }
     identityClip = _srcClip[input];
     return true;
 }
@@ -198,9 +237,14 @@ SwitchPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, 
 {
     // this should never be called as isIdentity should always be trapped
     assert(false);
+    const double time = args.time;
     int input;
-    _which->getValueAtTime(args.time, input);
-    input = std::max(0, std::min(input, (int)_srcClip.size()-1));
+    if (_automatic->getValueAtTime(time)) {
+        input = getInputAutomatic(time);
+    } else {
+        input = _which->getValueAtTime(time);
+        input = std::max(0, std::min(input, (int)_srcClip.size()-1));
+    }
     const OfxRectD emptyRoI = {0., 0., 0., 0.};
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
         if (i != (unsigned)input) {
@@ -212,9 +256,14 @@ SwitchPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, 
 bool
 SwitchPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
+    const double time = args.time;
     int input;
-    _which->getValueAtTime(args.time, input);
-    input = std::max(0, std::min(input, (int)_srcClip.size()-1));
+    if (_automatic->getValueAtTime(time)) {
+        input = getInputAutomatic(time);
+    } else {
+        input = _which->getValueAtTime(time);
+        input = std::max(0, std::min(input, (int)_srcClip.size()-1));
+    }
     if (_srcClip[input] && _srcClip[input]->isConnected()) {
         rod = _srcClip[input]->getRegionOfDefinition(args.time);
 
@@ -229,9 +278,14 @@ SwitchPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args
 bool
 SwitchPlugin::getTransform(const OFX::TransformArguments &args, OFX::Clip * &transformClip, double transformMatrix[9])
 {
+    const double time = args.time;
     int input;
-    _which->getValueAtTime(args.time, input);
-    input = std::max(0, std::min(input, (int)_srcClip.size()-1));
+    if (_automatic->getValueAtTime(time)) {
+        input = getInputAutomatic(time);
+    } else {
+        input = _which->getValueAtTime(time);
+        input = std::max(0, std::min(input, (int)_srcClip.size()-1));
+    }
     transformClip = _srcClip[input];
 
     transformMatrix[0] = 1.;
@@ -259,6 +313,14 @@ void
 SwitchPlugin::changedClip(const OFX::InstanceChangedArgs &/*args*/, const std::string &/*clipName*/)
 {
     updateRange();
+}
+
+void
+SwitchPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+{
+    if (paramName == kParamAutomatic && args.reason == OFX::eChangeUserEdit) {
+        _which->setEnabled(!_automatic->getValueAtTime(args.time));
+    }
 }
 
 
@@ -352,11 +414,12 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 
     if (numerousInputs) {
         for (int i = 2; i < clipSourceCount; ++i) {
-            assert(i < 100);
             ClipDescriptor *srcClip;
-            char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-            name[0] = (i < 10) ? ('0' + i) : ('0' + i / 10);
-            name[1] = (i < 10) ?         0 : ('0' + i % 10);
+            assert(i < 1000);
+            char name[4] = { 0, 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
+            name[0] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
+            name[1] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
+            name[1] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
             srcClip = desc.defineClip(name);
             srcClip->setOptional(true);
             srcClip->addSupportedComponent(ePixelComponentNone);
@@ -388,6 +451,17 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setDefault(0);
         param->setRange(0, clipSourceCount - 1);
         param->setDisplayRange(0, clipSourceCount - 1);
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    // automatic
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamAutomatic);
+        param->setLabel(kParamAutomaticLabel);
+        param->setHint(kParamAutomaticHint);
+        param->setDefault(false);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);
