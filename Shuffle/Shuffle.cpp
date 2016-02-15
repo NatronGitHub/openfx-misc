@@ -70,6 +70,14 @@
 #define kParamOutputBitDepthOptionShort "Short (16 bits)"
 #define kParamOutputBitDepthOptionFloat "Float (32 bits)"
 
+#define kParamOutputPremultiplication "outputPremult"
+#define kParamOutputPremultiplicationLabel "Premultiplication Metadata"
+#define kParamOutputPremultiplicationHint "Set the premultiplication meta-data that will flow down-stream so that further down effects " \
+"know what kind of data to expect. By default it should be set to the Unpremultiplied and you should always provide the Shuffle node " \
+"unpremultiplied data. Providing alpha-premultiplied data in input of the Shuffle may produce wrong results because of the potential loss " \
+"of the associated alpha channel."
+
+
 #define kParamOutputR "outputR"
 #define kParamOutputRChoice kParamOutputR "Choice"
 #define kParamOutputRLabel "R"
@@ -537,6 +545,8 @@ public:
             secret = false;
         }
         _outputComponents->setIsSecret(secret);
+        
+        _outputPremult = fetchChoiceParam(kParamOutputPremultiplication);
     }
 
 private:
@@ -594,7 +604,8 @@ private:
     OFX::ChoiceParam* _channelParam[4];
     OFX::StringParam* _channelParamStrings[4];
     OFX::ChoiceParam *_outputComponents;
-
+    OFX::ChoiceParam *_outputPremult;
+    
     //Small cache only used on main-thread to speed up getclipPreferences
     std::list<std::string> _currentOutputComps;
     std::list<std::string> _currentCompsA;
@@ -1313,23 +1324,25 @@ ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
         clipPreferences.setClipBitDepth(*_dstClip, outputBitDepth);
     }
     
-    bool aIsPremultiplied = _srcClipA->getPreMultiplication() == OFX::eImagePreMultiplied && _srcClipA->isConnected();
-    bool bIsPremultiplied = _srcClipB->getPreMultiplication() == OFX::eImagePreMultiplied && _srcClipB->isConnected();
-    if (aIsPremultiplied || bIsPremultiplied) {
-        //If the A input or the B input is premultiplied warn that it may yield wrong results
-        std::stringstream error;
-        if (aIsPremultiplied && bIsPremultiplied) {
-            error << "Input A and B have their RGB channels premultiplied by their Alpha channel.";
-        } else if (aIsPremultiplied && !bIsPremultiplied) {
-            error << "Input A has its RGB channels premultiplied by its Alpha channel.";
-        } else if (!aIsPremultiplied && bIsPremultiplied) {
-            error << "Input B has its RGB channels premultiplied by its Alpha channel.";
-        }
-        error << "You should be careful when copying any of these channels. To be safer, unpremultiply them first.";
-        setPersistentMessage(OFX::Message::eMessageWarning, "", error.str());
-    } else {
-        clearPersistentMessage();
+    OFX::PreMultiplicationEnum premult;
+    int premult_i;
+    _outputPremult->getValue(premult_i);
+    switch (premult_i) {
+        case 0:
+            premult = OFX::eImageOpaque;
+            break;
+        case 1:
+            premult = OFX::eImagePreMultiplied;
+            break;
+        case 2:
+            premult = OFX::eImageUnPreMultiplied;
+            break;
+        default:
+            assert(false);
+            break;
     }
+    clipPreferences.setOutputPremultiplication(premult);
+
 }
 
 static std::string
@@ -2079,6 +2092,21 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
         if (page) {
             page->addChild(*param);
         }
+    }
+    
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamOutputPremultiplication);
+        param->setLabel(kParamOutputPremultiplicationLabel);
+        param->setHint(kParamOutputPremultiplicationHint);
+        param->setAnimates(false);
+        param->appendOption("Opaque");
+        param->appendOption("Premultiplied");
+        param->appendOption("Unpremultiplied");
+        param->setDefault(2);
+        if (page) {
+            page->addChild(*param);
+        }
+        desc.addClipPreferencesSlaveParam(*param);
     }
 }
 
