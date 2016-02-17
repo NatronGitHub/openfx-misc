@@ -1804,6 +1804,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 0., 1., 1.);
             param->setDimensionLabels("U", "V");
+            param->setUseHostNativeOverlayHandle(false);
             if (page) {
                 page->addChild(*param);
             }
@@ -1817,6 +1818,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 0., 100., 100.);
             param->setDimensionLabels("U", "V");
+            param->setUseHostNativeOverlayHandle(false);
             if (page) {
                 page->addChild(*param);
             }
@@ -1915,6 +1917,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             param->setLabel(kParamCenterLabel);
             param->setHint(kParamCenterHint);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setUseHostNativeOverlayHandle(false);
             param->setDisplayRange(-1, -1, 1, 1);
             if (page) {
                 page->addChild(*param);
@@ -1937,6 +1940,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
             param->setHint(kParamAsymmetricHint);
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-0.5, -0.5, 0.5, 0.5);
+            param->setUseHostNativeOverlayHandle(false);
             if (page) {
                 page->addChild(*param);
             }

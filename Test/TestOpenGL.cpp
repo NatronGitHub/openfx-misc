@@ -323,6 +323,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setRange(0., 0., DBL_MAX, DBL_MAX);
         param->setDisplayRange(0., 0., 10., 10.);
         param->setIncrement(0.01);
+        param->setUseHostNativeOverlayHandle(false);
         if (page) {
             page->addChild(*param);
         }
@@ -338,6 +339,7 @@ TestOpenGLPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
         param->setRange(0., 0., DBL_MAX, DBL_MAX);
         param->setDisplayRange(0., 0., 10., 10.);
         param->setIncrement(0.01);
+        param->setUseHostNativeOverlayHandle(false);
         if (page) {
             page->addChild(*param);
         }

@@ -781,6 +781,7 @@ ColorLookupPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
         param->setDefault(0., 1.);
         param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
         param->setDisplayRange(0., 0., 1., 1.);
+        param->setUseHostNativeOverlayHandle(false);
         param->setAnimates(true);
         if (page) {
             page->addChild(*param);
