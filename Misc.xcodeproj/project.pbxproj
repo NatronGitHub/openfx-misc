@@ -217,10 +217,6 @@
 		1E3284621A41C0C900C9A4E4 /* net.sf.openfx.anaglyphPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486CF1A41A4960088844F /* net.sf.openfx.anaglyphPlugin.png */; };
 		1E3284731A41C17500C9A4E4 /* net.sf.openfx.Deinterlace.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC4774E41A25B8E7008A2B57 /* net.sf.openfx.Deinterlace.png */; };
 		1E3284741A41C17500C9A4E4 /* net.sf.openfx.Deinterlace.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284711A41C16500C9A4E4 /* net.sf.openfx.Deinterlace.svg */; };
-		1E3284781A41C1A700C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25C1A2C713700DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png */; };
-		1E3284791A41C1A700C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284751A41C19A00C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg */; };
-		1E32847A1A41C1A700C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25D1A2C713700DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png */; };
-		1E32847B1A41C1A700C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284761A41C19A00C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg */; };
 		1E32847D1A41C1BD00C9A4E4 /* net.sf.openfx.HSVToolPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25B1A2C712E00DE1AAA /* net.sf.openfx.HSVToolPlugin.png */; };
 		1E32847E1A41C1BD00C9A4E4 /* net.sf.openfx.HSVToolPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32847C1A41C1B200C9A4E4 /* net.sf.openfx.HSVToolPlugin.svg */; };
 		1E3284811A41C1D800C9A4E4 /* net.sf.openfx.joinViewsPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D31A41A4D00088844F /* net.sf.openfx.joinViewsPlugin.png */; };
@@ -258,8 +254,6 @@
 		1E3284B21A41C4F000C9A4E4 /* net.sf.openfx.KeyerPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284831A41C1E400C9A4E4 /* net.sf.openfx.KeyerPlugin.svg */; };
 		1E3284B31A41C4F400C9A4E4 /* net.sf.openfx.joinViewsPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32847F1A41C1CD00C9A4E4 /* net.sf.openfx.joinViewsPlugin.svg */; };
 		1E3284B41A41C4F800C9A4E4 /* net.sf.openfx.HSVToolPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32847C1A41C1B200C9A4E4 /* net.sf.openfx.HSVToolPlugin.svg */; };
-		1E3284B51A41C4FF00C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284751A41C19A00C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg */; };
-		1E3284B61A41C50500C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284761A41C19A00C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg */; };
 		1E3284B71A41C50D00C9A4E4 /* net.sf.openfx.Deinterlace.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E3284711A41C16500C9A4E4 /* net.sf.openfx.Deinterlace.svg */; };
 		1E3284B81A41C52F00C9A4E4 /* net.sf.openfx.ColorLookupPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E814CAE19C9829C00C2C668 /* net.sf.openfx.ColorLookupPlugin.svg */; };
 		1E3284B91A41C54200C9A4E4 /* net.sf.openfx.anaglyphPlugin.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1E32845F1A41C09E00C9A4E4 /* net.sf.openfx.anaglyphPlugin.svg */; };
@@ -943,6 +937,28 @@
 		1EE72C141B525906001B0245 /* ofxsShutter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE72C0F1B5253A4001B0245 /* ofxsShutter.cpp */; };
 		1EE72C151B525921001B0245 /* ofxsShutter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE72C0F1B5253A4001B0245 /* ofxsShutter.cpp */; };
 		1EE72C161B525A4A001B0245 /* ofxsShutter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE72C0F1B5253A4001B0245 /* ofxsShutter.cpp */; };
+		1EE7A8991C74B70E001AE4BC /* net.sf.openfx.HSVToRGB.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A88E1C74B6E4001AE4BC /* net.sf.openfx.HSVToRGB.png */; };
+		1EE7A89A1C74B70E001AE4BC /* net.sf.openfx.HSVToRGB.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A88F1C74B6E4001AE4BC /* net.sf.openfx.HSVToRGB.svg */; };
+		1EE7A89B1C74B70E001AE4BC /* net.sf.openfx.LABToRGB.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8901C74B6E4001AE4BC /* net.sf.openfx.LABToRGB.png */; };
+		1EE7A89C1C74B70E001AE4BC /* net.sf.openfx.RGBToHSV.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8911C74B6E4001AE4BC /* net.sf.openfx.RGBToHSV.png */; };
+		1EE7A89D1C74B70E001AE4BC /* net.sf.openfx.RGBToHSV.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8921C74B6E4001AE4BC /* net.sf.openfx.RGBToHSV.svg */; };
+		1EE7A89E1C74B70E001AE4BC /* net.sf.openfx.RGBToLAB.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8931C74B6E4001AE4BC /* net.sf.openfx.RGBToLAB.png */; };
+		1EE7A89F1C74B70E001AE4BC /* net.sf.openfx.RGBToLAB.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8941C74B6E4001AE4BC /* net.sf.openfx.RGBToLAB.svg */; };
+		1EE7A8A01C74B70E001AE4BC /* net.sf.openfx.RGBToXYZ.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8951C74B6E4001AE4BC /* net.sf.openfx.RGBToXYZ.png */; };
+		1EE7A8A11C74B70E001AE4BC /* net.sf.openfx.RGBToXYZ.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8961C74B6E4001AE4BC /* net.sf.openfx.RGBToXYZ.svg */; };
+		1EE7A8A21C74B70E001AE4BC /* net.sf.openfx.XYZToRGB.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8971C74B6E4001AE4BC /* net.sf.openfx.XYZToRGB.png */; };
+		1EE7A8A31C74B70E001AE4BC /* net.sf.openfx.XYZToRGB.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8981C74B6E4001AE4BC /* net.sf.openfx.XYZToRGB.svg */; };
+		1EE7A8A41C74B748001AE4BC /* net.sf.openfx.HSVToRGB.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A88E1C74B6E4001AE4BC /* net.sf.openfx.HSVToRGB.png */; };
+		1EE7A8A51C74B748001AE4BC /* net.sf.openfx.HSVToRGB.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A88F1C74B6E4001AE4BC /* net.sf.openfx.HSVToRGB.svg */; };
+		1EE7A8A61C74B748001AE4BC /* net.sf.openfx.LABToRGB.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8901C74B6E4001AE4BC /* net.sf.openfx.LABToRGB.png */; };
+		1EE7A8A71C74B748001AE4BC /* net.sf.openfx.RGBToHSV.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8911C74B6E4001AE4BC /* net.sf.openfx.RGBToHSV.png */; };
+		1EE7A8A81C74B748001AE4BC /* net.sf.openfx.RGBToHSV.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8921C74B6E4001AE4BC /* net.sf.openfx.RGBToHSV.svg */; };
+		1EE7A8A91C74B748001AE4BC /* net.sf.openfx.RGBToLAB.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8931C74B6E4001AE4BC /* net.sf.openfx.RGBToLAB.png */; };
+		1EE7A8AA1C74B748001AE4BC /* net.sf.openfx.RGBToLAB.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8941C74B6E4001AE4BC /* net.sf.openfx.RGBToLAB.svg */; };
+		1EE7A8AB1C74B748001AE4BC /* net.sf.openfx.RGBToXYZ.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8951C74B6E4001AE4BC /* net.sf.openfx.RGBToXYZ.png */; };
+		1EE7A8AC1C74B748001AE4BC /* net.sf.openfx.RGBToXYZ.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8961C74B6E4001AE4BC /* net.sf.openfx.RGBToXYZ.svg */; };
+		1EE7A8AD1C74B748001AE4BC /* net.sf.openfx.XYZToRGB.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8971C74B6E4001AE4BC /* net.sf.openfx.XYZToRGB.png */; };
+		1EE7A8AE1C74B748001AE4BC /* net.sf.openfx.XYZToRGB.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE7A8981C74B6E4001AE4BC /* net.sf.openfx.XYZToRGB.svg */; };
 		1EE9B0971A4B300700869861 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EE9B0981A4B300700869861 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1EE9B0991A4B300700869861 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -1073,8 +1089,6 @@
 		AC6486E41A41A5D10088844F /* net.sf.openfx.Rectangle.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486D91A41A5490088844F /* net.sf.openfx.Rectangle.png */; };
 		AC6486E51A41A5DD0088844F /* net.sf.openfx.sideBySidePlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486DA1A41A5540088844F /* net.sf.openfx.sideBySidePlugin.png */; };
 		AC6486E61A41A5E40088844F /* net.sf.openfx.VectorToColorPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC6486DB1A41A5620088844F /* net.sf.openfx.VectorToColorPlugin.png */; };
-		ACC5D25E1A2C714600DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25C1A2C713700DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png */; };
-		ACC5D25F1A2C714900DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25D1A2C713700DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png */; };
 		ACC5D2601A2C714C00DE1AAA /* net.sf.openfx.HSVToolPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = ACC5D25B1A2C712E00DE1AAA /* net.sf.openfx.HSVToolPlugin.png */; };
 		ACC8477E1A0A3F9300B3FAFE /* net.sf.openfx.Ramp.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC60A32719FE995F00375A86 /* net.sf.openfx.Ramp.png */; };
 		ACC8477F1A0A3F9500B3FAFE /* net.sf.openfx.Ramp.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = AC60A32819FE995F00375A86 /* net.sf.openfx.Ramp.svg */; };
@@ -1680,10 +1694,17 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
-				1E3284781A41C1A700C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.png in CopyFiles */,
-				1E3284791A41C1A700C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg in CopyFiles */,
-				1E32847A1A41C1A700C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.png in CopyFiles */,
-				1E32847B1A41C1A700C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg in CopyFiles */,
+				1EE7A8991C74B70E001AE4BC /* net.sf.openfx.HSVToRGB.png in CopyFiles */,
+				1EE7A89A1C74B70E001AE4BC /* net.sf.openfx.HSVToRGB.svg in CopyFiles */,
+				1EE7A89B1C74B70E001AE4BC /* net.sf.openfx.LABToRGB.png in CopyFiles */,
+				1EE7A89C1C74B70E001AE4BC /* net.sf.openfx.RGBToHSV.png in CopyFiles */,
+				1EE7A89D1C74B70E001AE4BC /* net.sf.openfx.RGBToHSV.svg in CopyFiles */,
+				1EE7A89E1C74B70E001AE4BC /* net.sf.openfx.RGBToLAB.png in CopyFiles */,
+				1EE7A89F1C74B70E001AE4BC /* net.sf.openfx.RGBToLAB.svg in CopyFiles */,
+				1EE7A8A01C74B70E001AE4BC /* net.sf.openfx.RGBToXYZ.png in CopyFiles */,
+				1EE7A8A11C74B70E001AE4BC /* net.sf.openfx.RGBToXYZ.svg in CopyFiles */,
+				1EE7A8A21C74B70E001AE4BC /* net.sf.openfx.XYZToRGB.png in CopyFiles */,
+				1EE7A8A31C74B70E001AE4BC /* net.sf.openfx.XYZToRGB.svg in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2233,6 +2254,17 @@
 				1E3284B81A41C52F00C9A4E4 /* net.sf.openfx.ColorLookupPlugin.svg in CopyFiles */,
 				1EFA60F91A8E1D5400EA4CBF /* net.sf.openfx.ColorMatrixPlugin.png in CopyFiles */,
 				1EFA60FA1A8E1D5400EA4CBF /* net.sf.openfx.ColorMatrixPlugin.svg in CopyFiles */,
+				1EE7A8A41C74B748001AE4BC /* net.sf.openfx.HSVToRGB.png in CopyFiles */,
+				1EE7A8A51C74B748001AE4BC /* net.sf.openfx.HSVToRGB.svg in CopyFiles */,
+				1EE7A8A61C74B748001AE4BC /* net.sf.openfx.LABToRGB.png in CopyFiles */,
+				1EE7A8A71C74B748001AE4BC /* net.sf.openfx.RGBToHSV.png in CopyFiles */,
+				1EE7A8A81C74B748001AE4BC /* net.sf.openfx.RGBToHSV.svg in CopyFiles */,
+				1EE7A8A91C74B748001AE4BC /* net.sf.openfx.RGBToLAB.png in CopyFiles */,
+				1EE7A8AA1C74B748001AE4BC /* net.sf.openfx.RGBToLAB.svg in CopyFiles */,
+				1EE7A8AB1C74B748001AE4BC /* net.sf.openfx.RGBToXYZ.png in CopyFiles */,
+				1EE7A8AC1C74B748001AE4BC /* net.sf.openfx.RGBToXYZ.svg in CopyFiles */,
+				1EE7A8AD1C74B748001AE4BC /* net.sf.openfx.XYZToRGB.png in CopyFiles */,
+				1EE7A8AE1C74B748001AE4BC /* net.sf.openfx.XYZToRGB.svg in CopyFiles */,
 				1EE4A8B219C6EF3900E6E3AE /* net.sf.openfx.ConstantPlugin.png in CopyFiles */,
 				1E814CC219C9837E00C2C668 /* net.sf.openfx.ConstantPlugin.svg in CopyFiles */,
 				1EE4A8B319C6EF3E00E6E3AE /* net.sf.openfx.CornerPinPlugin.png in CopyFiles */,
@@ -2266,10 +2298,6 @@
 				1EDF568A1AA4744800E57882 /* net.sf.openfx.GodRays.svg in CopyFiles */,
 				1EE4A8B919C6EF5A00E6E3AE /* net.sf.openfx.GradePlugin.png in CopyFiles */,
 				1E814CC819C9839500C2C668 /* net.sf.openfx.GradePlugin.svg in CopyFiles */,
-				ACC5D25E1A2C714600DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png in CopyFiles */,
-				1E3284B51A41C4FF00C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg in CopyFiles */,
-				ACC5D25F1A2C714900DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png in CopyFiles */,
-				1E3284B61A41C50500C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg in CopyFiles */,
 				ACC5D2601A2C714C00DE1AAA /* net.sf.openfx.HSVToolPlugin.png in CopyFiles */,
 				1E3284B41A41C4F800C9A4E4 /* net.sf.openfx.HSVToolPlugin.svg in CopyFiles */,
 				1E75A08A1A88E2E7005BAA36 /* net.sf.openfx.ImageStatistics.png in CopyFiles */,
@@ -2530,8 +2558,6 @@
 		1E3284681A41C0E500C9A4E4 /* net.sf.cimg.CImgPlasma.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgPlasma.svg; path = Plasma/net.sf.cimg.CImgPlasma.svg; sourceTree = "<group>"; };
 		1E3284691A41C0E500C9A4E4 /* net.sf.cimg.CImgSmooth.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgSmooth.svg; path = Smooth/net.sf.cimg.CImgSmooth.svg; sourceTree = "<group>"; };
 		1E3284711A41C16500C9A4E4 /* net.sf.openfx.Deinterlace.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.Deinterlace.svg; sourceTree = "<group>"; };
-		1E3284751A41C19A00C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.HSVToRGBPlugin.svg; sourceTree = "<group>"; };
-		1E3284761A41C19A00C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.RGBToHSVPlugin.svg; sourceTree = "<group>"; };
 		1E32847C1A41C1B200C9A4E4 /* net.sf.openfx.HSVToolPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.HSVToolPlugin.svg; sourceTree = "<group>"; };
 		1E32847F1A41C1CD00C9A4E4 /* net.sf.openfx.joinViewsPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.joinViewsPlugin.svg; sourceTree = "<group>"; };
 		1E3284831A41C1E400C9A4E4 /* net.sf.openfx.KeyerPlugin.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.KeyerPlugin.svg; sourceTree = "<group>"; };
@@ -2868,6 +2894,17 @@
 		1EE72C071B524A6D001B0245 /* TimeBlur.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TimeBlur.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EE72C0E1B5253A4001B0245 /* ofxsShutter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsShutter.h; sourceTree = "<group>"; };
 		1EE72C0F1B5253A4001B0245 /* ofxsShutter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsShutter.cpp; sourceTree = "<group>"; };
+		1EE7A88E1C74B6E4001AE4BC /* net.sf.openfx.HSVToRGB.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.HSVToRGB.png; sourceTree = "<group>"; };
+		1EE7A88F1C74B6E4001AE4BC /* net.sf.openfx.HSVToRGB.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.HSVToRGB.svg; sourceTree = "<group>"; };
+		1EE7A8901C74B6E4001AE4BC /* net.sf.openfx.LABToRGB.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.LABToRGB.png; sourceTree = "<group>"; };
+		1EE7A8911C74B6E4001AE4BC /* net.sf.openfx.RGBToHSV.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.RGBToHSV.png; sourceTree = "<group>"; };
+		1EE7A8921C74B6E4001AE4BC /* net.sf.openfx.RGBToHSV.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.RGBToHSV.svg; sourceTree = "<group>"; };
+		1EE7A8931C74B6E4001AE4BC /* net.sf.openfx.RGBToLAB.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.RGBToLAB.png; sourceTree = "<group>"; };
+		1EE7A8941C74B6E4001AE4BC /* net.sf.openfx.RGBToLAB.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.RGBToLAB.svg; sourceTree = "<group>"; };
+		1EE7A8951C74B6E4001AE4BC /* net.sf.openfx.RGBToXYZ.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.RGBToXYZ.png; sourceTree = "<group>"; };
+		1EE7A8961C74B6E4001AE4BC /* net.sf.openfx.RGBToXYZ.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.RGBToXYZ.svg; sourceTree = "<group>"; };
+		1EE7A8971C74B6E4001AE4BC /* net.sf.openfx.XYZToRGB.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.XYZToRGB.png; sourceTree = "<group>"; };
+		1EE7A8981C74B6E4001AE4BC /* net.sf.openfx.XYZToRGB.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.XYZToRGB.svg; sourceTree = "<group>"; };
 		1EE9B0A51A4B300700869861 /* Add.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Add.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EE9B0CF1A4B301500869861 /* ClipTest.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClipTest.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1EEAA6C51BBD3C1F00D397F5 /* ofxsRamp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ofxsRamp.cpp; sourceTree = "<group>"; };
@@ -2961,8 +2998,6 @@
 		AC6487121A41C0F00088844F /* net.sf.cimg.CImgGuided.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = net.sf.cimg.CImgGuided.png; path = Guided/net.sf.cimg.CImgGuided.png; sourceTree = "<group>"; };
 		AC6487131A41C0F00088844F /* net.sf.cimg.CImgGuided.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; name = net.sf.cimg.CImgGuided.svg; path = Guided/net.sf.cimg.CImgGuided.svg; sourceTree = "<group>"; };
 		ACC5D25B1A2C712E00DE1AAA /* net.sf.openfx.HSVToolPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.HSVToolPlugin.png; sourceTree = "<group>"; };
-		ACC5D25C1A2C713700DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.HSVToRGBPlugin.png; sourceTree = "<group>"; };
-		ACC5D25D1A2C713700DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.RGBToHSVPlugin.png; sourceTree = "<group>"; };
 		ACC8477B1A0A3F6400B3FAFE /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		ACC8477C1A0A3F6400B3FAFE /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		D721EBFD1911209B0069DB1D /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -4336,10 +4371,17 @@
 				1ED537301A234D21007966D5 /* ColorTransform.cpp */,
 				1ED537351A234D35007966D5 /* Info.plist */,
 				1ED537361A234D35007966D5 /* Makefile */,
-				ACC5D25C1A2C713700DE1AAA /* net.sf.openfx.HSVToRGBPlugin.png */,
-				1E3284751A41C19A00C9A4E4 /* net.sf.openfx.HSVToRGBPlugin.svg */,
-				ACC5D25D1A2C713700DE1AAA /* net.sf.openfx.RGBToHSVPlugin.png */,
-				1E3284761A41C19A00C9A4E4 /* net.sf.openfx.RGBToHSVPlugin.svg */,
+				1EE7A88E1C74B6E4001AE4BC /* net.sf.openfx.HSVToRGB.png */,
+				1EE7A88F1C74B6E4001AE4BC /* net.sf.openfx.HSVToRGB.svg */,
+				1EE7A8901C74B6E4001AE4BC /* net.sf.openfx.LABToRGB.png */,
+				1EE7A8911C74B6E4001AE4BC /* net.sf.openfx.RGBToHSV.png */,
+				1EE7A8921C74B6E4001AE4BC /* net.sf.openfx.RGBToHSV.svg */,
+				1EE7A8931C74B6E4001AE4BC /* net.sf.openfx.RGBToLAB.png */,
+				1EE7A8941C74B6E4001AE4BC /* net.sf.openfx.RGBToLAB.svg */,
+				1EE7A8951C74B6E4001AE4BC /* net.sf.openfx.RGBToXYZ.png */,
+				1EE7A8961C74B6E4001AE4BC /* net.sf.openfx.RGBToXYZ.svg */,
+				1EE7A8971C74B6E4001AE4BC /* net.sf.openfx.XYZToRGB.png */,
+				1EE7A8981C74B6E4001AE4BC /* net.sf.openfx.XYZToRGB.svg */,
 			);
 			path = ColorTransform;
 			sourceTree = "<group>";
