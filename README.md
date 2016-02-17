@@ -98,8 +98,9 @@ matrix.
 * Transform/RGBToHSV and HSVToRGB: Convert to/from HSV color representation.
 * Transform/RGBToHSL and HSLToRGB: Convert to/from HSL color representation. 
 * Transform/RGBToHSI and HSIToRGB: Convert to/from HSI color representation. 
-* Transform/RGBToYCbCr and YCbCrToRGB: Convert to/from YCbCr color representation. 
-* Transform/RGBToYUV and YUVToRGB: Convert to/from YUV color representation. 
+* Transform/RGBToYCbCr601, YCbCr601ToRGB, RGBToYCbCr709 and YCbCr709ToRGB: Convert to/from YCbCr color representation. 
+* Transform/RGBToYPbPr601, YPbPr601ToRGB, RGBToYPbPr709 and YPbPr709ToRGB: Convert to/from YPbPr color representation. 
+* Transform/RGBToYUV601, YUV601ToRGB, RGBToYUV709 and YUV709ToRGB: Convert to/from YUV color representation. 
 * Transform/RGBToLab and LabToRGB: Convert to/from Lab color representation.
 * Transform/RGBToXYZ and XYZToRGB: Convert to/from XYZ color representation.
 * VectorToColor: Convert x and y vector components to a color representation.

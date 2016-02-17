@@ -30,65 +30,97 @@
 #include "ofxsMacros.h"
 #include "ofxsLut.h"
 
-#define kPluginRGBToHSVName "RGBToHSVOFX"
-#define kPluginRGBToHSVDescription "Convert from RGB to HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978). H is in degrees, S and V are in the same units as RGB."
-#define kPluginRGBToHSVIdentifier "net.sf.openfx.RGBToHSVPlugin"
+#define kPluginRGBToHSVName "RGBToHSV"
+#define kPluginRGBToHSVDescription "Convert from linear RGB to HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978). H is in degrees, S and V are in the same units as RGB. RGB is gamma-compressed using the sRGB transfer function before conversion."
+#define kPluginRGBToHSVIdentifier "net.sf.openfx.RGBToHSV"
 
-#define kPluginHSVToRGBName "HSVToRGBOFX"
-#define kPluginHSVToRGBDescription "Convert from HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978) to RGB. H is in degrees, S and V are in the same units as RGB."
-#define kPluginHSVToRGBIdentifier "net.sf.openfx.HSVToRGBPlugin"
+#define kPluginHSVToRGBName "HSVToRGB"
+#define kPluginHSVToRGBDescription "Convert from HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978) to linear RGB. H is in degrees, S and V are in the same units as RGB. RGB is gamma-decompressed using the sRGB transfer function after conversion."
+#define kPluginHSVToRGBIdentifier "net.sf.openfx.HSVToRGB"
 
-#define kPluginRGBToHSLName "RGBToHSLOFX"
-#define kPluginRGBToHSLDescription "Convert from RGB to HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978). H is in degrees, S and L are in the same units as RGB."
-#define kPluginRGBToHSLIdentifier "net.sf.openfx.RGBToHSLPlugin"
+#define kPluginRGBToHSLName "RGBToHSL"
+#define kPluginRGBToHSLDescription "Convert from RGB to HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978). H is in degrees, S and L are in the same units as RGB. RGB is gamma-compressed using the sRGB transfer function before conversion."
+#define kPluginRGBToHSLIdentifier "net.sf.openfx.RGBToHSL"
 
-#define kPluginHSLToRGBName "HSLToRGBOFX"
-#define kPluginHSLToRGBDescription "Convert from HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978) to RGB. H is in degrees, S and L are in the same units as RGB."
-#define kPluginHSLToRGBIdentifier "net.sf.openfx.HSLToRGBPlugin"
+#define kPluginHSLToRGBName "HSLToRGB"
+#define kPluginHSLToRGBDescription "Convert from HSL color model (hue, saturation, lightness, as defined by Joblove and Greenberg in 1978) to linear RGB. H is in degrees, S and L are in the same units as RGB. RGB is gamma-decompressed using the sRGB transfer function after conversion."
+#define kPluginHSLToRGBIdentifier "net.sf.openfx.HSLToRGB"
 
-#define kPluginRGBToHSIName "RGBToHSIOFX"
-#define kPluginRGBToHSIDescription "Convert from RGB to HSI color model (hue, saturation, intensity, as defined by Gonzalez and Woods in 1992). H is in degrees, S and I are in the same units as RGB.\n" \
+#define kPluginRGBToHSIName "RGBToHSI"
+#define kPluginRGBToHSIDescription "Convert from linear RGB to HSI color model (hue, saturation, intensity, as defined by Gonzalez and Woods in 1992). H is in degrees, S and I are in the same units as RGB. RGB is gamma-compressed using the sRGB transfer function before conversion.\n" \
 "The HSI colour space (hue, saturation and intensity) attempts to produce a more intuitive representation of colour. The I axis represents the luminance information. The H and S axes are polar coordinates on the plane orthogonal to I. H is the angle, specified such that red is at zero, green at 120 degrees, and blue at 240 degrees. Hue thus represents what humans implicitly understand as colour. S is the magnitude of the colour vector projected in the plane orthogonal to I, and so represents the difference between pastel colours (low saturation) and vibrant colours (high saturation). The main drawback of this colour space is that hue is undefined if saturation is zero, making error propagation in transformations from the RGB colour space more complicated.\n" \
 "It should also be noted that, although the HSI colour space may be more intuitive, is not \"perceptual\", in the sense that small displacements of equal size in different parts of the colour space will be perceived by human observers as changes of different magnitude. Attempts have been made to define such colour spaces: CIE-LAB and CIE-LUV are two examples."
-#define kPluginRGBToHSIIdentifier "net.sf.openfx.RGBToHSIPlugin"
+#define kPluginRGBToHSIIdentifier "net.sf.openfx.RGBToHSI"
 
-#define kPluginHSIToRGBName "HSIToRGBOFX"
-#define kPluginHSIToRGBDescription "Convert from HSI color model (hue, saturation, intensity, as defined by Gonzalez and Woods in 1992) to RGB. H is in degrees, S and I are in the same units as RGB.\n" \
+#define kPluginHSIToRGBName "HSIToRGB"
+#define kPluginHSIToRGBDescription "Convert from HSI color model (hue, saturation, intensity, as defined by Gonzalez and Woods in 1992) to linear RGB. H is in degrees, S and I are in the same units as RGB. RGB is gamma-decompressed using the sRGB transfer function after conversion.\n" \
 "The HSI colour space (hue, saturation and intensity) attempts to produce a more intuitive representation of colour. The I axis represents the luminance information. The H and S axes are polar coordinates on the plane orthogonal to I. H is the angle, specified such that red is at zero, green at 120 degrees, and blue at 240 degrees. Hue thus represents what humans implicitly understand as colour. S is the magnitude of the colour vector projected in the plane orthogonal to I, and so represents the difference between pastel colours (low saturation) and vibrant colours (high saturation). The main drawback of this colour space is that hue is undefined if saturation is zero, making error propagation in transformations from the RGB colour space more complicated.\n" \
 "It should also be noted that, although the HSI colour space may be more intuitive, is not \"perceptual\", in the sense that small displacements of equal size in different parts of the colour space will be perceived by human observers as changes of different magnitude. Attempts have been made to define such colour spaces: CIE-LAB and CIE-LUV are two examples."
-#define kPluginHSIToRGBIdentifier "net.sf.openfx.HSIToRGBPlugin"
+#define kPluginHSIToRGBIdentifier "net.sf.openfx.HSIToRGB"
 
-#define kPluginRGBToYCbCrName "RGBToYCbCrOFX"
-#define kPluginRGBToYCbCrDescription "Convert from RGB to YCbCr color model (ITU.BT-709). For strict standards conformance, RGB should be nonlinear (gamma-compressed)."
-#define kPluginRGBToYCbCrIdentifier "net.sf.openfx.RGBToYCbCrPlugin"
+#define kPluginRGBToYCbCr601Name "RGBToYCbCr601"
+#define kPluginRGBToYCbCr601Description "Convert from linear RGB to YCbCr color model (ITU.BT-601). RGB is gamma-compressed using the sRGB transfer function before conversion."
+#define kPluginRGBToYCbCr601Identifier "net.sf.openfx.RGBToYCbCr601"
 
-#define kPluginYCbCrToRGBName "YCbCrToRGBOFX"
-#define kPluginYCbCrToRGBDescription "Convert from YCbCr color model (ITU.BT-709) to RGB. RGB on output is nonlinear (gamma-compressed)."
-#define kPluginYCbCrToRGBIdentifier "net.sf.openfx.YCbCrToRGBPlugin"
+#define kPluginYCbCr601ToRGBName "YCbCr601ToRGB"
+#define kPluginYCbCr601ToRGBDescription "Convert from YCbCr color model (ITU.BT-601) to linear RGB. RGB is gamma-decompressed using the sRGB transfer function after conversion."
+#define kPluginYCbCr601ToRGBIdentifier "net.sf.openfx.YCbCr601ToRGB"
 
-#define kPluginRGBToYUVName "RGBToYUVOFX"
-#define kPluginRGBToYUVDescription "Convert from RGB to YUV color model (ITU.BT-709). For strict standards conformance, RGB should be nonlinear (gamma-compressed)."
-#define kPluginRGBToYUVIdentifier "net.sf.openfx.RGBToYUVPlugin"
+#define kPluginRGBToYCbCr709Name "RGBToYCbCr709"
+#define kPluginRGBToYCbCr709Description "Convert from linear RGB to YCbCr color model (ITU.BT-709). RGB is gamma-compressed using the Rec.709 transfer function before conversion."
+#define kPluginRGBToYCbCr709Identifier "net.sf.openfx.RGBToYCbCr709"
 
-#define kPluginYUVToRGBName "YUVoRGBOFX"
-#define kPluginYUVToRGBDescription "Convert from YUV color model (ITU.BT-709) to RGB. RGB on output is nonlinear (gamma-compressed)."
-#define kPluginYUVToRGBIdentifier "net.sf.openfx.YUVToRGBPlugin"
+#define kPluginYCbCr709ToRGBName "YCbCr709ToRGB"
+#define kPluginYCbCr709ToRGBDescription "Convert from YCbCr color model (ITU.BT-709) to linear RGB. RGB is gamma-decompressed using the Rec.709 transfer function after conversion."
+#define kPluginYCbCr709ToRGBIdentifier "net.sf.openfx.YCbCr709ToRGB"
+
+#define kPluginRGBToYPbPr601Name "RGBToYPbPr601"
+#define kPluginRGBToYPbPr601Description "Convert from RGB to YPbPr color model (ITU.BT-601). RGB is gamma-compressed using the sRGB transfer function before conversion."
+#define kPluginRGBToYPbPr601Identifier "net.sf.openfx.RGBToYPbPr601"
+
+#define kPluginYPbPr601ToRGBName "YPbPr601ToRGB"
+#define kPluginYPbPr601ToRGBDescription "Convert from YPbPr color model (ITU.BT-601) to RGB. RGB is gamma-decompressed using the sRGB transfer function after conversion."
+#define kPluginYPbPr601ToRGBIdentifier "net.sf.openfx.YPbPr601ToRGB"
+
+#define kPluginRGBToYPbPr709Name "RGBToYPbPr709"
+#define kPluginRGBToYPbPr709Description "Convert from RGB to YPbPr color model (ITU.BT-709). RGB is gamma-compressed using the Rec.709 transfer function before conversion."
+#define kPluginRGBToYPbPr709Identifier "net.sf.openfx.RGBToYPbPr709"
+
+#define kPluginYPbPr709ToRGBName "YPbPr709ToRGB"
+#define kPluginYPbPr709ToRGBDescription "Convert from YPbPr color model (ITU.BT-709) to RGB. RGB is gamma-decompressed using the Rec.709 transfer function after conversion."
+#define kPluginYPbPr709ToRGBIdentifier "net.sf.openfx.YPbPr709ToRGB"
+
+#define kPluginRGBToYUV601Name "RGBToYUV601"
+#define kPluginRGBToYUV601Description "Convert from RGB to YUV color model (ITU.BT-601). RGB is gamma-compressed using the sRGB transfer function before conversion."
+#define kPluginRGBToYUV601Identifier "net.sf.openfx.RGBToYUV601"
+
+#define kPluginYUV601ToRGBName "YUV601ToRGB"
+#define kPluginYUV601ToRGBDescription "Convert from YUV color model (ITU.BT-601) to RGB. RGB is gamma-decompressed using the sRGB transfer function after conversion."
+#define kPluginYUV601ToRGBIdentifier "net.sf.openfx.YUV601ToRGB"
+
+#define kPluginRGBToYUV709Name "RGBToYUV709"
+#define kPluginRGBToYUV709Description "Convert from RGB to YUV color model (ITU.BT-709). RGB is gamma-compressed using the Rec.709 transfer function before conversion."
+#define kPluginRGBToYUV709Identifier "net.sf.openfx.RGBToYUV709"
+
+#define kPluginYUV709ToRGBName "YUV709ToRGB"
+#define kPluginYUV709ToRGBDescription "Convert from YUV color model (ITU.BT-709) to RGB. RGB is gamma-decompressed using the Rec.709 transfer function after conversion."
+#define kPluginYUV709ToRGBIdentifier "net.sf.openfx.YUV709ToRGB"
 
 
-#define kPluginRGBToXYZName "RGBToXYZOFX"
+#define kPluginRGBToXYZName "RGBToXYZ"
 #define kPluginRGBToXYZDescription "Convert from RGB to XYZ color model (Rec.709 with D65 illuminant). X, Y and Z are in the same units as RGB."
 #define kPluginRGBToXYZIdentifier "net.sf.openfx.RGBToXYZPlugin"
 
-#define kPluginXYZToRGBName "XYZToRGBOFX"
+#define kPluginXYZToRGBName "XYZToRGB"
 #define kPluginXYZToRGBDescription "Convert from XYZ color model (Rec.709 with D65 illuminant) to RGB. X, Y and Z are in the same units as RGB."
 #define kPluginXYZToRGBIdentifier "net.sf.openfx.XYZToRGBPlugin"
 
-#define kPluginRGBToLabName "RGBToLabOFX"
-#define kPluginRGBToLabDescription "Convert from RGB to Lab color model (Rec.709 with D65 illuminant)."
+#define kPluginRGBToLabName "RGBToLab"
+#define kPluginRGBToLabDescription "Convert from RGB to L*a*b color model (Rec.709 with D65 illuminant). L*a*b coordinates are divided by 100 for better visualization."
 #define kPluginRGBToLabIdentifier "net.sf.openfx.RGBToLabPlugin"
 
-#define kPluginLabToRGBName "LabToRGBOFX"
-#define kPluginLabToRGBDescription "Convert from Lab color model (Rec.709 with D65 illuminant) to RGB.$"
+#define kPluginLabToRGBName "LabToRGB"
+#define kPluginLabToRGBDescription "Convert from L*a*b color model (Rec.709 with D65 illuminant) to RGB. L*a*b coordinates are divided by 100 for better visualization."
 #define kPluginLabToRGBIdentifier "net.sf.openfx.LabToRGBPlugin"
 
 #define kPluginGrouping "Color/Transform"
@@ -124,10 +156,18 @@ enum ColorTransformEnum {
     eColorTransformHSLToRGB,
     eColorTransformRGBToHSI,
     eColorTransformHSIToRGB,
-    eColorTransformRGBToYCbCr,
-    eColorTransformYCbCrToRGB,
-    eColorTransformRGBToYUV,
-    eColorTransformYUVToRGB,
+    eColorTransformRGBToYCbCr601,
+    eColorTransformYCbCr601ToRGB,
+    eColorTransformRGBToYCbCr709,
+    eColorTransformYCbCr709ToRGB,
+    eColorTransformRGBToYPbPr601,
+    eColorTransformYPbPr601ToRGB,
+    eColorTransformRGBToYPbPr709,
+    eColorTransformYPbPr709ToRGB,
+    eColorTransformRGBToYUV601,
+    eColorTransformYUV601ToRGB,
+    eColorTransformRGBToYUV709,
+    eColorTransformYUV709ToRGB,
     eColorTransformRGBToXYZ,
     eColorTransformXYZToRGB,
     eColorTransformRGBToLab,
@@ -137,8 +177,12 @@ enum ColorTransformEnum {
 #define toRGB(e)   ((e) == eColorTransformHSVToRGB || \
                     (e) == eColorTransformHSLToRGB || \
                     (e) == eColorTransformHSIToRGB || \
-                    (e) == eColorTransformYCbCrToRGB || \
-                    (e) == eColorTransformYUVToRGB || \
+                    (e) == eColorTransformYCbCr601ToRGB || \
+                    (e) == eColorTransformYCbCr709ToRGB || \
+                    (e) == eColorTransformYPbPr601ToRGB || \
+                    (e) == eColorTransformYPbPr709ToRGB || \
+                    (e) == eColorTransformYUV601ToRGB || \
+                    (e) == eColorTransformYUV709ToRGB || \
                     (e) == eColorTransformXYZToRGB || \
                     (e) == eColorTransformLabToRGB)
 
@@ -208,46 +252,132 @@ public:
                 ofxsUnPremult<PIX, nComponents, maxValue>(srcPix, unpPix, dounpremult, _premultChannel);
                 switch (transform) {
                     case eColorTransformRGBToHSV:
+                        unpPix[0] = OFX::Color::to_func_srgb(unpPix[0]);
+                        unpPix[1] = OFX::Color::to_func_srgb(unpPix[1]);
+                        unpPix[2] = OFX::Color::to_func_srgb(unpPix[2]);
                         OFX::Color::rgb_to_hsv(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                         break;
 
                     case eColorTransformHSVToRGB:
                         OFX::Color::hsv_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        tmpPix[0] = OFX::Color::from_func_srgb(tmpPix[0]);
+                        tmpPix[1] = OFX::Color::from_func_srgb(tmpPix[1]);
+                        tmpPix[2] = OFX::Color::from_func_srgb(tmpPix[2]);
                         break;
 
                     case eColorTransformRGBToHSL:
+                        unpPix[0] = OFX::Color::to_func_srgb(unpPix[0]);
+                        unpPix[1] = OFX::Color::to_func_srgb(unpPix[1]);
+                        unpPix[2] = OFX::Color::to_func_srgb(unpPix[2]);
                         OFX::Color::rgb_to_hsl(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                         break;
 
                     case eColorTransformHSLToRGB:
                         OFX::Color::hsl_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        tmpPix[0] = OFX::Color::from_func_srgb(tmpPix[0]);
+                        tmpPix[1] = OFX::Color::from_func_srgb(tmpPix[1]);
+                        tmpPix[2] = OFX::Color::from_func_srgb(tmpPix[2]);
                         break;
 
                     case eColorTransformRGBToHSI:
+                        unpPix[0] = OFX::Color::to_func_srgb(unpPix[0]);
+                        unpPix[1] = OFX::Color::to_func_srgb(unpPix[1]);
+                        unpPix[2] = OFX::Color::to_func_srgb(unpPix[2]);
                         OFX::Color::rgb_to_hsi(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                         break;
 
                     case eColorTransformHSIToRGB:
                         OFX::Color::hsi_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        tmpPix[0] = OFX::Color::from_func_srgb(tmpPix[0]);
+                        tmpPix[1] = OFX::Color::from_func_srgb(tmpPix[1]);
+                        tmpPix[2] = OFX::Color::from_func_srgb(tmpPix[2]);
                         break;
 
 
-                    case eColorTransformRGBToYCbCr:
-                        OFX::Color::rgb_to_ycbcr(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    case eColorTransformRGBToYCbCr601:
+                        unpPix[0] = OFX::Color::to_func_srgb(unpPix[0]);
+                        unpPix[1] = OFX::Color::to_func_srgb(unpPix[1]);
+                        unpPix[2] = OFX::Color::to_func_srgb(unpPix[2]);
+                        OFX::Color::rgb_to_ycbcr601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                         break;
 
-                    case eColorTransformYCbCrToRGB:
-                        OFX::Color::ycbcr_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    case eColorTransformYCbCr601ToRGB:
+                        OFX::Color::ycbcr601_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        tmpPix[0] = OFX::Color::from_func_srgb(tmpPix[0]);
+                        tmpPix[1] = OFX::Color::from_func_srgb(tmpPix[1]);
+                        tmpPix[2] = OFX::Color::from_func_srgb(tmpPix[2]);
                         break;
                         
-                    case eColorTransformRGBToYUV:
-                        OFX::Color::rgb_to_yuv(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    case eColorTransformRGBToYCbCr709:
+                        unpPix[0] = OFX::Color::to_func_Rec709(unpPix[0]);
+                        unpPix[1] = OFX::Color::to_func_Rec709(unpPix[1]);
+                        unpPix[2] = OFX::Color::to_func_Rec709(unpPix[2]);
+                        OFX::Color::rgb_to_ycbcr709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                         break;
 
-                    case eColorTransformYUVToRGB:
-                        OFX::Color::yuv_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                    case eColorTransformYCbCr709ToRGB:
+                        OFX::Color::ycbcr709_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        tmpPix[0] = OFX::Color::from_func_Rec709(tmpPix[0]);
+                        tmpPix[1] = OFX::Color::from_func_Rec709(tmpPix[1]);
+                        tmpPix[2] = OFX::Color::from_func_Rec709(tmpPix[2]);
                         break;
-                        
+
+                    case eColorTransformRGBToYPbPr601:
+                        unpPix[0] = OFX::Color::to_func_srgb(unpPix[0]);
+                        unpPix[1] = OFX::Color::to_func_srgb(unpPix[1]);
+                        unpPix[2] = OFX::Color::to_func_srgb(unpPix[2]);
+                        OFX::Color::rgb_to_ypbpr601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+
+                    case eColorTransformYPbPr601ToRGB:
+                        OFX::Color::ypbpr601_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        tmpPix[0] = OFX::Color::from_func_srgb(tmpPix[0]);
+                        tmpPix[1] = OFX::Color::from_func_srgb(tmpPix[1]);
+                        tmpPix[2] = OFX::Color::from_func_srgb(tmpPix[2]);
+                        break;
+
+                    case eColorTransformRGBToYPbPr709:
+                        unpPix[0] = OFX::Color::to_func_Rec709(unpPix[0]);
+                        unpPix[1] = OFX::Color::to_func_Rec709(unpPix[1]);
+                        unpPix[2] = OFX::Color::to_func_Rec709(unpPix[2]);
+                        OFX::Color::rgb_to_ypbpr709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+
+                    case eColorTransformYPbPr709ToRGB:
+                        OFX::Color::ypbpr709_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        tmpPix[0] = OFX::Color::from_func_Rec709(tmpPix[0]);
+                        tmpPix[1] = OFX::Color::from_func_Rec709(tmpPix[1]);
+                        tmpPix[2] = OFX::Color::from_func_Rec709(tmpPix[2]);
+                        break;
+
+                    case eColorTransformRGBToYUV601:
+                        unpPix[0] = OFX::Color::to_func_srgb(unpPix[0]);
+                        unpPix[1] = OFX::Color::to_func_srgb(unpPix[1]);
+                        unpPix[2] = OFX::Color::to_func_srgb(unpPix[2]);
+                        OFX::Color::rgb_to_yuv601(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+
+                    case eColorTransformYUV601ToRGB:
+                        OFX::Color::yuv601_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        tmpPix[0] = OFX::Color::from_func_srgb(tmpPix[0]);
+                        tmpPix[1] = OFX::Color::from_func_srgb(tmpPix[1]);
+                        tmpPix[2] = OFX::Color::from_func_srgb(tmpPix[2]);
+                        break;
+
+                    case eColorTransformRGBToYUV709:
+                        unpPix[0] = OFX::Color::to_func_Rec709(unpPix[0]);
+                        unpPix[1] = OFX::Color::to_func_Rec709(unpPix[1]);
+                        unpPix[2] = OFX::Color::to_func_Rec709(unpPix[2]);
+                        OFX::Color::rgb_to_yuv709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        break;
+
+                    case eColorTransformYUV709ToRGB:
+                        OFX::Color::yuv709_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        tmpPix[0] = OFX::Color::from_func_Rec709(tmpPix[0]);
+                        tmpPix[1] = OFX::Color::from_func_Rec709(tmpPix[1]);
+                        tmpPix[2] = OFX::Color::from_func_Rec709(tmpPix[2]);
+                        break;
+
                     case eColorTransformRGBToXYZ:
                         OFX::Color::rgb_to_xyz_rec709(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                         break;
@@ -258,9 +388,15 @@ public:
 
                     case eColorTransformRGBToLab:
                         OFX::Color::rgb_to_lab(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
+                        tmpPix[0] /= 100;
+                        tmpPix[1] /= 100;
+                        tmpPix[2] /= 100;
                         break;
 
                     case eColorTransformLabToRGB:
+                        unpPix[0] *= 100;
+                        unpPix[1] *= 100;
+                        unpPix[2] *= 100;
                         OFX::Color::lab_to_rgb(unpPix[0], unpPix[1], unpPix[2], &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                         break;
 
@@ -542,26 +678,66 @@ ColorTransformPluginFactory<transform>::describe(OFX::ImageEffectDescriptor &des
             desc.setPluginDescription(kPluginHSIToRGBDescription);
             break;
 
-        case eColorTransformRGBToYCbCr:
-            desc.setLabel(kPluginRGBToYCbCrName);
-            desc.setPluginDescription(kPluginRGBToYCbCrDescription);
+        case eColorTransformRGBToYCbCr601:
+            desc.setLabel(kPluginRGBToYCbCr601Name);
+            desc.setPluginDescription(kPluginRGBToYCbCr601Description);
             break;
 
-        case eColorTransformYCbCrToRGB:
-            desc.setLabel(kPluginYCbCrToRGBName);
-            desc.setPluginDescription(kPluginYCbCrToRGBDescription);
-            break;
-
-        case eColorTransformRGBToYUV:
-            desc.setLabel(kPluginRGBToYUVName);
-            desc.setPluginDescription(kPluginRGBToYUVDescription);
-            break;
-
-        case eColorTransformYUVToRGB:
-            desc.setLabel(kPluginYUVToRGBName);
-            desc.setPluginDescription(kPluginYUVToRGBDescription);
+        case eColorTransformYCbCr601ToRGB:
+            desc.setLabel(kPluginYCbCr601ToRGBName);
+            desc.setPluginDescription(kPluginYCbCr601ToRGBDescription);
             break;
             
+        case eColorTransformRGBToYCbCr709:
+            desc.setLabel(kPluginRGBToYCbCr709Name);
+            desc.setPluginDescription(kPluginRGBToYCbCr709Description);
+            break;
+
+        case eColorTransformYCbCr709ToRGB:
+            desc.setLabel(kPluginYCbCr709ToRGBName);
+            desc.setPluginDescription(kPluginYCbCr709ToRGBDescription);
+            break;
+            
+        case eColorTransformRGBToYPbPr601:
+            desc.setLabel(kPluginRGBToYPbPr601Name);
+            desc.setPluginDescription(kPluginRGBToYPbPr601Description);
+            break;
+
+        case eColorTransformYPbPr601ToRGB:
+            desc.setLabel(kPluginYPbPr601ToRGBName);
+            desc.setPluginDescription(kPluginYPbPr601ToRGBDescription);
+            break;
+
+        case eColorTransformRGBToYPbPr709:
+            desc.setLabel(kPluginRGBToYPbPr709Name);
+            desc.setPluginDescription(kPluginRGBToYPbPr709Description);
+            break;
+
+        case eColorTransformYPbPr709ToRGB:
+            desc.setLabel(kPluginYPbPr709ToRGBName);
+            desc.setPluginDescription(kPluginYPbPr709ToRGBDescription);
+            break;
+
+        case eColorTransformRGBToYUV601:
+            desc.setLabel(kPluginRGBToYUV601Name);
+            desc.setPluginDescription(kPluginRGBToYUV601Description);
+            break;
+
+        case eColorTransformYUV601ToRGB:
+            desc.setLabel(kPluginYUV601ToRGBName);
+            desc.setPluginDescription(kPluginYUV601ToRGBDescription);
+            break;
+
+        case eColorTransformRGBToYUV709:
+            desc.setLabel(kPluginRGBToYUV709Name);
+            desc.setPluginDescription(kPluginRGBToYUV709Description);
+            break;
+
+        case eColorTransformYUV709ToRGB:
+            desc.setLabel(kPluginYUV709ToRGBName);
+            desc.setPluginDescription(kPluginYUV709ToRGBDescription);
+            break;
+
         case eColorTransformRGBToXYZ:
             desc.setLabel(kPluginRGBToXYZName);
             desc.setPluginDescription(kPluginRGBToXYZDescription);
@@ -691,14 +867,30 @@ static ColorTransformPluginFactory<eColorTransformHSLToRGB> p4(kPluginHSLToRGBId
 static ColorTransformPluginFactory<eColorTransformRGBToHSI> p5(kPluginRGBToHSIIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 // HSItoRGB
 static ColorTransformPluginFactory<eColorTransformHSIToRGB> p6(kPluginHSIToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-// RGBtoYCbCr
-static ColorTransformPluginFactory<eColorTransformRGBToYCbCr> p7(kPluginRGBToYCbCrIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-// YCbCrtoRGB
-static ColorTransformPluginFactory<eColorTransformYCbCrToRGB> p8(kPluginYCbCrToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-// RGBtoYUV
-static ColorTransformPluginFactory<eColorTransformRGBToYUV> p9(kPluginRGBToYUVIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-// YUVtoRGB
-static ColorTransformPluginFactory<eColorTransformYUVToRGB> p10(kPluginYUVToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// RGBtoYCbCr601
+static ColorTransformPluginFactory<eColorTransformRGBToYCbCr601> p7(kPluginRGBToYCbCr601Identifier, kPluginVersionMajor, kPluginVersionMinor);
+// YCbCr601toRGB
+static ColorTransformPluginFactory<eColorTransformYCbCr601ToRGB> p8(kPluginYCbCr601ToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// RGBtoYCbCr709
+static ColorTransformPluginFactory<eColorTransformRGBToYCbCr709> p17(kPluginRGBToYCbCr709Identifier, kPluginVersionMajor, kPluginVersionMinor);
+// YCbCr709toRGB
+static ColorTransformPluginFactory<eColorTransformYCbCr709ToRGB> p18(kPluginYCbCr709ToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// RGBtoYPbPr601
+static ColorTransformPluginFactory<eColorTransformRGBToYPbPr601> p9(kPluginRGBToYPbPr601Identifier, kPluginVersionMajor, kPluginVersionMinor);
+// YPbPr601toRGB
+static ColorTransformPluginFactory<eColorTransformYPbPr601ToRGB> p10(kPluginYPbPr601ToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// RGBtoYPbPr709
+static ColorTransformPluginFactory<eColorTransformRGBToYPbPr709> p15(kPluginRGBToYPbPr709Identifier, kPluginVersionMajor, kPluginVersionMinor);
+// YPbPr709toRGB
+static ColorTransformPluginFactory<eColorTransformYPbPr709ToRGB> p16(kPluginYPbPr709ToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// RGBtoYUV601
+static ColorTransformPluginFactory<eColorTransformRGBToYUV601> p19(kPluginRGBToYUV601Identifier, kPluginVersionMajor, kPluginVersionMinor);
+// YUV601toRGB
+static ColorTransformPluginFactory<eColorTransformYUV601ToRGB> p20(kPluginYUV601ToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+// RGBtoYUV709
+static ColorTransformPluginFactory<eColorTransformRGBToYUV709> p21(kPluginRGBToYUV709Identifier, kPluginVersionMajor, kPluginVersionMinor);
+// YUV709toRGB
+static ColorTransformPluginFactory<eColorTransformYUV709ToRGB> p22(kPluginYUV709ToRGBIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 // RGBtoXYZ
 static ColorTransformPluginFactory<eColorTransformRGBToXYZ> p11(kPluginRGBToXYZIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 // XYZtoRGB
@@ -722,4 +914,12 @@ mRegisterPluginFactoryInstance(p11)
 mRegisterPluginFactoryInstance(p12)
 mRegisterPluginFactoryInstance(p13)
 mRegisterPluginFactoryInstance(p14)
+mRegisterPluginFactoryInstance(p15)
+mRegisterPluginFactoryInstance(p16)
+mRegisterPluginFactoryInstance(p17)
+mRegisterPluginFactoryInstance(p18)
+mRegisterPluginFactoryInstance(p19)
+mRegisterPluginFactoryInstance(p20)
+mRegisterPluginFactoryInstance(p21)
+mRegisterPluginFactoryInstance(p22)
 
