@@ -204,9 +204,9 @@ public:
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 pixToVector<PIX, nComponents>(srcPix, vec, _xChannel, _yChannel);
-                h = (float)(std::atan2(_inverseY?-vec[1]:vec[1], vec[0]) * 180. / M_PI);
+                h = (float)(std::atan2(_inverseY?-vec[1]:vec[1], vec[0]) * OFXS_HUE_CIRCLE / (2*M_PI));
                 if (_opposite) {
-                    h += 180;
+                    h += OFXS_HUE_CIRCLE/2.;
                 }
                 float norm = std::sqrt(vec[0] * vec[0] + vec[1] *  vec[1]);
                 if (_modulateV) {

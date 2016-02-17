@@ -271,6 +271,7 @@ protected:
             g = p[1]/(float)maxValue;
             b = p[2]/(float)maxValue;
             OFX::Color::rgb_to_hsv(r, g, b, &hsvl[0], &hsvl[1], &hsvl[2]);
+            hsvl[0] *= 360/OFXS_HUE_CIRCLE;
             float min = std::min(std::min(r, g), b);
             float max = std::max(std::max(r, g), b);
             hsvl[3] = (min + max)/2;

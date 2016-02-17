@@ -377,6 +377,7 @@ public:
     {
         float h, s, v;
         OFX::Color::rgb_to_hsv(r, g, b, &h, &s, &v);
+        h *= 360./OFXS_HUE_CIRCLE;
         const double h0 = _values.hueRange[0];
         const double h1 = _values.hueRange[1];
         const double h0mrolloff = _values.hueRangeWithRolloff[0];
@@ -438,6 +439,7 @@ public:
                 s = 0;
             }
             v += coeff * (float)_values.valAdjust;
+            h *= OFXS_HUE_CIRCLE/360.;
             OFX::Color::hsv_to_rgb(h, s, v, rout, gout, bout);
         }
         if (_clampBlack) {
@@ -928,6 +930,7 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
         _srcColor->getValueAtTime(time, r, g, b);
         float h, s, v;
         OFX::Color::rgb_to_hsv((float)r, (float)g, (float)b, &h, &s, &v);
+        h *= 360./OFXS_HUE_CIRCLE;
         _hueRange->setValue(h, h);
         _hueRangeRolloff->setValue(50.);
         _saturationRange->setValue(s, s);
@@ -941,10 +944,12 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
         _srcColor->getValueAtTime(time, r, g, b);
         float h, s, v;
         OFX::Color::rgb_to_hsv((float)r, (float)g, (float)b, &h, &s, &v);
+        h *= 360./OFXS_HUE_CIRCLE;
         double tor, tog, tob;
         _dstColor->getValueAtTime(time, tor, tog, tob);
         float toh, tos, tov;
         OFX::Color::rgb_to_hsv((float)tor, (float)tog, (float)tob, &toh, &tos, &tov);
+        toh *= 360./OFXS_HUE_CIRCLE;
         double dh = toh - h;
         while (dh <= -180.) {
             dh += 360;
@@ -1114,6 +1119,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 0., 360., 360.);
             param->setDoubleType(eDoubleTypeAngle);
+            param->setUseHostNativeOverlayHandle(false);
             if (group) {
                 param->setParent(*group);
             }
@@ -1172,6 +1178,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setDefault(0., 1.);
             param->setRange(0., 0., 1., 1.);
             param->setDisplayRange(0., 0., 1, 1);
+            param->setUseHostNativeOverlayHandle(false);
             if (group) {
                 param->setParent(*group);
             }
@@ -1228,6 +1235,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setDefault(0., 1.);
             param->setRange(0., 0., DBL_MAX, DBL_MAX);
             param->setDisplayRange(0., 0., 1, 1);
+            param->setUseHostNativeOverlayHandle(false);
             if (group) {
                 param->setParent(*group);
             }
