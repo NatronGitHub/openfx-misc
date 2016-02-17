@@ -10,6 +10,7 @@ ClipTest.o \
 ColorCorrect.o \
 ColorMatrix.o \
 ColorSuppress.o \
+ColorWheel.o \
 Constant.o \
 CopyRectangle.o \
 CornerPin.o \
@@ -226,6 +227,7 @@ $(TOP_SRCDIR)/ClipTest \
 $(TOP_SRCDIR)/ColorCorrect \
 $(TOP_SRCDIR)/ColorMatrix \
 $(TOP_SRCDIR)/ColorSuppress \
+$(TOP_SRCDIR)/ColorWheel \
 $(TOP_SRCDIR)/Constant \
 $(TOP_SRCDIR)/CopyRectangle \
 $(TOP_SRCDIR)/CornerPin \
@@ -293,6 +295,7 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/ColorCorrect \
 -I$(TOP_SRCDIR)/ColorLookup \
 -I$(TOP_SRCDIR)/ColorMatrix \
+-I$(TOP_SRCDIR)/ColorWheel \
 -I$(TOP_SRCDIR)/Constant \
 -I$(TOP_SRCDIR)/CopyRectangle \
 -I$(TOP_SRCDIR)/CornerPin \

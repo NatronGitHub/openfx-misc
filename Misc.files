@@ -30,6 +30,7 @@ ColorLookup/ColorLookup.cpp
 ColorMatrix/ColorMatrix.cpp
 ColorSuppress/ColorSuppress.cpp
 ColorTransform/ColorTransform.cpp
+ColorWheel/ColorWheel.cpp
 Constant/Constant.cpp
 CopyRectangle/CopyRectangle.cpp
 CornerPin/CornerPin.cpp

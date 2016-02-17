@@ -41,6 +41,7 @@ grouping).
 ### Image
 
 * CheckerBoardOFX: Generator for an image with a checkerboard color
+* ColorWheelOFX: Generator for an image with a color wheel
 * ConstantOFX: Generator for an image with a uniform color
 * SolidOFX: Generator for an image with a uniform opaque color
 
@@ -303,7 +304,8 @@ ReConverge, SideBySide are by Frederic Devernay.
 
 ColorLookup, Switch, TimeOffset, ChromaKeyer, Difference, Constant,
 Shuffle, Rectangle, Radial, HSVTool, ImageStatistics, CheckerBoard,
-Retime, SlitScan and the CImg plugins are by Frederic Devernay.
+Retime, SlitScan, ColorWheel, the color transform plugins and the
+CImg plugins are by Frederic Devernay.
 
 Merge, ColorCorrect, Grade, Roto, Crop, CopyRectangle  are by
 Alexandre Gauthier.

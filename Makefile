@@ -13,6 +13,7 @@ ColorCorrect \
 ColorLookup \
 ColorMatrix \
 ColorSuppress \
+ColorWheel \
 Constant \
 CopyRectangle \
 CornerPin \
