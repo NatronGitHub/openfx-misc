@@ -370,6 +370,7 @@ public:
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL
     {
         clipPreferences.setOutputFrameVarying(true);
+        clipPreferences.setOutputHasContinousSamples(true);
     }
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL

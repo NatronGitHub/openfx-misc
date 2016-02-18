@@ -411,6 +411,7 @@ void
 TimeDissolvePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     clipPreferences.setOutputFrameVarying(true);
+    clipPreferences.setOutputHasContinousSamples(true);
 }
 
 mDeclarePluginFactory(TimeDissolvePluginFactory, {}, {}

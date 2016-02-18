@@ -264,8 +264,11 @@ RandPlugin::setupAndProcess(RandGeneratorBase &processor, const OFX::RenderArgum
     double density;
     _density->getValueAtTime(time, density);
 
+    float time_f = args.time;
+    uint32_t seed = *((uint32_t*)&time_f);
+
     // set the seed based on the current time, and double it we get difference seeds on different fields
-    uint32_t seed = hash((unsigned)(time)^_seed->getValueAtTime(args.time));
+    seed = hash(seed^_seed->getValueAtTime(args.time));
 
     // set the scales
     // noise level depends on the render scale
@@ -285,6 +288,7 @@ void
 RandPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     clipPreferences.setOutputFrameVarying(true);
+    clipPreferences.setOutputHasContinousSamples(true);
 }
 
 // the overridden render function
