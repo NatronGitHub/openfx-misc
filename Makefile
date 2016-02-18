@@ -9,10 +9,12 @@ CheckerBoard \
 ChromaKeyer \
 Clamp \
 ClipTest \
+ColorBars \
 ColorCorrect \
 ColorLookup \
 ColorMatrix \
 ColorSuppress \
+ColorTransform \
 ColorWheel \
 Constant \
 CopyRectangle \
@@ -29,7 +31,6 @@ FrameRange \
 Gamma \
 GodRays \
 Grade \
-ColorTransform \
 HSVTool \
 Distortion \
 ImageStatistics \

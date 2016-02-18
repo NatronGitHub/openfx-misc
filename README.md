@@ -40,10 +40,11 @@ grouping).
 
 ### Image
 
-* CheckerBoardOFX: Generator for an image with a checkerboard color
-* ColorWheelOFX: Generator for an image with a color wheel
-* ConstantOFX: Generator for an image with a uniform color
-* SolidOFX: Generator for an image with a uniform opaque color
+* CheckerBoardOFX: Generate an image with a checkerboard
+* ColorBarsOFX: Generate an image with SMPTE color bars
+* ColorWheelOFX: Generate an image with a color wheel
+* ConstantOFX: Generate an image with a uniform color
+* SolidOFX: Generate an image with a uniform opaque color
 
 ### Draw
 

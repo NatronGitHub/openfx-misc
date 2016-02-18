@@ -7,9 +7,12 @@ CheckerBoard.o \
 ChromaKeyer.o \
 Clamp.o \
 ClipTest.o \
+ColorBars.o \
 ColorCorrect.o \
+ColorLookup.o \
 ColorMatrix.o \
 ColorSuppress.o \
+ColorTransform.o \
 ColorWheel.o \
 Constant.o \
 CopyRectangle.o \
@@ -25,7 +28,6 @@ FrameRange.o \
 Gamma.o \
 GodRays.o \
 Grade.o \
-ColorTransform.o \
 HSVTool.o \
 Distortion.o \
 ImageStatistics.o \
@@ -49,7 +51,6 @@ Rectangle.o \
 Reformat.o \
 Retime.o \
 Roto.o \
-ColorLookup.o \
 Saturation.o \
 Shuffle.o \
 SideBySide.o \
@@ -101,8 +102,6 @@ $(TOP_SRCDIR)/ColorLookup/net.sf.openfx.ColorLookupPlugin.png \
 $(TOP_SRCDIR)/ColorLookup/net.sf.openfx.ColorLookupPlugin.svg \
 $(TOP_SRCDIR)/ColorMatrix/net.sf.openfx.ColorMatrixPlugin.png \
 $(TOP_SRCDIR)/ColorMatrix/net.sf.openfx.ColorMatrixPlugin.svg \
-$(TOP_SRCDIR)/Despill/net.sf.openfx.Despill.png \
-$(TOP_SRCDIR)/Despill/net.sf.openfx.Despill.svg \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.HSVToRGB.png \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.HSVToRGB.svg \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.LABToRGB.png \
@@ -121,6 +120,8 @@ $(TOP_SRCDIR)/Crop/net.sf.openfx.CropPlugin.png \
 $(TOP_SRCDIR)/Crop/net.sf.openfx.CropPlugin.svg \
 $(TOP_SRCDIR)/Deinterlace/net.sf.openfx.Deinterlace.png \
 $(TOP_SRCDIR)/Deinterlace/net.sf.openfx.Deinterlace.svg \
+$(TOP_SRCDIR)/Despill/net.sf.openfx.Despill.png \
+$(TOP_SRCDIR)/Despill/net.sf.openfx.Despill.svg \
 $(TOP_SRCDIR)/Difference/net.sf.openfx.DifferencePlugin.png \
 $(TOP_SRCDIR)/Difference/net.sf.openfx.DifferencePlugin.svg \
 $(TOP_SRCDIR)/Dissolve/net.sf.openfx.DissolvePlugin.png \
@@ -224,9 +225,12 @@ $(TOP_SRCDIR)/CheckerBoard \
 $(TOP_SRCDIR)/ChromaKeyer \
 $(TOP_SRCDIR)/Clamp \
 $(TOP_SRCDIR)/ClipTest \
+$(TOP_SRCDIR)/ColorBars \
 $(TOP_SRCDIR)/ColorCorrect \
+$(TOP_SRCDIR)/ColorLookup \
 $(TOP_SRCDIR)/ColorMatrix \
 $(TOP_SRCDIR)/ColorSuppress \
+$(TOP_SRCDIR)/ColorTransform \
 $(TOP_SRCDIR)/ColorWheel \
 $(TOP_SRCDIR)/Constant \
 $(TOP_SRCDIR)/CopyRectangle \
@@ -242,7 +246,6 @@ $(TOP_SRCDIR)/FrameRange \
 $(TOP_SRCDIR)/Gamma \
 $(TOP_SRCDIR)/GodRays \
 $(TOP_SRCDIR)/Grade \
-$(TOP_SRCDIR)/ColorTransform \
 $(TOP_SRCDIR)/HSVTool \
 $(TOP_SRCDIR)/Distortion \
 $(TOP_SRCDIR)/ImageStatistics \
@@ -265,7 +268,6 @@ $(TOP_SRCDIR)/ReConverge \
 $(TOP_SRCDIR)/Rectangle \
 $(TOP_SRCDIR)/Reformat \
 $(TOP_SRCDIR)/Retime \
-$(TOP_SRCDIR)/ColorLookup \
 $(TOP_SRCDIR)/Roto \
 $(TOP_SRCDIR)/Saturation \
 $(TOP_SRCDIR)/Shuffle \
@@ -292,9 +294,11 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/ChromaKeyer \
 -I$(TOP_SRCDIR)/Clamp \
 -I$(TOP_SRCDIR)/ClipTest \
+-I$(TOP_SRCDIR)/ColorBars \
 -I$(TOP_SRCDIR)/ColorCorrect \
 -I$(TOP_SRCDIR)/ColorLookup \
 -I$(TOP_SRCDIR)/ColorMatrix \
+-I$(TOP_SRCDIR)/ColorTransform \
 -I$(TOP_SRCDIR)/ColorWheel \
 -I$(TOP_SRCDIR)/Constant \
 -I$(TOP_SRCDIR)/CopyRectangle \
@@ -310,7 +314,6 @@ CXXFLAGS += \
 -I$(TOP_SRCDIR)/Gamma \
 -I$(TOP_SRCDIR)/GodRays \
 -I$(TOP_SRCDIR)/Grade \
--I$(TOP_SRCDIR)/ColorTransform \
 -I$(TOP_SRCDIR)/HSVTool \
 -I$(TOP_SRCDIR)/Distortion \
 -I$(TOP_SRCDIR)/ImageStatistics \
