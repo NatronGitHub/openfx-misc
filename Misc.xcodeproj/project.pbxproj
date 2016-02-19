@@ -985,6 +985,7 @@
 		1EE7A8BD1C74B8AD001AE4BC /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1EE7A8CA1C74B909001AE4BC /* ColorWheel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE7A8C71C74B8F2001AE4BC /* ColorWheel.cpp */; };
 		1EE7A8CB1C74B909001AE4BC /* ColorWheel.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE7A8C71C74B8F2001AE4BC /* ColorWheel.cpp */; };
+		1EE8A0CA1C77650100186ABD /* ofxsRectangleInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E9B5F53198A51840095C8AA /* ofxsRectangleInteract.cpp */; };
 		1EE9B0971A4B300700869861 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EE9B0981A4B300700869861 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1EE9B0991A4B300700869861 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -7072,8 +7073,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1E0072FB1A408BB900E77042 /* ofxsLut.cpp in Sources */,
 				1EFA77351A24F13300212DB0 /* HSVTool.cpp in Sources */,
+				1E0072FB1A408BB900E77042 /* ofxsLut.cpp in Sources */,
+				1EE8A0CA1C77650100186ABD /* ofxsRectangleInteract.cpp in Sources */,
 				1EFA771C1A24F0BA00212DB0 /* ofxsCore.cpp in Sources */,
 				1EFA771D1A24F0BA00212DB0 /* ofxsImageEffect.cpp in Sources */,
 				1EFA771E1A24F0BA00212DB0 /* ofxsInteract.cpp in Sources */,
