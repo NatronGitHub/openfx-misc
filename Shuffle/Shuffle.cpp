@@ -73,7 +73,7 @@
 #define kParamOutputPremultiplication "outputPremult"
 #define kParamOutputPremultiplicationLabel "Premultiplication Metadata"
 #define kParamOutputPremultiplicationHint "Set the premultiplication meta-data that will flow down-stream so that further down effects " \
-"know what kind of data to expect. By default it should be set to the Unpremultiplied and you should always provide the Shuffle node " \
+"know what kind of data to expect. By default it should be set to Unpremultiplied and you should always provide the Shuffle node " \
 "unpremultiplied data. Providing alpha-premultiplied data in input of the Shuffle may produce wrong results because of the potential loss " \
 "of the associated alpha channel."
 
