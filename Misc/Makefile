@@ -96,12 +96,16 @@ $(TOP_SRCDIR)/Clamp/net.sf.openfx.Clamp.png \
 $(TOP_SRCDIR)/Clamp/net.sf.openfx.Clamp.svg \
 $(TOP_SRCDIR)/ClipTest/net.sf.openfx.ClipTestPlugin.png \
 $(TOP_SRCDIR)/ClipTest/net.sf.openfx.ClipTestPlugin.svg \
+$(TOP_SRCDIR)/ColorBars/net.sf.openfx.ColorBars.png \
+$(TOP_SRCDIR)/ColorBars/net.sf.openfx.ColorBars.svg \
 $(TOP_SRCDIR)/ColorCorrect/net.sf.openfx.ColorCorrectPlugin.png \
 $(TOP_SRCDIR)/ColorCorrect/net.sf.openfx.ColorCorrectPlugin.svg \
 $(TOP_SRCDIR)/ColorLookup/net.sf.openfx.ColorLookupPlugin.png \
 $(TOP_SRCDIR)/ColorLookup/net.sf.openfx.ColorLookupPlugin.svg \
 $(TOP_SRCDIR)/ColorMatrix/net.sf.openfx.ColorMatrixPlugin.png \
 $(TOP_SRCDIR)/ColorMatrix/net.sf.openfx.ColorMatrixPlugin.svg \
+$(TOP_SRCDIR)/ColorWheel/net.sf.openfx.ColorWheel.png \
+$(TOP_SRCDIR)/ColorWheel/net.sf.openfx.ColorWheel.svg \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.HSVToRGB.png \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.HSVToRGB.svg \
 $(TOP_SRCDIR)/ColorTransform/net.sf.openfx.LABToRGB.png \
