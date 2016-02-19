@@ -31,6 +31,7 @@
 #include "ofxsCoords.h"
 #include "ofxsLut.h"
 #include "ofxsMacros.h"
+#include "ofxsRectangleInteract.h"
 
 #define kPluginName "HSVToolOFX"
 #define kPluginGrouping "Color"
@@ -69,6 +70,14 @@
 #define kParamDstColor "dstColor"
 #define kParamDstColorLabel "Dst Color"
 #define kParamDstColorHint "Destination color for replacement. Changing this parameter sets the hue rotation, and saturation and brightness adjustments. Should be set after Src Color."
+
+#define kParamEnableRectangle "enableRectangle"
+#define kParamEnableRectangleLabel "Src Analysis Rectangle"
+#define kParamEnableRectangleHint "Enable the rectangle interact for analysis of Src and Dst colors and ranges."
+
+#define kParamSetSrcFromRectangle "setSrcFromRectangle"
+#define kParamSetSrcFromRectangleLabel "Set Src from Rectangle"
+#define kParamSetSrcFromRectangleHint "Set the Src color and ranges and the adjustments from the colors of the source image within the selection rectangle and the Dst Color."
 
 #define kGroupHue "hue"
 #define kGroupHueLabel "Hue"
@@ -138,6 +147,13 @@
 #define kParamOutputAlphaOptionAllHint "Alpha is set to min(Hue mask,Saturation mask,Brightness mask)"
 
 #define kParamPremultChanged "premultChanged"
+
+// to compute the rolloff for a default distribution, we approximate the gaussian with a piecewise linear function
+// f(0) = 1, f'(0) = 0
+// f(sigma*0.5*sqrt(12)) = 1/2, f'(sigma*0.5*sqrt(12)) = g'(sigma) (g is exp(-x^2/(2*sigma^2)))
+// f(inf) = 0, f'(inf) = 0
+#define GAUSSIAN_ROLLOFF 0.8243606354 // exp(1/2)/2
+#define GAUSSIAN_RANGE 1.7320508075 // 0.5*sqrt(12)
 
 enum OutputAlphaEnum {
     eOutputAlphaSource,
@@ -545,6 +561,159 @@ public:
     }
 };
 
+typedef struct HSVColor {
+    HSVColor() : h(0), s(0), v(0) {}
+
+    double h, s, v;
+} HSVColor;
+
+typedef struct HSVColorF {
+    HSVColorF() : h(0), s(0), v(0) {}
+
+    float h, s, v;
+} HSVColorF;
+
+
+class HSVStatsProcessorBase : public OFX::ImageProcessor
+{
+protected:
+    OFX::MultiThread::Mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
+    unsigned long _count;
+    double _sumsinh, _sumcosh, _sums, _sumv;
+    double _sum2s, _sum2v;
+public:
+    HSVStatsProcessorBase(OFX::ImageEffect &instance)
+    : OFX::ImageProcessor(instance)
+    , _mutex()
+    , _count(0)
+    , _sumsinh(0)
+    , _sumcosh(0)
+    , _sums(0)
+    , _sumv(0)
+    , _sum2s(0)
+    , _sum2v(0)
+    {
+    }
+
+    ~HSVStatsProcessorBase()
+    {
+    }
+
+    void getResults(HSVColor *mean, HSVColor *sdev)
+    {
+        if (_count <= 0) {
+            *mean = HSVColor();
+            *sdev = HSVColor();
+        } else {
+            double meansinh = _sumsinh / _count;
+            double meancosh = _sumcosh / _count;
+            // angle mean and sdev from https://en.wikipedia.org/wiki/Directional_statistics#Measures_of_location_and_spread
+            mean->h = std::atan2(meansinh, meancosh)*180/M_PI;
+            mean->s = _sums / _count;
+            mean->v = _sumv / _count;
+            sdev->h = std::sqrt(std::max(0., -std::log(meansinh*meansinh+meancosh*meancosh)))*180/M_PI;
+            sdev->s = std::sqrt(_sum2s / _count - mean->s*mean->s);
+            sdev->v = std::sqrt(_sum2v / _count - mean->v*mean->v);
+        }
+    }
+
+protected:
+    void addResults(double sumsinh, double sumcosh, double sums, double sumv, double sum2s, double sum2v, unsigned long count) {
+        _mutex.lock();
+        _sumsinh += sumsinh;
+        _sumcosh += sumcosh;
+        _sums += sums;
+        _sumv += sumv;
+        _sum2s += sum2s;
+        _sum2v += sum2v;
+        _count += count;
+        _mutex.unlock();
+    }
+};
+
+template <class PIX, int nComponents, int maxValue>
+class HSVStatsProcessor : public HSVStatsProcessorBase
+{
+public:
+    HSVStatsProcessor(OFX::ImageEffect &instance)
+    : HSVStatsProcessorBase(instance)
+    {
+    }
+
+    ~HSVStatsProcessor()
+    {
+    }
+private:
+
+    void
+    pixToHSV(const PIX *p, HSVColorF* hsv)
+    {
+        if (nComponents == 4 || nComponents == 3) {
+            float r, g, b;
+            r = p[0]/(float)maxValue;
+            g = p[1]/(float)maxValue;
+            b = p[2]/(float)maxValue;
+            OFX::Color::rgb_to_hsv(r, g, b, &hsv->h, &hsv->s, &hsv->v);
+            hsv->h *= 360/OFXS_HUE_CIRCLE;
+        } else {
+            *hsv = HSVColorF();
+        }
+    }
+
+
+
+    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
+    {
+        double sumsinh = 0.;
+        double sumcosh = 0.;
+        double sums = 0.;
+        double sumv = 0.;
+        double sum2s = 0.;
+        double sum2v = 0.;
+        unsigned long count = 0;
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if (_effect.abort()) {
+                break;
+            }
+
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
+            // partial sums to avoid underflows
+            double sumsinhLine = 0.;
+            double sumcoshLine = 0.;
+            double sumsLine = 0.;
+            double sumvLine = 0.;
+            double sum2sLine = 0.;
+            double sum2vLine = 0.;
+
+            for (int x = procWindow.x1; x < procWindow.x2; ++x) {
+                HSVColorF hsv;
+                pixToHSV(dstPix, &hsv);
+                sumsinhLine += std::sin(hsv.h*M_PI/180);
+                sumcoshLine += std::cos(hsv.h*M_PI/180);
+                sumsLine += hsv.s;
+                sumvLine += hsv.v;
+                sum2sLine += hsv.s*hsv.s;
+                sum2vLine += hsv.v*hsv.v;
+
+                dstPix += nComponents;
+            }
+            sumsinh += sumsinhLine;
+            sumcosh += sumcoshLine;
+            sums += sumsLine;
+            sumv += sumvLine;
+            sum2s += sum2sLine;
+            sum2v += sum2vLine;
+            count += procWindow.x2 - procWindow.x1;
+        }
+
+        addResults(sumsinh, sumcosh, sums, sumv, sum2s, sum2v, count);
+    }
+};
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -588,6 +757,12 @@ public:
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
+        _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
+        _size = fetchDouble2DParam(kParamRectangleInteractSize);
+        _enableRectangle = fetchBooleanParam(kParamEnableRectangle);
+        assert(_btmLeft && _size && _enableRectangle);
+        _setSrcFromRectangle = fetchPushButtonParam(kParamSetSrcFromRectangle);
+        assert(_setSrcFromRectangle);
         _srcColor = fetchRGBParam(kParamSrcColor);
         _dstColor = fetchRGBParam(kParamDstColor);
         _hueRange = fetchDouble2DParam(kParamHueRange);
@@ -617,6 +792,17 @@ public:
         assert(_mix && _maskInvert);
         _premultChanged = fetchBooleanParam(kParamPremultChanged);
         assert(_premultChanged);
+
+
+        // update visibility
+        bool enableRectangle = _enableRectangle->getValue();
+        _btmLeft->setEnabled(enableRectangle);
+        _btmLeft->setIsSecret(!enableRectangle);
+        _size->setEnabled(enableRectangle);
+        _size->setIsSecret(!enableRectangle);
+        _setSrcFromRectangle->setEnabled(enableRectangle);
+        _setSrcFromRectangle->setIsSecret(!enableRectangle);
+        _srcColor->setEnabled(!enableRectangle);
     }
     
 private:
@@ -634,12 +820,55 @@ private:
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
     
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
-    
+
+    // compute computation window in srcImg
+    bool computeWindow(const OFX::Image* srcImg, double time, OfxRectI *analysisWindow);
+
+    // update image statistics
+    void setSrcFromRectangle(const OFX::Image* srcImg, double time, const OfxRectI& analysisWindow);
+
+    void setSrcFromRectangleProcess(HSVStatsProcessorBase &processor, const OFX::Image* srcImg, double /*time*/, const OfxRectI &analysisWindow, HSVColor *mean, HSVColor *sdev);
+
+    template <class PIX, int nComponents, int maxValue>
+    void setSrcFromRectangleComponentsDepth(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, HSVColor *mean, HSVColor *sdev)
+    {
+        HSVStatsProcessor<PIX, nComponents, maxValue> fred(*this);
+        setSrcFromRectangleProcess(fred, srcImg, time, analysisWindow, mean, sdev);
+    }
+
+    template <int nComponents>
+    void setSrcFromRectangleComponents(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, HSVColor *mean, HSVColor *sdev)
+    {
+        OFX::BitDepthEnum srcBitDepth = srcImg->getPixelDepth();
+        switch (srcBitDepth) {
+            case OFX::eBitDepthUByte: {
+                setSrcFromRectangleComponentsDepth<unsigned char, nComponents, 255>(srcImg, time, analysisWindow, mean, sdev);
+                break;
+            }
+            case OFX::eBitDepthUShort: {
+                setSrcFromRectangleComponentsDepth<unsigned short, nComponents, 65535>(srcImg, time, analysisWindow, mean, sdev);
+                break;
+            }
+            case OFX::eBitDepthFloat: {
+                setSrcFromRectangleComponentsDepth<float, nComponents, 1>(srcImg, time, analysisWindow, mean, sdev);
+                break;
+            }
+            default:
+                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        }
+    }
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
     OFX::Clip *_maskClip;
+
+    Double2DParam* _btmLeft;
+    Double2DParam* _size;
+    BooleanParam* _enableRectangle;
+    PushButtonParam* _setSrcFromRectangle;
+
     OFX::RGBParam *_srcColor;
     OFX::RGBParam *_dstColor;
     OFX::Double2DParam *_hueRange;
@@ -771,7 +1000,7 @@ HSVToolPlugin::render(const OFX::RenderArguments &args)
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
-    
+
     assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
     assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
@@ -920,6 +1149,122 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip,
     return false;
 }
 
+bool
+HSVToolPlugin::computeWindow(const OFX::Image* srcImg, double time, OfxRectI *analysisWindow)
+{
+    OfxRectD regionOfInterest;
+    bool enableRectangle = _enableRectangle->getValueAtTime(time);
+    if (!enableRectangle && _srcClip) {
+        return false; // no analysis in this case
+        /*
+        // use the src region of definition as rectangle, but avoid infinite rectangle
+        regionOfInterest = _srcClip->getRegionOfDefinition(time);
+        OfxPointD size = getProjectSize();
+        OfxPointD offset = getProjectOffset();
+        if (regionOfInterest.x1 <= kOfxFlagInfiniteMin) {
+            regionOfInterest.x1 = offset.x;
+        }
+        if (regionOfInterest.x2 >= kOfxFlagInfiniteMax) {
+            regionOfInterest.x2 = offset.x + size.x;
+        }
+        if (regionOfInterest.y1 <= kOfxFlagInfiniteMin) {
+            regionOfInterest.y1 = offset.y;
+        }
+        if (regionOfInterest.y2 >= kOfxFlagInfiniteMax) {
+            regionOfInterest.y2 = offset.y + size.y;
+        }
+         */
+    } else {
+        _btmLeft->getValueAtTime(time, regionOfInterest.x1, regionOfInterest.y1);
+        _size->getValueAtTime(time, regionOfInterest.x2, regionOfInterest.y2);
+        regionOfInterest.x2 += regionOfInterest.x1;
+        regionOfInterest.y2 += regionOfInterest.y1;
+    }
+    Coords::toPixelEnclosing(regionOfInterest,
+                             srcImg->getRenderScale(),
+                             srcImg->getPixelAspectRatio(),
+                             analysisWindow);
+    return OFX::Coords::rectIntersection(*analysisWindow, srcImg->getBounds(), analysisWindow);
+}
+
+void
+HSVToolPlugin::setSrcFromRectangle(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow)
+{
+    HSVColor mean, sdev;
+
+    OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
+    assert(srcComponents == OFX::ePixelComponentAlpha ||srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA);
+    if (srcComponents == OFX::ePixelComponentAlpha) {
+        setSrcFromRectangleComponents<1>(srcImg, time, analysisWindow, &mean, &sdev);
+    } else if (srcComponents == OFX::ePixelComponentRGBA) {
+        setSrcFromRectangleComponents<4>(srcImg, time, analysisWindow, &mean, &sdev);
+    } else if (srcComponents == OFX::ePixelComponentRGB) {
+        setSrcFromRectangleComponents<3>(srcImg, time, analysisWindow, &mean, &sdev);
+    } else {
+        // coverity[dead_error_line]
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    }
+
+    if (abort()) {
+        return;
+    }
+
+    float h = mean.h * OFXS_HUE_CIRCLE / 360.;
+    float s = mean.s;
+    float v = mean.v;
+    float r = 0.f;
+    float g = 0.f;
+    float b = 0.f;
+    OFX::Color::hsv_to_rgb(h, s, v, &r, &g, &b);
+    double tor, tog, tob;
+    _dstColor->getValueAtTime(time, tor, tog, tob);
+    float toh, tos, tov;
+    OFX::Color::rgb_to_hsv((float)tor, (float)tog, (float)tob, &toh, &tos, &tov);
+    double dh = (toh - h) * 360./OFXS_HUE_CIRCLE;
+    while (dh <= -180.) {
+        dh += 360;
+    }
+    while (dh > 180.) {
+        dh -= 360;
+    }
+    // range is from mean+sdev*(GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF) to mean+sdev*(GAUSSIAN_RANGE+GAUSSIAN_ROLLOFF)
+    beginEditBlock("setSrcFromRectangle");
+    _srcColor->setValue(r, g, b);
+    _hueRange->setValue(mean.h - sdev.h * (GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF), mean.h + sdev.h * (GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF));
+    _hueRangeRolloff->setValue(sdev.h * 2 * GAUSSIAN_ROLLOFF);
+    if (tov != 0.) { // no need to rotate if target color is black
+        _hueRotation->setValue(dh);
+    }
+    _saturationRange->setValue(mean.s - sdev.s * (GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF), mean.s + sdev.s * (GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF));
+    _saturationRangeRolloff->setValue(sdev.s * 2 * GAUSSIAN_ROLLOFF);
+    if (tov != 0.) { // no need to adjust saturation if target color is black
+        _saturationAdjustment->setValue(tos - s);
+    }
+    _brightnessRange->setValue(mean.v - sdev.v * (GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF), mean.v + sdev.v * (GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF));
+    _brightnessRangeRolloff->setValue(sdev.v * 2 * GAUSSIAN_ROLLOFF);
+    _brightnessAdjustment->setValue(tov - v);
+    endEditBlock();
+}
+
+/* set up and run a processor */
+void
+HSVToolPlugin::setSrcFromRectangleProcess(HSVStatsProcessorBase &processor, const OFX::Image* srcImg, double /*time*/, const OfxRectI &analysisWindow, HSVColor *mean, HSVColor *sdev)
+{
+
+    // set the images
+    processor.setDstImg(const_cast<OFX::Image*>(srcImg)); // not a bug: we only set dst
+
+    // set the render window
+    processor.setRenderWindow(analysisWindow);
+
+    // Call the base class process member, this will call the derived templated process code
+    processor.process();
+
+    if (!abort()) {
+        processor.getResults(mean, sdev);
+    }
+}
+
 void
 HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &paramName)
 {
@@ -931,14 +1276,65 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
         float h, s, v;
         OFX::Color::rgb_to_hsv((float)r, (float)g, (float)b, &h, &s, &v);
         h *= 360./OFXS_HUE_CIRCLE;
+        double tor, tog, tob;
+        _dstColor->getValueAtTime(time, tor, tog, tob);
+        float toh, tos, tov;
+        OFX::Color::rgb_to_hsv((float)tor, (float)tog, (float)tob, &toh, &tos, &tov);
+        toh *= 360./OFXS_HUE_CIRCLE;
+        double dh = toh - h;
+        while (dh <= -180.) {
+            dh += 360;
+        }
+        while (dh > 180.) {
+            dh -= 360;
+        }
+        beginEditBlock("setSrc");
         _hueRange->setValue(h, h);
         _hueRangeRolloff->setValue(50.);
+        if (tov != 0.) { // no need to rotate if target color is black
+            _hueRotation->setValue(dh);
+        }
         _saturationRange->setValue(s, s);
         _saturationRangeRolloff->setValue(0.3);
+        if (tov != 0.) { // no need to adjust saturation if target color is black
+            _saturationAdjustment->setValue(tos - s);
+        }
         _brightnessRange->setValue(v, v);
         _brightnessRangeRolloff->setValue(0.3);
-    }
-    if (paramName == kParamDstColor && args.reason == OFX::eChangeUserEdit) {
+        _brightnessAdjustment->setValue(tov - v);
+        endEditBlock();
+    } else if (paramName == kParamEnableRectangle) {
+        // update visibility
+        bool enableRectangle = _enableRectangle->getValueAtTime(time);
+        _btmLeft->setEnabled(enableRectangle);
+        _btmLeft->setIsSecret(!enableRectangle);
+        _size->setEnabled(enableRectangle);
+        _size->setIsSecret(!enableRectangle);
+        _setSrcFromRectangle->setEnabled(enableRectangle);
+        _setSrcFromRectangle->setIsSecret(!enableRectangle);
+        _srcColor->setEnabled(!enableRectangle);
+    } else if (paramName == kParamSetSrcFromRectangle && args.reason == OFX::eChangeUserEdit) {
+        std::auto_ptr<OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
+                                      _srcClip->fetchImage(args.time) : 0);
+        if (src.get()) {
+            if (src->getRenderScale().x != args.renderScale.x ||
+                src->getRenderScale().y != args.renderScale.y) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+            }
+            OfxRectI analysisWindow;
+            bool intersect = computeWindow(src.get(), args.time, &analysisWindow);
+            if (intersect) {
+#             ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
+                getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
+#             endif
+                setSrcFromRectangle(src.get(), args.time, analysisWindow);
+#             ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
+                getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
+#             endif
+            }
+        }
+    } else if (paramName == kParamDstColor && args.reason == OFX::eChangeUserEdit) {
         // - when setting dstColor: compute hueRotation, satAdjust and valAdjust
         double r, g, b;
         _srcColor->getValueAtTime(time, r, g, b);
@@ -957,9 +1353,13 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
         while (dh > 180.) {
             dh -= 360;
         }
-        _hueRotation->setValue(dh);
-        _saturationAdjustment->setValue(tos - s);
+        beginEditBlock("setDst");
+        if (tov != 0.) { // no need to adjust hue or saturation if target color is black
+            _hueRotation->setValue(dh);
+            _saturationAdjustment->setValue(tos - s);
+        }
         _brightnessAdjustment->setValue(tov - v);
+        endEditBlock();
     } else if (paramName == kParamPremult && args.reason == OFX::eChangeUserEdit) {
         _premultChanged->setValue(true);
     }
@@ -989,7 +1389,6 @@ HSVToolPlugin::changedClip(const InstanceChangedArgs &args, const std::string &c
 }
 
 
-
 /* Override the clip preferences */
 void
 HSVToolPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
@@ -1003,6 +1402,59 @@ HSVToolPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }
 }
+
+class HSVToolInteract : public RectangleInteract
+{
+public:
+
+    HSVToolInteract(OfxInteractHandle handle, OFX::ImageEffect* effect)
+    : RectangleInteract(handle,effect)
+    , _enableRectangle(0)
+    {
+        _enableRectangle = effect->fetchBooleanParam(kParamEnableRectangle);
+        addParamToSlaveTo(_enableRectangle);
+    }
+
+private:
+
+    // overridden functions from OFX::Interact to do things
+    virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL {
+        bool enableRectangle = _enableRectangle->getValueAtTime(args.time);
+        if (enableRectangle) {
+            return RectangleInteract::draw(args);
+        }
+        return false;
+    }
+    virtual bool penMotion(const OFX::PenArgs &args) OVERRIDE FINAL {
+        bool enableRectangle = _enableRectangle->getValueAtTime(args.time);
+        if (enableRectangle) {
+            return RectangleInteract::penMotion(args);
+        }
+        return false;
+    }
+    virtual bool penDown(const OFX::PenArgs &args) OVERRIDE FINAL {
+        bool enableRectangle = _enableRectangle->getValueAtTime(args.time);
+        if (enableRectangle) {
+            return RectangleInteract::penDown(args);
+        }
+        return false;
+    }
+    virtual bool penUp(const OFX::PenArgs &args) OVERRIDE FINAL {
+        bool enableRectangle = _enableRectangle->getValueAtTime(args.time);
+        if (enableRectangle) {
+            return RectangleInteract::penUp(args);
+        }
+        return false;
+    }
+    //virtual bool keyDown(const OFX::KeyArgs &args) OVERRIDE;
+    //virtual bool keyUp(const OFX::KeyArgs & args) OVERRIDE;
+    //virtual void loseFocus(const FocusArgs &args) OVERRIDE FINAL;
+
+
+    OFX::BooleanParam* _enableRectangle;
+};
+
+class HSVToolOverlayDescriptor : public DefaultEffectOverlayDescriptor<HSVToolOverlayDescriptor, HSVToolInteract> {};
 
 mDeclarePluginFactory(HSVToolPluginFactory, {}, {});
 
@@ -1031,6 +1483,7 @@ HSVToolPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+    desc.setOverlayInteractDescriptor(new HSVToolOverlayDescriptor);
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentRGBA);
 #endif
@@ -1074,10 +1527,82 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             group->setEnabled(true);
         }
 
+        // enableRectangle
+        {
+            BooleanParamDescriptor *param = desc.defineBooleanParam(kParamEnableRectangle);
+            param->setLabel(kParamEnableRectangleLabel);
+            param->setHint(kParamEnableRectangleHint);
+            param->setDefault(false);
+            param->setAnimates(false);
+            param->setEvaluateOnChange(false);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        // btmLeft
+        {
+            Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
+            param->setLabel(kParamRectangleInteractBtmLeftLabel);
+            param->setDoubleType(OFX::eDoubleTypeXYAbsolute);
+            param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+            param->setDefault(0.5, 0.5);
+            param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(-10000, -10000, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
+            param->setIncrement(1.);
+            param->setHint(kParamRectangleInteractBtmLeftHint);
+            param->setDigits(0);
+            param->setEvaluateOnChange(false);
+            param->setAnimates(true);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        // size
+        {
+            Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractSize);
+            param->setLabel(kParamRectangleInteractSizeLabel);
+            param->setDoubleType(OFX::eDoubleTypeXY);
+            param->setDefaultCoordinateSystem(OFX::eCoordinatesNormalised);
+            param->setDefault(0.5, 0.5);
+            param->setRange(0., 0., DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0, 0, 10000, 10000); // Resolve requires display range or values are clamped to (-1,1)
+            param->setIncrement(1.);
+            param->setDimensionLabels(kParamRectangleInteractSizeDim1, kParamRectangleInteractSizeDim2);
+            param->setHint(kParamRectangleInteractSizeHint);
+            param->setDigits(0);
+            param->setEvaluateOnChange(false);
+            param->setAnimates(true);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            PushButtonParamDescriptor *param = desc.definePushButtonParam(kParamSetSrcFromRectangle);
+            param->setLabel(kParamSetSrcFromRectangleLabel);
+            param->setHint(kParamSetSrcFromRectangleHint);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
         {
             RGBParamDescriptor *param = desc.defineRGBParam(kParamSrcColor);
             param->setLabel(kParamSrcColorLabel);
             param->setHint(kParamSrcColorHint);
+            param->setEvaluateOnChange(false);
             if (group) {
                 param->setParent(*group);
             }
@@ -1089,6 +1614,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             RGBParamDescriptor *param = desc.defineRGBParam(kParamDstColor);
             param->setLabel(kParamDstColorLabel);
             param->setHint(kParamDstColorHint);
+            param->setEvaluateOnChange(false);
             param->setLayoutHint(eLayoutHintDivider); // last parameter in the group
             if (group) {
                 param->setParent(*group);
