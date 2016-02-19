@@ -138,6 +138,7 @@ using namespace OFX;
 
 
 static bool gHostCanTransform;
+static bool gHostIsNatron = false;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -185,37 +186,40 @@ public:
         _boxSize_saved = _boxSize->getValue();
         _boxPAR_saved = _boxPAR->getValue();
         _boxFixed_saved = _boxFixed->getValue();
-
-        // try to guess the output format from the project size
-        double projectPAR = getProjectPixelAspectRatio();
-        OfxPointD projectSize = getProjectSize();
-
-        ///Try to find a format matching the project format in which case we switch to format mode otherwise
-        ///switch to size mode and set the size accordingly
-        bool foundFormat = false;
-        for (int i = 0; i < (int)eParamFormatCount ; ++i) {
-            int width = 0, height = 0;
-            double par = -1.;
-            getFormatResolution((OFX::EParamFormat)i, &width, &height, &par);
-            assert(par != -1);
-            if (width * par == projectSize.x && height == projectSize.y && std::abs(par - projectPAR) < 0.01) {
-                _type->setValue((int)eReformatTypeToFormat);
-                _format->setValue((OFX::EParamFormat)i);
-                _boxSize->setValue(width, height);
-                _boxPAR->setValue(par);
-                foundFormat = true;
-                break;
+        
+        if (!gHostIsNatron) {
+            // try to guess the output format from the project size
+            // do it only if not Natron otherwise this will override what the host has set in the format when loading
+            double projectPAR = getProjectPixelAspectRatio();
+            OfxPointD projectSize = getProjectSize();
+            
+            ///Try to find a format matching the project format in which case we switch to format mode otherwise
+            ///switch to size mode and set the size accordingly
+            bool foundFormat = false;
+            for (int i = 0; i < (int)eParamFormatCount ; ++i) {
+                int width = 0, height = 0;
+                double par = -1.;
+                getFormatResolution((OFX::EParamFormat)i, &width, &height, &par);
+                assert(par != -1);
+                if (width * par == projectSize.x && height == projectSize.y && std::abs(par - projectPAR) < 0.01) {
+                    _type->setValue((int)eReformatTypeToFormat);
+                    _format->setValue((OFX::EParamFormat)i);
+                    _boxSize->setValue(width, height);
+                    _boxPAR->setValue(par);
+                    foundFormat = true;
+                    break;
+                }
             }
-        }
-        if (!foundFormat) {
-            _type->setValue((int)eReformatTypeToBox);
-            _boxSize->setValue(projectSize.x / projectPAR, projectSize.y);
-            _boxPAR->setValue(projectPAR);
-            _boxFixed->setValue(true);
-            _boxSize_saved.x = projectSize.x / projectPAR;
-            _boxSize_saved.y = projectSize.y;
-            _boxPAR_saved = projectPAR;
-            _boxFixed_saved = true;
+            if (!foundFormat) {
+                _type->setValue((int)eReformatTypeToBox);
+                _boxSize->setValue(projectSize.x / projectPAR, projectSize.y);
+                _boxPAR->setValue(projectPAR);
+                _boxFixed->setValue(true);
+                _boxSize_saved.x = projectSize.x / projectPAR;
+                _boxSize_saved.y = projectSize.y;
+                _boxPAR_saved = projectPAR;
+                _boxFixed_saved = true;
+            }
         }
 
         refreshVisibility();
@@ -681,6 +685,11 @@ void ReformatPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #ifdef OFX_EXTENSIONS_NUKE
     if (OFX::getImageEffectHostDescription()->canTransform) {
         gHostCanTransform = true;
+    }
+#endif
+#ifdef OFX_EXTENSIONS_NATRON
+    if (OFX::getImageEffectHostDescription()->isNatron) {
+        gHostIsNatron = true;
     }
 #endif
 }
