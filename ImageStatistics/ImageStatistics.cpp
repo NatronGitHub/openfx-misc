@@ -927,14 +927,12 @@ public:
         assert(_analyzeFrameHSVL && _analyzeSequenceHSVL);
 
         // update visibility
-        bool restrictToRectangle;
-        _restrictToRectangle->getValue(restrictToRectangle);
+        bool restrictToRectangle = _restrictToRectangle->getValue();
         _btmLeft->setEnabled(restrictToRectangle);
         _btmLeft->setIsSecret(!restrictToRectangle);
         _size->setEnabled(restrictToRectangle);
         _size->setIsSecret(!restrictToRectangle);
-        bool doUpdate;
-        _autoUpdate->getValue(doUpdate);
+        bool doUpdate = _autoUpdate->getValue();
         _interactive->setEnabled(restrictToRectangle && doUpdate);
         _interactive->setIsSecret(!restrictToRectangle || !doUpdate);
     }
@@ -1084,8 +1082,7 @@ ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
     copyPixels(*this, args.renderWindow, src.get(), dst.get());
 
     if (src.get()) {
-        bool autoUpdate;
-        _autoUpdate->getValueAtTime(args.time, autoUpdate);
+        bool autoUpdate = _autoUpdate->getValueAtTime(args.time);
         assert(autoUpdate); // render should only be called if autoUpdate is true: in other cases isIdentity returns true
         if (autoUpdate) {
             // check if there is already a Keyframe, if yes update it
@@ -1111,8 +1108,7 @@ ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
 void
 ImageStatisticsPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
-    bool restrictToRectangle;
-    _restrictToRectangle->getValueAtTime(args.time, restrictToRectangle);
+    bool restrictToRectangle = _restrictToRectangle->getValueAtTime(args.time);
     if (restrictToRectangle) {
         OfxRectD regionOfInterest;
         _btmLeft->getValueAtTime(args.time, regionOfInterest.x1, regionOfInterest.y1);
@@ -1146,8 +1142,7 @@ ImageStatisticsPlugin::isIdentity(const OFX::IsIdentityArguments &args,
     }
 
     const double time = args.time;
-    bool autoUpdate;
-    _autoUpdate->getValueAtTime(time, autoUpdate);
+    bool autoUpdate = _autoUpdate->getValueAtTime(time);
 
     if (!autoUpdate) {
         identityClip = _srcClip;
@@ -1176,8 +1171,7 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 
     if (paramName == kParamRestrictToRectangle) {
         // update visibility
-        bool restrictToRectangle;
-        _restrictToRectangle->getValueAtTime(time, restrictToRectangle);
+        bool restrictToRectangle = _restrictToRectangle->getValueAtTime(time);
         _btmLeft->setEnabled(restrictToRectangle);
         _btmLeft->setIsSecret(!restrictToRectangle);
         _size->setEnabled(restrictToRectangle);
@@ -1187,16 +1181,15 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         doUpdate = true;
     }
     if (paramName == kParamAutoUpdate) {
-        bool restrictToRectangle;
-        _restrictToRectangle->getValueAtTime(time, restrictToRectangle);
-        _autoUpdate->getValueAtTime(time, doUpdate);
+        bool restrictToRectangle = _restrictToRectangle->getValueAtTime(time);
+        doUpdate = _autoUpdate->getValueAtTime(time);
         _interactive->setEnabled(restrictToRectangle && doUpdate);
         _interactive->setIsSecret(!restrictToRectangle || !doUpdate);
     }
     if (//paramName == kParamRectangleInteractBtmLeft ||
         // only trigger on kParamRectangleInteractSize (the last one changed)
         paramName == kParamRectangleInteractSize) {
-        _autoUpdate->getValueAtTime(time, doUpdate);
+        doUpdate = _autoUpdate->getValueAtTime(time);
     }
     if (paramName == kParamAnalyzeFrame) {
         doAnalyzeRGBA = true;
@@ -1342,8 +1335,7 @@ bool
 ImageStatisticsPlugin::computeWindow(const OFX::Image* srcImg, double time, OfxRectI *analysisWindow)
 {
     OfxRectD regionOfInterest;
-    bool restrictToRectangle;
-    _restrictToRectangle->getValueAtTime(time, restrictToRectangle);
+    bool restrictToRectangle = _restrictToRectangle->getValueAtTime(time);
     if (!restrictToRectangle && _srcClip) {
         // use the src region of definition as rectangle, but avoid infinite rectangle
         regionOfInterest = _srcClip->getRegionOfDefinition(time);
@@ -1444,32 +1436,28 @@ private:
 
     // overridden functions from OFX::Interact to do things
     virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL {
-        bool restrictToRectangle;
-        _restrictToRectangle->getValueAtTime(args.time, restrictToRectangle);
+        bool restrictToRectangle = _restrictToRectangle->getValueAtTime(args.time);
         if (restrictToRectangle) {
             return RectangleInteract::draw(args);
         }
         return false;
     }
     virtual bool penMotion(const OFX::PenArgs &args) OVERRIDE FINAL {
-        bool restrictToRectangle;
-        _restrictToRectangle->getValueAtTime(args.time, restrictToRectangle);
+        bool restrictToRectangle = _restrictToRectangle->getValueAtTime(args.time);
         if (restrictToRectangle) {
             return RectangleInteract::penMotion(args);
         }
         return false;
     }
     virtual bool penDown(const OFX::PenArgs &args) OVERRIDE FINAL {
-        bool restrictToRectangle;
-        _restrictToRectangle->getValueAtTime(args.time, restrictToRectangle);
+        bool restrictToRectangle = _restrictToRectangle->getValueAtTime(args.time);
         if (restrictToRectangle) {
             return RectangleInteract::penDown(args);
         }
         return false;
     }
     virtual bool penUp(const OFX::PenArgs &args) OVERRIDE FINAL {
-        bool restrictToRectangle;
-        _restrictToRectangle->getValueAtTime(args.time, restrictToRectangle);
+        bool restrictToRectangle = _restrictToRectangle->getValueAtTime(args.time);
         if (restrictToRectangle) {
             return RectangleInteract::penUp(args);
         }
@@ -1581,8 +1569,9 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setIncrement(1.);
         param->setHint(kParamRectangleInteractBtmLeftHint);
         param->setDigits(0);
+        param->setEvaluateOnChange(false);
         param->setAnimates(true);
-        if (page) {
+       if (page) {
             page->addChild(*param);
         }
     }
