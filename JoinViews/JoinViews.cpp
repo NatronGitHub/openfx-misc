@@ -380,6 +380,6 @@ OFX::ImageEffect* JoinViewsPluginFactory::createInstance(OfxImageEffectHandle ha
 }
 
 
-static JoinViewsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-mRegisterPluginFactoryInstance(p)
+//static JoinViewsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+//mRegisterPluginFactoryInstance(p)
 
