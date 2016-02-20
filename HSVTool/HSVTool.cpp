@@ -91,7 +91,7 @@
 #define kParamHueRotationHint "Rotation of color hues (in degrees) within the range."
 #define kParamHueRotationGain "hueRotationGain"
 #define kParamHueRotationGainLabel "Hue Rotation Gain"
-#define kParamHueRotationGainHint "Factor to be applied to the rotation of color hues (in degrees) within the range. A value of 0 will set all values within range to a constant, and a value of 1 will add hueRotation to all values within range."
+#define kParamHueRotationGainHint "Factor to be applied to the rotation of color hues (in degrees) within the range. A value of 0 will set all values within range to a constant (computed at the center of the range), and a value of 1 will add hueRotation to all values within range."
 #define kParamHueRangeRolloff "hueRangeRolloff"
 #define kParamHueRangeRolloffLabel "Hue Range Rolloff"
 #define kParamHueRangeRolloffHint "Interval (in degrees) around Hue Range, where hue rotation decreases progressively to zero."
@@ -105,6 +105,9 @@
 #define kParamSaturationAdjustment "saturationAdjustment"
 #define kParamSaturationAdjustmentLabel "Saturation Adjustment"
 #define kParamSaturationAdjustmentHint "Adjustment of color saturations within the range. Saturation is clamped to zero to avoid color inversions."
+#define kParamSaturationAdjustmentGain "saturationAdjustmentGain"
+#define kParamSaturationAdjustmentGainLabel "Saturation Adjustment Gain"
+#define kParamSaturationAdjustmentGainHint "Factor to be applied to the saturation adjustment within the range. A value of 0 will set all values within range to a constant (computed at the center of the range), and a value of 1 will add saturationAdjustment to all values within range."
 #define kParamSaturationRangeRolloff "saturationRangeRolloff"
 #define kParamSaturationRangeRolloffLabel "Saturation Range Rolloff"
 #define kParamSaturationRangeRolloffHint "Interval (in degrees) around Saturation Range, where saturation rotation decreases progressively to zero."
@@ -118,6 +121,9 @@
 #define kParamBrightnessAdjustment "brightnessAdjustment"
 #define kParamBrightnessAdjustmentLabel "Brightness Adjustment"
 #define kParamBrightnessAdjustmentHint "Adjustment of color brightnesss within the range."
+#define kParamBrightnessAdjustmentGain "brightnessAdjustmentGain"
+#define kParamBrightnessAdjustmentGainLabel "Brightness Adjustment Gain"
+#define kParamBrightnessAdjustmentGainHint "Factor to be applied to the brightness adjustment within the range. A value of 0 will set all values within range to a constant (computed at the center of the range), and a value of 1 will add brightnessAdjustment to all values within range."
 #define kParamBrightnessRangeRolloff "brightnessRangeRolloff"
 #define kParamBrightnessRangeRolloffLabel "Brightness Range Rolloff"
 #define kParamBrightnessRangeRolloffHint "Interval (in degrees) around Brightness Range, where brightness rotation decreases progressively to zero."
@@ -199,9 +205,11 @@ struct HSVToolValues {
     double hueRolloff;
     double satRange[2];
     double satAdjust;
+    double satAdjustGain;
     double satRolloff;
     double valRange[2];
     double valAdjust;
+    double valAdjustGain;
     double valRolloff;
     HSVToolValues() {
         hueRange[0] = hueRange[1] = 0.;
@@ -212,9 +220,11 @@ struct HSVToolValues {
         hueRolloff = 0.;
         satRange[0] = satRange[1] = 0.;
         satAdjust = 0.;
+        satAdjustGain = 1.;
         satRolloff = 0.;
         valRange[0] = valRange[1] = 0.;
         valAdjust = 0.;
+        valAdjustGain = 1.;
         valRolloff = 0.;
     }
 };
@@ -529,11 +539,11 @@ public:
         } else {
             //h += coeff * (float)_values.hueRotation;
             h += coeff * ((float)_values.hueRotation + (_values.hueRotationGain - 1.) * normalizeAngleSigned(h - _values.hueMean));
-            s += coeff * (float)_values.satAdjust;
+            s += coeff * ((float)_values.satAdjust + (_values.satAdjustGain - 1.) * (s - (s0+s1)/2));
             if (s < 0) {
                 s = 0;
             }
-            v += coeff * (float)_values.valAdjust;
+            v += coeff * ((float)_values.valAdjust + (_values.valAdjustGain - 1.) * (v - (v0+v1)/2));
             h *= OFXS_HUE_CIRCLE/360.;
             OFX::Color::hsv_to_rgb(h, s, v, rout, gout, bout);
         }
@@ -920,9 +930,11 @@ public:
     , _hueRangeRolloff(0)
     , _saturationRange(0)
     , _saturationAdjustment(0)
+    , _saturationAdjustmentGain(0)
     , _saturationRangeRolloff(0)
     , _brightnessRange(0)
     , _brightnessAdjustment(0)
+    , _brightnessAdjustmentGain(0)
     , _brightnessRangeRolloff(0)
     , _clampBlack(0)
     , _clampWhite(0)
@@ -958,14 +970,16 @@ public:
         _hueRangeRolloff = fetchDoubleParam(kParamHueRangeRolloff);
         _saturationRange = fetchDouble2DParam(kParamSaturationRange);
         _saturationAdjustment = fetchDoubleParam(kParamSaturationAdjustment);
+        _saturationAdjustmentGain = fetchDoubleParam(kParamSaturationAdjustmentGain);
         _saturationRangeRolloff = fetchDoubleParam(kParamSaturationRangeRolloff);
         _brightnessRange = fetchDouble2DParam(kParamBrightnessRange);
         _brightnessAdjustment = fetchDoubleParam(kParamBrightnessAdjustment);
+        _brightnessAdjustmentGain = fetchDoubleParam(kParamBrightnessAdjustmentGain);
         _brightnessRangeRolloff = fetchDoubleParam(kParamBrightnessRangeRolloff);
         assert(_srcColor && _dstColor &&
                _hueRange && _hueRotation && _hueRotationGain && _hueRangeRolloff &&
-               _saturationRange && _saturationAdjustment && _saturationRangeRolloff &&
-               _brightnessRange && _brightnessAdjustment && _brightnessRangeRolloff);
+               _saturationRange && _saturationAdjustment && _saturationAdjustmentGain && _saturationRangeRolloff &&
+               _brightnessRange && _brightnessAdjustment && _brightnessAdjustmentGain && _brightnessRangeRolloff);
         _clampBlack = fetchBooleanParam(kParamClampBlack);
         _clampWhite = fetchBooleanParam(kParamClampWhite);
         assert(_clampBlack && _clampWhite);
@@ -1066,9 +1080,11 @@ private:
     OFX::DoubleParam *_hueRangeRolloff;
     OFX::Double2DParam *_saturationRange;
     OFX::DoubleParam *_saturationAdjustment;
+    OFX::DoubleParam *_saturationAdjustmentGain;
     OFX::DoubleParam *_saturationRangeRolloff;
     OFX::Double2DParam *_brightnessRange;
     OFX::DoubleParam *_brightnessAdjustment;
+    OFX::DoubleParam *_brightnessAdjustmentGain;
     OFX::DoubleParam *_brightnessRangeRolloff;
     OFX::BooleanParam *_clampBlack;
     OFX::BooleanParam *_clampWhite;
@@ -1165,9 +1181,11 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
     values.hueRolloff = _hueRangeRolloff->getValueAtTime(time);
     _saturationRange->getValueAtTime(time, values.satRange[0], values.satRange[1]);
     values.satAdjust = _saturationAdjustment->getValueAtTime(time);
+    values.satAdjustGain = _saturationAdjustmentGain->getValueAtTime(time);
     values.satRolloff = _saturationRangeRolloff->getValueAtTime(time);
     _brightnessRange->getValueAtTime(time, values.valRange[0], values.valRange[1]);
     values.valAdjust = _brightnessAdjustment->getValueAtTime(time);
+    values.valAdjustGain = _brightnessAdjustmentGain->getValueAtTime(time);
     values.valRolloff = _brightnessRangeRolloff->getValueAtTime(time);
 
     bool clampBlack,clampWhite;
@@ -1941,6 +1959,20 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             }
         }
         {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSaturationAdjustmentGain);
+            param->setLabel(kParamSaturationAdjustmentGainLabel);
+            param->setHint(kParamSaturationAdjustmentGainHint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0., 2.);
+            param->setDefault(1.);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
             DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSaturationRangeRolloff);
             param->setLabel(kParamSaturationRangeRolloffLabel);
             param->setHint(kParamSaturationRangeRolloffHint);
@@ -1990,6 +2022,20 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setHint(kParamBrightnessAdjustmentHint);
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(0., 1.);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBrightnessAdjustmentGain);
+            param->setLabel(kParamBrightnessAdjustmentGainLabel);
+            param->setHint(kParamBrightnessAdjustmentGainHint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0., 2.);
+            param->setDefault(1.);
             if (group) {
                 param->setParent(*group);
             }
