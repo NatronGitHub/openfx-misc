@@ -89,6 +89,9 @@
 #define kParamHueRotation "hueRotation"
 #define kParamHueRotationLabel "Hue Rotation"
 #define kParamHueRotationHint "Rotation of color hues (in degrees) within the range."
+#define kParamHueRotationGain "hueRotationGain"
+#define kParamHueRotationGainLabel "Hue Rotation Gain"
+#define kParamHueRotationGainHint "Factor to be applied to the rotation of color hues (in degrees) within the range. A value of 0 will set all values within range to a constant, and a value of 1 will add hueRotation to all values within range."
 #define kParamHueRangeRolloff "hueRangeRolloff"
 #define kParamHueRangeRolloffLabel "Hue Range Rolloff"
 #define kParamHueRangeRolloffHint "Interval (in degrees) around Hue Range, where hue rotation decreases progressively to zero."
@@ -191,6 +194,8 @@ struct HSVToolValues {
     double hueRange[2];
     double hueRangeWithRolloff[2];
     double hueRotation;
+    double hueMean;
+    double hueRotationGain;
     double hueRolloff;
     double satRange[2];
     double satAdjust;
@@ -202,6 +207,8 @@ struct HSVToolValues {
         hueRange[0] = hueRange[1] = 0.;
         hueRangeWithRolloff[0] = hueRangeWithRolloff[1] = 0.;
         hueRotation = 0.;
+        hueMean = 0.;
+        hueRotationGain = 1.;
         hueRolloff = 0.;
         satRange[0] = satRange[1] = 0.;
         satAdjust = 0.;
@@ -221,6 +228,13 @@ normalizeAngle(double a)
     a -= c * 360;
     assert(a >= 0 && a <= 360);
     return a;
+}
+
+static inline
+double
+normalizeAngleSigned(double a)
+{
+    return normalizeAngle(a + 180.) - 180.;
 }
 
 static inline
@@ -409,6 +423,7 @@ public:
             _values.hueRolloff = 0.;
             _values.hueRangeWithRolloff[0] = 0.;
             _values.hueRangeWithRolloff[1] = 360.;
+            _values.hueMean = 0.;
         } else {
             h0 = normalizeAngle(h0);
             h1 = normalizeAngle(h1);
@@ -430,6 +445,7 @@ public:
             }
             _values.hueRangeWithRolloff[0] = normalizeAngle(h0 - _values.hueRolloff);
             _values.hueRangeWithRolloff[1] = normalizeAngle(h1 + _values.hueRolloff);
+            _values.hueMean = normalizeAngle(h0 + normalizeAngleSigned(h1-h0) / 2);
         }
         if (_values.satRange[1] < _values.satRange[0]) {
             std::swap(_values.satRange[0], _values.satRange[1]);
@@ -511,7 +527,8 @@ public:
             *gout = g;
             *bout = b;
         } else {
-            h += coeff * (float)_values.hueRotation;
+            //h += coeff * (float)_values.hueRotation;
+            h += coeff * ((float)_values.hueRotation + (_values.hueRotationGain - 1.) * normalizeAngleSigned(h - _values.hueMean));
             s += coeff * (float)_values.satAdjust;
             if (s < 0) {
                 s = 0;
@@ -664,9 +681,7 @@ public:
             double meansinh = _sumsinh / _count;
             double meancosh = _sumcosh / _count;
             // angle mean and sdev from https://en.wikipedia.org/wiki/Directional_statistics#Measures_of_location_and_spread
-            double huemean = std::atan2(meansinh, meancosh)*180/M_PI;
-            if (huemean < 0) { huemean += 360; }
-            return (huemean >= 0) ? huemean : (huemean + 360);
+            return normalizeAngle(std::atan2(meansinh, meancosh)*180/M_PI);
             //*huesdev = std::sqrt(std::max(0., -std::log(meansinh*meansinh+meancosh*meancosh)))*180/M_PI;
         }
     }
@@ -866,13 +881,7 @@ private:
                 HSVColorF hsv;
                 pixToHSV(dstPix, &hsv);
                 if (hsv.s > MIN_SATURATION && hsv.v > MIN_VALUE) {
-                    float dh = hsv.h - _hmean; // relative angle with hmean
-                    // normalize between -180..180
-                    if (dh < -180) {
-                        dh += 360;
-                    } else if (dh > 180) {
-                        dh -= 360;
-                    }
+                    float dh = normalizeAngleSigned(hsv.h - _hmean); // relative angle with hmean
                     if (dh < dhmin) { dhmin = dh; }
                     if (dh > dhmax) { dhmax = dh; }
                 }
@@ -907,6 +916,7 @@ public:
     , _dstColor(0)
     , _hueRange(0)
     , _hueRotation(0)
+    , _hueRotationGain(0)
     , _hueRangeRolloff(0)
     , _saturationRange(0)
     , _saturationAdjustment(0)
@@ -944,6 +954,7 @@ public:
         _dstColor = fetchRGBParam(kParamDstColor);
         _hueRange = fetchDouble2DParam(kParamHueRange);
         _hueRotation = fetchDoubleParam(kParamHueRotation);
+        _hueRotationGain = fetchDoubleParam(kParamHueRotationGain);
         _hueRangeRolloff = fetchDoubleParam(kParamHueRangeRolloff);
         _saturationRange = fetchDouble2DParam(kParamSaturationRange);
         _saturationAdjustment = fetchDoubleParam(kParamSaturationAdjustment);
@@ -952,7 +963,7 @@ public:
         _brightnessAdjustment = fetchDoubleParam(kParamBrightnessAdjustment);
         _brightnessRangeRolloff = fetchDoubleParam(kParamBrightnessRangeRolloff);
         assert(_srcColor && _dstColor &&
-               _hueRange && _hueRotation && _hueRangeRolloff &&
+               _hueRange && _hueRotation && _hueRotationGain && _hueRangeRolloff &&
                _saturationRange && _saturationAdjustment && _saturationRangeRolloff &&
                _brightnessRange && _brightnessAdjustment && _brightnessRangeRolloff);
         _clampBlack = fetchBooleanParam(kParamClampBlack);
@@ -1051,6 +1062,7 @@ private:
     OFX::RGBParam *_dstColor;
     OFX::Double2DParam *_hueRange;
     OFX::DoubleParam *_hueRotation;
+    OFX::DoubleParam *_hueRotationGain;
     OFX::DoubleParam *_hueRangeRolloff;
     OFX::Double2DParam *_saturationRange;
     OFX::DoubleParam *_saturationAdjustment;
@@ -1147,14 +1159,16 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
     HSVToolValues values;
     _hueRange->getValueAtTime(time, values.hueRange[0], values.hueRange[1]);
     values.hueRangeWithRolloff[0] = values.hueRangeWithRolloff[1] = 0; // set in setValues()
-    _hueRotation->getValueAtTime(time, values.hueRotation);
-    _hueRangeRolloff->getValueAtTime(time, values.hueRolloff);
+    values.hueRotation = _hueRotation->getValueAtTime(time);
+    values.hueRotationGain = _hueRotationGain->getValueAtTime(time);
+    values.hueMean = 0; // set in setValues()
+    values.hueRolloff = _hueRangeRolloff->getValueAtTime(time);
     _saturationRange->getValueAtTime(time, values.satRange[0], values.satRange[1]);
-    _saturationAdjustment->getValueAtTime(time, values.satAdjust);
-    _saturationRangeRolloff->getValueAtTime(time, values.satRolloff);
+    values.satAdjust = _saturationAdjustment->getValueAtTime(time);
+    values.satRolloff = _saturationRangeRolloff->getValueAtTime(time);
     _brightnessRange->getValueAtTime(time, values.valRange[0], values.valRange[1]);
-    _brightnessAdjustment->getValueAtTime(time, values.valAdjust);
-    _brightnessRangeRolloff->getValueAtTime(time, values.valRolloff);
+    values.valAdjust = _brightnessAdjustment->getValueAtTime(time);
+    values.valRolloff = _brightnessRangeRolloff->getValueAtTime(time);
 
     bool clampBlack,clampWhite;
     _clampBlack->getValueAtTime(time, clampBlack);
@@ -1394,18 +1408,12 @@ HSVToolPlugin::setSrcFromRectangle(const OFX::Image* srcImg, double time, const 
     float r = 0.f;
     float g = 0.f;
     float b = 0.f;
-    OFX::Color::hsv_to_rgb(h, s, v, &r, &g, &b);
+    OFX::Color::hsv_to_rgb(h * OFXS_HUE_CIRCLE / 360., s, v, &r, &g, &b);
     double tor, tog, tob;
     _dstColor->getValueAtTime(time, tor, tog, tob);
     float toh, tos, tov;
     OFX::Color::rgb_to_hsv((float)tor, (float)tog, (float)tob, &toh, &tos, &tov);
-    double dh = (toh - h) * 360./OFXS_HUE_CIRCLE;
-    while (dh <= -180.) {
-        dh += 360;
-    }
-    while (dh > 180.) {
-        dh -= 360;
-    }
+    double dh = normalizeAngleSigned(toh * 360./OFXS_HUE_CIRCLE - h);
     // range is from mean+sdev*(GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF) to mean+sdev*(GAUSSIAN_RANGE+GAUSSIAN_ROLLOFF)
     beginEditBlock("setSrcFromRectangle");
     _srcColor->setValue(fround(r, 4), fround(g, 4), fround(b, 4));
@@ -1485,13 +1493,7 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
         float toh, tos, tov;
         OFX::Color::rgb_to_hsv((float)tor, (float)tog, (float)tob, &toh, &tos, &tov);
         toh *= 360./OFXS_HUE_CIRCLE;
-        double dh = toh - h;
-        while (dh <= -180.) {
-            dh += 360;
-        }
-        while (dh > 180.) {
-            dh -= 360;
-        }
+        double dh = normalizeAngleSigned(toh - h);
         beginEditBlock("setSrc");
         _hueRange->setValue(h, h);
         _hueRangeRolloff->setValue(50.);
@@ -1550,13 +1552,7 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
         float toh, tos, tov;
         OFX::Color::rgb_to_hsv((float)tor, (float)tog, (float)tob, &toh, &tos, &tov);
         toh *= 360./OFXS_HUE_CIRCLE;
-        double dh = toh - h;
-        while (dh <= -180.) {
-            dh += 360;
-        }
-        while (dh > 180.) {
-            dh -= 360;
-        }
+        double dh = normalizeAngleSigned(toh - h);
         beginEditBlock("setDst");
         if (tov != 0.) { // no need to adjust hue or saturation if target color is black
             _hueRotation->setValue(dh);
@@ -1865,6 +1861,20 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
             param->setDisplayRange(-180., 180.);
             param->setDoubleType(eDoubleTypeAngle);
+            if (group) {
+                param->setParent(*group);
+            }
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+        {
+            DoubleParamDescriptor *param = desc.defineDoubleParam(kParamHueRotationGain);
+            param->setLabel(kParamHueRotationGainLabel);
+            param->setHint(kParamHueRotationGainHint);
+            param->setRange(-DBL_MAX, DBL_MAX); // Resolve requires range and display range or values are clamped to (-1,1)
+            param->setDisplayRange(0., 2.);
+            param->setDefault(1.);
             if (group) {
                 param->setParent(*group);
             }
