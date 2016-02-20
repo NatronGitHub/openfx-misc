@@ -21,6 +21,7 @@
  */
 
 #include <cmath>
+#include <cfloat>
 #include <algorithm>
 #ifdef _WINDOWS
 #include <windows.h>
@@ -146,15 +147,6 @@
 #define kParamOutputAlphaOptionAll "min(all)"
 #define kParamOutputAlphaOptionAllHint "Alpha is set to min(Hue mask,Saturation mask,Brightness mask)"
 
-#define kParamPremultChanged "premultChanged"
-
-// to compute the rolloff for a default distribution, we approximate the gaussian with a piecewise linear function
-// f(0) = 1, f'(0) = 0
-// f(sigma*0.5*sqrt(12)) = 1/2, f'(sigma*0.5*sqrt(12)) = g'(sigma) (g is exp(-x^2/(2*sigma^2)))
-// f(inf) = 0, f'(inf) = 0
-#define GAUSSIAN_ROLLOFF 0.8243606354 // exp(1/2)/2
-#define GAUSSIAN_RANGE 1.7320508075 // 0.5*sqrt(12)
-
 enum OutputAlphaEnum {
     eOutputAlphaSource,
     eOutputAlphaHue,
@@ -165,6 +157,22 @@ enum OutputAlphaEnum {
     eOutputAlphaSaturationBrightness,
     eOutputAlphaAll,
 };
+
+#define kParamPremultChanged "premultChanged"
+
+// to compute the rolloff for a default distribution, we approximate the gaussian with a piecewise linear function
+// f(0) = 1, f'(0) = 0
+// f(sigma*0.5*sqrt(12)) = 1/2, f'(sigma*0.5*sqrt(12)) = g'(sigma) (g is exp(-x^2/(2*sigma^2)))
+// f(inf) = 0, f'(inf) = 0
+//#define GAUSSIAN_ROLLOFF 0.8243606354 // exp(1/2)/2
+//#define GAUSSIAN_RANGE 1.7320508075 // 0.5*sqrt(12)
+
+// minimum S and V components to take hue into account (hue is too noisy below these values)
+#define MIN_SATURATION 0.1
+#define MIN_VALUE 0.1
+
+// default fraction of the min-max interval to use as rolloff after rectangle analysis
+#define DEFAULT_RECTANGLE_ROLLOFF 0.5
 
 using namespace OFX;
 
@@ -223,6 +231,60 @@ angleWithinRange(double h, double h0, double h1)
     return ((h1 < h0 && (h <= h1 || h0 <= h)) ||
             (h0 <= h && h <= h1));
 }
+
+// Exponentiation by squaring
+// works with positive or negative integer exponents
+namespace {
+    template<typename T>
+    T
+    ipow(T base, int exp)
+    {
+        T result = T(1);
+        if (exp >= 0) {
+            while (exp) {
+                if (exp & 1) {
+                    result *= base;
+                }
+                exp >>= 1;
+                base *= base;
+            }
+        } else {
+            exp = -exp;
+            while (exp) {
+                if (exp & 1) {
+                    result /= base;
+                }
+                exp >>= 1;
+                base *= base;
+            }
+        }
+        
+        return result;
+    }
+
+    double
+    ffloor(double val, int decimals)
+    {
+        int p = ipow(10, decimals);
+        return std::floor(val * p) / p;
+    }
+
+
+    double
+    fround(double val, int decimals)
+    {
+        int p = ipow(10, decimals);
+        return std::floor(val * p + 0.5) / p;
+    }
+
+    double
+    fceil(double val, int decimals)
+    {
+        int p = ipow(10, decimals);
+        return std::ceil(val * p) / p;
+    }
+}
+
 
 // returns:
 // - 0 if outside of [h0, h1]
@@ -574,73 +636,61 @@ typedef struct HSVColorF {
 } HSVColorF;
 
 
-class HSVStatsProcessorBase : public OFX::ImageProcessor
+class HueMeanProcessorBase : public OFX::ImageProcessor
 {
 protected:
     OFX::MultiThread::Mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
     unsigned long _count;
-    double _sumsinh, _sumcosh, _sums, _sumv;
-    double _sum2s, _sum2v;
+    double _sumsinh, _sumcosh;
 public:
-    HSVStatsProcessorBase(OFX::ImageEffect &instance)
+    HueMeanProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _mutex()
     , _count(0)
     , _sumsinh(0)
     , _sumcosh(0)
-    , _sums(0)
-    , _sumv(0)
-    , _sum2s(0)
-    , _sum2v(0)
     {
     }
 
-    ~HSVStatsProcessorBase()
+    ~HueMeanProcessorBase()
     {
     }
 
-    void getResults(HSVColor *mean, HSVColor *sdev)
+    double getResult()
     {
         if (_count <= 0) {
-            *mean = HSVColor();
-            *sdev = HSVColor();
+            return 0;
         } else {
             double meansinh = _sumsinh / _count;
             double meancosh = _sumcosh / _count;
             // angle mean and sdev from https://en.wikipedia.org/wiki/Directional_statistics#Measures_of_location_and_spread
-            mean->h = std::atan2(meansinh, meancosh)*180/M_PI;
-            mean->s = _sums / _count;
-            mean->v = _sumv / _count;
-            sdev->h = std::sqrt(std::max(0., -std::log(meansinh*meansinh+meancosh*meancosh)))*180/M_PI;
-            sdev->s = std::sqrt(_sum2s / _count - mean->s*mean->s);
-            sdev->v = std::sqrt(_sum2v / _count - mean->v*mean->v);
+            double huemean = std::atan2(meansinh, meancosh)*180/M_PI;
+            if (huemean < 0) { huemean += 360; }
+            return (huemean >= 0) ? huemean : (huemean + 360);
+            //*huesdev = std::sqrt(std::max(0., -std::log(meansinh*meansinh+meancosh*meancosh)))*180/M_PI;
         }
     }
 
 protected:
-    void addResults(double sumsinh, double sumcosh, double sums, double sumv, double sum2s, double sum2v, unsigned long count) {
+    void addResults(double sumsinh, double sumcosh, unsigned long count) {
         _mutex.lock();
         _sumsinh += sumsinh;
         _sumcosh += sumcosh;
-        _sums += sums;
-        _sumv += sumv;
-        _sum2s += sum2s;
-        _sum2v += sum2v;
         _count += count;
         _mutex.unlock();
     }
 };
 
 template <class PIX, int nComponents, int maxValue>
-class HSVStatsProcessor : public HSVStatsProcessorBase
+class HueMeanProcessor : public HueMeanProcessorBase
 {
 public:
-    HSVStatsProcessor(OFX::ImageEffect &instance)
-    : HSVStatsProcessorBase(instance)
+    HueMeanProcessor(OFX::ImageEffect &instance)
+    : HueMeanProcessorBase(instance)
     {
     }
 
-    ~HSVStatsProcessor()
+    ~HueMeanProcessor()
     {
     }
 private:
@@ -666,10 +716,6 @@ private:
     {
         double sumsinh = 0.;
         double sumcosh = 0.;
-        double sums = 0.;
-        double sumv = 0.;
-        double sum2s = 0.;
-        double sum2v = 0.;
         unsigned long count = 0;
         assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
                _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
@@ -683,35 +729,166 @@ private:
             // partial sums to avoid underflows
             double sumsinhLine = 0.;
             double sumcoshLine = 0.;
-            double sumsLine = 0.;
-            double sumvLine = 0.;
-            double sum2sLine = 0.;
-            double sum2vLine = 0.;
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 HSVColorF hsv;
                 pixToHSV(dstPix, &hsv);
-                sumsinhLine += std::sin(hsv.h*M_PI/180);
-                sumcoshLine += std::cos(hsv.h*M_PI/180);
-                sumsLine += hsv.s;
-                sumvLine += hsv.v;
-                sum2sLine += hsv.s*hsv.s;
-                sum2vLine += hsv.v*hsv.v;
+                if (hsv.s > MIN_SATURATION && hsv.v > MIN_VALUE) {
+                    // only take into account pixels that really have a hue
+                    sumsinhLine += std::sin(hsv.h*M_PI/180);
+                    sumcoshLine += std::cos(hsv.h*M_PI/180);
+                    ++count;
+                }
 
                 dstPix += nComponents;
             }
             sumsinh += sumsinhLine;
             sumcosh += sumcoshLine;
-            sums += sumsLine;
-            sumv += sumvLine;
-            sum2s += sum2sLine;
-            sum2v += sum2vLine;
-            count += procWindow.x2 - procWindow.x1;
         }
-
-        addResults(sumsinh, sumcosh, sums, sumv, sum2s, sum2v, count);
+        
+        addResults(sumsinh, sumcosh, count);
     }
 };
+
+class HSVRangeProcessorBase : public OFX::ImageProcessor
+{
+protected:
+    OFX::MultiThread::Mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
+    float _hmean;
+private:
+    float _dhmin; // -180..180
+    float _dhmax; // -180..180
+    float _smin;
+    float _smax;
+    float _vmin;
+    float _vmax;
+
+public:
+    HSVRangeProcessorBase(OFX::ImageEffect &instance)
+    : OFX::ImageProcessor(instance)
+    , _mutex()
+    , _dhmin(FLT_MAX)
+    , _dhmax(-FLT_MAX)
+    , _smin(FLT_MAX)
+    , _smax(-FLT_MAX)
+    , _vmin(FLT_MAX)
+    , _vmax(-FLT_MAX)
+    {
+    }
+
+    ~HSVRangeProcessorBase()
+    {
+    }
+
+    void setHueMean(float hmean)
+    {
+        _hmean = hmean;
+    }
+
+    void getResults(HSVColor *hsvmin, HSVColor *hsvmax)
+    {
+        if (_dhmax -_dhmin > 179.9) {
+            // more than half circle, take the full circle
+            hsvmin->h = 0.;
+            hsvmax->h = 360.;
+        } else {
+            hsvmin->h = normalizeAngle(_hmean + _dhmin);
+            hsvmax->h = normalizeAngle(_hmean + _dhmax);
+        }
+        hsvmin->s = _smin;
+        hsvmax->s = _smax;
+        hsvmin->v = _vmin;
+        hsvmax->v = _vmax;
+    }
+
+protected:
+    void addResults(const float dhmin, const float dhmax, const float smin, const float smax, const float vmin, const float vmax) {
+        _mutex.lock();
+        if (dhmin < _dhmin) { _dhmin = dhmin; }
+        if (dhmax > _dhmax) { _dhmax = dhmax; }
+        if (smin < _smin) { _smin = smin; }
+        if (smax > _smax) { _smax = smax; }
+        if (vmin < _vmin) { _vmin = vmin; }
+        if (vmax > _vmax) { _vmax = vmax; }
+        _mutex.unlock();
+    }
+};
+
+template <class PIX, int nComponents, int maxValue>
+class HSVRangeProcessor : public HSVRangeProcessorBase
+{
+public:
+    HSVRangeProcessor(OFX::ImageEffect &instance)
+    : HSVRangeProcessorBase(instance)
+    {
+    }
+
+    ~HSVRangeProcessor()
+    {
+    }
+private:
+
+    void
+    pixToHSV(const PIX *p, HSVColorF* hsv)
+    {
+        if (nComponents == 4 || nComponents == 3) {
+            float r, g, b;
+            r = p[0]/(float)maxValue;
+            g = p[1]/(float)maxValue;
+            b = p[2]/(float)maxValue;
+            OFX::Color::rgb_to_hsv(r, g, b, &hsv->h, &hsv->s, &hsv->v);
+            hsv->h *= 360/OFXS_HUE_CIRCLE;
+        } else {
+            *hsv = HSVColorF();
+        }
+    }
+
+
+
+    void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
+    {
+        assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
+               _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
+        float dhmin = 0.;
+        float dhmax = 0.;
+        float smin = FLT_MAX;
+        float smax = -FLT_MAX;
+        float vmin = FLT_MAX;
+        float vmax = -FLT_MAX;
+        for (int y = procWindow.y1; y < procWindow.y2; ++y) {
+            if (_effect.abort()) {
+                break;
+            }
+
+            PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
+
+            for (int x = procWindow.x1; x < procWindow.x2; ++x) {
+                HSVColorF hsv;
+                pixToHSV(dstPix, &hsv);
+                if (hsv.s > MIN_SATURATION && hsv.v > MIN_VALUE) {
+                    float dh = hsv.h - _hmean; // relative angle with hmean
+                    // normalize between -180..180
+                    if (dh < -180) {
+                        dh += 360;
+                    } else if (dh > 180) {
+                        dh -= 360;
+                    }
+                    if (dh < dhmin) { dhmin = dh; }
+                    if (dh > dhmax) { dhmax = dh; }
+                }
+                if (hsv.s < smin) { smin = hsv.s; }
+                if (hsv.s > smax) { smax = hsv.s; }
+                if (hsv.v < vmin) { vmin = hsv.v; }
+                if (hsv.v > vmax) { vmax = hsv.v; }
+
+                dstPix += nComponents;
+            }
+        }
+
+        addResults(dhmin, dhmax, smin, smax, vmin, vmax);
+    }
+};
+
 
 
 
@@ -827,30 +1004,31 @@ private:
     // update image statistics
     void setSrcFromRectangle(const OFX::Image* srcImg, double time, const OfxRectI& analysisWindow);
 
-    void setSrcFromRectangleProcess(HSVStatsProcessorBase &processor, const OFX::Image* srcImg, double /*time*/, const OfxRectI &analysisWindow, HSVColor *mean, HSVColor *sdev);
+    void setSrcFromRectangleProcess(HueMeanProcessorBase &huemeanprocessor, HSVRangeProcessorBase &rangeprocessor, const OFX::Image* srcImg, double /*time*/, const OfxRectI &analysisWindow, double *hmean, HSVColor *hsvmin, HSVColor *hsvmax);
 
     template <class PIX, int nComponents, int maxValue>
-    void setSrcFromRectangleComponentsDepth(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, HSVColor *mean, HSVColor *sdev)
+    void setSrcFromRectangleComponentsDepth(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, double *hmean, HSVColor *hsvmin, HSVColor *hsvmax)
     {
-        HSVStatsProcessor<PIX, nComponents, maxValue> fred(*this);
-        setSrcFromRectangleProcess(fred, srcImg, time, analysisWindow, mean, sdev);
+        HueMeanProcessor<PIX, nComponents, maxValue> fred1(*this);
+        HSVRangeProcessor<PIX, nComponents, maxValue> fred2(*this);
+        setSrcFromRectangleProcess(fred1, fred2, srcImg, time, analysisWindow, hmean, hsvmin, hsvmax);
     }
 
     template <int nComponents>
-    void setSrcFromRectangleComponents(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, HSVColor *mean, HSVColor *sdev)
+    void setSrcFromRectangleComponents(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, double *hmean, HSVColor *hsvmin, HSVColor *hsvmax)
     {
         OFX::BitDepthEnum srcBitDepth = srcImg->getPixelDepth();
         switch (srcBitDepth) {
             case OFX::eBitDepthUByte: {
-                setSrcFromRectangleComponentsDepth<unsigned char, nComponents, 255>(srcImg, time, analysisWindow, mean, sdev);
+                setSrcFromRectangleComponentsDepth<unsigned char, nComponents, 255>(srcImg, time, analysisWindow, hmean, hsvmin, hsvmax);
                 break;
             }
             case OFX::eBitDepthUShort: {
-                setSrcFromRectangleComponentsDepth<unsigned short, nComponents, 65535>(srcImg, time, analysisWindow, mean, sdev);
+                setSrcFromRectangleComponentsDepth<unsigned short, nComponents, 65535>(srcImg, time, analysisWindow, hmean, hsvmin, hsvmax);
                 break;
             }
             case OFX::eBitDepthFloat: {
-                setSrcFromRectangleComponentsDepth<float, nComponents, 1>(srcImg, time, analysisWindow, mean, sdev);
+                setSrcFromRectangleComponentsDepth<float, nComponents, 1>(srcImg, time, analysisWindow, hmean, hsvmin, hsvmax);
                 break;
             }
             default:
@@ -1190,16 +1368,17 @@ HSVToolPlugin::computeWindow(const OFX::Image* srcImg, double time, OfxRectI *an
 void
 HSVToolPlugin::setSrcFromRectangle(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow)
 {
-    HSVColor mean, sdev;
+    double hmean;
+    HSVColor hsvmin, hsvmax;
 
     OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
     assert(srcComponents == OFX::ePixelComponentAlpha ||srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA);
     if (srcComponents == OFX::ePixelComponentAlpha) {
-        setSrcFromRectangleComponents<1>(srcImg, time, analysisWindow, &mean, &sdev);
+        setSrcFromRectangleComponents<1>(srcImg, time, analysisWindow, &hmean, &hsvmin, &hsvmax);
     } else if (srcComponents == OFX::ePixelComponentRGBA) {
-        setSrcFromRectangleComponents<4>(srcImg, time, analysisWindow, &mean, &sdev);
+        setSrcFromRectangleComponents<4>(srcImg, time, analysisWindow, &hmean, &hsvmin, &hsvmax);
     } else if (srcComponents == OFX::ePixelComponentRGB) {
-        setSrcFromRectangleComponents<3>(srcImg, time, analysisWindow, &mean, &sdev);
+        setSrcFromRectangleComponents<3>(srcImg, time, analysisWindow, &hmean, &hsvmin, &hsvmax);
     } else {
         // coverity[dead_error_line]
         OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
@@ -1209,9 +1388,9 @@ HSVToolPlugin::setSrcFromRectangle(const OFX::Image* srcImg, double time, const 
         return;
     }
 
-    float h = mean.h * OFXS_HUE_CIRCLE / 360.;
-    float s = mean.s;
-    float v = mean.v;
+    float h = normalizeAngle(hmean);
+    float s = (hsvmin.s + hsvmax.s) / 2;
+    float v = (hsvmin.v + hsvmax.v) / 2;
     float r = 0.f;
     float g = 0.f;
     float b = 0.f;
@@ -1229,41 +1408,66 @@ HSVToolPlugin::setSrcFromRectangle(const OFX::Image* srcImg, double time, const 
     }
     // range is from mean+sdev*(GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF) to mean+sdev*(GAUSSIAN_RANGE+GAUSSIAN_ROLLOFF)
     beginEditBlock("setSrcFromRectangle");
-    _srcColor->setValue(r, g, b);
-    _hueRange->setValue(mean.h - sdev.h * (GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF), mean.h + sdev.h * (GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF));
-    _hueRangeRolloff->setValue(sdev.h * 2 * GAUSSIAN_ROLLOFF);
+    _srcColor->setValue(fround(r, 4), fround(g, 4), fround(b, 4));
+    _hueRange->setValue(ffloor(hsvmin.h, 2), fceil(hsvmax.h, 2));
+    double hrange = hsvmax.h - hsvmin.h;
+    if (hrange < 0) {
+        hrange += 360.;
+    }
+    double hrolloff = std::min(hrange*DEFAULT_RECTANGLE_ROLLOFF, (360-hrange)/2);
+    _hueRangeRolloff->setValue(ffloor(hrolloff, 2));
     if (tov != 0.) { // no need to rotate if target color is black
-        _hueRotation->setValue(dh);
+        _hueRotation->setValue(fround(dh, 2));
     }
-    _saturationRange->setValue(mean.s - sdev.s * (GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF), mean.s + sdev.s * (GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF));
-    _saturationRangeRolloff->setValue(sdev.s * 2 * GAUSSIAN_ROLLOFF);
+    _saturationRange->setValue(ffloor(hsvmin.s, 4), fceil(hsvmax.s, 4));
+    _saturationRangeRolloff->setValue(ffloor((hsvmax.s - hsvmin.s)*DEFAULT_RECTANGLE_ROLLOFF, 4));
     if (tov != 0.) { // no need to adjust saturation if target color is black
-        _saturationAdjustment->setValue(tos - s);
+        _saturationAdjustment->setValue(fround(tos - s, 4));
     }
-    _brightnessRange->setValue(mean.v - sdev.v * (GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF), mean.v + sdev.v * (GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF));
-    _brightnessRangeRolloff->setValue(sdev.v * 2 * GAUSSIAN_ROLLOFF);
-    _brightnessAdjustment->setValue(tov - v);
+    _brightnessRange->setValue(ffloor(hsvmin.v, 4), fceil(hsvmax.v, 4));
+    _brightnessRangeRolloff->setValue(ffloor((hsvmax.v - hsvmin.v)*DEFAULT_RECTANGLE_ROLLOFF, 4));
+    _brightnessAdjustment->setValue(fround(tov - v, 4));
     endEditBlock();
 }
 
+
 /* set up and run a processor */
 void
-HSVToolPlugin::setSrcFromRectangleProcess(HSVStatsProcessorBase &processor, const OFX::Image* srcImg, double /*time*/, const OfxRectI &analysisWindow, HSVColor *mean, HSVColor *sdev)
+HSVToolPlugin::setSrcFromRectangleProcess(HueMeanProcessorBase &huemeanprocessor, HSVRangeProcessorBase &hsvrangeprocessor, const OFX::Image* srcImg, double /*time*/, const OfxRectI &analysisWindow, double *hmean, HSVColor *hsvmin, HSVColor *hsvmax)
 {
 
     // set the images
-    processor.setDstImg(const_cast<OFX::Image*>(srcImg)); // not a bug: we only set dst
+    huemeanprocessor.setDstImg(const_cast<OFX::Image*>(srcImg)); // not a bug: we only set dst
 
     // set the render window
-    processor.setRenderWindow(analysisWindow);
+    huemeanprocessor.setRenderWindow(analysisWindow);
 
     // Call the base class process member, this will call the derived templated process code
-    processor.process();
+    huemeanprocessor.process();
 
-    if (!abort()) {
-        processor.getResults(mean, sdev);
+    if (abort()) {
+        return;
     }
+
+    *hmean = huemeanprocessor.getResult();
+
+    // set the images
+    hsvrangeprocessor.setDstImg(const_cast<OFX::Image*>(srcImg)); // not a bug: we only set dst
+
+    // set the render window
+    hsvrangeprocessor.setRenderWindow(analysisWindow);
+    hsvrangeprocessor.setHueMean(*hmean);
+
+
+    // Call the base class process member, this will call the derived templated process code
+    hsvrangeprocessor.process();
+
+    if (abort()) {
+        return;
+    }
+    hsvrangeprocessor.getResults(hsvmin, hsvmax);
 }
+
 
 void
 HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &paramName)
@@ -1402,6 +1606,7 @@ HSVToolPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
         clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
     }
 }
+
 
 class HSVToolInteract : public RectangleInteract
 {
