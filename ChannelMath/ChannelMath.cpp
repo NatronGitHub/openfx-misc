@@ -814,11 +814,7 @@ void ChannelMathPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
-    if (gHostDescription.hostName == "uk.co.thefoundry.nuke") {
-        desc.setLabel("OFX"kPluginName);
-    } else {
-        desc.setLabel(kPluginName);
-    }
+    desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
 
@@ -947,25 +943,12 @@ void ChannelMathPluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->setLabel(kParamParam2Label);
         param->setHint(kParamParam2Hint);
         param->setDefault(1.0);
-        param->setDisplayRange(-100., 100.);
+        param->setDisplayRange(0., 2.);
         param->setAnimates(true); // can animate
         if (page) {
             page->addChild(*param);
         }
     }
-
-//     {
-//         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamStatusName);
-//         param->setLabel(kParamStatusLabel);
-//         param->setHint(kParamStatusHint);
-//         param->setDefault(false);
-//         param->setLayoutHint(eLayoutHintNoNewLine);
-//         param->setAnimates(false);
-//         if (page) {
-//             page->addChild(*param);
-//         }
-//     }
-
     
     ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
