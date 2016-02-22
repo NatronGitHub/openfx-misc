@@ -42,8 +42,9 @@ Version   Date       Author       Description
     1.5   26-NOV-15  N. Carroll   Implemented Spill Replacement
 
 * TODO implement Key Amount
-need to modulate keyAmountRGB by Key Colour
-current code only works when K[mid] = (K[min]+K[max])/2
+need to modulate keyAmountRGB by keyColour
+current code has alpha right
+and red is also correct, but only when K[mid] = (K[min]+K[max])/2
 
 * TODO implement Tune Key Amount
 
@@ -78,7 +79,7 @@ CLANG_DIAG_ON(shorten-64-to-32)
 #define kPluginDescription \
 "INK proportionate colour difference keyer\n" \
 "Copyleft 2015 Nicholas Carroll\n" \
-"http://casanico.com\n\n" \
+"http://casanico.com\n" \
 
 #define kPluginIdentifier "com.casanico.INK"
 #define kPluginVersionMajor 1 // Increment this if you have broken backwards compatibility.
@@ -478,8 +479,7 @@ private:
 		    double min1 = (P[minKey]/(P[maxKey]-_keyBalance*P[midKey])-K[minKey]/(K[maxKey]-_keyBalance*K[midKey]))
 		      / (1+P[minKey]/(P[maxKey]-_keyBalance*P[midKey])-(2-_keyBalance)*K[minKey]/(K[maxKey]-_keyBalance*K[midKey]));
 		    double min2 = min(P[minKey],(P[maxKey]-_keyBalance*P[midKey])*min1/(1-min1));
-		    double min3 = P[minKey] - keyAmountRGB*keyAmountRGB*(P[minKey] - min2);
-		    chan[minKey] = max(0.,min(min3,1.));
+		    chan[minKey] = max(0.,min(min2,1.));
 		    // solve chan[midKey]
 		    double mid1 = (P[midKey]/(P[maxKey]-(1-_keyBalance)*P[minKey])-K[midKey]/(K[maxKey]-(1-_keyBalance)*K[minKey]))
 		      / (1+P[midKey]/(P[maxKey]-(1-_keyBalance)*P[minKey])-(1+_keyBalance)*K[midKey]/(K[maxKey]-(1-_keyBalance)*K[minKey]));
@@ -489,8 +489,7 @@ private:
 	  	    // solve chan[maxKey]
 		    double max1 = min(P[maxKey],(_keyBalance*min(P[midKey],(P[maxKey]-(1-_keyBalance)*P[minKey])*mid1/(1-mid1))
 						 + (1-_keyBalance)*min(P[minKey],(P[maxKey]-_keyBalance*P[midKey])*min1/(1-min1))));
-		    double max2 = P[maxKey] - keyAmountRGB*keyAmountRGB*(P[maxKey] - max1);
-		    chan[maxKey] = max(0.,min(max2,1.));
+		    chan[maxKey] = max(0.,min(max1,1.));
 		    // solve alpha
 		    double a1 = (1-K[maxKey])+(_keyBalance*K[midKey]+(1-_keyBalance)*K[minKey]);
 		    double a2 = (_keyAmount*_keyAmount)*(1+a1/abs(1-a1));
@@ -535,7 +534,7 @@ private:
 		if (_whitePoint <=0.) {
 		  combMatte = 0.;
 		} else if (_whitePoint <1.) {
-		  combMatte /= _whitePoint; // TODO maybe comp different. why not max?
+		  combMatte /= _whitePoint; 
 		  combMatte = max(0.,min(combMatte,1.));
 		}
 
