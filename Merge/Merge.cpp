@@ -1166,10 +1166,11 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
     if (numerousInputs) {
         for (int i = 2; i <= kMaximumAInputs; ++i) {
             assert(i < 100);
-            char name[4] = { 'A', 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-            assert(i < 100);
-            name[1] = (i < 10) ? ('0' + i) : ('0' + i / 10);
-            name[2] = (i < 10) ?         0 : ('0' + i % 10);
+            char name[5] = { 'A', 0, 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
+            assert(i < 1000);
+            name[1] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
+            name[2] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
+            name[3] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
             OFX::ClipDescriptor* optionalSrcClip = desc.defineClip(name);
             optionalSrcClip->addSupportedComponent( OFX::ePixelComponentRGBA );
             optionalSrcClip->addSupportedComponent( OFX::ePixelComponentRGB );

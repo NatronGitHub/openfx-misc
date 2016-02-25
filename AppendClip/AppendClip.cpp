@@ -99,17 +99,19 @@ public:
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha));
-        for (unsigned i = 0; i < _srcClip.size(); ++i) {
-            if (getContext() == OFX::eContextTransition && i < 2) {
-                _srcClip[i] = fetchClip(i == 0 ? kOfxImageEffectTransitionSourceFromClipName : kOfxImageEffectTransitionSourceToClipName);
+        for (unsigned j = 0; j < _srcClip.size(); ++j) {
+            if (getContext() == OFX::eContextTransition && j < 2) {
+                _srcClip[j] = fetchClip(j == 0 ? kOfxImageEffectTransitionSourceFromClipName : kOfxImageEffectTransitionSourceToClipName);
             } else {
-                char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-                int clipNumber = i + kClipSourceOffset;
-                name[0] = (clipNumber < 10) ? ('0' + clipNumber) : ('0' + clipNumber / 10);
-                name[1] = (clipNumber < 10) ?                  0 : ('0' + clipNumber % 10);
-                _srcClip[i] = fetchClip(name);
+                int i = j + kClipSourceOffset;
+                char name[4] = { 0, 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
+                assert(i < 1000);
+                name[0] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
+                name[1] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
+                name[2] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
+                _srcClip[j] = fetchClip(name);
             }
-            assert(_srcClip[i] && (_srcClip[i]->getPixelComponents() == OFX::ePixelComponentRGB || _srcClip[i]->getPixelComponents() == OFX::ePixelComponentRGBA || _srcClip[i]->getPixelComponents() == OFX::ePixelComponentAlpha));
+            assert(_srcClip[j] && (_srcClip[j]->getPixelComponents() == OFX::ePixelComponentRGB || _srcClip[j]->getPixelComponents() == OFX::ePixelComponentRGBA || _srcClip[j]->getPixelComponents() == OFX::ePixelComponentAlpha));
         }
 
         _fadeIn = fetchIntParam(kParamFadeIn);
@@ -915,14 +917,14 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     if (numerousInputs) {
-        for (int i = 2; i < clipSourceCount; ++i) {
-            assert(i < 100);
+        for (int j = 2; j < clipSourceCount; ++j) {
             ClipDescriptor *srcClip;
-            char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-            int clipNumber = i + kClipSourceOffset;
-            assert(clipNumber < 100);
-            name[0] = (clipNumber < 10) ? ('0' + clipNumber) : ('0' + clipNumber / 10);
-            name[1] = (clipNumber < 10) ?                  0 : ('0' + clipNumber % 10);
+            int i = j + kClipSourceOffset;
+            char name[4] = { 0, 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
+            assert(i < 1000);
+            name[0] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
+            name[1] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
+            name[2] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
             srcClip = desc.defineClip(name);
             srcClip->setOptional(true);
             srcClip->addSupportedComponent(ePixelComponentNone);

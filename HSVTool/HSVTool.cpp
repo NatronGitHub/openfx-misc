@@ -792,6 +792,7 @@ public:
     HSVRangeProcessorBase(OFX::ImageEffect &instance)
     : OFX::ImageProcessor(instance)
     , _mutex()
+    , _hmean(0)
     , _dhmin(FLT_MAX)
     , _dhmax(-FLT_MAX)
     , _smin(FLT_MAX)

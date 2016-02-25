@@ -75,9 +75,10 @@ public:
             if (getContext() == OFX::eContextTransition && i < 2) {
                 _srcClip[i] = fetchClip(i == 0 ? kOfxImageEffectTransitionSourceFromClipName : kOfxImageEffectTransitionSourceToClipName);
             } else {
-                char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-                name[0] = (i < 10) ? ('0' + i) : ('0' + i / 10);
-                name[1] = (i < 10) ?         0 : ('0' + i % 10);
+                char name[4] = { 0, 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
+                name[0] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
+                name[1] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
+                name[2] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
                 _srcClip[i] = fetchClip(name);
             }
             assert(_srcClip[i] && (_srcClip[i]->getPixelComponents() == OFX::ePixelComponentRGBA || _srcClip[i]->getPixelComponents() == OFX::ePixelComponentRGB || _srcClip[i]->getPixelComponents() == OFX::ePixelComponentXY || _srcClip[i]->getPixelComponents() == OFX::ePixelComponentAlpha));
@@ -546,10 +547,10 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         for (int i = 2; i < clipSourceCount; ++i) {
             assert(i < 100);
             ClipDescriptor *srcClip;
-            char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-            assert(i < 100);
-            name[0] = (i < 10) ? ('0' + i) : ('0' + i / 10);
-            name[1] = (i < 10) ?         0 : ('0' + i % 10);
+            char name[4] = { 0, 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
+            name[0] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
+            name[1] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
+            name[2] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
             srcClip = desc.defineClip(name);
             srcClip->setOptional(true);
             srcClip->addSupportedComponent(ePixelComponentNone);
