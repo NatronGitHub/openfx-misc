@@ -335,7 +335,9 @@ void JoinViewsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     //}
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
-    desc.setIsDeprecated(true); // prefer Natron's internal JoinViews
+    if (OFX::getImageEffectHostDescription()->isNatron) {
+        desc.setIsDeprecated(true); // prefer Natron's internal JoinViews
+    }
 #endif
 }
 
