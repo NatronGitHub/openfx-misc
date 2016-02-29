@@ -141,7 +141,7 @@ enum RetimeFunctionEnum {
 
 #define kParamFrameRange "frameRange"
 #define kParamFrameRangeLabel "Max. Frame Range"
-#define kParamFrameRangeHint "Maximum input frame range to fetch images from (may be relative or absolute, depending on the \"absolute\" parameter). Only used if the Retime Map is connected."
+#define kParamFrameRangeHint "Maximum input frame range to fetch images from (may be relative or absolute, depending on the \"absolute\" parameter). Only used if the Retime Map is used and connected."
 #define kParamFrameRangeDefault -10,0
 
 #define kParamFilter "filter"
