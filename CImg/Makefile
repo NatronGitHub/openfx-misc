@@ -38,6 +38,10 @@ Bilateral/net.sf.cimg.CImgBilateral.png \
 Bilateral/net.sf.cimg.CImgBilateral.svg \
 Blur/net.sf.cimg.CImgBlur.png \
 Blur/net.sf.cimg.CImgBlur.svg \
+Blur/net.sf.cimg.CImgChromaBlur.png \
+Blur/net.sf.cimg.CImgChromaBlur.svg \
+Blur/net.sf.cimg.CImgBloom.png \
+Blur/net.sf.cimg.CImgBloom.svg \
 Blur/net.sf.cimg.CImgLaplacian.png \
 Blur/net.sf.cimg.CImgLaplacian.svg \
 Denoise/net.sf.cimg.CImgDenoise.png \

@@ -18,8 +18,13 @@ PLUGINNAME = CImgBlur
 RESOURCES = \
 net.sf.cimg.CImgBlur.png \
 net.sf.cimg.CImgBlur.svg \
+net.sf.cimg.CImgBloom.png \
+net.sf.cimg.CImgBloom.svg \
+net.sf.cimg.CImgChromaBlur.png \
+net.sf.cimg.CImgChromaBlur.svg \
 net.sf.cimg.CImgLaplacian.png \
 net.sf.cimg.CImgLaplacian.svg \
+
 
 TOP_SRCDIR = ../..
 include $(TOP_SRCDIR)/Makefile.master
