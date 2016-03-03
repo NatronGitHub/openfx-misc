@@ -527,17 +527,23 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
 void ReformatPlugin::setBoxValues(const double time)
 {
     ReformatTypeEnum type = (ReformatTypeEnum)_type->getValue();
-
+    
     switch (type) {
         case eReformatTypeToFormat: {
-            EParamFormat format = (EParamFormat)_format->getValue();
-            assert(0 <= (int)format && (int)format < eParamFormatCount);
-            int w = 0, h = 0;
-            double par = -1;
-            getFormatResolution(format, &w, &h, &par);
-            assert(par != -1);
-            _boxSize->setValue(w, h);
-            _boxPAR->setValue(par);
+            
+            //size & par have been set by natron with the Format choice extension
+            if (!gHostIsNatron) {
+                EParamFormat format = (EParamFormat)_format->getValue();
+                assert(0 <= (int)format && (int)format < eParamFormatCount);
+                int w = 0, h = 0;
+                double par = -1;
+                getFormatResolution(format, &w, &h, &par);
+                assert(par != -1);
+                _boxSize->setValue(w, h);
+                _boxPAR->setValue(par);
+            }
+                
+            
             _boxFixed->setValue(true);
             break;
         }
