@@ -221,6 +221,15 @@ public:
                 _boxFixed_saved = true;
             }
         }
+        // On Natron, hide the uniform parameter if it is false and not animated,
+        // since uniform scaling is easy through Natron's GUI.
+        // The parameter is kept for backward compatibility.
+        // Fixes https://github.com/MrKepzie/Natron/issues/1204
+        if (getImageEffectHostDescription()->isNatron &&
+            !_scaleUniform->getValue() &&
+            _scaleUniform->getNumKeys() == 0) {
+            _scaleUniform->setIsSecret(true);
+        }
 
         refreshVisibility();
         refreshDynamicProps();
@@ -829,8 +838,9 @@ void ReformatPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamScaleUniform);
         param->setLabel(kParamScaleUniformLabel);
         param->setHint(kParamScaleUniformHint);
-        // don't check it by default: it is easy to obtain Uniform scaling using the slider or the interact
-        param->setDefault(true);
+        // uniform parameter is false by default on Natron
+        // https://github.com/MrKepzie/Natron/issues/1204
+        param->setDefault(!OFX::getImageEffectHostDescription()->isNatron);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintDivider);
         if (page) {

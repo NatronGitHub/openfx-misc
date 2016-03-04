@@ -514,6 +514,15 @@ public:
         assert(_fromColor && _toColor && _gamma && _max);
         _premultChanged = fetchBooleanParam(kParamPremultChanged);
         assert(_premultChanged);
+        // On Natron, hide the uniform parameter if it is false and not animated,
+        // since uniform scaling is easy through Natron's GUI.
+        // The parameter is kept for backward compatibility.
+        // Fixes https://github.com/MrKepzie/Natron/issues/1204
+        if (getImageEffectHostDescription()->isNatron &&
+            !_scaleUniform->getValue() &&
+            _scaleUniform->getNumKeys() == 0) {
+            _scaleUniform->setIsSecret(true);
+        }
     }
 
 private:
