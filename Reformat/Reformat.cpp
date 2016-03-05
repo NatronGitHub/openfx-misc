@@ -396,6 +396,10 @@ ReformatPlugin::getInverseTransformCanonical(const double time,
     // same as getRegionOfDefinition, but without rounding, and without conversion to pixels
 
     OfxPointI boxSize = _boxSize->getValueAtTime(time);
+    if (boxSize.x == 0 && boxSize.y == 0) {
+        //probably scale is 0
+        return false;
+    }
     double boxPAR = _boxPAR->getValueAtTime(time);
     OfxRectD boxRod = { 0., 0., boxSize.x * boxPAR, boxSize.y};
 
