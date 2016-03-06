@@ -1,6 +1,7 @@
 SUBDIRS = Misc
 
 SUBDIRS_NOMULTI = \
+TimeBuffer \
 Add \
 AdjustRoD \
 Anaglyph \

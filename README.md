@@ -70,6 +70,7 @@ grouping).
 * TimeOffsetOFX: Move the input clip forward or backward in time.
 * TimeBlurOFX: Average frames over a fractional shutter period.
 * NoTimeBlurOFX: Round fractional frames to integer values.
+* TimeBufferRead/TimeBufferWrite: Read from an buffer written during a previous render.
 
 ### Channel
 

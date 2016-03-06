@@ -674,9 +674,6 @@ OFX::ImageEffect* MaskableFilterPluginFactory::createInstance(OfxImageEffectHand
     return new MaskableFilterPlugin(handle);
 }
 
-void getMaskableFilterPluginID(OFX::PluginFactoryArray &ids)
-{
-    static MaskableFilterPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-    ids.push_back(&p);
-}
+static MaskableFilterPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
+mRegisterPluginFactoryInstance(p)
 
