@@ -29,6 +29,10 @@
 #include "ofxsTracking.h"
 #include "ofxsCoords.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "TrackerPM"
 #define kPluginGrouping "Transform"
 #define kPluginDescription \
@@ -61,7 +65,6 @@
 #define kParamScoreOptionZNCC "ZNCC"
 #define kParamScoreOptionZNCCHint "Zero-mean Normalized Cross-Correlation, less sensitive to illumination changes"
 
-using namespace OFX;
 
 enum TrackerScoreEnum
 {
@@ -841,8 +844,6 @@ TrackerPMPlugin::trackInternal(OfxTime refTime, OfxTime otherTime, const OFX::Tr
 }
 
 
-using namespace OFX;
-
 mDeclarePluginFactory(TrackerPMPluginFactory, {}, {});
 
 void TrackerPMPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
@@ -1046,3 +1047,4 @@ OFX::ImageEffect* TrackerPMPluginFactory::createInstance(OfxImageEffectHandle ha
 static TrackerPMPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

@@ -34,6 +34,10 @@
 #include "ofxsCoords.h"
 #include "ofxNatron.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "DissolveOFX"
 #define kPluginGrouping "Merge"
 #define kPluginDescription "Weighted average of two inputs."
@@ -452,7 +456,6 @@ DissolvePlugin::changedClip(const OFX::InstanceChangedArgs &/*args*/, const std:
 
 mDeclarePluginFactory(DissolvePluginFactory, {}, {}
                       );
-using namespace OFX;
 
 void
 DissolvePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
@@ -615,3 +618,4 @@ DissolvePluginFactory::createInstance(OfxImageEffectHandle handle,
 static DissolvePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

@@ -33,6 +33,9 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "InvertOFX"
 #define kPluginGrouping "Color"
@@ -58,7 +61,6 @@
 
 #define kParamPremultChanged "premultChanged"
 
-using namespace OFX;
 
 // Base class for the RGBA and the Alpha processor
 class InvertBase : public OFX::ImageProcessor
@@ -550,7 +552,6 @@ InvertPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::stri
 
 mDeclarePluginFactory(InvertPluginFactory, {}, {});
 
-using namespace OFX;
 void InvertPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     //std::cout << "describe!\n";
@@ -684,3 +685,4 @@ OFX::ImageEffect* InvertPluginFactory::createInstance(OfxImageEffectHandle handl
 static InvertPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

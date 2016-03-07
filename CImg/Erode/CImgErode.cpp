@@ -36,6 +36,10 @@
 
 #include "CImgFilter.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "ErodeCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
@@ -76,8 +80,6 @@
 #define kParamSizeHint "Width/height of the rectangular structuring element is 2*size+1, in pixel units (>=0)."
 #define kParamSizeDefault 1
 
-
-using namespace OFX;
 
 /// Erode plugin
 struct CImgErodeParams
@@ -207,3 +209,5 @@ OFX::ImageEffect* CImgErodePluginFactory::createInstance(OfxImageEffectHandle ha
 
 static CImgErodePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

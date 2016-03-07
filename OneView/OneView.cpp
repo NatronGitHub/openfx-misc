@@ -29,6 +29,10 @@
 #include "ofxsMacros.h"
 #include "ofxsCopier.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "OneViewOFX"
 #define kPluginGrouping "Views"
 #define kPluginDescription "Takes one view from the input."
@@ -49,7 +53,6 @@
 #define kParamViewOptionLeft "Left"
 #define kParamViewOptionRight "Right"
 
-using namespace OFX;
 
 static bool gHostSupportsDynamicChoices = false;
 
@@ -272,8 +275,6 @@ OneViewPlugin::render(const OFX::RenderArguments &args)
 }
 
 
-using namespace OFX;
-
 mDeclarePluginFactory(OneViewPluginFactory, ;, {});
 
 void OneViewPluginFactory::load()
@@ -389,3 +390,5 @@ OFX::ImageEffect* OneViewPluginFactory::createInstance(OfxImageEffectHandle hand
 
 static OneViewPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

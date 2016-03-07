@@ -30,6 +30,10 @@
 #include "ofxsCopier.h"
 #include "ofxsCoords.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "JoinViewsOFX"
 #define kPluginGrouping "Views"
 #define kPluginDescription "JoinView inputs to make a stereo output. " \
@@ -48,8 +52,6 @@
 #define kClipLeft "Left"
 #define kClipRight "Right"
 
-
-using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -279,8 +281,6 @@ JoinViewsPlugin::render(const OFX::RenderArguments &args)
 }
 
 
-using namespace OFX;
-
 mDeclarePluginFactory(JoinViewsPluginFactory, ;, {});
 
 void JoinViewsPluginFactory::load()
@@ -386,3 +386,4 @@ OFX::ImageEffect* JoinViewsPluginFactory::createInstance(OfxImageEffectHandle ha
 static JoinViewsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

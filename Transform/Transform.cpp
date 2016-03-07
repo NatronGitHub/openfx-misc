@@ -30,6 +30,10 @@
 #include "ofxsTransformInteract.h"
 #include "ofxsCoords.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "TransformOFX"
 #define kPluginMaskedName "TransformMaskedOFX"
 #define kPluginGrouping "Transform"
@@ -48,8 +52,6 @@
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kParamSrcClipChanged "srcClipChanged"
-
-using namespace OFX;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -360,8 +362,6 @@ TransformPlugin::changedClip(const InstanceChangedArgs &args, const std::string 
 }
 
 
-using namespace OFX;
-
 mDeclarePluginFactory(TransformPluginFactory, {}, {});
 
 
@@ -502,3 +502,5 @@ static DirBlurPluginFactory p3(kPluginDirBlurIdentifier, kPluginVersionMajor, kP
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

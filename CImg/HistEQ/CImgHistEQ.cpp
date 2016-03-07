@@ -36,6 +36,10 @@
 
 #include "CImgFilter.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "HistEQCImg"
 #define kPluginGrouping      "Color"
 #define kPluginDescription \
@@ -74,7 +78,6 @@
 #define kParamNbLevelsHint "Number of histogram levels used for the equalization."
 #define kParamNbLevelsDefault 4096
 
-using namespace OFX;
 
 /// HistEQ plugin
 struct CImgHistEQParams
@@ -211,3 +214,5 @@ OFX::ImageEffect* CImgHistEQPluginFactory::createInstance(OfxImageEffectHandle h
 
 static CImgHistEQPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

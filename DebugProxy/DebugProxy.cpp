@@ -52,6 +52,11 @@
 #endif
 #include "ofxhBinary.h"
 #include "ofxhUtilities.h"
+#include "ofxsMacros.h"
+
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #if defined __APPLE__ || defined linux || defined __FreeBSD__
 #  define EXPORT __attribute__((visibility("default")))
@@ -2364,6 +2369,8 @@ getViewCountNthFunc(int nth)
 
 #endif // OFX_EXTENSIONS_NUKE
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT
+
 // the two mandated functions
 EXPORT OfxPlugin *
 OfxGetPlugin(int nth)
@@ -2446,5 +2453,3 @@ OfxGetNumberOfPlugins(void)
 
   return gPluginsNb;
 }
-
-

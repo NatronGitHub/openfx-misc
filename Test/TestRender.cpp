@@ -32,6 +32,9 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "TestRenderOFX"
 #define kPluginGrouping "Other/Test"
@@ -89,7 +92,6 @@
 #define kParamForceCopyLabel "Force Copy"
 #define kParamForceCopyHint "Force copy from input to output (isIdentity always returns false)"
 
-using namespace OFX;
 
 // Base class for the RGBA and the Alpha processor
 class TestRenderBase : public OFX::ImageProcessor
@@ -719,8 +721,6 @@ public:
 };
 
 
-using namespace OFX;
-
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
 void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRenderScale>::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -934,4 +934,7 @@ mRegisterPluginFactoryInstance(p5)
 mRegisterPluginFactoryInstance(p6)
 mRegisterPluginFactoryInstance(p7)
 mRegisterPluginFactoryInstance(p8)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT
+
 #endif

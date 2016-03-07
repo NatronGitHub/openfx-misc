@@ -34,6 +34,10 @@
 #include "ofxsCoords.h"
 #include "ofxNatron.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "ColorWheelOFX"
 #define kPluginGrouping "Image"
 #define kPluginDescription "Generate an image with a color wheel."
@@ -78,8 +82,6 @@
 #define kParamRotateHint "Sets the amount of rotation to apply to color position in the color wheel. Negative values produce clockwise rotation and vice-versa."
 #define kParamRotateDefault 0
 
-
-using namespace OFX;
 
 class ColorWheelProcessorBase : public OFX::ImageProcessor {
 protected:
@@ -441,7 +443,6 @@ ColorWheelPlugin::paramsNotAnimated()
 //    clipPreferences.setOutputPremultiplication(OFX::eImagePreMultiplied);
 //}
 
-using namespace OFX;
 
 mDeclarePluginFactory(ColorWheelPluginFactory, {}, {});
 
@@ -574,3 +575,5 @@ ColorWheelPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum
 
 static ColorWheelPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

@@ -37,6 +37,10 @@
 #include "nuke/fnOfxExtensions.h"
 #endif
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "SwitchOFX"
 #define kPluginGrouping "Merge"
 #define kPluginDescription \
@@ -337,8 +341,6 @@ SwitchPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::stri
 }
 
 
-using namespace OFX;
-
 mDeclarePluginFactory(SwitchPluginFactory, {}, {});
 
 void SwitchPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
@@ -501,3 +503,5 @@ OFX::ImageEffect* SwitchPluginFactory::createInstance(OfxImageEffectHandle handl
 
 static SwitchPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

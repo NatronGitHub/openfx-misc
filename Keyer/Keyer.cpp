@@ -34,6 +34,10 @@
 #define M_PI        3.14159265358979323846264338327950288   /* pi             */
 #endif
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "KeyerOFX"
 #define kPluginGrouping "Keyer"
 #define kPluginDescription \
@@ -165,7 +169,6 @@ enum SourceAlphaEnum {
     eSourceAlphaNormal,
 };
 
-using namespace OFX;
 
 // This is for Rec.709
 // see http://www.poynton.com/notes/colour_and_gamma/GammaFAQ.html#luminance
@@ -1094,3 +1097,5 @@ OFX::ImageEffect* KeyerPluginFactory::createInstance(OfxImageEffectHandle handle
 
 static KeyerPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

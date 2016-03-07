@@ -39,6 +39,10 @@
 #error "This plugin requires CImg 1.6.1, please upgrade CImg."
 #endif
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "GuidedCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
@@ -85,7 +89,6 @@
 #define kParamEpsilonHint "Regularization parameter. The actual guided filter parameter is epsilon^2)."
 #define kParamEpsilonDefault 0.2
 
-using namespace OFX;
 
 /// Guided plugin
 struct CImgGuidedParams
@@ -225,3 +228,5 @@ OFX::ImageEffect* CImgGuidedPluginFactory::createInstance(OfxImageEffectHandle h
 
 static CImgGuidedPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

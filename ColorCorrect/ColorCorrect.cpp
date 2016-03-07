@@ -32,6 +32,10 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "ColorCorrectOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription "Adjusts the saturation, constrast, gamma, gain and offset of an image. " \
@@ -88,184 +92,180 @@ static const double s_rLum = 0.2126;
 static const double s_gLum = 0.7152;
 static const double s_bLum = 0.0722;
 
-using namespace OFX;
 
+struct ColorControlValues {
+    double r;
+    double g;
+    double b;
+    double a;
 
-namespace {
-    struct ColorControlValues {
-        double r;
-        double g;
-        double b;
-        double a;
+    ColorControlValues() : r(0.), g(0.), b(0.),a(0.) {}
 
-        ColorControlValues() : r(0.), g(0.), b(0.),a(0.) {}
+    void getValueFrom(double time, OFX::RGBAParam* p)
+    {
+        p->getValueAtTime(time, r, g, b, a);
+    }
 
-        void getValueFrom(double time, OFX::RGBAParam* p)
-        {
-            p->getValueAtTime(time, r, g, b, a);
+    void set(double r_, double g_, double b_, double a_) {
+        r = r_;
+        g = g_;
+        b = b_;
+        a = a_;
+    }
+
+    void set(double v) {
+        r = g = b = a = v;
+    }
+};
+
+struct ColorControlGroup {
+    ColorControlValues saturation;
+    ColorControlValues contrast;
+    ColorControlValues gamma;
+    ColorControlValues gain;
+    ColorControlValues offset;
+};
+
+template<bool processR, bool processG, bool processB, bool processA>
+struct RGBAPixel {
+    double r, g, b,a;
+
+    RGBAPixel(double r_, double g_, double b_,double a_)
+    : r(r_)
+    , g(g_)
+    , b(b_)
+    , a(a_)
+    {
+    }
+
+    void applySMH(const ColorControlGroup& sValues,
+                  double s_scale,
+                  const ColorControlGroup& mValues,
+                  double m_scale,
+                  const ColorControlGroup& hValues,
+                  double h_scale,
+                  const ColorControlGroup& masterValues)
+    {
+        RGBAPixel s = *this;
+        RGBAPixel m = *this;
+        RGBAPixel h = *this;
+        s.applyGroup(sValues);
+        m.applyGroup(mValues);
+        h.applyGroup(hValues);
+
+        if (processR) {
+            r = s.r * s_scale + m.r * m_scale + h.r * h_scale;
         }
-
-        void set(double r_, double g_, double b_, double a_) {
-            r = r_;
-            g = g_;
-            b = b_;
-            a = a_;
+        if (processG) {
+            g = s.g * s_scale + m.g * m_scale + h.g * h_scale;
         }
-
-        void set(double v) {
-            r = g = b = a = v;
+        if (processB) {
+            b = s.b * s_scale + m.b * m_scale + h.b * h_scale;
         }
-    };
-
-    struct ColorControlGroup {
-        ColorControlValues saturation;
-        ColorControlValues contrast;
-        ColorControlValues gamma;
-        ColorControlValues gain;
-        ColorControlValues offset;
-    };
-    
-    template<bool processR, bool processG, bool processB, bool processA>
-    struct RGBAPixel {
-        double r, g, b,a;
-
-        RGBAPixel(double r_, double g_, double b_,double a_)
-        : r(r_)
-        , g(g_)
-        , b(b_)
-        , a(a_)
-        {
+        if (processA) {
+            a = s.a * s_scale + m.a * m_scale + h.a * h_scale;
         }
+        applyGroup(masterValues);
+    }
 
-        void applySMH(const ColorControlGroup& sValues,
-                      double s_scale,
-                      const ColorControlGroup& mValues,
-                      double m_scale,
-                      const ColorControlGroup& hValues,
-                      double h_scale,
-                      const ColorControlGroup& masterValues)
-        {
-            RGBAPixel s = *this;
-            RGBAPixel m = *this;
-            RGBAPixel h = *this;
-            s.applyGroup(sValues);
-            m.applyGroup(mValues);
-            h.applyGroup(hValues);
-            
-            if (processR) {
-                r = s.r * s_scale + m.r * m_scale + h.r * h_scale;
-            }
-            if (processG) {
-                g = s.g * s_scale + m.g * m_scale + h.g * h_scale;
-            }
-            if (processB) {
-                b = s.b * s_scale + m.b * m_scale + h.b * h_scale;
-            }
-            if (processA) {
-                a = s.a * s_scale + m.a * m_scale + h.a * h_scale;
-            }
-            applyGroup(masterValues);
+private:
+    void applySaturation(const ColorControlValues &c)
+    {
+        double tmp_r ,tmp_g,tmp_b ;
+        if (processR) {
+            tmp_r = r *((1.f - c.r) * s_rLum + c.r) + g *((1.f-c.r) * s_gLum) + b *((1.f-c.r) * s_bLum);
         }
-
-    private:
-        void applySaturation(const ColorControlValues &c)
-        {
-            double tmp_r ,tmp_g,tmp_b ;
-            if (processR) {
-                tmp_r = r *((1.f - c.r) * s_rLum + c.r) + g *((1.f-c.r) * s_gLum) + b *((1.f-c.r) * s_bLum);
-            }
-            if (processG) {
-                tmp_g = g *((1.f - c.g) * s_gLum + c.g) + r *((1.f-c.g) * s_rLum) + b *((1.f-c.g) * s_bLum);
-            }
-            if (processB) {
-                tmp_b = b *((1.f - c.b) * s_bLum + c.b) + g *((1.f-c.b) * s_gLum) + r *((1.f-c.b) * s_rLum);
-            }
-            if (processR) {
-                r = tmp_r;
-            }
-            if (processG) {
-                g = tmp_g;
-            }
-            if (processB) {
-                b = tmp_b;
-            }
+        if (processG) {
+            tmp_g = g *((1.f - c.g) * s_gLum + c.g) + r *((1.f-c.g) * s_rLum) + b *((1.f-c.g) * s_bLum);
         }
-
-        void applyContrast(const ColorControlValues &c)
-        {
-            if (processR) {
-                r = (r - 0.5f) * c.r  + 0.5f;
-            }
-            if (processG) {
-                g = (g - 0.5f) * c.g  + 0.5f;
-            }
-            if (processB) {
-                b = (b - 0.5f) * c.b  + 0.5f;
-            }
-            if (processA) {
-                a = (a - 0.5f) * c.a  + 0.5f;
-            }
+        if (processB) {
+            tmp_b = b *((1.f - c.b) * s_bLum + c.b) + g *((1.f-c.b) * s_gLum) + r *((1.f-c.b) * s_rLum);
         }
-
-        void applyGain(const ColorControlValues &c)
-        {
-            if (processR) {
-                r = r * c.r;
-            }
-            if (processG) {
-                g = g * c.g;
-            }
-            if (processB) {
-                b = b * c.b;
-            }
-            if (processA) {
-                a = a * c.a;
-            }
+        if (processR) {
+            r = tmp_r;
         }
-
-        void applyGamma(const ColorControlValues &c)
-        {
-            if (processR && r > 0) {
-                r = std::pow(r ,1. / c.r);
-            }
-            if (processG && g > 0) {
-                g = std::pow(g ,1. / c.g);
-            }
-            if (processB && b > 0) {
-                b = std::pow(b ,1. / c.b);
-            }
-            if (processA && a > 0) {
-                a = std::pow(a ,1. / c.a);
-            }
+        if (processG) {
+            g = tmp_g;
         }
-
-        void applyOffset(const ColorControlValues &c)
-        {
-            if (processR) {
-                r = r + c.r;
-            }
-            if (processG) {
-                g = g + c.g;
-            }
-            if (processB) {
-                b = b + c.b;
-            }
-            if (processA) {
-                a = a + c.a;
-            }
+        if (processB) {
+            b = tmp_b;
         }
+    }
 
-        void applyGroup(const ColorControlGroup& group)
-        {
-            applySaturation(group.saturation);
-            applyContrast(group.contrast);
-            applyGamma(group.gamma);
-            applyGain(group.gain);
-            applyOffset(group.offset);
+    void applyContrast(const ColorControlValues &c)
+    {
+        if (processR) {
+            r = (r - 0.5f) * c.r  + 0.5f;
         }
+        if (processG) {
+            g = (g - 0.5f) * c.g  + 0.5f;
+        }
+        if (processB) {
+            b = (b - 0.5f) * c.b  + 0.5f;
+        }
+        if (processA) {
+            a = (a - 0.5f) * c.a  + 0.5f;
+        }
+    }
 
-    };
-}
+    void applyGain(const ColorControlValues &c)
+    {
+        if (processR) {
+            r = r * c.r;
+        }
+        if (processG) {
+            g = g * c.g;
+        }
+        if (processB) {
+            b = b * c.b;
+        }
+        if (processA) {
+            a = a * c.a;
+        }
+    }
+
+    void applyGamma(const ColorControlValues &c)
+    {
+        if (processR && r > 0) {
+            r = std::pow(r ,1. / c.r);
+        }
+        if (processG && g > 0) {
+            g = std::pow(g ,1. / c.g);
+        }
+        if (processB && b > 0) {
+            b = std::pow(b ,1. / c.b);
+        }
+        if (processA && a > 0) {
+            a = std::pow(a ,1. / c.a);
+        }
+    }
+
+    void applyOffset(const ColorControlValues &c)
+    {
+        if (processR) {
+            r = r + c.r;
+        }
+        if (processG) {
+            g = g + c.g;
+        }
+        if (processB) {
+            b = b + c.b;
+        }
+        if (processA) {
+            a = a + c.a;
+        }
+    }
+
+    void applyGroup(const ColorControlGroup& group)
+    {
+        applySaturation(group.saturation);
+        applyContrast(group.contrast);
+        applyGamma(group.gamma);
+        applyGain(group.gain);
+        applyOffset(group.offset);
+    }
+
+};
 
 class ColorCorrecterBase : public OFX::ImageProcessor
 {
@@ -560,24 +560,22 @@ private:
     }
 };
 
-namespace {
-    struct ColorControlParamGroup {
-        ColorControlParamGroup()
-        : enable(0)
-        , saturation(0)
-        , contrast(0)
-        , gamma(0)
-        , gain(0)
-        , offset(0) {}
+struct ColorControlParamGroup {
+    ColorControlParamGroup()
+    : enable(0)
+    , saturation(0)
+    , contrast(0)
+    , gamma(0)
+    , gain(0)
+    , offset(0) {}
 
-        OFX::BooleanParam* enable;
-        OFX::RGBAParam* saturation;
-        OFX::RGBAParam* contrast;
-        OFX::RGBAParam* gamma;
-        OFX::RGBAParam* gain;
-        OFX::RGBAParam* offset;
-    };
-}
+    OFX::BooleanParam* enable;
+    OFX::RGBAParam* saturation;
+    OFX::RGBAParam* contrast;
+    OFX::RGBAParam* gamma;
+    OFX::RGBAParam* gain;
+    OFX::RGBAParam* offset;
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -1275,3 +1273,4 @@ OFX::ImageEffect* ColorCorrectPluginFactory::createInstance(OfxImageEffectHandle
 static ColorCorrectPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

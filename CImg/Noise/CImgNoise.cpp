@@ -35,6 +35,10 @@
 
 #include "CImgFilter.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "NoiseCImg"
 #define kPluginGrouping      "Draw"
 #define kPluginDescription \
@@ -88,6 +92,7 @@
 #define kParamTypeOptionRice "Rice"
 #define kParamTypeOptionRiceHint "Rician noise."
 #define kParamTypeDefault eTypeGaussian
+
 enum TypeEnum
 {
     eTypeGaussian = 0,
@@ -97,8 +102,6 @@ enum TypeEnum
     eTypeRice,
 };
 
-
-using namespace OFX;
 
 /// Noise plugin
 struct CImgNoiseParams
@@ -256,3 +259,5 @@ OFX::ImageEffect* CImgNoisePluginFactory::createInstance(OfxImageEffectHandle ha
 
 static CImgNoisePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

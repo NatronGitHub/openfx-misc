@@ -34,6 +34,10 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "MaskableFilter"
 #define kPluginGrouping "Filter"
 #define kPluginDescription "A generic maskable filter template."
@@ -680,3 +684,4 @@ void getMaskableFilterPluginID(OFX::PluginFactoryArray &ids)
     ids.push_back(&p);
 }
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

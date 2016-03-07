@@ -33,6 +33,10 @@
 #include "ofxsCoords.h"
 #include "ofxNatron.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "TimeDissolveOFX"
 #define kPluginGrouping "Merge"
 #define kPluginDescription "Dissolves between two inputs, starting the dissolve at the in frame and ending at the out frame. You can specify the dissolve curve over time, if the OFX host supports it (else it is a traditional smoothstep)."
@@ -416,7 +420,6 @@ TimeDissolvePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferenc
 
 mDeclarePluginFactory(TimeDissolvePluginFactory, {}, {}
                       );
-using namespace OFX;
 
 void
 TimeDissolvePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
@@ -562,3 +565,5 @@ TimeDissolvePluginFactory::createInstance(OfxImageEffectHandle handle,
 
 static TimeDissolvePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

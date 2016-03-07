@@ -36,6 +36,10 @@
 
 #include "CImgFilter.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "DenoiseCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
@@ -103,7 +107,6 @@
 #define kParamFastApproxHint "Tells if a fast approximation of the gaussian function is used or not"
 #define kParamFastApproxDafault true
 
-using namespace OFX;
 using namespace cimg_library;
 
 /// Denoise plugin
@@ -451,3 +454,5 @@ OFX::ImageEffect* CImgDenoisePluginFactory::createInstance(OfxImageEffectHandle 
 
 static CImgDenoisePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

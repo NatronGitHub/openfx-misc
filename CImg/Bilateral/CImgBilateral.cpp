@@ -40,6 +40,10 @@
 #error "The bilateral filter before CImg 1.6.0 produces incorrect results, please upgrade CImg."
 #endif
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "BilateralCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
@@ -95,7 +99,6 @@
 #define kClipImage kOfxImageEffectSimpleSourceClipName
 #define kClipGuide "Guide"
 
-using namespace OFX;
 
 /// Bilateral plugin
 struct CImgBilateralParams
@@ -362,3 +365,5 @@ static CImgBilateralPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPl
 static CImgBilateralGuidedPluginFactory p2(kPluginGuidedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

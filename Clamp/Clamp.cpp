@@ -32,6 +32,9 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "ClampOFX"
 #define kPluginGrouping "Color"
@@ -89,15 +92,12 @@
 
 #define kParamPremultChanged "premultChanged"
 
-using namespace OFX;
 
-namespace {
-    struct RGBAValues {
-        double r,g,b,a;
-        RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
-        RGBAValues() : r(0), g(0), b(0), a(0) {}
-    };
-}
+struct RGBAValues {
+    double r,g,b,a;
+    RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+    RGBAValues() : r(0), g(0), b(0), a(0) {}
+};
 
 // Base class for the RGBA and the Alpha processor
 class ClampBase : public OFX::ImageProcessor
@@ -746,7 +746,7 @@ ClampPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::strin
 
 mDeclarePluginFactory(ClampPluginFactory, {}, {});
 
-using namespace OFX;
+
 void ClampPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
@@ -954,3 +954,4 @@ OFX::ImageEffect* ClampPluginFactory::createInstance(OfxImageEffectHandle handle
 static ClampPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

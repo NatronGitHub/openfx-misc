@@ -30,6 +30,10 @@
 #include "ofxsMacros.h"
 #include "ofxsLut.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginRGBToHSVName "RGBToHSV"
 #define kPluginRGBToHSVDescription "Convert from linear RGB to HSV color model (hue, saturation, value, as defined by A. R. Smith in 1978). H is in degrees, S and V are in the same units as RGB. RGB is gamma-compressed using the sRGB transfer function before conversion."
 #define kPluginRGBToHSVIdentifier "net.sf.openfx.RGBToHSV"
@@ -147,7 +151,6 @@
 
 #define kParamPremultChanged "premultChanged"
 
-using namespace OFX;
 
 enum ColorTransformEnum {
     eColorTransformRGBToHSV,
@@ -923,3 +926,4 @@ mRegisterPluginFactoryInstance(p20)
 mRegisterPluginFactoryInstance(p21)
 mRegisterPluginFactoryInstance(p22)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

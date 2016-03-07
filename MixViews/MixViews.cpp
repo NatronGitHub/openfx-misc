@@ -28,6 +28,10 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "MixViewsOFX"
 #define kPluginGrouping "Views/Stereo"
 #define kPluginDescription "Mix two views together."
@@ -111,7 +115,6 @@ private:
     }
 };
 
-using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -293,8 +296,6 @@ MixViewsPlugin::render(const OFX::RenderArguments &args)
 }
 
 
-using namespace OFX;
-
 mDeclarePluginFactory(MixViewsPluginFactory, ;, {});
 
 void MixViewsPluginFactory::load()
@@ -393,3 +394,5 @@ OFX::ImageEffect* MixViewsPluginFactory::createInstance(OfxImageEffectHandle han
 
 static MixViewsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

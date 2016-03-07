@@ -33,6 +33,9 @@
 #include "ofxsCopier.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "TestGroupsOFX"
 #define kPluginGrouping "Other/Test"
@@ -56,8 +59,6 @@
 #define kParamForceCopy "forceCopy"
 #define kParamForceCopyLabel "Force Copy"
 #define kParamForceCopyHint "Force copy from input to output"
-
-using namespace OFX;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -394,7 +395,6 @@ TestGroupsPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::
 
 mDeclarePluginFactory(TestGroupsPluginFactory, {}, {});
 
-using namespace OFX;
 
 void
 TestGroupsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
@@ -591,3 +591,5 @@ OFX::ImageEffect* TestGroupsPluginFactory::createInstance(OfxImageEffectHandle h
 
 static TestGroupsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

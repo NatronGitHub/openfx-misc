@@ -31,6 +31,10 @@
 #include "ofxsTransformInteract.h"
 #include "ofxsCoords.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "GodRaysOFX"
 #define kPluginGrouping "Filter"
 #define kPluginDescription \
@@ -77,7 +81,6 @@
 
 #define kParamPremultChanged "premultChanged"
 
-using namespace OFX;
 
 class GodRaysProcessorBase
 : public Transform3x3ProcessorBase
@@ -1113,7 +1116,6 @@ GodRaysPlugin::render(const OFX::RenderArguments &args)
     }
 }
 
-using namespace OFX;
 
 mDeclarePluginFactory(GodRaysPluginFactory, {}, {});
 
@@ -1251,3 +1253,5 @@ OFX::ImageEffect* GodRaysPluginFactory::createInstance(OfxImageEffectHandle hand
 
 static GodRaysPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

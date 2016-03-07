@@ -32,6 +32,10 @@
 #include "ofxsMacros.h"
 #include "ofxNatron.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "AddOFX"
 #define kPluginGrouping "Color/Math"
 #define kPluginDescription "Add a constant to the selected channels."
@@ -56,16 +60,12 @@
 
 #define kParamPremultChanged "premultChanged"
 
-using namespace OFX;
 
-
-namespace {
-    struct RGBAValues {
-        double r,g,b,a;
-        RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
-        RGBAValues() : r(0), g(0), b(0), a(0) {}
-    };
-}
+struct RGBAValues {
+    double r,g,b,a;
+    RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+    RGBAValues() : r(0), g(0), b(0), a(0) {}
+};
 
 class AddProcessorBase : public OFX::ImageProcessor
 {
@@ -698,3 +698,4 @@ OFX::ImageEffect* AddPluginFactory::createInstance(OfxImageEffectHandle handle, 
 static AddPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

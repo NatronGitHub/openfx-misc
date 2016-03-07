@@ -28,6 +28,10 @@
 #include "ofxsMerging.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "RotoOFX"
 #define kPluginGrouping "Draw"
 #define kPluginDescription "Create masks and shapes."
@@ -46,8 +50,6 @@
 #define kParamPremultLabel "Premultiply"
 #define kParamPremultHint "Premultiply the red, green and blue channels with the alpha channel produced by the mask."
 
-
-using namespace OFX;
 
 class RotoProcessorBase : public OFX::ImageProcessor
 {
@@ -539,7 +541,6 @@ RotoPlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
     }
 }
 
-using namespace OFX;
 
 mDeclarePluginFactory(RotoPluginFactory, {}, {});
 
@@ -677,3 +678,5 @@ RotoPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::Cont
 
 static RotoPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

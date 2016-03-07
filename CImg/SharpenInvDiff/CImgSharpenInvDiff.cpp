@@ -35,6 +35,10 @@
 
 #include "CImgFilter.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "SharpenInvDiffCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
@@ -78,7 +82,6 @@
 #define kParamIterationsHint "Number of iterations. A reasonable value is 2."
 #define kParamIterationsDefault 2
 
-using namespace OFX;
 using namespace cimg_library;
 
 /// SharpenInvDiff plugin
@@ -278,3 +281,5 @@ OFX::ImageEffect* CImgSharpenInvDiffPluginFactory::createInstance(OfxImageEffect
 
 static CImgSharpenInvDiffPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

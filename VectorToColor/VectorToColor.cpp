@@ -33,6 +33,10 @@
 #define M_PI        3.14159265358979323846264338327950288   /* pi             */
 #endif
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "VectorToColorOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription \
@@ -90,8 +94,6 @@ enum InputChannelEnum {
 #define kParamHSVOutput "hsvOutput"
 #define kParamHSVOutputLabel "HSV Output"
 #define kParamHSVOutputHint "If checked, output is in the HSV color model."
-
-using namespace OFX;
 
 
 class VectorToColorProcessorBase : public OFX::ImageProcessor
@@ -508,3 +510,5 @@ VectorToColorPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::Con
 
 static VectorToColorPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

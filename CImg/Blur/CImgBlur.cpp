@@ -41,6 +41,10 @@
 #error "This plugin requires CImg 1.6.1, please upgrade CImg."
 #endif
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "BlurCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
@@ -209,7 +213,6 @@ using namespace cimg_library;
 
 // Exponentiation by squaring
 // works with positive or negative integer exponents
-namespace {
 template<typename T>
 T
 ipow(T base, int exp)
@@ -235,7 +238,6 @@ ipow(T base, int exp)
     }
 
     return result;
-}
 }
 
 static inline
@@ -390,7 +392,6 @@ box(CImg<T>& img, const float width, const int iter, const int order, const char
     return/* *this*/;
 }
 
-using namespace OFX;
 
 /// Blur plugin
 struct CImgBlurParams
@@ -1076,3 +1077,5 @@ mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
 mRegisterPluginFactoryInstance(p4)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

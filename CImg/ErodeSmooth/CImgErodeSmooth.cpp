@@ -40,6 +40,10 @@
 #error "This plugin requires CImg 1.6.1 produces incorrect results, please upgrade CImg."
 #endif
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "ErodeSmoothCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
@@ -294,7 +298,6 @@ box(CImg<T>& img, const float width, const int iter, const int order, const char
     return/* *this*/;
 }
 
-using namespace OFX;
 
 #define ERODESMOOTH_MIN 1.e-8 // minimum value for the weight
 #define ERODESMOOTH_OFFSET 0.1 // offset to the image values to avoid divisions by zero
@@ -710,3 +713,5 @@ OFX::ImageEffect* CImgErodeSmoothPluginFactory::createInstance(OfxImageEffectHan
 
 static CImgErodeSmoothPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

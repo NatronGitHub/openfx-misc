@@ -25,6 +25,10 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "TimeOffsetOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription "Move the input clip forward or backward in time. " \
@@ -46,10 +50,6 @@
 #define kParamReverseInput "reverseInput"
 #define kParamReverseInputLabel "Reverse input"
 #define kParamReverseInputHint "Reverse the order of the input frames so that last one is first"
-
-namespace OFX {
-    extern ImageEffectHostDescription gHostDescription;
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -174,14 +174,12 @@ TimeOffsetPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &
 }
 
 
-using namespace OFX;
-
 mDeclarePluginFactory(TimeOffsetPluginFactory, ;, {});
 
 void TimeOffsetPluginFactory::load()
 {
     // we can't be used on hosts that don't perfrom temporal clip access
-    if (!gHostDescription.temporalClipAccess) {
+    if (!getImageEffectHostDescription()->temporalClipAccess) {
         throw OFX::Exception::HostInadequate("Need random temporal image access to work");
     }
 }
@@ -214,7 +212,7 @@ void TimeOffsetPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     // we can't be used on hosts that don't perfrom temporal clip access
-    if (!gHostDescription.temporalClipAccess) {
+    if (!getImageEffectHostDescription()->temporalClipAccess) {
         throw OFX::Exception::HostInadequate("Need random temporal image access to work");
     }
 #ifdef OFX_EXTENSIONS_NATRON
@@ -281,3 +279,5 @@ ImageEffect* TimeOffsetPluginFactory::createInstance(OfxImageEffectHandle handle
 
 static TimeOffsetPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

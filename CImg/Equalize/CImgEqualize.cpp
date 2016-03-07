@@ -35,6 +35,10 @@
 
 #include "CImgFilter.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "EqualizeCImg"
 #define kPluginGrouping      "Color"
 #define kPluginDescription \
@@ -84,7 +88,6 @@
 #define kParamMaxHint "Maximum pixel value considered for the histogram computation. All pixel values higher than max_value will not be counted."
 #define kParamMaxDefault 1.0
 
-using namespace OFX;
 
 /// Equalize plugin
 struct CImgEqualizeParams
@@ -234,3 +237,5 @@ OFX::ImageEffect* CImgEqualizePluginFactory::createInstance(OfxImageEffectHandle
 
 static CImgEqualizePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

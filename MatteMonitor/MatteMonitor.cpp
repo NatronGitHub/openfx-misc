@@ -31,6 +31,10 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "MatteMonitor"
 #define kPluginGrouping "Keyer"
 #define kPluginDescription \
@@ -58,8 +62,6 @@
 #define kParamSlope      "slope"
 #define kParamSlopeLabel "Slope"
 #define kParamSlopeHint  "Slope applied to alpha values striuctly between 0 and 1."
-
-using namespace OFX;
 
 
 class MatteMonitorProcessorBase : public OFX::ImageProcessor
@@ -373,3 +375,5 @@ OFX::ImageEffect* MatteMonitorPluginFactory::createInstance(OfxImageEffectHandle
 
 static MatteMonitorPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

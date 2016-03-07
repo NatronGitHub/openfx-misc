@@ -31,6 +31,10 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "ColorMatrixOFX"
 #define kPluginGrouping "Color/Math"
 #define kPluginDescription "Multiply the RGBA channels by an arbitrary 4x4 matrix."
@@ -74,16 +78,12 @@
 
 #define kParamPremultChanged "premultChanged"
 
-using namespace OFX;
 
-
-namespace {
-    struct RGBAValues {
-        double r,g,b,a;
-        RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
-        RGBAValues() : r(0), g(0), b(0), a(0) {}
-    };
-}
+struct RGBAValues {
+    double r,g,b,a;
+    RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+    RGBAValues() : r(0), g(0), b(0), a(0) {}
+};
 
 class ColorMatrixProcessorBase : public OFX::ImageProcessor
 {
@@ -817,3 +817,4 @@ OFX::ImageEffect* ColorMatrixPluginFactory::createInstance(OfxImageEffectHandle 
 static ColorMatrixPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

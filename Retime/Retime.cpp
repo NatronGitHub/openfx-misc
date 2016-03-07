@@ -42,6 +42,10 @@
 #include "ofxsCopier.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "RetimeOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription "Change the timing of the input clip."
@@ -97,9 +101,7 @@ enum FilterEnum {
 #define kParamWarpLabel "Warp"
 #define kParamWarpHint "Curve that maps input range (after applying speed) to the output range. A low positive slope slows down the input clip, and a negative slope plays it backwards."
 
-namespace OFX {
-    extern ImageEffectHostDescription gHostDescription;
-}
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class RetimePlugin : public OFX::ImageEffect
@@ -558,13 +560,13 @@ RetimePlugin::render(const OFX::RenderArguments &args)
     }
 }
 
-using namespace OFX;
+
 mDeclarePluginFactory(RetimePluginFactory, ;, {});
 
 void RetimePluginFactory::load()
 {
     // we can't be used on hosts that don't perfrom temporal clip access
-    if (!gHostDescription.temporalClipAccess) {
+    if (!getImageEffectHostDescription()->temporalClipAccess) {
         throw OFX::Exception::HostInadequate("Need random temporal image access to work");
     }
 }
@@ -599,7 +601,7 @@ void RetimePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
     
     // we can't be used on hosts that don't perfrom temporal clip access
-    if (!gHostDescription.temporalClipAccess) {
+    if (!getImageEffectHostDescription()->temporalClipAccess) {
         throw OFX::Exception::HostInadequate("Need random temporal image access to work");
     }
 #ifdef OFX_EXTENSIONS_NATRON
@@ -757,3 +759,5 @@ ImageEffect* RetimePluginFactory::createInstance(OfxImageEffectHandle handle, Co
 
 static RetimePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

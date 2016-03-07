@@ -73,6 +73,10 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "SlitScan"
 #define kPluginGrouping "Time"
 #define kPluginDescription \
@@ -165,9 +169,6 @@ enum FilterEnum {
 #define kParamFilterDefault eFilterNearest
 
 
-namespace OFX {
-    extern ImageEffectHostDescription gHostDescription;
-}
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class SlitScanPlugin : public OFX::ImageEffect
@@ -508,13 +509,13 @@ SlitScanPlugin::render(const OFX::RenderArguments &args)
 #endif
 }
 
-using namespace OFX;
+
 mDeclarePluginFactory(SlitScanPluginFactory, ;, {});
 
 void SlitScanPluginFactory::load()
 {
     // we can't be used on hosts that don't perfrom temporal clip access
-    if (!gHostDescription.temporalClipAccess) {
+    if (!getImageEffectHostDescription()->temporalClipAccess) {
         throw OFX::Exception::HostInadequate("Need random temporal image access to work");
     }
 }
@@ -547,7 +548,7 @@ void SlitScanPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 
     // we can't be used on hosts that don't perfrom temporal clip access
-    if (!gHostDescription.temporalClipAccess) {
+    if (!getImageEffectHostDescription()->temporalClipAccess) {
         throw OFX::Exception::HostInadequate("Need random temporal image access to work");
     }
 #ifdef OFX_EXTENSIONS_NATRON
@@ -666,6 +667,8 @@ ImageEffect* SlitScanPluginFactory::createInstance(OfxImageEffectHandle handle, 
 
 static SlitScanPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT
 
 #endif
 

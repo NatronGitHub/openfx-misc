@@ -31,6 +31,10 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "ClipTestOFX"
 #define kPluginGrouping "Color/Math"
 #define kPluginDescription "Draw zebra stripes on all pixels outside of the specified range."
@@ -57,16 +61,12 @@
 
 #define kParamPremultChanged "premultChanged"
 
-using namespace OFX;
 
-
-namespace {
-    struct RGBAValues {
-        double r,g,b,a;
-        RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
-        RGBAValues() : r(0), g(0), b(0), a(0) {}
-    };
-}
+struct RGBAValues {
+    double r,g,b,a;
+    RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+    RGBAValues() : r(0), g(0), b(0), a(0) {}
+};
 
 class ClipTestProcessorBase : public OFX::ImageProcessor
 {
@@ -805,3 +805,4 @@ OFX::ImageEffect* ClipTestPluginFactory::createInstance(OfxImageEffectHandle han
 static ClipTestPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

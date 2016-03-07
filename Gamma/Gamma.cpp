@@ -32,6 +32,10 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "GammaOFX"
 #define kPluginGrouping "Color/Math"
 #define kPluginDescription "Apply gamma function to the selected channels. The actual function is pow(x,1/max(1e-8,value))."
@@ -55,16 +59,11 @@
 
 #define kParamPremultChanged "premultChanged"
 
-using namespace OFX;
-
-
-namespace {
-    struct RGBAValues {
-        double r,g,b,a;
-        RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
-        RGBAValues() : r(0), g(0), b(0), a(0) {}
-    };
-}
+struct RGBAValues {
+    double r,g,b,a;
+    RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+    RGBAValues() : r(0), g(0), b(0), a(0) {}
+};
 
 class GammaProcessorBase : public OFX::ImageProcessor
 {
@@ -756,3 +755,4 @@ OFX::ImageEffect* GammaPluginFactory::createInstance(OfxImageEffectHandle handle
 static GammaPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

@@ -33,6 +33,10 @@
 #include "ofxsGenerator.h"
 #include "ofxsLut.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "CheckerBoardOFX"
 #define kPluginGrouping "Image"
 #define kPluginDescription "Generate an image with a checkerboard. A frame range may be specified for operators that need it."
@@ -506,7 +510,6 @@ CheckerBoardPlugin::paramsNotAnimated()
             (!_centerlineWidth || _centerlineWidth->getNumKeys() == 0));
 }
 
-using namespace OFX;
 
 mDeclarePluginFactory(CheckerBoardPluginFactory, {}, {});
 
@@ -703,3 +706,5 @@ ImageEffect* CheckerBoardPluginFactory::createInstance(OfxImageEffectHandle hand
 
 static CheckerBoardPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

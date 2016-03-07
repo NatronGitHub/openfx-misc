@@ -40,6 +40,9 @@
 #define POINT_TOLERANCE 6
 #define POINT_SIZE 5
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "RadialOFX"
 #define kPluginGrouping "Draw"
@@ -78,13 +81,12 @@
 #define kParamExpandRoDLabel "Expand RoD"
 #define kParamExpandRoDHint "Expand the source region of definition by the shape RoD (if Source is connected and color0.a=0)."
 
-namespace {
-    struct RGBAValues {
-        double r,g,b,a;
-        RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
-        RGBAValues() : r(0), g(0), b(0), a(0) {}
-    };
-}
+
+struct RGBAValues {
+    double r,g,b,a;
+    RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+    RGBAValues() : r(0), g(0), b(0), a(0) {}
+};
 
 static inline
 double
@@ -99,7 +101,6 @@ rampSmooth(double t)
     }
 }
 
-using namespace OFX;
 
 class RadialProcessorBase : public OFX::ImageProcessor
 {
@@ -982,3 +983,5 @@ void RadialPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
 
 static RadialPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

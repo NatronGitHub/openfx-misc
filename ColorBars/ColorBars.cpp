@@ -34,6 +34,10 @@
 #include "ofxsCoords.h"
 #include "ofxNatron.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "ColorBarsOFX"
 #define kPluginGrouping "Image"
 #define kPluginDescription \
@@ -60,7 +64,6 @@
 #define kParamOutputIRELabel "Output IRE"
 #define kParamOutputIREHint "When checked, the output is scaled so that 0 is black and the max value is white."
 
-using namespace OFX;
 
 class ColorBarsProcessorBase : public OFX::ImageProcessor {
 protected:
@@ -384,7 +387,6 @@ ColorBarsPlugin::paramsNotAnimated()
 //    clipPreferences.setOutputPremultiplication(OFX::eImagePreMultiplied);
 //}
 
-using namespace OFX;
 
 mDeclarePluginFactory(ColorBarsPluginFactory, {}, {});
 
@@ -467,3 +469,5 @@ ColorBarsPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum 
 
 static ColorBarsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

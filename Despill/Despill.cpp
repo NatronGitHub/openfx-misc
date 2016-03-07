@@ -33,6 +33,10 @@
 #include "ofxsCoords.h"
 #include "ofxNatron.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "Despill"
 #define kPluginGrouping "Keyer"
 #define kPluginDescription "Remove the unwanted color contamination of the foreground (spill) " \
@@ -105,11 +109,6 @@ enum ScreenTypeEnum
 #define kParamBrightness "brightness"
 #define kParamBrightnessLabel "Brightness"
 #define kParamBrightnessHint "Controls the brightness of the spill while trying to preserve the colors."
-
-
-using namespace OFX;
-
-
 
 
 class DespillProcessorBase : public OFX::ImageProcessor
@@ -673,3 +672,4 @@ DespillPluginFactory::createInstance(OfxImageEffectHandle handle,
 static DespillPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT
