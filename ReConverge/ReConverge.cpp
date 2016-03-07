@@ -36,6 +36,10 @@
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "ReConvergeOFX"
 #define kPluginGrouping "Views/Stereo"
 #define kPluginDescription "Shift convergence so that a tracked point appears at screen-depth. " \
@@ -153,7 +157,6 @@ private:
     }
 };
 
-using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -376,7 +379,6 @@ struct ConvergePointParam {
 };
 
 
-using namespace OFX;
 void ReConvergePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
@@ -506,5 +508,7 @@ OFX::ImageEffect* ReConvergePluginFactory::createInstance(OfxImageEffectHandle h
 
 static ReConvergePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT
 
 #endif

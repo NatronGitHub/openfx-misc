@@ -35,6 +35,10 @@
 
 #include "CImgFilter.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "SharpenShockCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
@@ -99,7 +103,6 @@
 #define test_abort() if (abort()) throw CImgAbortException("")
 #endif
 
-using namespace OFX;
 using namespace cimg_library;
 
 /// SharpenShock plugin
@@ -380,3 +383,5 @@ OFX::ImageEffect* CImgSharpenShockPluginFactory::createInstance(OfxImageEffectHa
 
 static CImgSharpenShockPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

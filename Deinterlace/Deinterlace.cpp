@@ -29,6 +29,10 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "DeinterlaceOFX"
 #define kPluginGrouping      "Time"
 #define kPluginDescription \
@@ -626,7 +630,6 @@ DeinterlacePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
 
 mDeclarePluginFactory(DeinterlacePluginFactory, {}, {});
 
-using namespace OFX;
 
 void DeinterlacePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -776,3 +779,5 @@ ImageEffect* DeinterlacePluginFactory::createInstance(OfxImageEffectHandle handl
 
 static DeinterlacePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

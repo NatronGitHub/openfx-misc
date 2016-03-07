@@ -31,6 +31,10 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "ColorSuppress"
 #define kPluginGrouping "Color"
 #define kPluginDescription \
@@ -116,8 +120,6 @@ enum LuminanceMathEnum
 };
 
 #define kParamPremultChanged "premultChanged"
-
-using namespace OFX;
 
 
 class ColorSuppressProcessorBase
@@ -988,3 +990,4 @@ ColorSuppressPluginFactory::createInstance(OfxImageEffectHandle handle,
 static ColorSuppressPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

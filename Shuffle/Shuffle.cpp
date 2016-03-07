@@ -33,6 +33,10 @@
 #include "ofxsCoords.h"
 #include "ofxsMultiPlane.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "ShuffleOFX"
 #define kPluginGrouping "Channel"
 #define kPluginDescription "Rearrange channels from one or two inputs and/or convert to different bit depth or components. No colorspace conversion is done (mapping is linear, even for 8-bit and 16-bit types)."
@@ -135,7 +139,6 @@ static bool gIsMultiPlanar = false;
 static OFX::PixelComponentEnum gOutputComponentsMap[4]; // 3 components + a sentinel at the end with ePixelComponentNone
 static OFX::BitDepthEnum gOutputBitDepthMap[4]; // 3 possible bit depths + a sentinel
 
-using namespace OFX;
 
 class ShufflerBase : public OFX::ImageProcessor
 {
@@ -2118,3 +2121,5 @@ OFX::ImageEffect* ShufflePluginFactory::createInstance(OfxImageEffectHandle hand
 
 static ShufflePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

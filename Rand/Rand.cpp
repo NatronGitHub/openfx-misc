@@ -41,6 +41,10 @@
 #endif
 #endif
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 // Note: this plugin was initially named NoiseOFX, but was renamed to Rand (like the Shake node)
 #define kPluginName "Rand"
 #define kPluginGrouping "Draw"
@@ -68,7 +72,6 @@
 #define kParamSeedLabel "Seed"
 #define kParamSeedHint "Random seed: change this if you want different instances to have different noise."
 
-using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
 // base class for the noise
@@ -351,7 +354,6 @@ RandPlugin::render(const OFX::RenderArguments &args)
 
 mDeclarePluginFactory(RandPluginFactory, {}, {});
 
-using namespace OFX;
 
 void RandPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -448,3 +450,5 @@ ImageEffect* RandPluginFactory::createInstance(OfxImageEffectHandle handle, Cont
 
 static RandPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

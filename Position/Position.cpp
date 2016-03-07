@@ -31,6 +31,10 @@
 #include "ofxsCopier.h"
 #include "ofxsPositionInteract.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "PositionOFX"
 #define kPluginGrouping "Transform"
 #define kPluginDescription "Translate an image by an integer number of pixels.\n"\
@@ -54,10 +58,6 @@
 #define kParamInteractiveLabel "Interactive"
 #define kParamInteractiveHint \
 "When checked the image will be rendered whenever moving the overlay interact instead of when releasing the mouse button."
-
-
-using namespace OFX;
-
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -276,12 +276,10 @@ PositionPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip
 
 mDeclarePluginFactory(PositionPluginFactory, {}, {});
 
-namespace {
-    struct PositionInteractParam {
-        static const char *name() { return kParamTranslate; }
-        static const char *interactiveName() { return kParamInteractive; }
-    };
-}
+struct PositionInteractParam {
+    static const char *name() { return kParamTranslate; }
+    static const char *interactiveName() { return kParamInteractive; }
+};
 
 void PositionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -401,3 +399,5 @@ PositionPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextE
 
 static PositionPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

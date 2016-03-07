@@ -33,6 +33,10 @@
 #include "ofxsMacros.h"
 #include "ofxNatron.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "FrameHoldOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription "Hold a given frame for the input clip indefinitely, or use a subsample of the input frames and hold them for several frames."
@@ -53,10 +57,6 @@
 #define kParamIncrement "increment"
 #define kParamIncrementLabel "Increment"
 #define kParamIncrementHint "If increment is 0, only the \"firstFrame\" will be held. If it is positive, every multiple of \"increment\" plus \"firstFrame\" will be held for \"increment\" frames afterwards (before if it is negative)."
-
-namespace OFX {
-    extern ImageEffectHostDescription gHostDescription;
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -188,14 +188,13 @@ FrameHoldPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::s
     }
 }
 
-using namespace OFX;
 
 mDeclarePluginFactory(FrameHoldPluginFactory, ;, {});
 
 void FrameHoldPluginFactory::load()
 {
     // we can't be used on hosts that don't perfrom temporal clip access
-    if (!gHostDescription.temporalClipAccess) {
+    if (!getImageEffectHostDescription()->temporalClipAccess) {
         throw OFX::Exception::HostInadequate("Need random temporal image access to work");
     }
 }
@@ -228,7 +227,7 @@ void FrameHoldPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
     // we can't be used on hosts that don't perfrom temporal clip access
-    if (!gHostDescription.temporalClipAccess) {
+    if (!getImageEffectHostDescription()->temporalClipAccess) {
         throw OFX::Exception::HostInadequate("Need random temporal image access to work");
     }
 #ifdef OFX_EXTENSIONS_NATRON
@@ -308,3 +307,5 @@ ImageEffect* FrameHoldPluginFactory::createInstance(OfxImageEffectHandle handle,
 
 static FrameHoldPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

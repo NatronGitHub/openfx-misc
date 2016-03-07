@@ -28,6 +28,10 @@
 #include "ofxsRectangleInteract.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "CropOFX"
 #define kPluginGrouping "Transform"
 #define kPluginDescription "Removes everything outside the defined rectangle and adds black edges so everything outside is black.\n"\
@@ -72,7 +76,6 @@ rampSmooth(double t)
     }
 }
 
-using namespace OFX;
 
 class CropProcessorBase : public OFX::ImageProcessor
 {
@@ -526,8 +529,6 @@ CropPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string
 }
 
 
-using namespace OFX;
-
 class CropInteract : public RectangleInteract
 {
 public:
@@ -758,3 +759,4 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
 static CropPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

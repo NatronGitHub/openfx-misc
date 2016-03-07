@@ -35,6 +35,10 @@
 
 #include "CImgFilter.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "SmoothCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
@@ -129,10 +133,6 @@ enum InterpEnum
 #define kParamFastApproxLabel "fast Approximation"
 #define kParamFastApproxHint "Tells if a fast approximation of the gaussian function is used or not"
 #define kParamFastApproxDafault true
-
-using namespace OFX;
-
-
 
 
 /// Smooth plugin
@@ -407,3 +407,5 @@ OFX::ImageEffect* CImgSmoothPluginFactory::createInstance(OfxImageEffectHandle h
 
 static CImgSmoothPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

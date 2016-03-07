@@ -31,6 +31,10 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginMirrorName "MirrorOFX"
 #define kPluginMirrorGrouping "Transform"
 #define kPluginMirrorDescription "Flip (vertical mirror) or flop (horizontal mirror) an image. Interlaced video can not be flipped.\n"\
@@ -55,8 +59,6 @@
 #define kParamMirrorFlopHint "Mirror image (swap left and right)"
 
 #define kParamSrcClipChanged "sourceChanged"
-
-using namespace OFX;
 
 
 template <class PIX, int nComponents, bool flip, bool flop>
@@ -628,3 +630,5 @@ MirrorPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnu
 
 static MirrorPluginFactory p(kPluginMirrorIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

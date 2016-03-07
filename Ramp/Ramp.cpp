@@ -36,6 +36,9 @@
 #include <GL/gl.h>
 #endif
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "RampOFX"
 #define kPluginGrouping "Draw"
@@ -57,16 +60,12 @@
 #define kRenderThreadSafety eRenderFullySafe
 
 
+struct RGBAValues {
+    double r,g,b,a;
+    RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+    RGBAValues() : r(0), g(0), b(0), a(0) {}
+};
 
-namespace {
-    struct RGBAValues {
-        double r,g,b,a;
-        RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
-        RGBAValues() : r(0), g(0), b(0), a(0) {}
-    };
-}
-
-using namespace OFX;
 
 class RampProcessorBase : public OFX::ImageProcessor
 {
@@ -820,3 +819,5 @@ void RampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
 
 static RampPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

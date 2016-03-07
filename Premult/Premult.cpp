@@ -35,6 +35,10 @@
 #include "ofxsMacros.h"
 #include "ofxNatron.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginPremultName "PremultOFX"
 #define kPluginPremultGrouping "Merge"
 #define kPluginPremultDescription \
@@ -93,7 +97,6 @@ enum InputChannelEnum {
     eInputChannelA,
 };
 
-using namespace OFX;
 
 // Base class for the RGBA and the Alpha processor
 class PremultBase : public OFX::ImageProcessor
@@ -653,7 +656,6 @@ public:
     virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context);
 };
 
-using namespace OFX;
 
 template<bool isPremult>
 void PremultPluginFactory<isPremult>::describe(OFX::ImageEffectDescriptor &desc)
@@ -812,3 +814,5 @@ static PremultPluginFactory<true> p1(kPluginPremultIdentifier, kPluginVersionMaj
 static PremultPluginFactory<false> p2(kPluginUnpremultIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

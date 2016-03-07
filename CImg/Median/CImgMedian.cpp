@@ -37,6 +37,10 @@
 
 #include "CImgFilter.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "MedianCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
@@ -80,7 +84,6 @@
 #define kParamThresholdHint "Threshold used to discard pixels too far from the current pixel value in the median computation. A threshold value of zero disables the threshold."
 #define kParamThresholdDefault 1
 
-using namespace OFX;
 
 /// Median plugin
 struct CImgMedianParams
@@ -216,3 +219,5 @@ OFX::ImageEffect* CImgMedianPluginFactory::createInstance(OfxImageEffectHandle h
 
 static CImgMedianPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

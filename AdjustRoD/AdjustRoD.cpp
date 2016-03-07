@@ -29,6 +29,10 @@
 #include "ofxsCoords.h"
 #include "ofxsCopier.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "AdjustRoD"
 #define kPluginGrouping "Transform"
 #define kPluginDescription "Enlarges the input image by a given amount of black and transparent pixels."
@@ -47,8 +51,6 @@
 #define kParamAddPixelsLabel "Add Pixels"
 #define kParamAddPixelsHint "How many pixels to add on each side for both dimensions (width/height)"
 
-
-using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -369,3 +371,4 @@ void AdjustRoDPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 static AdjustRoDPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

@@ -29,6 +29,10 @@
 #include "ofxsMaskMix.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "CopyRectangleOFX"
 #define kPluginGrouping "Merge"
 #define kPluginDescription "Copies a rectangle from the input A to the input B in output. It can be used to limit an effect to a rectangle of the original image by plugging the original image into the input B."
@@ -52,12 +56,9 @@
 #define kParamSoftnessLabel "Softness"
 #define kParamSoftnessHint "Size of the fade around edges of the rectangle to apply"
 
-using namespace OFX;
 
 class CopyRectangleProcessorBase : public OFX::ImageProcessor
 {
-   
-    
 protected:
     const OFX::Image *_srcImgA;
     const OFX::Image *_srcImgB;
@@ -532,11 +533,6 @@ CopyRectanglePlugin::render(const OFX::RenderArguments &args)
 }
 
 
-
-using namespace OFX;
-
-
-
 mDeclarePluginFactory(CopyRectanglePluginFactory, {}, {});
 
 void CopyRectanglePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
@@ -711,3 +707,4 @@ void CopyRectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &d
 static CopyRectanglePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

@@ -32,6 +32,10 @@
 #include "ofxsMacros.h"
 #include "ofxNatron.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "SaturationOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription "Modify the color saturation of an image."
@@ -83,7 +87,6 @@ enum LuminanceMathEnum
 
 #define kParamPremultChanged "premultChanged"
 
-using namespace OFX;
 
 class SaturationProcessorBase
     : public ImageProcessor
@@ -848,3 +851,5 @@ SaturationPluginFactory::createInstance(OfxImageEffectHandle handle,
 
 static SaturationPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

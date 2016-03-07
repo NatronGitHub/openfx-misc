@@ -34,6 +34,10 @@
 #include "ofxsMacros.h"
 #include "ofxsRectangleInteract.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "HSVToolOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription \
@@ -183,7 +187,6 @@ enum OutputAlphaEnum {
 // default fraction of the min-max interval to use as rolloff after rectangle analysis
 #define DEFAULT_RECTANGLE_ROLLOFF 0.5
 
-using namespace OFX;
 
 /* algorithm:
  - convert to HSV
@@ -258,55 +261,53 @@ angleWithinRange(double h, double h0, double h1)
 
 // Exponentiation by squaring
 // works with positive or negative integer exponents
-namespace {
-    template<typename T>
-    T
-    ipow(T base, int exp)
-    {
-        T result = T(1);
-        if (exp >= 0) {
-            while (exp) {
-                if (exp & 1) {
-                    result *= base;
-                }
-                exp >>= 1;
-                base *= base;
+template<typename T>
+T
+ipow(T base, int exp)
+{
+    T result = T(1);
+    if (exp >= 0) {
+        while (exp) {
+            if (exp & 1) {
+                result *= base;
             }
-        } else {
-            exp = -exp;
-            while (exp) {
-                if (exp & 1) {
-                    result /= base;
-                }
-                exp >>= 1;
-                base *= base;
-            }
+            exp >>= 1;
+            base *= base;
         }
-        
-        return result;
+    } else {
+        exp = -exp;
+        while (exp) {
+            if (exp & 1) {
+                result /= base;
+            }
+            exp >>= 1;
+            base *= base;
+        }
     }
 
-    double
-    ffloor(double val, int decimals)
-    {
-        int p = ipow(10, decimals);
-        return std::floor(val * p) / p;
-    }
+    return result;
+}
+
+static double
+ffloor(double val, int decimals)
+{
+    int p = ipow(10, decimals);
+    return std::floor(val * p) / p;
+}
 
 
-    double
-    fround(double val, int decimals)
-    {
-        int p = ipow(10, decimals);
-        return std::floor(val * p + 0.5) / p;
-    }
+static double
+fround(double val, int decimals)
+{
+    int p = ipow(10, decimals);
+    return std::floor(val * p + 0.5) / p;
+}
 
-    double
-    fceil(double val, int decimals)
-    {
-        int p = ipow(10, decimals);
-        return std::ceil(val * p) / p;
-    }
+static double
+fceil(double val, int decimals)
+{
+    int p = ipow(10, decimals);
+    return std::ceil(val * p) / p;
 }
 
 
@@ -2137,3 +2138,5 @@ HSVToolPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEn
 
 static HSVToolPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

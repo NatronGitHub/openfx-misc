@@ -57,6 +57,10 @@
 #include "ofxsMacros.h"
 #include "ofxsMultiPlane.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginIDistortName "IDistortOFX"
 #define kPluginIDistortGrouping "Transform"
 #define kPluginIDistortDescription \
@@ -239,7 +243,6 @@ enum DistortionModelEnum {
 
 static bool gIsMultiPlane;
 
-using namespace OFX;
 
 struct InputPlaneChannel {
     OFX::Image* img;
@@ -1968,3 +1971,5 @@ static DistortionPluginFactory<eDistortionPluginLensDistortion> p3(kPluginLensDi
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

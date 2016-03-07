@@ -31,6 +31,10 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "GradeOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription "Modify the tonal spread of an image from the white and black points. " \
@@ -94,15 +98,12 @@
 
 #define kParamPremultChanged "premultChanged"
 
-using namespace OFX;
 
-namespace {
-    struct RGBAValues {
-        double r,g,b,a;
-        RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
-        RGBAValues() : r(0), g(0), b(0), a(0) {}
-    };
-}
+struct RGBAValues {
+    double r,g,b,a;
+    RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+    RGBAValues() : r(0), g(0), b(0), a(0) {}
+};
 
 class GradeProcessorBase : public OFX::ImageProcessor
 {
@@ -908,3 +909,4 @@ GradePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum
 static GradePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

@@ -34,6 +34,10 @@
 #include "nuke/fnOfxExtensions.h"
 #endif
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "NoOpOFX"
 #define kPluginGrouping "Other"
 #define kPluginDescription "Copies the input to the ouput.\n"\
@@ -89,7 +93,6 @@
 #define kParamOutputFrameRateLabel "Output Frame Rate"
 #define kParamOutputFrameRateHint "Frame rate of the output clip."
 
-using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -571,7 +574,6 @@ NoOpPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     }
 }
 
-using namespace OFX;
 
 mDeclarePluginFactory(NoOpPluginFactory, {}, {});
 
@@ -814,3 +816,5 @@ OFX::ImageEffect* NoOpPluginFactory::createInstance(OfxImageEffectHandle handle,
 
 static NoOpPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

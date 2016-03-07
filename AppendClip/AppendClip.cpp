@@ -35,6 +35,10 @@
 #include "ofxsMacros.h"
 #include "ofxNatron.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "AppendClipOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription "Append one clip to another."
@@ -826,7 +830,6 @@ AppendClipPlugin::getTimeDomain(OfxRangeD &range)
 
 mDeclarePluginFactory(AppendClipPluginFactory, {}, {}
                       );
-using namespace OFX;
 
 void
 AppendClipPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
@@ -1033,3 +1036,4 @@ AppendClipPluginFactory::createInstance(OfxImageEffectHandle handle,
 static AppendClipPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

@@ -40,6 +40,10 @@
 #include "ofxNatron.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "MergeOFX"
 #define kPluginGrouping "Merge"
 #define kPluginDescription \
@@ -146,7 +150,6 @@
 
 #define kMaximumAInputs 64
 
-using namespace OFX;
 using namespace MergeImages2D;
 
 /*
@@ -550,7 +553,6 @@ MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxR
 	return false;
 }
 
-namespace {
 // Since we cannot hold a std::auto_ptr in the vector we must hold a raw pointer.
 // To ensure that images are always freed even in case of exceptions, use a RAII class.
 struct OptionalImagesHolder_RAII
@@ -570,7 +572,6 @@ struct OptionalImagesHolder_RAII
         }
     }
 };
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */
@@ -1490,3 +1491,4 @@ mRegisterPluginFactoryInstance(p8)
 mRegisterPluginFactoryInstance(p9)
 mRegisterPluginFactoryInstance(p10)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

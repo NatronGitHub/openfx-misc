@@ -47,6 +47,9 @@
 #define POINT_TOLERANCE 6
 #define POINT_SIZE 5
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "RectangleOFX"
 #define kPluginGrouping "Draw"
@@ -85,13 +88,12 @@
 #define kParamBlackOutsideLabel "Black Outside"
 #define kParamBlackOutsideHint "Add a 1 pixel black and transparent border if the plugin is used as a generator."
 
-namespace {
-    struct RGBAValues {
-        double r,g,b,a;
-        RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
-        RGBAValues() : r(0), g(0), b(0), a(0) {}
-    };
-}
+
+struct RGBAValues {
+    double r,g,b,a;
+    RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+    RGBAValues() : r(0), g(0), b(0), a(0) {}
+};
 
 static inline
 double
@@ -106,7 +108,6 @@ rampSmooth(double t)
     }
 }
 
-using namespace OFX;
 
 class RectangleProcessorBase : public OFX::ImageProcessor
 {
@@ -1124,3 +1125,5 @@ void RectanglePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
 static RectanglePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

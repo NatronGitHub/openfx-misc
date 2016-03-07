@@ -15,6 +15,10 @@
 #include "nuke/fnOfxExtensions.h"
 #endif
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "NoTimeBlurOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription "Rounds fractional frame numbers to integers. This can be used to avoid computing non-integer frame numbers, and to discretize motion (useful for animated objects). This plug-in is usually inserted upstream from TimeBlur."
@@ -41,6 +45,7 @@
 #define kParamRoundingOptionNone "none"
 #define kParamRoundingOptionNoneHint "Do not round."
 #define kParamRoundingDefault eRoundingRint
+
 enum RoundingEnum
 {
     eRoundingRint = 0,
@@ -49,7 +54,6 @@ enum RoundingEnum
     eRoundingNone,
 };
 
-using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -176,7 +180,6 @@ NoTimeBlurPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
     return true;
 }
 
-using namespace OFX;
 
 mDeclarePluginFactory(NoTimeBlurPluginFactory, {}, {});
 
@@ -281,3 +284,5 @@ OFX::ImageEffect* NoTimeBlurPluginFactory::createInstance(OfxImageEffectHandle h
 
 static NoTimeBlurPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

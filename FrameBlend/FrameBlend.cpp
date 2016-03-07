@@ -37,6 +37,10 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "FrameBlendOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription \
@@ -106,7 +110,6 @@ enum OperationEnum {
 
 #define kFrameChunk 4 // how many frames to process simultaneously
 
-using namespace OFX;
 
 class FrameBlendProcessorBase : public OFX::PixelProcessor
 {
@@ -521,7 +524,6 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 // basic plugin render function, just a skelington to instantiate templates from
 
-namespace {
 // Since we cannot hold a std::auto_ptr in the vector we must hold a raw pointer.
 // To ensure that images are always freed even in case of exceptions, use a RAII class.
 struct OptionalImagesHolder_RAII
@@ -541,7 +543,6 @@ struct OptionalImagesHolder_RAII
         }
     }
 };
-}
 
 /* set up and run a processor */
 void
@@ -1175,3 +1176,4 @@ OFX::ImageEffect* FrameBlendPluginFactory::createInstance(OfxImageEffectHandle h
 static FrameBlendPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

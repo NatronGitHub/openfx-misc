@@ -32,6 +32,10 @@
 #include "ofxsGenerator.h"
 #include "ofxsLut.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "ConstantOFX"
 #define kPluginGrouping "Image"
 #define kPluginDescription "Generate an image with a constant color."
@@ -317,7 +321,6 @@ ConstantPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     clipPreferences.setOutputPremultiplication(_colorRGB ? OFX::eImageOpaque : OFX::eImagePreMultiplied);
 }
 
-using namespace OFX;
 
 template<bool solid>
 class ConstantPluginFactory : public OFX::PluginFactoryHelper<ConstantPluginFactory<solid> >
@@ -425,3 +428,5 @@ static ConstantPluginFactory<false> p1(kPluginIdentifier, kPluginVersionMajor, k
 static ConstantPluginFactory<true> p2(kPluginSolidIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

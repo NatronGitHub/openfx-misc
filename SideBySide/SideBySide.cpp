@@ -30,6 +30,10 @@
 #include "ofxsMacros.h"
 #include "ofxsCoords.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "SideBySideOFX"
 #define kPluginGrouping "Views/Stereo"
 #define kPluginDescription "Put the left and right view of the input next to each other."
@@ -136,7 +140,6 @@ private:
     }
 };
 
-using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -421,8 +424,6 @@ SideBySidePlugin::render(const OFX::RenderArguments &args)
 }
 
 
-using namespace OFX;
-
 mDeclarePluginFactory(SideBySidePluginFactory, ;, {});
 
 void SideBySidePluginFactory::load()
@@ -553,3 +554,5 @@ OFX::ImageEffect* SideBySidePluginFactory::createInstance(OfxImageEffectHandle h
 
 static SideBySidePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

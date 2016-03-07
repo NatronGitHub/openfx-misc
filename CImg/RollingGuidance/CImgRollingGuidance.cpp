@@ -39,6 +39,10 @@
 #error "This plugin requires CImg 1.6.1, please upgrade CImg."
 #endif
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "RollingGuidanceCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
@@ -88,7 +92,6 @@
 #define kParamIterationsHint "Number of iterations of the rolling guidance filter. 1 corresponds to Gaussian smoothing. A reasonable value is 4."
 #define kParamIterationsDefault 4
 
-using namespace OFX;
 
 /// RollingGuidance plugin
 struct CImgRollingGuidanceParams
@@ -261,3 +264,5 @@ OFX::ImageEffect* CImgRollingGuidancePluginFactory::createInstance(OfxImageEffec
 
 static CImgRollingGuidancePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

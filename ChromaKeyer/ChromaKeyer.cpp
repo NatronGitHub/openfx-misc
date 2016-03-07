@@ -30,6 +30,10 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "ChromaKeyerOFX"
 #define kPluginGrouping "Keyer"
 #define kPluginDescription \
@@ -130,7 +134,6 @@ enum SourceAlphaEnum {
     eSourceAlphaNormal,
 };
 
-using namespace OFX;
 
 class ChromaKeyerProcessorBase : public OFX::ImageProcessor
 {
@@ -964,3 +967,5 @@ OFX::ImageEffect* ChromaKeyerPluginFactory::createInstance(OfxImageEffectHandle 
 
 static ChromaKeyerPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

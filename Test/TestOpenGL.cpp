@@ -34,6 +34,10 @@
 #include "ofxsMacros.h"
 #include "ofxOpenGLRender.h"
 
+using namespace OFX;
+
+//OFXS_NAMESPACE_ANONYMOUS_ENTER // defines external classes
+
 #define kPluginName "TestOpenGL"
 #define kPluginGrouping "Other/Test"
 #define kPluginDescription \
@@ -211,7 +215,6 @@ TestOpenGLPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences
 
 mDeclarePluginFactory(TestOpenGLPluginFactory, ;, {});
 
-using namespace OFX;
 
 void TestOpenGLPluginFactory::load()
 {

@@ -40,6 +40,10 @@
 #include "nuke/fnOfxExtensions.h"
 #endif
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "FrameRangeOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription "Set the frame range for a clip. Useful in conjunction with AppendClipOFX."
@@ -81,7 +85,6 @@ enum BeforeAfterEnum {
     eBeforeAfterBlack,
 };
 
-using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -347,7 +350,6 @@ FrameRangePlugin::getTimeDomain(OfxRangeD &range)
     return true;
 }
 
-using namespace OFX;
 
 mDeclarePluginFactory(FrameRangePluginFactory, {}, {});
 
@@ -504,3 +506,5 @@ OFX::ImageEffect* FrameRangePluginFactory::createInstance(OfxImageEffectHandle h
 
 static FrameRangePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

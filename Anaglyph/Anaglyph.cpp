@@ -30,6 +30,10 @@
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "AnaglyphOFX"
 #define kPluginGrouping "Views/Stereo"
 #define kPluginDescription "Make an anaglyph image out of the two views of the input."
@@ -167,7 +171,6 @@ private:
     }
 };
 
-using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -354,8 +357,6 @@ AnaglyphPlugin::render(const OFX::RenderArguments &args)
 }
 
 
-using namespace OFX;
-
 mDeclarePluginFactory(AnaglyphPluginFactory, ;, {});
 
 void AnaglyphPluginFactory::load()
@@ -477,3 +478,4 @@ OFX::ImageEffect* AnaglyphPluginFactory::createInstance(OfxImageEffectHandle han
 static AnaglyphPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

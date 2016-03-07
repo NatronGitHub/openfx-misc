@@ -48,6 +48,10 @@
 #include "ofxsOGLTextRenderer.h"
 #include "ofxsTransform3x3.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "CornerPinOFX"
 #define kPluginMaskedName "CornerPinMaskedOFX"
 #define kPluginGrouping "Transform"
@@ -123,8 +127,6 @@ static const char* const kParamFrom[4] = {
 #define kParamSrcClipChanged "srcClipChanged"
 
 #define POINT_INTERACT_LINE_SIZE_PIXELS 20
-
-using namespace OFX;
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -851,7 +853,6 @@ CornerPinTransformInteract::loseFocus(const FocusArgs & /*args*/)
     _interactiveDrag = false;
 }
 
-using namespace OFX;
 
 class CornerPinOverlayDescriptor
     : public DefaultEffectOverlayDescriptor<CornerPinOverlayDescriptor, CornerPinTransformInteract>
@@ -1164,3 +1165,5 @@ static CornerPinPluginFactory p1(kPluginIdentifier, kPluginVersionMajor, kPlugin
 static CornerPinMaskedPluginFactory p2(kPluginMaskedIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

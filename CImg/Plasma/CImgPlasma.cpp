@@ -36,6 +36,10 @@
 
 #include "CImgFilter.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "PlasmaCImg"
 #define kPluginGrouping      "Draw"
 #define kPluginDescription \
@@ -97,8 +101,6 @@
 #define kParamSeedLabel "Random Seed"
 #define kParamSeedHint "Random seed used to generate the image. Time value is added to this seed, to get a time-varying effect."
 
-
-using namespace OFX;
 
 /// Plasma plugin
 struct CImgPlasmaParams
@@ -272,3 +274,5 @@ OFX::ImageEffect* CImgPlasmaPluginFactory::createInstance(OfxImageEffectHandle h
 
 static CImgPlasmaPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

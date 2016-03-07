@@ -39,6 +39,10 @@
 
 #include "CImgFilter.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName          "GMICExpr"
 #define kPluginGrouping      "Filter"
 #define kPluginDescriptionUnsafe \
@@ -301,7 +305,6 @@
 #define kParamHelpLabel "Help"
 #define kParamHelpHint "Display help for writing GMIC expressions."
 
-using namespace OFX;
 
 /// Expression plugin
 struct CImgExpressionParams
@@ -469,3 +472,5 @@ OFX::ImageEffect* CImgExpressionPluginFactory::createInstance(OfxImageEffectHand
 
 static CImgExpressionPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

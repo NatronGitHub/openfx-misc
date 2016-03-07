@@ -40,6 +40,10 @@ using std::isnan;
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "ColorLookupOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription \
@@ -116,7 +120,6 @@ using std::isnan;
 #define kCurveAlpha 4
 #define kCurveNb 5
 
-using namespace OFX;
 
 class ColorLookupProcessorBase : public OFX::ImageProcessor {
 protected:
@@ -324,7 +327,6 @@ private:
     double _rangeMax;
 };
 
-using namespace OFX;
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -693,10 +695,6 @@ ColorLookupPlugin::changedClip(const InstanceChangedArgs &args, const std::strin
 }
 
 
-
-
-using namespace OFX;
-
 mDeclarePluginFactory(ColorLookupPluginFactory, {}, {});
 
 void
@@ -960,3 +958,4 @@ ColorLookupPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::Conte
 static ColorLookupPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

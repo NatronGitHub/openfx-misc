@@ -33,6 +33,10 @@
 #include "ofxsFormatResolution.h"
 #include "ofxsCoords.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "ReformatOFX"
 #define kPluginGrouping "Transform"
 #define kPluginDescription "Convert the image to another format or size\n"\
@@ -133,8 +137,6 @@ enum ResizeEnum
 "If checked, preserve the whole image bounding box and concatenate transforms downstream.\n" \
 "Normally, all pixels outside of the outside format are clipped off. If this is checked, the whole image RoD is kept.\n" \
 "By default, transforms are only concatenated upstream, i.e. the image is rendered by this effect by concatenating upstream transforms (e.g. CornerPin, Transform...), and the original image is resampled only once. If checked, and there are concatenating transform effects downstream, the image is rendered by the last consecutive concatenating effect."
-
-using namespace OFX;
 
 
 static bool gHostCanTransform;
@@ -952,3 +954,5 @@ OFX::ImageEffect* ReformatPluginFactory::createInstance(OfxImageEffectHandle han
 
 static ReformatPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT

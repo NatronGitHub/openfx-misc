@@ -32,6 +32,10 @@
 #include "ofxsMacros.h"
 #include "ofxNatron.h"
 
+using namespace OFX;
+
+OFXS_NAMESPACE_ANONYMOUS_ENTER
+
 #define kPluginName "MultiplyOFX"
 #define kPluginGrouping "Color/Math"
 #define kPluginDescription "Multiply the selected channels by a constant."
@@ -55,16 +59,12 @@
 
 #define kParamPremultChanged "premultChanged"
 
-using namespace OFX;
 
-
-namespace {
-    struct RGBAValues {
-        double r,g,b,a;
-        RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
-        RGBAValues() : r(0), g(0), b(0), a(0) {}
-    };
-}
+struct RGBAValues {
+    double r,g,b,a;
+    RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+    RGBAValues() : r(0), g(0), b(0), a(0) {}
+};
 
 class MultiplyProcessorBase : public OFX::ImageProcessor
 {
@@ -753,3 +753,4 @@ OFX::ImageEffect* MultiplyPluginFactory::createInstance(OfxImageEffectHandle han
 static MultiplyPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
 
+OFXS_NAMESPACE_ANONYMOUS_EXIT

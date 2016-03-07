@@ -44,11 +44,9 @@
 using std::isnan;
 #endif
 
-#
+using namespace OFX;
 
-#define POINT_TOLERANCE 6
-#define POINT_SIZE 5
-
+OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "ImageStatisticsOFX"
 #define kPluginGrouping "Other"
@@ -187,24 +185,24 @@ using std::isnan;
 "• The skewness is unitless.\n" \
 "• Any threshold or rule of thumb is arbitrary, but here is one: If the skewness is greater than 1.0 (or less than -1.0), the skewness is substantial and the distribution is far from symmetrical."
 
-using namespace OFX;
+#define POINT_TOLERANCE 6
+#define POINT_SIZE 5
 
-namespace {
-    struct RGBAValues {
-        double r,g,b,a;
-        RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
-        RGBAValues() : r(0), g(0), b(0), a(0) {}
-    };
 
-    struct Results {
-        RGBAValues min;
-        RGBAValues max;
-        RGBAValues mean;
-        RGBAValues sdev;
-        RGBAValues skewness;
-        RGBAValues kurtosis;
-    };
-}
+struct RGBAValues {
+    double r,g,b,a;
+    RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+    RGBAValues() : r(0), g(0), b(0), a(0) {}
+};
+
+struct Results {
+    RGBAValues min;
+    RGBAValues max;
+    RGBAValues mean;
+    RGBAValues sdev;
+    RGBAValues skewness;
+    RGBAValues kurtosis;
+};
 
 class ImageStatisticsProcessorBase : public OFX::ImageProcessor
 {
@@ -1932,3 +1930,5 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
 
 static ImageStatisticsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
+
+OFXS_NAMESPACE_ANONYMOUS_EXIT
