@@ -20,6 +20,8 @@
  * OFX TestRender plugin.
  */
 
+#ifdef DEBUG
+
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
@@ -917,7 +919,6 @@ OFX::ImageEffect* TestRenderPluginFactory<supportsTiles,supportsMultiResolution,
     return new TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>(handle);
 }
 
-#ifdef DEBUG
 static TestRenderPluginFactory<true,true,true> p1(kPluginIdentifier"_TiOK_MrOK_RsOK", kPluginVersionMajor, kPluginVersionMinor);
 static TestRenderPluginFactory<true,true,false> p2(kPluginIdentifier"_TiOK_MrOK_RsNo", kPluginVersionMajor, kPluginVersionMinor);
 static TestRenderPluginFactory<true,false,true> p3(kPluginIdentifier"_TiOK_MrNo_RsOK", kPluginVersionMajor, kPluginVersionMinor);
@@ -937,4 +938,4 @@ mRegisterPluginFactoryInstance(p8)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
 
-#endif
+#endif // DEBUG
