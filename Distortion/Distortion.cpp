@@ -1377,7 +1377,23 @@ DistortionPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
             return true;
         }
     }
-
+    if (_plugin == eDistortionPluginLensDistortion) {
+        bool identity = false;
+        DistortionModelEnum distortionModel = (DistortionModelEnum)_distortionModel->getValueAtTime(time);
+        switch (distortionModel) {
+            case eDistortionModelNuke:
+                double k1 = _k1->getValueAtTime(time);
+                double k2 = _k2->getValueAtTime(time);
+                double ax, ay;
+                _asymmetric->getValueAtTime(time, ax, ay);
+                identity = (k1 == 0.) && (k2 == 0.) && (ax == 0.) && (ay == 0.);
+                break;
+        }
+        if (identity) {
+            identityClip = _srcClip;
+            return true;
+        }
+    }
     double mix;
     _mix->getValueAtTime(time, mix);
 
@@ -1412,7 +1428,6 @@ DistortionPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
             }
         }
     }
-
     return false;
 }
 
