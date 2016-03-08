@@ -161,7 +161,7 @@ struct TimeBuffer {
     mutable OFX::MultiThread::Mutex mutex;
     double time; // can store any integer from 0 to 2^53
     bool dirty; // TimeBufferRead sets this to true and sets date to t+1, TimeBufferWrite sets this to false
-    std::vector<uint8_t> pixelData;
+    std::vector<unsigned char> pixelData;
     OfxRectI bounds;
     OFX::PixelComponentEnum pixelComponents;
     int pixelComponentCount;
