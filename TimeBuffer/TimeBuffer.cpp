@@ -21,12 +21,17 @@
  */
 
 #include <cmath>
+#include <cfloat>
 #include <algorithm>
 //#include <iostream>
 #ifdef _WINDOWS
 #include <windows.h>
 #endif
+#ifdef DEBUG
+#include <iostream>
+#endif
 
+#include "ofxNatron.h"
 #include "ofxsCopier.h"
 //#include "ofxsCoords.h"
 #include "ofxsMacros.h"
@@ -149,6 +154,44 @@ enum UnorderedRenderEnum {
 
  */
 
+struct TimeBuffer {
+    OFX::ImageEffect *readInstance; // written only once, not protected by mutex
+    OFX::ImageEffect *writeInstance; // written only once, not protected by mutex
+
+    mutable OFX::MultiThread::Mutex mutex;
+    double time; // can store any integer from 0 to 2^53
+    bool dirty; // TimeBufferRead sets this to true and sets date to t+1, TimeBufferWrite sets this to false
+    std::vector<uint8_t> pixelData;
+    OfxRectI bounds;
+    OFX::PixelComponentEnum pixelComponents;
+    int pixelComponentCount;
+    OFX::BitDepthEnum bitDepth;
+    int rowBytes;
+
+    TimeBuffer()
+    : readInstance(0)
+    , writeInstance(0)
+    , mutex()
+    , time(-DBL_MAX)
+    , dirty(true)
+    , pixelData()
+    , pixelComponents(ePixelComponentNone)
+    , pixelComponentCount(0)
+    , bitDepth(eBitDepthNone)
+    , rowBytes(0)
+    {
+        bounds.x1 = bounds.y1 = bounds.x2 = bounds.y2 = 0;
+    }
+};
+
+// This is the global map from buffer names to buffers.
+// The buffer key should *really* be the concatenation of the ProjectId, the GroupId (if any), and the buffer name,
+// so that the same name can exist in different groups and/or different projects
+typedef std::string TimeBufferKey;
+typedef std::map<TimeBufferKey, TimeBuffer*> TimeBufferMap;
+static TimeBufferMap gTimeBufferMap;
+static std::auto_ptr<OFX::MultiThread::Mutex> gTimeBufferMapMutex;
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class TimeBufferReadPlugin : public OFX::ImageEffect
@@ -160,7 +203,16 @@ public:
     : ImageEffect(handle)
     , _dstClip(0)
     , _srcClip(0)
+    , _bufferName(0)
+    , _startFrame(0)
+    , _unorderedRender(0)
+    , _sublabel(0)
+    , _buffer(0)
+    , _name()
     {
+        if (!gTimeBufferMapMutex.get()) {
+            gTimeBufferMapMutex.reset(new OFX::MultiThread::Mutex);
+        }
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGBA));
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -172,8 +224,19 @@ public:
         _unorderedRender = fetchChoiceParam(kParamUnorderedRender);
         _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
         assert(_bufferName && _startFrame && _unorderedRender && _sublabel);
+
+        std::string name;
+        _bufferName->getValue(name);
+        setName(name);
+        _projectId = getPropertySet().propGetString(kNatronOfxImageEffectPropProjectId, false);
+        _groupId = getPropertySet().propGetString(kNatronOfxImageEffectPropGroupId, false);
+   }
+
+    virtual ~TimeBufferReadPlugin()
+    {
+        setName("");
     }
-    
+
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
@@ -184,6 +247,104 @@ private:
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
+    void setName(const std::string &name)
+    {
+        if (name == _name) {
+            // ok!
+            check();
+            return;
+        }
+        std::string key = _projectId + '.' + _groupId + '.' + name;
+        if (_buffer && name != _name) {
+            _buffer->readInstance = 0; // remove reference to this instance
+            if (!_buffer->writeInstance) {
+                // we may free this buffer
+                {
+                    OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+                    gTimeBufferMap.erase(_name);
+                }
+                delete _buffer;
+                _buffer = 0;
+                _name.clear();
+            }
+        }
+        if (!name.empty() && !_buffer) {
+            TimeBuffer* timeBuffer = 0;
+            {
+                OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+                TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
+                if (it != gTimeBufferMap.end()) {
+                    timeBuffer = it->second;
+                }
+            }
+            if (timeBuffer && timeBuffer->readInstance && timeBuffer->writeInstance != this) {
+                // a buffer already exists with that name
+                setPersistentMessage(OFX::Message::eMessageError, "", std::string("A TimeBufferRead already exists with name \"")+name+"\".");
+                throwSuiteStatusException(kOfxStatFailed);
+                return;
+            }
+            if (timeBuffer) {
+                _buffer = timeBuffer;
+            } else {
+                _buffer = new TimeBuffer;
+            }
+            _buffer->readInstance = this;
+            _name = name;
+            {
+                OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+                TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
+                if (it != gTimeBufferMap.end()) {
+                    assert(it->second == timeBuffer);
+                    if (it->second != timeBuffer) {
+                        setPersistentMessage(OFX::Message::eMessageError, "", std::string("A TimeBufferRead already exists with name \"")+name+"\".");
+                        delete _buffer;
+                        _buffer = 0;
+                        _name.clear();
+                        throwSuiteStatusException(kOfxStatFailed);
+                        return;
+                    }
+                } else {
+                    gTimeBufferMap[key] = _buffer;
+                }
+            }
+        }
+        clearPersistentMessage();
+        check();
+    }
+
+    void check() {
+#ifdef DEBUG
+        std::string key = _projectId + '.' + _groupId + '.' + _name;
+        OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+        TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
+        if (it == gTimeBufferMap.end()) {
+            if (!_name.empty()) {
+                std::cout << "Error: Buffer '" << _name << "' not found\n";
+                return;
+            }
+        } else {
+            if (_name.empty()) {
+                if (it != gTimeBufferMap.end()) {
+                    std::cout << "Error: Buffer with empty name found\n";
+                }
+                if (_buffer) {
+                    std::cout << "Error: Local buffer with empty name found\n";
+                }
+                return;
+            }
+            if (!it->second) {
+                std::cout << "Error: Buffer '" << _name << "' is NULL\n";
+                return;
+            }
+            if (it->second->readInstance != this) {
+                std::cout << "Error: Buffer '" << _name << "' belongs to " << (void*)it->second->readInstance << ", not " << (void*)this << std::endl;
+                return;
+            }
+        }
+#endif
+    }
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -192,6 +353,11 @@ private:
     OFX::IntParam *_startFrame;
     OFX::ChoiceParam *_unorderedRender;
     OFX::StringParam *_sublabel;
+
+    TimeBuffer *_buffer; // associated TimeBuffer
+    std::string _name; // name of the TimeBuffer
+    std::string _projectId; // identifier for the project the instance lives in
+    std::string _groupId; // identifier for the group (or subproject) the instance lives in
 };
 
 
@@ -225,6 +391,10 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
     assert(dstComponents == OFX::ePixelComponentRGBA);
 
     // TODO: do the rendering
+    TimeBuffer *buffer = 0;
+    {
+        
+    }
     // * if the write instance does not exist, an error is displayed and render fails
     // * if t <= startTime:
     //   - a black image is rendered
@@ -433,7 +603,14 @@ public:
     , _dstClip(0)
     , _srcClip(0)
     , _syncClip(0)
+    , _bufferName(0)
+    , _sublabel(0)
+    , _buffer(0)
+    , _name()
     {
+        if (!gTimeBufferMapMutex.get()) {
+            gTimeBufferMapMutex.reset(new OFX::MultiThread::Mutex);
+        }
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && _dstClip->getPixelComponents() == ePixelComponentRGBA);
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -444,13 +621,121 @@ public:
         _bufferName = fetchStringParam(kParamBufferName);
         _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
         assert(_bufferName && _sublabel);
-}
+        std::string name;
+        _bufferName->getValue(name);
+        setName(name);
+        _projectId = getPropertySet().propGetString(kNatronOfxImageEffectPropProjectId, false);
+        _groupId = getPropertySet().propGetString(kNatronOfxImageEffectPropGroupId, false);
+    }
+
+    virtual ~TimeBufferWritePlugin()
+    {
+        setName("");
+    }
 
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
+    void setName(const std::string &name)
+    {
+        if (name == _name) {
+            // ok!
+            clearPersistentMessage();
+            check();
+            return;
+        }
+        std::string key = _projectId + '.' + _groupId + '.' + name;
+        if (_buffer && name != _name) {
+            _buffer->writeInstance = 0; // remove reference to this instance
+            if (!_buffer->readInstance) {
+                // we may free this buffer
+                {
+                    OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+                    gTimeBufferMap.erase(_name);
+                }
+                delete _buffer;
+                _buffer = 0;
+                _name.clear();
+            }
+        }
+        if (!name.empty() && !_buffer) {
+            TimeBuffer* timeBuffer = 0;
+            {
+                OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+                TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
+                if (it != gTimeBufferMap.end()) {
+                    timeBuffer = it->second;
+                }
+            }
+            if (timeBuffer && timeBuffer->writeInstance && timeBuffer->writeInstance != this) {
+                // a buffer already exists with that name
+                setPersistentMessage(OFX::Message::eMessageError, "", std::string("A TimeBufferWrite already exists with name \"")+name+"\".");
+                throwSuiteStatusException(kOfxStatFailed);
+                return;
+            }
+            if (timeBuffer) {
+                _buffer = timeBuffer;
+            } else {
+                _buffer = new TimeBuffer;
+            }
+            _buffer->writeInstance = this;
+            _name = name;
+            {
+                OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+                TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
+                if (it != gTimeBufferMap.end()) {
+                    assert(it->second == timeBuffer);
+                    if (it->second != timeBuffer) {
+                        setPersistentMessage(OFX::Message::eMessageError, "", std::string("A TimeBufferWrite already exists with name \"")+name+"\".");
+                        delete _buffer;
+                        _buffer = 0;
+                        _name.clear();
+                        throwSuiteStatusException(kOfxStatFailed);
+                        return;
+                    }
+                } else {
+                    gTimeBufferMap[key] = _buffer;
+                }
+            }
+        }
+        clearPersistentMessage();
+        check();
+    }
+
+    void check() {
+#ifdef DEBUG
+        std::string key = _projectId + '.' + _groupId + '.' + _name;
+        OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+        TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
+        if (it == gTimeBufferMap.end()) {
+            if (!_name.empty()) {
+                std::cout << "Error: Buffer '" << _name << "' not found\n";
+                return;
+            }
+        } else {
+            if (_name.empty()) {
+                if (it != gTimeBufferMap.end()) {
+                    std::cout << "Error: Buffer with empty name found\n";
+                }
+                if (_buffer) {
+                    std::cout << "Error: Local buffer with empty name found\n";
+                }
+                return;
+            }
+            if (!it->second) {
+                std::cout << "Error: Buffer '" << _name << "' is NULL\n";
+                return;
+            }
+            if (it->second->writeInstance != this) {
+                std::cout << "Error: Buffer '" << _name << "' belongs to " << (void*)it->second->writeInstance << ", not " << (void*)this << std::endl;
+                return;
+            }
+        }
+#endif
+    }
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
@@ -459,6 +744,12 @@ private:
     OFX::Clip *_syncClip;
     OFX::StringParam *_bufferName;
     OFX::StringParam *_sublabel;
+
+
+    TimeBuffer *_buffer; // associated TimeBuffer
+    std::string _name; // name of the TimeBuffer
+    std::string _projectId; // identifier for the project the instance lives in
+    std::string _groupId; // identifier for the group (or subproject) the instance lives in
 };
 
 
