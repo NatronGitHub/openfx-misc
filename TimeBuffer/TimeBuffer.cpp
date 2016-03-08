@@ -33,7 +33,7 @@
 
 #include "ofxNatron.h"
 #include "ofxsCopier.h"
-//#include "ofxsCoords.h"
+#include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
 using namespace OFX;
@@ -107,6 +107,19 @@ enum UnorderedRenderEnum {
 #define kParamInfoLabel "Info..."
 #define kParamInfoHint "Reset the buffer state."
 
+inline void
+sleep(const unsigned int milliseconds)
+{
+#ifdef _WINDOWS
+    Sleep(milliseconds);
+#else
+    struct timespec tv;
+    tv.tv_sec = milliseconds/1000;
+    tv.tv_nsec = (milliseconds%1000)*1000000;
+    nanosleep(&tv,0);
+#endif
+}
+
 /*
  We maintain a global map from the buffer name to the buffer data.
  
@@ -167,6 +180,8 @@ struct TimeBuffer {
     int pixelComponentCount;
     OFX::BitDepthEnum bitDepth;
     int rowBytes;
+    OfxPointD renderScale;
+    double par;
 
     TimeBuffer()
     : readInstance(0)
@@ -179,8 +194,10 @@ struct TimeBuffer {
     , pixelComponentCount(0)
     , bitDepth(eBitDepthNone)
     , rowBytes(0)
+    , par(1.)
     {
         bounds.x1 = bounds.y1 = bounds.x2 = bounds.y2 = 0;
+        renderScale.x = renderScale.y = 1;
     }
 };
 
@@ -278,7 +295,7 @@ private:
                     timeBuffer = it->second;
                 }
             }
-            if (timeBuffer && timeBuffer->readInstance && timeBuffer->writeInstance != this) {
+            if (timeBuffer && timeBuffer->readInstance && timeBuffer->readInstance != this) {
                 // a buffer already exists with that name
                 setPersistentMessage(OFX::Message::eMessageError, "", std::string("A TimeBufferRead already exists with name \"")+name+"\".");
                 throwSuiteStatusException(kOfxStatFailed);
@@ -345,6 +362,38 @@ private:
 #endif
     }
 
+    TimeBuffer* getBuffer()
+    {
+        std::string key = _projectId + '.' + _groupId + '.' + _name;
+        TimeBuffer* timeBuffer = 0;
+        // * if the write instance does not exist, an error is displayed and render fails
+        {
+            OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+            TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
+            if (it != gTimeBufferMap.end()) {
+                timeBuffer = it->second;
+            }
+        }
+        if (!timeBuffer) {
+            setPersistentMessage(OFX::Message::eMessageError, "", std::string("No TimeBuffer exists with name \"")+_name+"\". Try using another name.");
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+        if (timeBuffer && !timeBuffer->readInstance) {
+            setPersistentMessage(OFX::Message::eMessageError, "", std::string("Another TimeBufferRead already exists with name \"")+_name+"\". Try using another name.");
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+        if (timeBuffer && timeBuffer->readInstance && timeBuffer->readInstance != this) {
+            // a buffer already exists with that name
+            setPersistentMessage(OFX::Message::eMessageError, "", std::string("Another TimeBufferRead already exists with name \"")+_name+"\". Try using another name.");
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+        if (timeBuffer && !timeBuffer->writeInstance) {
+            setPersistentMessage(OFX::Message::eMessageError, "", std::string("No TimeBufferWrite exists with name \"")+_name+"\". Create one and connect it to this TimeBufferRead via the Sync input.");
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+        return timeBuffer;
+    }
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -390,25 +439,82 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
     assert(dstBitDepth == OFX::eBitDepthFloat);
     assert(dstComponents == OFX::ePixelComponentRGBA);
 
-    // TODO: do the rendering
-    TimeBuffer *buffer = 0;
-    {
-        
-    }
+    // do the rendering
+    TimeBuffer* timeBuffer = 0;
     // * if the write instance does not exist, an error is displayed and render fails
+    timeBuffer = getBuffer();
+    int startFrame = _startFrame->getValue();
     // * if t <= startTime:
     //   - a black image is rendered
     //   - if t == startTime, the buffer is locked and marked as dirty, with date t+1, then unlocked
+    if (time <= startFrame) {
+        clearPersistentMessage();
+        fillBlack(*this, args.renderWindow, dst.get());
+        if (time == startFrame) {
+            OFX::MultiThread::AutoMutex guard(timeBuffer->mutex);
+            timeBuffer->dirty = true;
+            timeBuffer->time = time + 1;
+        }
+        return;
+    }
+    OFX::MultiThread::AutoMutex guard(timeBuffer->mutex);
     // * if t > startTime:
     //   - the buffer is locked, and if it doesn't have date t, then either the render fails, a black image is rendered, or the buffer is used anyway, depending on the user-chosen strategy
-    //   - if it is marked as dirty, it is unlocked, then locked and read again after a delay (there are no condition variables in the multithread suite, polling is the only solution). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
-    //   - when the buffer is locked and clean, it is copied to output and unlocked
-    //   - the buffer is re-locked for writing, and marked as dirty, with date t+1, then unlocked
-
-    int startFrame = _startFrame->getValue();
-    if (time <= startFrame) {
-        return fillBlack(*this, args.renderWindow, dst.get());
+    if (timeBuffer->time != time) {
+        UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
+        switch (e) {
+            case eUnorderedRenderError:
+                setPersistentMessage(OFX::Message::eMessageError, "", "Frames must be rendered in sequential order");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+                return;
+            case eUnorderedRenderBlack:
+                fillBlack(*this, args.renderWindow, dst.get());
+                timeBuffer->dirty = true;
+                timeBuffer->time = time + 1;
+                return;
+            case eUnorderedRenderLast:
+                // nothing special to do, continue.
+                break;
+        }
     }
+    //   - if it is marked as dirty, it is unlocked, then locked and read again after a delay (there are no condition variables in the multithread suite, polling is the only solution). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
+    int delay = 5; // initial delay, in milliseconds
+    while (timeBuffer->dirty) {
+        guard.unlock();
+        sleep(delay);
+        if (abort()) {
+            return;
+        }
+        delay *= 2;
+        guard.relock();
+    }
+    if (args.renderScale.x != timeBuffer->renderScale.x || args.renderScale.y != timeBuffer->renderScale.y) {
+        UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
+        switch (e) {
+            case eUnorderedRenderError:
+            case eUnorderedRenderLast:
+                setPersistentMessage(OFX::Message::eMessageError, "", "Frames must be rendered in sequential order with the same renderScale");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+                return;
+            case eUnorderedRenderBlack:
+                fillBlack(*this, args.renderWindow, dst.get());
+                timeBuffer->dirty = true;
+                timeBuffer->time = time + 1;
+                return;
+        }
+    }
+    //   - when the buffer is locked and clean, it is copied to output and unlocked
+    copyPixels(*this, args.renderWindow,
+               (void*)&timeBuffer->pixelData.front(),
+               timeBuffer->bounds,
+               timeBuffer->pixelComponents,
+               timeBuffer->pixelComponentCount,
+               timeBuffer->bitDepth,
+               timeBuffer->rowBytes,
+               dst.get());
+    //   - the buffer is re-locked for writing, and marked as dirty, with date t+1, then unlocked
+    timeBuffer->dirty = true;
+    timeBuffer->time = time + 1;
     //std::cout << "render! OK\n";
 }
 
@@ -424,17 +530,61 @@ bool
 TimeBufferReadPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     const double time = args.time;
+    TimeBuffer* timeBuffer = 0;
     // * if the write instance does not exist, an error is displayed and render fails
+    timeBuffer = getBuffer();
     // * if t <= startTime:
     // - the RoD is empty
     int startFrame = _startFrame->getValue();
     if (time <= startFrame) {
         return false; // use default behavior
     }
+    OFX::MultiThread::AutoMutex guard(timeBuffer->mutex);
     // * if t > startTime:
     // - the buffer is locked, and if it doesn't have date t, then either getRoD fails, a black image with an empty RoD is rendered, or the RoD from buffer is used anyway, depending on the user-chosen strategy
+    if (timeBuffer->time != time) {
+        UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
+        switch (e) {
+            case eUnorderedRenderError:
+                setPersistentMessage(OFX::Message::eMessageError, "", "Frames must be rendered in sequential order");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+                return false;
+            case eUnorderedRenderBlack:
+                return false; // use default behavior
+            case eUnorderedRenderLast:
+                // nothing special to do, continue.
+                break;
+        }
+    }
     // - if it is marked as dirty ,it is unlocked, then locked and read again after a delay (there are no condition variables in the multithread suite, polling is the only solution). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
+    int delay = 5; // initial delay, in milliseconds
+    while (timeBuffer->dirty) {
+        guard.unlock();
+        sleep(delay);
+        if (abort()) {
+            return false;
+        }
+        delay *= 2;
+        guard.relock();
+    }
+    if (args.renderScale.x != timeBuffer->renderScale.x || args.renderScale.y != timeBuffer->renderScale.y) {
+        UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
+        switch (e) {
+            case eUnorderedRenderError:
+            case eUnorderedRenderLast:
+                setPersistentMessage(OFX::Message::eMessageError, "", "Frames must be rendered in sequential order with the same renderScale");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+                return false;
+            case eUnorderedRenderBlack:
+                return false;
+        }
+    }
     // - when the buffer is locked and clean, the buffer's RoD is returned and it is unlocked
+    OFX::Coords::toCanonical(timeBuffer->bounds,
+                             timeBuffer->renderScale,
+                             timeBuffer->par,
+                             &rod);
+    return true;
 }
 
 void
@@ -445,10 +595,22 @@ TimeBufferReadPlugin::changedParam(const OFX::InstanceChangedArgs &/*args*/, con
         _bufferName->getValue(name);
         _sublabel->setValue(name);
         // check if a TimeBufferRead with the same name exists. If yes, issue an error, else clearPersistentMeassage()
-        // TODO
+        setName(name);
     } else if (paramName == kParamReset) {
+        TimeBuffer* timeBuffer = 0;
+        // * if the write instance does not exist, an error is displayed and render fails
+        timeBuffer = getBuffer();
         // reset the buffer to a clean state
-        // TODO
+        OFX::MultiThread::AutoMutex guard(timeBuffer->mutex);
+        timeBuffer->time = -DBL_MAX;
+        timeBuffer->dirty = true;
+        timeBuffer->pixelComponents = ePixelComponentNone;
+        timeBuffer->pixelComponentCount = 0;
+        timeBuffer->bitDepth = eBitDepthNone;
+        timeBuffer->rowBytes = 0;
+        timeBuffer->par = 1.;
+        timeBuffer->bounds.x1 = timeBuffer->bounds.y1 = timeBuffer->bounds.x2 = timeBuffer->bounds.y2 = 0;
+        timeBuffer->renderScale.x = timeBuffer->renderScale.y = 1;
     } else if (paramName == kParamInfo) {
         // give information about allocated buffers
         // TODO
@@ -737,6 +899,39 @@ private:
 #endif
     }
 
+
+    TimeBuffer* getBuffer()
+    {
+        std::string key = _projectId + '.' + _groupId + '.' + _name;
+        TimeBuffer* timeBuffer = 0;
+        // * if the read instance does not exist, an error is displayed and render fails
+        {
+            OFX::MultiThread::AutoMutex guard(*gTimeBufferMapMutex);
+            TimeBufferMap::const_iterator it = gTimeBufferMap.find(key);
+            if (it != gTimeBufferMap.end()) {
+                timeBuffer = it->second;
+            }
+        }
+        if (!timeBuffer) {
+            setPersistentMessage(OFX::Message::eMessageError, "", std::string("No TimeBuffer exists with name \"")+_name+"\". Try using another name.");
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+        if (timeBuffer && !timeBuffer->writeInstance) {
+            setPersistentMessage(OFX::Message::eMessageError, "", std::string("Another TimeBufferWrite already exists with name \"")+_name+"\". Try using another name.");
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+        if (timeBuffer && timeBuffer->writeInstance && timeBuffer->writeInstance != this) {
+            // a buffer already exists with that name
+            setPersistentMessage(OFX::Message::eMessageError, "", std::string("Another TimeBufferWrite already exists with name \"")+_name+"\". Try using another name.");
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+        if (timeBuffer && !timeBuffer->readInstance) {
+            setPersistentMessage(OFX::Message::eMessageError, "", std::string("No TimeBufferRead exists with name \"")+_name+"\". Create one and connect it to this TimeBufferWrite via the Sync input.");
+            throwSuiteStatusException(kOfxStatFailed);
+        }
+        return timeBuffer;
+    }
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -827,10 +1022,23 @@ TimeBufferWritePlugin::changedParam(const OFX::InstanceChangedArgs &/*args*/, co
         _bufferName->getValue(name);
         _sublabel->setValue(name);
         // check if a TimeBufferRead with the same name exists. If yes, issue an error, else clearPersistentMeassage()
-        // TODO
+        setName(name);
     } else if (paramName == kParamReset) {
         // reset the buffer to a clean state
-        // TODO
+        TimeBuffer* timeBuffer = 0;
+        // * if the write instance does not exist, an error is displayed and render fails
+        timeBuffer = getBuffer();
+        // reset the buffer to a clean state
+        OFX::MultiThread::AutoMutex guard(timeBuffer->mutex);
+        timeBuffer->time = -DBL_MAX;
+        timeBuffer->dirty = true;
+        timeBuffer->pixelComponents = ePixelComponentNone;
+        timeBuffer->pixelComponentCount = 0;
+        timeBuffer->bitDepth = eBitDepthNone;
+        timeBuffer->rowBytes = 0;
+        timeBuffer->par = 1.;
+        timeBuffer->bounds.x1 = timeBuffer->bounds.y1 = timeBuffer->bounds.x2 = timeBuffer->bounds.y2 = 0;
+        timeBuffer->renderScale.x = timeBuffer->renderScale.y = 1;
     } else if (paramName == kParamInfo) {
         // give information about allocated buffers
         // TODO
