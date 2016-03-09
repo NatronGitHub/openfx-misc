@@ -61,7 +61,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kSupportsTilesRead 1
+#define kSupportsTilesRead 0
 #define kSupportsTilesWrite 0
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
