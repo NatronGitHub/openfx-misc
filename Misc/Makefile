@@ -1,4 +1,5 @@
 PLUGINOBJECTS = \
+TimeBuffer.o \
 Add.o \
 AdjustRoD.o \
 Anaglyph.o \
@@ -221,6 +222,7 @@ $(TOP_SRCDIR)/VectorToColor/net.sf.openfx.VectorToColorPlugin.svg \
 
 
 VPATH += \
+$(TOP_SRCDIR)/TimeBuffer \
 $(TOP_SRCDIR)/Add \
 $(TOP_SRCDIR)/AdjustRoD \
 $(TOP_SRCDIR)/Anaglyph \
@@ -290,6 +292,7 @@ include $(TOP_SRCDIR)/Makefile.master
 
 CXXFLAGS += \
 -I. \
+-I$(TOP_SRCDIR)/TimeBuffer \
 -I$(TOP_SRCDIR)/Add \
 -I$(TOP_SRCDIR)/AdjustRoD \
 -I$(TOP_SRCDIR)/Anaglyph \
