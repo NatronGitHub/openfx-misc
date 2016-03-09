@@ -441,6 +441,11 @@ private:
     void setupAndProcess(RadialProcessorBase &, const OFX::RenderArguments &args);
 
     virtual bool paramsNotAnimated() OVERRIDE FINAL;
+    
+    virtual OFX::Clip* getSrcClip() const OVERRIDE FINAL
+    {
+        return _srcClip;
+    }
 
 private:
     

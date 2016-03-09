@@ -456,6 +456,11 @@ private:
 
     virtual bool paramsNotAnimated() OVERRIDE FINAL;
 
+    virtual OFX::Clip* getSrcClip() const OVERRIDE FINAL
+    {
+        return _srcClip;
+    }
+    
 private:
     
     // do not need to delete these, the ImageEffect is managing them for us
