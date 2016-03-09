@@ -36,6 +36,9 @@
 #include "ofxsCoords.h"
 #include "ofxsMacros.h"
 
+#ifdef DEBUG
+#pragma message WARN("TimeBuffer not yet supported by Natron, check again when Natron supports kOfxImageEffectInstancePropSequentialRender")
+
 using namespace OFX;
 
 OFXS_NAMESPACE_ANONYMOUS_ENTER
@@ -58,8 +61,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kSupportsTiles 0
-#define kSupportsMultiResolution 0
+#define kSupportsTilesRead 1
+#define kSupportsTilesWrite 0
+#define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
@@ -99,9 +103,14 @@ enum UnorderedRenderEnum {
     eUnorderedRenderLast,
 };
 
+#define kParamTimeOut "timeOut"
+#define kParamTimeOutLabel "Time-out"
+#define kParamTimeOutHint "Time-out (in ms) for all operations. Should be larger than the execution time of the whole graphe. 0 means infinite."
+
 #define kParamReset "reset"
-#define kParamResetLabel "Reset"
-#define kParamResetHint "Reset the buffer state."
+#define kParamResetLabel "Reset Buffer"
+#define kParamResetHint "Reset the buffer state. Should be done on the TimeBufferRead effect if possible."
+#define kParamResetTrigger "resetTrigger" // a dummy parameter to trigger a re-render
 
 #define kParamInfo "info"
 #define kParamInfoLabel "Info..."
@@ -223,6 +232,8 @@ public:
     , _bufferName(0)
     , _startFrame(0)
     , _unorderedRender(0)
+    , _timeOut(0)
+    , _resetTrigger(0)
     , _sublabel(0)
     , _buffer(0)
     , _name()
@@ -239,6 +250,8 @@ public:
         _bufferName = fetchStringParam(kParamBufferName);
         _startFrame = fetchIntParam(kParamStartFrame);
         _unorderedRender = fetchChoiceParam(kParamUnorderedRender);
+        _timeOut = fetchDoubleParam(kParamTimeOut);
+        _resetTrigger = fetchBooleanParam(kParamResetTrigger);
         _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
         assert(_bufferName && _startFrame && _unorderedRender && _sublabel);
 
@@ -401,6 +414,8 @@ private:
     OFX::StringParam *_bufferName;
     OFX::IntParam *_startFrame;
     OFX::ChoiceParam *_unorderedRender;
+    OFX::DoubleParam *_timeOut;
+    OFX::BooleanParam *_resetTrigger;
     OFX::StringParam *_sublabel;
 
     TimeBuffer *_buffer; // associated TimeBuffer
@@ -443,6 +458,9 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
     TimeBuffer* timeBuffer = 0;
     // * if the write instance does not exist, an error is displayed and render fails
     timeBuffer = getBuffer();
+    if (!timeBuffer) {
+        throwSuiteStatusException(kOfxStatFailed);
+    }
     int startFrame = _startFrame->getValue();
     // * if t <= startTime:
     //   - a black image is rendered
@@ -455,6 +473,7 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
             timeBuffer->dirty = true;
             timeBuffer->time = time + 1;
         }
+        clearPersistentMessage();
         return;
     }
     OFX::MultiThread::AutoMutex guard(timeBuffer->mutex);
@@ -479,6 +498,7 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
     }
     //   - if it is marked as dirty, it is unlocked, then locked and read again after a delay (there are no condition variables in the multithread suite, polling is the only solution). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
     int delay = 5; // initial delay, in milliseconds
+    double timeout = _timeOut->getValue();
     while (timeBuffer->dirty) {
         guard.unlock();
         sleep(delay);
@@ -486,6 +506,21 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
             return;
         }
         delay *= 2;
+        if (delay > timeout) {
+            UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
+            switch (e) {
+                case eUnorderedRenderError:
+                case eUnorderedRenderLast:
+                    setPersistentMessage(OFX::Message::eMessageError, "", "Timed out");
+                    OFX::throwSuiteStatusException(kOfxStatFailed);
+                    return;
+                case eUnorderedRenderBlack:
+                    fillBlack(*this, args.renderWindow, dst.get());
+                    timeBuffer->dirty = true;
+                    timeBuffer->time = time + 1;
+                    return;
+            }
+        }
         guard.relock();
     }
     if (args.renderScale.x != timeBuffer->renderScale.x || args.renderScale.y != timeBuffer->renderScale.y) {
@@ -515,6 +550,7 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
     //   - the buffer is re-locked for writing, and marked as dirty, with date t+1, then unlocked
     timeBuffer->dirty = true;
     timeBuffer->time = time + 1;
+    clearPersistentMessage();
     //std::cout << "render! OK\n";
 }
 
@@ -523,6 +559,11 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
 void
 TimeBufferReadPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
+    TimeBuffer* timeBuffer = getBuffer();
+    if (!timeBuffer) {
+        throwSuiteStatusException(kOfxStatFailed);
+    }
+    clearPersistentMessage();
     clipPreferences.setOutputFrameVarying(true);
 }
 
@@ -533,10 +574,14 @@ TimeBufferReadPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgumen
     TimeBuffer* timeBuffer = 0;
     // * if the write instance does not exist, an error is displayed and render fails
     timeBuffer = getBuffer();
+    if (!timeBuffer) {
+        throwSuiteStatusException(kOfxStatFailed);
+    }
     // * if t <= startTime:
     // - the RoD is empty
     int startFrame = _startFrame->getValue();
     if (time <= startFrame) {
+        clearPersistentMessage();
         return false; // use default behavior
     }
     OFX::MultiThread::AutoMutex guard(timeBuffer->mutex);
@@ -558,6 +603,7 @@ TimeBufferReadPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgumen
     }
     // - if it is marked as dirty ,it is unlocked, then locked and read again after a delay (there are no condition variables in the multithread suite, polling is the only solution). The delay starts at 10ms, and is multiplied by two at each unsuccessful lock. abort() is checked at each iteration.
     int delay = 5; // initial delay, in milliseconds
+    double timeout = _timeOut->getValue();
     while (timeBuffer->dirty) {
         guard.unlock();
         sleep(delay);
@@ -565,6 +611,18 @@ TimeBufferReadPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgumen
             return false;
         }
         delay *= 2;
+        if (delay > timeout) {
+            UnorderedRenderEnum e = (UnorderedRenderEnum)_unorderedRender->getValue();
+            switch (e) {
+                case eUnorderedRenderError:
+                case eUnorderedRenderLast:
+                    setPersistentMessage(OFX::Message::eMessageError, "", "Timed out");
+                    OFX::throwSuiteStatusException(kOfxStatFailed);
+                    return false;
+                case eUnorderedRenderBlack:
+                    return false; // use default behavior
+            }
+        }
         guard.relock();
     }
     if (args.renderScale.x != timeBuffer->renderScale.x || args.renderScale.y != timeBuffer->renderScale.y) {
@@ -576,6 +634,7 @@ TimeBufferReadPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgumen
                 OFX::throwSuiteStatusException(kOfxStatFailed);
                 return false;
             case eUnorderedRenderBlack:
+                clearPersistentMessage();
                 return false;
         }
     }
@@ -584,6 +643,7 @@ TimeBufferReadPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgumen
                              timeBuffer->renderScale,
                              timeBuffer->par,
                              &rod);
+    clearPersistentMessage();
     return true;
 }
 
@@ -600,6 +660,9 @@ TimeBufferReadPlugin::changedParam(const OFX::InstanceChangedArgs &/*args*/, con
         TimeBuffer* timeBuffer = 0;
         // * if the write instance does not exist, an error is displayed and render fails
         timeBuffer = getBuffer();
+        if (!timeBuffer) {
+            throwSuiteStatusException(kOfxStatFailed);
+        }
         // reset the buffer to a clean state
         OFX::MultiThread::AutoMutex guard(timeBuffer->mutex);
         timeBuffer->time = -DBL_MAX;
@@ -611,6 +674,7 @@ TimeBufferReadPlugin::changedParam(const OFX::InstanceChangedArgs &/*args*/, con
         timeBuffer->par = 1.;
         timeBuffer->bounds.x1 = timeBuffer->bounds.y1 = timeBuffer->bounds.x2 = timeBuffer->bounds.y2 = 0;
         timeBuffer->renderScale.x = timeBuffer->renderScale.y = 1;
+        _resetTrigger->setValue(!_resetTrigger->getValue()); // trigger a render
     } else if (paramName == kParamInfo) {
         // give information about allocated buffers
         // TODO
@@ -639,13 +703,13 @@ TimeBufferReadPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
-    desc.setSupportsTiles(kSupportsTiles);
+    desc.setSupportsTiles(kSupportsTilesRead);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-    
+    desc.setSequentialRender(true);
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
 #endif
@@ -662,13 +726,14 @@ TimeBufferReadPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->setTemporalClipAccess(false);
-    srcClip->setSupportsTiles(kSupportsTiles);
+    srcClip->setSupportsTiles(kSupportsTilesRead);
     srcClip->setIsMask(false);
+    srcClip->setOptional(true);
     
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->setSupportsTiles(kSupportsTiles);
+    dstClip->setSupportsTiles(kSupportsTilesRead);
     
 
     // make some pages and to things in
@@ -693,6 +758,8 @@ TimeBufferReadPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         OFX::IntParamDescriptor* param = desc.defineIntParam(kParamStartFrame);
         param->setLabel(kParamStartFrameLabel);
         param->setHint(kParamStartFrameHint);
+        param->setRange(INT_MIN, INT_MAX);
+        param->setDisplayRange(INT_MIN, INT_MAX);
         param->setDefault(1);
         param->setAnimates(false);
         if (page) {
@@ -716,6 +783,22 @@ TimeBufferReadPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
+        OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(kParamTimeOut);
+        param->setLabel(kParamTimeOutLabel);
+        param->setHint(kParamTimeOutHint);
+#ifdef DEBUG
+        param->setDefault(2000);
+#else
+        param->setDefault(0);
+#endif
+        param->setRange(0, DBL_MAX);
+        param->setDisplayRange(0, 10000);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamReset);
         param->setLabel(kParamResetLabel);
         param->setHint(kParamResetHint);
@@ -724,6 +807,16 @@ TimeBufferReadPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
     {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamResetTrigger);
+        param->setIsSecret(true);
+        param->setIsPersistant(false);
+        param->setEvaluateOnChange(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    /*
+    {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamInfo);
         param->setLabel(kParamInfoLabel);
         param->setHint(kParamInfoHint);
@@ -731,6 +824,7 @@ TimeBufferReadPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
+     */
     // sublabel
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
@@ -766,6 +860,7 @@ public:
     , _srcClip(0)
     , _syncClip(0)
     , _bufferName(0)
+    , _resetTrigger(0)
     , _sublabel(0)
     , _buffer(0)
     , _name()
@@ -781,6 +876,7 @@ public:
         assert(_syncClip && _syncClip->getPixelComponents() == ePixelComponentRGBA);
 
         _bufferName = fetchStringParam(kParamBufferName);
+        _resetTrigger = fetchBooleanParam(kParamResetTrigger);
         _sublabel = fetchStringParam(kNatronOfxParamStringSublabelName);
         assert(_bufferName && _sublabel);
         std::string name;
@@ -938,8 +1034,8 @@ private:
     OFX::Clip *_srcClip;
     OFX::Clip *_syncClip;
     OFX::StringParam *_bufferName;
+    OFX::BooleanParam *_resetTrigger;
     OFX::StringParam *_sublabel;
-
 
     TimeBuffer *_buffer; // associated TimeBuffer
     std::string _name; // name of the TimeBuffer
@@ -1003,14 +1099,37 @@ TimeBufferWritePlugin::render(const OFX::RenderArguments &args)
         }
     }
 
-    // TODO: do the stuff
+    // do the rendering
+    TimeBuffer* timeBuffer = 0;
     // - if the read instance does not exist, an error is displayed and render fails
-    // - if the "Sync" input is not connected, issue an error message (it should be connected to TimeBufferRead)
+    timeBuffer = getBuffer();
+    if (!timeBuffer) {
+        throwSuiteStatusException(kOfxStatFailed);
+    }
     // - the buffer is locked for writing, and if it doesn't have date t+1 or is not dirty, then it is unlocked, render fails and a message is posted. It may be because the TimeBufferRead plugin is not upstream - in this case a solution is to connect TimeBufferRead output to TimeBufferWrite' sync input for syncing.
-    // - src is copied to the buffer, and it is marked as not dirty, then unlocked
+    {
+        OFX::MultiThread::AutoMutex guard(timeBuffer->mutex);
+        if (timeBuffer->time != time+1 || !timeBuffer->dirty) {
+            setPersistentMessage(OFX::Message::eMessageError, "", "The TimeBuffer has wrong properties. Check that the corresponding TimeBufferRead effect is connected to the Sync input.");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
+        // - src is copied to the buffer, and it is marked as not dirty, then unlocked
+        std::vector<unsigned char> pixelData;
+        timeBuffer->bounds = args.renderWindow;
+        timeBuffer->pixelComponents = src->getPixelComponents();
+        timeBuffer->pixelComponentCount = src->getPixelComponentCount();
+        timeBuffer->bitDepth = src->getPixelDepth();
+        timeBuffer->rowBytes = (args.renderWindow.x2 - args.renderWindow.x1) * timeBuffer->pixelComponentCount * sizeof(float);
+        timeBuffer->renderScale = args.renderScale;
+        timeBuffer->par = src->getPixelAspectRatio();
+        timeBuffer->pixelData.resize(timeBuffer->rowBytes * (args.renderWindow.y2 - args.renderWindow.y1));
+        copyPixels(*this, args.renderWindow, src.get(), &timeBuffer->pixelData.front(), timeBuffer->bounds, timeBuffer->pixelComponents, timeBuffer->pixelComponentCount, timeBuffer->bitDepth, timeBuffer->rowBytes);
+        timeBuffer->dirty = false;
+    }
     // - src is also copied to output.
 
     copyPixels(*this, args.renderWindow, src.get(), dst.get());
+    clearPersistentMessage();
     //std::cout << "render! OK\n";
 }
 
@@ -1028,8 +1147,15 @@ TimeBufferWritePlugin::changedParam(const OFX::InstanceChangedArgs &/*args*/, co
         TimeBuffer* timeBuffer = 0;
         // * if the write instance does not exist, an error is displayed and render fails
         timeBuffer = getBuffer();
+        if (!timeBuffer) {
+            throwSuiteStatusException(kOfxStatFailed);
+        }
         // reset the buffer to a clean state
         OFX::MultiThread::AutoMutex guard(timeBuffer->mutex);
+        if (timeBuffer->readInstance) {
+            sendMessage(OFX::Message::eMessageError, "", "A TimeBufferRead instance is connected to this buffer, please reset it instead.");
+            return;
+        }
         timeBuffer->time = -DBL_MAX;
         timeBuffer->dirty = true;
         timeBuffer->pixelComponents = ePixelComponentNone;
@@ -1039,6 +1165,7 @@ TimeBufferWritePlugin::changedParam(const OFX::InstanceChangedArgs &/*args*/, co
         timeBuffer->par = 1.;
         timeBuffer->bounds.x1 = timeBuffer->bounds.y1 = timeBuffer->bounds.x2 = timeBuffer->bounds.y2 = 0;
         timeBuffer->renderScale.x = timeBuffer->renderScale.y = 1;
+        _resetTrigger->setValue(!_resetTrigger->getValue()); // trigger a render
     } else if (paramName == kParamInfo) {
         // give information about allocated buffers
         // TODO
@@ -1065,12 +1192,13 @@ void TimeBufferWritePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
     desc.setSupportsMultiResolution(kSupportsMultiResolution);
-    desc.setSupportsTiles(kSupportsTiles);
+    desc.setSupportsTiles(kSupportsTilesWrite);
     desc.setTemporalClipAccess(false);
     desc.setRenderTwiceAlways(false);
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
+    desc.setSequentialRender(true);
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
 #endif
@@ -1080,7 +1208,7 @@ void TimeBufferWritePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 
 void
-TimeBufferWritePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+TimeBufferWritePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
 {
     //std::cout << "describeInContext!\n";
     // Source clip only in the filter context
@@ -1088,19 +1216,19 @@ TimeBufferWritePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->setTemporalClipAccess(false);
-    srcClip->setSupportsTiles(kSupportsTiles);
+    srcClip->setSupportsTiles(kSupportsTilesWrite);
     srcClip->setIsMask(false);
     
     ClipDescriptor *syncClip = desc.defineClip(kClipSync);
     syncClip->addSupportedComponent(ePixelComponentRGBA);
     syncClip->setTemporalClipAccess(false);
-    syncClip->setSupportsTiles(kSupportsTiles);
+    syncClip->setSupportsTiles(kSupportsTilesRead);
     syncClip->setIsMask(false);
 
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
-    dstClip->setSupportsTiles(kSupportsTiles);
+    dstClip->setSupportsTiles(kSupportsTilesWrite);
     
 
     // make some pages and to things in
@@ -1130,6 +1258,17 @@ TimeBufferWritePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         }
     }
     {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamResetTrigger);
+        param->setIsSecret(true);
+        param->setIsPersistant(false);
+        param->setEvaluateOnChange(true);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    /*
+    {
         OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamInfo);
         param->setLabel(kParamInfoLabel);
         param->setHint(kParamInfoHint);
@@ -1137,6 +1276,7 @@ TimeBufferWritePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
             page->addChild(*param);
         }
     }
+     */
     // sublabel
     {
         StringParamDescriptor* param = desc.defineStringParam(kNatronOfxParamStringSublabelName);
@@ -1165,3 +1305,5 @@ mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 
 OFXS_NAMESPACE_ANONYMOUS_EXIT
+
+#endif // DEBUG
