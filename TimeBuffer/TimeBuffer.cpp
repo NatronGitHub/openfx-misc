@@ -390,19 +390,23 @@ private:
         if (!timeBuffer) {
             setPersistentMessage(OFX::Message::eMessageError, "", std::string("No TimeBuffer exists with name \"")+_name+"\". Try using another name.");
             throwSuiteStatusException(kOfxStatFailed);
+            return NULL;
         }
         if (timeBuffer && !timeBuffer->readInstance) {
             setPersistentMessage(OFX::Message::eMessageError, "", std::string("Another TimeBufferRead already exists with name \"")+_name+"\". Try using another name.");
             throwSuiteStatusException(kOfxStatFailed);
+            return NULL;
         }
         if (timeBuffer && timeBuffer->readInstance && timeBuffer->readInstance != this) {
             // a buffer already exists with that name
             setPersistentMessage(OFX::Message::eMessageError, "", std::string("Another TimeBufferRead already exists with name \"")+_name+"\". Try using another name.");
             throwSuiteStatusException(kOfxStatFailed);
+            return NULL;
         }
         if (timeBuffer && !timeBuffer->writeInstance) {
             setPersistentMessage(OFX::Message::eMessageError, "", std::string("No TimeBufferWrite exists with name \"")+_name+"\". Create one and connect it to this TimeBufferRead via the Sync input.");
             throwSuiteStatusException(kOfxStatFailed);
+            return NULL;
         }
         return timeBuffer;
     }
@@ -447,6 +451,7 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
         (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
     }
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
@@ -460,6 +465,7 @@ TimeBufferReadPlugin::render(const OFX::RenderArguments &args)
     timeBuffer = getBuffer();
     if (!timeBuffer) {
         throwSuiteStatusException(kOfxStatFailed);
+        return;
     }
     int startFrame = _startFrame->getValue();
     // * if t <= startTime:
@@ -562,6 +568,7 @@ TimeBufferReadPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPrefere
     TimeBuffer* timeBuffer = getBuffer();
     if (!timeBuffer) {
         throwSuiteStatusException(kOfxStatFailed);
+        return;
     }
     clearPersistentMessage();
     clipPreferences.setOutputFrameVarying(true);
@@ -576,6 +583,7 @@ TimeBufferReadPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgumen
     timeBuffer = getBuffer();
     if (!timeBuffer) {
         throwSuiteStatusException(kOfxStatFailed);
+        return;
     }
     // * if t <= startTime:
     // - the RoD is empty

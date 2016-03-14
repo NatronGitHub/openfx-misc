@@ -168,6 +168,7 @@ SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle, bool numerousInputs)
             char name[4] = { 0, 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
             name[0] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
             name[1] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
+            // coverity[dead_error_line]
             name[2] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
             _srcClip[i] = fetchClip(name);
         }
@@ -434,6 +435,7 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
             char name[4] = { 0, 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
             name[0] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
             name[1] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
+            // coverity[dead_error_line]
             name[2] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
             srcClip = desc.defineClip(name);
             srcClip->setOptional(true);

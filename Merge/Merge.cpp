@@ -1171,6 +1171,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
             assert(i < 1000);
             name[1] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
             name[2] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
+            // coverity[dead_error_line]
             name[3] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
             OFX::ClipDescriptor* optionalSrcClip = desc.defineClip(name);
             optionalSrcClip->addSupportedComponent( OFX::ePixelComponentRGBA );
