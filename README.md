@@ -188,20 +188,6 @@ with Nuke).
 Notes & Caveats
 ---------------
 
-### Transform and CornerPin produce aliasing when scaling down images
-
-The transform nodes may produce aliasing artifacts when downscaling by a factor of 2 or more.
-
-This can be avoided by blurring (using BlurCImg) or resizing (using ResizeOIIO) the image before downscaling it.
-
-There are several solutions to this problem, which may be implemented in the future (you can help!):
-
-* Trilinear mipmapping (as implemented by OpenGL) still produces artifacts when scaling is anisotropic (i.e. the scaling factor is different along two directions)
-* [Feline (McCormack, 1999)](http://www.hpl.hp.com/techreports/Compaq-DEC/WRL-99-1.pdf), which is close to what is proposed in [OpenGL's anisotropic texture filter](http://www.opengl.org/registry/specs/EXT/texture_filter_anisotropic.txt) is probably 4-5 times slower than mipmapping, but produces less artifacts
-* [EWA (Heckbert 1989)](https://www.cs.cmu.edu/~ph/texfund/texfund.pdf) would give the highest quality, but is probably 20 times slower than mipmapping.
-
-A sample implementation of the three methods is given in [Mesa 3D](http://mesa3d.org/)'s [software rasterizer, src/mesa/swrast/s_texfilter.c](http://cgit.freedesktop.org/mesa/mesa/tree/src/mesa/swrast/s_texfilter.c).
-
 ### What does the Roto plugin do?
 
 If you use the Roto plugin in any other host than [Natron](http://natron.inria.fr), you will notice that it doesn't do much. Its role is just to provide an entry point for a host-based rotoscoping tool, which provides a roto mask to this plugin.
