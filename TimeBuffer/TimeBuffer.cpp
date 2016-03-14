@@ -583,7 +583,7 @@ TimeBufferReadPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgumen
     timeBuffer = getBuffer();
     if (!timeBuffer) {
         throwSuiteStatusException(kOfxStatFailed);
-        return;
+        return false;
     }
     // * if t <= startTime:
     // - the RoD is empty
