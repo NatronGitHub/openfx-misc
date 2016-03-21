@@ -21,6 +21,8 @@
  */
 
 #include "TestOpenGL.h"
+#include <cstring>
+#include <cstdio>
 
 // first, check that the file is used in a good way
 #if !defined(USE_OPENGL) && !defined(USE_OSMESA)
