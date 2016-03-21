@@ -21,8 +21,9 @@
  */
 
 #include "TestOpenGL.h"
-#include <cstring>
-#include <cstdio>
+
+#include <cstring> // strstr, strchr, strlen
+#include <cstdio> // sscanf, vsnprintf, fwrite
 
 // first, check that the file is used in a good way
 #if !defined(USE_OPENGL) && !defined(USE_OSMESA)
@@ -55,9 +56,7 @@
 #define DPRINT(args) (void)0
 #define glCheckError() ( (void)0 )
 #else
-#include <cstdio> // vsnprintf, fwrite
 #include <cstdarg> // ...
-#include <cstring> // strlen
 #include <iostream>
 #include <stdio.h> // for snprintf & _snprintf
 #ifdef _WINDOWS
@@ -100,8 +99,8 @@ void print_dbg(const char *format, ...)
 #else
     vsnprintf(str, size, format, ap);
 #endif
-    fwrite(str, sizeof(char), strlen(str), stderr);
-    fflush(stderr);
+    std::fwrite(str, sizeof(char), std::strlen(str), stderr);
+    std::fflush(stderr);
 #ifdef _WIN32
     OutputDebugString(msg);
 #endif
@@ -322,13 +321,13 @@ static
 int glutExtensionSupported( const char* extension )
 {
     const char *extensions, *start;
-    const size_t len = strlen( extension );
+    const size_t len = std::strlen( extension );
 
     /* Make sure there is a current window, and thus a current context available */
     //FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutExtensionSupported" );
     //freeglut_return_val_if_fail( fgStructure.CurrentWindow != NULL, 0 );
 
-    if (strchr(extension, ' '))
+    if (std::strchr(extension, ' '))
         return 0;
     start = extensions = (const char *) glGetString(GL_EXTENSIONS);
 
@@ -341,7 +340,7 @@ int glutExtensionSupported( const char* extension )
     }
 
     while (1) {
-        const char *p = strstr(extensions, extension);
+        const char *p = std::strstr(extensions, extension);
         if (!p)
             return 0;  /* not found */
         /* check that the match isn't a super string */
@@ -740,7 +739,7 @@ static
 void getGlVersion(int *major, int *minor)
 {
     const char *verstr = (const char *) glGetString(GL_VERSION);
-    if ((verstr == NULL) || (sscanf(verstr,"%d.%d", major, minor) != 2)) {
+    if ((verstr == NULL) || (std::sscanf(verstr,"%d.%d", major, minor) != 2)) {
         *major = *minor = 0;
         //fprintf(stderr, "Invalid GL_VERSION format!!!\n");
     }
@@ -770,7 +769,7 @@ void getGlslVersion(int *major, int *minor)
         (const char *) glGetString(GL_SHADING_LANGUAGE_VERSION);
 
         if ((verstr == NULL) ||
-            (sscanf(verstr, "%d.%d", major, minor) != 2)) {
+            (std::sscanf(verstr, "%d.%d", major, minor) != 2)) {
             *major = *minor = 0;
             //fprintf(stderr, "Invalid GL_SHADING_LANGUAGE_VERSION format!!!\n");
         }
