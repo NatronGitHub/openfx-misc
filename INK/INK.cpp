@@ -44,7 +44,7 @@ Version   Date       Author       Description
 * TODO implement Key Amount
 need to modulate keyAmountRGB by keyColour
 current code has alpha right
-and red is also correct, but only when K[mid] = (K[min]+K[max])/2
+and chan[midKey] is also correct, but only when K[midkey] = (K[minKey]+K[maxKey])/2
 
 * TODO implement Tune Key Amount
 
