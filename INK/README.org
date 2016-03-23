@@ -20,14 +20,14 @@ PURPOSE.  See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with INK. 
 If not, see <http://www.gnu.org/licenses/gpl-3.0.html>
 
-* How To Install INK
+** How To Install INK
 
 Put INK.ofx.bundle in your OFX plugin path. On OS X this is usually:
   /Library/OFX/Plugins
 If that folder doesn't exist, you can create it. Or, if you prefer,
 use the environment variable OFX_PLUGIN_PATH.
 
-* Third Party Licenses
+** Third Party Licenses
 
  INK IS BASED ON CHROMAKEYER BY F. DEVERNAY:
  https://github.com/devernay/openfx-misc/ChromaKeyer/ChromaKeyer.cpp
@@ -128,6 +128,6 @@ You can output your INK matte directly into the *Source* of another INK node to 
         ~Goldilocks
 #+END_VERSE
 
-In colour difference keying, we make the image pixel's maximum channel (green in the case of greenscreen) less than its middle channel, to remove the key colour. We then need to adjust the proportions of red, green and blue to make the pixel colour what it would have been were the image originally photographed without the key colour present. We can't really know what that desired colour is because it was never captured in the photo. The best we can do is set the maximum key channel to the average of the other two channels. As for what value those other two channels should be, we should again stick to the average. So for each channel we incorporate the proportionate difference between each channel of the image pixel and the key colour. This is the /proportionate colour difference/ method and it is how INK works. 
+In colour difference keying, we make the image pixel's maximum channel (green in the case of greenscreen) less than its middle channel, to remove the key colour. We then need to adjust the proportions of red, green and blue to make the pixel colour what it would have been were the image originally photographed without the key colour present. We can't really know what that desired colour is because it was never captured in the photo. The best we can do is set the maximum key channel to the average of the other two channels. As for what value those other two channels should be, we should again stick to the average. So for each channel we incorporate the proportionate difference between each channel of the image pixel and of the key colour. This is the /proportionate colour difference/ method and it is how INK works. 
 
 Because it always resorts to the average, INK is a general purpose keyer.
