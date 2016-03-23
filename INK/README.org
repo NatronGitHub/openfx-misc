@@ -51,7 +51,7 @@ If your footage was shot perfectly, these steps will give you a perfect key. But
 
 ** Combined Matte Keying
 #+CAPTION: INK nodes used as garbage and core mattes.
-[[~/ink-doc/garbage-core.png]]
+[[garbage-core.png]]
 
 In an imperfect world we find that many shots have unevenly lit background screen, set equipment in the background, or spill on the foreground subjects. You remove the unwanted background artefacts by covering them with a /garbage matte/. The spill is removed by the keying operation but that will leave the matte somewhat transparent (because INK cannot distinguish spill from transparency), so you will need a /core matte/ wherever you have spill. Alternatively you might need the core matte to serve a different purpose: to mask an area where you want neither keying nor despill to occur.
 
