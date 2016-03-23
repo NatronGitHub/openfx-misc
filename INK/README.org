@@ -67,7 +67,7 @@ These are equivalent to using Invert, Grade, Erode and Blur nodes to process the
 
 *** Making the Garbage Matte
 #+CAPTION: Garbage matte (source image courtesy of Steve Wright Digital FX).
-[[~/ink-doc/garbage.png]]
+[[garbage.png]]
 
 To make a garbage matte, open the *Matte Postprocess* controls and:
 1. Enable *Invert*.
@@ -80,7 +80,7 @@ If you need to add a roto shape to your garbage matte, connect it as the *Garbag
 
 *** Making The Core Matte
 #+CAPTION: Core matte.
-[[~/ink-doc/core.png]]
+[[core.png]]
 
 To make a core matte, the procedure is the same as for garbage, except you don't enable *Invert*.
 
@@ -97,7 +97,7 @@ If you enable *Despill Core*, you should replace the spill colour that was remov
 
 *** Finishing Edges
 #+CAPTION: Matte Monitor.
-[[~/ink-doc/matte-monitor.png]]
+[[matte-monitor.png]]
 The edges are where the action is. Use the `Matte Monitor' *Output Mode* to see the full extent of the current matte, the garbage and core mattes, and where they overlap. The idea of a matte monitor is to help you to discriminate edge/transparency from pure background and solid foreground by showing you both the holes in your matte and the background noise at the same time. INK sets any alpha >= 0.00001 or < 0.99999 to 0.5. 
 
 The Matte Monitor shows the current matte in the green channel, the garbage matte in blue and the core matte in red. This produces a colour coding of the mattes:
@@ -117,7 +117,7 @@ Always remember that the RGB values of the Matte Monitor are not the actual matt
 
 ** Multi-pass Keying
 #+CAPTION: Multi-pass keying.
-[[~/ink-doc/multipass.png]]
+[[multipass.png]]
 If an image contains distinct regions of disparately coloured or textured edges, it may be best to pull a separate matte for each region and then combine them. The easy way to do this is to chain INK nodes (/multi-pass keying/).
 
 You can output your INK matte directly into the *Source* of another INK node to build up the matte. Set the *Output Mode* to `Source with Matte' and connect that output to the *Source* input of the next INK node. You can add it to the core matte by setting *Source Alpha* to `Add to Core' (you can do this even if there is no *Core* input). A value of `Multiply' for this option will multiply the combined matte by the source alpha (note this does not show up in the Matte Monitor). A value of `Discard' means INK will totally ignore any alpha in the source clip. 
