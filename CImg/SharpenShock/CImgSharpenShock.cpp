@@ -150,7 +150,7 @@ public:
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args, const CImgSharpenShockParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &args, const CImgSharpenShockParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place

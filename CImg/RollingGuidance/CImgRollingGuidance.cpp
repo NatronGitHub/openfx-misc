@@ -132,7 +132,7 @@ public:
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args, const CImgRollingGuidanceParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &args, const CImgRollingGuidanceParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
@@ -148,7 +148,7 @@ public:
             return;
         }
         // first iteration is Gaussian blur (equivalent to a bilateral filter with a constant image as the guide)
-        cimg_library::CImg<float> guide = cimg.get_blur((float)(params.sigma_s * args.renderScale.x), true, true);
+        cimg_library::CImg<cimgpix_t> guide = cimg.get_blur((float)(params.sigma_s * args.renderScale.x), true, true);
         // next iterations use the bilateral filter
         for (int i = 1; i < params.iterations; ++i) {
             if (abort()) {

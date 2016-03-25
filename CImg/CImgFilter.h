@@ -121,6 +121,8 @@ CLANG_DIAG_OFF(shorten-64-to-32)
 CLANG_DIAG_ON(shorten-64-to-32)
 #define cimg_library cimg_library_suffixed // so that namespace is private, but code requires no change
 
+typedef float cimgpix_t;
+
 #define CIMG_ABORTABLE // use abortable versions of CImg functions
 
 #ifdef HAVE_THREAD_LOCAL
@@ -301,7 +303,7 @@ public:
 
     virtual bool getRegionOfDefinition(const OfxRectI& /*srcRoD*/, const OfxPointD& /*renderScale*/, const Params& /*params*/, OfxRectI* /*dstRoD*/) { return false; };
 
-    virtual void render(const OFX::RenderArguments &args, const Params& params, int x1, int y1, cimg_library::CImg<float>& cimg) = 0;
+    virtual void render(const OFX::RenderArguments &args, const Params& params, int x1, int y1, cimg_library::CImg<cimgpix_t>& cimg) = 0;
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const Params& /*params*/) { return false; };
 
@@ -746,7 +748,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     }
     const int cimgWidth = srcRoI.x2 - srcRoI.x1;
     const int cimgHeight = srcRoI.y2 - srcRoI.y1;
-    const size_t cimgSize = cimgWidth * cimgHeight * cimgSpectrum * sizeof(float);
+    const size_t cimgSize = cimgWidth * cimgHeight * cimgSpectrum * sizeof(cimgpix_t);
     std::vector<int> srcChannel(cimgSpectrum, -1);
 
     if (!_supportsComponentRemapping) {
@@ -785,12 +787,12 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
     }
     if (cimgSize) { // may be zero if no channel is processed
         std::auto_ptr<OFX::ImageMemory> cimgData(new OFX::ImageMemory(cimgSize, this));
-        float *cimgPixelData = (float*)cimgData->lock();
-        cimg_library::CImg<float> cimg(cimgPixelData, cimgWidth, cimgHeight, 1, cimgSpectrum, true);
+        cimgpix_t *cimgPixelData = (cimgpix_t*)cimgData->lock();
+        cimg_library::CImg<cimgpix_t> cimg(cimgPixelData, cimgWidth, cimgHeight, 1, cimgSpectrum, true);
 
 
         for (int c=0; c < cimgSpectrum; ++c) {
-            float *dst = cimg.data(0,0,0,c);
+            cimgpix_t *dst = cimg.data(0,0,0,c);
             const float *src = tmpPixelData + srcChannel[c];
             for (unsigned int siz = cimgWidth * cimgHeight; siz; --siz, src += srcNComponents, ++dst) {
                 *dst = *src;
@@ -826,7 +828,7 @@ CImgFilterPluginHelper<Params,sourceIsOptional>::render(const OFX::RenderArgumen
 
         // We copy the whole srcRoI. This could be optimized to copy only renderWindow
         for (int c=0; c < cimgSpectrum; ++c) {
-            const float *src = cimg.data(0,0,0,c);
+            const cimgpix_t *src = cimg.data(0,0,0,c);
             float *dst = tmpPixelData + srcChannel[c];
             for (unsigned int siz = cimgWidth * cimgHeight; siz; --siz, ++src, dst += srcNComponents) {
                 *dst = *src;

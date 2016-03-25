@@ -142,7 +142,7 @@ enum FilterEnum
 #define kParamExpandRoDLabel "Expand RoD"
 #define kParamExpandRoDHint "Expand the source region of definition by 1.5*size (3.6*sigma)."
 
-typedef float T;
+typedef cimgpix_t T;
 using namespace cimg_library;
 
 
@@ -445,7 +445,7 @@ public:
         }
     }
 
-    virtual void render(const OFX::RenderArguments &args, const CImgErodeSmoothParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &args, const CImgErodeSmoothParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
@@ -462,19 +462,19 @@ public:
 #ifdef cimg_use_openmp
 #pragma omp parallel for if (cimg.size()>=4096)
 #endif
-        cimg_rof(cimg,ptrd,float) *ptrd = (float)((*ptrd-rmin)/(rmax-rmin) + ERODESMOOTH_OFFSET);
+        cimg_rof(cimg,ptrd,cimgpix_t) *ptrd = (cimgpix_t)((*ptrd-rmin)/(rmax-rmin) + ERODESMOOTH_OFFSET);
 
         // see "Robust local max-min filters by normalized power-weighted filtering" by L.J. van Vliet
         // http://dx.doi.org/10.1109/ICPR.2004.1334273
         // compute blur(x^(P+1))/blur(x^P)
         {
-            cimg_library::CImg<float> denom(cimg, false);
+            cimg_library::CImg<cimgpix_t> denom(cimg, false);
             const double vmin = std::pow((double)ERODESMOOTH_MIN, (double)1./params.exponent);
             //printf("%g\n",vmin);
 #ifdef cimg_use_openmp
 #pragma omp parallel for if (denom.size()>=4096)
 #endif
-            cimg_rof(denom,ptrd,float) *ptrd = (float)std::pow((double)((*ptrd<0.?0.:*ptrd)+vmin), params.exponent); // C++98 and C++11 both have std::pow(double,int)
+            cimg_rof(denom,ptrd,cimgpix_t) *ptrd = (cimgpix_t)std::pow((double)((*ptrd<0.?0.:*ptrd)+vmin), params.exponent); // C++98 and C++11 both have std::pow(double,int)
 
             cimg.mul(denom);
 
@@ -527,7 +527,7 @@ public:
 #ifdef cimg_use_openmp
 #pragma omp parallel for if (cimg.size()>=4096)
 #endif
-        cimg_rof(cimg,ptrd,float) *ptrd = (float)((*ptrd-ERODESMOOTH_OFFSET)*(rmax-rmin)+rmin);
+        cimg_rof(cimg,ptrd,cimgpix_t) *ptrd = (cimgpix_t)((*ptrd-ERODESMOOTH_OFFSET)*(rmax-rmin)+rmin);
     }
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgErodeSmoothParams& params) OVERRIDE FINAL

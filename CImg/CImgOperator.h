@@ -102,7 +102,7 @@ public:
 
     virtual bool getRegionOfDefinition(const OfxRectI& /*srcARoD*/, const OfxRectI& /*srcBRoD*/, const OfxPointD& /*renderScale*/, const Params& /*params*/, OfxRectI* /*dstRoD*/) { return false; };
 
-    virtual void render(const cimg_library::CImg<float>& srcA, const cimg_library::CImg<float>& srcB, const OFX::RenderArguments &args, const Params& params, int x1, int y1, cimg_library::CImg<float>& dst) = 0;
+    virtual void render(const cimg_library::CImg<cimgpix_t>& srcA, const cimg_library::CImg<cimgpix_t>& srcB, const OFX::RenderArguments &args, const Params& params, int x1, int y1, cimg_library::CImg<cimgpix_t>& dst) = 0;
 
     // returns 0 (no identity), 1 (dst:=dstA) or 2 (dst:=srcB)
     virtual int isIdentity(const OFX::IsIdentityArguments &/*args*/, const Params& /*params*/) { return false; };
@@ -454,16 +454,16 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
     const int cimgSpectrum = srcNComponents;
     const int cimgWidth = srcRoI.x2 - srcRoI.x1;
     const int cimgHeight = srcRoI.y2 - srcRoI.y1;
-    const size_t cimgSize = cimgWidth * cimgHeight * cimgSpectrum * sizeof(float);
+    const size_t cimgSize = cimgWidth * cimgHeight * cimgSpectrum * sizeof(cimgpix_t);
 
 
     if (cimgSize) { // may be zero if no channel is processed
         std::auto_ptr<OFX::ImageMemory> cimgAData(new OFX::ImageMemory(cimgSize, this));
-        float *cimgAPixelData = (float*)cimgAData->lock();
-        cimg_library::CImg<float> cimgA(cimgAPixelData, cimgWidth, cimgHeight, 1, cimgSpectrum, true);
+        cimgpix_t *cimgAPixelData = (cimgpix_t*)cimgAData->lock();
+        cimg_library::CImg<cimgpix_t> cimgA(cimgAPixelData, cimgWidth, cimgHeight, 1, cimgSpectrum, true);
 
         for (int c=0; c < cimgSpectrum; ++c) {
-            float *dst = cimgA.data(0,0,0,c);
+            cimgpix_t *dst = cimgA.data(0,0,0,c);
             const float *src = tmpAPixelData + c;
             for (unsigned int siz = cimgWidth * cimgHeight; siz; --siz, src += srcNComponents, ++dst) {
                 *dst = *src;
@@ -471,11 +471,11 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         }
 
         std::auto_ptr<OFX::ImageMemory> cimgBData(new OFX::ImageMemory(cimgSize, this));
-        float *cimgBPixelData = (float*)cimgBData->lock();
-        cimg_library::CImg<float> cimgB(cimgBPixelData, cimgWidth, cimgHeight, 1, cimgSpectrum, true);
+        cimgpix_t *cimgBPixelData = (cimgpix_t*)cimgBData->lock();
+        cimg_library::CImg<cimgpix_t> cimgB(cimgBPixelData, cimgWidth, cimgHeight, 1, cimgSpectrum, true);
 
         for (int c=0; c < cimgSpectrum; ++c) {
-            float *dst = cimgB.data(0,0,0,c);
+            cimgpix_t *dst = cimgB.data(0,0,0,c);
             const float *src = tmpBPixelData + c;
             for (unsigned int siz = cimgWidth * cimgHeight; siz; --siz, src += srcNComponents, ++dst) {
                 *dst = *src;
@@ -485,7 +485,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
         //////////////////////////////////////////////////////////////////////////////////////////
         // 3- process the cimg
         printRectI("render srcRoI", srcRoI);
-        cimg_library::CImg<float> cimg;
+        cimg_library::CImg<cimgpix_t> cimg;
         render(cimgA, cimgB, args, params, srcRoI.x1, srcRoI.y1, cimg);
         // check that the dimensions didn't change
         assert(cimg.width() == cimgWidth && cimg.height() == cimgHeight && cimg.depth() == 1 && cimg.spectrum() == cimgSpectrum);
@@ -495,7 +495,7 @@ CImgOperatorPluginHelper<Params>::render(const OFX::RenderArguments &args)
 
         // We copy the whole srcRoI. This could be optimized to copy only renderWindow
         for (int c=0; c < cimgSpectrum; ++c) {
-            const float *src = cimg.data(0,0,0,c);
+            const cimgpix_t *src = cimg.data(0,0,0,c);
             float *dst = tmpPixelData + c;
             for (unsigned int siz = cimgWidth * cimgHeight; siz; --siz, ++src, dst += srcNComponents) {
                 *dst = *src;

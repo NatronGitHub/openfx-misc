@@ -208,7 +208,7 @@ enum FilterEnum
 #define kParamExpandRoDLabel "Expand RoD"
 #define kParamExpandRoDHint "Expand the source region of definition by 1.5*size (3.6*sigma)."
 
-typedef float T;
+typedef cimgpix_t T;
 using namespace cimg_library;
 
 #if cimg_version < 160
@@ -842,14 +842,14 @@ public:
         }
     }
 
-    virtual void render(const OFX::RenderArguments &args, const CImgBlurParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &args, const CImgBlurParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
         double sx = args.renderScale.x * params.sizex;
         double sy = args.renderScale.y * params.sizey;
-        CImg<float> cimg0;
-        CImg<float> cimg1;
+        CImg<cimgpix_t> cimg0;
+        CImg<cimgpix_t> cimg1;
         if (_blurPlugin == eBlurPluginLaplacian) {
             cimg0 = cimg;
         } else if (_blurPlugin == eBlurPluginChromaBlur) {
@@ -858,10 +858,10 @@ public:
             // allocate chrominance image
             cimg0.resize(cimg.width(), cimg.height(), cimg.depth(), 2);
             // chrominance (U+V) goes into cimg0, luminance goes into first channel of cimg
-            float *pr = &cimg(0,0,0,0);
-            const float *pg = &cimg(0,0,0,1);
-            const float *pb = &cimg(0,0,0,2);
-            float *pu = &cimg0(0,0,0,0), *pv = &cimg0(0,0,0,1);
+            cimgpix_t *pr = &cimg(0,0,0,0);
+            const cimgpix_t *pg = &cimg(0,0,0,1);
+            const cimgpix_t *pb = &cimg(0,0,0,2);
+            cimgpix_t *pu = &cimg0(0,0,0,0), *pv = &cimg0(0,0,0,1);
             if (params.chrominanceMath == eChrominanceMathRec709) {
                 for (unsigned long N = (unsigned long)cimg.width()*cimg.height()*cimg.depth(); N; --N) {
                     const float R = *pr;
@@ -906,7 +906,7 @@ public:
                 // copy original image
                 cimg0 = cimg;
             }
-            cimg_library::CImg<float>& cimg_blur = (_blurPlugin == eBlurPluginChromaBlur ||
+            cimg_library::CImg<cimgpix_t>& cimg_blur = (_blurPlugin == eBlurPluginChromaBlur ||
                                                     _blurPlugin == eBlurPluginBloom) ? cimg0: cimg;
             double scale = ipow(params.bloomRatio, i);
             if (params.filter == eFilterQuasiGaussian || params.filter == eFilterGaussian) {
@@ -952,11 +952,11 @@ public:
         } else if (_blurPlugin == eBlurPluginChromaBlur) {
             // recombine luminance in cimg0 & chrominance in cimg to cimg
             // chrominance (U+V) is in cimg0, luminance is in first channel of cimg
-            float *pr = &cimg(0,0,0,0);
-            float *pg = &cimg(0,0,0,1);
-            float *pb = &cimg(0,0,0,2);
-            const float *pu = &cimg0(0,0,0,0);
-            const float *pv = &cimg0(0,0,0,1);
+            cimgpix_t *pr = &cimg(0,0,0,0);
+            cimgpix_t *pg = &cimg(0,0,0,1);
+            cimgpix_t *pb = &cimg(0,0,0,2);
+            const cimgpix_t *pu = &cimg0(0,0,0,0);
+            const cimgpix_t *pv = &cimg0(0,0,0,1);
             if (params.chrominanceMath == eChrominanceMathRec709) {
                 for (unsigned long N = (unsigned long)cimg.width()*cimg.height()*cimg.depth(); N; --N) {
                     const float Y = *pr;

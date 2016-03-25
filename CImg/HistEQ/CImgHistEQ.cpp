@@ -112,7 +112,7 @@ public:
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &/*args*/, const CImgHistEQParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<float>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &/*args*/, const CImgHistEQParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
@@ -126,14 +126,22 @@ public:
 #pragma omp parallel for if (cimg.size()>=1048576)
 #endif
             cimg_forXY(cimg, x, y) {
-                OFX::Color::rgb_to_hsv(cimg(x,y,0,0), cimg(x,y,0,1), cimg(x,y,0,2), &cimg(x,y,0,0), &cimg(x,y,0,1), &cimg(x,y,0,2));
+                float h, s, v;
+                OFX::Color::rgb_to_hsv(cimg(x,y,0,0), cimg(x,y,0,1), cimg(x,y,0,2), &h, &s, &v);
+                cimg(x,y,0,0) = h;
+                cimg(x,y,0,1) = s;
+                cimg(x,y,0,2) = v;
             }
-            cimg_library::CImg<float> vchannel = cimg.get_shared_channel(2);
+            cimg_library::CImg<cimgpix_t> vchannel = cimg.get_shared_channel(2);
             float vmin, vmax;
             vmin = vchannel.min_max(vmax);
             vchannel.equalize(params.nb_levels, vmin, vmax);
             cimg_forXY(cimg, x, y) {
-                OFX::Color::hsv_to_rgb(cimg(x,y,0,0), cimg(x,y,0,1), cimg(x,y,0,2), &cimg(x,y,0,0), &cimg(x,y,0,1), &cimg(x,y,0,2));
+                float r, g, b;
+                OFX::Color::hsv_to_rgb(cimg(x,y,0,0), cimg(x,y,0,1), cimg(x,y,0,2), &r, &g, &b);
+                cimg(x,y,0,0) = r;
+                cimg(x,y,0,1) = g;
+                cimg(x,y,0,2) = b;
             }
         }
     }
