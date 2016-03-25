@@ -1,16 +1,16 @@
-* About ChannelMath
+** About ChannelMath
 
 ChannelMath is an OFX Plugin that allows the user to write simple
 math expressions. This plugin is free to use and distribute for any purpose.
 
-* Installation
+** Installation
 
  Put ChannelMath.ofx.bundle in your OFX plugin path. This is usually:
   /Library/OFX/Plugins
   If that folder doesn't exist, you can create it. Or, if you prefer, use the environment
   variable OFX_PLUGIN_PATH.
 
-* How to Use ChannelMath 
+** How to Use ChannelMath 
 
 1. For a simple grey set these values:
 | field | value     |
@@ -33,12 +33,12 @@ Then use the colour wheel in param1 to adjust your image.
 |-------+--------------------------------------|
 | alpha | 0.2126 * r + 0.7152 * g + 0.0722 * b |
 
-RELEVANT WEBSITES
+** Relevant Websites 
 
 My homepage is http://casanico.com
 The OFX plugin standard's home is http://openeffects.org
 
-THIRD PARTY LICENSES
+** Third Party Licenses 
 
 The libraries used by this program come from:
 
