@@ -12,7 +12,8 @@ math expressions. This plugin is free to use and distribute for any purpose.
 
 ** How to Use ChannelMath 
 
-*** Example 1: For a simple grey set these values:
+*** Example 1: Monochrome
+For a simple grey set these values:
 | field | value     |
 |-------+-----------|
 | expr1 | (r+g+b)/3 |
@@ -20,7 +21,8 @@ math expressions. This plugin is free to use and distribute for any purpose.
 | blue  | expr1     |
 | green | expr1     |
 
-*** Example 2: Adjust  RGB levels. Enter these values:
+*** Example 2: Adjust RGB levels
+Enter these values:
 | field  | value        |
 |--------+--------------|
 | red    | r * param1.r |
@@ -28,7 +30,8 @@ math expressions. This plugin is free to use and distribute for any purpose.
 | blue   | b * param1.b |
 Then use the colour wheel in param1 to adjust your image.
 
-*** Example 3: Use Luminance for alpha:
+*** Example 3: Luminance Matte
+Use Luminance for alpha with:
 | field | value                                |
 |-------+--------------------------------------|
 | alpha | 0.2126 * r + 0.7152 * g + 0.0722 * b |
