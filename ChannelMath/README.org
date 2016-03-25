@@ -1,16 +1,16 @@
-ABOUT CHANNELMATH
+* About ChannelMath
 
 ChannelMath is an OFX Plugin that allows the user to write simple
 math expressions. This plugin is free to use and distribute for any purpose.
 
-HOW TO INSTALL  CHANNELMATH
+* Installation
 
  Put ChannelMath.ofx.bundle in your OFX plugin path. This is usually:
   /Library/OFX/Plugins
   If that folder doesn't exist, you can create it. Or, if you prefer, use the environment
   variable OFX_PLUGIN_PATH.
 
-HOW TO USE CHANNELMATH
+* How to Use ChannelMath 
 
 1. For a simple grey set these values:
 | field | value     |
