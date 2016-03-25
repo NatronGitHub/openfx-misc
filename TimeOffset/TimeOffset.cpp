@@ -45,11 +45,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kRenderThreadSafety eRenderFullySafe
 
 #define kParamTimeOffset "timeOffset"
-#define kParamTimeOffsetLabel "Time offset (frames)"
+#define kParamTimeOffsetLabel "Time Offset (Frames)"
 #define kParamTimeOffsetHint "Offset in frames (frame f from the input will be at f+offset)"
+
 #define kParamReverseInput "reverseInput"
-#define kParamReverseInputLabel "Reverse input"
+#define kParamReverseInputLabel "Reverse Input"
 #define kParamReverseInputHint "Reverse the order of the input frames so that last one is first"
+
+#define kParamClipToInputRange "clipToInputRange"
+#define kParamClipToInputRangeLabel "Clip to Input Range"
+#define kParamClipToInputRangeHint "Never ask for frames outside of the input frame range."
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
@@ -81,6 +86,7 @@ private:
 
     OFX::IntParam  *_time_offset;      /**< @brief only used in the filter context. */
     OFX::BooleanParam  *_reverse_input;
+    OFX::BooleanParam  *_clip;
 };
 
 TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
@@ -97,7 +103,8 @@ TimeOffsetPlugin::TimeOffsetPlugin(OfxImageEffectHandle handle)
 
     _time_offset   = fetchIntParam(kParamTimeOffset);
     _reverse_input = fetchBooleanParam(kParamReverseInput);
-    assert(_time_offset && _reverse_input);
+    _clip = fetchBooleanParam(kParamClipToInputRange);
+    assert(_time_offset && _reverse_input && _clip);
 }
 
 
@@ -120,11 +127,13 @@ TimeOffsetPlugin::getSourceTime(double t) const
     if (reverse_input) {
         sourceTime = range.max - sourceTime + range.min;
     }
-    // clip to min/max range
-    if (sourceTime < range.min) {
-        sourceTime = range.min;
-    } else if (sourceTime > range.max) {
-        sourceTime = range.max;
+    if (_clip->getValueAtTime(t)) {
+        // clip to min/max range
+        if (sourceTime < range.min) {
+            sourceTime = range.min;
+        } else if (sourceTime > range.max) {
+            sourceTime = range.max;
+        }
     }
     return sourceTime;
 }
@@ -263,7 +272,19 @@ void TimeOffsetPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->setDefault(false);
         param->setHint(kParamReverseInputHint);
         param->setLabel(kParamReverseInputLabel);
-        param->setAnimates(true);
+        param->setAnimates(false);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    // clip
+    {
+        BooleanParamDescriptor *param = desc.defineBooleanParam(kParamClipToInputRange);
+        param->setDefault(false);
+        param->setHint(kParamClipToInputRangeHint);
+        param->setLabel(kParamClipToInputRangeLabel);
+        param->setAnimates(false);
         if (page) {
             page->addChild(*param);
         }
