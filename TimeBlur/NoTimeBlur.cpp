@@ -79,6 +79,8 @@ private:
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
@@ -180,6 +182,30 @@ NoTimeBlurPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
     return true;
 }
 
+bool
+NoTimeBlurPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    const double time = args.time;
+    RoundingEnum rounding = (RoundingEnum)_rounding->getValueAtTime(time);
+    double srcTime = time;
+    switch (rounding) {
+        case eRoundingRint:
+            srcTime = std::floor(time + 0.5);
+            break;
+        case eRoundingFloor:
+            srcTime = std::floor(time);
+            break;
+        case eRoundingCeil:
+            srcTime = std::ceil(time);
+            break;
+        case eRoundingNone:
+            break;
+    }
+
+    rod = _srcClip->getRegionOfDefinition(srcTime);
+
+    return true;
+}
 
 mDeclarePluginFactory(NoTimeBlurPluginFactory, {}, {});
 

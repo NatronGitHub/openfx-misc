@@ -225,6 +225,8 @@ private:
 
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+
     /* set up and run a processor */
     //void setupAndProcess(OFX::SlitScanerBase &, const OFX::RenderArguments &args, double sourceTime, FilterEnum filter);
 
@@ -330,6 +332,39 @@ SlitScanPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &id
             }
         }
         identityClip = _srcClip;
+        return true;
+    }
+    return false;
+}
+
+bool
+SlitScanPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    const double time = args.time;
+    double retimeGain;
+    _retimeGain->getValueAtTime(time, retimeGain);
+
+    RetimeFunctionEnum retimeFunction = (RetimeFunctionEnum)_retimeFunction->getValueAtTime(time);
+    if (retimeFunction == eRetimeFunctionRetimeMap && !(_retimeMapClip && _retimeMapClip->isConnected())) {
+        // no retime map, equivalent to value = 0 everywhere
+        retimeGain = 0.;
+    }
+
+    if (retimeGain == 0.) {
+        double retimeOffset;
+        _retimeOffset->getValueAtTime(time, retimeOffset);
+        bool retimeAbsolute;
+        _retimeAbsolute->getValueAtTime(time, retimeAbsolute);
+        double identityTime = retimeAbsolute ? retimeOffset : (time + retimeOffset);
+        if (identityTime != (int)identityTime) {
+            FilterEnum filter = (FilterEnum)_filter->getValueAtTime(time);
+            if (filter == eFilterNearest) {
+                identityTime = std::floor(identityTime + 0.5);
+            } else {
+                return false; // result is blended
+            }
+        }
+        rod = _srcClip->getRegionOfDefinition(identityTime);
         return true;
     }
     return false;

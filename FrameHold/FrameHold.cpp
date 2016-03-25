@@ -100,6 +100,8 @@ private:
 
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+
 private:
     double getSourceTime(double time) const;
 
@@ -177,6 +179,13 @@ FrameHoldPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &i
 {
     identityClip = _srcClip;
     identityTime = getSourceTime(args.time);
+    return true;
+}
+
+bool
+FrameHoldPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    rod = _srcClip->getRegionOfDefinition(getSourceTime(args.time));
     return true;
 }
 
