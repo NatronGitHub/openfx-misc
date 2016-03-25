@@ -28,10 +28,10 @@ Enter these values:
 | red    | r * param1.r |
 | green  | g * param1.g |
 | blue   | b * param1.b |
-Then use the colour wheel in param1 to adjust your image.
+then use the colour wheel in param1 to adjust your image.
 
 *** Example 3: Luminance Matte
-Use Luminance for alpha with:
+Use luminance for alpha with:
 | field | value                                |
 |-------+--------------------------------------|
 | alpha | 0.2126 * r + 0.7152 * g + 0.0722 * b |
