@@ -1,0 +1,46 @@
+
+akset := {a0 = 2.490895, a2 = 1.466003, a4 = -0.24393e-1, a6 = .178257}:
+
+akset150 := {a0=2.4955381538282113833, a2=1.413809114185164373, a4=0.0396169571126941142, a6=0.16281495669408588866}:
+aksetsq := {a0=2.373647552685241989, a2=1.8956061776878913916, a4=-0.33154038780551425014, a6=0.23022220654437510631};
+aksetsq2:= {a0=2.3736953787229203333,a2=1.8954059495578737284, a4=-0.33137937232863943856, a6=0.2301913255504407193};
+aksetsq3:= {a0=2.4731581322812507965,a2=1.5728339709828572152, a4=-0.11727906720344727345,a6=0.19605238877139620853};
+
+# vérification de la courbe trouvée p 151 de Hastings - Approximations for digital computers (1955)
+# on va jusqu'à sigma=8 (sigma=5 dans le bouquin)
+plot(subs(akset, 1/(a0+a2*qs^2+a4*qs^4+a6*qs^6)-exp(-(1/2)*qs^2)/sqrt(2*Pi)), qs = 0 .. 8);
+plot(subs(akset150, 1/(a0+a2*qs^2+a4*qs^4+a6*qs^6)-exp(-(1/2)*qs^2)/sqrt(2*Pi)), qs = 0 .. 8);
+plot(subs(aksetsq, 1/(a0+a2*qs^2+a4*qs^4+a6*qs^6)-exp(-(1/2)*qs^2)/sqrt(2*Pi)), qs = 0 .. 8);
+
+# erreur obtenue avec les coeffs de l'article "recursive gabor filters"
+P:=collect(expand((qs+m0)*(qs+m1+I*m2)*(qs+m1-I*m2)*(qs-m0)*(qs-m1-I*m2)*(qs-m1+I*m2)), qs);
+Pm:=subs({m0 = 1.16680, m1 = 1.10783, m2 = 1.40586},P);
+
+C:=0.178257 ;
+b6:=C ;
+b4:=-coeff(Pm,qs,4)*C ;
+b2:=coeff(Pm,qs,2)*C ;
+b0:=-coeff(Pm,qs,0)*C ;
+plot(1/(b0+b2*qs^2+b4*qs^4+b6*qs^6)-exp(-(1/2)*qs^2)/sqrt(2*Pi), qs = 0 .. 5);
+
+# différence.. on est à moins de 10^-5
+plot(subs({a0 = 2.490895, a2 = 1.466003, a4 = -0.24393e-1, a6 = .178257}, 1/(a0+a2*qs^2+a4*qs^4+a6*qs^6)-1/(b0+b2*qs^2+b4*qs^4+b6*qs^6)), qs = 0 .. 8);
+
+# par contre, sur le Fourier on voit très nettement le creux... et surtout l'erreur est assez grande même apres sigma=5
+
+with(inttrans):
+
+plot(Re(fourier(subs(akset, 1/(a0+a2*qs^2+a4*qs^4+a6*qs^6)),qs,w))/sqrt(2*Pi),w=0..8);
+
+#la différence sur le fourier avec le filtre issu des a0, a2, a4, a6:
+plot(Re(fourier(subs(akset, 1/(a0+a2*qs^2+a4*qs^4+a6*qs^6)),qs,w))/sqrt(2*Pi)-exp(-(1/2)*w^2)/sqrt(2*Pi),w=0..8);
+
+#la différence sur le fourier avec le filtre issu des m0, m1, m2:
+plot(Re(fourier(1/(b0+b2*qs^2+b4*qs^4+b6*qs^6),qs,w))/sqrt(2*Pi)-exp(-(1/2)*w^2)/sqrt(2*Pi),w=0..8);
+
+# les racines du dénominateur de g(t) s'expriment en fonction des m0,m1,m2 facilement
+solve(qs^6-coeff(P,qs,4)*qs^4+coeff(P,qs,2)*qs^2-coeff(P,qs,0), qs);
+
+# le fourier s'exprime en fonctin de ces racines:
+fourier(1/(a0+a2*qs^2+a4*qs^4+a6*qs^6)),qs,w)/sqrt(2*Pi)
+

@@ -257,13 +257,12 @@ AdjustRoDPlugin::render(const OFX::RenderArguments &args)
 }
 
 bool
-AdjustRoDPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+AdjustRoDPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
     double w,h;
     _size->getValueAtTime(args.time, w, h);
     if (w == 0 && h == 0) {
         identityClip = _srcClip;
-        identityTime = args.time;
         return true;
     }
     return false;

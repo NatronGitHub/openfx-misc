@@ -143,9 +143,8 @@ JoinViewsPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 }
 
 bool
-JoinViewsPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+JoinViewsPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
 {
-    identityTime = args.time;
     if (args.view == 0) {
         identityClip = _srcLeftClip;
     } else {
