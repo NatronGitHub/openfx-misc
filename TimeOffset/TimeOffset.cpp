@@ -77,6 +77,8 @@ private:
     /* override is identity */
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
+    virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
+
     double getSourceTime(double time) const;
 
 private:
@@ -182,6 +184,15 @@ TimeOffsetPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &
     return true;
 }
 
+bool
+TimeOffsetPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+{
+    const double identityTime = getSourceTime(args.time);
+
+    rod = _srcClip->getRegionOfDefinition(identityTime);
+
+    return true;
+}
 
 mDeclarePluginFactory(TimeOffsetPluginFactory, ;, {});
 
