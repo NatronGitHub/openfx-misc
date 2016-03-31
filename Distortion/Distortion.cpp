@@ -681,12 +681,12 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class DistortionPlugin : public OFX::ImageEffect
+class DistortionPlugin : public OFX::MultiPlane::MultiPlaneEffect
 {
 public:
     /** @brief ctor */
     DistortionPlugin(OfxImageEffectHandle handle, DistortionPluginEnum plugin)
-    : ImageEffect(handle)
+    : OFX::MultiPlane::MultiPlaneEffect(handle)
     , _dstClip(0)
     , _srcClip(0)
     , _uvClip(0)
@@ -696,7 +696,6 @@ public:
     , _processB(0)
     , _processA(0)
     , _uvChannels()
-    , _uvChannelsString()
     , _uvOffset(0)
     , _uvScale(0)
     , _uWrap(0)
@@ -717,7 +716,6 @@ public:
     , _maskApply(0)
     , _maskInvert(0)
     , _plugin(plugin)
-    , _currentComps()
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
@@ -743,23 +741,10 @@ public:
             _uvChannels[0] = fetchChoiceParam(kParamChannelU);
             _uvChannels[1] = fetchChoiceParam(kParamChannelV);
             if (gIsMultiPlane) {
-                _uvChannelsString[0] = fetchStringParam(kParamChannelUChoice);
-                _uvChannelsString[1] = fetchStringParam(kParamChannelVChoice);
-                assert(_uvChannelsString[0] && _uvChannelsString[1]);
-                
-                //We need to restore the choice params because the host may not call getClipPreference if all clips are disconnected
-                //e.g: this can be from a copy/paste issued from the user
-                std::list<OFX::MultiPlane::ChoiceStringParam> params;
-                for (int i = 0; i < 2; ++i) {
-                    OFX::MultiPlane::ChoiceStringParam p;
-                    p.param = _uvChannels[i];
-                    p.stringParam = _uvChannelsString[i];
-                    params.push_back(p);
-                }
-                OFX::MultiPlane::setChannelsFromStringParams(params, false);
 
-            } else {
-                _uvChannelsString[0] = _uvChannelsString[1] = 0;
+                fetchDynamicMultiplaneChoiceParameter(kParamChannelU, _uvClip);
+                fetchDynamicMultiplaneChoiceParameter(kParamChannelV, _uvClip);
+
             }
             _uvOffset = fetchDouble2DParam(kParamUVOffset);
             _uvScale = fetchDouble2DParam(kParamUVScale);
@@ -771,7 +756,6 @@ public:
             }
         } else {
             _uvChannels[0] = _uvChannels[1] = 0;
-            _uvChannelsString[0] = _uvChannelsString[1] = 0;
         }
         
        /* if (gIsMultiPlane) {
@@ -844,7 +828,6 @@ private:
     OFX::BooleanParam* _processB;
     OFX::BooleanParam* _processA;
     OFX::ChoiceParam* _uvChannels[2];
-    OFX::StringParam* _uvChannelsString[2];
     OFX::Double2DParam *_uvOffset;
     OFX::Double2DParam *_uvScale;
     OFX::ChoiceParam* _uWrap;
@@ -866,7 +849,6 @@ private:
     OFX::BooleanParam* _maskInvert;
     DistortionPluginEnum _plugin;
     
-    std::list<std::string> _currentComps;
 };
 
 
@@ -880,21 +862,7 @@ DistortionPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences
         clipPreferences.setClipComponents(*_srcClip, dstPixelComps);
     }
     if (gIsMultiPlane && _uvClip) {
-        std::vector<OFX::MultiPlane::ClipComponentsInfo> clipInfos(1);
-        OFX::MultiPlane::ClipComponentsInfo& uvInfo = clipInfos[0];
-        uvInfo.clip = _uvClip;
-        uvInfo.componentsPresent = _uvClip->getComponentsPresent();
-        uvInfo.componentsPresentCache = &_currentComps;
-        
-        std::vector<OFX::MultiPlane::ChoiceParamClips> choiceParams(2);
-        for (int i = 0; i < 2; ++i) {
-            choiceParams[i].param = _uvChannels[i];
-            choiceParams[i].stringparam = _uvChannelsString[i];
-            choiceParams[i].clips = &clipInfos;
-        }
-        
-        OFX::MultiPlane::buildChannelMenus(choiceParams);
-
+        buildChannelMenus();
     }
 
 }
@@ -975,13 +943,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
 
     if (gIsMultiPlane) {
         
-        OFX::MultiPlane::PerClipComponentsMap perClipComps;
-   
-        if (_uvClip) {
-            OFX::MultiPlane::ClipsComponentsInfoBase& uvInfo = perClipComps[kClipUV];
-            uvInfo.clip = _uvClip;
-            uvInfo.componentsPresent = _uvClip->getComponentsPresent();
-        }
+        
         OFX::BitDepthEnum srcBitDepth = eBitDepthNone;
         
         std::map<OFX::Clip*,std::map<std::string,OFX::Image*> > fetchedPlanes;
@@ -995,7 +957,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
             if (_uvClip) {
                 OFX::Clip* clip = 0;
                 std::string plane,ofxComp;
-                bool ok = OFX::MultiPlane::getPlaneNeededForParam(time, perClipComps, _uvChannels[i], &clip, &plane, &ofxComp, &p.channelIndex, &isCreatingAlpha);
+                bool ok = getPlaneNeededForParam(time, _uvChannels[i]->getName(), &clip, &plane, &ofxComp, &p.channelIndex, &isCreatingAlpha);
                 if (!ok) {
                     setPersistentMessage(OFX::Message::eMessageError, "", "Cannot find requested channels in input");
                     OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -1498,14 +1460,6 @@ DistortionPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OF
     
     if (_uvClip) {
         
-        OFX::MultiPlane::PerClipComponentsMap perClipComps;
-        
-        OFX::MultiPlane::ClipsComponentsInfoBase& uvInfo = perClipComps[kClipUV];
-        uvInfo.clip = _uvClip;
-        uvInfo.componentsPresent = _uvClip->getComponentsPresent();
-        
-
-        
         std::map<OFX::Clip*,std::set<std::string> > clipMap;
         
         bool isCreatingAlpha;
@@ -1513,7 +1467,7 @@ DistortionPlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OF
             std::string ofxComp,ofxPlane;
             int channelIndex;
             OFX::Clip* clip = 0;
-            bool ok = OFX::MultiPlane::getPlaneNeededForParam(time, perClipComps, _uvChannels[i], &clip, &ofxPlane, &ofxComp, &channelIndex, &isCreatingAlpha);
+            bool ok = getPlaneNeededForParam(time, _uvChannels[i]->getName(), &clip, &ofxPlane, &ofxComp, &channelIndex, &isCreatingAlpha);
             if (!ok) {
                 continue;
             }
@@ -1569,10 +1523,8 @@ DistortionPlugin::changedParam(const InstanceChangedArgs &args, const std::strin
         return;
     }
     if (gIsMultiPlane) {
-        for (int i = 0; i < 2; ++i) {
-            if (OFX::MultiPlane::checkIfChangedParamCalledOnDynamicChoice(paramName, args.reason, _uvChannels[i], _uvChannelsString[i])) {
-                return;
-            }
+        if (handleChangedParamForAllDynamicChoices(paramName, args.reason)) {
+            return;
         }
     }
     
@@ -1778,12 +1730,12 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
         
         if (gIsMultiPlane) {
             {
-                ChoiceParamDescriptor* param = OFX::MultiPlane::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelU, kParamChannelULabel, kParamChannelUHint);
+                ChoiceParamDescriptor* param = OFX::MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelU, kParamChannelULabel, kParamChannelUHint);
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
                 param->setDefault(eInputChannelR);
             }
             {
-                ChoiceParamDescriptor* param = OFX::MultiPlane::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelV, kParamChannelVLabel, kParamChannelVHint);
+                ChoiceParamDescriptor* param = OFX::MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelV, kParamChannelVLabel, kParamChannelVHint);
                 param->setDefault(eInputChannelG);
             }
         } else {
@@ -1792,7 +1744,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
                 param->setLabel(kParamChannelULabel);
                 param->setHint(kParamChannelUHint);
                 param->setLayoutHint(eLayoutHintNoNewLine, 1);
-                OFX::MultiPlane::addInputChannelOptionsRGBA(param, clipsForChannels, true, 0);
+                OFX::MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
                 param->setDefault(eInputChannelR);
                 if (page) {
                     page->addChild(*param);
@@ -1803,7 +1755,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelV);
                 param->setLabel(kParamChannelVLabel);
                 param->setHint(kParamChannelVHint);
-                OFX::MultiPlane::addInputChannelOptionsRGBA(param, clipsForChannels, true, 0);
+                OFX::MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
                 param->setDefault(eInputChannelG);
                 if (page) {
                     page->addChild(*param);

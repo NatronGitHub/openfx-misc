@@ -61,8 +61,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputComponentsOptionRGB "RGB"
 #define kParamOutputComponentsOptionAlpha "Alpha"
 
-#define kParamOutputChannels kNatronOfxParamOutputChannels
-#define kParamOutputChannelsChoice kParamOutputChannels "Choice"
+#define kParamOutputChannels kMultiPlaneParamOutputChannels
+#define kParamOutputChannelsChoice kMultiPlaneParamOutputChannelsChoice
+#define kParamOutputChannelsRefreshButton kMultiPlaneParamOutputChannelsRefreshButton
 #define kParamOutputChannelsLabel "Output Layer"
 #define kParamOutputChannelsHint "The layer that will be written to in output"
 
@@ -84,22 +85,26 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kParamOutputR "outputR"
 #define kParamOutputRChoice kParamOutputR "Choice"
+#define kParamOutputRRefreshButton kParamOutputR "RefreshButton"
 #define kParamOutputRLabel "R"
 #define kParamOutputRHint "Input channel for the output red channel"
 
 #define kParamOutputG "outputG"
 #define kParamOutputGChoice kParamOutputG "Choice"
+#define kParamOutputGRefreshButton kParamOutputG "RefreshButton"
 #define kParamOutputGLabel "G"
 #define kParamOutputGHint "Input channel for the output green channel"
 
 #define kParamOutputB "outputB"
 #define kParamOutputBChoice kParamOutputB "Choice"
+#define kParamOutputBRefreshButton kParamOutputB "RefreshButton"
 #define kParamOutputBLabel "B"
 #define kParamOutputBHint "Input channel for the output blue channel"
 
 
 #define kParamOutputA "outputA"
 #define kParamOutputAChoice kParamOutputA "Choice"
+#define kParamOutputARefreshButton kParamOutputA "RefreshButton"
 #define kParamOutputALabel "A"
 #define kParamOutputAHint "Input channel for the output alpha channel"
 
@@ -472,20 +477,18 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class ShufflePlugin : public OFX::ImageEffect
+class ShufflePlugin : public OFX::MultiPlane::MultiPlaneEffect
 {
 public:
     /** @brief ctor */
     ShufflePlugin(OfxImageEffectHandle handle, OFX::ContextEnum context)
-    : ImageEffect(handle)
+    : MultiPlane::MultiPlaneEffect(handle)
     , _dstClip(0)
     , _srcClipA(0)
     , _srcClipB(0)
     , _outputLayer(0)
-    , _outputLayerString(0)
     , _outputBitDepth(0)
     , _channelParam()
-    , _channelParamStrings()
     , _outputComponents(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
@@ -510,31 +513,20 @@ public:
         _outputComponents = fetchChoiceParam(kParamOutputComponents);
         
         if (gSupportsDynamicChoices) {
-            _outputLayerString = fetchStringParam(kParamOutputChannelsChoice);
-            _channelParamStrings[0] = fetchStringParam(kParamOutputRChoice);
-            _channelParamStrings[1] = fetchStringParam(kParamOutputGChoice);
-            _channelParamStrings[2] = fetchStringParam(kParamOutputBChoice);
-            _channelParamStrings[3] = fetchStringParam(kParamOutputAChoice);
             
-            //We need to restore the choice params because the host may not call getClipPreference if all clips are disconnected
-            //e.g: this can be from a copy/paste issued from the user
-            std::list<OFX::MultiPlane::ChoiceStringParam> params;
-            for (int i = 0; i < 4; ++i) {
-                OFX::MultiPlane::ChoiceStringParam p;
-                p.param = _channelParam[i];
-                p.stringParam = _channelParamStrings[i];
-                params.push_back(p);
-            }
-            OFX::MultiPlane::setChannelsFromStringParams(params, false);
-        } else {
-            _channelParamStrings[0] = _channelParamStrings[1] = _channelParamStrings[2] = _channelParamStrings[3] = 0;
+            std::vector<OFX::Clip*> abClips(2);
+            abClips[0] = _srcClipA;
+            abClips[1] = _srcClipB;
+            fetchDynamicMultiplaneChoiceParameter(kParamOutputR, abClips);
+            fetchDynamicMultiplaneChoiceParameter(kParamOutputG, abClips);
+            fetchDynamicMultiplaneChoiceParameter(kParamOutputB, abClips);
+            fetchDynamicMultiplaneChoiceParameter(kParamOutputA, abClips);
+            fetchDynamicMultiplaneChoiceParameter(kParamOutputChannels, _dstClip);
         }
         
         //Refresh output components secretness
-        std::string layerName;
-        if (_outputLayerString) {
-            _outputLayerString->getValue(layerName);
-        }
+        std::string layerName,ofxComps;
+        getPlaneNeededInOutput(&layerName, &ofxComps);
         
         std::string ofxComponents;
         if (layerName.empty() ||
@@ -602,17 +594,10 @@ private:
     OFX::Clip *_srcClipB;
 
     OFX::ChoiceParam *_outputLayer;
-    OFX::StringParam *_outputLayerString;
     OFX::ChoiceParam *_outputBitDepth;
     OFX::ChoiceParam* _channelParam[4];
-    OFX::StringParam* _channelParamStrings[4];
     OFX::ChoiceParam *_outputComponents;
     OFX::ChoiceParam *_outputPremult;
-    
-    //Small cache only used on main-thread to speed up getclipPreferences
-    std::list<std::string> _currentOutputComps;
-    std::list<std::string> _currentCompsA;
-    std::list<std::string> _currentCompsB;
 };
 
 void
@@ -620,19 +605,9 @@ ShufflePlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::
 {
     const double time = args.time;
     
-    OFX::MultiPlane::PerClipComponentsMap perClipComps;
-    OFX::MultiPlane::ClipsComponentsInfoBase& aInfo = perClipComps[kClipA];
-    aInfo.clip = _srcClipA;
-    aInfo.componentsPresent = _srcClipA->getComponentsPresent();
-    
-    OFX::MultiPlane::ClipsComponentsInfoBase& bInfo = perClipComps[kClipB];
-    bInfo.clip = _srcClipB;
-    bInfo.componentsPresent = _srcClipB->getComponentsPresent();
-    
     if (gIsMultiPlanar) {
-        std::list<std::string> outputComponents = _dstClip->getComponentsPresent();
         std::string ofxPlane,ofxComp;
-        OFX::MultiPlane::getPlaneNeededInOutput(outputComponents, _dstClip, _outputLayer, &ofxPlane, &ofxComp);
+        getPlaneNeededInOutput(&ofxPlane, &ofxComp);
         clipComponents.addClipComponents(*_dstClip, ofxComp);
     } else {
         PixelComponentEnum outputComponents = gOutputComponentsMap[_outputLayer->getValueAtTime(time)];
@@ -647,7 +622,7 @@ ShufflePlugin::getClipComponents(const OFX::ClipComponentsArguments& args, OFX::
         std::string ofxComp,ofxPlane;
         int channelIndex;
         OFX::Clip* clip = 0;
-        bool ok = OFX::MultiPlane::getPlaneNeededForParam(time, perClipComps, _channelParam[i], &clip, &ofxPlane, &ofxComp, &channelIndex, &isCreatingAlpha);
+        bool ok = getPlaneNeededForParam(time, _channelParam[i]->getName(), &clip, &ofxPlane, &ofxComp, &channelIndex, &isCreatingAlpha);
         if (!ok) {
             continue;
         }
@@ -701,22 +676,13 @@ ShufflePlugin::isIdentityInternal(double time, OFX::Clip*& identityClip)
         }
         return false;
     } else {
-        OFX::MultiPlane::PerClipComponentsMap perClipComps;
-        OFX::MultiPlane::ClipsComponentsInfoBase& aInfo = perClipComps[kClipA];
-        aInfo.clip = _srcClipA;
-        aInfo.componentsPresent = _srcClipA->getComponentsPresent();
         
-        OFX::MultiPlane::ClipsComponentsInfoBase& bInfo = perClipComps[kClipB];
-        bInfo.clip = _srcClipB;
-        bInfo.componentsPresent = _srcClipB->getComponentsPresent();
-
-        std::list<std::string> outputsComponents = _dstClip->getComponentsPresent();
         
         IdentityChoiceData data[4];
         
         
         std::string dstPlane,dstComponents;
-        OFX::MultiPlane::getPlaneNeededInOutput(outputsComponents, _dstClip, _outputLayer, &dstPlane, &dstComponents);
+        getPlaneNeededInOutput(&dstPlane, &dstComponents);
         if (dstPlane != kFnOfxImagePlaneColour) {
             return false;
         }
@@ -725,7 +691,7 @@ ShufflePlugin::isIdentityInternal(double time, OFX::Clip*& identityClip)
         for (int i = 0; i < 4; ++i) {
             std::string plane;
             bool isCreatingAlpha;
-            bool ok = OFX::MultiPlane::getPlaneNeededForParam(time, perClipComps, _channelParam[i], &data[i].clip, &plane, &data[i].components, &data[i].index, &isCreatingAlpha);
+            bool ok = getPlaneNeededForParam(time, _channelParam[i]->getName(), &data[i].clip, &plane, &data[i].components, &data[i].index, &isCreatingAlpha);
             if (!ok) {
                 //We might have an index in the param different from the actual components if getClipPreferences was not called so far
                 return false;
@@ -934,8 +900,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
 {
     const double time = args.time;
     std::string dstOfxPlane,dstOfxComp;
-    std::list<std::string> outputComponents = _dstClip->getComponentsPresent();
-    OFX::MultiPlane::getPlaneNeededInOutput(outputComponents, _dstClip, _outputLayer, &dstOfxPlane, &dstOfxComp);
+    getPlaneNeededInOutput(&dstOfxPlane, &dstOfxComp);
     
 #ifdef DEBUG
     // Follow the OpenFX spec:
@@ -985,16 +950,6 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
     }
     
     
-
-    OFX::MultiPlane::PerClipComponentsMap perClipComps;
-    OFX::MultiPlane::ClipsComponentsInfoBase& aInfo = perClipComps[kClipA];
-    aInfo.clip = _srcClipA;
-    aInfo.componentsPresent = _srcClipA->getComponentsPresent();
-    
-    OFX::MultiPlane::ClipsComponentsInfoBase& bInfo = perClipComps[kClipB];
-    bInfo.clip = _srcClipB;
-    bInfo.componentsPresent = _srcClipB->getComponentsPresent();
-    
     
     InputImagesHolder_RAII imagesHolder;
     OFX::BitDepthEnum srcBitDepth = eBitDepthNone;
@@ -1008,7 +963,7 @@ ShufflePlugin::setupAndProcessMultiPlane(MultiPlaneShufflerBase & processor, con
         InputPlaneChannel p;
         OFX::Clip* clip = 0;
         std::string plane,ofxComp;
-        bool ok = OFX::MultiPlane::getPlaneNeededForParam(time, perClipComps, nDstComponents == 1 ? _channelParam[3] : _channelParam[i], &clip, &plane, &ofxComp, &p.channelIndex, &isCreatingAlpha);
+        bool ok = getPlaneNeededForParam(time, nDstComponents == 1 ? _channelParam[3]->getName() : _channelParam[i]->getName(), &clip, &plane, &ofxComp, &p.channelIndex, &isCreatingAlpha);
         if (!ok) {
             setPersistentMessage(OFX::Message::eMessageError, "", "Cannot find requested channels in input");
             OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -1153,9 +1108,8 @@ ShufflePlugin::render(const OFX::RenderArguments &args)
     // check that dstComponents is consistent with the result of getClipPreferences
     // (@see getClipPreferences).
     if (gIsMultiPlanar && gSupportsDynamicChoices) {
-        std::list<std::string> outputComponents = _dstClip->getComponentsPresent();
         std::string ofxPlane,ofxComponents;
-        OFX::MultiPlane::getPlaneNeededInOutput(outputComponents, _dstClip, _outputLayer, &ofxPlane, &ofxComponents);
+        getPlaneNeededInOutput(&ofxPlane, &ofxComponents);
 
         OFX::PixelComponentEnum pixelComps = mapStrToPixelComponentEnum(ofxComponents);
         if (pixelComps == OFX::ePixelComponentCustom) {
@@ -1251,36 +1205,9 @@ ShufflePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     PixelComponentEnum dstPixelComps = OFX::ePixelComponentNone;
     if (gIsMultiPlanar && gSupportsDynamicChoices) {
     
-        std::vector<OFX::MultiPlane::ClipComponentsInfo> clipInfos(2);
-        OFX::MultiPlane::ClipComponentsInfo& aInfo = clipInfos[0];
-        OFX::MultiPlane::ClipComponentsInfo& bInfo = clipInfos[1];
-        aInfo.clip = _srcClipA;
-        bInfo.clip = _srcClipB;
-        aInfo.componentsPresent = _srcClipA->getComponentsPresent();
-        bInfo.componentsPresent = _srcClipB->getComponentsPresent();
-        aInfo.componentsPresentCache = &_currentCompsA;
-        bInfo.componentsPresentCache = &_currentCompsB;
-        
-        std::vector<OFX::MultiPlane::ChoiceParamClips> choiceParams(5);
-        for (int i = 0; i < 4; ++i) {
-            choiceParams[i].param = _channelParam[i];
-            choiceParams[i].stringparam = _channelParamStrings[i];
-            choiceParams[i].clips = &clipInfos;
-        }
-        
-        std::vector<OFX::MultiPlane::ClipComponentsInfo> outputClipInfos(1);
-        outputClipInfos[0].clip = _dstClip;
-        outputClipInfos[0].componentsPresent = _dstClip->getComponentsPresent();
-        outputClipInfos[0].componentsPresentCache = &_currentOutputComps;
-        choiceParams[4].param = _outputLayer;
-        choiceParams[4].stringparam = _outputLayerString;
-        choiceParams[4].clips = &outputClipInfos;
-        
-        //choiceParams[4].clips = _outputLayer;
-        
-        OFX::MultiPlane::buildChannelMenus(choiceParams);
+        buildChannelMenus();
         std::string ofxPlane,ofxComponents;
-        OFX::MultiPlane::getPlaneNeededInOutput(outputClipInfos[0].componentsPresent, _dstClip, _outputLayer, &ofxPlane, &ofxComponents);
+        getPlaneNeededInOutput(&ofxPlane, &ofxComponents);
         
         dstPixelComps = mapStrToPixelComponentEnum(ofxComponents);
         originalDstPixelComps = dstPixelComps;
@@ -1457,21 +1384,12 @@ ShufflePlugin::setChannelsFromRed(double time)
                 std::string chan = opt.substr(base.size());
                 if (chan == ".G" || chan == ".g") {
                     _channelParam[1]->setValue(i);
-                    if (_channelParamStrings[1]) {
-                        _channelParamStrings[1]->setValue(opt);
-                    }
                     gSet = true;
                 } else if (chan == ".B" || chan == ".b") {
                     _channelParam[2]->setValue(i);
-                    if (_channelParamStrings[2]) {
-                        _channelParamStrings[2]->setValue(opt);
-                    }
                     bSet = true;
                 } else if (chan == ".A" || chan == ".a") {
                     _channelParam[3]->setValue(i);
-                    if (_channelParamStrings[3]) {
-                        _channelParamStrings[3]->setValue(opt);
-                    }
                     aSet = true;
                 }
             }
@@ -1483,21 +1401,12 @@ ShufflePlugin::setChannelsFromRed(double time)
         assert(indexOf0 != -1 && indexOf1 != -1);
         if (!gSet) {
             _channelParam[1]->setValue(indexOf0);
-            if (_channelParamStrings[1]) {
-                _channelParamStrings[1]->setValue(kMultiPlaneParamOutputOption0);
-            }
         }
         if (!bSet) {
             _channelParam[2]->setValue(indexOf0);
-            if (_channelParamStrings[2]) {
-                _channelParamStrings[2]->setValue(kMultiPlaneParamOutputOption0);
-            }
         }
         if (!aSet) {
             _channelParam[3]->setValue(indexOf1);
-            if (_channelParamStrings[3]) {
-                _channelParamStrings[3]->setValue(kMultiPlaneParamOutputOption0);
-            }
         }
     }
 }
@@ -1584,10 +1493,9 @@ ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::str
     
     
     if (gIsMultiPlanar && gSupportsDynamicChoices) {
-        OFX::MultiPlane::ChangedParamRetCode trappedRParam =
-        OFX::MultiPlane::checkIfChangedParamCalledOnDynamicChoice(paramName, args.reason, _channelParam[0], _channelParamStrings[0]);
-        if (trappedRParam != OFX::MultiPlane::eChangedParamRetCodeNoChange) {
-            if (trappedRParam == OFX::MultiPlane::eChangedParamRetCodeChoiceParamChanged) {
+        OFX::MultiPlane::MultiPlaneEffect::ChangedParamRetCode trappedRParam = checkIfChangedParamCalledOnDynamicChoice(paramName, _channelParam[0]->getName(), args.reason);
+        if (trappedRParam != OFX::MultiPlane::MultiPlaneEffect::eChangedParamRetCodeNoChange) {
+            if (trappedRParam == OFX::MultiPlane::MultiPlaneEffect::eChangedParamRetCodeChoiceParamChanged) {
 #ifdef OFX_EXTENSIONS_NATRON
                 setChannelsFromRed(args.time);
 #endif
@@ -1595,12 +1503,12 @@ ShufflePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::str
             return;
         }
         for (int i = 1; i < 4; ++i) {
-            if (OFX::MultiPlane::checkIfChangedParamCalledOnDynamicChoice(paramName, args.reason, _channelParam[i], _channelParamStrings[i])) {
+            if (checkIfChangedParamCalledOnDynamicChoice(paramName,  _channelParam[i]->getName(), args.reason)) {
                 return;
             }
         }
         
-        if (OFX::MultiPlane::checkIfChangedParamCalledOnDynamicChoice(paramName, args.reason, _outputLayer, _outputLayerString)) {
+        if (checkIfChangedParamCalledOnDynamicChoice(paramName, _outputLayer->getName(), args.reason)) {
             return;
         }
     }
@@ -1671,10 +1579,10 @@ ShufflePlugin::enableComponents(PixelComponentEnum originalOutputComponents, Pix
                 break;
         }
     } else { // if (!gIsMultiPlanar) {
-        std::list<std::string> components =  _dstClip->getComponentsPresent();
+
         
         std::string ofxPlane,ofxComp;
-        OFX::MultiPlane::getPlaneNeededInOutput(components, _dstClip, _outputLayer, &ofxPlane, &ofxComp);
+        getPlaneNeededInOutput(&ofxPlane, &ofxComp);
         std::vector<std::string> compNames;
         
         
@@ -1959,7 +1867,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
 
     // outputComponents
     if (gIsMultiPlanar && gSupportsDynamicChoices) {
-        OFX::MultiPlane::describeInContextAddOutputLayerChoice(false, desc, page);
+        OFX::MultiPlane::Factory::describeInContextAddOutputLayerChoice(false, desc, page);
     }
     {
         ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputComponents);
@@ -2026,11 +1934,11 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     if (gSupportsRGB || gSupportsRGBA) {
         // outputR
         if (gIsMultiPlanar && gSupportsDynamicChoices) {
-            OFX::ChoiceParamDescriptor* r = OFX::MultiPlane::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamOutputR, kParamOutputRLabel, kParamOutputRHint);
+            OFX::ChoiceParamDescriptor* r = OFX::MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamOutputR, kParamOutputRLabel, kParamOutputRHint);
             r->setDefault(eInputChannelAR);
-            OFX::ChoiceParamDescriptor* g = OFX::MultiPlane::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamOutputG, kParamOutputGLabel, kParamOutputGHint);
+            OFX::ChoiceParamDescriptor* g = OFX::MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamOutputG, kParamOutputGLabel, kParamOutputGHint);
             g->setDefault(eInputChannelAG);
-            OFX::ChoiceParamDescriptor* b = OFX::MultiPlane::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamOutputB, kParamOutputBLabel, kParamOutputBHint);
+            OFX::ChoiceParamDescriptor* b = OFX::MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamOutputB, kParamOutputBLabel, kParamOutputBHint);
             b->setDefault(eInputChannelAB);
         } else {
             
@@ -2038,7 +1946,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputR);
                 param->setLabel(kParamOutputRLabel);
                 param->setHint(kParamOutputRHint);
-                OFX::MultiPlane::addInputChannelOptionsRGBA(param, clipsForChannels, true, 0);
+                OFX::MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
                 param->setDefault(eInputChannelAR);
                 if (page) {
                     page->addChild(*param);
@@ -2048,7 +1956,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputG);
                 param->setLabel(kParamOutputGLabel);
                 param->setHint(kParamOutputGHint);
-                OFX::MultiPlane::addInputChannelOptionsRGBA(param, clipsForChannels, true, 0);
+                OFX::MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
                 param->setDefault(eInputChannelAG);
                 if (page) {
                     page->addChild(*param);
@@ -2058,7 +1966,7 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputB);
                 param->setLabel(kParamOutputBLabel);
                 param->setHint(kParamOutputBHint);
-                OFX::MultiPlane::addInputChannelOptionsRGBA(param, clipsForChannels, true, 0);
+                OFX::MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
                 param->setDefault(eInputChannelAB);
                 if (page) {
                     page->addChild(*param);
@@ -2070,14 +1978,14 @@ void ShufflePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, O
     // ouputA
     if (gSupportsRGBA || gSupportsAlpha) {
         if (gIsMultiPlanar && gSupportsDynamicChoices) {
-            OFX::ChoiceParamDescriptor* a = OFX::MultiPlane::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamOutputA, kParamOutputALabel, kParamOutputAHint);
+            OFX::ChoiceParamDescriptor* a = OFX::MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamOutputA, kParamOutputALabel, kParamOutputAHint);
             a->setDefault(eInputChannelAA);
         } else {
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamOutputA);
                 param->setLabel(kParamOutputALabel);
                 param->setHint(kParamOutputAHint);
-                OFX::MultiPlane::addInputChannelOptionsRGBA(param, clipsForChannels, true, 0);
+                OFX::MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
                 param->setDefault(eInputChannelAA);
                 if (page) {
                     page->addChild(*param);
