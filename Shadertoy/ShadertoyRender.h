@@ -44,12 +44,20 @@
 #  define RENDERFUNC renderGL
 #endif
 
+#if defined(HAS_GLES)
+#include <GLES2/gl2.h>
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <cassert>
+#define TO_STRING(...) #__VA_ARGS__
+#else
 #ifdef __APPLE__
 #  include <OpenGL/gl.h>
 #  include <OpenGL/glu.h>
 #else
 #  include <GL/gl.h>
 #  include <GL/glu.h>
+#endif
 #endif
 
 #ifndef DEBUG
@@ -591,6 +599,23 @@ ShadertoyPlugin::contextAttached()
         _maxAnisoMax = MaxAnisoMax;
         DPRINT(("GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = %f\n", _maxAnisoMax));
     }
+
+    // Shadertoy:
+#if defined(HAS_GLES)
+    static const GLfloat vertex_data[] = {
+        -1.0,1.0,1.0,1.0,
+        1.0,1.0,1.0,1.0,
+        1.0,-1.0,1.0,1.0,
+        -1.0,-1.0,1.0,1.0,
+    };
+    glGetError();
+    // Upload vertex data to a buffer
+    GLuint vertex_buffer;
+    glGenBuffers(1, &vertex_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW);
+    _vertex_buffer = vertex_buffer;
+#endif
 }
 
 /*
@@ -606,4 +631,10 @@ ShadertoyPlugin::contextAttached()
 void
 ShadertoyPlugin::contextDetached()
 {
+    // Shadertoy:
+#if defined(HAS_GLES)
+    GLuint vertex_buffer = _vertex_buffer;
+    glDeleteBuffers(1, &vertex_buffer);
+    _vertex_buffer = 0;
+#endif
 }

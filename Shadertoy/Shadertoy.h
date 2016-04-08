@@ -74,6 +74,9 @@ private:
 
     bool _haveAniso;
     float _maxAnisoMax;
+#if defined(HAS_GLES)
+    unsigned long _vertexbuffer;
+#endif
 };
 
 #endif // Misc_Shadertoy_h

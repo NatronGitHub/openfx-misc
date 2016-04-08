@@ -18,6 +18,11 @@
 
 /*
  * OFX Shadertoy plugin.
+ *
+ * References:
+ * https://www.shadertoy.com
+ * http://www.iquilezles.org/apps/shadertoy/index2.html (original Shader Toy v0.4)
+ *
  * TODO:
  * - actual shadertoy render (for now, it is a placeholder)
  * - only recompile shader if it changed
@@ -50,7 +55,157 @@ using namespace OFX;
 #define kPluginName "Shadertoy"
 #define kPluginGrouping "Filter"
 #define kPluginDescription \
-"Apply shaders from www.shadertoy.com."
+"Apply shaders from www.shadertoy.com.\n" \
+"\n" \
+"This help only covers the parts of GLSL ES that are relevant for Shadertoy. " \
+"For the complete specification please have a look at GLSL ES specification " \
+"<http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf>\n" \
+"Language:\n" \
+"\n" \
+"    Preprocessor: # #define #undef #if #ifdef #ifndef #else #elif #endif #error #pragma #extension #version #line\n" \
+"    Operators: () + - ! * / % < > <= >= == != && ||\n" \
+"    Comments: // /* */\n" \
+"    Types: void bool int float vec2 vec3 vec4 bvec2 bvec3 bvec4 ivec2 ivec3 ivec4 mat2 mat3 mat4 sampler2D\n" \
+"    Function Parameter Qualifiers: [none], in, out, inout\n" \
+"    Global Variable Qualifiers: const\n" \
+"    Vector Components: .xyzw .rgba .stpq\n" \
+"    Flow Control: if else for return break continue\n" \
+"    Output: vec4 fragColor\n" \
+"    Input: vec2 fragCoord\n" \
+"\n" \
+"\n" \
+"Built-in Functions:\n" \
+"\n" \
+"    type radians (type degrees)\n" \
+"    type degrees (type radians)\n" \
+"    type sin (type angle)\n" \
+"    type cos (type angle)\n" \
+"    type tan (type angle)\n" \
+"    type asin (type x)\n" \
+"    type acos (type x)\n" \
+"    type atan (type y, type x)\n" \
+"    type atan (type y_over_x)\n" \
+"\n" \
+"	\n" \
+"\n" \
+"    type pow (type x, type y)\n" \
+"    type exp (type x)\n" \
+"    type log (type x)\n" \
+"    type exp2 (type x)\n" \
+"    type log2 (type x)\n" \
+"    type sqrt (type x)\n" \
+"    type inversesqrt (type x)\n" \
+"\n" \
+"    type abs (type x)\n" \
+"    type sign (type x)\n" \
+"    type floor (type x)\n" \
+"    type ceil (type x)\n" \
+"    type fract (type x)\n" \
+"    type mod (type x, float y)\n" \
+"    type mod (type x, type y)\n" \
+"    type min (type x, type y)\n" \
+"    type min (type x, float y)\n" \
+"    type max (type x, type y)\n" \
+"    type max (type x, float y)\n" \
+"    type clamp (type x, type minV, type maxV)\n" \
+"    type clamp (type x, float minV, float maxV)\n" \
+"    type mix (type x, type y, type a)\n" \
+"    type mix (type x, type y, float a)\n" \
+"    type step (type edge, type x)\n" \
+"    type step (float edge, type x)\n" \
+"    type smoothstep (type a, type b, type x)\n" \
+"    type smoothstep (float a, float b, type x)\n" \
+"    mat matrixCompMult (mat x, mat y)\n" \
+"\n" \
+"	\n" \
+"\n" \
+"    float length (type x)\n" \
+"    float distance (type p0, type p1)\n" \
+"    float dot (type x, type y)\n" \
+"    vec3 cross (vec3 x, vec3 y)\n" \
+"    type normalize (type x)\n" \
+"    type faceforward (type N, type I, type Nref)\n" \
+"    type reflect (type I, type N)\n" \
+"    type refract (type I, type N,float eta)\n" \
+"\n" \
+"    bvec lessThan(vec x, vec y)\n" \
+"    bvec lessThan(ivec x, ivec y)\n" \
+"    bvec lessThanEqual(vec x, vec y)\n" \
+"    bvec lessThanEqual(ivec x, ivec y)\n" \
+"    bvec greaterThan(vec x, vec y)\n" \
+"    bvec greaterThan(ivec x, ivec y)\n" \
+"    bvec greaterThanEqual(vec x, vec y)\n" \
+"    bvec greaterThanEqual(ivec x, ivec y)\n" \
+"    bvec equal(vec x, vec y)\n" \
+"    bvec equal(ivec x, ivec y)\n" \
+"    bvec equal(bvec x, bvec y)\n" \
+"    bvec notEqual(vec x, vec y)\n" \
+"    bvec notEqual(ivec x, ivec y)\n" \
+"    bvec notEqual(bvec x, bvec y)\n" \
+"    bool any(bvec x)\n" \
+"    bool all(bvec x)\n" \
+"    bvec not(bvec x)\n" \
+"\n" \
+"	\n" \
+"\n" \
+"    vec4 texture2D(sampler2D sampler, vec2 coord )\n" \
+"    vec4 texture2D(sampler2D sampler, vec2 coord, float bias)\n" \
+"    vec4 textureCube(samplerCube sampler, vec3 coord)\n" \
+"    vec4 texture2DProj(sampler2D sampler, vec3 coord )\n" \
+"    vec4 texture2DProj(sampler2D sampler, vec3 coord, float bias)\n" \
+"    vec4 texture2DProj(sampler2D sampler, vec4 coord)\n" \
+"    vec4 texture2DProj(sampler2D sampler, vec4 coord, float bias)\n" \
+"    vec4 texture2DLodEXT(sampler2D sampler, vec2 coord, float lod)\n" \
+"    vec4 texture2DProjLodEXT(sampler2D sampler, vec3 coord, float lod)\n" \
+"    vec4 texture2DProjLodEXT(sampler2D sampler, vec4 coord, float lod)\n" \
+"    vec4 textureCubeLodEXT(samplerCube sampler, vec3 coord, float lod)\n" \
+"    vec4 texture2DGradEXT(sampler2D sampler, vec2 P, vec2 dPdx, vec2 dPdy)\n" \
+"    vec4 texture2DProjGradEXT(sampler2D sampler, vec3 P, vec2 dPdx, vec2 dPdy)\n" \
+"    vec4 texture2DProjGradEXT(sampler2D sampler, vec4 P, vec2 dPdx, vec2 dPdy)\n" \
+"    vec4 textureCubeGradEXT(samplerCube sampler, vec3 P, vec3 dPdx, vec3 dPdy)\n" \
+"\n" \
+"    type dFdx( type x ), dFdy( type x )\n" \
+"    type fwidth( type p )\n" \
+"\n" \
+"\n" \
+"How-to\n" \
+"\n" \
+"    Use structs: struct myDataType { float occlusion; vec3 color; }; myDataType myData = myDataType(0.7, vec3(1.0, 2.0, 3.0));\n" \
+"    Initialize arrays: arrays cannot be initialized in WebGL.\n" \
+"    Do conversions: int a = 3; float b = float(a);\n" \
+"    Do component swizzling: vec4 a = vec4(1.0,2.0,3.0,4.0); vec4 b = a.zyyw;\n" \
+"    Access matrix components: mat4 m; m[1] = vec4(2.0); m[0][0] = 1.0; m[2][3] = 2.0;\n" \
+"\n" \
+"\n" \
+"Be careful!\n" \
+"\n" \
+"    the f suffix for floating pont numbers: 1.0f is illegal in GLSL. You must use 1.0\n" \
+"    saturate(): saturate(x) doesn't exist in GLSL. Use clamp(x,0.0,1.0) instead\n" \
+"    pow/sqrt: please don't feed sqrt() and pow() with negative numbers. Add an abs() or max(0.0,) to the argument\n" \
+"    mod: please don't do mod(x,0.0). This is undefined in some platforms\n" \
+"    variables: initialize your variables! Don't assume they'll be set to zero by default\n" \
+"    functions: don't call your functions the same as some of your variables\n" \
+"\n" \
+"\n" \
+"Shadertoy Inputs\n" \
+"vec3	iResolution	image	The viewport resolution (z is pixel aspect ratio, usually 1.0)\n" \
+"float	iGlobalTime	image/sound	Current time in seconds\n" \
+"float	iTimeDelta	image	Time it takes to render a frame, in seconds\n" \
+"int	iFrame	image	Current frame\n" \
+"float	iFrameRate	image	Number of frames rendered per second\n" \
+"float	iChannelTime[4]	image	Time for channel (if video or sound), in seconds\n" \
+"vec3	iChannelResolution[4]	image/sound	Input texture resolution for each channel\n" \
+"vec4	iMouse	image	xy = current pixel coords (if LMB is down). zw = click pixel\n" \
+"sampler2D	iChannel{i}	image/sound	Sampler for input textures i\n" \
+"vec4	iDate	image/sound	Year, month, day, time in seconds in .xyzw\n" \
+"float	iSampleRate	image/sound	The sound sample rate (typically 44100)\n" \
+"\n" \
+"Shadertoy Outputs\n" \
+"For image shaders, fragColor is used as output channel. It is not, for now, mandatory but recommended to leave the alpha channel to 1.0.\n" \
+"\n" \
+"For sound shaders, the mainSound() function returns a vec2 containing the left and right (stereo) sound channel wave data.\n" \
+""
+
 
 #define kPluginIdentifier "net.sf.openfx.Shadertoy"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
