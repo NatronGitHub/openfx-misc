@@ -236,6 +236,14 @@ using namespace OFX;
 #define kGroupImageShader "imageShaderGroup"
 #define kGroupImageShaderLabel "Image"
 
+#define kParamImageShaderFileName "imageShaderFileName"
+#define kParamImageShaderFileNameLabel "Load from File"
+#define kParamImageShaderFileNameHint "Load the source from the given file. Press the \"Reload\" button if the file changed."
+
+#define kParamImageShaderReload "imageShaderReload"
+#define kParamImageShaderReloadLabel "Reload"
+#define kParamImageShaderReloadHint "Reload the source from the given file."
+
 #define kParamImageShaderSource "imageShaderSource"
 #define kParamImageShaderSourceLabel "Source"
 #define kParamImageShaderSourceHint "Image shader.\n\n"kShaderInputsHint
@@ -377,6 +385,18 @@ ShadertoyPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     // (The OFX spec doesn't state a default value for this)
     if (_srcClips[0]) {
         clipPreferences.setClipComponents(*_dstClip, _srcClips[0]->getPixelComponents());
+    }
+}
+
+void
+ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+                              const std::string &paramName)
+{
+    if (paramName == kParamImageShaderFileName ||
+        paramName == kParamImageShaderReload) {
+        // TODO: load image shader from file
+    } else if (paramName == kParamImageShaderSource) {
+        // TODO: mark that image shader must be recompiled on next render
     }
 }
 
@@ -526,6 +546,33 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         if (group) {
             group->setLabel(kGroupImageShaderLabel);
             group->setAsTab();
+        }
+
+        {
+            OFX::StringParamDescriptor* param = desc.defineStringParam(kParamImageShaderFileName);
+            param->setLabel(kParamImageShaderFileNameLabel);
+            param->setHint(kParamImageShaderFileNameHint);
+            param->setStringType(eStringTypeFilePath);
+            param->setFilePathExists(true);
+            param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            if (page) {
+                page->addChild(*param);
+            }
+            if (group) {
+                param->setParent(*group);
+            }
+        }
+
+        {
+            OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamImageShaderReload);
+            param->setLabel(kParamImageShaderReloadLabel);
+            param->setHint(kParamImageShaderReloadHint);
+            if (page) {
+                page->addChild(*param);
+            }
+            if (group) {
+                param->setParent(*group);
+            }
         }
 
         {

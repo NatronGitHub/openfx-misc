@@ -62,6 +62,8 @@ private:
 
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
+    virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
+
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
