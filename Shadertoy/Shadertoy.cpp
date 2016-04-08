@@ -63,9 +63,29 @@ using namespace OFX;
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
-#define kParamImageShader "imageShader"
-#define kParamImageShaderLabel "Image"
-#define kParamImageShaderHint "Image shader"
+
+#define kShaderInputsHint \
+"Shader Inputs:\n" \
+"uniform vec3      iResolution;           // viewport resolution (in pixels)\n" \
+"uniform float     iGlobalTime;           // shader playback time (in seconds)\n" \
+"uniform float     iTimeDelta;            // render time (in seconds)\n" \
+"uniform int       iFrame;                // shader playback frame\n" \
+"uniform float     iChannelTime[4];       // channel playback time (in seconds)\n" \
+"uniform vec3      iChannelResolution[4]; // channel resolution (in pixels)\n" \
+"uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click\n" \
+"uniform samplerXX iChannel0..3;          // input channel. XX = 2D/Cube\n" \
+"uniform vec4      iDate;                 // (year, month, day, time in seconds)\n" \
+"uniform float     iSampleRate;           // sound sample rate (i.e., 44100)\n" \
+""
+
+#define kGroupImageShader "imageShaderGroup"
+#define kGroupImageShaderLabel "Image"
+
+#define kParamImageShaderSource "imageShaderSource"
+#define kParamImageShaderSourceLabel "Source"
+#define kParamImageShaderSourceHint "Image shader.\n\n"kShaderInputsHint
+
+
 #define kParamImageShaderDefault                            \
 "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n" \
 "{\n"                                                       \
@@ -107,14 +127,13 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
                         _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha));
     switch (getContext()) {
-        case OFX::eContextGenerator:
-            break;
         case OFX::eContextFilter:
             _srcClips[0] = fetchClip(kOfxImageEffectSimpleSourceClipName);
             _srcClips[1] = fetchClip(kClipChannel"1");
             _srcClips[2] = fetchClip(kClipChannel"2");
             _srcClips[3] = fetchClip(kClipChannel"3");
             break;
+        case OFX::eContextGenerator:
         case OFX::eContextGeneral:
         default:
             _srcClips[0] = fetchClip(kClipChannel"0");
@@ -129,7 +148,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
                              _srcClips[i]->getPixelComponents() == OFX::ePixelComponentAlpha)));
     }
 
-    _imageShader = fetchStringParam(kParamImageShader);
+    _imageShader = fetchStringParam(kParamImageShaderSource);
     assert(_imageShader);
     _mipmap = fetchBooleanParam(kParamMipmap);
     _anisotropic = fetchBooleanParam(kParamAnisotropic);
@@ -238,6 +257,7 @@ ShadertoyPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setPluginDescription(kPluginDescription);
 
     // add the supported contexts
+    desc.addSupportedContext(eContextGenerator);
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
 
@@ -282,7 +302,7 @@ ShadertoyPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
 {
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
     const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
@@ -293,13 +313,50 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
 
     // Source clip only in the filter context
     // create the mandated source clip
-    ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-    srcClip->addSupportedComponent(ePixelComponentRGBA);
-    srcClip->addSupportedComponent(ePixelComponentAlpha);
-    srcClip->setTemporalClipAccess(false);
-    srcClip->setSupportsTiles(kSupportsTiles);
-    srcClip->setIsMask(false);
-
+    if (context == eContextFilter) {
+        ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+        srcClip->addSupportedComponent(ePixelComponentRGBA);
+        srcClip->addSupportedComponent(ePixelComponentAlpha);
+        srcClip->setTemporalClipAccess(false);
+        srcClip->setSupportsTiles(kSupportsTiles);
+        srcClip->setIsMask(false);
+        srcClip->setOptional(false);
+    } else {
+        ClipDescriptor *srcClip = desc.defineClip(kClipChannel"0");
+        srcClip->addSupportedComponent(ePixelComponentRGBA);
+        srcClip->addSupportedComponent(ePixelComponentAlpha);
+        srcClip->setTemporalClipAccess(false);
+        srcClip->setSupportsTiles(kSupportsTiles);
+        srcClip->setIsMask(false);
+        srcClip->setOptional(true);
+    }
+    {
+        ClipDescriptor *srcClip = desc.defineClip(kClipChannel"1");
+        srcClip->addSupportedComponent(ePixelComponentRGBA);
+        srcClip->addSupportedComponent(ePixelComponentAlpha);
+        srcClip->setTemporalClipAccess(false);
+        srcClip->setSupportsTiles(kSupportsTiles);
+        srcClip->setIsMask(false);
+        srcClip->setOptional(true);
+    }
+    {
+        ClipDescriptor *srcClip = desc.defineClip(kClipChannel"2");
+        srcClip->addSupportedComponent(ePixelComponentRGBA);
+        srcClip->addSupportedComponent(ePixelComponentAlpha);
+        srcClip->setTemporalClipAccess(false);
+        srcClip->setSupportsTiles(kSupportsTiles);
+        srcClip->setIsMask(false);
+        srcClip->setOptional(true);
+    }
+    {
+        ClipDescriptor *srcClip = desc.defineClip(kClipChannel"3");
+        srcClip->addSupportedComponent(ePixelComponentRGBA);
+        srcClip->addSupportedComponent(ePixelComponentAlpha);
+        srcClip->setTemporalClipAccess(false);
+        srcClip->setSupportsTiles(kSupportsTiles);
+        srcClip->setIsMask(false);
+        srcClip->setOptional(true);
+    }
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
@@ -310,13 +367,24 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
     {
-        OFX::StringParamDescriptor* param = desc.defineStringParam(kParamImageShader);
-        param->setLabel(kParamImageShaderLabel);
-        param->setHint(kParamImageShaderHint);
-        param->setStringType(eStringTypeMultiLine);
-        param->setDefault(kParamImageShaderDefault);
-        if (page) {
-            page->addChild(*param);
+        OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupImageShader);
+        if (group) {
+            group->setLabel(kGroupImageShaderLabel);
+            group->setAsTab();
+        }
+
+        {
+            OFX::StringParamDescriptor* param = desc.defineStringParam(kParamImageShaderSource);
+            param->setLabel(kParamImageShaderSourceLabel);
+            param->setHint(kParamImageShaderSourceHint);
+            param->setStringType(eStringTypeMultiLine);
+            param->setDefault(kParamImageShaderDefault);
+            if (page) {
+                page->addChild(*param);
+            }
+            if (group) {
+                param->setParent(*group);
+            }
         }
     }
     {

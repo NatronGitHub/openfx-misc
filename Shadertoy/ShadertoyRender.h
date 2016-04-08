@@ -318,6 +318,38 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
 
 #ifdef USE_OSMESA
+    if (format == 0) {
+        switch (dstComponents) {
+            case OFX::ePixelComponentRGBA:
+                format = GL_RGBA;
+                break;
+            case OFX::ePixelComponentAlpha:
+                format = GL_ALPHA;
+                break;
+            default:
+                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+                return;
+        }
+    }
+    if (depthBits == 0) {
+        switch (dstBitDepth) {
+            case OFX::eBitDepthUByte:
+                depthBits = 16;
+                type = GL_UNSIGNED_BYTE;
+                break;
+            case OFX::eBitDepthUShort:
+                depthBits = 16;
+                type = GL_UNSIGNED_SHORT;
+                break;
+            case OFX::eBitDepthFloat:
+                depthBits = 32;
+                type = GL_FLOAT;
+                break;
+            default:
+                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+                return;
+        }
+    }
     /* Create an RGBA-mode context */
 #if OSMESA_MAJOR_VERSION * 100 + OSMESA_MINOR_VERSION >= 305
     /* specify Z, stencil, accum sizes */
@@ -349,20 +381,22 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     std::vector<GLenum> srcTarget(4, GL_TEXTURE_2D);
     std::vector<GLuint> srcIndex(4);
     for (unsigned i = 0; i< 4; ++i) {
-        glGenTextures(1, &srcIndex[i]);
-        OfxRectI srcBounds = src[i]->getBounds();
-        glActiveTextureARB(GL_TEXTURE0_ARB);
-        glBindTexture(srcTarget[i], srcIndex[i]);
-        if (mipmap) {
-            // this must be done before glTexImage2D
-            glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
-            // requires extension GL_SGIS_generate_mipmap or OpenGL 1.4.
-            glTexParameteri(srcTarget[i], GL_GENERATE_MIPMAP, GL_TRUE); // Allocate the mipmaps
-        }
+        if (src[i].get()) {
+            glGenTextures(1, &srcIndex[i]);
+            OfxRectI srcBounds = src[i]->getBounds();
+            glActiveTextureARB(GL_TEXTURE0_ARB);
+            glBindTexture(srcTarget[i], srcIndex[i]);
+            if (mipmap) {
+                // this must be done before glTexImage2D
+                glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
+                // requires extension GL_SGIS_generate_mipmap or OpenGL 1.4.
+                glTexParameteri(srcTarget[i], GL_GENERATE_MIPMAP, GL_TRUE); // Allocate the mipmaps
+            }
 
-        glTexImage2D(srcTarget[i], 0, format,
-                     srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
-                     format, type, src[i]->getPixelData());
+            glTexImage2D(srcTarget[i], 0, format,
+                         srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
+                         format, type, src[i]->getPixelData());
+        }
     }
     // setup the projection
     glMatrixMode(GL_PROJECTION);
@@ -443,7 +477,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glTexCoord2f (1, 1);
     glVertex2f   (w * scale, h * scale);
     glTexCoord2f (0, 1);
-    glVertex2f   (w * scale, h * scale);
+    glVertex2f   (0, h * scale);
     glEnd ();
     glDisable(srcTarget[0]);
 
