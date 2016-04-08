@@ -65,6 +65,7 @@
 				1EA0C22419BA12A0006AB602 /* PBXTargetDependency */,
 				1E0E4EC8194CB2C30072248F /* PBXTargetDependency */,
 				1E6CC0931A76AE5A00173EB3 /* PBXTargetDependency */,
+				1EDFE9FA1CB79388001E68FA /* PBXTargetDependency */,
 				1E0E4ECA194CB2C30072248F /* PBXTargetDependency */,
 				1E0E4ECC194CB2C30072248F /* PBXTargetDependency */,
 				1EBB4B921B2CA07B0042DBE0 /* PBXTargetDependency */,
@@ -88,6 +89,7 @@
 			dependencies = (
 				1E8B5D5F18B76ACD00C31FDC /* PBXTargetDependency */,
 				1E31942519D9B6DE0027D0E2 /* PBXTargetDependency */,
+				1EDFE9F81CB79375001E68FA /* PBXTargetDependency */,
 				1ECE5472185F24B7001ED442 /* PBXTargetDependency */,
 				1EB0A43D1AA1ECD300F9C93E /* PBXTargetDependency */,
 			);
@@ -899,6 +901,20 @@
 		1EDF56AD1AA4B00900E57882 /* net.sf.openfx.DirBlur.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56AB1AA4AFFD00E57882 /* net.sf.openfx.DirBlur.svg */; };
 		1EDF56AE1AA4B01200E57882 /* net.sf.openfx.DirBlur.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56AA1AA4AFFD00E57882 /* net.sf.openfx.DirBlur.png */; };
 		1EDF56AF1AA4B01200E57882 /* net.sf.openfx.DirBlur.svg in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EDF56AB1AA4AFFD00E57882 /* net.sf.openfx.DirBlur.svg */; };
+		1EDFE9D71CB792D1001E68FA /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
+		1EDFE9D91CB792D1001E68FA /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
+		1EDFE9DB1CB792D1001E68FA /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
+		1EDFE9DC1CB792D1001E68FA /* ofxsLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB817995D5C005F2132 /* ofxsLog.cpp */; };
+		1EDFE9E01CB792D1001E68FA /* ofxsMultiThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB917995D5C005F2132 /* ofxsMultiThread.cpp */; };
+		1EDFE9E11CB792D1001E68FA /* ofxsParams.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBA17995D5C005F2132 /* ofxsParams.cpp */; };
+		1EDFE9E31CB792D1001E68FA /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
+		1EDFE9E41CB792D1001E68FA /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
+		1EDFE9E71CB792D1001E68FA /* libMangledOSMesa32.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E2868D41B832BB400B18774 /* libMangledOSMesa32.a */; };
+		1EDFE9E81CB792D1001E68FA /* libGLU.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E398DAA1B99008E00C98B28 /* libGLU.a */; };
+		1EDFE9E91CB792D1001E68FA /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
+		1EDFE9FB1CB79D0D001E68FA /* Shadertoy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDFE9F21CB79314001E68FA /* Shadertoy.cpp */; };
+		1EDFE9FC1CB79D14001E68FA /* ShadertoyRenderGL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDFE9F51CB79314001E68FA /* ShadertoyRenderGL.cpp */; };
+		1EDFE9FD1CB79D18001E68FA /* ShadertoyRenderMesa.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDFE9F61CB79314001E68FA /* ShadertoyRenderMesa.cpp */; };
 		1EE1F7811A506181002BE24B /* CImgSharpenInvDiff.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE1F77F1A506181002BE24B /* CImgSharpenInvDiff.cpp */; };
 		1EE1F7841A506E14002BE24B /* CImgSharpenShock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EE1F7821A506E14002BE24B /* CImgSharpenShock.cpp */; };
 		1EE4A87019C6EC7300E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1EE4A86E19C6EC4200E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png */; };
@@ -1667,6 +1683,20 @@
 			proxyType = 1;
 			remoteGlobalIDString = 1E92571F19EC1DB80018F19A;
 			remoteInfo = Clamp.ofx;
+		};
+		1EDFE9F71CB79375001E68FA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1EDFE9D41CB792D1001E68FA;
+			remoteInfo = Shadertoy.ofx;
+		};
+		1EDFE9F91CB79388001E68FA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1E551EB917994D4000A4135C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1EDFE9D41CB792D1001E68FA;
+			remoteInfo = Shadertoy.ofx;
 		};
 		1EFA774B1A25D63100212DB0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -2951,6 +2981,14 @@
 		1EDF56A71AA4AF9600E57882 /* net.sf.openfx.MultiplyPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.MultiplyPlugin.png; sourceTree = "<group>"; };
 		1EDF56AA1AA4AFFD00E57882 /* net.sf.openfx.DirBlur.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.DirBlur.png; sourceTree = "<group>"; };
 		1EDF56AB1AA4AFFD00E57882 /* net.sf.openfx.DirBlur.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = net.sf.openfx.DirBlur.svg; sourceTree = "<group>"; };
+		1EDFE9ED1CB792D1001E68FA /* Shadertoy.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Shadertoy.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		1EDFE9F01CB79314001E68FA /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		1EDFE9F11CB79314001E68FA /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		1EDFE9F21CB79314001E68FA /* Shadertoy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Shadertoy.cpp; sourceTree = "<group>"; };
+		1EDFE9F31CB79314001E68FA /* Shadertoy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Shadertoy.h; sourceTree = "<group>"; };
+		1EDFE9F41CB79314001E68FA /* ShadertoyRender.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ShadertoyRender.h; sourceTree = "<group>"; };
+		1EDFE9F51CB79314001E68FA /* ShadertoyRenderGL.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ShadertoyRenderGL.cpp; sourceTree = "<group>"; };
+		1EDFE9F61CB79314001E68FA /* ShadertoyRenderMesa.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ShadertoyRenderMesa.cpp; sourceTree = "<group>"; };
 		1EE1F77F1A506181002BE24B /* CImgSharpenInvDiff.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgSharpenInvDiff.cpp; path = SharpenInvDiff/CImgSharpenInvDiff.cpp; sourceTree = "<group>"; };
 		1EE1F7821A506E14002BE24B /* CImgSharpenShock.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CImgSharpenShock.cpp; path = SharpenShock/CImgSharpenShock.cpp; sourceTree = "<group>"; };
 		1EE4A86E19C6EC4200E6E3AE /* net.sf.openfx.ChromaKeyerPlugin.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = net.sf.openfx.ChromaKeyerPlugin.png; sourceTree = "<group>"; };
@@ -3558,6 +3596,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1EDFE9E61CB792D1001E68FA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EDFE9E71CB792D1001E68FA /* libMangledOSMesa32.a in Frameworks */,
+				1EDFE9E81CB792D1001E68FA /* libGLU.a in Frameworks */,
+				1EDFE9E91CB792D1001E68FA /* OpenGL.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1EE72BFF1B524A6D001B0245 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -4052,6 +4100,7 @@
 				1EE7A8C41C74B8AD001AE4BC /* ColorWheel.ofx.bundle */,
 				1E53BFA21C75D1D500623EE0 /* ColorBars.ofx.bundle */,
 				1EAD4F411C8C785100462A1A /* TimeBuffer.ofx.bundle */,
+				1EDFE9ED1CB792D1001E68FA /* Shadertoy.ofx.bundle */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -4124,6 +4173,7 @@
 				1E2A93461990EE320061B1F1 /* Retime */,
 				D721EBFC1911209B0069DB1D /* Roto */,
 				1E69C9EC1A2B2EC10099D609 /* Saturation */,
+				1EDFE9EF1CB792EE001E68FA /* Shadertoy */,
 				1EF46F44194A399D00825BDF /* Shuffle */,
 				1E235FEC18363CCA0019C45F /* SideBySide */,
 				1EBB4B731B2C9EEE0042DBE0 /* SlitScan */,
@@ -4606,6 +4656,20 @@
 				1E3284871A41C1FF00C9A4E4 /* net.sf.openfx.mixViewsPlugin.svg */,
 			);
 			path = MixViews;
+			sourceTree = "<group>";
+		};
+		1EDFE9EF1CB792EE001E68FA /* Shadertoy */ = {
+			isa = PBXGroup;
+			children = (
+				1EDFE9F01CB79314001E68FA /* Info.plist */,
+				1EDFE9F11CB79314001E68FA /* Makefile */,
+				1EDFE9F21CB79314001E68FA /* Shadertoy.cpp */,
+				1EDFE9F31CB79314001E68FA /* Shadertoy.h */,
+				1EDFE9F41CB79314001E68FA /* ShadertoyRender.h */,
+				1EDFE9F51CB79314001E68FA /* ShadertoyRenderGL.cpp */,
+				1EDFE9F61CB79314001E68FA /* ShadertoyRenderMesa.cpp */,
+			);
+			path = Shadertoy;
 			sourceTree = "<group>";
 		};
 		1EE72BEB1B52499B001B0245 /* TimeBlur */ = {
@@ -5761,6 +5825,22 @@
 			productReference = 1EDE1BDF182D8941002392CB /* MixViews.ofx.bundle */;
 			productType = "com.apple.product-type.bundle";
 		};
+		1EDFE9D41CB792D1001E68FA /* Shadertoy.ofx */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1EDFE9EA1CB792D1001E68FA /* Build configuration list for PBXNativeTarget "Shadertoy.ofx" */;
+			buildPhases = (
+				1EDFE9D51CB792D1001E68FA /* Sources */,
+				1EDFE9E61CB792D1001E68FA /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Shadertoy.ofx;
+			productName = basic.ofx;
+			productReference = 1EDFE9ED1CB792D1001E68FA /* Shadertoy.ofx.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
 		1EE72BF31B524A6D001B0245 /* TimeBlur.ofx */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1EE72C041B524A6D001B0245 /* Build configuration list for PBXNativeTarget "TimeBlur.ofx" */;
@@ -6110,6 +6190,7 @@
 				1E2A93471990EE690061B1F1 /* Retime.ofx */,
 				D721EC02191120B30069DB1D /* Roto.ofx */,
 				1E69C9ED1A2B2EDD0099D609 /* Saturation.ofx */,
+				1EDFE9D41CB792D1001E68FA /* Shadertoy.ofx */,
 				1EF46F32194A394E00825BDF /* Shuffle.ofx */,
 				1E235FD918363C850019C45F /* SideBySide.ofx */,
 				1EBB4B791B2CA01B0042DBE0 /* SlitScan.ofx */,
@@ -7097,6 +7178,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		1EDFE9D51CB792D1001E68FA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1EDFE9D71CB792D1001E68FA /* ofxsCore.cpp in Sources */,
+				1EDFE9D91CB792D1001E68FA /* ofxsImageEffect.cpp in Sources */,
+				1EDFE9DB1CB792D1001E68FA /* ofxsInteract.cpp in Sources */,
+				1EDFE9DC1CB792D1001E68FA /* ofxsLog.cpp in Sources */,
+				1EDFE9E01CB792D1001E68FA /* ofxsMultiThread.cpp in Sources */,
+				1EDFE9E11CB792D1001E68FA /* ofxsParams.cpp in Sources */,
+				1EDFE9FD1CB79D18001E68FA /* ShadertoyRenderMesa.cpp in Sources */,
+				1EDFE9FC1CB79D14001E68FA /* ShadertoyRenderGL.cpp in Sources */,
+				1EDFE9FB1CB79D0D001E68FA /* Shadertoy.cpp in Sources */,
+				1EDFE9E31CB792D1001E68FA /* ofxsProperty.cpp in Sources */,
+				1EDFE9E41CB792D1001E68FA /* ofxsPropertyValidation.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1EE72BF41B524A6D001B0245 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -7695,6 +7794,16 @@
 			isa = PBXTargetDependency;
 			target = 1E92571F19EC1DB80018F19A /* Clamp.ofx */;
 			targetProxy = 1ED537401A237203007966D5 /* PBXContainerItemProxy */;
+		};
+		1EDFE9F81CB79375001E68FA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1EDFE9D41CB792D1001E68FA /* Shadertoy.ofx */;
+			targetProxy = 1EDFE9F71CB79375001E68FA /* PBXContainerItemProxy */;
+		};
+		1EDFE9FA1CB79388001E68FA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1EDFE9D41CB792D1001E68FA /* Shadertoy.ofx */;
+			targetProxy = 1EDFE9F91CB79388001E68FA /* PBXContainerItemProxy */;
 		};
 		1EFA774C1A25D63100212DB0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -9027,6 +9136,56 @@
 			};
 			name = Release;
 		};
+		1EDFE9EB1CB792D1001E68FA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"HAVE_OSMESA=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(OFX_PATH)/include",
+					"$(OFX_PATH)/Support/include",
+					"$(OFX_PATH)/Support/Plugins/include",
+					"$(OSMESA_PATH)/include",
+				);
+				INFOPLIST_FILE = Shadertoy/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/opt/osmesa/lib,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Debug;
+		};
+		1EDFE9EC1CB792D1001E68FA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"HAVE_OSMESA=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(OFX_PATH)/include",
+					"$(OFX_PATH)/Support/include",
+					"$(OFX_PATH)/Support/Plugins/include",
+					"$(OSMESA_PATH)/include",
+				);
+				INFOPLIST_FILE = Shadertoy/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/OFX/Plugins/$(PROJECT_NAME)";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/opt/osmesa/lib,
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Release;
+		};
 		1EE72C051B524A6D001B0245 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -9873,6 +10032,15 @@
 			buildConfigurations = (
 				1EDE1BDD182D8941002392CB /* Debug */,
 				1EDE1BDE182D8941002392CB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		1EDFE9EA1CB792D1001E68FA /* Build configuration list for PBXNativeTarget "Shadertoy.ofx" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1EDFE9EB1CB792D1001E68FA /* Debug */,
+				1EDFE9EC1CB792D1001E68FA /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
