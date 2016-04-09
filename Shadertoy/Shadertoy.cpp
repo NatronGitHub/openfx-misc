@@ -39,6 +39,9 @@
 
 #include <cfloat>
 #include <cstddef>
+#include <string>
+#include <fstream>
+#include <streambuf>
 
 #ifdef _WINDOWS
 #include <windows.h>
@@ -238,7 +241,7 @@ using namespace OFX;
 
 #define kParamImageShaderFileName "imageShaderFileName"
 #define kParamImageShaderFileNameLabel "Load from File"
-#define kParamImageShaderFileNameHint "Load the source from the given file. Press the \"Reload\" button if the file changed."
+#define kParamImageShaderFileNameHint "Load the source from the given file. The file contents is only loaded once. Press the \"Reload\" button to load again the same file."
 
 #define kParamImageShaderReload "imageShaderReload"
 #define kParamImageShaderReloadLabel "Reload"
@@ -279,7 +282,8 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
 : ImageEffect(handle)
 , _dstClip(0)
 , _srcClips(4, NULL)
-, _imageShader(0)
+, _imageShaderFileName(0)
+, _imageShaderSource(0)
 , _mipmap(0)
 , _anisotropic(0)
 , _useGPUIfAvailable(0)
@@ -311,8 +315,9 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
                              _srcClips[i]->getPixelComponents() == OFX::ePixelComponentAlpha)));
     }
 
-    _imageShader = fetchStringParam(kParamImageShaderSource);
-    assert(_imageShader);
+    _imageShaderFileName = fetchStringParam(kParamImageShaderFileName);
+    _imageShaderSource = fetchStringParam(kParamImageShaderSource);
+    assert(_imageShaderFileName && _imageShaderSource);
     _mipmap = fetchBooleanParam(kParamMipmap);
     _anisotropic = fetchBooleanParam(kParamAnisotropic);
     assert(_mipmap && _anisotropic);
@@ -394,7 +399,23 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 {
     if (paramName == kParamImageShaderFileName ||
         paramName == kParamImageShaderReload) {
-        // TODO: load image shader from file
+        // load image shader from file
+        std::string imageShaderFileName;
+        _imageShaderFileName->getValue(imageShaderFileName);
+        if (!imageShaderFileName.empty()) {
+            std::ifstream t(imageShaderFileName.c_str());
+            if (t.bad()) {
+                sendMessage(OFX::Message::eMessageError, "", std::string("Error: Cannot open file ")+imageShaderFileName);
+            } else {
+                std::string str;
+                t.seekg(0, std::ios::end);
+                str.reserve(t.tellg());
+                t.seekg(0, std::ios::beg);
+                str.assign((std::istreambuf_iterator<char>(t)),
+                           std::istreambuf_iterator<char>());
+                _imageShaderSource->setValue(str);
+            }
+        }
     } else if (paramName == kParamImageShaderSource) {
         // TODO: mark that image shader must be recompiled on next render
     }
@@ -405,7 +426,7 @@ mDeclarePluginFactory(ShadertoyPluginFactory, ;, {});
 
 void ShadertoyPluginFactory::load()
 {
-    // we can't be used on hosts that don't support the stereoscopic suite
+    // we can't be used on hosts that don't support the OpenGL suite
     // returning an error here causes a blank menu entry in Nuke
     //#if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
     //const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
@@ -555,6 +576,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
             param->setStringType(eStringTypeFilePath);
             param->setFilePathExists(true);
             param->setLayoutHint(eLayoutHintNoNewLine, 1);
+            param->setAnimates(false);
             if (page) {
                 page->addChild(*param);
             }
@@ -581,6 +603,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
             param->setHint(kParamImageShaderSourceHint);
             param->setStringType(eStringTypeMultiLine);
             param->setDefault(kParamImageShaderDefault);
+            param->setAnimates(false);
             if (page) {
                 page->addChild(*param);
             }

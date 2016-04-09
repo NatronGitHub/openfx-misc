@@ -157,11 +157,11 @@ void
 ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 {
     const double time = args.time;
-    std::string imageShader;
+    std::string imageShaderSource;
     bool mipmap = true;
     bool anisotropic = true;
-    if (_imageShader) {
-        _imageShader->getValueAtTime(time, imageShader);
+    if (_imageShaderSource) {
+        _imageShaderSource->getValueAtTime(time, imageShaderSource);
     }
     if (_mipmap) {
         _mipmap->getValueAtTime(time, mipmap);

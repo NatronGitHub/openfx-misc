@@ -69,7 +69,8 @@ private:
     OFX::Clip *_dstClip;
     std::vector<OFX::Clip*> _srcClips;
 
-    OFX::StringParam *_imageShader;
+    OFX::StringParam *_imageShaderFileName;
+    OFX::StringParam *_imageShaderSource;
     OFX::BooleanParam *_mipmap;
     OFX::BooleanParam *_anisotropic;
     OFX::BooleanParam *_useGPUIfAvailable;
