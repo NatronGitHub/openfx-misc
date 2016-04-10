@@ -1,133 +1,24 @@
 * About INK
 
-INK is a proportionate colour difference keyer. You may obtain the source
-code from https://github.com/nicholascarroll.
+INK is a proportionate colour difference keyer for processing blue or green screen video. It will remove the background screen colour for you (performing both the matte generation and the despill), so then you can superimpose the video over a different background. It's easy to use, even if you have never used a keyer before.
 
-INK’s user interface design and build are complete but some controls
-don't work yet. Those controls are marked with an asterisk ‘*’.
-They are listed in the source file for INK as a TODO list. If you want to 
-contribute by undertaking any of these you are very welcome.
+INK is a general purpose keyer, producing a good result across a wide variety of materials and lighting conditions.
 
-INK is free software: you can redistribute it and/or modify it under the 
-terms of the GNU General Public License as published by the Free Software 
-Foundation; either  version 3 of the License, or (at your option) any later 
-version.
+/Some of INK's more advanced controls don't work yet. Those controls are marked with an asterisk ‘*’. They are listed in the source file for INK as a TODO list. If you want to contribute by completing any of these you are very welcome./
 
-INK is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
-without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR 
-PURPOSE.  See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with INK. 
-If not, see <http://www.gnu.org/licenses/gpl-3.0.html>
-
-** How To Install INK
+* How To Install INK
 
 Put INK.ofx.bundle in your OFX plugin path. On OS X this is usually:
-  /Library/OFX/Plugins
-If that folder doesn't exist, you can create it. Or, if you prefer,
-use the environment variable OFX_PLUGIN_PATH.
+#+BEGIN_SRC
+/Library/OFX/Plugins
+#+END_SRC
+If that folder doesn't exist, you can create it. Or, if you prefer, use the environment variable:
+#+BEGIN_SRC
+OFX_PLUGIN_PATH
+#+END_SRC
 
-** Third Party Licenses
+* INK is Free Software
+INK is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version.  You may obtain the source code from [[http://casanico.com][casanico.com]].
 
- INK IS BASED ON CHROMAKEYER BY F. DEVERNAY:
- https://github.com/devernay/openfx-misc/ChromaKeyer/ChromaKeyer.cpp
- Copyright (C) 2014 INRIA. Chromakeyer is GNU GPL 2.0.
+INK is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of merchantability or fitness for a particular purpose.  See the [[http://www.gnu.org/licenses/gpl-3.0.html][GNU General Public License]] for more details.
  
- INK INCLUDES THE CIMG LIBRARY:
- CImg is a free, open-source library distributed under the CeCILL-C license.  
- http://www.cecill.info/licences/Licence_CeCILL-C_V1-en.html 
- http://cimg.sourceforge.net
-
-* How to Use INK
-
-** Basic Keying
-1. Set the *Key Colour* by sampling the blue or green background screen colour. The key colour will disappear and you will find the matte in the alpha channel. Sample from close to the foreground subject, being careful not to go too close or you will lose fine edge details.
-2. Adjust the *Key Amount* if you need to key more or less. You can key different amounts in shadows, midtones or highlights of the image by using the *Tune Key Amount* controls. 
-3. Increasing the *Key Balance* will weight the key toward the least key channel. Decreasing it weights the key toward the middle key channel. 
-4. Use *Matte/Despill Balance* to perform colour correction inside the keying operation. The colour you select for this parameter will effectively be excluded from the operation. *Matte Balance* will apply this to only the matte generation and *Despill Balance* will apply it to only the despill operation. Usually you will find the same value works well for both *Matte Balance* and *Despill Balance*.
-5. Composite the result (*Output Mode* `Premultiplied') over your desired background image using your application's composite `over' operation. 
-
-If your footage was shot perfectly, these steps will give you a perfect key. But in practice you will often need to do /Combined Matte Keying/.
-
-** Combined Matte Keying
-#+CAPTION: INK nodes used as garbage and core mattes.
-[[garbage-core.png]]
-
-In an imperfect world we find that many shots have unevenly lit background screen, set equipment in the background, or spill on the foreground subjects. You remove the unwanted background artefacts by covering them with a /garbage matte/. The spill is removed by the keying operation but that will leave the matte somewhat transparent (because INK cannot distinguish spill from transparency), so you will need a /core matte/ wherever you have spill. Alternatively you might need the core matte to serve a different purpose: to mask an area where you want neither keying nor despill to occur.
-
-As a convenience, INK has *Garbage* and *Core* inputs. You can make the garbage and core mattes procedurally using INK (or any other keyer), or by drawing an animated rotobezier shape. 
-
-To make a procedural matte in INK, open the *Matte Postprocessing* section to reveal the following controls:
-- *Invert*
-- *Black Point*
-- *White Point*
-- *Erode*
-- *Blur*
-These are equivalent to using Invert, Grade, Erode and Blur nodes to process the alpha channel coming out of the INK node. They do not influence the keying operation. They are purely a convenience for when you are using INK to make garbage and core mattes. *Matte Postprocessing* options DEGRADE the matte. Use them ONLY for making garbage/core mattes.
-
-*** Making the Garbage Matte
-#+CAPTION: Garbage matte (source image courtesy of Steve Wright Digital FX).
-[[garbage.png]]
-
-To make a garbage matte, open the *Matte Postprocess* controls and:
-1. Enable *Invert*.
-2. Raise the *White Point* until you see no noise in the background, then lower the *Black Point* until you have a pure black foreground. You can vary the gamma in your viewer, or use the `Matte Monitor' *Output Mode*, to confirm this.
-3. *Erode* the matte to bring the background just clear of the edges of the foreground. Use the wipe mode in your viewer to compare against the original so you can see how far from the edge you are. 
-4. *Blur* the matte to feather out that edge. Don't try to get it perfect yet, because you will make your fine adjustments once you have the whole composite constructed.
-5. Name this INK node `garbage' and attach it to the *Garbage* input of your main INK node, like in Figure 1.
-
-If you need to add a roto shape to your garbage matte, connect it as the *Garbage* input clip /of your garbage matte INK node/. 
-
-*** Making The Core Matte
-#+CAPTION: Core matte.
-[[core.png]]
-
-To make a core matte, the procedure is the same as for garbage, except you don't enable *Invert*.
-
-If you have spill, you will need a core matte to prevent INK from making a corresponding transparency in the matte. You should also enable *Despill Core*.
-
-If instead you need a holdout against despill (for example to key a blue eyed actor with a blue screen), disable the option *Despill Core*. Then INK will reduce the *Key Amount* by the core matte density.
-
-*** Despill
-INK performs despill in the same operation as it pulls the matte.
-
-If you enable *Despill Core*, you should replace the spill colour that was removed with a substitute; the *Replacement Colour*. Sample a region of unaffected foreground that will make a good average of what the original colour would have been. You can then fine tune the result using:
-- *Replacement Amount*: You can reduce this all the way to zero, which is the same as not having set *Replacement Colour*.
-- *Match Luminance*: By default, the luminance of the despilled pixel is matched in the replacement. You can reduce this all the way down to a solid colour.
-
-*** Finishing Edges
-#+CAPTION: Matte Monitor.
-[[matte-monitor.png]]
-The edges are where the action is. Use the `Matte Monitor' *Output Mode* to see the full extent of the current matte, the garbage and core mattes, and where they overlap. The idea of a matte monitor is to help you to discriminate edge/transparency from pure background and solid foreground by showing you both the holes in your matte and the background noise at the same time. INK sets any alpha >= 0.00001 or < 0.99999 to 0.5. 
-
-The Matte Monitor shows the current matte in the green channel, the garbage matte in blue and the core matte in red. This produces a colour coding of the mattes:
-
-| black        | pure background                      |
-| bright green | solid foreground                     |
-| mid green    | edge/transparency                    |
-| yellow       | core matte over solid foreground     |
-| blue         | garbage matte over pure background   |
-| aqua         | garbage matte over edge/transparency |
-
-When your garbage or core matte intrudes into your edges, it tends to degrade those edges. Any matte overlap shows up as blended colours: magenta, cyan, etc. It is on these colours that you need to focus your attention. 
-
-You can view the combined matte in the alpha channel. You can also pipe the output through a temporary premultiply node to see a coloured version of the combined matte. Toggling the *Core/Garbage* inputs is another good way to see how the mattes relate. 
-
-Always remember that the RGB values of the Matte Monitor are not the actual matte density.
-
-** Multi-pass Keying
-#+CAPTION: Multi-pass keying.
-[[multipass.png]]
-If an image contains distinct regions of disparately coloured or textured edges, it may be best to pull a separate matte for each region and then combine them. The easy way to do this is to chain INK nodes (/multi-pass keying/).
-
-You can output your INK matte directly into the *Source* of another INK node to build up the matte. Set the *Output Mode* to `Source with Matte' and connect that output to the *Source* input of the next INK node. You can add it to the core matte by setting *Source Alpha* to `Add to Core' (you can do this even if there is no *Core* input). A value of `Multiply' for this option will multiply the combined matte by the source alpha (note this does not show up in the Matte Monitor). A value of `Discard' means INK will totally ignore any alpha in the source clip. 
-
-** How INK Works
-#+BEGIN_VERSE
-/...but this one is just right!/
-        ~Goldilocks
-#+END_VERSE
-
-In colour difference keying, we make the image pixel's maximum channel (green in the case of greenscreen) less than its middle channel, to remove the key colour. We then need to adjust the proportions of red, green and blue to make the pixel colour what it would have been were the image originally photographed without the key colour present. We can't really know what that desired colour is because it was never captured in the photo. The best we can do is set the maximum key channel to the average of the other two channels. As for what value those other two channels should be, we should again stick to the average. So for each channel we incorporate the proportionate difference between each channel of the image pixel and of the key colour. This is the /proportionate colour difference/ method and it is how INK works. 
-
-Because it always resorts to the average, INK is a general purpose keyer.
