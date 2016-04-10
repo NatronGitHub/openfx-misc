@@ -44,7 +44,7 @@ Version   Date       Author       Description
 * TODO implement Key Amount
 need to modulate keyAmountRGB by keyColour
 current code has alpha right
-and chan[midKey] is also correct, but only when K[midkey] = (K[minKey]+K[maxKey])/2
+and chan[midKey] is also correct, but only when K[midKey] = (K[minKey]+K[maxKey])/2
 
 * TODO implement Tune Key Amount
 
@@ -52,9 +52,9 @@ and chan[midKey] is also correct, but only when K[midkey] = (K[minKey]+K[maxKey]
 use the ratios between matte balance's channels for this
 not their absolute values
 
-* TODO implement Erode and Blur
-use cimg
-
+* TODO implement Fill Holes, Erode and Blur
+fill holes is done by dilating then eroding by the same amount.
+do these with cimg
 */
 
 #include "INK.h"
@@ -68,7 +68,7 @@ use cimg
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"
- 
+
 #define cimg_display 0
 CLANG_DIAG_OFF(shorten-64-to-32)
 #include "CImg.h"
@@ -150,9 +150,9 @@ CLANG_DIAG_ON(shorten-64-to-32)
 #define kParamReplacementAmountLabel "Replacement Amount"
 #define kParamReplacementAmountHint "Fade the replace amount"
 
-#define kParamMatchLuminance "matchLuminance"
-#define kParamMatchLuminanceLabel "Match Luminance"
-#define kParamMatchLuminanceHint "Match the despilled pixel luminance where spill replacement is occurring"
+#define kParamPreserveLuminance "preserveLuminance"
+#define kParamPreserveLuminanceLabel "Preserve Luminance"
+#define kParamPreserveLuminanceHint "Preserve the despilled pixel luminance where spill replacement is occurring"
 
 #define kParamBlackPoint "blackPoint"
 #define kParamBlackPointLabel "Black Point"
@@ -178,6 +178,11 @@ CLANG_DIAG_ON(shorten-64-to-32)
 #define kParamErodeLabel "* Erode"
 #define kParamErodeHint \
 "* NOT YET IMPLEMENTED\nErode (or dilate) the matte"
+
+#define kParamFillHoles "fillHoles"
+#define kParamFillHolesLabel "* Fill Holes"
+#define kParamFillHolesHint \
+"* NOT YET IMPLEMENTED\nFill holes in the matte"
 
 #define kParamOutputMode "outputMode"
 #define kParamOutputModeLabel "Output Mode"
@@ -225,7 +230,7 @@ enum SourceAlphaEnum {
 
 using namespace OFX;
 using namespace std;
-using namespace cimg_library;
+ using namespace cimg_library;
 
 class INKProcessorBase : public OFX::ImageProcessor
 {
@@ -249,12 +254,14 @@ protected:
   OfxRGBColourD  _matteBalance;
   OfxRGBColourD  _despillBalance;
     double _replacementAmount;
-    double _matchLuminance;
+    double _preserveLuminance;
     bool _despillCore;
     double _blackPoint;
     bool _invert;
     double _whitePoint;
-    double _erode;
+    int _erode;
+    int _blur;
+    int _fillHoles;
     OutputModeEnum _outputMode;
     SourceAlphaEnum _sourceAlpha;
     double _sinKey, _cosKey, _xKey, _ys;
@@ -278,12 +285,14 @@ public:
     , _midtones(0.)
     , _highlights(0.)
     , _replacementAmount(1.)
-        , _matchLuminance(1.)
+        , _preserveLuminance(1.)
     , _despillCore(true)
     , _blackPoint(0.)
     , _invert(false)
     , _whitePoint(1.)
-    , _erode(0.)
+    , _erode(0)
+    , _blur(0)
+    , _fillHoles(0)
       //bg , _outputMode(eOutputModeComposite)
     , _sourceAlpha(eSourceAlphaIgnore)
     , _sinKey(0)
@@ -306,7 +315,12 @@ public:
         _garbageImg = garbageImg;
     }
     
-  void setValues(const OfxRGBColourD& keyColour, double acceptanceAngle, double suppressionAngle, double keyBalance, double keyAmount,double midpoint, double shadows, double midtones, double highlights, const OfxRGBColourD& replacementColour, OfxRGBColourD& matteBalance, OfxRGBColourD& despillBalance, double replacementAmount, double matchLuminance,  bool despillCore, double blackPoint, bool invert, double whitePoint, double erode, OutputModeEnum outputMode, SourceAlphaEnum sourceAlpha)
+  void setValues(const OfxRGBColourD& keyColour, double acceptanceAngle, double suppressionAngle,
+		 double keyBalance, double keyAmount,double midpoint, double shadows, double midtones,
+		 double highlights, const OfxRGBColourD& replacementColour, OfxRGBColourD& matteBalance,
+		 OfxRGBColourD& despillBalance, double replacementAmount, double preserveLuminance,
+		 bool despillCore, double blackPoint, bool invert, double whitePoint, int erode, int blur, int fillHoles,
+		 OutputModeEnum outputMode, SourceAlphaEnum sourceAlpha)
     {
         _keyColour = keyColour;
         _acceptanceAngle = acceptanceAngle;
@@ -321,12 +335,14 @@ public:
 	_matteBalance =  matteBalance;
 	_despillBalance =  despillBalance;
 	_replacementAmount = replacementAmount;
-	_matchLuminance = matchLuminance;
+	_preserveLuminance = preserveLuminance;
 	_despillCore = despillCore;
         _blackPoint = blackPoint;
         _invert = invert;
         _whitePoint = whitePoint;
         _erode = erode;
+	_blur = blur;
+	_fillHoles = fillHoles;
         _outputMode = outputMode;
         _sourceAlpha = sourceAlpha;
     }
@@ -479,6 +495,11 @@ private:
 		    double min1 = (P[minKey]/(P[maxKey]-_keyBalance*P[midKey])-K[minKey]/(K[maxKey]-_keyBalance*K[midKey]))
 		      / (1+P[minKey]/(P[maxKey]-_keyBalance*P[midKey])-(2-_keyBalance)*K[minKey]/(K[maxKey]-_keyBalance*K[midKey]));
 		    double min2 = min(P[minKey],(P[maxKey]-_keyBalance*P[midKey])*min1/(1-min1));
+		    //alternate equation for min2
+		    //double min2 = ((P[maxKey]-_keyBalance*P[midKey])*(P[minKey]*(K[maxKey]-_keyBalance*K[midKey])
+		    //			   -K[minKey]*(P[maxKey]-_keyBalance*P[midKey])))/(_keyBalance*_keyBalance*P[midKey]*K[midKey]
+		    //			   +_keyBalance*P[midKey]*K[minKey]+_keyBalance*P[maxKey]*K[minKey]-_keyBalance*_keyBalance*P[midKey]*K[minKey]
+		    //			   -_keyBalance*P[midKey]*K[maxKey]-_keyBalance*P[maxKey]*K[midKey]+P[maxKey]*K[maxKey]-P[maxKey]*K[minKey]);	    
 		    chan[minKey] = max(0.,min(min2,1.));
 		    // solve chan[midKey]
 		    double mid1 = (P[midKey]/(P[maxKey]-(1-_keyBalance)*P[minKey])-K[midKey]/(K[maxKey]-(1-_keyBalance)*K[minKey]))
@@ -511,7 +532,7 @@ private:
 		  // give the spill replace colour the luminance of the despilled pixel
 		  double replaceLum = rgb2luminance(R[0], R[1], R[2]);
 		  double despilledLum = rgb2luminance(chan[0], chan[1], chan[2]);
-		  double lumFactor =  _matchLuminance*(despilledLum/replaceLum-1.)+1.;
+		  double lumFactor =  _preserveLuminance*(despilledLum/replaceLum-1.)+1.;
 		  // replacement amount
 		  chan[minKey] += lumFactor * _replacementAmount * R[minKey] * ((double)core - currMatte*(double)core);
 		  chan[midKey] += lumFactor * _replacementAmount * R[midKey] * ((double)core - currMatte*(double)core);
@@ -537,6 +558,24 @@ private:
 		  combMatte /= _whitePoint; 
 		  combMatte = max(0.,min(combMatte,1.));
 		}
+		// fill holes
+       		if (_fillHoles >0) {
+		 combMatte = 0.;
+		}
+		//erode
+		if (_erode >1) {
+		  
+		  combMatte = 0.;
+		} else if (_erode < 1) {
+	     
+		  combMatte = 0.;
+		  }
+		    
+		// blur
+	       	if (_blur >0) {
+		  
+		 combMatte = 0.;
+	       	}
 
 		// OUTPUT MODE
                 switch (_outputMode) {
@@ -608,12 +647,14 @@ public:
     , _matteBalance(0)
     , _despillBalance(0)
     , _replacementAmount(0)
-       , _matchLuminance(0)
+       , _preserveLuminance(0)
       , _despillCore(0)
     , _blackPoint(0)
     , _invert(0)
     , _whitePoint(0)
     , _erode(0)
+    , _blur(0)
+    , _fillHoles(0)
     , _outputMode(0)
     , _sourceAlpha(0)
     {
@@ -643,15 +684,17 @@ public:
 	_matteBalance = fetchRGBParam(kParamMatteBalance);
 	_despillBalance = fetchRGBParam(kParamDespillBalance);
 	_replacementAmount = fetchDoubleParam(kParamReplacementAmount);
-		_matchLuminance = fetchDoubleParam(kParamMatchLuminance);
+		_preserveLuminance = fetchDoubleParam(kParamPreserveLuminance);
 	_despillCore = fetchBooleanParam(kParamDespillCore);
         _blackPoint = fetchDoubleParam(kParamBlackPoint);
         _invert = fetchBooleanParam(kParamInvert);
 	_whitePoint = fetchDoubleParam(kParamWhitePoint);
-	_erode = fetchDoubleParam(kParamErode);
+	_erode = fetchIntParam(kParamErode);
+	_blur = fetchIntParam(kParamBlur);
+	_fillHoles = fetchIntParam(kParamFillHoles);
         _outputMode = fetchChoiceParam(kParamOutputMode);
         _sourceAlpha = fetchChoiceParam(kParamSourceAlpha);
-        assert(_keyColour && _acceptanceAngle && _suppressionAngle && _keyBalance && _keyAmount && _midpoint && _shadows && _midtones && _highlights && _replacementColour && _matteBalance && _despillBalance && _replacementAmount && _matchLuminance && _despillCore && _blackPoint && _invert && _whitePoint && _outputMode && _sourceAlpha);
+        assert(_keyColour && _acceptanceAngle && _suppressionAngle && _keyBalance && _keyAmount && _midpoint && _shadows && _midtones && _highlights && _replacementColour && _matteBalance && _despillBalance && _replacementAmount && _preserveLuminance && _despillCore && _blackPoint && _invert && _whitePoint && _outputMode && _sourceAlpha);
     }
  
 private:
@@ -685,12 +728,14 @@ private:
   OFX::RGBParam*  _matteBalance;
   OFX::RGBParam*  _despillBalance;
     OFX::DoubleParam*  _replacementAmount;
-      OFX::DoubleParam*  _matchLuminance;
+      OFX::DoubleParam*  _preserveLuminance;
     OFX::BooleanParam* _despillCore;
     OFX::DoubleParam* _blackPoint;
     OFX::BooleanParam* _invert;
     OFX::DoubleParam* _whitePoint;
-    OFX::DoubleParam* _erode;
+  OFX::IntParam* _erode;
+  OFX::IntParam* _blur;
+  OFX::IntParam* _fillHoles;
     OFX::ChoiceParam* _outputMode;
     OFX::ChoiceParam* _sourceAlpha;
 };
@@ -790,12 +835,14 @@ INKPlugin::setupAndProcess(INKProcessorBase &processor, const OFX::RenderArgumen
     OfxRGBColourD matteBalance;
     OfxRGBColourD despillBalance;
     double replacementAmount;
-        double matchLuminance;
+        double preserveLuminance;
     bool despillCore;
     double blackPoint;
     bool invert;
     double whitePoint;
-    double erode;
+    int erode;
+    int blur;
+    int fillHoles;
     int outputModeI;
     int sourceAlphaI;
     _keyColour->getValueAtTime(args.time, keyColour.r, keyColour.g, keyColour.b);
@@ -811,17 +858,22 @@ INKPlugin::setupAndProcess(INKProcessorBase &processor, const OFX::RenderArgumen
     _matteBalance->getValueAtTime(args.time, matteBalance.r, matteBalance.g, matteBalance.b);
     _despillBalance->getValueAtTime(args.time, despillBalance.r, despillBalance.g, despillBalance.b);
     _replacementAmount->getValueAtTime(args.time, replacementAmount);
-       _matchLuminance->getValueAtTime(args.time, matchLuminance);
+       _preserveLuminance->getValueAtTime(args.time, preserveLuminance);
     _despillCore->getValueAtTime(args.time, despillCore);
     _blackPoint->getValueAtTime(args.time, blackPoint);
     _invert->getValueAtTime(args.time, invert);
     _whitePoint->getValueAtTime(args.time, whitePoint);
     _erode->getValueAtTime(args.time, erode);
+    _blur->getValueAtTime(args.time, blur);
+    _fillHoles->getValueAtTime(args.time, fillHoles);
     _outputMode->getValueAtTime(args.time, outputModeI);
     OutputModeEnum outputMode = (OutputModeEnum)outputModeI;
     _sourceAlpha->getValueAtTime(args.time, sourceAlphaI);
     SourceAlphaEnum sourceAlpha = (SourceAlphaEnum)sourceAlphaI;
-    processor.setValues(keyColour, acceptanceAngle, suppressionAngle, keyBalance, keyAmount, midpoint, shadows, midtones, highlights, replacementColour, matteBalance, despillBalance, replacementAmount, matchLuminance, despillCore, blackPoint, invert, whitePoint, erode, outputMode, sourceAlpha);
+    processor.setValues(keyColour, acceptanceAngle, suppressionAngle, keyBalance, keyAmount,
+			midpoint, shadows, midtones, highlights, replacementColour, matteBalance,
+			despillBalance, replacementAmount, preserveLuminance, despillCore, blackPoint,
+			invert, whitePoint, erode, blur, fillHoles, outputMode, sourceAlpha);
     processor.setDstImg(dst.get());
     processor.setSrcImgs(src.get(),/*//bg bg.get(),*/ core.get(), garbage.get());
     processor.setRenderWindow(args.renderWindow);
@@ -1013,7 +1065,7 @@ void INKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
         param->setDoubleType(eDoubleTypeAngle);;
         param->setRange(0., 1.);
         param->setDisplayRange(0., 1.);  
-        param->setDefault(.5);    
+        param->setDefault(.18);    //0.18 is mid grey in linear colourspace
         param->setAnimates(true);
 	param->setParent(*tuneKey);
 
@@ -1155,9 +1207,9 @@ void INKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
 
     // luminance
     {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamMatchLuminance);
-        param->setLabel(kParamMatchLuminanceLabel);
-        param->setHint(kParamMatchLuminanceHint);
+        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamPreserveLuminance);
+        param->setLabel(kParamPreserveLuminanceLabel);
+        param->setHint(kParamPreserveLuminanceHint);
         param->setRange(0., 1.);
         param->setDisplayRange(0., 1.);  
         param->setDefault(1.);    
@@ -1212,29 +1264,37 @@ void INKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
     }
 
 
+    // fillHoles
+      {
+        IntParamDescriptor* param = desc.defineIntParam(kParamFillHoles);
+        param->setLabel(kParamFillHolesLabel);
+        param->setHint(kParamFillHolesHint);
+        param->setRange(0,100);
+        param->setDisplayRange(0, 100);
+        param->setDefault(0);
+        param->setAnimates(true);
+        param->setParent(*matte);
+    }
+
     // erode
       {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamErode);
+        IntParamDescriptor* param = desc.defineIntParam(kParamErode);
         param->setLabel(kParamErodeLabel);
         param->setHint(kParamErodeHint);
-        param->setDisplayRange(-100., 100.);
-        param->setIncrement(1.);
-        param->setDefault(0.);
-        param->setDigits(1);
+        param->setDisplayRange(-100, 100);
+        param->setDefault(0);
         param->setAnimates(true);
         param->setParent(*matte);
       }    
 
     // blur
       {
-        DoubleParamDescriptor* param = desc.defineDoubleParam(kParamBlur);
+        IntParamDescriptor* param = desc.defineIntParam(kParamBlur);
         param->setLabel(kParamBlurLabel);
         param->setHint(kParamBlurHint);
-        param->setRange(0.,100.);
-        param->setDisplayRange(0., 100.);
-        param->setIncrement(1.);
-        param->setDefault(0.);
-        param->setDigits(1);
+        param->setRange(0,100);
+        param->setDisplayRange(0, 100);
+        param->setDefault(0);
         param->setAnimates(true);
         param->setParent(*matte);
     }
