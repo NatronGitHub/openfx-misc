@@ -25,15 +25,22 @@
 
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
+#include "ofxsMultiThread.h"
 
 void getShadertoyPluginID(OFX::PluginFactoryArray &ids);
 
 /** @brief The plugin that does our work */
 class ShadertoyPlugin : public OFX::ImageEffect
 {
+#if defined(HAVE_OSMESA)
+    struct OSMesaPrivate;
+#endif
+
 public:
     /** @brief ctor */
     ShadertoyPlugin(OfxImageEffectHandle handle);
+
+    virtual ~ShadertoyPlugin();
 
 private:
     /* Override the render */
@@ -52,6 +59,8 @@ private:
     //virtual void beginSequenceRender(const OFX::BeginSequenceRenderArguments &args) OVERRIDE FINAL;
     //virtual void endSequenceRender(const OFX::EndSequenceRenderArguments &args) OVERRIDE FINAL;
 
+    void initMesa();
+    void exitMesa();
     void renderGL(const OFX::RenderArguments &args);
     void renderMesa(const OFX::RenderArguments &args);
     void contextAttachedMesa();
@@ -71,6 +80,9 @@ private:
 
     OFX::StringParam *_imageShaderFileName;
     OFX::StringParam *_imageShaderSource;
+    OFX::Double2DParam *_mousePosition;
+    OFX::Double2DParam *_mouseClick;
+    OFX::BooleanParam *_mousePressed;
     OFX::BooleanParam *_mipmap;
     OFX::BooleanParam *_anisotropic;
     OFX::BooleanParam *_useGPUIfAvailable;
@@ -79,6 +91,14 @@ private:
     float _maxAnisoMax;
 #if defined(HAS_GLES)
     unsigned long _vertexbuffer;
+#endif
+#if defined(HAVE_OSMESA)
+    // A list of Mesa contexts available for rendering.
+    // renderMesa() pops the last element, uses it, then pushes it back.
+    // A new context is created if the list is empty.
+    // That way, we can have multithreaded OSMesa rendering without having to create a context at each render
+    std::list<OSMesaPrivate *> _osmesa;
+    OFX::MultiThread::Mutex _osmesaMutex;
 #endif
 };
 

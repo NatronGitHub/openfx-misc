@@ -259,6 +259,20 @@ using namespace OFX;
 "    fragColor = vec4(uv,0.5+0.5*sin(iGlobalTime),1.0);\n"  \
 "}"
 
+// mouse parameters, see https://www.shadertoy.com/view/Mss3zH
+#define kParamMousePosition "mousePosition"
+#define kParamMousePositionLabel "Mouse Pos."
+#define kParamMousePositionHint "Mouse position, in pixels. Gets mapped to the xy components of the iMouse input."
+
+#define kParamMouseClick "mouseClick"
+#define kParamMouseClickLabel "Click Pos."
+#define kParamMouseClickHint "Mouse click position, in pixels. The zw components of the iMouse input contain mouseClick if mousePressed is checked, else -mouseClick."
+
+#define kParamMousePressed "mousePressed"
+#define kParamMousePressedLabel "Mouse Pressed"
+#define kParamMousePressedHint "When checked, the zw components of the iMouse input contain mouseClick, else they contain -mouseClick. If the host does not support animating this parameter, use negative values for mouseClick to emulate a released mouse button."
+
+
 #define kParamMipmap "mipmap"
 #define kParamMipmapLabel "Mipmap"
 #define kParamMipmapHint "Use mipmapping (if supported)"
@@ -318,6 +332,10 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     _imageShaderFileName = fetchStringParam(kParamImageShaderFileName);
     _imageShaderSource = fetchStringParam(kParamImageShaderSource);
     assert(_imageShaderFileName && _imageShaderSource);
+    _mousePosition = fetchDouble2DParam(kParamMousePosition);
+    _mouseClick = fetchDouble2DParam(kParamMouseClick);
+    _mousePressed = fetchBooleanParam(kParamMousePressed);
+    assert(_mousePosition && _mousePressed && _mouseClick);
     _mipmap = fetchBooleanParam(kParamMipmap);
     _anisotropic = fetchBooleanParam(kParamAnisotropic);
     assert(_mipmap && _anisotropic);
@@ -329,9 +347,18 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
         _useGPUIfAvailable->setEnabled(false);
     }
 #endif
-
+#if defined(HAVE_OSMESA)
+    initMesa();
+#endif
 }
 
+
+ShadertoyPlugin::~ShadertoyPlugin()
+{
+#if defined(HAVE_OSMESA)
+    exitMesa();
+#endif
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */
@@ -610,6 +637,40 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
             if (group) {
                 param->setParent(*group);
             }
+        }
+        if (page) {
+            page->addChild(*group);
+        }
+    }
+    {
+        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMousePosition);
+        param->setLabel(kParamMousePositionLabel);
+        param->setHint(kParamMousePositionHint);
+        param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setUseHostNativeOverlayHandle(true);
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMouseClick);
+        param->setLabel(kParamMouseClickLabel);
+        param->setHint(kParamMouseClickHint);
+        param->setDoubleType(eDoubleTypeXYAbsolute);
+        param->setUseHostNativeOverlayHandle(true);
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+    {
+        OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMousePressed);
+        param->setLabel(kParamMousePressedLabel);
+        param->setHint(kParamMousePressedHint);
+        param->setAnimates(true);
+        if (page) {
+            page->addChild(*param);
         }
     }
     {

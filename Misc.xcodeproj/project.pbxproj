@@ -663,6 +663,7 @@
 		1EB0A4901AA21B1300F9C93E /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1EB0A4991AA21B3700F9C93E /* Mirror.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0A4801AA21AF100F9C93E /* Mirror.cpp */; };
 		1EB0A49B1AA21B4200F9C93E /* Mirror.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EB0A4801AA21AF100F9C93E /* Mirror.cpp */; };
+		1EB718191CBA5ACE007BBABE /* Shadertoy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDFE9F21CB79314001E68FA /* Shadertoy.cpp */; };
 		1EB9C073196DD64E003C1849 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1EB9C074196DD64E003C1849 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1EB9C075196DD64E003C1849 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -7121,6 +7122,7 @@
 				1EDE1B92182D0552002392CB /* Anaglyph.cpp in Sources */,
 				1EDE1B7E182D04D9002392CB /* ofxsCore.cpp in Sources */,
 				1EDE1B7F182D04D9002392CB /* ofxsImageEffect.cpp in Sources */,
+				1EB718191CBA5ACE007BBABE /* Shadertoy.cpp in Sources */,
 				1EDE1B80182D04D9002392CB /* ofxsInteract.cpp in Sources */,
 				1EDE1B81182D04D9002392CB /* ofxsLog.cpp in Sources */,
 				1EDE1B82182D04D9002392CB /* ofxsMultiThread.cpp in Sources */,
