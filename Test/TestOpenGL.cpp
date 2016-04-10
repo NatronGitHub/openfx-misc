@@ -152,9 +152,17 @@ TestOpenGLPlugin::TestOpenGLPlugin(OfxImageEffectHandle handle)
         _useGPUIfAvailable->setEnabled(false);
     }
 #endif
-
+#if defined(HAVE_OSMESA)
+    initMesa();
+#endif
 }
 
+TestOpenGLPlugin::~TestOpenGLPlugin()
+{
+#if defined(HAVE_OSMESA)
+    exitMesa();
+#endif
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief render for the filter */

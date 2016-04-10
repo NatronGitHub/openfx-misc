@@ -25,16 +25,23 @@
 
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
+#include "ofxsMultiThread.h"
 
 void getTestOpenGLPluginID(OFX::PluginFactoryArray &ids);
 
 /** @brief The plugin that does our work */
 class TestOpenGLPlugin : public OFX::ImageEffect
 {
+#if defined(HAVE_OSMESA)
+    struct OSMesaPrivate;
+#endif
+
 public:
     /** @brief ctor */
     TestOpenGLPlugin(OfxImageEffectHandle handle);
 
+    virtual ~TestOpenGLPlugin();
+    
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
@@ -52,6 +59,8 @@ private:
     //virtual void beginSequenceRender(const OFX::BeginSequenceRenderArguments &args) OVERRIDE FINAL;
     //virtual void endSequenceRender(const OFX::EndSequenceRenderArguments &args) OVERRIDE FINAL;
 
+    void initMesa();
+    void exitMesa();
     void renderGL(const OFX::RenderArguments &args);
     void renderMesa(const OFX::RenderArguments &args);
     void contextAttachedMesa();
@@ -81,6 +90,14 @@ private:
 
     bool _haveAniso;
     float _maxAnisoMax;
+#if defined(HAVE_OSMESA)
+    // A list of Mesa contexts available for rendering.
+    // renderMesa() pops the last element, uses it, then pushes it back.
+    // A new context is created if the list is empty.
+    // That way, we can have multithreaded OSMesa rendering without having to create a context at each render
+    std::list<OSMesaPrivate *> _osmesa;
+    OFX::MultiThread::Mutex _osmesaMutex;
+#endif
 };
 
 #endif // Misc_TestOpenGL_h

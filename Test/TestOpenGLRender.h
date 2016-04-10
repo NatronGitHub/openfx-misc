@@ -24,6 +24,9 @@
 
 #include <cstring> // strstr, strchr, strlen
 #include <cstdio> // sscanf, vsnprintf, fwrite
+#include <cassert>
+
+#include "ofxsMacros.h"
 
 // first, check that the file is used in a good way
 #if !defined(USE_OPENGL) && !defined(USE_OSMESA)
@@ -37,6 +40,7 @@
 #  include <GL/gl_mangle.h>
 #  include <GL/glu_mangle.h>
 #  include <GL/osmesa.h>
+#  include "ofxsMultiThread.h"
 #  define RENDERFUNC renderMesa
 #  define contextAttached contextAttachedMesa
 #  define contextDetached contextDetachedMesa
@@ -108,6 +112,118 @@ void print_dbg(const char *format, ...)
 }
 #endif
 
+#ifdef USE_OSMESA
+struct TestOpenGLPlugin::OSMesaPrivate
+{
+    OSMesaPrivate(TestOpenGLPlugin *effect)
+    : _effect(effect)
+    , _ctx(0)
+    , _ctxFormat(0)
+    , _ctxDepthBits(0)
+    , _ctxStencilBits(0)
+    , _ctxAccumBits(0)
+    {
+    }
+
+    ~OSMesaPrivate() {
+        /* destroy the context */
+        if (_ctx) {
+            _effect->contextDetachedMesa();
+            OSMesaDestroyContext( _ctx );
+        }
+    }
+
+    void setContext(GLenum format,
+                    GLint depthBits,
+                    GLenum type,
+                    GLint stencilBits,
+                    GLint accumBits,
+                    void* buffer,
+                    const OfxRectI &dstBounds)
+    {
+        bool newContext = false;
+
+        if (!_ctx || (format      != _ctxFormat &&
+                      depthBits   != _ctxDepthBits &&
+                      stencilBits != _ctxStencilBits &&
+                      accumBits   != _ctxAccumBits)) {
+            /* destroy the context */
+            if (_ctx) {
+                _effect->contextDetachedMesa();
+                OSMesaDestroyContext( _ctx );
+                _ctx = 0;
+            }
+            assert(!_ctx);
+
+            /* Create an RGBA-mode context */
+#if OSMESA_MAJOR_VERSION * 100 + OSMESA_MINOR_VERSION >= 305
+            /* specify Z, stencil, accum sizes */
+            _ctx = OSMesaCreateContextExt( format, depthBits, stencilBits, accumBits, NULL );
+#else
+            _ctx = OSMesaCreateContext( format, NULL );
+#endif
+            if (!_ctx) {
+                DPRINT(("OSMesaCreateContext failed!\n"));
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+                return;
+            }
+            _ctxFormat = format;
+            _ctxDepthBits = depthBits;
+            _ctxStencilBits = stencilBits;
+            _ctxAccumBits = accumBits;
+            newContext = true;
+        }
+        // optional: enable Gallium postprocess filters
+#if OSMESA_MAJOR_VERSION * 100 + OSMESA_MINOR_VERSION >= 1000
+        //OSMesaPostprocess(_ctx, const char *filter, unsigned enable_value);
+#endif
+        
+        /* Bind the buffer to the context and make it current */
+        if (!OSMesaMakeCurrent( _ctx, buffer, type, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1 )) {
+            DPRINT(("OSMesaMakeCurrent failed!\n"));
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+            return;
+        }
+        if (newContext) {
+            _effect->contextAttachedMesa();
+        } else {
+            // set viewport
+            glViewport(0, 0, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1);
+        }
+    }
+
+    OSMesaContext ctx() { return _ctx; }
+
+    TestOpenGLPlugin *_effect;
+    // information about the current Mesa context
+    OSMesaContext _ctx;
+    GLenum _ctxFormat;
+    GLint _ctxDepthBits;
+    GLint _ctxStencilBits;
+    GLint _ctxAccumBits;
+};
+
+
+void
+TestOpenGLPlugin::initMesa()
+{
+}
+
+
+void
+TestOpenGLPlugin::exitMesa()
+{
+    OFX::MultiThread::AutoMutex lock(_osmesaMutex);
+    for (std::list<OSMesaPrivate *>::iterator it = _osmesa.begin(); it != _osmesa.end(); ++it) {
+        // make the context current, with a dummy buffer
+        unsigned char buffer[4];
+        OSMesaMakeCurrent((*it)->ctx(), buffer, GL_UNSIGNED_BYTE, 1, 1);
+        contextDetachedMesa();
+        delete *it;
+    }
+    _osmesa.clear();
+}
+#endif
 
 /* The OpenGL teapot */
 
@@ -409,7 +525,7 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 # endif
 
     const OfxRectI renderWindow = args.renderWindow;
-    DPRINT(("Render: window = [%d, %d - %d, %d]\n",
+    DPRINT(("renderWindow = [%d, %d - %d, %d]\n",
             renderWindow.x1, renderWindow.y1,
             renderWindow.x2, renderWindow.y2));
 
@@ -506,29 +622,20 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
             return;
     }
-    /* Create an RGBA-mode context */
-#if OSMESA_MAJOR_VERSION * 100 + OSMESA_MINOR_VERSION >= 305
-    /* specify Z, stencil, accum sizes */
-    OSMesaContext ctx = OSMesaCreateContextExt( format, depthBits, stencilBits, accumBits, NULL );
-#else
-    OSMesaContext ctx = OSMesaCreateContext( format, NULL );
-#endif
-    if (!ctx) {
-        DPRINT(("OSMesaCreateContext failed!\n"));
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
-    }
-
     /* Allocate the image buffer */
     void* buffer = dst->getPixelData();
     OfxRectI dstBounds = dst->getBounds();
-    /* Bind the buffer to the context and make it current */
-    if (!OSMesaMakeCurrent( ctx, buffer, type, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1 )) {
-        DPRINT(("OSMesaMakeCurrent failed!\n"));
-        OFX::throwSuiteStatusException(kOfxStatFailed);
-        return;
+    OSMesaPrivate *osmesa;
+    {
+        OFX::MultiThread::AutoMutex lock(_osmesaMutex);
+        if (_osmesa.empty()) {
+            osmesa = new OSMesaPrivate(this);
+        } else {
+            osmesa = _osmesa.back();
+            _osmesa.pop_back();
+        }
     }
-    contextAttachedMesa();
+    osmesa->setContext(format, depthBits, type, stencilBits, accumBits, buffer, dstBounds);
 
     // load the source image into a texture
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -560,10 +667,15 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glMatrixMode(GL_MODELVIEW);
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-    
+    DPRINT(("dstBounds = [%d, %d - %d, %d]\n",
+            dstBounds.x1, dstBounds.y1,
+            dstBounds.x2, dstBounds.y2));
+
 #endif
 
     const OfxPointD& rs = args.renderScale;
+    DPRINT(("renderScale = [%g, %d]\n",
+            rs.x, rs.y));
 
     // Render to texture: see http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
     float w = (renderWindow.x2 - renderWindow.x1);
@@ -729,9 +841,11 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
 #endif
 
-    contextDetachedMesa();
-    /* destroy the context */
-    OSMesaDestroyContext( ctx );
+    // We're finished with this osmesa, make it available for other renders
+    {
+        OFX::MultiThread::AutoMutex lock(_osmesaMutex);
+        _osmesa.push_back(osmesa);
+    }
 #endif
 }
 
