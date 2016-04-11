@@ -141,10 +141,6 @@ static PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
 #  endif
 #endif // _WINDOWS
 
-using std::cerr;
-using std::cout;
-using std::endl;
-
 // put a breakpoint in glError to halt the debugger
 inline void glError() {}
 
@@ -340,9 +336,7 @@ GLuint compileShader(GLenum shaderType, const char *shader)
 {
     GLuint s = glCreateShader(shaderType);
     if (s == 0) {
-        cerr << "Failed to create shader from\n====" << endl;
-        cerr << shader << endl;
-        cerr << "===" << endl;
+        DPRINT(("Failed to create shader from\n====\n%s\n===\n", shader));
 
         return 0;
     }
@@ -353,9 +347,7 @@ GLuint compileShader(GLenum shaderType, const char *shader)
     GLint param;
     glGetShaderiv(s, GL_COMPILE_STATUS, &param);
     if (param != GL_TRUE) {
-        cerr << "Failed to compile shader source\n====" << endl;
-        cerr << shader << endl;
-        cerr << "===" << endl;
+        DPRINT(("Failed to compile shader source\n====\n%s\n===\n", shader));
 
         int infologLength = 0;
         char *infoLog;
@@ -365,7 +357,7 @@ GLuint compileShader(GLenum shaderType, const char *shader)
         if (infologLength > 0) {
             infoLog = new char[infologLength];
             glGetShaderInfoLog(s, infologLength, NULL, infoLog);
-            cout << "<log>" << endl << infoLog << endl << "</log>" << endl;
+            DPRINT(("<log>\n%s\n</log>\n", infoLog));
             delete [] infoLog;
         }
 
@@ -380,10 +372,10 @@ GLuint compileShader(GLenum shaderType, const char *shader)
 static
 GLuint compileAndLinkProgram(const char *vertexShader, const char *fragmentShader)
 {
-    cout << "CompileAndLink " << endl;
+    DPRINT(("CompileAndLink\n"));
     GLuint program = glCreateProgram();
     if (program == 0) {
-        cerr << "Failed to create program" << endl;
+        DPRINT(("Failed to create program\n"));
         return 0;
     }
 
@@ -398,7 +390,7 @@ GLuint compileAndLinkProgram(const char *vertexShader, const char *fragmentShade
         GLint param;
         glGetProgramiv(program, GL_LINK_STATUS, &param);
         if (param != GL_TRUE) {
-            cerr << "Failed to link shader program " << endl;
+            DPRINT(("Failed to link shader program\n"));
             glGetError();
             int infologLength = 0;
             char *infoLog;
@@ -408,16 +400,16 @@ GLuint compileAndLinkProgram(const char *vertexShader, const char *fragmentShade
             if (infologLength > 0) {
                 infoLog = new char[infologLength];
                 glGetProgramInfoLog(program, infologLength, NULL, infoLog);
-                cout << "<log>" << endl << infoLog << endl << "</log>" << endl;
+                DPRINT(("<log>\n%s\n</log>\n", infoLog));
                 delete [] infoLog;
             }
 
             GLchar errorLog[1024] = {0};
             glGetProgramInfoLog(program, 1024, NULL, errorLog);
 
-            cout << "<vertexShader>" << endl << vertexShader << endl << "</vertexShader>" << endl;
-            cout << "<fragmentShader>" << endl << fragmentShader << endl << "</fragmentShader>" << endl;
-            
+            DPRINT(("<vertexShader>\n%s\n</vertexShader>\n", vertexShader));
+            DPRINT(("<fragmentShader>\n%s\n</fragmentShader>\n", fragmentShader));
+
             glDetachShader(program, vs);
             glDeleteShader(vs);
             
