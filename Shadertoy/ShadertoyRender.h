@@ -36,6 +36,11 @@
 #error "include this file first only once, either with USE_OPENGL, or with USE_OSMESA"
 #endif
 
+
+#if defined(USE_MESA) || !defined(_WINDOWS)
+#define GL_GLEXT_PROTOTYPES
+#endif
+
 #ifdef USE_OSMESA
 #  include <GL/gl_mangle.h>
 #  include <GL/glu_mangle.h>
@@ -48,20 +53,78 @@
 #  define RENDERFUNC renderGL
 #endif
 
-#if defined(HAS_GLES)
-#include <GLES2/gl2.h>
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
-#include <cassert>
-#define TO_STRING(...) #__VA_ARGS__
-#else
 #ifdef __APPLE__
 #  include <OpenGL/gl.h>
+#  include <OpenGL/glext.h>
 #  include <OpenGL/glu.h>
 #else
 #  include <GL/gl.h>
+#  include <GL/glext.h>
 #  include <GL/glu.h>
 #endif
+
+#if !defined(USE_MESA) && defined(_WINDOWS)
+// Program
+static PFNGLCREATEPROGRAMPROC glCreateProgram = NULL;
+static PFNGLDELETEPROGRAMPROC glDeleteProgram = NULL;
+static PFNGLUSEPROGRAMPROC glUseProgram = NULL;
+static PFNGLATTACHSHADERPROC glAttachShader = NULL;
+static PFNGLDETACHSHADERPROC glDetachShader = NULL;
+static PFNGLLINKPROGRAMPROC glLinkProgram = NULL;
+static PFNGLGETPROGRAMIVPROC glGetProgramiv = NULL;
+static PFNGLGETSHADERINFOLOGPROC glGetShaderInfoLog = NULL;
+static PFNGLGETUNIFORMLOCATIONPROC glGetUniformLocation = NULL;
+static PFNGLUNIFORM1IPROC glUniform1i = NULL;
+static PFNGLUNIFORM1IVPROC glUniform1iv = NULL;
+static PFNGLUNIFORM2IVPROC glUniform2iv = NULL;
+static PFNGLUNIFORM3IVPROC glUniform3iv = NULL;
+static PFNGLUNIFORM4IVPROC glUniform4iv = NULL;
+static PFNGLUNIFORM1FPROC glUniform1f = NULL;
+static PFNGLUNIFORM1FVPROC glUniform1fv = NULL;
+static PFNGLUNIFORM2FVPROC glUniform2fv = NULL;
+static PFNGLUNIFORM3FVPROC glUniform3fv = NULL;
+static PFNGLUNIFORM4FVPROC glUniform4fv = NULL;
+static PFNGLUNIFORMMATRIX4FVPROC glUniformMatrix4fv = NULL;
+static PFNGLGETATTRIBLOCATIONPROC glGetAttribLocation = NULL;
+static PFNGLVERTEXATTRIB1FPROC glVertexAttrib1f = NULL;
+static PFNGLVERTEXATTRIB1FVPROC glVertexAttrib1fv = NULL;
+static PFNGLVERTEXATTRIB2FVPROC glVertexAttrib2fv = NULL;
+static PFNGLVERTEXATTRIB3FVPROC glVertexAttrib3fv = NULL;
+static PFNGLVERTEXATTRIB4FVPROC glVertexAttrib4fv = NULL;
+static PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray = NULL;
+static PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray = NULL;
+static PFNGLBINDATTRIBLOCATIONPROC glBindAttribLocation = NULL;
+static PFNGLGETACTIVEUNIFORMPROC glGetActiveUniform = NULL;
+
+// Shader
+static PFNGLCREATESHADERPROC glCreateShader = NULL;
+static PFNGLDELETESHADERPROC glDeleteShader = NULL;
+static PFNGLSHADERSOURCEPROC glShaderSource = NULL;
+static PFNGLCOMPILESHADERPROC glCompileShader = NULL;
+static PFNGLGETSHADERIVPROC glGetShaderiv = NULL;
+
+// VBO
+static PFNGLGENBUFFERSPROC glGenBuffers = NULL;
+static PFNGLBINDBUFFERPROC glBindBuffer = NULL;
+static PFNGLBUFFERDATAPROC glBufferData = NULL;
+static PFNGLVERTEXATTRIBPOINTERPROC glVertexAttribPointer = NULL;
+
+//Multitexture
+static PFNGLACTIVETEXTUREARBPROC glActiveTexture = NULL;
+static PFNGLCLIENTACTIVETEXTUREPROC glClientActiveTexture = NULL;
+static PFNGLMULTITEXCOORD2FPROC glMultiTexCoord2f = NULL;
+
+// Framebuffers
+//static PFNGLISFRAMEBUFFERPROC glIsFramebuffer = NULL;
+static PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer = NULL;
+static PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers = NULL;
+static PFNGLGENFRAMEBUFFERSPROC glGenFramebuffers = NULL;
+static PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus = NULL;
+//PFNGLFRAMEBUFFERTEXTURE1DPROC glFramebufferTexture1D = NULL;
+static PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
+//PFNGLFRAMEBUFFERTEXTURE3DPROC glFramebufferTexture3D = NULL;
+//PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer = NULL;
+//PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC glGetFramebufferAttachmentParameteriv = NULL;
 #endif
 
 #ifndef DEBUG
@@ -77,6 +140,10 @@
 #    define snprintf _snprintf
 #  endif
 #endif // _WINDOWS
+
+using std::cerr;
+using std::cout;
+using std::endl;
 
 // put a breakpoint in glError to halt the debugger
 inline void glError() {}
@@ -267,6 +334,140 @@ int glutExtensionSupported( const char* extension )
     
     return 0 ;
 }
+
+static
+GLuint compileShader(GLenum shaderType, const char *shader)
+{
+    GLuint s = glCreateShader(shaderType);
+    if (s == 0) {
+        cerr << "Failed to create shader from\n====" << endl;
+        cerr << shader << endl;
+        cerr << "===" << endl;
+
+        return 0;
+    }
+
+    glShaderSource(s, 1, &shader, NULL);
+    glCompileShader(s);
+
+    GLint param;
+    glGetShaderiv(s, GL_COMPILE_STATUS, &param);
+    if (param != GL_TRUE) {
+        cerr << "Failed to compile shader source\n====" << endl;
+        cerr << shader << endl;
+        cerr << "===" << endl;
+
+        int infologLength = 0;
+        char *infoLog;
+
+        glGetShaderiv(s, GL_INFO_LOG_LENGTH, &infologLength);
+
+        if (infologLength > 0) {
+            infoLog = new char[infologLength];
+            glGetShaderInfoLog(s, infologLength, NULL, infoLog);
+            cout << "<log>" << endl << infoLog << endl << "</log>" << endl;
+            delete [] infoLog;
+        }
+
+        glDeleteShader(s);
+
+        return 0;
+    }
+
+    return s;
+}
+
+static
+GLuint compileAndLinkProgram(const char *vertexShader, const char *fragmentShader)
+{
+    cout << "CompileAndLink " << endl;
+    GLuint program = glCreateProgram();
+    if (program == 0) {
+        cerr << "Failed to create program" << endl;
+        return 0;
+    }
+
+    GLuint vs = compileShader(GL_VERTEX_SHADER, vertexShader);
+    GLuint fs = compileShader(GL_FRAGMENT_SHADER, fragmentShader);
+
+    if (vs && fs) {
+        glAttachShader(program, vs);
+        glAttachShader(program, fs);
+        glLinkProgram(program);
+
+        GLint param;
+        glGetProgramiv(program, GL_LINK_STATUS, &param);
+        if (param != GL_TRUE) {
+            cerr << "Failed to link shader program " << endl;
+            glGetError();
+            int infologLength = 0;
+            char *infoLog;
+
+            glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infologLength);
+
+            if (infologLength > 0) {
+                infoLog = new char[infologLength];
+                glGetProgramInfoLog(program, infologLength, NULL, infoLog);
+                cout << "<log>" << endl << infoLog << endl << "</log>" << endl;
+                delete [] infoLog;
+            }
+
+            GLchar errorLog[1024] = {0};
+            glGetProgramInfoLog(program, 1024, NULL, errorLog);
+
+            cout << "<vertexShader>" << endl << vertexShader << endl << "</vertexShader>" << endl;
+            cout << "<fragmentShader>" << endl << fragmentShader << endl << "</fragmentShader>" << endl;
+            
+            glDetachShader(program, vs);
+            glDeleteShader(vs);
+            
+            glDetachShader(program, fs);
+            glDeleteShader(fs);
+            
+            glDeleteProgram(program);
+            return 0;
+        }
+    } else {
+        glDeleteProgram(program);
+    }
+    
+    glUseProgram(0);
+    
+    if (vs)
+        glDeleteShader(vs);
+    
+    if (fs)
+        glDeleteShader(fs);
+    
+    return program;
+}
+
+static std::string vsSource = "void main() { gl_Position = ftransform(); }";
+
+static std::string fsHeader =
+"#extension GL_OES_standard_derivatives : enable\n"
+"precision mediump float;\n"
+"precision mediump int;\n"
+"uniform vec3      iResolution;\n"
+"uniform float     iGlobalTime;\n"
+"uniform float     iChannelTime[4];\n"
+"uniform vec4      iMouse;\n"
+"uniform vec4      iDate;\n"
+"uniform float     iSampleRate;\n"
+"uniform vec3      iChannelResolution[4];\n"
+"uniform sampler2D iChannel0;\n"
+"uniform sampler2D iChannel1;\n"
+"uniform sampler2D iChannel2;\n"
+"uniform sampler2D iChannel3;\n";
+
+static std::string fsFooter =
+"void main(void)\n"
+"{\n"
+"  vec4 color = vec4(0.0, 0.0, 0.0, 1.0);\n"
+"  mainImage(color, gl_FragCoord.xy);\n"
+"  color.w = 1.0;\n"
+"  gl_FragColor = color;\n"
+"}\n";
 
 void
 ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
@@ -708,22 +909,71 @@ ShadertoyPlugin::contextAttached()
         DPRINT(("GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = %f\n", _maxAnisoMax));
     }
 
-    // Shadertoy:
-#if defined(HAS_GLES)
-    static const GLfloat vertex_data[] = {
-        -1.0,1.0,1.0,1.0,
-        1.0,1.0,1.0,1.0,
-        1.0,-1.0,1.0,1.0,
-        -1.0,-1.0,1.0,1.0,
-    };
-    glGetError();
-    // Upload vertex data to a buffer
-    GLuint vertex_buffer;
-    glGenBuffers(1, &vertex_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_STATIC_DRAW);
-    _vertex_buffer = vertex_buffer;
+#if !defined(USE_OSMESA) && defined(_WINDOWS)
+    if (glCreateProgram == NULL) {
+      // Program
+      glCreateProgram = (PFNGLCREATEPROGRAMPROC)wglGetProcAddress("glCreateProgram");
+      glDeleteProgram = (PFNGLDELETEPROGRAMPROC)wglGetProcAddress("glDeleteProgram");
+      glUseProgram = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
+      glAttachShader = (PFNGLATTACHSHADERPROC)wglGetProcAddress("glAttachShader");
+      glDetachShader = (PFNGLDETACHSHADERPROC)wglGetProcAddress("glDetachShader");
+      glLinkProgram = (PFNGLLINKPROGRAMPROC)wglGetProcAddress("glLinkProgram");
+      glGetProgramiv = (PFNGLGETPROGRAMIVPROC)wglGetProcAddress("glGetProgramiv");
+      glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)wglGetProcAddress("glGetShaderInfoLog");
+      glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)wglGetProcAddress("glGetUniformLocation");
+      glUniform1i = (PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i");
+      glUniform1iv = (PFNGLUNIFORM1IVPROC)wglGetProcAddress("glUniform1iv");
+      glUniform2iv = (PFNGLUNIFORM2IVPROC)wglGetProcAddress("glUniform2iv");
+      glUniform3iv = (PFNGLUNIFORM3IVPROC)wglGetProcAddress("glUniform3iv");
+      glUniform4iv = (PFNGLUNIFORM4IVPROC)wglGetProcAddress("glUniform4iv");
+      glUniform1f = (PFNGLUNIFORM1FPROC)wglGetProcAddress("glUniform1f");
+      glUniform1fv = (PFNGLUNIFORM1FVPROC)wglGetProcAddress("glUniform1fv");
+      glUniform2fv = (PFNGLUNIFORM2FVPROC)wglGetProcAddress("glUniform2fv");
+      glUniform3fv = (PFNGLUNIFORM3FVPROC)wglGetProcAddress("glUniform3fv");
+      glUniform4fv = (PFNGLUNIFORM4FVPROC)wglGetProcAddress("glUniform4fv");
+      glUniformMatrix4fv = (PFNGLUNIFORMMATRIX4FVPROC)wglGetProcAddress("glUniformMatrix4fv");
+      glGetAttribLocation = (PFNGLGETATTRIBLOCATIONPROC)wglGetProcAddress("glGetAttribLocation");
+      glVertexAttrib1f = (PFNGLVERTEXATTRIB1FPROC)wglGetProcAddress("glVertexAttrib1f");
+      glVertexAttrib1fv = (PFNGLVERTEXATTRIB1FVPROC)wglGetProcAddress("glVertexAttrib1fv");
+      glVertexAttrib2fv = (PFNGLVERTEXATTRIB2FVPROC)wglGetProcAddress("glVertexAttrib2fv");
+      glVertexAttrib3fv = (PFNGLVERTEXATTRIB3FVPROC)wglGetProcAddress("glVertexAttrib3fv");
+      glVertexAttrib4fv = (PFNGLVERTEXATTRIB4FVPROC)wglGetProcAddress("glVertexAttrib4fv");
+      glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)wglGetProcAddres s("glEnableVertexAttribArray");
+      glBindAttribLocation = (PFNGLBINDATTRIBLOCATIONPROC)wglGetProcAddress("glBindAttribLocation");
+
+      // Shader
+      glCreateShader = (PFNGLCREATESHADERPROC)wglGetProcAddress("glCreateShader");
+      glDeleteShader = (PFNGLDELETESHADERPROC)wglGetProcAddress("glDeleteShader");
+      glShaderSource = (PFNGLSHADERSOURCEPROC)wglGetProcAddress("glShaderSource");
+      glCompileShader = (PFNGLCOMPILESHADERPROC)wglGetProcAddress("glCompileShader");
+      glGetShaderiv = (PFNGLGETSHADERIVPROC)wglGetProcAddress("glGetShaderiv");
+
+      // VBO
+      glGenBuffers = (PFNGLGENBUFFERSPROC)wglGetProcAddress("glGenBuffers");
+      glBindBuffer = (PFNGLBINDBUFFERPROC)wglGetProcAddress("glBindBuffer");
+      glBufferData = (PFNGLBUFFERDATAPROC)wglGetProcAddress("glBufferData");
+      glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
+
+      // Multitexture
+      glActiveTexture = (PFNGLACTIVETEXTUREARBPROC)wglGetProcAddress("glActiveTexture");
+      glClientActiveTexture = (PFNGLCLIENTACTIVETEXTUREPROC)wglGetProcAddress("glClientActiveTexture");
+      glMultiTexCoord2f = (PFNGLMULTITEXCOORD2FPROC)wglGetProcAddress("glMultiTexCoord2f");
+
+      // Framebuffers
+      //glIsFramebuffer = (PFNGLISFRAMEBUFFERPROC)wglGetProcAddress("glIsFramebuffer");
+      glBindFramebuffer = (PFNGLBINDFRAMEBUFFERPROC)wglGetProcAddress("glBindFramebuffer");
+      glDeleteFramebuffers = (PFNGLDELETEFRAMEBUFFERSPROC)wglGetProcAddress("glDeleteFramebuffers");
+      glGenFramebuffers = (PFNGLGENFRAMEBUFFERSPROC)wglGetProcAddress("glGenFramebuffers");
+      glCheckFramebufferStatus = (PFNGLCHECKFRAMEBUFFERSTATUSPROC)wglGetProcAddress("glCheckFramebufferStatus");
+      //glFramebufferTexture1D = (PFNGLFRAMEBUFFERTEXTURE1DPROC)wglGetProcAddress("glFramebufferTexture1D");
+      glFramebufferTexture2D = (PFNGLFRAMEBUFFERTEXTURE2DPROC)wglGetProcAddress("glFramebufferTexture2D");
+      //glFramebufferTexture3D = (PFNGLFRAMEBUFFERTEXTURE3DPROC)wglGetProcAddress("glFramebufferTexture3D");
+      //glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)wglGetProcAddress("glFramebufferRenderbuffer");
+      //glGetFramebufferAttachmentParameteriv = (PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)wglGetProcAddress("glGetFramebufferAttachmentParameteriv");
+    }
 #endif
+
+    // Shadertoy:
 }
 
 /*
@@ -740,9 +990,4 @@ void
 ShadertoyPlugin::contextDetached()
 {
     // Shadertoy:
-#if defined(HAS_GLES)
-    GLuint vertex_buffer = _vertex_buffer;
-    glDeleteBuffers(1, &vertex_buffer);
-    _vertex_buffer = 0;
-#endif
 }
