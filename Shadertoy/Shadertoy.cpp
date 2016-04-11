@@ -62,11 +62,12 @@ using namespace OFX;
 "\n" \
 "This help only covers the parts of GLSL ES that are relevant for Shadertoy. " \
 "For the complete specification please have a look at GLSL ES specification " \
-"<http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf>\n" \
+"http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf\n" \
 "Language:\n" \
 "\n" \
 "    Preprocessor: # #define #undef #if #ifdef #ifndef #else #elif #endif #error #pragma #extension #version #line\n" \
-"    Operators: () + - ! * / % < > <= >= == != && ||\n" \
+/*"    Operators: () + - ! * / % < > <= >= == != && ||\n"*/ \
+"    Operators: usual GLSL/C/C++/Java operators\n" \
 "    Comments: // /* */\n" \
 "    Types: void bool int float vec2 vec3 vec4 bvec2 bvec3 bvec4 ivec2 ivec3 ivec4 mat2 mat3 mat4 sampler2D\n" \
 "    Function Parameter Qualifiers: [none], in, out, inout\n" \
