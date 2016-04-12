@@ -558,24 +558,6 @@ private:
 		  combMatte /= _whitePoint; 
 		  combMatte = max(0.,min(combMatte,1.));
 		}
-		// fill holes
-       		if (_fillHoles >0) {
-		 combMatte = 0.;
-		}
-		//erode
-		if (_erode >1) {
-		  
-		  combMatte = 0.;
-		} else if (_erode < 1) {
-	     
-		  combMatte = 0.;
-		  }
-		    
-		// blur
-	       	if (_blur >0) {
-		  
-		 combMatte = 0.;
-	       	}
 
 		// OUTPUT MODE
                 switch (_outputMode) {
