@@ -20,7 +20,7 @@
  * OFX Shadertoy plugin.
  *
  * References:
- * https://www.shadertoy.com
+ * https://www.shadertoy.com (v0.8.3 as of march 22, 2016)
  * http://www.iquilezles.org/apps/shadertoy/index2.html (original Shader Toy v0.4)
  *
  * TODO:
@@ -54,11 +54,12 @@
 using namespace OFX;
 
 //OFXS_NAMESPACE_ANONYMOUS_ENTER // defines external classes
+#define NBINPUTS SHADERTOY_NBINPUTS
 
 #define kPluginName "Shadertoy"
 #define kPluginGrouping "Filter"
 #define kPluginDescription \
-"Apply shaders from www.shadertoy.com.\n" \
+"Apply shaders from www.shadertoy.com .\n" \
 "\n" \
 "This help only covers the parts of GLSL ES that are relevant for Shadertoy. " \
 "For the complete specification please have a look at GLSL ES specification " \
@@ -197,8 +198,8 @@ using namespace OFX;
 "float	iTimeDelta	image	Time it takes to render a frame, in seconds\n" \
 "int	iFrame	image	Current frame\n" \
 "float	iFrameRate	image	Number of frames rendered per second\n" \
-"float	iChannelTime[4]	image	Time for channel (if video or sound), in seconds\n" \
-"vec3	iChannelResolution[4]	image/sound	Input texture resolution for each channel\n" \
+"float	iChannelTime["STRINGISE(NBINPUTS)"]	image	Time for channel (if video or sound), in seconds\n" \
+"vec3	iChannelResolution["STRINGISE(NBINPUTS)"]	image/sound	Input texture resolution for each channel\n" \
 "vec4	iMouse	image	xy = current pixel coords (if LMB is down). zw = click pixel\n" \
 "sampler2D	iChannel{i}	image/sound	Sampler for input textures i\n" \
 "vec4	iDate	image/sound	Year, month, day, time in seconds in .xyzw\n" \
@@ -229,8 +230,8 @@ using namespace OFX;
 "uniform float     iGlobalTime;           // shader playback time (in seconds)\n" \
 "uniform float     iTimeDelta;            // render time (in seconds)\n" \
 "uniform int       iFrame;                // shader playback frame\n" \
-"uniform float     iChannelTime[4];       // channel playback time (in seconds)\n" \
-"uniform vec3      iChannelResolution[4]; // channel resolution (in pixels)\n" \
+"uniform float     iChannelTime["STRINGISE(NBINPUTS)"];       // channel playback time (in seconds)\n" \
+"uniform vec3      iChannelResolution["STRINGISE(NBINPUTS)"]; // channel resolution (in pixels)\n" \
 "uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click\n" \
 "uniform samplerXX iChannel0..3;          // input channel. XX = 2D/Cube\n" \
 "uniform vec4      iDate;                 // (year, month, day, time in seconds)\n" \
@@ -296,7 +297,7 @@ using namespace OFX;
 ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
 : ImageEffect(handle)
 , _dstClip(0)
-, _srcClips(4, NULL)
+, _srcClips(NBINPUTS, NULL)
 , _imageShaderFileName(0)
 , _imageShaderSource(0)
 , _mipmap(0)
@@ -304,6 +305,11 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
 , _useGPUIfAvailable(0)
 , _haveAniso(false)
 , _maxAnisoMax(1.)
+#ifdef HAVE_OSMESA
+, _imageShaderID(1)
+#endif
+, _imageShader(0)
+, _imageShaderChanged(true)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
@@ -324,7 +330,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
             _srcClips[3] = fetchClip(kClipChannel"3");
             break;
     }
-    for (unsigned i = 0; i < 4; ++i) {
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
         assert((!_srcClips[i] && getContext() == OFX::eContextGenerator) ||
                (_srcClips[i] && (_srcClips[i]->getPixelComponents() == OFX::ePixelComponentRGBA ||
                              _srcClips[i]->getPixelComponents() == OFX::ePixelComponentAlpha)));
@@ -348,6 +354,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
         _useGPUIfAvailable->setEnabled(false);
     }
 #endif
+    initOpenGL();
 #if defined(HAVE_OSMESA)
     initMesa();
 #endif
@@ -356,6 +363,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
 
 ShadertoyPlugin::~ShadertoyPlugin()
 {
+    exitOpenGL();
 #if defined(HAVE_OSMESA)
     exitMesa();
 #endif
@@ -374,7 +382,7 @@ ShadertoyPlugin::render(const OFX::RenderArguments &args)
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    for (unsigned i = 0; i < 4; ++i) {
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
         assert(kSupportsMultipleClipPARs   || !_srcClips[i] || _srcClips[i]->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
         assert(kSupportsMultipleClipDepths || !_srcClips[i] || _srcClips[i]->getPixelDepth()       == _dstClip->getPixelDepth());
     }
@@ -445,7 +453,12 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             }
         }
     } else if (paramName == kParamImageShaderSource) {
-        // TODO: mark that image shader must be recompiled on next render
+        OFX::MultiThread::AutoMutex lock(_shaderMutex);
+        // mark that image shader must be recompiled on next render
+#ifdef HAVE_OSMESA
+        ++_imageShaderID;
+#endif
+        _imageShaderChanged = true;
     }
 }
 
@@ -537,43 +550,23 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
 
     // Source clip only in the filter context
     // create the mandated source clip
-    if (context == eContextFilter) {
-        ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
-        srcClip->addSupportedComponent(ePixelComponentRGBA);
-        srcClip->addSupportedComponent(ePixelComponentAlpha);
-        srcClip->setTemporalClipAccess(false);
-        srcClip->setSupportsTiles(kSupportsTiles);
-        srcClip->setIsMask(false);
-        srcClip->setOptional(false);
-    } else {
-        ClipDescriptor *srcClip = desc.defineClip(kClipChannel"0");
-        srcClip->addSupportedComponent(ePixelComponentRGBA);
-        srcClip->addSupportedComponent(ePixelComponentAlpha);
-        srcClip->setTemporalClipAccess(false);
-        srcClip->setSupportsTiles(kSupportsTiles);
-        srcClip->setIsMask(false);
-        srcClip->setOptional(true);
-    }
+    char iChannelX[10] = "iChannelX"; // index 8 holds the channel character
+    assert(NBINPUTS < 10 && iChannelX[8] == 'X');
     {
-        ClipDescriptor *srcClip = desc.defineClip(kClipChannel"1");
+        iChannelX[8] = '0';
+        ClipDescriptor *srcClip = desc.defineClip((context == eContextFilter) ?
+                                                  kOfxImageEffectSimpleSourceClipName :
+                                                  iChannelX);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);
-        srcClip->setOptional(true);
+        srcClip->setOptional(!(context == eContextFilter));
     }
-    {
-        ClipDescriptor *srcClip = desc.defineClip(kClipChannel"2");
-        srcClip->addSupportedComponent(ePixelComponentRGBA);
-        srcClip->addSupportedComponent(ePixelComponentAlpha);
-        srcClip->setTemporalClipAccess(false);
-        srcClip->setSupportsTiles(kSupportsTiles);
-        srcClip->setIsMask(false);
-        srcClip->setOptional(true);
-    }
-    {
-        ClipDescriptor *srcClip = desc.defineClip(kClipChannel"3");
+    for (unsigned i = 1; i < NBINPUTS; ++i ){
+        iChannelX[8] = '0' + i;
+        ClipDescriptor *srcClip = desc.defineClip(iChannelX);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
         srcClip->setTemporalClipAccess(false);

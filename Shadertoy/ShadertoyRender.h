@@ -27,6 +27,7 @@
 #include <cassert>
 
 #include "ofxsMacros.h"
+#include "ofxsMultiThread.h"
 
 // first, check that the file is used in a good way
 #if !defined(USE_OPENGL) && !defined(USE_OSMESA)
@@ -45,15 +46,16 @@
 #  include <GL/gl_mangle.h>
 #  include <GL/glu_mangle.h>
 #  include <GL/osmesa.h>
-#  include "ofxsMultiThread.h"
 #  define RENDERFUNC renderMesa
 #  define contextAttached contextAttachedMesa
 #  define contextDetached contextDetachedMesa
+#  define ShadertoyShader ShadertoyShaderMesa // in case OpenGL and Mesa use different type definitions
 #else
 #  define RENDERFUNC renderGL
+#  define ShadertoyShader ShadertoyShaderOpenGL
 #endif
 
-#ifdef __APPLE__
+#if !defined(USE_OSMESA) && defined(__APPLE__)
 #  include <OpenGL/gl.h>
 #  include <OpenGL/glext.h>
 #  include <OpenGL/glu.h>
@@ -62,6 +64,37 @@
 #  include <GL/glext.h>
 #  include <GL/glu.h>
 #endif
+
+#define NBINPUTS SHADERTOY_NBINPUTS
+
+struct ShadertoyShader {
+    ShadertoyShader()
+    : program(0)
+    , iResolutionLoc(-1)
+    , iGlobalTimeLoc(-1)
+    , iTimeDeltaLoc(-1)
+    , iFrameLoc(-1)
+    , iChannelTimeLoc(-1)
+    , iMouseLoc(-1)
+    , iDateLoc(-1)
+    , iSampleRateLoc(-1)
+    , iChannelResolutionLoc(-1)
+    {
+        std::fill(iChannelLoc, iChannelLoc+NBINPUTS, -1);
+    }
+
+    GLuint program;
+    GLint iResolutionLoc;
+    GLint iGlobalTimeLoc;
+    GLint iTimeDeltaLoc;
+    GLint iFrameLoc;
+    GLint iChannelTimeLoc;
+    GLint iMouseLoc;
+    GLint iDateLoc;
+    GLint iSampleRateLoc;
+    GLint iChannelResolutionLoc;
+    GLint iChannelLoc[4];
+};
 
 #if !defined(USE_MESA) && defined(_WINDOWS)
 // Program
@@ -194,6 +227,8 @@ struct ShadertoyPlugin::OSMesaPrivate
     , _ctxDepthBits(0)
     , _ctxStencilBits(0)
     , _ctxAccumBits(0)
+    , _imageShaderID(0)
+    , _imageShader()
     {
     }
 
@@ -273,6 +308,8 @@ struct ShadertoyPlugin::OSMesaPrivate
     GLint _ctxDepthBits;
     GLint _ctxStencilBits;
     GLint _ctxAccumBits;
+    unsigned int _imageShaderID; // the shader ID compiled for this context
+    ShadertoyShader _imageShader;
 };
 
 void
@@ -293,7 +330,25 @@ ShadertoyPlugin::exitMesa()
     }
     _osmesa.clear();
 }
-#endif
+
+#endif // USE_MESA
+
+
+#ifdef USE_OPENGL
+
+void
+ShadertoyPlugin::initOpenGL()
+{
+    _imageShader = new ShadertoyShader;
+}
+
+void
+ShadertoyPlugin::exitOpenGL()
+{
+    delete _imageShader;
+}
+
+#endif // USE_OPENGL
 
 static
 int glutExtensionSupported( const char* extension )
@@ -376,7 +431,8 @@ GLuint compileAndLinkProgram(const char *vertexShader, const char *fragmentShade
     GLuint program = glCreateProgram();
     if (program == 0) {
         DPRINT(("Failed to create program\n"));
-        return 0;
+        glCheckError();
+        return program;
     }
 
     GLuint vs = compileShader(GL_VERTEX_SHADER, vertexShader);
@@ -391,6 +447,7 @@ GLuint compileAndLinkProgram(const char *vertexShader, const char *fragmentShade
         glGetProgramiv(program, GL_LINK_STATUS, &param);
         if (param != GL_TRUE) {
             DPRINT(("Failed to link shader program\n"));
+            glCheckError();
             glGetError();
             int infologLength = 0;
             char *infoLog;
@@ -442,15 +499,13 @@ static std::string fsHeader =
 "precision mediump int;\n"
 "uniform vec3      iResolution;\n"
 "uniform float     iGlobalTime;\n"
-"uniform float     iChannelTime[4];\n"
+"uniform float     iTimeDelta;\n"
+"uniform int       iFrame;\n"
+"uniform float     iChannelTime["STRINGISE(NBINPUTS)"];\n"
+"uniform vec3      iChannelResolution["STRINGISE(NBINPUTS)"];\n"
 "uniform vec4      iMouse;\n"
 "uniform vec4      iDate;\n"
-"uniform float     iSampleRate;\n"
-"uniform vec3      iChannelResolution[4];\n"
-"uniform sampler2D iChannel0;\n"
-"uniform sampler2D iChannel1;\n"
-"uniform sampler2D iChannel2;\n"
-"uniform sampler2D iChannel3;\n";
+"uniform float     iSampleRate;\n";
 
 static std::string fsFooter =
 "void main(void)\n"
@@ -465,12 +520,8 @@ void
 ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 {
     const double time = args.time;
-    std::string imageShaderSource;
     bool mipmap = true;
     bool anisotropic = true;
-    if (_imageShaderSource) {
-        _imageShaderSource->getValueAtTime(time, imageShaderSource);
-    }
     if (_mipmap) {
         _mipmap->getValueAtTime(time, mipmap);
     }
@@ -537,24 +588,24 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 # endif
 
 # ifdef USE_OPENGL
-    std::auto_ptr<const OFX::Texture> src[4];
-    for (unsigned i = 0; i< 4; ++i) {
+    std::auto_ptr<const OFX::Texture> src[NBINPUTS];
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
         src[i].reset((_srcClips[i] && _srcClips[i]->isConnected()) ?
                      _srcClips[i]->loadTexture(time) : 0);
     }
 # else
-    std::auto_ptr<const OFX::Image> src[4];
-    for (unsigned i = 0; i< 4; ++i) {
-        src[i].reset((_srcClips[0] && _srcClips[0]->isConnected()) ?
-                     _srcClips[0]->fetchImage(time) : 0);
+    std::auto_ptr<const OFX::Image> src[NBINPUTS];
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
+        src[i].reset((_srcClips[i] && _srcClips[i]->isConnected()) ?
+                     _srcClips[i]->fetchImage(time) : 0);
     }
 # endif
 
-    std::vector<OFX::BitDepthEnum> srcBitDepth(4, OFX::eBitDepthNone);
-    std::vector<OFX::PixelComponentEnum> srcComponents(4, OFX::ePixelComponentNone);
+    std::vector<OFX::BitDepthEnum> srcBitDepth(NBINPUTS, OFX::eBitDepthNone);
+    std::vector<OFX::PixelComponentEnum> srcComponents(NBINPUTS, OFX::ePixelComponentNone);
 # ifdef USE_OPENGL
-    std::vector<GLuint> srcIndex(4);
-    std::vector<GLenum> srcTarget(4);
+    std::vector<GLuint> srcIndex(NBINPUTS);
+    std::vector<GLenum> srcTarget(NBINPUTS);
 # endif
 #ifdef USE_OSMESA
     GLenum format = 0;
@@ -564,7 +615,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     GLenum type = 0;
 #endif
 
-    for (unsigned i = 0; i< 4; ++i) {
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
         if (src[i].get()) {
             srcBitDepth[i] = src[i]->getPixelDepth();
             srcComponents[i] = src[i]->getPixelComponents();
@@ -626,6 +677,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                     stencilBits != stencilBitsi ||
                     accumBits != accumBitsi ||
                     type != typei) {
+                    // all inputs should have the same format
                     OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
                 }
             }
@@ -633,6 +685,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
     }
 
+    const OfxRectI dstBounds = dst->getBounds();
 #ifdef USE_OSMESA
     if (format == 0) {
         switch (dstComponents) {
@@ -668,7 +721,6 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     /* Allocate the image buffer */
     void* buffer = dst->getPixelData();
-    OfxRectI dstBounds = dst->getBounds();
     OSMesaPrivate *osmesa;
     {
         OFX::MultiThread::AutoMutex lock(_osmesaMutex);
@@ -681,17 +733,18 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, buffer, dstBounds);
 
+
     // load the source image into a texture
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     // Non-power-of-two textures are supported if the GL version is 2.0 or greater, or if the implementation exports the GL_ARB_texture_non_power_of_two extension. (Mesa does, of course)
 
     std::vector<GLenum> srcTarget(4, GL_TEXTURE_2D);
-    std::vector<GLuint> srcIndex(4);
-    for (unsigned i = 0; i< 4; ++i) {
+    std::vector<GLuint> srcIndex(NBINPUTS);
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
         if (src[i].get()) {
             glGenTextures(1, &srcIndex[i]);
             OfxRectI srcBounds = src[i]->getBounds();
-            glActiveTextureARB(GL_TEXTURE0_ARB);
+            glActiveTextureARB(GL_TEXTURE0_ARB + i);
             glBindTexture(srcTarget[i], srcIndex[i]);
             if (mipmap) {
                 // this must be done before glTexImage2D
@@ -714,8 +767,121 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glMatrixMode(GL_MODELVIEW);
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-    
+
 #endif
+
+    // compile and link the shader if necessary
+    ShadertoyShader *shadertoy;
+    {
+        OFX::MultiThread::AutoMutex lock(_shaderMutex);
+        bool must_recompile = false;
+#ifdef USE_OPENGL
+        shadertoy = _imageShader;
+        assert(shadertoy);
+        must_recompile = _imageShaderChanged;
+        _imageShaderChanged = false;
+#endif
+#ifdef USE_OSMESA
+        shadertoy = &osmesa->_imageShader;
+        must_recompile = (_imageShaderID != osmesa->_imageShaderID);
+        osmesa->_imageShaderID = _imageShaderID;
+#endif
+        assert(shadertoy);
+        if (must_recompile) {
+            if (shadertoy->program) {
+                glDeleteProgram(shadertoy->program);
+                shadertoy->program = 0;
+            }
+            std::string str;
+            _imageShaderSource->getValue(str);
+            std::string fsSource = fsHeader;
+            for (unsigned i = 0; i < NBINPUTS; ++i) {
+                fsSource += std::string("uniform sampler2D iChannel") + (char)('0'+i) + ";\n";
+            }
+            fsSource += '\n' + str + '\n' + fsFooter;
+            shadertoy->program = compileAndLinkProgram(vsSource.c_str(), fsSource.c_str());
+            if (shadertoy->program == 0) {
+                setPersistentMessage(OFX::Message::eMessageError, "", "Failed to compile and link program");
+                OFX::throwSuiteStatusException(kOfxStatFailed);
+                return;
+           }
+            _imageShaderChanged = false;
+            shadertoy->iResolutionLoc        = glGetUniformLocation(shadertoy->program, "iResolution");
+            shadertoy->iGlobalTimeLoc        = glGetUniformLocation(shadertoy->program, "iGlobalTime");
+            shadertoy->iTimeDeltaLoc         = glGetUniformLocation(shadertoy->program, "iTimeDelta");
+            shadertoy->iFrameLoc             = glGetUniformLocation(shadertoy->program, "iFrame");
+            shadertoy->iChannelTimeLoc       = glGetUniformLocation(shadertoy->program, "iChannelTime");
+            shadertoy->iMouseLoc             = glGetUniformLocation(shadertoy->program, "iMouse");
+            shadertoy->iDateLoc              = glGetUniformLocation(shadertoy->program, "iDate");
+            shadertoy->iSampleRateLoc        = glGetUniformLocation(shadertoy->program, "iSampleRate");
+            shadertoy->iChannelResolutionLoc = glGetUniformLocation(shadertoy->program, "iChannelResolution");
+            char iChannelX[10] = "iChannelX"; // index 8 holds the channel character
+            assert(NBINPUTS < 10 && iChannelX[8] == 'X');
+            for (unsigned i = 0; i < NBINPUTS; ++i) {
+                iChannelX[8] = '0' + i;
+                shadertoy->iChannelLoc[i] = glGetUniformLocation (shadertoy->program, iChannelX);
+            }
+        }
+    }
+    //GLuint shadertoy_shader = shadertoy->program;
+
+    double fps = _dstClip->getFrameRate();
+    if (fps <= 0) {
+        fps = 1.;
+    }
+    GLfloat t = time / fps;
+
+    if (shadertoy->iResolutionLoc >= 0) {
+        double width = dstBounds.x2 - dstBounds.x1;
+        double height = dstBounds.y2 - dstBounds.y1;
+        glUniform3f (shadertoy->iResolutionLoc, width, height, width/height);
+    }
+    if (shadertoy->iGlobalTimeLoc >= 0) {
+        glUniform1f (shadertoy->iGlobalTimeLoc, t);
+    }
+    if (shadertoy->iTimeDeltaLoc >= 0) {
+        glUniform1f (shadertoy->iTimeDeltaLoc, 1 / fps); // is that it?
+    }
+    if (shadertoy->iFrameLoc >= 0) {
+        glUniform1f (shadertoy->iFrameLoc, time); // is that it?
+    }
+    if (shadertoy->iChannelTimeLoc >= 0) {
+        GLfloat tv[NBINPUTS];
+        std::fill(tv, tv + NBINPUTS, t);
+        glUniform1fv(shadertoy->iChannelTimeLoc, NBINPUTS, tv);
+    }
+    if (shadertoy->iChannelResolutionLoc >= 0) {
+        GLfloat rv[3*NBINPUTS];
+        for (unsigned i = 0; i < NBINPUTS; ++i) {
+        }
+        glUniform3fv(shadertoy->iChannelResolutionLoc, NBINPUTS, rv);
+    }
+    if (shadertoy->iMouseLoc >= 0) {
+        double x, y, xc, yc;
+        _mousePosition->getValueAtTime(time, x, y);
+        _mouseClick->getValueAtTime(time, xc, yc);
+        if (_mousePressed->getValueAtTime(time)) {
+            xc = -xc;
+            yc = -yc;
+        }
+        glUniform4f (shadertoy->iMouseLoc, x, y, xc, yc);
+    }
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
+        if (shadertoy->iChannelLoc[i] >= 0) {
+            glActiveTexture (GL_TEXTURE0 + i);
+            glBindTexture (GL_TEXTURE_2D, srcIndex[i]);
+            glUniform1i (shadertoy->iChannelLoc[i], 0);
+        }
+    }
+    if (shadertoy->iDateLoc >= 0) {
+        // do not use the current date, as it may generate a different image at each render
+        glUniform4f(shadertoy->iDateLoc, 1970, 1, 1, 0);
+    }
+    if (shadertoy->iSampleRateLoc >= 0) {
+        glUniform1f(shadertoy->iSampleRateLoc, 44100);
+    }
+
+
 
     const OfxPointD& rs = args.renderScale;
 
@@ -740,7 +906,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     //
 
     // set up textures (how much of this is needed?)
-    for (unsigned i = 0; i < 4; ++i) {
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
+        glActiveTexture (GL_TEXTURE0 + i);
         glEnable(srcTarget[i]);
         glBindTexture(srcTarget[i], srcIndex[i]);
         glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -796,7 +963,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
      * Make sure buffered commands are finished!!!
      */
     glFinish();
-    for (unsigned i = 0; i < 4; ++i) {
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
         glDeleteTextures(1, &srcIndex[i]);
     }
 
@@ -820,6 +987,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
 #endif
 }
+
 
 static
 void getGlVersion(int *major, int *minor)
@@ -892,6 +1060,10 @@ ShadertoyPlugin::contextAttached()
         }
     }
     if (major < 3) {
+        if (major == 2 && minor < 1) {
+            sendMessage(OFX::Message::eMessageError, "", "Can not render: OpenGL 2.1 or better required for GLSL support.");
+            OFX::throwSuiteStatusException(kOfxStatFailed);
+        }
     }
     _haveAniso = glutExtensionSupported("GL_EXT_texture_filter_anisotropic");
     if (_haveAniso) {

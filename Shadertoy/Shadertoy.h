@@ -27,7 +27,11 @@
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
 
+#define SHADERTOY_NBINPUTS 4 // number of input channels (the standard shadertoy has 4 inputs)
+
 void getShadertoyPluginID(OFX::PluginFactoryArray &ids);
+
+struct ShadertoyShaderOpenGL;
 
 /** @brief The plugin that does our work */
 class ShadertoyPlugin : public OFX::ImageEffect
@@ -59,7 +63,9 @@ private:
     //virtual void beginSequenceRender(const OFX::BeginSequenceRenderArguments &args) OVERRIDE FINAL;
     //virtual void endSequenceRender(const OFX::EndSequenceRenderArguments &args) OVERRIDE FINAL;
 
+    void initOpenGL();
     void initMesa();
+    void exitOpenGL();
     void exitMesa();
     void renderGL(const OFX::RenderArguments &args);
     void renderMesa(const OFX::RenderArguments &args);
@@ -89,9 +95,13 @@ private:
 
     bool _haveAniso;
     float _maxAnisoMax;
-#if defined(HAS_GLES)
-    unsigned long _vertexbuffer;
+    OFX::MultiThread::Mutex _shaderMutex;
+#if defined(HAVE_OSMESA)
+    unsigned int _imageShaderID; // (Mesa-only) an ID that changes each time the shadertoy changes and needs to be recompiled
 #endif
+    ShadertoyShaderOpenGL *_imageShader; // (OpenGL-only) shader information
+    bool _imageShaderChanged; // (OpenGL-only) shader ID needs to be recompiled
+
 #if defined(HAVE_OSMESA)
     // A list of Mesa contexts available for rendering.
     // renderMesa() pops the last element, uses it, then pushes it back.
