@@ -28,6 +28,7 @@
 
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
+#include "ofxsCoords.h"
 
 // first, check that the file is used in a good way
 #if !defined(USE_OPENGL) && !defined(USE_OSMESA)
@@ -79,6 +80,7 @@ struct ShadertoyShader {
     , iDateLoc(-1)
     , iSampleRateLoc(-1)
     , iChannelResolutionLoc(-1)
+    , ifFragCoordOffsetUniform(-1)
     {
         std::fill(iChannelLoc, iChannelLoc+NBINPUTS, -1);
     }
@@ -93,6 +95,7 @@ struct ShadertoyShader {
     GLint iDateLoc;
     GLint iSampleRateLoc;
     GLint iChannelResolutionLoc;
+    GLint ifFragCoordOffsetUniform;
     GLint iChannelLoc[4];
 };
 
@@ -420,7 +423,7 @@ GLuint compileShader(GLenum shaderType, const char *shader, std::string &errstr)
             infoLog = new char[infologLength];
             glGetShaderInfoLog(s, infologLength, NULL, infoLog);
             if (shaderType == GL_FRAGMENT_SHADER) {
-                errstr += "\nError log (subtract 9 to line numbers):\n";
+                errstr += "\nError log (subtract 10 to line numbers):\n";
             } else {
                 errstr += "\nError log:\n";
             }
@@ -564,7 +567,9 @@ static std::string fsHeader =
 "uniform vec3      iChannelResolution["STRINGISE(NBINPUTS)"];\n"
 "uniform vec4      iMouse;\n"
 "uniform vec4      iDate;\n"
-"uniform float     iSampleRate;\n";
+"uniform float     iSampleRate;\n"
+"uniform vec2      ifFragCoordOffsetUniform;\n"
+;
 
 // https://raw.githubusercontent.com/beautypi/shadertoy-iOS-v2/master/shadertoy/shaders/fragment_main_image.glsl
 /*
@@ -576,10 +581,11 @@ void main()  {
 static std::string fsFooter =
 "void main(void)\n"
 "{\n"
-"  vec4 color = vec4(0.0, 0.0, 0.0, 1.0);\n"
-"  mainImage(color, gl_FragCoord.xy);\n"
-"  color.w = 1.0;\n"
-"  gl_FragColor = color;\n"
+"  mainImage(gl_FragColor, gl_FragCoord.xy + ifFragCoordOffsetUniform );\n"
+//"  vec4 color = vec4(0.0, 0.0, 0.0, 1.0);\n"
+//"  mainImage(color, gl_FragCoord.xy + ifFragCoordOffsetUniform);\n"
+//"  color.w = 1.0;\n"
+//"  gl_FragColor = color;\n"
 "}\n";
 
 void
@@ -827,8 +833,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     // setup the projection
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(dstBounds.x1, dstBounds.x2,
-            dstBounds.y1, dstBounds.y2,
+    glOrtho(0, dstBounds.x2 - dstBounds.x1,
+            0, dstBounds.y2 - dstBounds.y1,
             -10.0*(dstBounds.y2-dstBounds.y1), 10.0*(dstBounds.y2-dstBounds.y1));
     glMatrixMode(GL_MODELVIEW);
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -883,6 +889,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             shadertoy->iDateLoc              = glGetUniformLocation(shadertoy->program, "iDate");
             shadertoy->iSampleRateLoc        = glGetUniformLocation(shadertoy->program, "iSampleRate");
             shadertoy->iChannelResolutionLoc = glGetUniformLocation(shadertoy->program, "iChannelResolution");
+            shadertoy->ifFragCoordOffsetUniform = glGetUniformLocation(shadertoy->program, "ifFragCoordOffsetUniform");
             char iChannelX[10] = "iChannelX"; // index 8 holds the channel character
             assert(NBINPUTS < 10 && iChannelX[8] == 'X');
             for (unsigned i = 0; i < NBINPUTS; ++i) {
@@ -899,14 +906,16 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     GLfloat t = time / fps;
     const OfxPointD& rs = args.renderScale;
+    OfxRectI dstBoundsFull;
+    OFX::Coords::toPixelEnclosing(_dstClip->getRegionOfDefinition(time), rs, _dstClip->getPixelAspectRatio(), &dstBoundsFull);
 
     glUseProgram(shadertoy->program);
 
     // Uniform locations may be -1 if the Uniform was optimised out by the compîler.
     // see https://www.opengl.org/wiki/GLSL_:_common_mistakes#glGetUniformLocation_and_glGetActiveUniform
     if (shadertoy->iResolutionLoc >= 0) {
-        double width = dstBounds.x2 - dstBounds.x1;
-        double height = dstBounds.y2 - dstBounds.y1;
+        double width = dstBoundsFull.x2 - dstBoundsFull.x1;
+        double height = dstBoundsFull.y2 - dstBoundsFull.y1;
         // last coord is 1.
         // see https://github.com/beautypi/shadertoy-iOS-v2/blob/a852d8fd536e0606377a810635c5b654abbee623/shadertoy/ShaderPassRenderer.m#L329
         glUniform3f (shadertoy->iResolutionLoc, width, height, 1.);
@@ -956,6 +965,10 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     if (shadertoy->iSampleRateLoc >= 0) {
         glUniform1f(shadertoy->iSampleRateLoc, 44100);
+    }
+    if (shadertoy->ifFragCoordOffsetUniform >= 0) {
+        glUniform2f(shadertoy->ifFragCoordOffsetUniform, renderWindow.x1 - dstBoundsFull.x1, renderWindow.y1 - dstBoundsFull.y1);
+        DPRINT(("offset=%d,%d\n",(int)(renderWindow.x1 - dstBoundsFull.x1), (int)(renderWindow.y1 - dstBoundsFull.y1)));
     }
 
 

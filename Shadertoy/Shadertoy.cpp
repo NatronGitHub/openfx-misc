@@ -24,8 +24,8 @@
  * http://www.iquilezles.org/apps/shadertoy/index2.html (original Shader Toy v0.4)
  *
  * TODO:
- * - add a "Supports Tiles" checkbox
  * - add a "Renderer Info..." press button, which displays OpenGL renderer info in a dialog window
+ * - add RoD parameters (see SeExpr)
  * - add multipass support (using tabs for UI as in shadertoys)
  */
 
@@ -212,7 +212,7 @@ using namespace OFX;
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
-#define kSupportsTiles 0
+#define kSupportsTiles 1
 #define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
 #define kSupportsMultipleClipPARs false
@@ -233,6 +233,9 @@ using namespace OFX;
 "uniform vec4      iDate;                 // (year, month, day, time in seconds)\n" \
 "uniform float     iSampleRate;           // sound sample rate (i.e., 44100)\n" \
 ""
+
+#define kGroupShaders "shadersGroup"
+#define kGroupShadersLabel "Shaders"
 
 #define kGroupImageShader "imageShaderGroup"
 #define kGroupImageShaderLabel "Image"
@@ -416,6 +419,26 @@ ShadertoyPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
 }
 
 void
+ShadertoyPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
+                                      OFX::RegionOfInterestSetter &rois)
+{
+    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+        OFX::throwSuiteStatusException(kOfxStatFailed);
+        return;
+    }
+
+    // The effect requires full images to render any region
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
+        OfxRectD srcRoI;
+
+        if (_srcClips[i] && _srcClips[i]->isConnected()) {
+            srcRoI = _srcClips[i]->getRegionOfDefinition(args.time);
+            rois.setRegionOfInterest(*_srcClips[i], srcRoI);
+        }
+    }
+}
+
+void
 ShadertoyPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     // We have to do this because the processing code does not support varying components for srcClip and dstClip
@@ -582,6 +605,11 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
+    OFX::GroupParamDescriptor* groupShaders = desc.defineGroupParam(kGroupShaders);
+    if (groupShaders) {
+        groupShaders->setLabel(kGroupShadersLabel);
+    }
+
     {
         OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupImageShader);
         if (group) {
@@ -634,7 +662,14 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         if (page) {
             page->addChild(*group);
         }
+        if (groupShaders) {
+            group->setParent(*groupShaders);
+        }
     }
+    if (page) {
+        page->addChild(*groupShaders);
+    }
+
     {
         OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamMousePosition);
         param->setLabel(kParamMousePositionLabel);
