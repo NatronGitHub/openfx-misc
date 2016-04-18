@@ -898,6 +898,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         fps = 1.;
     }
     GLfloat t = time / fps;
+    const OfxPointD& rs = args.renderScale;
 
     glUseProgram(shadertoy->program);
 
@@ -940,7 +941,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             xc = -xc;
             yc = -yc;
         }
-        glUniform4f (shadertoy->iMouseLoc, x, y, xc, yc);
+        glUniform4f (shadertoy->iMouseLoc, x * rs.x, y * rs.y, xc * rs.x, yc * rs.y);
     }
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         if (shadertoy->iChannelLoc[i] >= 0) {
@@ -957,9 +958,6 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         glUniform1f(shadertoy->iSampleRateLoc, 44100);
     }
 
-
-
-    const OfxPointD& rs = args.renderScale;
 
     // Render to texture: see http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
     float w = (renderWindow.x2 - renderWindow.x1);
