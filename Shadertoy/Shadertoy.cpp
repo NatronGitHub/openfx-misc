@@ -217,7 +217,7 @@ using namespace OFX;
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
 
 #define kSupportsTiles 0
-#define kSupportsMultiResolution 0
+#define kSupportsMultiResolution 1
 #define kSupportsRenderScale 1
 #define kSupportsMultipleClipPARs false
 #define kSupportsMultipleClipDepths false
@@ -427,10 +427,12 @@ ShadertoyPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     if (_srcClips[0]) {
         clipPreferences.setClipComponents(*_dstClip, _srcClips[0]->getPixelComponents());
     }
+    clipPreferences.setOutputFrameVarying(true);
+    clipPreferences.setOutputHasContinousSamples(true);
 }
 
 void
-ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &/*args*/,
                               const std::string &paramName)
 {
     if (paramName == kParamImageShaderFileName ||
@@ -461,6 +463,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _imageShaderChanged = true;
     }
 }
+
 
 mDeclarePluginFactory(ShadertoyPluginFactory, ;, {});
 
