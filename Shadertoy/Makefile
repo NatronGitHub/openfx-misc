@@ -1,11 +1,7 @@
 PLUGINOBJECTS = \
-	TestRender.o \
-	TestPosition.o \
-	TestGroups.o \
-	TestOpenGL.o TestOpenGLRenderGL.o  TestOpenGLRenderMesa.o \
-	ofxsTransform3x3.o ofxsShutter.o
+	Shadertoy.o ShadertoyRenderGL.o  ShadertoyRenderMesa.o
 
-PLUGINNAME = Test
+PLUGINNAME = Shadertoy
 
 TOP_SRCDIR = ..
 include $(TOP_SRCDIR)/Makefile.master
