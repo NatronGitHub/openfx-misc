@@ -38,7 +38,7 @@
 #endif
 
 
-#if defined(USE_MESA) || !defined(_WINDOWS)
+#if defined(USE_OSMESA) || !defined(_WINDOWS)
 #define GL_GLEXT_PROTOTYPES
 #endif
 
@@ -386,8 +386,9 @@ int glutExtensionSupported( const char* extension )
     return 0 ;
 }
 
+
 static
-GLuint compileShader(GLenum shaderType, const char *shader)
+GLuint compileShader(GLenum shaderType, const char *shader, std::string &errstr)
 {
     GLuint s = glCreateShader(shaderType);
     if (s == 0) {
@@ -402,7 +403,13 @@ GLuint compileShader(GLenum shaderType, const char *shader)
     GLint param;
     glGetShaderiv(s, GL_COMPILE_STATUS, &param);
     if (param != GL_TRUE) {
-        DPRINT(("Failed to compile shader source\n====\n%s\n===\n", shader));
+        errstr = "Failed to compile ";
+        errstr += (shaderType == GL_VERTEX_SHADER) ? "vertex" : "fragment";
+        errstr += " shader source!\n";
+        //errstr += "\n====\n";
+        //errstr += shader;
+        //errstr += "\n===\n";
+
 
         int infologLength = 0;
         char *infoLog;
@@ -412,11 +419,19 @@ GLuint compileShader(GLenum shaderType, const char *shader)
         if (infologLength > 0) {
             infoLog = new char[infologLength];
             glGetShaderInfoLog(s, infologLength, NULL, infoLog);
-            DPRINT(("<log>\n%s\n</log>\n", infoLog));
+            if (shaderType == GL_FRAGMENT_SHADER) {
+                errstr += "\nError log (subtract 9 to line numbers):\n";
+            } else {
+                errstr += "\nError log:\n";
+            }
+            errstr += infoLog;
             delete [] infoLog;
+        } else {
+            errstr += "(no error log)";
         }
 
         glDeleteShader(s);
+        DPRINT(("%s\n", errstr.c_str()));
 
         return 0;
     }
@@ -425,7 +440,7 @@ GLuint compileShader(GLenum shaderType, const char *shader)
 }
 
 static
-GLuint compileAndLinkProgram(const char *vertexShader, const char *fragmentShader)
+GLuint compileAndLinkProgram(const char *vertexShader, const char *fragmentShader, std::string &errstr)
 {
     DPRINT(("CompileAndLink\n"));
     GLuint program = glCreateProgram();
@@ -435,8 +450,17 @@ GLuint compileAndLinkProgram(const char *vertexShader, const char *fragmentShade
         return program;
     }
 
-    GLuint vs = compileShader(GL_VERTEX_SHADER, vertexShader);
-    GLuint fs = compileShader(GL_FRAGMENT_SHADER, fragmentShader);
+    GLuint vs = compileShader(GL_VERTEX_SHADER, vertexShader, errstr);
+    if (!vs) {
+        glDeleteProgram(program);
+        return 0;
+    }
+    GLuint fs = compileShader(GL_FRAGMENT_SHADER, fragmentShader, errstr);
+    if (!fs) {
+        glDeleteShader(vs);
+        glDeleteProgram(program);
+        return 0;
+    }
 
     if (vs && fs) {
         glAttachShader(program, vs);
@@ -446,7 +470,7 @@ GLuint compileAndLinkProgram(const char *vertexShader, const char *fragmentShade
         GLint param;
         glGetProgramiv(program, GL_LINK_STATUS, &param);
         if (param != GL_TRUE) {
-            DPRINT(("Failed to link shader program\n"));
+            errstr = "Failed to link shader program\n";
             glCheckError();
             glGetError();
             int infologLength = 0;
@@ -457,15 +481,16 @@ GLuint compileAndLinkProgram(const char *vertexShader, const char *fragmentShade
             if (infologLength > 0) {
                 infoLog = new char[infologLength];
                 glGetProgramInfoLog(program, infologLength, NULL, infoLog);
-                DPRINT(("<log>\n%s\n</log>\n", infoLog));
+                errstr += "\nError Log:\n";
+                errstr += infoLog;
                 delete [] infoLog;
+            } else {
+                errstr += "(no error log)";
             }
-
-            GLchar errorLog[1024] = {0};
-            glGetProgramInfoLog(program, 1024, NULL, errorLog);
-
-            DPRINT(("<vertexShader>\n%s\n</vertexShader>\n", vertexShader));
-            DPRINT(("<fragmentShader>\n%s\n</fragmentShader>\n", fragmentShader));
+            //errstr += "\n==== Vertex shader source:\n";
+            //errstr += vertexShader;
+            //errstr += "\n==== Fragment shader source:\n";
+            //errstr += fragmentShader;
 
             glDetachShader(program, vs);
             glDeleteShader(vs);
@@ -474,14 +499,14 @@ GLuint compileAndLinkProgram(const char *vertexShader, const char *fragmentShade
             glDeleteShader(fs);
             
             glDeleteProgram(program);
+            DPRINT(("%s\n", errstr.c_str()));
+
             return 0;
         }
     } else {
         glDeleteProgram(program);
     }
-    
-    glUseProgram(0);
-    
+
     if (vs)
         glDeleteShader(vs);
     
@@ -491,12 +516,46 @@ GLuint compileAndLinkProgram(const char *vertexShader, const char *fragmentShade
     return program;
 }
 
+// https://raw.githubusercontent.com/beautypi/shadertoy-iOS-v2/master/shadertoy/shaders/vertex_main.glsl
+/*
+precision highp float;
+precision highp int;
+
+attribute vec3 position;
+
+void main() {
+    gl_Position.xyz = position;
+    gl_Position.w = 1.0;
+}
+
+ */
 static std::string vsSource = "void main() { gl_Position = ftransform(); }";
 
+// https://raw.githubusercontent.com/beautypi/shadertoy-iOS-v2/master/shadertoy/shaders/fragment_base_uniforms.glsl
+/*
+#extension GL_EXT_shader_texture_lod : enable
+#extension GL_OES_standard_derivatives : enable
+
+precision highp float;
+precision highp int;
+precision mediump sampler2D;
+
+uniform vec3      iResolution;                  // viewport resolution (in pixels)
+uniform float     iGlobalTime;                  // shader playback time (in seconds)
+uniform vec4      iMouse;                       // mouse pixel coords
+uniform vec4      iDate;                        // (year, month, day, time in seconds)
+uniform float     iSampleRate;                  // sound sample rate (i.e., 44100)
+uniform vec3      iChannelResolution[4];        // channel resolution (in pixels)
+uniform float     iChannelTime[4];              // channel playback time (in sec)
+
+uniform vec2      ifFragCoordOffsetUniform;     // used for tiled based hq rendering
+uniform float     iTimeDelta;                   // render time (in seconds)
+uniform int       iFrame;                       // shader playback frame
+*/
 static std::string fsHeader =
-"#extension GL_OES_standard_derivatives : enable\n"
-"precision mediump float;\n"
-"precision mediump int;\n"
+//"#extension GL_OES_standard_derivatives : enable\n"
+//"precision mediump float;\n"
+//"precision mediump int;\n"
 "uniform vec3      iResolution;\n"
 "uniform float     iGlobalTime;\n"
 "uniform float     iTimeDelta;\n"
@@ -507,6 +566,13 @@ static std::string fsHeader =
 "uniform vec4      iDate;\n"
 "uniform float     iSampleRate;\n";
 
+// https://raw.githubusercontent.com/beautypi/shadertoy-iOS-v2/master/shadertoy/shaders/fragment_main_image.glsl
+/*
+
+void main()  {
+    mainImage(gl_FragColor, gl_FragCoord.xy + ifFragCoordOffsetUniform );
+}
+*/
 static std::string fsFooter =
 "void main(void)\n"
 "{\n"
@@ -799,9 +865,11 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                 fsSource += std::string("uniform sampler2D iChannel") + (char)('0'+i) + ";\n";
             }
             fsSource += '\n' + str + '\n' + fsFooter;
-            shadertoy->program = compileAndLinkProgram(vsSource.c_str(), fsSource.c_str());
+            std::string errstr;
+            shadertoy->program = compileAndLinkProgram(vsSource.c_str(), fsSource.c_str(), errstr);
             if (shadertoy->program == 0) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Failed to compile and link program");
+                sendMessage(OFX::Message::eMessageError, "", errstr.c_str());
                 OFX::throwSuiteStatusException(kOfxStatFailed);
                 return;
            }
@@ -831,10 +899,16 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     GLfloat t = time / fps;
 
+    glUseProgram(shadertoy->program);
+
+    // Uniform locations may be -1 if the Uniform was optimised out by the compîler.
+    // see https://www.opengl.org/wiki/GLSL_:_common_mistakes#glGetUniformLocation_and_glGetActiveUniform
     if (shadertoy->iResolutionLoc >= 0) {
         double width = dstBounds.x2 - dstBounds.x1;
         double height = dstBounds.y2 - dstBounds.y1;
-        glUniform3f (shadertoy->iResolutionLoc, width, height, width/height);
+        // last coord is 1.
+        // see https://github.com/beautypi/shadertoy-iOS-v2/blob/a852d8fd536e0606377a810635c5b654abbee623/shadertoy/ShaderPassRenderer.m#L329
+        glUniform3f (shadertoy->iResolutionLoc, width, height, 1.);
     }
     if (shadertoy->iGlobalTimeLoc >= 0) {
         glUniform1f (shadertoy->iGlobalTimeLoc, t);
@@ -860,7 +934,9 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         double x, y, xc, yc;
         _mousePosition->getValueAtTime(time, x, y);
         _mouseClick->getValueAtTime(time, xc, yc);
-        if (_mousePressed->getValueAtTime(time)) {
+        if (!_mousePressed->getValueAtTime(time)) {
+            // negative is mouse released
+            // see https://github.com/beautypi/shadertoy-iOS-v2/blob/a852d8fd536e0606377a810635c5b654abbee623/shadertoy/ShaderCanvasViewController.m#L315
             xc = -xc;
             yc = -yc;
         }
@@ -1048,6 +1124,7 @@ ShadertoyPlugin::contextAttached()
     DPRINT(("GL_RENDERER   = %s\n", (char *) glGetString(GL_RENDERER)));
     DPRINT(("GL_VERSION    = %s\n", (char *) glGetString(GL_VERSION)));
     DPRINT(("GL_VENDOR     = %s\n", (char *) glGetString(GL_VENDOR)));
+    DPRINT(("GL_SHADING_LANGUAGE_VERSION = %s\n", (char *) glGetString(GL_SHADING_LANGUAGE_VERSION)));
     DPRINT(("GL_EXTENSIONS = %s\n", (char *) glGetString(GL_EXTENSIONS)));
 #endif
     // Non-power-of-two textures are supported if the GL version is 2.0 or greater, or if the implementation exports the GL_ARB_texture_non_power_of_two extension. (Mesa does, of course)
