@@ -24,12 +24,8 @@
  * http://www.iquilezles.org/apps/shadertoy/index2.html (original Shader Toy v0.4)
  *
  * TODO:
- * - actual shadertoy render (for now, it is a placeholder)
- * - only recompile shader if it changed
- * - for each shader, add a "From file" checkbox and a "File" param - this disables the shader param.
- * - when unchecking the checkbox, the "File" param is still enabled, and the shader param is enabled too (so it can be edited)
- * - at plugin initialization, if the "From file" checkbox is checked, reload the shader from the file
- * - add a "Save file as" non-persistant param to save the edited shader
+ * - add a "Supports Tiles" checkbox
+ * - add a "Renderer Info..." press button, which displays OpenGL renderer info in a dialog window
  * - add multipass support (using tabs for UI as in shadertoys)
  */
 
