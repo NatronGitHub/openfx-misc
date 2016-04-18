@@ -301,7 +301,7 @@
 		1E34520B190695DC0080D699 /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1E34520D190695DC0080D699 /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1E3452131906961F0080D699 /* ColorCorrect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D7B4C95E18D9DA410004137D /* ColorCorrect.cpp */; };
-		1E398DAB1B9900A600C98B28 /* libGLU.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E398DAA1B99008E00C98B28 /* libGLU.a */; };
+		1E398DAB1B9900A600C98B28 /* libMangledGLU.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E398DAA1B99008E00C98B28 /* libMangledGLU.a */; };
 		1E3AC8C918B6207600F228A6 /* ofxsCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB517995D5C005F2132 /* ofxsCore.cpp */; };
 		1E3AC8CA18B6207600F228A6 /* ofxsImageEffect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB617995D5C005F2132 /* ofxsImageEffect.cpp */; };
 		1E3AC8CB18B6207600F228A6 /* ofxsInteract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CB717995D5C005F2132 /* ofxsInteract.cpp */; };
@@ -910,7 +910,7 @@
 		1EDFE9E31CB792D1001E68FA /* ofxsProperty.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBB17995D5C005F2132 /* ofxsProperty.cpp */; };
 		1EDFE9E41CB792D1001E68FA /* ofxsPropertyValidation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1E3E3CBC17995D5C005F2132 /* ofxsPropertyValidation.cpp */; };
 		1EDFE9E71CB792D1001E68FA /* libMangledOSMesa32.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E2868D41B832BB400B18774 /* libMangledOSMesa32.a */; };
-		1EDFE9E81CB792D1001E68FA /* libGLU.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E398DAA1B99008E00C98B28 /* libGLU.a */; };
+		1EDFE9E81CB792D1001E68FA /* libMangledGLU.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E398DAA1B99008E00C98B28 /* libMangledGLU.a */; };
 		1EDFE9E91CB792D1001E68FA /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1E551F5A179950EC00A4135C /* OpenGL.framework */; };
 		1EDFE9FB1CB79D0D001E68FA /* Shadertoy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDFE9F21CB79314001E68FA /* Shadertoy.cpp */; };
 		1EDFE9FC1CB79D14001E68FA /* ShadertoyRenderGL.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1EDFE9F51CB79314001E68FA /* ShadertoyRenderGL.cpp */; };
@@ -2688,7 +2688,7 @@
 		1E3451F5190695850080D699 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E3451F6190695850080D699 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E345211190695DC0080D699 /* ColorCorrect.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorCorrect.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
-		1E398DAA1B99008E00C98B28 /* libGLU.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libGLU.a; path = lib/libGLU.a; sourceTree = OSMESA_PATH; };
+		1E398DAA1B99008E00C98B28 /* libMangledGLU.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libMangledGLU.a; path = lib/libMangledGLU.a; sourceTree = OSMESA_PATH; };
 		1E3AC8D618B6207600F228A6 /* Switch.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Switch.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E3AC8DD18B6215F00F228A6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E3AC8DE18B6215F00F228A6 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
@@ -3455,7 +3455,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1E2868D51B832BB400B18774 /* libMangledOSMesa32.a in Frameworks */,
-				1E398DAB1B9900A600C98B28 /* libGLU.a in Frameworks */,
+				1E398DAB1B9900A600C98B28 /* libMangledGLU.a in Frameworks */,
 				1EBAEFDD199A81DB0037B3E6 /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3601,7 +3601,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1EDFE9E71CB792D1001E68FA /* libMangledOSMesa32.a in Frameworks */,
-				1EDFE9E81CB792D1001E68FA /* libGLU.a in Frameworks */,
+				1EDFE9E81CB792D1001E68FA /* libMangledGLU.a in Frameworks */,
 				1EDFE9E91CB792D1001E68FA /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -4196,7 +4196,7 @@
 		1E551EDA17994E8100A4135C /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				1E398DAA1B99008E00C98B28 /* libGLU.a */,
+				1E398DAA1B99008E00C98B28 /* libMangledGLU.a */,
 				1E2868D41B832BB400B18774 /* libMangledOSMesa32.a */,
 				1E551F5A179950EC00A4135C /* OpenGL.framework */,
 			);
@@ -8234,6 +8234,7 @@
 					"$(OFX_PATH)/Support/Plugins/include",
 				);
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks @loader_path/../Libraries";
+				LLVM_PATH = /opt/llvm;
 				OFX_PATH = openfx;
 				ONLY_ACTIVE_ARCH = YES;
 				WARNING_CFLAGS = (
@@ -8277,6 +8278,7 @@
 					"$(OFX_PATH)/Support/Plugins/include",
 				);
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks @loader_path/../Libraries";
+				LLVM_PATH = /opt/llvm;
 				OFX_PATH = openfx;
 				WARNING_CFLAGS = (
 					"-Wextra",
@@ -8701,6 +8703,7 @@
 		1EBAEFDF199A81DB0037B3E6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LIBRARY = "libc++";
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"HAVE_OSMESA=1",
@@ -8717,6 +8720,41 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/osmesa/lib,
+				);
+				OTHER_LDFLAGS = (
+					"-L$(LLVM_PATH)/lib",
+					"-Wl,-search_paths_first",
+					"-Wl,-headerpad_max_install_names\n-lLLVMX86Disassembler",
+					"-lLLVMX86AsmParser",
+					"-lLLVMX86CodeGen",
+					"-lLLVMSelectionDAG",
+					"-lLLVMAsmPrinter",
+					"-lLLVMCodeGen",
+					"-lLLVMScalarOpts",
+					"-lLLVMInstCombine",
+					"-lLLVMInstrumentation",
+					"-lLLVMProfileData",
+					"-lLLVMTransformUtils",
+					"-lLLVMBitWriter",
+					"-lLLVMX86Desc",
+					"-lLLVMMCDisassembler",
+					"-lLLVMX86Info",
+					"-lLLVMX86AsmPrinter",
+					"-lLLVMX86Utils",
+					"-lLLVMMCJIT",
+					"-lLLVMExecutionEngine",
+					"-lLLVMTarget",
+					"-lLLVMAnalysis",
+					"-lLLVMRuntimeDyld",
+					"-lLLVMObject",
+					"-lLLVMMCParser",
+					"-lLLVMBitReader",
+					"-lLLVMMC",
+					"-lLLVMCore",
+					"-lLLVMSupport\n-lcurses",
+					"-lpthread",
+					"-lz",
+					"-lm",
 				);
 				PRODUCT_NAME = Test.ofx;
 				WRAPPER_EXTENSION = bundle;
@@ -8726,6 +8764,7 @@
 		1EBAEFE0199A81DB0037B3E6 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LIBRARY = "libc++";
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"HAVE_OSMESA=1",
@@ -8742,6 +8781,41 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/osmesa/lib,
+				);
+				OTHER_LDFLAGS = (
+					"-L$(LLVM_PATH)/lib",
+					"-Wl,-search_paths_first",
+					"-Wl,-headerpad_max_install_names\n-lLLVMX86Disassembler",
+					"-lLLVMX86AsmParser",
+					"-lLLVMX86CodeGen",
+					"-lLLVMSelectionDAG",
+					"-lLLVMAsmPrinter",
+					"-lLLVMCodeGen",
+					"-lLLVMScalarOpts",
+					"-lLLVMInstCombine",
+					"-lLLVMInstrumentation",
+					"-lLLVMProfileData",
+					"-lLLVMTransformUtils",
+					"-lLLVMBitWriter",
+					"-lLLVMX86Desc",
+					"-lLLVMMCDisassembler",
+					"-lLLVMX86Info",
+					"-lLLVMX86AsmPrinter",
+					"-lLLVMX86Utils",
+					"-lLLVMMCJIT",
+					"-lLLVMExecutionEngine",
+					"-lLLVMTarget",
+					"-lLLVMAnalysis",
+					"-lLLVMRuntimeDyld",
+					"-lLLVMObject",
+					"-lLLVMMCParser",
+					"-lLLVMBitReader",
+					"-lLLVMMC",
+					"-lLLVMCore",
+					"-lLLVMSupport\n-lcurses",
+					"-lpthread",
+					"-lz",
+					"-lm",
 				);
 				PRODUCT_NAME = Test.ofx;
 				WRAPPER_EXTENSION = bundle;
@@ -9139,6 +9213,7 @@
 		1EDFE9EB1CB792D1001E68FA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LIBRARY = "libc++";
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"HAVE_OSMESA=1",
@@ -9155,6 +9230,41 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/osmesa/lib,
+				);
+				OTHER_LDFLAGS = (
+					"-L$(LLVM_PATH)/lib",
+					"-Wl,-search_paths_first",
+					"-Wl,-headerpad_max_install_names\n-lLLVMX86Disassembler",
+					"-lLLVMX86AsmParser",
+					"-lLLVMX86CodeGen",
+					"-lLLVMSelectionDAG",
+					"-lLLVMAsmPrinter",
+					"-lLLVMCodeGen",
+					"-lLLVMScalarOpts",
+					"-lLLVMInstCombine",
+					"-lLLVMInstrumentation",
+					"-lLLVMProfileData",
+					"-lLLVMTransformUtils",
+					"-lLLVMBitWriter",
+					"-lLLVMX86Desc",
+					"-lLLVMMCDisassembler",
+					"-lLLVMX86Info",
+					"-lLLVMX86AsmPrinter",
+					"-lLLVMX86Utils",
+					"-lLLVMMCJIT",
+					"-lLLVMExecutionEngine",
+					"-lLLVMTarget",
+					"-lLLVMAnalysis",
+					"-lLLVMRuntimeDyld",
+					"-lLLVMObject",
+					"-lLLVMMCParser",
+					"-lLLVMBitReader",
+					"-lLLVMMC",
+					"-lLLVMCore",
+					"-lLLVMSupport\n-lcurses",
+					"-lpthread",
+					"-lz",
+					"-lm",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;
@@ -9164,6 +9274,7 @@
 		1EDFE9EC1CB792D1001E68FA /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LIBRARY = "libc++";
 				EXPORTED_SYMBOLS_FILE = "$(OFX_PATH)/Support/include/osxSymbols";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"HAVE_OSMESA=1",
@@ -9180,6 +9291,41 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/osmesa/lib,
+				);
+				OTHER_LDFLAGS = (
+					"-L$(LLVM_PATH)/lib",
+					"-Wl,-search_paths_first",
+					"-Wl,-headerpad_max_install_names\n-lLLVMX86Disassembler",
+					"-lLLVMX86AsmParser",
+					"-lLLVMX86CodeGen",
+					"-lLLVMSelectionDAG",
+					"-lLLVMAsmPrinter",
+					"-lLLVMCodeGen",
+					"-lLLVMScalarOpts",
+					"-lLLVMInstCombine",
+					"-lLLVMInstrumentation",
+					"-lLLVMProfileData",
+					"-lLLVMTransformUtils",
+					"-lLLVMBitWriter",
+					"-lLLVMX86Desc",
+					"-lLLVMMCDisassembler",
+					"-lLLVMX86Info",
+					"-lLLVMX86AsmPrinter",
+					"-lLLVMX86Utils",
+					"-lLLVMMCJIT",
+					"-lLLVMExecutionEngine",
+					"-lLLVMTarget",
+					"-lLLVMAnalysis",
+					"-lLLVMRuntimeDyld",
+					"-lLLVMObject",
+					"-lLLVMMCParser",
+					"-lLLVMBitReader",
+					"-lLLVMMC",
+					"-lLLVMCore",
+					"-lLLVMSupport\n-lcurses",
+					"-lpthread",
+					"-lz",
+					"-lm",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = bundle;
