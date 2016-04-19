@@ -424,7 +424,7 @@ GLuint compileShader(GLenum shaderType, const char *shader, std::string &errstr)
             infoLog = new char[infologLength];
             glGetShaderInfoLog(s, infologLength, NULL, infoLog);
             if (shaderType == GL_FRAGMENT_SHADER) {
-                errstr += "\nError log (subtract 100 to line numbers):\n";
+                errstr += "\nError log (subtract 100 from line numbers):\n";
             } else {
                 errstr += "\nError log:\n";
             }
