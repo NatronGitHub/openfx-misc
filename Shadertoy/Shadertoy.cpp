@@ -50,6 +50,7 @@ using namespace OFX;
 
 //OFXS_NAMESPACE_ANONYMOUS_ENTER // defines external classes
 #define NBINPUTS SHADERTOY_NBINPUTS
+#define NBUNIFORMS SHADERTOY_NBUNIFORMS
 
 #ifdef DEBUG
 #define NATRON_EVALUATEONCHANGE_BUG
@@ -204,6 +205,7 @@ using namespace OFX;
 "sampler2D	iChannel{i}	image/sound	Sampler for input textures i\n" \
 "vec4	iDate	image/sound	Year, month, day, time in seconds in .xyzw\n" \
 "float	iSampleRate	image/sound	The sound sample rate (typically 44100)\n" \
+"vec4	iRenderScale	The OpenFX render scale (e.g. 0.5,0.5 when rendering half-size) [OFX plugin only]\n" \
 "\n" \
 "Shadertoy Outputs\n" \
 "For image shaders, fragColor is used as output channel. It is not, for now, mandatory but recommended to leave the alpha channel to 1.0.\n" \

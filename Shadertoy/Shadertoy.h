@@ -28,6 +28,7 @@
 #include "ofxsMultiThread.h"
 
 #define SHADERTOY_NBINPUTS 4 // number of input channels (the standard shadertoy has 4 inputs)
+#define SHADERTOY_NBUNIFORMS 10 // number of additional uniforms
 
 void getShadertoyPluginID(OFX::PluginFactoryArray &ids);
 

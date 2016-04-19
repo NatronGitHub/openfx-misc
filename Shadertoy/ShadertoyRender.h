@@ -81,7 +81,8 @@ struct ShadertoyShader {
     , iDateLoc(-1)
     , iSampleRateLoc(-1)
     , iChannelResolutionLoc(-1)
-    , ifFragCoordOffsetUniform(-1)
+    , ifFragCoordOffsetUniformLoc(-1)
+    , iRenderScaleLoc(-1)
     {
         std::fill(iChannelLoc, iChannelLoc+NBINPUTS, -1);
     }
@@ -96,7 +97,8 @@ struct ShadertoyShader {
     GLint iDateLoc;
     GLint iSampleRateLoc;
     GLint iChannelResolutionLoc;
-    GLint ifFragCoordOffsetUniform;
+    GLint ifFragCoordOffsetUniformLoc;
+    GLint iRenderScaleLoc;
     GLint iChannelLoc[4];
 };
 
@@ -591,23 +593,14 @@ static std::string fsHeader =
 "uniform vec4      iDate;\n"
 "uniform float     iSampleRate;\n"
 "uniform vec2      ifFragCoordOffsetUniform;\n"
+"uniform vec2      iRenderScale;\n" // the OpenFX renderscale
 ;
 
 // https://raw.githubusercontent.com/beautypi/shadertoy-iOS-v2/master/shadertoy/shaders/fragment_main_image.glsl
-/*
-
-void main()  {
-    mainImage(gl_FragColor, gl_FragCoord.xy + ifFragCoordOffsetUniform );
-}
-*/
 static std::string fsFooter =
 "void main(void)\n"
 "{\n"
 "  mainImage(gl_FragColor, gl_FragCoord.xy + ifFragCoordOffsetUniform );\n"
-//"  vec4 color = vec4(0.0, 0.0, 0.0, 1.0);\n"
-//"  mainImage(color, gl_FragCoord.xy + ifFragCoordOffsetUniform);\n"
-//"  color.w = 1.0;\n"
-//"  gl_FragColor = color;\n"
 "}\n";
 
 void
@@ -917,7 +910,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             shadertoy->iDateLoc              = glGetUniformLocation(shadertoy->program, "iDate");
             shadertoy->iSampleRateLoc        = glGetUniformLocation(shadertoy->program, "iSampleRate");
             shadertoy->iChannelResolutionLoc = glGetUniformLocation(shadertoy->program, "iChannelResolution");
-            shadertoy->ifFragCoordOffsetUniform = glGetUniformLocation(shadertoy->program, "ifFragCoordOffsetUniform");
+            shadertoy->ifFragCoordOffsetUniformLoc = glGetUniformLocation(shadertoy->program, "ifFragCoordOffsetUniform");
+            shadertoy->iRenderScaleLoc = glGetUniformLocation(shadertoy->program, "iRenderScale");
             char iChannelX[10] = "iChannelX"; // index 8 holds the channel character
             assert(NBINPUTS < 10 && iChannelX[8] == 'X');
             for (unsigned i = 0; i < NBINPUTS; ++i) {
@@ -994,9 +988,12 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     if (shadertoy->iSampleRateLoc >= 0) {
         glUniform1f(shadertoy->iSampleRateLoc, 44100);
     }
-    if (shadertoy->ifFragCoordOffsetUniform >= 0) {
-        glUniform2f(shadertoy->ifFragCoordOffsetUniform, renderWindow.x1 - dstBoundsFull.x1, renderWindow.y1 - dstBoundsFull.y1);
-        DPRINT(("offset=%d,%d\n",(int)(renderWindow.x1 - dstBoundsFull.x1), (int)(renderWindow.y1 - dstBoundsFull.y1)));
+    if (shadertoy->ifFragCoordOffsetUniformLoc >= 0) {
+        glUniform2f(shadertoy->ifFragCoordOffsetUniformLoc, renderWindow.x1 - dstBoundsFull.x1, renderWindow.y1 - dstBoundsFull.y1);
+        //DPRINT(("offset=%d,%d\n",(int)(renderWindow.x1 - dstBoundsFull.x1), (int)(renderWindow.y1 - dstBoundsFull.y1)));
+    }
+    if (shadertoy->iRenderScaleLoc >= 0) {
+        glUniform2f(shadertoy->iRenderScaleLoc, rs.x, rs.y);
     }
 
 
