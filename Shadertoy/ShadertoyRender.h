@@ -25,6 +25,7 @@
 #include <cstring> // strstr, strchr, strlen
 #include <cstdio> // sscanf, vsnprintf, fwrite
 #include <cassert>
+#include <algorithm>
 
 #include "ofxsMacros.h"
 #include "ofxsMultiThread.h"
@@ -423,7 +424,7 @@ GLuint compileShader(GLenum shaderType, const char *shader, std::string &errstr)
             infoLog = new char[infologLength];
             glGetShaderInfoLog(s, infologLength, NULL, infoLog);
             if (shaderType == GL_FRAGMENT_SHADER) {
-                errstr += "\nError log (subtract 10 to line numbers):\n";
+                errstr += "\nError log (subtract 100 to line numbers):\n";
             } else {
                 errstr += "\nError log:\n";
             }
@@ -555,10 +556,31 @@ uniform vec2      ifFragCoordOffsetUniform;     // used for tiled based hq rende
 uniform float     iTimeDelta;                   // render time (in seconds)
 uniform int       iFrame;                       // shader playback frame
 */
+// improve OpenGL ES 2.0 portability,
+// see https://en.wikibooks.org/wiki/OpenGL_Programming/Modern_OpenGL_Tutorial_03#OpenGL_ES_2_portability
 static std::string fsHeader =
-//"#extension GL_OES_standard_derivatives : enable\n"
-//"precision mediump float;\n"
-//"precision mediump int;\n"
+#ifdef GL_ES_VERSION_2_0
+"#version 100\n"  // OpenGL ES 2.0
+#else
+"#version 120\n"  // OpenGL 2.1
+#endif
+#ifdef GL_ES_VERSION_2_0
+"#extension GL_EXT_shader_texture_lod : enable\n"
+"#extension GL_OES_standard_derivatives : enable\n"
+"#ifdef GL_FRAGMENT_PRECISION_HIGH\n"
+"precision highp float;\n"
+"precision highp int;\n"
+"#else\n"
+"precision mediump float;\n"
+"precision mediump int;\n"
+"#endif\n"
+"precision mediump sampler2D;\n"
+#else
+// Ignore GLES 2 precision specifiers:
+"#define lowp   \n"
+"#define mediump\n"
+"#define highp  \n"
+#endif
 "uniform vec3      iResolution;\n"
 "uniform float     iGlobalTime;\n"
 "uniform float     iTimeDelta;\n"
@@ -870,7 +892,13 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             for (unsigned i = 0; i < NBINPUTS; ++i) {
                 fsSource += std::string("uniform sampler2D iChannel") + (char)('0'+i) + ";\n";
             }
-            fsSource += '\n' + str + '\n' + fsFooter;
+            size_t fsSourceLines = std::count(fsSource.begin(), fsSource.end(), '\n');
+            assert(fsSourceLines <= 100);
+            if ((int)fsSourceLines > 100) {
+                fsSourceLines = 100;
+            }
+            // make sure the actual program starts at line 100
+            fsSource += std::string(100 - fsSourceLines, '\n') + str + '\n' + fsFooter;
             std::string errstr;
             shadertoy->program = compileAndLinkProgram(vsSource.c_str(), fsSource.c_str(), errstr);
             if (shadertoy->program == 0) {
