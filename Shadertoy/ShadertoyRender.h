@@ -1166,6 +1166,28 @@ ShadertoyPlugin::contextAttached()
     DPRINT(("GL_SHADING_LANGUAGE_VERSION = %s\n", (char *) glGetString(GL_SHADING_LANGUAGE_VERSION)));
     DPRINT(("GL_EXTENSIONS = %s\n", (char *) glGetString(GL_EXTENSIONS)));
 #endif
+    {
+        OFX::MultiThread::AutoMutex lock(_rendererInfoMutex);
+#ifdef USE_OSMESA
+        std::string &message = _rendererInfoMesa;
+#else
+        std::string &message = _rendererInfoGL;
+#endif
+        if (message.empty()) {
+            message += "OpenGL renderer information:";
+            message += "\nGL_RENDERER = ";
+            message += (char *) glGetString(GL_RENDERER);
+            message += "\nGL_VERSION = ";
+            message += (char *) glGetString(GL_VERSION);
+            message += "\nGL_VENDOR = ";
+            message += (char *) glGetString(GL_VENDOR);
+            message += "\nGL_SHADING_LANGUAGE_VERSION = ";
+            message += (char *) glGetString(GL_SHADING_LANGUAGE_VERSION);
+            message += "\nGL_EXTENSIONS = ";
+            message += (char *) glGetString(GL_EXTENSIONS);
+        }
+    }
+
     // Non-power-of-two textures are supported if the GL version is 2.0 or greater, or if the implementation exports the GL_ARB_texture_non_power_of_two extension. (Mesa does, of course)
     int major, minor;
     getGlVersion(&major, &minor);

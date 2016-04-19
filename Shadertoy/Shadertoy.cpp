@@ -24,8 +24,7 @@
  * http://www.iquilezles.org/apps/shadertoy/index2.html (original Shader Toy v0.4)
  *
  * TODO:
- * - add a "Renderer Info..." press button, which displays OpenGL renderer info in a dialog window
- * - add RoD parameters (see SeExpr)
+ * - add RoD + extra parameters (see SeExpr)
  * - add multipass support (using tabs for UI as in shadertoys)
  */
 
@@ -288,6 +287,10 @@ using namespace OFX;
 #define kParamUseGPUHint "If GPU rendering is available, use it. If the checkbox is not enabled, GPU rendering is not available on this host."
 #endif
 
+#define kParamRendererInfo "rendererInfo"
+#define kParamRendererInfoLabel "Renderer Info..."
+#define kParamRendererInfoHint "Retrieve information about the current OpenGL renderer."
+
 #define kClipChannel "iChannel"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -451,7 +454,7 @@ ShadertoyPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 }
 
 void
-ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &/*args*/,
+ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                               const std::string &paramName)
 {
     if (paramName == kParamImageShaderFileName ||
@@ -480,6 +483,33 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &/*args*/,
         ++_imageShaderID;
 #endif
         _imageShaderChanged = true;
+    } else if (paramName == kParamRendererInfo) {
+        const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
+        bool openGLRender = false;
+        std::string message;
+#if defined(OFX_SUPPORTS_OPENGLRENDER)
+        if (gHostDescription.supportsOpenGLRender) {
+            _useGPUIfAvailable->getValueAtTime(args.time, openGLRender);
+        }
+
+        if (openGLRender) {
+            OFX::MultiThread::AutoMutex lock(_rendererInfoMutex);
+            message = _rendererInfoGL;
+        }
+#endif
+#ifdef HAVE_OSMESA
+        if (!openGLRender) {
+            OFX::MultiThread::AutoMutex lock(_rendererInfoMutex);
+            message = _rendererInfoMesa;
+        }
+#endif // HAVE_OSMESA
+        if (message.empty()) {
+            sendMessage(OFX::Message::eMessageMessage, "", "OpenGL renderer info not yet available.\n"
+                        "Please execute at least one image render and try again.");
+        } else {
+            sendMessage(OFX::Message::eMessageMessage, "", message);
+        }
+
     }
 }
 
@@ -732,6 +762,15 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         }
     }
 #endif
+
+    {
+        OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamRendererInfo);
+        param->setLabel(kParamRendererInfoLabel);
+        param->setHint(kParamRendererInfoHint);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 }
 
 OFX::ImageEffect*

@@ -105,6 +105,9 @@ private:
     ShadertoyShaderOpenGL *_imageShader; // (OpenGL-only) shader information
     bool _imageShaderChanged; // (OpenGL-only) shader ID needs to be recompiled
 
+    OFX::MultiThread::Mutex _rendererInfoMutex;
+    std::string _rendererInfoGL;
+
 #if defined(HAVE_OSMESA)
     // A list of Mesa contexts available for rendering.
     // renderMesa() pops the last element, uses it, then pushes it back.
@@ -112,6 +115,8 @@ private:
     // That way, we can have multithreaded OSMesa rendering without having to create a context at each render
     std::list<OSMesaPrivate *> _osmesa;
     OFX::MultiThread::Mutex _osmesaMutex;
+
+    std::string _rendererInfoMesa;
 #endif
 };
 
