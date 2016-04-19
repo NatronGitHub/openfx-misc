@@ -89,6 +89,8 @@ private:
 
     OFX::StringParam *_imageShaderFileName;
     OFX::StringParam *_imageShaderSource;
+    OFX::PushButtonParam *_imageShaderCompile;
+    OFX::IntParam *_imageShaderTriggerRender;
     OFX::Double2DParam *_mousePosition;
     OFX::Double2DParam *_mouseClick;
     OFX::BooleanParam *_mousePressed;

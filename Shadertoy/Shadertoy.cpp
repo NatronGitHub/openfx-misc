@@ -51,10 +51,15 @@ using namespace OFX;
 //OFXS_NAMESPACE_ANONYMOUS_ENTER // defines external classes
 #define NBINPUTS SHADERTOY_NBINPUTS
 
+#ifdef DEBUG
+#define NATRON_EVALUATEONCHANGE_BUG
+#pragma message WARN("version compiled to demonstrate the NATRON_EVALUATEONCHANGE_BUG")
+#endif
+
 #define kPluginName "Shadertoy"
 #define kPluginGrouping "Filter"
 #define kPluginDescription \
-"Apply shaders from www.shadertoy.com .\n" \
+"Apply shaders from www.shadertoy.com (multipass shaders are not supported).\n" \
 "\n" \
 "This help only covers the parts of GLSL ES that are relevant for Shadertoy. " \
 "For the complete specification please have a look at GLSL ES specification " \
@@ -233,11 +238,8 @@ using namespace OFX;
 "uniform float     iSampleRate;           // sound sample rate (i.e., 44100)\n" \
 ""
 
-#define kGroupShaders "shadersGroup"
-#define kGroupShadersLabel "Shaders"
-
 #define kGroupImageShader "imageShaderGroup"
-#define kGroupImageShaderLabel "Image"
+#define kGroupImageShaderLabel "Image Shader"
 
 #define kParamImageShaderFileName "imageShaderFileName"
 #define kParamImageShaderFileNameLabel "Load from File"
@@ -251,6 +253,11 @@ using namespace OFX;
 #define kParamImageShaderSourceLabel "Source"
 #define kParamImageShaderSourceHint "Image shader.\n\n"kShaderInputsHint
 
+#define kParamImageShaderCompile "imageShaderCompile"
+#define kParamImageShaderCompileLabel "Compile"
+#define kParamImageShaderCompileHint "Compile the image shader."
+
+#define kParamImageShaderTriggerRender "imageShaderTriggerRender"
 
 #define kParamImageShaderDefault                            \
 "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n" \
@@ -302,6 +309,8 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
 , _srcClips(NBINPUTS, NULL)
 , _imageShaderFileName(0)
 , _imageShaderSource(0)
+, _imageShaderCompile(0)
+, _imageShaderTriggerRender(0)
 , _mipmap(0)
 , _anisotropic(0)
 , _useGPUIfAvailable(0)
@@ -340,7 +349,9 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
 
     _imageShaderFileName = fetchStringParam(kParamImageShaderFileName);
     _imageShaderSource = fetchStringParam(kParamImageShaderSource);
-    assert(_imageShaderFileName && _imageShaderSource);
+    _imageShaderCompile = fetchPushButtonParam(kParamImageShaderCompile);
+    _imageShaderTriggerRender = fetchIntParam(kParamImageShaderTriggerRender);
+    assert(_imageShaderFileName && _imageShaderSource && _imageShaderCompile && _imageShaderTriggerRender);
     _mousePosition = fetchDouble2DParam(kParamMousePosition);
     _mouseClick = fetchDouble2DParam(kParamMouseClick);
     _mousePressed = fetchBooleanParam(kParamMousePressed);
@@ -359,6 +370,11 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     initOpenGL();
 #if defined(HAVE_OSMESA)
     initMesa();
+#endif
+#ifdef NATRON_EVALUATEONCHANGE_BUG
+    _imageShaderCompile->setEnabled(true);
+#else
+    _imageShaderCompile->setEnabled(false); // always compile on first render
 #endif
 }
 
@@ -476,13 +492,25 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                 _imageShaderSource->setValue(str);
             }
         }
-    } else if (paramName == kParamImageShaderSource) {
-        OFX::MultiThread::AutoMutex lock(_shaderMutex);
-        // mark that image shader must be recompiled on next render
+    } else if ((paramName == kParamImageShaderSource && args.reason != eChangeUserEdit) ||
+               (paramName == kParamImageShaderCompile)) {
+        {
+            OFX::MultiThread::AutoMutex lock(_shaderMutex);
+            // mark that image shader must be recompiled on next render
 #ifdef HAVE_OSMESA
-        ++_imageShaderID;
+            ++_imageShaderID;
 #endif
-        _imageShaderChanged = true;
+            _imageShaderChanged = true;
+        }
+#ifndef NATRON_EVALUATEONCHANGE_BUG
+        _imageShaderCompile->setEnabled(false);
+#endif
+        // trigger a new render
+        _imageShaderTriggerRender->setValue(_imageShaderTriggerRender->getValue()+1);
+    } else if (paramName == kParamImageShaderSource && args.reason == eChangeUserEdit) {
+#ifndef NATRON_EVALUATEONCHANGE_BUG
+        _imageShaderCompile->setEnabled(true);
+#endif
     } else if (paramName == kParamRendererInfo) {
         const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
         bool openGLRender = false;
@@ -635,16 +663,11 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
-    OFX::GroupParamDescriptor* groupShaders = desc.defineGroupParam(kGroupShaders);
-    if (groupShaders) {
-        groupShaders->setLabel(kGroupShadersLabel);
-    }
-
     {
         OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupImageShader);
         if (group) {
             group->setLabel(kGroupImageShaderLabel);
-            group->setAsTab();
+            //group->setAsTab();
         }
 
         {
@@ -681,6 +704,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
             param->setHint(kParamImageShaderSourceHint);
             param->setStringType(eStringTypeMultiLine);
             param->setDefault(kParamImageShaderDefault);
+            param->setEvaluateOnChange(false); // render is triggered using kParamImageShaderTriggerRender
             param->setAnimates(false);
             if (page) {
                 page->addChild(*param);
@@ -689,15 +713,39 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
                 param->setParent(*group);
             }
         }
-        if (page) {
+
+        {
+            OFX::PushButtonParamDescriptor* param = desc.definePushButtonParam(kParamImageShaderCompile);
+            param->setLabel(kParamImageShaderCompileLabel);
+            param->setHint(kParamImageShaderCompileHint);
+            if (page) {
+                page->addChild(*param);
+            }
+            if (group) {
+                param->setParent(*group);
+            }
+        }
+
+        {
+            // a dummy boolean parameter, used to trigger a new render when the shader is recompiled
+            OFX::IntParamDescriptor* param = desc.defineIntParam(kParamImageShaderTriggerRender);
+            param->setEvaluateOnChange(true);
+            param->setAnimates(false);
+#         ifndef NATRON_EVALUATEONCHANGE_BUG
+            param->setIsSecret(true);
+#         endif
+            param->setIsPersistant(false);
+            if (page) {
+                page->addChild(*param);
+            }
+            if (group) {
+                param->setParent(*group);
+            }
+        }
+
+       if (page) {
             page->addChild(*group);
         }
-        if (groupShaders) {
-            group->setParent(*groupShaders);
-        }
-    }
-    if (page) {
-        page->addChild(*groupShaders);
     }
 
     {
