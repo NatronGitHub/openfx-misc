@@ -506,6 +506,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _imageShaderCompile->setEnabled(false);
 #endif
         // trigger a new render
+        clearPersistentMessage();
         _imageShaderTriggerRender->setValue(_imageShaderTriggerRender->getValue()+1);
     } else if (paramName == kParamImageShaderSource && args.reason == eChangeUserEdit) {
 #ifndef NATRON_EVALUATEONCHANGE_BUG
