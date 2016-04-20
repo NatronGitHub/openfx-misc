@@ -22,7 +22,7 @@
 
 #include <cmath>
 #include <algorithm>
-#ifdef _WINDOWS
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
 #define isnan _isnan
 #else

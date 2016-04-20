@@ -22,12 +22,12 @@
 
 #include <cmath>
 #include <stdio.h> // for snprintf & _snprintf
-#ifdef _WINDOWS
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #  include <windows.h>
 #  if defined(_MSC_VER) && _MSC_VER < 1900
 #    define snprintf _snprintf
 #  endif
-#endif // _WINDOWS
+#endif // defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 
 #include "ofxsProcessing.H"
 #include "ofxsMacros.h"

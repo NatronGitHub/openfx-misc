@@ -34,7 +34,7 @@
 #ifdef USE_RANDOMGENERATOR
 #include "randomGenerator.H"
 #else
-#ifdef _WINDOWS
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #define uint32_t unsigned int
 #else
 #include <stdint.h> // for uint32_t

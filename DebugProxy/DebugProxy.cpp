@@ -68,7 +68,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 // the Plugin path can be set here in the source code, or at runtime via the OFX_DEBUGPROXY_BINARY environment variable
 #ifndef BINARY_PATH
-#if defined(WINDOWS)
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #define OFX_PATH "C:\\Program Files\\Common Files\\OFX\\Plugins\\"
 #define BINARY_PATH "C:\\Program Files\\Common Files\\OFX\\Plugins.disabled\\Sapphire.ofx.bundle\\Contents\\Win64\\Sapphire.ofx"
 #endif
@@ -261,7 +261,7 @@ static const char* help_string =
 "- If the plugin depends on dynamic libraries and cannot find them, you can\n"
 "  modify the path to locate them by adding the directory containing the\n"
 "  dependency (usually the same as the plugin location) to\n"
-#if defined(WINDOWS)
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 "  the global %PATH%.\n"
 #endif
 #if defined(__linux__)

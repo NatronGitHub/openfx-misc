@@ -27,7 +27,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-#ifdef _WINDOWS
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
 #endif
 

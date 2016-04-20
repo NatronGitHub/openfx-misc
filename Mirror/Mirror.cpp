@@ -23,7 +23,7 @@
 #include <cstring> // for memcpy
 #include <cmath>
 #include <iostream>
-#ifdef _WINDOWS
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
 #endif
 

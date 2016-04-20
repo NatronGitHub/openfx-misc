@@ -24,7 +24,7 @@
 #include <cfloat>
 #include <algorithm>
 //#include <iostream>
-#ifdef _WINDOWS
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 #include <windows.h>
 #endif
 #ifdef DEBUG
@@ -119,7 +119,7 @@ enum UnorderedRenderEnum {
 inline void
 sleep(const unsigned int milliseconds)
 {
-#ifdef _WINDOWS
+#if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
     Sleep(milliseconds);
 #else
     struct timespec tv;
