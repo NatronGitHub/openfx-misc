@@ -36,6 +36,10 @@
 #error "include this file first only once, either with USE_OPENGL, or with USE_OSMESA"
 #endif
 
+#if defined(USE_OSMESA) || !( defined(_WIN32) || defined(__WIN32__) || defined(WIN32) )
+#define GL_GLEXT_PROTOTYPES
+#endif
+
 #ifdef USE_OSMESA
 #  include <GL/gl_mangle.h>
 #  include <GL/glu_mangle.h>
@@ -50,9 +54,11 @@
 
 #ifdef __APPLE__
 #  include <OpenGL/gl.h>
+#  include <OpenGL/glext.h>
 #  include <OpenGL/glu.h>
 #else
 #  include <GL/gl.h>
+#  include <GL/glext.h>
 #  include <GL/glu.h>
 #endif
 
