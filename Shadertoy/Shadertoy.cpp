@@ -34,6 +34,7 @@
 
 #include <cfloat>
 #include <cstddef>
+#include <climits>
 #include <string>
 #include <fstream>
 #include <streambuf>
@@ -64,7 +65,10 @@ using namespace OFX;
 "\n" \
 "This help only covers the parts of GLSL ES that are relevant for Shadertoy. " \
 "For the complete specification please have a look at GLSL ES specification " \
-"http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf\n" \
+"http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf " \
+"or pages 3 and 4 of the OpenGL ES 2.0 quick reference card " \
+"https://www.khronos.org/opengles/sdk/docs/reference_cards/OpenGL-ES-2_0-Reference-card.pdf\n" \
+"\n" \
 "Language:\n" \
 "\n" \
 "    Preprocessor: # #define #undef #if #ifdef #ifndef #else #elif #endif #error #pragma #extension #version #line\n" \
@@ -281,6 +285,38 @@ using namespace OFX;
 #define kParamMousePressedLabel "Mouse Pressed"
 #define kParamMousePressedHint "When checked, the zw components of the iMouse input contain mouseClick, else they contain -mouseClick. If the host does not support animating this parameter, use negative values for mouseClick to emulate a released mouse button."
 
+#define kGroupExtraParameters "extraParametersGroup"
+#define kGroupExtraParametersLabel "Extra Parameters"
+#define kGroupExtraParametersHint "Description of extra parameters (a.k.a. uniforms) used by the shader source. Note that these parameters must be explicitely declared as uniforms in the shader (to keep compatibility with shadertoy, they may also have a default value set in the shader source)."
+
+#define kParamCount "paramCount"
+#define kParamCountLabel "No. of Params"
+#define kParamCountHint "Number of extra parameters."
+
+#define kParamType "paramType" // followed by param number
+#define kParamTypeLabel1 "Param "
+#define kParamTypeLabel2 " Type"
+#define kParamTypeHint "Type of the parameter."
+#define kParamTypeOptionNone "none"
+#define kParamTypeOptionBool "bool"
+#define kParamTypeOptionInt "int"
+#define kParamTypeOptionFloat "float"
+#define kParamTypeOptionVec2 "vec2"
+#define kParamTypeOptionVec3 "vec3"
+#define kParamTypeOptionVec4 "vec4"
+
+#define kParamName "paramName" // followed by param number
+#define kParamNameLabel "Name"
+#define kParamNameHint "Name of the parameter, as used in the shader."
+
+#define kParamValueBool "paramValueBool" // followed by param number
+#define kParamValueInt "paramValueInt" // followed by param number
+#define kParamValueFloat "paramValueFloat" // followed by param number
+#define kParamValueVec2 "paramValueVec2" // followed by param number
+#define kParamValueVec3 "paramValueVec3" // followed by param number
+#define kParamValueVec4 "paramValueVec4" // followed by param number
+#define kParamValueLabel "Value" // followed by param number
+#define kParamValueHint "Value of the parameter."
 
 #define kParamMipmap "mipmap"
 #define kParamMipmapLabel "Mipmap"
@@ -313,6 +349,15 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
 , _imageShaderSource(0)
 , _imageShaderCompile(0)
 , _imageShaderTriggerRender(0)
+, _paramCount(0)
+, _paramType(NBUNIFORMS, NULL)
+, _paramName(NBUNIFORMS, NULL)
+, _paramValueBool(NBUNIFORMS, NULL)
+, _paramValueInt(NBUNIFORMS, NULL)
+, _paramValueFloat(NBUNIFORMS, NULL)
+, _paramValueVec2(NBUNIFORMS, NULL)
+, _paramValueVec3(NBUNIFORMS, NULL)
+, _paramValueVec4(NBUNIFORMS, NULL)
 , _mipmap(0)
 , _anisotropic(0)
 , _useGPUIfAvailable(0)
@@ -320,9 +365,11 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
 , _maxAnisoMax(1.)
 #ifdef HAVE_OSMESA
 , _imageShaderID(1)
+, _imageShaderUniformsID(1)
 #endif
 , _imageShader(0)
 , _imageShaderChanged(true)
+, _imageShaderUniformsChanged(true)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
     assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
@@ -358,6 +405,24 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     _mouseClick = fetchDouble2DParam(kParamMouseClick);
     _mousePressed = fetchBooleanParam(kParamMousePressed);
     assert(_mousePosition && _mousePressed && _mouseClick);
+    _paramCount = fetchIntParam(kParamCount);
+    assert(_paramCount);
+    for (unsigned i = 0; i < NBUNIFORMS; ++i) {
+        std::string nb;
+        // generate the number string
+        for (unsigned j = i + 1; j !=0; j /= 10) {
+            nb += ('0' + (j % 10));
+        }
+        _paramType[i]       = fetchChoiceParam  (std::string(kParamType) + nb);
+        _paramName[i]       = fetchStringParam  (std::string(kParamName) + nb);
+        _paramValueBool[i]  = fetchBooleanParam (std::string(kParamValueBool)  + nb);
+        _paramValueInt[i]   = fetchIntParam     (std::string(kParamValueInt)   + nb);
+        _paramValueFloat[i] = fetchDoubleParam  (std::string(kParamValueFloat) + nb);
+        _paramValueVec2[i]  = fetchDouble2DParam(std::string(kParamValueVec2)  + nb);
+        _paramValueVec3[i]  = fetchDouble3DParam(std::string(kParamValueVec3)  + nb);
+        _paramValueVec4[i]  = fetchRGBAParam    (std::string(kParamValueVec4)  + nb);
+        assert(_paramType[i] && _paramName[i] && _paramValueBool[i] && _paramValueInt[i] && _paramValueFloat[i] && _paramValueVec2[i] && _paramValueVec3[i] && _paramValueVec4[i]);
+    }
     _mipmap = fetchBooleanParam(kParamMipmap);
     _anisotropic = fetchBooleanParam(kParamAnisotropic);
     assert(_mipmap && _anisotropic);
@@ -369,6 +434,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
         _useGPUIfAvailable->setEnabled(false);
     }
 #endif
+    updateVisibility();
     initOpenGL();
 #if defined(HAVE_OSMESA)
     initMesa();
@@ -471,6 +537,78 @@ ShadertoyPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     clipPreferences.setOutputHasContinousSamples(true);
 }
 
+static inline
+bool
+starts_with(const std::string &str, const std::string &prefix)
+{
+    return (str.substr(0, prefix.size()) == prefix);
+}
+
+void
+ShadertoyPlugin::updateVisibility()
+{
+    unsigned paramCount = std::max(0, std::min(_paramCount->getValue(), NBUNIFORMS));
+    for (unsigned i = 0; i < NBUNIFORMS; ++i) {
+        updateVisibilityParam(i, i < paramCount);
+    }
+}
+
+void
+ShadertoyPlugin::updateVisibilityParam(unsigned i, bool visible)
+{
+    UniformTypeEnum paramType = (UniformTypeEnum)_paramType[i]->getValue();
+    bool isBool = false;
+    bool isInt = false;
+    bool isFloat = false;
+    bool isVec2 = false;
+    bool isVec3 = false;
+    bool isVec4 = false;
+
+    if (visible) {
+        switch (paramType) {
+            case eUniformTypeNone: {
+                break;
+            }
+            case eUniformTypeBool: {
+                isBool = true;
+                break;
+            }
+            case eUniformTypeInt: {
+                isInt = true;
+                break;
+            }
+            case eUniformTypeFloat: {
+                isFloat = true;
+                break;
+            }
+            case eUniformTypeVec2: {
+                isVec2 = true;
+                break;
+            }
+            case eUniformTypeVec3: {
+                isVec3 = true;
+                break;
+            }
+            case eUniformTypeVec4: {
+                isVec4 = true;
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
+
+    _paramType[i]->setIsSecret(!visible);
+    _paramName[i]->setIsSecret(!visible);
+    _paramValueBool[i]->setIsSecret(!isBool);
+    _paramValueInt[i]->setIsSecret(!isInt);
+    _paramValueFloat[i]->setIsSecret(!isFloat);
+    _paramValueVec2[i]->setIsSecret(!isVec2);
+    _paramValueVec3[i]->setIsSecret(!isVec3);
+    _paramValueVec4[i]->setIsSecret(!isVec4);
+}
+
 void
 ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                               const std::string &paramName)
@@ -494,14 +632,15 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                 _imageShaderSource->setValue(str);
             }
         }
+
     } else if ((paramName == kParamImageShaderSource && args.reason != eChangeUserEdit) ||
                (paramName == kParamImageShaderCompile)) {
         {
             OFX::MultiThread::AutoMutex lock(_shaderMutex);
             // mark that image shader must be recompiled on next render
-#ifdef HAVE_OSMESA
+#         ifdef HAVE_OSMESA
             ++_imageShaderID;
-#endif
+#         endif
             _imageShaderChanged = true;
         }
 #ifndef NATRON_EVALUATEONCHANGE_BUG
@@ -510,6 +649,35 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         // trigger a new render
         clearPersistentMessage();
         _imageShaderTriggerRender->setValue(_imageShaderTriggerRender->getValue()+1);
+
+    } else if (paramName == kParamImageShaderSource && args.reason == eChangeUserEdit) {
+#ifndef NATRON_EVALUATEONCHANGE_BUG
+        _imageShaderCompile->setEnabled(true);
+#endif
+
+    } else if (paramName == kParamCount || starts_with(paramName, kParamName)) {
+        {
+            OFX::MultiThread::AutoMutex lock(_shaderMutex);
+            // mark that image shader must be recompiled on next render
+#         ifdef HAVE_OSMESA
+            ++_imageShaderUniformsID;
+#         endif
+            _imageShaderUniformsChanged = true;
+        }
+        updateVisibility();
+
+    } else if (starts_with(paramName, kParamType)) {
+        {
+            OFX::MultiThread::AutoMutex lock(_shaderMutex);
+            // mark that image shader must be recompiled on next render
+#         ifdef HAVE_OSMESA
+            ++_imageShaderUniformsID;
+#         endif
+            _imageShaderUniformsChanged = true;
+        }
+        //updateVisibilityParam(i, i < paramCount);
+        updateVisibility();
+
     } else if (paramName == kParamImageShaderSource && args.reason == eChangeUserEdit) {
 #ifndef NATRON_EVALUATEONCHANGE_BUG
         _imageShaderCompile->setEnabled(true);
@@ -518,7 +686,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
         bool openGLRender = false;
         std::string message;
-#if defined(OFX_SUPPORTS_OPENGLRENDER)
+#     if defined(OFX_SUPPORTS_OPENGLRENDER)
         if (gHostDescription.supportsOpenGLRender) {
             _useGPUIfAvailable->getValueAtTime(args.time, openGLRender);
         }
@@ -527,20 +695,19 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             OFX::MultiThread::AutoMutex lock(_rendererInfoMutex);
             message = _rendererInfoGL;
         }
-#endif
-#ifdef HAVE_OSMESA
+#     endif
+#     ifdef HAVE_OSMESA
         if (!openGLRender) {
             OFX::MultiThread::AutoMutex lock(_rendererInfoMutex);
             message = _rendererInfoMesa;
         }
-#endif // HAVE_OSMESA
+#     endif // HAVE_OSMESA
         if (message.empty()) {
             sendMessage(OFX::Message::eMessageMessage, "", "OpenGL renderer info not yet available.\n"
                         "Please execute at least one image render and try again.");
         } else {
             sendMessage(OFX::Message::eMessageMessage, "", message);
         }
-
     }
 }
 
@@ -746,7 +913,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
             }
         }
 
-       if (page) {
+        if (page) {
             page->addChild(*group);
         }
     }
@@ -782,6 +949,174 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
             page->addChild(*param);
         }
     }
+    {
+        OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupExtraParameters);
+        if (group) {
+            group->setLabel(kGroupExtraParametersLabel);
+            group->setHint(kGroupExtraParametersHint);
+            group->setOpen(false);
+        }
+
+        {
+            OFX::IntParamDescriptor* param = desc.defineIntParam(kParamCount);
+            param->setLabel(kParamCountLabel);
+            param->setHint(kParamCountHint);
+            param->setRange(0, NBUNIFORMS);
+            param->setDisplayRange(0, NBUNIFORMS);
+            param->setAnimates(false);
+            if (page) {
+                page->addChild(*param);
+            }
+            if (group) {
+                param->setParent(*group);
+            }
+        }
+
+        for (unsigned i = 0; i < NBUNIFORMS; ++i) {
+            std::string nb;
+            // generate the number string
+            for (unsigned j = i + 1; j !=0; j /= 10) {
+                nb += ('0' + (j % 10));
+            }
+            {
+                OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(std::string(kParamType) + nb);
+                param->setLabel(std::string(kParamTypeLabel1) + nb + kParamTypeLabel2);
+                param->setHint(kParamTypeHint);
+                assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeNone);
+                param->appendOption(kParamTypeOptionNone);
+                assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeBool);
+                param->appendOption(kParamTypeOptionBool);
+                assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeInt);
+                param->appendOption(kParamTypeOptionInt);
+                assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeFloat);
+                param->appendOption(kParamTypeOptionFloat);
+                assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeVec2);
+                param->appendOption(kParamTypeOptionVec2);
+                assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeVec3);
+                param->appendOption(kParamTypeOptionVec3);
+                assert(param->getNOptions() == ShadertoyPlugin::eUniformTypeVec4);
+                param->appendOption(kParamTypeOptionVec4);
+                param->setEvaluateOnChange(true);
+                param->setAnimates(false);
+                param->setLayoutHint(eLayoutHintNoNewLine, 1);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+            {
+                OFX::StringParamDescriptor* param = desc.defineStringParam(std::string(kParamName) + nb);
+                param->setLabel(kParamNameLabel);
+                param->setHint(kParamNameHint);
+                param->setEvaluateOnChange(true);
+                param->setAnimates(false);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+            {
+                OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(std::string(kParamValueBool) + nb);
+                param->setLabel(kParamValueLabel);
+                param->setHint(kParamValueHint);
+                param->setEvaluateOnChange(true);
+                param->setAnimates(true);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+            {
+                OFX::IntParamDescriptor* param = desc.defineIntParam(std::string(kParamValueInt) + nb);
+                param->setLabel(kParamValueLabel);
+                param->setHint(kParamValueHint);
+                param->setRange(INT_MIN, INT_MAX);
+                param->setDisplayRange(INT_MIN, INT_MAX);
+                param->setEvaluateOnChange(true);
+                param->setAnimates(true);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+            {
+                OFX::DoubleParamDescriptor* param = desc.defineDoubleParam(std::string(kParamValueFloat) + nb);
+                param->setLabel(kParamValueLabel);
+                param->setHint(kParamValueHint);
+                param->setRange(-DBL_MAX, DBL_MAX);
+                param->setDisplayRange(-DBL_MAX, DBL_MAX);
+                param->setEvaluateOnChange(true);
+                param->setAnimates(true);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+            {
+                OFX::Double2DParamDescriptor* param = desc.defineDouble2DParam(std::string(kParamValueVec2) + nb);
+                param->setLabel(kParamValueLabel);
+                param->setHint(kParamValueHint);
+                param->setRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
+                param->setDisplayRange(-DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX);
+                param->setDimensionLabels("x", "y");
+                param->setEvaluateOnChange(true);
+                param->setAnimates(true);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+            {
+                OFX::Double3DParamDescriptor* param = desc.defineDouble3DParam(std::string(kParamValueVec3) + nb);
+                param->setLabel(kParamValueLabel);
+                param->setHint(kParamValueHint);
+                param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
+                param->setDisplayRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
+                param->setDimensionLabels("x", "y", "z");
+                param->setEvaluateOnChange(true);
+                param->setAnimates(true);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+            {
+                OFX::RGBAParamDescriptor* param = desc.defineRGBAParam(std::string(kParamValueVec4) + nb);
+                param->setLabel(kParamValueLabel);
+                param->setHint(kParamValueHint);
+                param->setRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
+                param->setDisplayRange(-DBL_MAX, -DBL_MAX, -DBL_MAX, -DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX, DBL_MAX);
+                param->setDimensionLabels("x", "y", "z", "w");
+                param->setEvaluateOnChange(true);
+                param->setAnimates(true);
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (group) {
+                    param->setParent(*group);
+                }
+            }
+
+            if (page) {
+                page->addChild(*group);
+            }
+        }
+    }
+
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamMipmap);
         param->setLabel(kParamMipmapLabel);
