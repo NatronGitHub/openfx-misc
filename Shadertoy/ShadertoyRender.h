@@ -105,7 +105,7 @@ struct ShadertoyShader {
     GLint iChannelLoc[NBINPUTS];
 };
 
-#if !defined(USE_MESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32) )
+#if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32) )
 // Program
 static PFNGLCREATEPROGRAMPROC glCreateProgram = NULL;
 static PFNGLDELETEPROGRAMPROC glDeleteProgram = NULL;
@@ -349,7 +349,7 @@ ShadertoyPlugin::exitMesa()
     _osmesa.clear();
 }
 
-#endif // USE_MESA
+#endif // USE_OSMESA
 
 
 #ifdef USE_OPENGL
