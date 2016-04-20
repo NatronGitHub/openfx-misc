@@ -68,6 +68,7 @@
 #endif
 
 #define NBINPUTS SHADERTOY_NBINPUTS
+#define NBUNIFORMS SHADERTOY_NBUNIFORMS
 
 struct ShadertoyShader {
     ShadertoyShader()
@@ -84,7 +85,8 @@ struct ShadertoyShader {
     , ifFragCoordOffsetUniformLoc(-1)
     , iRenderScaleLoc(-1)
     {
-        std::fill(iChannelLoc, iChannelLoc+NBINPUTS, -1);
+        std::fill(iChannelLoc, iChannelLoc + NBINPUTS, -1);
+        std::fill(iParamLoc, iParamLoc + NBUNIFORMS, -1);
     }
 
     GLuint program;
@@ -99,7 +101,8 @@ struct ShadertoyShader {
     GLint iChannelResolutionLoc;
     GLint ifFragCoordOffsetUniformLoc;
     GLint iRenderScaleLoc;
-    GLint iChannelLoc[4];
+    GLint iParamLoc[NBUNIFORMS];
+    GLint iChannelLoc[NBINPUTS];
 };
 
 #if !defined(USE_MESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32) )
@@ -241,6 +244,7 @@ struct ShadertoyPlugin::OSMesaPrivate
     , _ctxStencilBits(0)
     , _ctxAccumBits(0)
     , _imageShaderID(0)
+    , _imageShaderUniformsID(0)
     , _imageShader()
     {
     }
@@ -322,6 +326,7 @@ struct ShadertoyPlugin::OSMesaPrivate
     GLint _ctxStencilBits;
     GLint _ctxAccumBits;
     unsigned int _imageShaderID; // the shader ID compiled for this context
+    unsigned int _imageShaderUniformsID; // the ID for custom uniform locations
     ShadertoyShader _imageShader;
 };
 
@@ -869,16 +874,21 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     {
         OFX::MultiThread::AutoMutex lock(_shaderMutex);
         bool must_recompile = false;
+        bool uniforms_changed = false;
 #ifdef USE_OPENGL
         shadertoy = _imageShader;
         assert(shadertoy);
         must_recompile = _imageShaderChanged;
         _imageShaderChanged = false;
+        uniforms_changed = _imageShaderUniformsChanged;
+        _imageShaderUniformsChanged = false;
 #endif
 #ifdef USE_OSMESA
         shadertoy = &osmesa->_imageShader;
         must_recompile = (_imageShaderID != osmesa->_imageShaderID);
         osmesa->_imageShaderID = _imageShaderID;
+        uniforms_changed = (_imageShaderUniformsID != osmesa->_imageShaderUniformsID);
+        osmesa->_imageShaderUniformsID = _imageShaderUniformsID;
 #endif
         assert(shadertoy);
         if (must_recompile) {
@@ -923,7 +933,18 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             assert(NBINPUTS < 10 && iChannelX[8] == 'X');
             for (unsigned i = 0; i < NBINPUTS; ++i) {
                 iChannelX[8] = '0' + i;
-                shadertoy->iChannelLoc[i] = glGetUniformLocation (shadertoy->program, iChannelX);
+                shadertoy->iChannelLoc[i] = glGetUniformLocation(shadertoy->program, iChannelX);
+            }
+        }
+        if (must_recompile || uniforms_changed) {
+            std::fill(shadertoy->iParamLoc, shadertoy->iParamLoc + NBUNIFORMS, -1);
+            unsigned paramCount = std::max(0, std::min(_paramCount->getValue(), NBUNIFORMS));
+            for (unsigned i = 0; i < paramCount; ++i) {
+                std::string paramName;
+                _paramName[i]->getValue(paramName);
+                if (!paramName.empty()) {
+                    shadertoy->iParamLoc[i] = glGetUniformLocation(shadertoy->program, paramName.c_str());
+                }
             }
         }
     }
@@ -980,6 +1001,54 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             yc = -yc;
         }
         glUniform4f (shadertoy->iMouseLoc, x * rs.x, y * rs.y, xc * rs.x, yc * rs.y);
+    }
+    unsigned paramCount = std::max(0, std::min(_paramCount->getValue(), NBUNIFORMS));
+    for (unsigned i = 0; i < paramCount; ++i) {
+        if (shadertoy->iParamLoc[i] >= 0) {
+            UniformTypeEnum paramType = (UniformTypeEnum)_paramType[i]->getValue();
+            switch (paramType) {
+                case eUniformTypeNone: {
+                    break;
+                }
+                case eUniformTypeBool: {
+                    bool v = _paramValueBool[i]->getValue();
+                    glUniform1i(shadertoy->iParamLoc[i], v);
+                    break;
+                }
+                case eUniformTypeInt: {
+                    int v = _paramValueInt[i]->getValue();
+                    glUniform1i(shadertoy->iParamLoc[i], v);
+                    break;
+                }
+                case eUniformTypeFloat: {
+                    double v = _paramValueFloat[i]->getValue();
+                    glUniform1f(shadertoy->iParamLoc[i], v);
+                    break;
+                }
+                case eUniformTypeVec2: {
+                    double x, y;
+                    _paramValueVec2[i]->getValue(x, y);
+                    glUniform2f(shadertoy->iParamLoc[i], x, y);
+                    break;
+                }
+                case eUniformTypeVec3: {
+                    double x, y, z;
+                    _paramValueVec3[i]->getValue(x, y, z);
+                    glUniform3f(shadertoy->iParamLoc[i], x, y, z);
+                    break;
+                }
+                case eUniformTypeVec4: {
+                    double x, y, z, w;
+                    _paramValueVec4[i]->getValue(x, y, z, w);
+                    glUniform4f(shadertoy->iParamLoc[i], x, y, z, w);
+                    break;
+                }
+                default: {
+                    assert(false);
+                    break;
+                }
+            }
+        }
     }
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         if (shadertoy->iChannelLoc[i] >= 0) {

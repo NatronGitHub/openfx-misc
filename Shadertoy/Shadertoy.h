@@ -42,6 +42,17 @@ class ShadertoyPlugin : public OFX::ImageEffect
 #endif
 
 public:
+    enum UniformTypeEnum {
+        eUniformTypeNone,
+        eUniformTypeBool,
+        eUniformTypeInt,
+        eUniformTypeFloat,
+        eUniformTypeVec2,
+        eUniformTypeVec3,
+        eUniformTypeVec4,
+    };
+
+public:
     /** @brief ctor */
     ShadertoyPlugin(OfxImageEffectHandle handle);
 
@@ -84,6 +95,9 @@ private:
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
 private:
+    void updateVisibility();
+    void updateVisibilityParam(unsigned i, bool visible);
+    
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     std::vector<OFX::Clip*> _srcClips;
@@ -95,6 +109,16 @@ private:
     OFX::Double2DParam *_mousePosition;
     OFX::Double2DParam *_mouseClick;
     OFX::BooleanParam *_mousePressed;
+    OFX::IntParam *_paramCount;
+    std::vector<OFX::ChoiceParam *> _paramType;
+    std::vector<OFX::StringParam *> _paramName;
+    std::vector<OFX::BooleanParam *> _paramValueBool;
+    std::vector<OFX::IntParam *> _paramValueInt;
+    std::vector<OFX::DoubleParam *> _paramValueFloat;
+    std::vector<OFX::Double2DParam *> _paramValueVec2;
+    std::vector<OFX::Double3DParam *> _paramValueVec3;
+    std::vector<OFX::RGBAParam *> _paramValueVec4;
+
     OFX::BooleanParam *_mipmap;
     OFX::BooleanParam *_anisotropic;
     OFX::BooleanParam *_useGPUIfAvailable;
@@ -104,9 +128,11 @@ private:
     OFX::MultiThread::Mutex _shaderMutex;
 #if defined(HAVE_OSMESA)
     unsigned int _imageShaderID; // (Mesa-only) an ID that changes each time the shadertoy changes and needs to be recompiled
+    unsigned int _imageShaderUniformsID; // (Mesa-only) an ID that changes each time the uniform names or count changed
 #endif
     ShadertoyShaderOpenGL *_imageShader; // (OpenGL-only) shader information
     bool _imageShaderChanged; // (OpenGL-only) shader ID needs to be recompiled
+    bool _imageShaderUniformsChanged; // (OpenGL-only) custom uniforms names or count changed, need to re-get their location
 
     OFX::MultiThread::Mutex _rendererInfoMutex;
     std::string _rendererInfoGL;
