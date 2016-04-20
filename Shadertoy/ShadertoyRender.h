@@ -1237,9 +1237,9 @@ ShadertoyPlugin::contextAttached()
         glUniform3iv = (PFNGLUNIFORM3IVPROC)wglGetProcAddress("glUniform3iv");
         glUniform4iv = (PFNGLUNIFORM4IVPROC)wglGetProcAddress("glUniform4iv");
         glUniform1f = (PFNGLUNIFORM1FPROC)wglGetProcAddress("glUniform1f");
-        glUniform2f = (PFNGLUNIFORM1FPROC)wglGetProcAddress("glUniform2f");
-        glUniform3f = (PFNGLUNIFORM1FPROC)wglGetProcAddress("glUniform3f");
-        glUniform4f = (PFNGLUNIFORM1FPROC)wglGetProcAddress("glUniform4f");
+        glUniform2f = (PFNGLUNIFORM2FPROC)wglGetProcAddress("glUniform2f");
+        glUniform3f = (PFNGLUNIFORM3FPROC)wglGetProcAddress("glUniform3f");
+        glUniform4f = (PFNGLUNIFORM4FPROC)wglGetProcAddress("glUniform4f");
         glUniform1fv = (PFNGLUNIFORM1FVPROC)wglGetProcAddress("glUniform1fv");
         glUniform2fv = (PFNGLUNIFORM2FVPROC)wglGetProcAddress("glUniform2fv");
         glUniform3fv = (PFNGLUNIFORM3FVPROC)wglGetProcAddress("glUniform3fv");
