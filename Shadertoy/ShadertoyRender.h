@@ -843,42 +843,6 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
     }
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, buffer, dstBounds);
-
-
-    // load the source image into a texture
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    // Non-power-of-two textures are supported if the GL version is 2.0 or greater, or if the implementation exports the GL_ARB_texture_non_power_of_two extension. (Mesa does, of course)
-
-    std::vector<GLenum> srcTarget(4, GL_TEXTURE_2D);
-    std::vector<GLuint> srcIndex(NBINPUTS);
-    for (unsigned i = 0; i < NBINPUTS; ++i) {
-        if (src[i].get()) {
-            glGenTextures(1, &srcIndex[i]);
-            OfxRectI srcBounds = src[i]->getBounds();
-            glActiveTextureARB(GL_TEXTURE0_ARB + i);
-            glBindTexture(srcTarget[i], srcIndex[i]);
-            if (mipmap) {
-                // this must be done before glTexImage2D
-                glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
-                // requires extension GL_SGIS_generate_mipmap or OpenGL 1.4.
-                glTexParameteri(srcTarget[i], GL_GENERATE_MIPMAP, GL_TRUE); // Allocate the mipmaps
-            }
-
-            glTexImage2D(srcTarget[i], 0, format,
-                         srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
-                         format, type, src[i]->getPixelData());
-        }
-    }
-    // setup the projection
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(0, dstBounds.x2 - dstBounds.x1,
-            0, dstBounds.y2 - dstBounds.y1,
-            -10.0*(dstBounds.y2-dstBounds.y1), 10.0*(dstBounds.y2-dstBounds.y1));
-    glMatrixMode(GL_MODELVIEW);
-    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-
 #endif
 
     // compile and link the shader if necessary
@@ -946,6 +910,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             for (unsigned i = 0; i < NBINPUTS; ++i) {
                 iChannelX[8] = '0' + i;
                 shadertoy->iChannelLoc[i] = glGetUniformLocation(shadertoy->program, iChannelX);
+                printf("%s -> %d\n", iChannelX, (int)shadertoy->iChannelLoc[i]);
             }
         }
         if (must_recompile || uniforms_changed) {
@@ -960,7 +925,43 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             }
         }
     }
-    //GLuint shadertoy_shader = shadertoy->program;
+
+
+#ifdef USE_OSMESA
+    // load the source image into a texture
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    // Non-power-of-two textures are supported if the GL version is 2.0 or greater, or if the implementation exports the GL_ARB_texture_non_power_of_two extension. (Mesa does, of course)
+
+    std::vector<GLenum> srcTarget(4, GL_TEXTURE_2D);
+    std::vector<GLuint> srcIndex(NBINPUTS);
+    glActiveTexture(GL_TEXTURE0);
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
+        if (src[i].get() && shadertoy->iChannelLoc[i] >= 0) {
+            glGenTextures(1, &srcIndex[i]);
+            OfxRectI srcBounds = src[i]->getBounds();
+            glBindTexture(srcTarget[i], srcIndex[i]);
+            if (mipmap) {
+                // this must be done before glTexImage2D
+                glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
+                // requires extension GL_SGIS_generate_mipmap or OpenGL 1.4.
+                glTexParameteri(srcTarget[i], GL_GENERATE_MIPMAP, GL_TRUE); // Allocate the mipmaps
+            }
+
+            glTexImage2D(srcTarget[i], 0, format,
+                         srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
+                         format, type, src[i]->getPixelData());
+            glBindTexture(srcTarget[i], 0);
+        }
+    }
+    // setup the projection
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(0, dstBounds.x2 - dstBounds.x1,
+            0, dstBounds.y2 - dstBounds.y1,
+            -10.0*(dstBounds.y2-dstBounds.y1), 10.0*(dstBounds.y2-dstBounds.y1));
+    glMatrixMode(GL_MODELVIEW);
+    glClear( GL_DEPTH_BUFFER_BIT );
+#endif
 
     double fps = _dstClip->getFrameRate();
     if (fps <= 0) {
@@ -1063,10 +1064,13 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
     }
     for (unsigned i = 0; i < NBINPUTS; ++i) {
-        if (shadertoy->iChannelLoc[i] >= 0) {
-            glActiveTexture (GL_TEXTURE0 + i);
-            glBindTexture (GL_TEXTURE_2D, srcIndex[i]);
-            glUniform1i (shadertoy->iChannelLoc[i], 0);
+        glActiveTexture(GL_TEXTURE0 + i);
+        if (src[i].get() && shadertoy->iChannelLoc[i] >= 0) {
+            glEnable(srcTarget[i]);
+            glUniform1i(shadertoy->iChannelLoc[i], i);
+            glBindTexture(srcTarget[i], srcIndex[i]);
+        } else {
+            glBindTexture(srcTarget[i], 0);
         }
     }
     if (shadertoy->iDateLoc >= 0) {
@@ -1084,75 +1088,30 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         glUniform2f(shadertoy->iRenderScaleLoc, rs.x, rs.y);
     }
 
-
-    // Render to texture: see http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
     float w = (renderWindow.x2 - renderWindow.x1);
     float h = (renderWindow.y2 - renderWindow.y1);
 
     glPushAttrib(GL_ALL_ATTRIB_BITS);
     glDisable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    // Draw black into dest to start
     glBegin(GL_QUADS);
-    glColor4f(0, 0, 0, 1); //Set the colour to opaque black
     glVertex2f(0, 0);
     glVertex2f(0, h);
     glVertex2f(w, h);
     glVertex2f(w, 0);
     glEnd();
 
-    //
-    // Copy source texture to output by drawing a big textured quad
-    //
-
-    // set up textures (how much of this is needed?)
     for (unsigned i = 0; i < NBINPUTS; ++i) {
-        glActiveTexture (GL_TEXTURE0 + i);
-        glEnable(srcTarget[i]);
-        glBindTexture(srcTarget[i], srcIndex[i]);
-        glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(srcTarget[i], GL_TEXTURE_WRAP_T, GL_REPEAT);
-        //glTexParameteri(srcTarget[i], GL_TEXTURE_BASE_LEVEL, 0);
-        //glTexParameteri(srcTarget[i], GL_TEXTURE_MAX_LEVEL, 1);
-        //glTexParameterf(srcTarget[i], GL_TEXTURE_MIN_LOD, -1);
-        //glTexParameterf(srcTarget[i], GL_TEXTURE_MAX_LOD, 1);
-        glTexParameteri(srcTarget[i], GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        // With opengl render, we don't know if mipmaps were generated by the host.
-        // check if mipmaps exist for that texture (we only check if level 1 exists)
-        {
-            int width = 0;
-            glGetTexLevelParameteriv(srcTarget[i], 1, GL_TEXTURE_WIDTH, &width);
-            if (width == 0) {
-                mipmap = false;
-            }
+        if (shadertoy->iChannelLoc[i] >= 0) {
+            glActiveTexture(GL_TEXTURE0 + i);
+            glBindTexture(GL_TEXTURE_2D, 0);
         }
-        glTexParameteri(srcTarget[i], GL_TEXTURE_MIN_FILTER, mipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
-        if (anisotropic && _haveAniso) {
-            glTexParameterf(srcTarget[i], GL_TEXTURE_MAX_ANISOTROPY_EXT, _maxAnisoMax);
-        }
-        glDisable(srcTarget[i]);
     }
-    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
-    // textures are oriented with Y up (standard orientation)
-    //float tymin = 0;
-    //float tymax = 1;
-
-//    // now draw the textured quad containing the source
-//    const double scale=0.333;
-//    glEnable(srcTarget[0]);
-//    glBegin(GL_QUADS);
-//    glColor4f(1.0f, 1.0f, 1.0f, 1.0f); // useless?
-//    glTexCoord2f (0, 0);
-//    glVertex2f   (0, 0);
-//    glTexCoord2f (1, 0);
-//    glVertex2f   (w * scale, 0);
-//    glTexCoord2f (1, 1);
-//    glVertex2f   (w * scale, h * scale);
-//    glTexCoord2f (0, 1);
-//    glVertex2f   (0, h * scale);
-//    glEnd ();
-//    glDisable(srcTarget[0]);
+    glUseProgram(0);
 
     // done; clean up.
     glPopAttrib();
