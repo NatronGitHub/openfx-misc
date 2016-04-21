@@ -252,7 +252,12 @@ struct ShadertoyPlugin::OSMesaPrivate
     ~OSMesaPrivate() {
         /* destroy the context */
         if (_ctx) {
+            // make the context current, with a dummy buffer
+            unsigned char buffer[4];
+            OSMesaMakeCurrent(_ctx, buffer, GL_UNSIGNED_BYTE, 1, 1);
             _effect->contextDetachedMesa();
+            OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0); // detach buffer from context
+            OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context (not really recessary)
             OSMesaDestroyContext( _ctx );
         }
     }
@@ -267,13 +272,22 @@ struct ShadertoyPlugin::OSMesaPrivate
     {
         bool newContext = false;
 
+        if (!buffer) {
+            OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0);
+            return;
+        }
         if (!_ctx || (format      != _ctxFormat &&
                       depthBits   != _ctxDepthBits &&
                       stencilBits != _ctxStencilBits &&
                       accumBits   != _ctxAccumBits)) {
             /* destroy the context */
             if (_ctx) {
+                // make the context current, with a dummy buffer
+                unsigned char buffer[4];
+                OSMesaMakeCurrent(_ctx, buffer, GL_UNSIGNED_BYTE, 1, 1);
                 _effect->contextDetachedMesa();
+                OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0); // detach buffer from context
+                OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context (not really recessary)
                 OSMesaDestroyContext( _ctx );
                 _ctx = 0;
             }
@@ -308,6 +322,8 @@ struct ShadertoyPlugin::OSMesaPrivate
             OFX::throwSuiteStatusException(kOfxStatFailed);
             return;
         }
+        //OSMesaPixelStore(OSMESA_Y_UP, true); // default value
+        //OSMesaPixelStore(OSMESA_ROW_LENGTH, dstBounds.x2 - dstBounds.x1); // default value
         if (newContext) {
             _effect->contextAttachedMesa();
         } else {
@@ -340,10 +356,6 @@ ShadertoyPlugin::exitMesa()
 {
     OFX::MultiThread::AutoMutex lock(_osmesaMutex);
     for (std::list<OSMesaPrivate *>::iterator it = _osmesa.begin(); it != _osmesa.end(); ++it) {
-        // make the context current, with a dummy buffer
-        unsigned char buffer[4];
-        OSMesaMakeCurrent((*it)->ctx(), buffer, GL_UNSIGNED_BYTE, 1, 1);
-        contextDetachedMesa();
         delete *it;
     }
     _osmesa.clear();
@@ -1126,22 +1138,21 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     //float tymin = 0;
     //float tymax = 1;
 
-    // now draw the textured quad containing the source
-    const double scale=0.333;
-    glEnable(srcTarget[0]);
-    glBegin(GL_QUADS);
-    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-    glBegin (GL_QUADS);
-    glTexCoord2f (0, 0);
-    glVertex2f   (0, 0);
-    glTexCoord2f (1, 0);
-    glVertex2f   (w * scale, 0);
-    glTexCoord2f (1, 1);
-    glVertex2f   (w * scale, h * scale);
-    glTexCoord2f (0, 1);
-    glVertex2f   (0, h * scale);
-    glEnd ();
-    glDisable(srcTarget[0]);
+//    // now draw the textured quad containing the source
+//    const double scale=0.333;
+//    glEnable(srcTarget[0]);
+//    glBegin(GL_QUADS);
+//    glColor4f(1.0f, 1.0f, 1.0f, 1.0f); // useless?
+//    glTexCoord2f (0, 0);
+//    glVertex2f   (0, 0);
+//    glTexCoord2f (1, 0);
+//    glVertex2f   (w * scale, 0);
+//    glTexCoord2f (1, 1);
+//    glVertex2f   (w * scale, h * scale);
+//    glTexCoord2f (0, 1);
+//    glVertex2f   (0, h * scale);
+//    glEnd ();
+//    glDisable(srcTarget[0]);
 
     // done; clean up.
     glPopAttrib();
@@ -1150,9 +1161,10 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     /* This is very important!!!
      * Make sure buffered commands are finished!!!
      */
-    glFinish();
     for (unsigned i = 0; i < NBINPUTS; ++i) {
-        glDeleteTextures(1, &srcIndex[i]);
+        if (src[i].get()) {
+            glDeleteTextures(1, &srcIndex[i]);
+        }
     }
 
 #ifdef DEBUG
@@ -1167,6 +1179,9 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         DPRINT(("depth bits %d\n", d));
     }
 #endif
+    glFinish();
+    // make sure the buffer is not referenced anymore
+    osmesa->setContext(format, depthBits, type, stencilBits, accumBits, NULL, dstBounds);
 
     // We're finished with this osmesa, make it available for other renders
     {

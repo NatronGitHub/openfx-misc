@@ -134,7 +134,12 @@ struct TestOpenGLPlugin::OSMesaPrivate
     ~OSMesaPrivate() {
         /* destroy the context */
         if (_ctx) {
+            // make the context current, with a dummy buffer
+            unsigned char buffer[4];
+            OSMesaMakeCurrent(_ctx, buffer, GL_UNSIGNED_BYTE, 1, 1);
             _effect->contextDetachedMesa();
+            OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0); // detach buffer from context
+            OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context (not really recessary)
             OSMesaDestroyContext( _ctx );
         }
     }
@@ -149,13 +154,22 @@ struct TestOpenGLPlugin::OSMesaPrivate
     {
         bool newContext = false;
 
+        if (!buffer) {
+            OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0);
+            return;
+        }
         if (!_ctx || (format      != _ctxFormat &&
                       depthBits   != _ctxDepthBits &&
                       stencilBits != _ctxStencilBits &&
                       accumBits   != _ctxAccumBits)) {
             /* destroy the context */
             if (_ctx) {
+                // make the context current, with a dummy buffer
+                unsigned char buffer[4];
+                OSMesaMakeCurrent(_ctx, buffer, GL_UNSIGNED_BYTE, 1, 1);
                 _effect->contextDetachedMesa();
+                OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0); // detach buffer from context
+                OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context (not really recessary)
                 OSMesaDestroyContext( _ctx );
                 _ctx = 0;
             }
@@ -190,6 +204,8 @@ struct TestOpenGLPlugin::OSMesaPrivate
             OFX::throwSuiteStatusException(kOfxStatFailed);
             return;
         }
+        //OSMesaPixelStore(OSMESA_Y_UP, true); // default value
+        //OSMesaPixelStore(OSMESA_ROW_LENGTH, dstBounds.x2 - dstBounds.x1); // default value
         if (newContext) {
             _effect->contextAttachedMesa();
         } else {
@@ -221,10 +237,6 @@ TestOpenGLPlugin::exitMesa()
 {
     OFX::MultiThread::AutoMutex lock(_osmesaMutex);
     for (std::list<OSMesaPrivate *>::iterator it = _osmesa.begin(); it != _osmesa.end(); ++it) {
-        // make the context current, with a dummy buffer
-        unsigned char buffer[4];
-        OSMesaMakeCurrent((*it)->ctx(), buffer, GL_UNSIGNED_BYTE, 1, 1);
-        contextDetachedMesa();
         delete *it;
     }
     _osmesa.clear();
@@ -735,7 +747,6 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     // now draw the textured quad containing the source
     glBegin(GL_QUADS);
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-    glBegin (GL_QUADS);
     if (projective) {
         glTexCoord4f (0, 0, 0, 1);
     } else {
@@ -831,7 +842,6 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     /* This is very important!!!
      * Make sure buffered commands are finished!!!
      */
-    glFinish();
     glDeleteTextures(1, &srcIndex);
 
 #ifdef DEBUG
@@ -846,7 +856,10 @@ TestOpenGLPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         DPRINT(("depth bits %d\n", d));
     }
 #endif
-
+    glFinish();
+    // make sure the buffer is not referenced anymore
+    osmesa->setContext(format, depthBits, type, stencilBits, accumBits, NULL, dstBounds);
+    
     // We're finished with this osmesa, make it available for other renders
     {
         OFX::MultiThread::AutoMutex lock(_osmesaMutex);
