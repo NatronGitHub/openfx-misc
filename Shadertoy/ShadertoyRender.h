@@ -259,6 +259,7 @@ struct ShadertoyPlugin::OSMesaPrivate
             OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0); // detach buffer from context
             OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context (not really recessary)
             OSMesaDestroyContext( _ctx );
+            assert(!OSMesaGetCurrentContext());
         }
     }
 
@@ -273,6 +274,7 @@ struct ShadertoyPlugin::OSMesaPrivate
         bool newContext = false;
 
         if (!buffer) {
+            //printf("%p before OSMesaMakeCurrent(%p,buf=NULL), OSMesaGetCurrentContext=%p\n", pthread_self(), _ctx, OSMesaGetCurrentContext());
             OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0);
             return;
         }
@@ -282,6 +284,7 @@ struct ShadertoyPlugin::OSMesaPrivate
                       accumBits   != _ctxAccumBits)) {
             /* destroy the context */
             if (_ctx) {
+                //printf("%p before OSMesaDestroyContext(%p), OSMesaGetCurrentContext=%p\n", pthread_self(), _ctx, OSMesaGetCurrentContext());
                 // make the context current, with a dummy buffer
                 unsigned char buffer[4];
                 OSMesaMakeCurrent(_ctx, buffer, GL_UNSIGNED_BYTE, 1, 1);
@@ -289,6 +292,7 @@ struct ShadertoyPlugin::OSMesaPrivate
                 OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0); // detach buffer from context
                 OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context (not really recessary)
                 OSMesaDestroyContext( _ctx );
+                assert(!OSMesaGetCurrentContext());
                 _ctx = 0;
             }
             assert(!_ctx);
@@ -315,6 +319,8 @@ struct ShadertoyPlugin::OSMesaPrivate
 #if OSMESA_MAJOR_VERSION * 100 + OSMESA_MINOR_VERSION >= 1000
         //OSMesaPostprocess(_ctx, const char *filter, unsigned enable_value);
 #endif
+
+        //printf("%p before OSMesaMakeCurrent(%p), OSMesaGetCurrentContext=%p\n", pthread_self(), _ctx, OSMesaGetCurrentContext());
 
         /* Bind the buffer to the context and make it current */
         if (!OSMesaMakeCurrent( _ctx, buffer, type, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1 )) {
@@ -842,6 +848,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             _osmesa.pop_back();
         }
     }
+    assert(OSMesaGetCurrentContext() == NULL); // the thread should have no Mesa context attached
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, buffer, dstBounds);
 #endif
 
@@ -910,7 +917,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             for (unsigned i = 0; i < NBINPUTS; ++i) {
                 iChannelX[8] = '0' + i;
                 shadertoy->iChannelLoc[i] = glGetUniformLocation(shadertoy->program, iChannelX);
-                printf("%s -> %d\n", iChannelX, (int)shadertoy->iChannelLoc[i]);
+                //printf("%s -> %d\n", iChannelX, (int)shadertoy->iChannelLoc[i]);
             }
         }
         if (must_recompile || uniforms_changed) {
@@ -1141,6 +1148,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     glFinish();
     // make sure the buffer is not referenced anymore
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, NULL, dstBounds);
+    OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context so that it can be used from another thread
+    assert(OSMesaGetCurrentContext() == NULL);
 
     // We're finished with this osmesa, make it available for other renders
     {
