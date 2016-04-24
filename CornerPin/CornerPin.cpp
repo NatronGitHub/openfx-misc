@@ -941,7 +941,7 @@ defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
     if (OFX::getImageEffectHostDescription()->isNatron && OFX::getImageEffectHostDescription()->versionMajor >= 2 && OFX::getImageEffectHostDescription()->versionMinor >= 1) {
         param->setLabel(kGroupExtraMatrixLabel);
     } else {
-        param->setLabel("");
+        param->setLabels("","","");
     }
     
     param->setMatrixRow(rowIndex);
