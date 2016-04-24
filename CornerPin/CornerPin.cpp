@@ -116,9 +116,9 @@ static const char* const kParamFrom[4] = {
 #define kGroupExtraMatrix "transformMatrix"
 #define kGroupExtraMatrixLabel "Extra Matrix"
 #define kGroupExtraMatrixHint "This matrix gets concatenated to the transform defined by the other parameters."
-#define kParamExtraMatrixRow1 "row1"
-#define kParamExtraMatrixRow2 "row2"
-#define kParamExtraMatrixRow3 "row3"
+#define kParamExtraMatrixRow1 "transform_row1"
+#define kParamExtraMatrixRow2 "transform_row2"
+#define kParamExtraMatrixRow3 "transform_row3"
 
 #define kParamTransformInteractive "interactive"
 #define kParamTransformInteractiveLabel "Interactive Update"
@@ -932,13 +932,19 @@ defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
                      PageParamDescriptor *page,
                      GroupParamDescriptor* group,
                      const std::string & name,
+                     int rowIndex,
                      double x,
                      double y,
                      double z)
 {
     Double3DParamDescriptor* param = desc.defineDouble3DParam(name);
-
-    param->setLabel("");
+    if (OFX::getImageEffectHostDescription()->isNatron && OFX::getImageEffectHostDescription()->versionMajor >= 2 && OFX::getImageEffectHostDescription()->versionMinor >= 1) {
+        param->setLabel(kGroupExtraMatrixLabel);
+    } else {
+        param->setLabel("");
+    }
+    
+    param->setMatrixRow(rowIndex);
     param->setAnimates(true);
     param->setDefault(x, y, z);
     param->setIncrement(0.01);
@@ -1040,9 +1046,9 @@ CornerPinPluginDescribeInContext(OFX::ImageEffectDescriptor &desc,
             group->setOpen(false);
         }
 
-        defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow1, 1, 0, 0);
-        defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow2, 0, 1, 0);
-        defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow3, 0, 0, 1);
+        defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow1, 1, 1, 0, 0);
+        defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow2, 2, 0, 1, 0);
+        defineExtraMatrixRow(desc, page, group, kParamExtraMatrixRow3, 3, 0, 0, 1);
 
         if (page && group) {
             page->addChild(*group);
