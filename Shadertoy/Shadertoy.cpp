@@ -53,11 +53,6 @@ using namespace OFX;
 #define NBINPUTS SHADERTOY_NBINPUTS
 #define NBUNIFORMS SHADERTOY_NBUNIFORMS
 
-#ifdef DEBUG
-#define NATRON_EVALUATEONCHANGE_BUG
-#pragma message WARN("version compiled to demonstrate the NATRON_EVALUATEONCHANGE_BUG")
-#endif
-
 #define kPluginName "Shadertoy"
 #define kPluginGrouping "Filter"
 #define kPluginDescription \
@@ -439,11 +434,7 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
 #if defined(HAVE_OSMESA)
     initMesa();
 #endif
-#ifdef NATRON_EVALUATEONCHANGE_BUG
-    _imageShaderCompile->setEnabled(true);
-#else
     _imageShaderCompile->setEnabled(false); // always compile on first render
-#endif
 }
 
 
@@ -643,17 +634,13 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
 #         endif
             _imageShaderChanged = true;
         }
-#ifndef NATRON_EVALUATEONCHANGE_BUG
         _imageShaderCompile->setEnabled(false);
-#endif
         // trigger a new render
         clearPersistentMessage();
         _imageShaderTriggerRender->setValue(_imageShaderTriggerRender->getValue()+1);
 
     } else if (paramName == kParamImageShaderSource && args.reason == eChangeUserEdit) {
-#ifndef NATRON_EVALUATEONCHANGE_BUG
         _imageShaderCompile->setEnabled(true);
-#endif
 
     } else if (paramName == kParamCount || starts_with(paramName, kParamName)) {
         {
@@ -679,9 +666,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         updateVisibility();
 
     } else if (paramName == kParamImageShaderSource && args.reason == eChangeUserEdit) {
-#ifndef NATRON_EVALUATEONCHANGE_BUG
         _imageShaderCompile->setEnabled(true);
-#endif
     } else if (paramName == kParamRendererInfo) {
         const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
         bool openGLRender = false;
@@ -901,9 +886,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
             OFX::IntParamDescriptor* param = desc.defineIntParam(kParamImageShaderTriggerRender);
             param->setEvaluateOnChange(true);
             param->setAnimates(false);
-#         ifndef NATRON_EVALUATEONCHANGE_BUG
             param->setIsSecret(true);
-#         endif
             param->setIsPersistant(false);
             if (page) {
                 page->addChild(*param);
