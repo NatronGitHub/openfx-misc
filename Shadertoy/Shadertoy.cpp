@@ -24,7 +24,6 @@
  * http://www.iquilezles.org/apps/shadertoy/index2.html (original Shader Toy v0.4)
  *
  * TODO:
- * - add RoD + extra parameters (see SeExpr)
  * - add multipass support (using tabs for UI as in shadertoys)
  */
 
@@ -46,6 +45,7 @@
 #include "ofxsImageEffect.h"
 #include "ofxsMacros.h"
 #include "ofxOpenGLRender.h"
+#include "ofxsCoords.h"
 
 using namespace OFX;
 
@@ -238,6 +238,24 @@ using namespace OFX;
 "uniform vec4      iDate;                 // (year, month, day, time in seconds)\n" \
 "uniform float     iSampleRate;           // sound sample rate (i.e., 44100)\n" \
 ""
+#define kParamBBox "bbox"
+#define kParamBBoxLabel "Bounding Box"
+#define kParamBBoxHint "What to use to produce the output image's bounding box. If no selected input is connected, use the project size."
+#define kParamBBoxOptionDefault "Default"
+#define kParamBBoxOptionDefaultHint "Default bounding box (project size)."
+#define kParamBBoxOptionUnion "Union"
+#define kParamBBoxOptionUnionHint "Union of all connected inputs."
+#define kParamBBoxOptionIntersection "Intersect"
+#define kParamBBoxOptionIntersectionHint "Intersection of all connected inputs."
+#define kParamBBoxOptionIChannel "iChannel"
+#define kParamBBoxOptionIChannelHint "Bounding box of iChannel"
+
+enum BBoxEnum {
+    eBBoxDefault,
+    eBBoxUnion,
+    eBBoxIntersection,
+    eBBoxIChannel
+};
 
 #define kGroupImageShader "imageShaderGroup"
 #define kGroupImageShaderLabel "Image Shader"
@@ -333,6 +351,19 @@ using namespace OFX;
 
 #define kClipChannel "iChannel"
 
+static
+std::string unsignedToString(unsigned i)
+{
+    if (i == 0) {
+        return "0";
+    }
+    std::string nb;
+    for (unsigned j = i; j !=0; j /= 10) {
+        nb += ('0' + (j % 10));
+    }
+    return nb;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 
@@ -372,17 +403,16 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     switch (getContext()) {
         case OFX::eContextFilter:
             _srcClips[0] = fetchClip(kOfxImageEffectSimpleSourceClipName);
-            _srcClips[1] = fetchClip(kClipChannel"1");
-            _srcClips[2] = fetchClip(kClipChannel"2");
-            _srcClips[3] = fetchClip(kClipChannel"3");
+            for (unsigned j = 1; j < NBINPUTS; ++j) {
+                _srcClips[j] = fetchClip(std::string(kClipChannel) + unsignedToString(j));
+            }
             break;
         case OFX::eContextGenerator:
         case OFX::eContextGeneral:
         default:
-            _srcClips[0] = fetchClip(kClipChannel"0");
-            _srcClips[1] = fetchClip(kClipChannel"1");
-            _srcClips[2] = fetchClip(kClipChannel"2");
-            _srcClips[3] = fetchClip(kClipChannel"3");
+            for (unsigned j = 0; j < NBINPUTS; ++j) {
+                _srcClips[j] = fetchClip(std::string(kClipChannel) + unsignedToString(j));
+            }
             break;
     }
     for (unsigned i = 0; i < NBINPUTS; ++i) {
@@ -391,6 +421,8 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
                              _srcClips[i]->getPixelComponents() == OFX::ePixelComponentAlpha)));
     }
 
+    _bbox = fetchChoiceParam(kParamBBox);
+    assert(_bbox);
     _imageShaderFileName = fetchStringParam(kParamImageShaderFileName);
     _imageShaderSource = fetchStringParam(kParamImageShaderSource);
     _imageShaderCompile = fetchPushButtonParam(kParamImageShaderCompile);
@@ -403,11 +435,8 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     _paramCount = fetchIntParam(kParamCount);
     assert(_paramCount);
     for (unsigned i = 0; i < NBUNIFORMS; ++i) {
-        std::string nb;
         // generate the number string
-        for (unsigned j = i + 1; j !=0; j /= 10) {
-            nb += ('0' + (j % 10));
-        }
+        std::string nb = unsignedToString(i);
         _paramType[i]       = fetchChoiceParam  (std::string(kParamType) + nb);
         _paramName[i]       = fetchStringParam  (std::string(kParamName) + nb);
         _paramValueBool[i]  = fetchBooleanParam (std::string(kParamValueBool)  + nb);
@@ -486,14 +515,52 @@ ShadertoyPlugin::render(const OFX::RenderArguments &args)
 
 // overriding getRegionOfDefinition is necessary to tell the host that we do not support render scale
 bool
-ShadertoyPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &/*rod*/)
+ShadertoyPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    // use the default RoD
-    return false;
+    const double time = args.time;
+
+
+    int bboxChoice = _bbox->getValueAtTime(time);
+    if (bboxChoice == eBBoxDefault) {
+        // use the default RoD
+        return false;
+    }
+    if (bboxChoice >= eBBoxIChannel) {
+        unsigned i = bboxChoice - eBBoxIChannel;
+        if (_srcClips[i]->isConnected()) {
+            rod = _srcClips[i]->getRegionOfDefinition(time);
+            return true;
+        }
+        // use the default RoD
+        return false;
+    }
+
+    std::vector<OfxRectD> rods;
+    for (unsigned i = 0; i < NBINPUTS; ++i) {
+        if (_srcClips[i]->isConnected()) {
+            rods.push_back(_srcClips[i]->getRegionOfDefinition(time));
+        }
+    }
+    if (rods.size() == 0) {
+        return false;
+    }
+    rod = rods[0];
+    if (bboxChoice == eBBoxUnion) { //union
+        for (unsigned i = 1; i < rods.size(); ++i) {
+            OFX::Coords::rectBoundingBox(rod, rods[i], &rod);
+        }
+    } else  { //intersection
+        for (unsigned i = 1; i < rods.size(); ++i) {
+            OFX::Coords::rectIntersection(rod, rods[i], &rod);
+        }
+        // may return an empty RoD if intersection is empty
+    }
+
+    return true;
 }
 
 void
@@ -785,13 +852,10 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
 
     // Source clip only in the filter context
     // create the mandated source clip
-    char iChannelX[10] = "iChannelX"; // index 8 holds the channel character
-    assert(NBINPUTS < 10 && iChannelX[8] == 'X');
     {
-        iChannelX[8] = '0';
         ClipDescriptor *srcClip = desc.defineClip((context == eContextFilter) ?
                                                   kOfxImageEffectSimpleSourceClipName :
-                                                  iChannelX);
+                                                  kClipChannel"0");
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
         srcClip->setTemporalClipAccess(false);
@@ -800,7 +864,8 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         srcClip->setOptional(!(context == eContextFilter));
     }
     for (unsigned i = 1; i < NBINPUTS; ++i ){
-        iChannelX[8] = '0' + i;
+        std::string iChannelX(kClipChannel);
+        iChannelX += unsignedToString(i);
         ClipDescriptor *srcClip = desc.defineClip(iChannelX);
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
@@ -817,6 +882,29 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
+
+    // boundingBox
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamBBox);
+        param->setLabel(kParamBBoxLabel);
+        param->setHint(kParamBBoxHint);
+        assert(param->getNOptions() == (int)eBBoxDefault);
+        param->appendOption(kParamBBoxOptionDefault, kParamBBoxOptionDefaultHint);
+        assert(param->getNOptions() == (int)eBBoxUnion);
+        param->appendOption(kParamBBoxOptionUnion, kParamBBoxOptionUnionHint);
+        assert(param->getNOptions() == (int)eBBoxIntersection);
+        param->appendOption(kParamBBoxOptionIntersection, kParamBBoxOptionIntersectionHint);
+        assert(param->getNOptions() == (int)eBBoxIChannel);
+        for (unsigned i = 0; i < NBINPUTS; ++i) {
+            std::string nb = unsignedToString(i);
+            param->appendOption(std::string(kParamBBoxOptionIChannel) + nb, std::string(kParamBBoxOptionIChannelHint) + nb + '.');
+        }
+        param->setAnimates(true);
+        param->setDefault((int)eBBoxDefault);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
 
     {
         OFX::GroupParamDescriptor* group = desc.defineGroupParam(kGroupImageShader);
@@ -956,11 +1044,8 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         }
 
         for (unsigned i = 0; i < NBUNIFORMS; ++i) {
-            std::string nb;
             // generate the number string
-            for (unsigned j = i + 1; j !=0; j /= 10) {
-                nb += ('0' + (j % 10));
-            }
+            std::string nb = unsignedToString(i);
             {
                 OFX::ChoiceParamDescriptor* param = desc.defineChoiceParam(std::string(kParamType) + nb);
                 param->setLabel(std::string(kParamTypeLabel1) + nb + kParamTypeLabel2);

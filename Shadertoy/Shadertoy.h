@@ -102,6 +102,7 @@ private:
     OFX::Clip *_dstClip;
     std::vector<OFX::Clip*> _srcClips;
 
+    OFX::ChoiceParam *_bbox;
     OFX::StringParam *_imageShaderFileName;
     OFX::StringParam *_imageShaderSource;
     OFX::PushButtonParam *_imageShaderCompile;
