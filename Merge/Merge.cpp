@@ -93,9 +93,24 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
     " the output alpha is set to a+b - a*b. When disabled the alpha channel is processed as " \
     "any other channel. Option is disabled for operations where it does not apply or makes no difference."
 
-#define kParamBbox "bbox"
-#define kParamBboxLabel "Bounding Box"
-#define kParamBboxHint "What to use to produce the output image's bounding box."
+#define kParamBBox "bbox"
+#define kParamBBoxLabel "Bounding Box"
+#define kParamBBoxHint "What to use to produce the output image's bounding box."
+#define kParamBBoxOptionUnion "Union"
+#define kParamBBoxOptionUnionHint "Union of all connected inputs."
+#define kParamBBoxOptionIntersection "Intersection"
+#define kParamBBoxOptionIntersectionHint "Intersection of all connected inputs."
+#define kParamBBoxOptionA "A"
+#define kParamBBoxOptionAHint "Bounding box of input A."
+#define kParamBBoxOptionB "B"
+#define kParamBBoxOptionBHint "Bounding box of input B."
+
+enum BBoxEnum {
+    eBBoxUnion = 0,
+    eBBoxIntersection,
+    eBBoxA,
+    eBBoxB
+};
 
 #define kParamAChannels       "AChannels"
 #define kParamAChannelsLabel  "A Channels"
@@ -149,6 +164,20 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kClipB "B"
 
 #define kMaximumAInputs 64
+
+static
+std::string unsignedToString(unsigned i)
+{
+    if (i == 0) {
+        return "0";
+    }
+    std::string nb;
+    for (unsigned j = i; j !=0; j /= 10) {
+        nb += ('0' + (j % 10));
+    }
+    return nb;
+}
+
 
 using namespace MergeImages2D;
 
@@ -383,10 +412,7 @@ public:
         if (numerousInputs) {
             _optionalASrcClips.resize(kMaximumAInputs - 1);
             for (int i = 2; i <= kMaximumAInputs; ++i) {
-                std::stringstream ss;
-                ss << kClipA << i;
-                std::string clipName = ss.str();
-                OFX::Clip* clip = fetchClip(clipName);
+                OFX::Clip* clip = fetchClip(std::string(kClipA) + unsignedToString(i));
                 assert(clip && (clip->getPixelComponents() == ePixelComponentRGB || clip->getPixelComponents() == ePixelComponentRGBA || clip->getPixelComponents() == ePixelComponentAlpha));
                 _optionalASrcClips[i - 2] = clip;
             }
@@ -398,7 +424,7 @@ public:
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _operation = fetchChoiceParam(kParamOperation);
         _operationString = fetchStringParam(kNatronOfxParamStringSublabelName);
-        _bbox = fetchChoiceParam(kParamBbox);
+        _bbox = fetchChoiceParam(kParamBBox);
         _alphaMasking = fetchBooleanParam(kParamAlphaMasking);
         assert(_operation && _operationString && _bbox && _alphaMasking);
         _mix = fetchDoubleParam(kParamMix);
@@ -473,81 +499,65 @@ bool
 MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
 {
     const double time = args.time;
-    if (!_srcClipA->isConnected() && !_srcClipB->isConnected()) {
+
+    double mix = _mix->getValueAtTime(time);
+    //Do the same as isIdentity otherwise the result of getRegionOfDefinition() might not be coherent with the RoD of the identity clip.
+    if (mix == 0.) {
+        if (_srcClipB->isConnected()) {
+            OfxRectD rodB = _srcClipB->getRegionOfDefinition(time);
+            rod = rodB;
+            return true;
+        }
         return false;
     }
     
-    OfxRectD rodA = _srcClipA->getRegionOfDefinition(time);
-    OfxRectD rodB = _srcClipB->getRegionOfDefinition(time);
-   
-    
-    int bboxChoice;
-    double mix;
-    _mix->getValueAtTime(time, mix);
-    //Do the same as isIdentity otherwise the result of getRegionOfDefinition() might not be coherent with the RoD of the identity clip.
-    if (mix == 0.) {
-        rod = rodB;
-        return true;
+    std::vector<OfxRectD> rods;
+
+    BBoxEnum bboxChoice = (BBoxEnum)_bbox->getValueAtTime(time);
+    if (bboxChoice == eBBoxUnion || bboxChoice == eBBoxIntersection) {
+        if (_srcClipB->isConnected()) {
+            rods.push_back(_srcClipB->getRegionOfDefinition(time));
+        }
+        if (_srcClipA->isConnected()) {
+            rods.push_back(_srcClipA->getRegionOfDefinition(time));
+        }
+        for (std::size_t i = 0; i < _optionalASrcClips.size(); ++i) {
+            if (_optionalASrcClips[i]->isConnected()) {
+                rods.push_back(_optionalASrcClips[i]->getRegionOfDefinition(time));
+            }
+        }
+        if (!rods.size()) {
+            return false;
+        }
+        rod = rods[0];
     }
-    
-    _bbox->getValueAtTime(time, bboxChoice);
-    
     switch (bboxChoice) {
-        case 0: { //union
-            bool aConnected = _srcClipA->isConnected();
-            bool bConnected = _srcClipB->isConnected();
-            bool rodSet = false;
-            if (aConnected) {
-                rod = rodA;
-                rodSet = true;
-            }
-            if (bConnected) {
-                if (!rodSet) {
-                    rod = rodB;
-                    rodSet = true;
-                } else {
-                    OFX::Coords::rectBoundingBox(rod, rodB, &rod);
-                }
-            }
-            
-            for (std::size_t i = 0; i < _optionalASrcClips.size(); ++i) {
-                OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(time);
-                if (!_optionalASrcClips[i]->isConnected()) {
-                    continue;
-                }
-                if (rodSet) {
-                    OFX::Coords::rectBoundingBox(rodOptionalA, rod, &rod);
-                } else {
-                    rod = rodOptionalA;
-                    rodSet = true;
-                }
+        case eBBoxUnion: { //union
+            for (unsigned i = 1; i < rods.size(); ++i) {
+                OFX::Coords::rectBoundingBox(rod, rods[i], &rod);
             }
 			return true;
 		}
-        case 1: { //intersection
-            bool interesect = OFX::Coords::rectIntersection(rodA, rodB, &rod);
-            if (!interesect) {
-                setPersistentMessage(OFX::Message::eMessageError, "", "Input images intersection is empty.");
-                return false;
+        case eBBoxIntersection: { //intersection
+            for (unsigned i = 1; i < rods.size(); ++i) {
+                OFX::Coords::rectIntersection(rod, rods[i], &rod);
             }
-            for (std::size_t i = 0; i < _optionalASrcClips.size(); ++i) {
-                OfxRectD rodOptionalA = _optionalASrcClips[i]->getRegionOfDefinition(time);
-                interesect = OFX::Coords::rectIntersection(rodOptionalA, rod, &rod);
-                if (!interesect) {
-                    setPersistentMessage(OFX::Message::eMessageError, "",
-                                         "Input images intersection is empty. ");
-                    return false;
-                }
+            // may return an empty RoD if intersection is empty
+            return true;
+		}
+        case eBBoxA: { //A
+            if (_srcClipA->isConnected()) {
+                rod = _srcClipA->getRegionOfDefinition(time);
+                return true;
             }
-			return true;
+			return false;
 		}
-        case 2: { //A
-			rod = rodA;
-			return true;
-		}
-        case 3: { //B
-			rod = rodB;
-			return true;
+        case eBBoxB: { //B
+            if (_srcClipB->isConnected()) {
+                rod = _srcClipB->getRegionOfDefinition(time);
+                return true;
+            }
+            return false;
 		}
 	}
 	return false;
@@ -1166,14 +1176,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
 
     if (numerousInputs) {
         for (int i = 2; i <= kMaximumAInputs; ++i) {
-            assert(i < 100);
-            char name[5] = { 'A', 0, 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-            assert(i < 1000);
-            name[1] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
-            name[2] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
-            // coverity[dead_error_line]
-            name[3] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
-            OFX::ClipDescriptor* optionalSrcClip = desc.defineClip(name);
+            OFX::ClipDescriptor* optionalSrcClip = desc.defineClip(std::string(kClipA) + unsignedToString(i));
             optionalSrcClip->addSupportedComponent( OFX::ePixelComponentRGBA );
             optionalSrcClip->addSupportedComponent( OFX::ePixelComponentRGB );
             optionalSrcClip->addSupportedComponent( OFX::ePixelComponentXY );
@@ -1270,15 +1273,19 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
 
     // boundingBox
     {
-        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamBbox);
-        param->setLabel(kParamBboxLabel);
-        param->setHint(kParamBboxHint);
-        param->appendOption("Union");
-        param->appendOption("Intersection");
-        param->appendOption("A");
-        param->appendOption("B");
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamBBox);
+        param->setLabel(kParamBBoxLabel);
+        param->setHint(kParamBBoxHint);
+        assert(param->getNOptions() == (int)eBBoxUnion);
+        param->appendOption(kParamBBoxOptionUnion, kParamBBoxOptionUnionHint);
+        assert(param->getNOptions() == (int)eBBoxIntersection);
+        param->appendOption(kParamBBoxOptionIntersection, kParamBBoxOptionIntersectionHint);
+        assert(param->getNOptions() == (int)eBBoxA);
+        param->appendOption(kParamBBoxOptionA, kParamBBoxOptionAHint);
+        assert(param->getNOptions() == (int)eBBoxB);
+        param->appendOption(kParamBBoxOptionB, kParamBBoxOptionBHint);
         param->setAnimates(true);
-        param->setDefault(0);
+        param->setDefault((int)eBBoxUnion);
         if (page) {
             page->addChild(*param);
         }
