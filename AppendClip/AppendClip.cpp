@@ -84,6 +84,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kClipSourceCount 64
 #define kClipSourceOffset 1 // clip numbers start
 
+static
+std::string unsignedToString(unsigned i)
+{
+    if (i == 0) {
+        return "0";
+    }
+    std::string nb;
+    for (unsigned j = i; j !=0; j /= 10) {
+        nb += ('0' + (j % 10));
+    }
+    return nb;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class AppendClipPlugin
@@ -107,14 +120,7 @@ public:
             if (getContext() == OFX::eContextTransition && j < 2) {
                 _srcClip[j] = fetchClip(j == 0 ? kOfxImageEffectTransitionSourceFromClipName : kOfxImageEffectTransitionSourceToClipName);
             } else {
-                int i = j + kClipSourceOffset;
-                char name[4] = { 0, 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-                assert(i < 1000);
-                name[0] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
-                name[1] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
-                // coverity[dead_error_line]
-                name[2] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
-                _srcClip[j] = fetchClip(name);
+                _srcClip[j] = fetchClip(unsignedToString(j + kClipSourceOffset));
             }
             assert(_srcClip[j] && (_srcClip[j]->getPixelComponents() == OFX::ePixelComponentRGB || _srcClip[j]->getPixelComponents() == OFX::ePixelComponentRGBA || _srcClip[j]->getPixelComponents() == OFX::ePixelComponentAlpha));
         }
@@ -871,7 +877,7 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
                             OFX::getImageEffectHostDescription()->versionMajor >= 2);
 
-    int clipSourceCount = numerousInputs ? kClipSourceCount : 2;
+    unsigned clipSourceCount = numerousInputs ? kClipSourceCount : 2;
 
     {
         ClipDescriptor *srcClip;
@@ -879,12 +885,8 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             // we are a transition, so define the sourceFrom/sourceTo input clip
             srcClip = desc.defineClip(kOfxImageEffectTransitionSourceFromClipName);
         } else {
-            char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-            int i = 0;
-            int clipNumber = i + kClipSourceOffset;
-            name[0] = '0' + clipNumber;
-            name[1] = 0;
-            srcClip = desc.defineClip(name);
+            unsigned i = 0;
+            srcClip = desc.defineClip(unsignedToString(i + kClipSourceOffset));
             srcClip->setOptional(true);
         }
         srcClip->addSupportedComponent(ePixelComponentNone);
@@ -902,12 +904,8 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             // we are a transition, so define the sourceFrom/sourceTo input clip
             srcClip = desc.defineClip(kOfxImageEffectTransitionSourceToClipName);
         } else {
-            char name[3] = { 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-            int i = 1;
-            int clipNumber = i + kClipSourceOffset;
-            name[0] = '0' + clipNumber;
-            name[1] = 0;
-            srcClip = desc.defineClip(name);
+            unsigned i = 1;
+            srcClip = desc.defineClip(unsignedToString(i + kClipSourceOffset));
             srcClip->setOptional(true);
         }
         srcClip->addSupportedComponent(ePixelComponentNone);
@@ -921,16 +919,9 @@ AppendClipPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     if (numerousInputs) {
-        for (int j = 2; j < clipSourceCount; ++j) {
+        for (unsigned j = 2; j < clipSourceCount; ++j) {
             ClipDescriptor *srcClip;
-            int i = j + kClipSourceOffset;
-            char name[4] = { 0, 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-            assert(i < 1000);
-            name[0] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
-            name[1] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
-            // coverity[dead_error_line]
-            name[2] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
-            srcClip = desc.defineClip(name);
+            srcClip = desc.defineClip(unsignedToString(j + kClipSourceOffset));
             srcClip->setOptional(true);
             srcClip->addSupportedComponent(ePixelComponentNone);
             srcClip->addSupportedComponent(ePixelComponentRGBA);

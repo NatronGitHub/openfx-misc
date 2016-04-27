@@ -82,6 +82,19 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kClipSourceCount 16
 #define kClipSourceCountNumerous 128
 
+static
+std::string unsignedToString(unsigned i)
+{
+    if (i == 0) {
+        return "0";
+    }
+    std::string nb;
+    for (unsigned j = i; j !=0; j /= 10) {
+        nb += ('0' + (j % 10));
+    }
+    return nb;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 class SwitchPlugin : public OFX::ImageEffect
@@ -164,13 +177,7 @@ SwitchPlugin::SwitchPlugin(OfxImageEffectHandle handle, bool numerousInputs)
         if (getContext() == OFX::eContextFilter && i == 0) {
             _srcClip[i] = fetchClip(kOfxImageEffectSimpleSourceClipName);
         } else {
-            assert(i < 1000);
-            char name[4] = { 0, 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-            name[0] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
-            name[1] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
-            // coverity[dead_error_line]
-            name[2] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
-            _srcClip[i] = fetchClip(name);
+            _srcClip[i] = fetchClip(unsignedToString(i));
         }
         assert(_srcClip[i]);
     }
@@ -395,7 +402,7 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
                             OFX::getImageEffectHostDescription()->versionMajor >= 2);
 
-    int clipSourceCount = numerousInputs ? kClipSourceCountNumerous : kClipSourceCount;
+    unsigned clipSourceCount = numerousInputs ? kClipSourceCountNumerous : kClipSourceCount;
 
     // Source clip only in the filter context
     // create the mandated source clip
@@ -429,15 +436,8 @@ void SwitchPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
     }
 
     if (numerousInputs) {
-        for (int i = 2; i < clipSourceCount; ++i) {
-            ClipDescriptor *srcClip;
-            assert(i < 1000);
-            char name[4] = { 0, 0, 0, 0 }; // don't use std::stringstream (not thread-safe on OSX)
-            name[0] = (i < 10) ? ('0' + i) : ((i < 100) ? ('0' + i / 10) : ('0' + i / 100));
-            name[1] = (i < 10) ?         0 : ((i < 100) ? ('0' + i % 10) : ('0' + ((i/10)%10)));
-            // coverity[dead_error_line]
-            name[2] = (i < 10) ?         0 : ((i < 100) ?              0 : ('0' + i % 10));
-            srcClip = desc.defineClip(name);
+        for (unsigned i = 2; i < clipSourceCount; ++i) {
+            ClipDescriptor *srcClip = desc.defineClip(unsignedToString(i));
             srcClip->setOptional(true);
             srcClip->addSupportedComponent(ePixelComponentNone);
             srcClip->addSupportedComponent(ePixelComponentRGB);
