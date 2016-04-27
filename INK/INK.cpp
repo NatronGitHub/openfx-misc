@@ -40,21 +40,18 @@ Version   Date       Author       Description
     1.3   18-NOV-15  N. Carroll   Implemented Black Point, White Point, Invert
     1.4   18-NOV-15  N. Carroll   Implemented Despill Core
     1.5   26-NOV-15  N. Carroll   Implemented Spill Replacement
-
-* TODO implement Key Amount
-need to modulate keyAmountRGB by keyColour
-current code has alpha right
-and chan[midKey] is also correct, but only when K[midKey] = (K[minKey]+K[maxKey])/2
-
-* TODO implement Tune Key Amount
+    1.6   27-APR-16  N. Carroll   Implemented Key Amount and Tune Key Amount
 
 * TODO implement Matte and Despill Balance
 use the ratios between matte balance's channels for this
 not their absolute values
 
 * TODO implement Fill Holes, Erode and Blur
-fill holes is done by dilating then eroding by the same amount.
+fill holes is done by dilating then eroding by the same amount. 
 do these with cimg
+
+* TODO possible bug: garbage matte is multiplying, negating core matte.
+need to look into this further.
 */
 
 #include "INK.h"
@@ -74,16 +71,20 @@ CLANG_DIAG_OFF(shorten-64-to-32)
 #include "CImg.h"
 CLANG_DIAG_ON(shorten-64-to-32)
 
+using namespace OFX;
+using namespace std;
+using namespace cimg_library;
+
 #define kPluginName "INK"
 #define kPluginGrouping "Keyer"
 #define kPluginDescription \
 "INK proportionate colour difference keyer\n" \
 "Copyleft 2015 Nicholas Carroll\n" \
-"http://casanico.com\n" \
+"http://casanico.com" \
 
 #define kPluginIdentifier "com.casanico.INK"
 #define kPluginVersionMajor 1 // Increment this if you have broken backwards compatibility.
-#define kPluginVersionMinor 5
+#define kPluginVersionMinor 6
 
 #define kSupportsTiles 1 
 #define kSupportsMultiResolution 1
@@ -92,123 +93,107 @@ CLANG_DIAG_ON(shorten-64-to-32)
 #define kSupportsMultipleClipDepths false
 #define kRenderThreadSafety eRenderFullySafe
 
-#define kParamKeyColour "keyColour"
-#define kParamKeyColourLabel "Key Colour"
-#define kParamKeyColourHint \
-"Use the dropper to select the green/blue screen colour."
+static const string kParamKeyColour = "keyColour";
+static const string kParamKeyColourLabel = "Key Colour";
+static const string kParamKeyColourHint = "Use the dropper to select the green/blue screen colour.";
 
-#define kParamKeyAmount "keyAmount"
-#define kParamKeyAmountLabel "* Key Amount"
-#define kParamKeyAmountHint \
-"* NOT YET IMPLEMENTED\nHow much is keyed (both despill and matte generation)."
+static const string kParamKeyAmount = "keyAmount";
+static const string kParamKeyAmountLabel = "Key Amount";
+static const string kParamKeyAmountHint = "How much is keyed (both despill and matte generation).";
 
 // tune key amount
-#define kParamMidpoint "Midpoint"
-#define kParamMidpointLabel "Midpoint"
-#define kParamMidpointHint \
-""
+static const string kParamMidpoint = "midpoint";
+static const string kParamMidpointLabel = "Midpoint";
+static const string kParamMidpointHint = "";
 
-#define kParamShadows "Shadows"
-#define kParamShadowsLabel "Shadows"
-#define kParamShadowsHint \
-""
+static const string kParamShadows = "shadows";
+static const string kParamShadowsLabel = "Shadows";
+static const string kParamShadowsHint = "";
 
-#define kParamMidtones "Midtones"
-#define kParamMidtonesLabel "Midtones"
-#define kParamMidtonesHint \
-""
+static const string kParamMidtones = "midtones";
+static const string kParamMidtonesLabel = "Midtones";
+static const string kParamMidtonesHint = "";
 
-#define kParamHighlights "Highlights"
-#define kParamHighlightsLabel "Highlights"
-#define kParamHighlightsHint \
-""
+static const string kParamHighlights = "highlights";
+static const string kParamHighlightsLabel = "Highlights";
+static const string kParamHighlightsHint = "";
 
-#define kParamKeyBalance "keyBalance"
-#define kParamKeyBalanceLabel "Key Balance"
-#define kParamKeyBalanceHint \
-"How much each of the two lesser channels of RGB should influence the key. Higher favours the least channel."
+static const string kParamKeyBalance = "keyBalance";
+static const string kParamKeyBalanceLabel = "Key Balance";
+static const string kParamKeyBalanceHint = "How much each of the two lesser channels of RGB should influence the key. Higher favours the least channel.";
 
-#define kParamMatteBalance "matteBalance"
-#define kParamMatteBalanceLabel "* Matte Balance"
-#define kParamMatteBalanceHint \
-"* NOT YET IMPLEMENTED\nColour balances the key colour used to pull the matte."
+static const string kParamMatteBalance = "matteBalance";
+static const string kParamMatteBalanceLabel = "* Matte Balance";
+static const string kParamMatteBalanceHint = "* NOT YET IMPLEMENTED\nColour balances the key colour used to pull the matte.";
 
-#define kParamDespillBalance "despillBalance"
-#define kParamDespillBalanceLabel "* Despill Balance"
-#define kParamDespillBalanceHint \
-"* NOT YET IMPLEMENTED\nColour balances the key colour used for despill."
+static const string kParamDespillBalance = "despillBalance";
+static const string kParamDespillBalanceLabel = "* Despill Balance";
+static const string kParamDespillBalanceHint = "* NOT YET IMPLEMENTED\nColour balances the key colour used for despill.";
 
-#define kParamDespillCore "despillCore"
-#define kParamDespillCoreLabel "Despill Core"
-#define kParamDespillCoreHint "Enabled: Despill even where there is a core matte.\n\nDisabled: the core matte acts as a holdout against despill."
+static const string kParamDespillCore  = "despillCore";
+static const string kParamDespillCoreLabel = "Despill Core";
+static const string kParamDespillCoreHint = "Enabled: Despill even where there is a core matte.\n\nDisabled: the core matte acts as a holdout against despill.";
 
-#define kParamReplacementColour "replacementColour"
-#define kParamReplacementColourLabel "Replacement Colour"
-#define kParamReplacementColourHint "This colour will be added in proportion to the density of the core matte."
+static const string kParamReplacementColour = "replacementColour";
+static const string kParamReplacementColourLabel = "Replacement Colour";
+static const string kParamReplacementColourHint = "This colour will be added in proportion to the density of the core matte.";
 
-#define kParamReplacementAmount "replacementAmount"
-#define kParamReplacementAmountLabel "Replacement Amount"
-#define kParamReplacementAmountHint "Fade the replace amount"
+static const string kParamReplacementAmount = "replacementAmount";
+static const string kParamReplacementAmountLabel = "Replacement Amount";
+static const string kParamReplacementAmountHint = "Fade the replace amount";
 
-#define kParamPreserveLuminance "preserveLuminance"
-#define kParamPreserveLuminanceLabel "Preserve Luminance"
-#define kParamPreserveLuminanceHint "Preserve the despilled pixel luminance where spill replacement is occurring"
+static const string kParamPreserveLuminance = "preserveLuminance";
+static const string kParamPreserveLuminanceLabel = "Preserve Luminance";
+static const string kParamPreserveLuminanceHint = "Preserve the despilled pixel luminance where spill replacement is occurring";
 
-#define kParamBlackPoint "blackPoint"
-#define kParamBlackPointLabel "Black Point"
-#define kParamBlackPointHint \
-"Alpha below this value will be set to zero"
+static const string kParamBlackPoint = "blackPoint";
+static const string kParamBlackPointLabel = "Black Point";
+static const string kParamBlackPointHint = "Alpha below this value will be set to zero";
+static const string kParamWhitePoint = "whitePoint";
+static const string kParamWhitePointLabel = "White Point";
+static const string kParamWhitePointHint = "Alpha above this value will be set to 1";
 
-#define kParamWhitePoint "whitePoint"
-#define kParamWhitePointLabel "White Point"
-#define kParamWhitePointHint \
-"Alpha above this value will be set to 1"
+static const string kParamBlur = "blur";
+static const string kParamBlurLabel = "* Blur";
+static const string kParamBlurHint = "* NOT YET IMPLEMENTED\nBlur the matte";
 
-#define kParamBlur "blur"
-#define kParamBlurLabel "* Blur"
-#define kParamBlurHint \
-"* NOT YET IMPLEMENTED\nBlur the matte"
+static const string kParamInvert = "invert";
+static const string kParamInvertLabel = "Invert";
+static const string kParamInvertHint = "Use this to make a garbage matte";
 
-#define kParamInvert "invert"
-#define kParamInvertLabel "Invert"
-#define kParamInvertHint \
-"Use this to make a garbage matte"
+static const string kParamErode = "erode";
+static const string kParamErodeLabel = "* Erode";
+static const string kParamErodeHint = "* NOT YET IMPLEMENTED\nErode (or dilate) the matte";
 
-#define kParamErode "erode"
-#define kParamErodeLabel "* Erode"
-#define kParamErodeHint \
-"* NOT YET IMPLEMENTED\nErode (or dilate) the matte"
+static const string kParamFillHoles = "fillHoles";
+static const string kParamFillHolesLabel = "* Fill Holes";
+static const string kParamFillHolesHint = "* NOT YET IMPLEMENTED\nFill holes in the matte";
 
-#define kParamFillHoles "fillHoles"
-#define kParamFillHolesLabel "* Fill Holes"
-#define kParamFillHolesHint \
-"* NOT YET IMPLEMENTED\nFill holes in the matte"
+static const string kParamOutputMode = "outputMode";
+static const string kParamOutputModeLabel = "Output Mode";
+static const string kParamOutputModeHint = "What image to output.";
+static const string kParamOutputModeOptionIntermediate = "Source with Matte";
+static const string kParamOutputModeOptionIntermediateHint = "RGB holds the untouched source. Alpha holds the combined matte. Use for multi-pass keying.\n";
+static const string kParamOutputModeOptionPremultiplied = "Premultiplied";
+static const string kParamOutputModeOptionPremultipliedHint = "Normal keyer output (keyed and despilled). Alpha holds the combined matte.\n";
+static const string kParamOutputModeOptionUnpremultiplied = "Unpremultiplied";
+static const string kParamOutputModeOptionUnpremultipliedHint = "Premultiplied RGB divided by Alpha. Alpha holds the combined matte.\n";
+static const string kParamOutputModeOptionComposite = "Composite";
+static const string kParamOutputModeOptionCompositeHint = "Keyer output is composited over Bg as A+B(1-a). Alpha holds the combined matte.\n";
+static const string kParamOutputModeOptionMatteMonitor = "Matte Monitor";
+static const string kParamOutputModeOptionMatteMonitorHint = "Mattes shown with all pixel values from 0.00001 to 0.99999 set to 0.5. Core is in the red channel, current matte (without source alpha) is in the green channel and garbage matte is in the blue channel. Alpha holds the combined matte. For when you need to see the full extent of each matte and where they overlap.";
+static const string kParamOutputModeOptionMatteMonitorPremult = "Matte Monitor Premult";
+static const string kParamOutputModeOptionMatteMonitorPremultHint = "Matte Monitor multiplied by the combined matte.";
 
-#define kParamOutputMode "outputMode"
-#define kParamOutputModeLabel "Output Mode"
-#define kParamOutputModeHint \
-"What image to output."
-#define kParamOutputModeOptionIntermediate "Source with Matte"
-#define kParamOutputModeOptionIntermediateHint "RGB holds the untouched source. Alpha holds the combined matte. Use for multi-pass keying.\n"
-#define kParamOutputModeOptionPremultiplied "Premultiplied"
-#define kParamOutputModeOptionPremultipliedHint "Normal keyer output (keyed and despilled). Alpha holds the combined matte.\n"
-#define kParamOutputModeOptionUnpremultiplied "Unpremultiplied"
-#define kParamOutputModeOptionUnpremultipliedHint "Premultiplied RGB divided by Alpha. Alpha holds the combined matte.\n"
-#define kParamOutputModeOptionComposite "Composite"
-#define kParamOutputModeOptionCompositeHint "Keyer output is composited over Bg as A+B(1-a). Alpha holds the combined matte.\n"
-#define kParamOutputModeOptionMatteMonitor "Matte Monitor"
-#define kParamOutputModeOptionMatteMonitorHint "Mattes shown with all pixel values from 0.00001 to 0.99999 set to 0.5. Core is in the red channel, current matte (without source alpha) is in the green channel and garbage matte is in the blue channel. Alpha holds the combined matte. For when you need to see the full extent of each matte and where they overlap."
-
-#define kParamSourceAlpha "sourceAlphaHandling"
-#define kParamSourceAlphaLabel "Source Alpha"
-#define kParamSourceAlphaHint \
-"How the alpha embedded in the Source input should be used"
-#define kParamSourceAlphaOptionIgnore "Discard"
-#define kParamSourceAlphaOptionIgnoreHint "Ignore the source alpha.\n"
-#define kParamSourceAlphaOptionAddToCore "Add to Core"
-#define kParamSourceAlphaOptionAddToCoreHint "Source alpha is added to the core matte. Use for multi-pass keying.\n"
-#define kSourceAlphaNormalOption "Multiply"
-#define kParamSourceAlphaOptionNormalHint "Combined matte is multiplied by source alpha."
+static const string kParamSourceAlpha = "sourceAlphaHandling";
+static const string kParamSourceAlphaLabel = "Source Alpha";
+static const string kParamSourceAlphaHint = "How the alpha embedded in the Source input should be used";
+static const string kParamSourceAlphaOptionIgnore = "Discard";
+static const string kParamSourceAlphaOptionIgnoreHint = "Ignore the source alpha.\n";
+static const string kParamSourceAlphaOptionAddToCore =  "Add to Core";
+static const string kParamSourceAlphaOptionAddToCoreHint = "Source alpha is added to the core matte. Use for multi-pass keying.\n";
+static const string kSourceAlphaNormalOption =  "Multiply";
+static const string kParamSourceAlphaOptionNormalHint = "Combined matte is multiplied by source alpha.";
 
 //bg#define kClipBg "Bg"
 #define kClipCore "Core"
@@ -220,6 +205,7 @@ enum OutputModeEnum {
     eOutputModeUnpremultiplied,
     //bg   eOutputModeComposite,
     eOutputModeMatteMonitor,
+    eOutputModeMatteMonitorPremult,
 };
 
 enum SourceAlphaEnum {
@@ -227,10 +213,6 @@ enum SourceAlphaEnum {
     eSourceAlphaAddToCore,
     eSourceAlphaNormal,
 };
-
-using namespace OFX;
-using namespace std;
- using namespace cimg_library;
 
 class INKProcessorBase : public OFX::ImageProcessor
 {
@@ -483,38 +465,44 @@ private:
 		// output pixel channels
 		double chan[3] = {P[0], P[1], P[2]};
 		double currMatte = 1.;
-		// TUNE KEY AMOUNT TODO
-		double keyAmountRGB = _keyAmount;
+		double amount = _keyAmount;
+		double margin = 0.1;
+		// TUNE KEY AMOUNT
+		if (origLum <= (_midpoint - margin)) {
+                  amount *= _shadows;
+                } else if (origLum <= (_midpoint)) {
+                  amount *=  (_shadows+_midtones)/2;
+                } else if (origLum <= (_midpoint + 2*margin)) {
+                  amount *= (_midtones+_highlights)/2;
+                } else {
+                  amount *= _highlights;
+                }
+		double amountRGB = amount;
 		// We will apply the core matte to RGB by reducing the key amount
+		double bal = _keyBalance;
 		if (!_despillCore) {
-		  keyAmountRGB *= (1-(double)core);
+		  amountRGB *= (1-(double)core);
 		}
 		if (!(K[minKey] == 0. && K[midKey] == 0. && K[maxKey] == 0.) &&
-		    !(P[minKey] == 0. && P[midKey] == 0. && P[maxKey] == 0.) && !(keyAmountRGB==0.)) {
+		    !(P[minKey] == 0. && P[midKey] == 0. && P[maxKey] == 0.) && !(amountRGB==0.)) {
 		    // solve chan[minKey]		
-		    double min1 = (P[minKey]/(P[maxKey]-_keyBalance*P[midKey])-K[minKey]/(K[maxKey]-_keyBalance*K[midKey]))
-		      / (1+P[minKey]/(P[maxKey]-_keyBalance*P[midKey])-(2-_keyBalance)*K[minKey]/(K[maxKey]-_keyBalance*K[midKey]));
-		    double min2 = min(P[minKey],(P[maxKey]-_keyBalance*P[midKey])*min1/(1-min1));
-		    //alternate equation for min2
-		    //double min2 = ((P[maxKey]-_keyBalance*P[midKey])*(P[minKey]*(K[maxKey]-_keyBalance*K[midKey])
-		    //			   -K[minKey]*(P[maxKey]-_keyBalance*P[midKey])))/(_keyBalance*_keyBalance*P[midKey]*K[midKey]
-		    //			   +_keyBalance*P[midKey]*K[minKey]+_keyBalance*P[maxKey]*K[minKey]-_keyBalance*_keyBalance*P[midKey]*K[minKey]
-		    //			   -_keyBalance*P[midKey]*K[maxKey]-_keyBalance*P[maxKey]*K[midKey]+P[maxKey]*K[maxKey]-P[maxKey]*K[minKey]);	    
+		    double min1 = (P[minKey]/(P[maxKey]-bal*P[midKey])-amountRGB*amountRGB*K[minKey]/(K[maxKey]-bal*K[midKey]))
+		      / (1+P[minKey]/(P[maxKey]-bal*P[midKey])-(2-bal)*amountRGB*amountRGB*K[minKey]/(K[maxKey]-bal*K[midKey]));
+		    double min2 = min(P[minKey],(P[maxKey]-bal*P[midKey])*min1/(1-min1));    
 		    chan[minKey] = max(0.,min(min2,1.));
 		    // solve chan[midKey]
-		    double mid1 = (P[midKey]/(P[maxKey]-(1-_keyBalance)*P[minKey])-K[midKey]/(K[maxKey]-(1-_keyBalance)*K[minKey]))
-		      / (1+P[midKey]/(P[maxKey]-(1-_keyBalance)*P[minKey])-(1+_keyBalance)*K[midKey]/(K[maxKey]-(1-_keyBalance)*K[minKey]));
-		    double mid2 = min(P[midKey],(P[maxKey]-(1-_keyBalance)*P[minKey])*mid1/(1-mid1));
-		    double mid3 = P[midKey] - keyAmountRGB*keyAmountRGB*(P[midKey] - mid2);
-		    chan[midKey] = max(0.,min(mid3,1.));
+		    double mid1 = (P[midKey]/(P[maxKey]-(1-bal)*P[minKey])-amountRGB*amountRGB*K[midKey]/(K[maxKey]-(1-bal)*K[minKey]))
+		      / (1+P[midKey]/(P[maxKey]-(1-bal)*P[minKey])-(1+bal)*amountRGB*amountRGB*K[midKey]/(K[maxKey]-(1-bal)*K[minKey]));
+		    double mid2 = min(P[midKey],(P[maxKey]-(1-bal)*P[minKey])*mid1/(1-mid1));
+		    chan[midKey] = max(0.,min(mid2,1.));
 	  	    // solve chan[maxKey]
-		    double max1 = min(P[maxKey],(_keyBalance*min(P[midKey],(P[maxKey]-(1-_keyBalance)*P[minKey])*mid1/(1-mid1))
-						 + (1-_keyBalance)*min(P[minKey],(P[maxKey]-_keyBalance*P[midKey])*min1/(1-min1))));
+		    double max1 = min(P[maxKey],(bal*min(P[midKey],(P[maxKey]-(1-bal)*P[minKey])*mid1/(1-mid1))
+						 + (1-bal)*min(P[minKey],(P[maxKey]-bal*P[midKey])*min1/(1-min1))));
 		    chan[maxKey] = max(0.,min(max1,1.));
 		    // solve alpha
-		    double a1 = (1-K[maxKey])+(_keyBalance*K[midKey]+(1-_keyBalance)*K[minKey]);
-		    double a2 = (_keyAmount*_keyAmount)*(1+a1/abs(1-a1));
-		    double a3 =  (1-P[maxKey])-P[maxKey]*(a2-(1+(_keyBalance*P[midKey]+(1-_keyBalance)*P[minKey])/P[maxKey]*a2));
+		    double a1 = (1-K[maxKey])+(bal*K[midKey]+(1-bal)*K[minKey]);
+		    double a2 = amount*(1+a1/abs(1-a1));
+		    double a3 =  (1-P[maxKey])-P[maxKey]*(a2-(1+(bal*P[midKey]+(1-bal)*P[minKey])/P[maxKey]*a2));
 		    double a4 = max(chan[midKey],max(a3,chan[minKey]));
 		    currMatte = max(0.,min(a4,1.)); //alpha
 		}
@@ -590,6 +578,11 @@ private:
 		        dstPix[0] = floatToSample<PIX,maxValue>(matteMonitor(core));
 		        dstPix[1] = floatToSample<PIX,maxValue>(matteMonitor(currMatte));
 		        dstPix[2] = floatToSample<PIX,maxValue>(matteMonitor(garbage));
+                        break;
+		    case eOutputModeMatteMonitorPremult:
+		        dstPix[0] = floatToSample<PIX,maxValue>(matteMonitor(core) * combMatte);
+		        dstPix[1] = floatToSample<PIX,maxValue>(matteMonitor(currMatte) * combMatte);
+		        dstPix[2] = floatToSample<PIX,maxValue>(matteMonitor(garbage) * combMatte);
                         break;
                 }
                 if (nComponents == 4) {
@@ -917,6 +910,7 @@ INKPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
         case eOutputModeIntermediate:
         case eOutputModeUnpremultiplied:
 	case eOutputModeMatteMonitor:
+	case eOutputModeMatteMonitorPremult:
 	  //bg case eOutputModeComposite:
 	  //bg    clipPreferences.setOutputPremultiplication(eImageUnPreMultiplied);
 	  //bg   break;
@@ -1025,7 +1019,7 @@ void INKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
         param->setHint(kParamKeyAmountHint);
         //param->setDoubleType(eDoubleTypeAngle);;
         param->setRange(0., 2);
-        param->setDisplayRange(0.5, 1.5);  
+        param->setDisplayRange(0., 2.);  
         param->setDefault(1.);    
         param->setAnimates(true);
         if (page) {
@@ -1033,9 +1027,9 @@ void INKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
         }
     }
     
-      GroupParamDescriptor* tuneKey = desc.defineGroupParam("* Tune Key Amount");
+      GroupParamDescriptor* tuneKey = desc.defineGroupParam("Tune Key Amount");
       tuneKey->setOpen(false);
-      tuneKey->setHint("* NOT YET IMPLEMENTED\nVary Key Amount by pixel luminance");
+      tuneKey->setHint("Vary Key Amount by pixel luminance");
       if (page) {
             page->addChild(*tuneKey);
         }
@@ -1296,6 +1290,8 @@ void INKPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::
 	//bg param->appendOption(kParamOutputModeOptionComposite, kParamOutputModeOptionCompositeHint);
         assert(param->getNOptions() == (int)eOutputModeMatteMonitor);
         param->appendOption(kParamOutputModeOptionMatteMonitor, kParamOutputModeOptionMatteMonitorHint);
+        assert(param->getNOptions() == (int)eOutputModeMatteMonitorPremult);
+        param->appendOption(kParamOutputModeOptionMatteMonitorPremult, kParamOutputModeOptionMatteMonitorPremultHint);
         param->setDefault((int)eOutputModePremultiplied); //bg eOutputModeComposite
         param->setAnimates(true);
         desc.addClipPreferencesSlaveParam(*param);
