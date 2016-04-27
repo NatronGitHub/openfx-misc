@@ -42,6 +42,9 @@ Version   Date       Author       Description
     1.5   26-NOV-15  N. Carroll   Implemented Spill Replacement
     1.6   27-APR-16  N. Carroll   Implemented Key Amount and Tune Key Amount
 
+* TODO fix up the tune key amount 
+use a lerp or a smoothstep
+
 * TODO implement Matte and Despill Balance
 use the ratios between matte balance's channels for this
 not their absolute values
