@@ -103,6 +103,9 @@ private:
     std::vector<OFX::Clip*> _srcClips;
 
     OFX::ChoiceParam *_bbox;
+    OFX::ChoiceParam *_format;
+    OFX::Int2DParam *_formatSize;
+    OFX::DoubleParam *_formatPar;
     OFX::StringParam *_imageShaderFileName;
     OFX::StringParam *_imageShaderSource;
     OFX::PushButtonParam *_imageShaderCompile;

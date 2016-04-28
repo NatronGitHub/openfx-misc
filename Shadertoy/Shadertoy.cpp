@@ -46,6 +46,7 @@
 #include "ofxsMacros.h"
 #include "ofxOpenGLRender.h"
 #include "ofxsCoords.h"
+#include "ofxsFormatResolution.h"
 
 using namespace OFX;
 
@@ -243,6 +244,10 @@ using namespace OFX;
 #define kParamBBoxHint "What to use to produce the output image's bounding box. If no selected input is connected, use the project size."
 #define kParamBBoxOptionDefault "Default"
 #define kParamBBoxOptionDefaultHint "Default bounding box (project size)."
+#define kParamBBoxOptionFormat "Format"
+#define kParamBBoxOptionFormatHint "Use a pre-defined image format."
+//#define kParamBBoxOptionSize "Size"
+//#define kParamBBoxOptionSizeHint "Use a specific extent (size and offset)."
 #define kParamBBoxOptionUnion "Union"
 #define kParamBBoxOptionUnionHint "Union of all connected inputs."
 #define kParamBBoxOptionIntersection "Intersect"
@@ -252,10 +257,24 @@ using namespace OFX;
 
 enum BBoxEnum {
     eBBoxDefault,
+    eBBoxFormat,
+    //eBBoxSize,
     eBBoxUnion,
     eBBoxIntersection,
     eBBoxIChannel
 };
+
+#define kParamFormat kNatronParamFormatChoice
+#define kParamFormatLabel "Format"
+#define kParamFormatHint "The output format."
+
+#define kParamFormatSize kNatronParamFormatSize
+#define kParamFormatSizeLabel "Size"
+#define kParamFormatSizeHint "The output dimensions of the image in pixels."
+
+#define kParamFormatPAR kNatronParamFormatPar
+#define kParamFormatPARLabel "Pixel Aspect Ratio"
+#define kParamFormatPARHint "Output pixel aspect ratio."
 
 #define kGroupImageShader "imageShaderGroup"
 #define kGroupImageShaderLabel "Image Shader"
@@ -371,6 +390,10 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
 : ImageEffect(handle)
 , _dstClip(0)
 , _srcClips(NBINPUTS, (OFX::Clip*)NULL)
+, _bbox(0)
+, _format(0)
+, _formatSize(0)
+, _formatPar(0)
 , _imageShaderFileName(0)
 , _imageShaderSource(0)
 , _imageShaderCompile(0)
@@ -422,7 +445,10 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     }
 
     _bbox = fetchChoiceParam(kParamBBox);
-    assert(_bbox);
+    _format = fetchChoiceParam(kParamFormat);
+    _formatSize = fetchInt2DParam(kParamFormatSize);
+    _formatPar = fetchDoubleParam(kParamFormatPAR);
+    assert(_bbox && _format && _formatSize && _formatPar);
     _imageShaderFileName = fetchStringParam(kParamImageShaderFileName);
     _imageShaderSource = fetchStringParam(kParamImageShaderSource);
     _imageShaderCompile = fetchPushButtonParam(kParamImageShaderCompile);
@@ -529,6 +555,28 @@ ShadertoyPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
         // use the default RoD
         return false;
     }
+    if (bboxChoice == eBBoxFormat) {
+        int w,h;
+        _formatSize->getValue(w, h);
+        double par;
+        _formatPar->getValue(par);
+        OfxRectI pixelFormat;
+        pixelFormat.x1 = pixelFormat.y1 = 0;
+        pixelFormat.x2 = w;
+        pixelFormat.y2 = h;
+        OfxPointD renderScale = {1.,1.};
+        OFX::Coords::toCanonical(pixelFormat, renderScale, par, &rod);
+        return true;
+    }
+    /*if (bboxChoice == eBBoxSize) {
+        _size->getValue(rod.x2, rod.y2);
+        _btmLeft->getValue(rod.x1, rod.y1);
+        rod.x2 += rod.x1;
+        rod.y2 += rod.y1;
+        
+        return true;
+    }*/
+
     if (bboxChoice >= eBBoxIChannel) {
         unsigned i = bboxChoice - eBBoxIChannel;
         if (_srcClips[i]->isConnected()) {
@@ -605,6 +653,20 @@ starts_with(const std::string &str, const std::string &prefix)
 void
 ShadertoyPlugin::updateVisibility()
 {
+    BBoxEnum bbox = (BBoxEnum)_bbox->getValue();
+
+    bool hasFormat = (bbox == eBBoxFormat);
+    //bool hasSize = (bbox == eBBoxSize);
+
+    _format->setEnabled(hasFormat);
+    _format->setIsSecret(!hasFormat);
+    //_size->setEnabled(hasSize);
+    //_size->setIsSecret(!hasSize);
+    //_recenter->setEnabled(hasSize);
+    //_recenter->setIsSecret(!hasSize);
+    //_btmLeft->setEnabled(hasSize);
+    //_btmLeft->setIsSecret(!hasSize);
+
     unsigned paramCount = std::max(0, std::min(_paramCount->getValue(), NBUNIFORMS));
     for (unsigned i = 0; i < NBUNIFORMS; ++i) {
         updateVisibilityParam(i, i < paramCount);
@@ -671,8 +733,21 @@ void
 ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                               const std::string &paramName)
 {
-    if (paramName == kParamImageShaderFileName ||
-        paramName == kParamImageShaderReload) {
+    if (paramName == kParamBBox && args.reason == OFX::eChangeUserEdit) {
+        updateVisibility();
+
+    } else if (paramName == kParamFormat) {
+        //the host does not handle the format itself, do it ourselves
+        OFX::EParamFormat format = (OFX::EParamFormat)_format->getValue();
+        int w = 0, h = 0;
+        double par = -1;
+        getFormatResolution(format, &w, &h, &par);
+        assert(par != -1);
+        _formatPar->setValue(par);
+        _formatSize->setValue(w, h);
+
+    } else if (paramName == kParamImageShaderFileName ||
+               paramName == kParamImageShaderReload) {
         // load image shader from file
         std::string imageShaderFileName;
         _imageShaderFileName->getValue(imageShaderFileName);
@@ -890,6 +965,10 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setHint(kParamBBoxHint);
         assert(param->getNOptions() == (int)eBBoxDefault);
         param->appendOption(kParamBBoxOptionDefault, kParamBBoxOptionDefaultHint);
+        assert(param->getNOptions() == (int)eBBoxFormat);
+        param->appendOption(kParamBBoxOptionFormat, kParamBBoxOptionFormatHint);
+        //assert(param->getNOptions() == (int)eBBoxSize);
+        //param->appendOption(kParamBBoxOptionSize, kParamBBoxOptionSizeHint);
         assert(param->getNOptions() == (int)eBBoxUnion);
         param->appendOption(kParamBBoxOptionUnion, kParamBBoxOptionUnionHint);
         assert(param->getNOptions() == (int)eBBoxIntersection);
@@ -903,6 +982,82 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         param->setDefault((int)eBBoxDefault);
         if (page) {
             page->addChild(*param);
+        }
+    }
+
+    // format
+    {
+        ChoiceParamDescriptor* param = desc.defineChoiceParam(kParamFormat);
+        param->setLabel(kParamFormatLabel);
+        assert(param->getNOptions() == eParamFormatPCVideo);
+        param->appendOption(kParamFormatPCVideoLabel);
+        assert(param->getNOptions() == eParamFormatNTSC);
+        param->appendOption(kParamFormatNTSCLabel);
+        assert(param->getNOptions() == eParamFormatPAL);
+        param->appendOption(kParamFormatPALLabel);
+        assert(param->getNOptions() == eParamFormatHD);
+        param->appendOption(kParamFormatHDLabel);
+        assert(param->getNOptions() == eParamFormatNTSC169);
+        param->appendOption(kParamFormatNTSC169Label);
+        assert(param->getNOptions() == eParamFormatPAL169);
+        param->appendOption(kParamFormatPAL169Label);
+        assert(param->getNOptions() == eParamFormat1kSuper35);
+        param->appendOption(kParamFormat1kSuper35Label);
+        assert(param->getNOptions() == eParamFormat1kCinemascope);
+        param->appendOption(kParamFormat1kCinemascopeLabel);
+        assert(param->getNOptions() == eParamFormat2kSuper35);
+        param->appendOption(kParamFormat2kSuper35Label);
+        assert(param->getNOptions() == eParamFormat2kCinemascope);
+        param->appendOption(kParamFormat2kCinemascopeLabel);
+        assert(param->getNOptions() == eParamFormat4kSuper35);
+        param->appendOption(kParamFormat4kSuper35Label);
+        assert(param->getNOptions() == eParamFormat4kCinemascope);
+        param->appendOption(kParamFormat4kCinemascopeLabel);
+        assert(param->getNOptions() == eParamFormatSquare256);
+        param->appendOption(kParamFormatSquare256Label);
+        assert(param->getNOptions() == eParamFormatSquare512);
+        param->appendOption(kParamFormatSquare512Label);
+        assert(param->getNOptions() == eParamFormatSquare1k);
+        param->appendOption(kParamFormatSquare1kLabel);
+        assert(param->getNOptions() == eParamFormatSquare2k);
+        param->appendOption(kParamFormatSquare2kLabel);
+        param->setDefault(eParamFormatPCVideo);
+        param->setHint(kParamFormatHint);
+        param->setAnimates(false);
+        desc.addClipPreferencesSlaveParam(*param);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
+
+    {
+
+        int w = 0, h = 0;
+        double par = -1.;
+        getFormatResolution(eParamFormatPCVideo, &w, &h, &par);
+        assert(par != -1);
+        {
+            Int2DParamDescriptor* param = desc.defineInt2DParam(kParamFormatSize);
+            param->setLabel(kParamFormatSizeLabel);
+            param->setHint(kParamFormatSizeHint);
+            param->setIsSecret(true);
+            param->setDefault(w, h);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
+
+        {
+            DoubleParamDescriptor* param = desc.defineDoubleParam(kParamFormatPAR);
+            param->setLabel(kParamFormatPARLabel);
+            param->setHint(kParamFormatPARHint);
+            param->setIsSecret(true);
+            param->setRange(0., DBL_MAX);
+            param->setDisplayRange(0.5, 2.);
+            param->setDefault(par);
+            if (page) {
+                page->addChild(*param);
+            }
         }
     }
 
