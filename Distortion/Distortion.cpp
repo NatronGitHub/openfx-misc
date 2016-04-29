@@ -263,6 +263,7 @@ protected:
     bool _processA;
     bool _transformIsIdentity;
     OFX::Matrix3x3 _srcTransformInverse;
+    OfxRectI _srcRoDPixel;
     std::vector<InputPlaneChannel> _planeChannels;
     double _uOffset;
     double _vOffset;
@@ -323,6 +324,7 @@ public:
     , _mix(1.)
     , _maskInvert(false)
     {
+        _srcRoDPixel.x1 = _srcRoDPixel.y1 = _srcRoDPixel.x2 = _srcRoDPixel.y2 = 0;
     }
 
     void setSrcImgs(const OFX::Image *src) {_srcImg = src;}
@@ -337,6 +339,7 @@ public:
                    bool processA,
                    bool transformIsIdentity,
                    const OFX::Matrix3x3 &srcTransformInverse,
+                   const OfxRectI& srcRoDPixel,
                    const std::vector<InputPlaneChannel>& planeChannels,
                    double uOffset,
                    double vOffset,
@@ -360,6 +363,7 @@ public:
         _processA = processA;
         _transformIsIdentity = transformIsIdentity;
         _srcTransformInverse = srcTransformInverse;
+        _srcRoDPixel = srcRoDPixel;
         _planeChannels = planeChannels;
         _uOffset = uOffset;
         _vOffset = vOffset;
@@ -482,14 +486,14 @@ private:
         int srcx1 = 0, srcx2 = 1, srcy1 = 0, srcy2 = 0;
         double f = 0, par = 1.;
         if ((plugin == eDistortionPluginSTMap || plugin == eDistortionPluginLensDistortion) && _srcImg) {
-            const OfxRectI& srcBounds = _srcImg->getBounds();
-            srcx1 = srcBounds.x1;
-            srcx2 = srcBounds.x2;
-            srcy1 = srcBounds.y1;
-            srcy2 = srcBounds.y2;
+            // not valid if there is a transform on src: //const OfxRectI& srcBounds = _srcImg->getBounds();
+            srcx1 = _srcRoDPixel.x1;
+            srcx2 = _srcRoDPixel.x2;
+            srcy1 = _srcRoDPixel.y1;
+            srcy2 = _srcRoDPixel.y2;
             if (plugin == eDistortionPluginLensDistortion) {
-                double fx = (srcBounds.x2-srcBounds.x1)/2.;
-                double fy = (srcBounds.y2-srcBounds.y1)/2.;
+                double fx = (_srcRoDPixel.x2 - _srcRoDPixel.x1)/2.;
+                double fy = (_srcRoDPixel.y2 - _srcRoDPixel.y1)/2.;
                 f = std::max(fx, fy); // TODO: distortion scaling param for LensDistortion?
             }
         }
@@ -1149,8 +1153,12 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
         }
 
     }
+    const OfxRectD& srcRod = _srcClip->getRegionOfDefinition(time);
+    OfxRectI srcRoDPixel = {0, 0, 0, 0};
+    OFX::Coords::toPixelEnclosing(srcRod, args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoDPixel);
     processor.setValues(processR, processG, processB, processA,
                         transformIsIdentity, srcTransformInverse,
+                        srcRoDPixel,
                         planes,
                         uOffset, vOffset,
                         uScale, vScale,
