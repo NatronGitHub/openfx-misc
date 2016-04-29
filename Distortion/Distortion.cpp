@@ -121,16 +121,27 @@ enum DistortionPluginEnum {
 
 #define kParamChannelU "channelU"
 #define kParamChannelULabel "U Channel"
-#define kParamChannelUHint "Input channel for U from UV"
+#define kParamChannelUHint "Input U channel from UV."
 
 #define kParamChannelUChoice kParamChannelU "Choice"
 
 #define kParamChannelV "channelV"
 #define kParamChannelVLabel "V Channel"
-#define kParamChannelVHint "Input channel for V from UV"
+#define kParamChannelVHint "Input V channel from UV."
 
 #define kParamChannelVChoice kParamChannelV "Choice"
 
+#define kParamChannelA "channelA"
+#define kParamChannelALabel "Alpha Channel"
+#define kParamChannelAHint "Input Alpha channel from UV. Output is multiplied by Alpha."
+
+#define kParamChannelAChoice kParamChannelA "Choice"
+
+#define kParamChannelUnpremultUV "unpremultUV"
+#define kParamChannelUnpremultUVLabel "Unpremult UV"
+#define kParamChannelUnpremultUVHint "Unpremult UV by Alpha from UV. Check if UV values look small for small values of Alpha."
+
+#define kParamPremultChanged "premultChanged"
 
 #define kClipUV "UV"
 
@@ -265,6 +276,7 @@ protected:
     OFX::Matrix3x3 _srcTransformInverse;
     OfxRectI _srcRoDPixel;
     std::vector<InputPlaneChannel> _planeChannels;
+    bool _unpremultUV;
     double _uOffset;
     double _vOffset;
     double _uScale;
@@ -301,6 +313,7 @@ public:
     , _transformIsIdentity(true)
     , _srcTransformInverse()
     , _planeChannels()
+    , _unpremultUV(true)
     , _uOffset(0.)
     , _vOffset(0.)
     , _uScale(1.)
@@ -341,6 +354,7 @@ public:
                    const OFX::Matrix3x3 &srcTransformInverse,
                    const OfxRectI& srcRoDPixel,
                    const std::vector<InputPlaneChannel>& planeChannels,
+                   bool unpremultUV,
                    double uOffset,
                    double vOffset,
                    double uScale,
@@ -365,6 +379,7 @@ public:
         _srcTransformInverse = srcTransformInverse;
         _srcRoDPixel = srcRoDPixel;
         _planeChannels = planeChannels;
+        _unpremultUV = unpremultUV;
         _uOffset = uOffset;
         _vOffset = vOffset;
         _uScale = uScale;
@@ -477,12 +492,41 @@ private:
         }
     }
 
+    const PIX * getPix(unsigned channel,
+                       int x,
+                       int y)
+    {
+        return (const PIX *)  (_planeChannels[channel].img ? _planeChannels[channel].img->getPixelAddress(x, y) : 0);
+    }
+
+    double getVal(unsigned channel,
+                  const PIX* p,
+                  const PIX* pp)
+    {
+        if (!_planeChannels[channel].img) {
+            return _planeChannels[channel].channelIndex;
+        }
+        if (!p) {
+            return pp ? pp[_planeChannels[channel].channelIndex] : 0.;
+        }
+        return p[_planeChannels[channel].channelIndex];
+    }
+
+    void unpremult(double a, double *u, double *v) {
+        if (_unpremultUV && a != 0.) {
+            *u /= a;
+            *v /= a;
+        }
+    }
+
+
+
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         assert(nComponents == 1 || nComponents == 3 || nComponents == 4);
         assert(_dstImg);
-        assert(_planeChannels.size() == 2);
-        
+        assert(_planeChannels.size() == 3);
+
         int srcx1 = 0, srcx2 = 1, srcy1 = 0, srcy2 = 0;
         double f = 0, par = 1.;
         if ((plugin == eDistortionPluginSTMap || plugin == eDistortionPluginLensDistortion) && _srcImg) {
@@ -507,54 +551,78 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 double sx, sy, sxx, sxy, syx, syy; // the source pixel coordinates and their derivatives
+                double a = 1.;
 
                 switch (plugin) {
                     case eDistortionPluginSTMap:
                     case eDistortionPluginIDistort: {
-                        const PIX *uPix = (const PIX *)  (_planeChannels[0].img ? _planeChannels[0].img->getPixelAddress(x, y) : 0);
-                        const PIX *uPix_xn = (const PIX *)  (_planeChannels[0].img ? _planeChannels[0].img->getPixelAddress(x+1, y) : 0);
-                        const PIX *uPix_xp = (const PIX *)  (_planeChannels[0].img ? _planeChannels[0].img->getPixelAddress(x-1, y) : 0);
-                        const PIX *uPix_yn = (const PIX *)  (_planeChannels[0].img ? _planeChannels[0].img->getPixelAddress(x, y+1) : 0);
-                        const PIX *uPix_yp = (const PIX *)  (_planeChannels[0].img ? _planeChannels[0].img->getPixelAddress(x, y-1) : 0);
+                        const PIX *uPix    = getPix(0, x  , y  );
+                        const PIX *uPix_xn = getPix(0, x+1, y  );
+                        const PIX *uPix_xp = getPix(0, x-1, y  );
+                        const PIX *uPix_yn = getPix(0, x  , y+1);
+                        const PIX *uPix_yp = getPix(0, x  , y-1);
                         
                         
-                        const PIX *vPix,*vPix_xn,*vPix_xp,*vPix_yn,*vPix_yp;
-                        if (_planeChannels[0].img != _planeChannels[1].img) {
-                            vPix = (const PIX *)  (_planeChannels[1].img ? _planeChannels[1].img->getPixelAddress(x, y) : 0);
-                            vPix_xn = (const PIX *)  (_planeChannels[1].img ? _planeChannels[1].img->getPixelAddress(x+1, y) : 0);
-                            vPix_xp = (const PIX *)  (_planeChannels[1].img ? _planeChannels[1].img->getPixelAddress(x-1, y) : 0);
-                            vPix_yn = (const PIX *)  (_planeChannels[1].img ? _planeChannels[1].img->getPixelAddress(x, y+1) : 0);
-                            vPix_yp = (const PIX *)  (_planeChannels[1].img ? _planeChannels[1].img->getPixelAddress(x, y-1) : 0);
-                        } else {
-                            vPix = uPix;
+                        const PIX *vPix, *vPix_xn, *vPix_xp, *vPix_yn, *vPix_yp;
+                        if (_planeChannels[1].img == _planeChannels[0].img) {
+                            vPix    = uPix;
                             vPix_xn = uPix_xn;
                             vPix_xp = uPix_xp;
                             vPix_yn = uPix_yn;
                             vPix_yp = uPix_yp;
+                        } else {
+                            vPix =    getPix(1, x  , y  );
+                            vPix_xn = getPix(1, x+1, y  );
+                            vPix_xp = getPix(1, x-1, y  );
+                            vPix_yn = getPix(1, x  , y+1);
+                            vPix_yp = getPix(1, x  , y-1);
                         }
-                        double u, v, ux, uy, vx, vy;
+                        const PIX *aPix, *aPix_xn, *aPix_xp, *aPix_yn, *aPix_yp;
+                        if (_planeChannels[2].img == _planeChannels[0].img) {
+                            aPix = uPix;
+                            aPix_xn = uPix_xn;
+                            aPix_xp = uPix_xp;
+                            aPix_yn = uPix_yn;
+                            aPix_yp = uPix_yp;
+                        } else if (_planeChannels[2].img == _planeChannels[1].img)  {
+                            aPix = vPix;
+                            aPix_xn = vPix_xn;
+                            aPix_xp = vPix_xp;
+                            aPix_yn = vPix_yn;
+                            aPix_yp = vPix_yp;
+                        } else {
+                            aPix =    getPix(2, x  , y  );
+                            aPix_xn = getPix(2, x+1, y  );
+                            aPix_xp = getPix(2, x-1, y  );
+                            aPix_yn = getPix(2, x  , y+1);
+                            aPix_yp = getPix(2, x  , y-1);
+                        }
                         // compute gradients before wrapping
-                        if (!_planeChannels[0].img) {
-                            u = _planeChannels[0].channelIndex;
-                            ux = uy = 0.;
-                        } else if (!uPix) {
-                            u = PIX();
-                            ux = uy = 0.;
-                        } else {
-                            u = uPix[_planeChannels[0].channelIndex];
-                            ux = (uPix_xn && uPix_xp) ? ((uPix_xn[_planeChannels[0].channelIndex] - uPix_xp[_planeChannels[0].channelIndex]) / 2.) : 0.;
-                            uy = (uPix_yn && uPix_yp) ? ((uPix_yn[_planeChannels[0].channelIndex] - uPix_yp[_planeChannels[0].channelIndex]) / 2.) : 0.;
-                        }
-                        if (!_planeChannels[1].img) {
-                            v = _planeChannels[1].channelIndex;
-                            vx = vy = 0.;
-                        } else if (!vPix) {
-                            v = PIX();
-                            vx = vy = 0.;
-                        } else {
-                            v = vPix[_planeChannels[1].channelIndex];
-                            vx = (vPix_xn && vPix_xp) ? ((vPix_xn[_planeChannels[1].channelIndex] - vPix_xp[_planeChannels[1].channelIndex]) / 2.) : 0.;
-                            vy = (vPix_yn && vPix_yp) ? ((vPix_yn[_planeChannels[1].channelIndex] - vPix_yp[_planeChannels[1].channelIndex]) / 2.) : 0.;
+                        double u = getVal(0, uPix, NULL);
+                        double v = getVal(1, vPix, NULL);
+                        a = getVal(2, aPix, NULL);
+                        unpremult(a, &u, &v);
+
+                        double ux, uy, vx, vy;
+                        {
+                            double u_xn = getVal(0, uPix_xn, uPix);
+                            double u_xp = getVal(0, uPix_xp, uPix);
+                            double u_yn = getVal(0, uPix_yn, uPix);
+                            double u_yp = getVal(0, uPix_yp, uPix);
+                            double v_xn = getVal(1, vPix_xn, vPix);
+                            double v_xp = getVal(1, vPix_xp, vPix);
+                            double v_yn = getVal(1, vPix_yn, vPix);
+                            double v_yp = getVal(1, vPix_yp, vPix);
+                            if (_unpremultUV) {
+                                unpremult(getVal(2, aPix_xn, aPix), &u_xn, &v_xn);
+                                unpremult(getVal(2, aPix_xp, aPix), &u_xp, &v_xp);
+                                unpremult(getVal(2, aPix_yn, aPix), &u_yn, &v_yn);
+                                unpremult(getVal(2, aPix_yp, aPix), &u_yp, &v_yp);
+                            }
+                            ux = (u_xn - u_xp) / 2.;
+                            vx = (v_xn - v_xp) / 2.;
+                            uy = (u_yn - u_yp) / 2.;
+                            vy = (v_yn - v_yp) / 2.;
                         }
                         u = (u - _uOffset) * _uScale;
                         ux *= _uScale;
@@ -650,6 +718,9 @@ private:
                 } else {
                     ofxsFilterInterpolate2DSuper<PIX,nComponents,filter,clamp>(sx, sy, Jxx, Jxy, Jyx, Jyy, _srcImg, _blackOutside, tmpPix);
                 }
+                for (unsigned c = 0; c < nComponents; ++c) {
+                    tmpPix[c] *= a;
+                }
                 ofxsMaskMix<PIX, nComponents, maxValue, true>(tmpPix, x, y, _srcImg, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // copy back original values from unprocessed channels
                 if (nComponents == 1) {
@@ -700,6 +771,7 @@ public:
     , _processB(0)
     , _processA(0)
     , _uvChannels()
+    , _unpremultUV(0)
     , _uvOffset(0)
     , _uvScale(0)
     , _uWrap(0)
@@ -744,22 +816,23 @@ public:
         if (plugin == eDistortionPluginIDistort || plugin == eDistortionPluginSTMap) {
             _uvChannels[0] = fetchChoiceParam(kParamChannelU);
             _uvChannels[1] = fetchChoiceParam(kParamChannelV);
+            _uvChannels[2] = fetchChoiceParam(kParamChannelA);
             if (gIsMultiPlane) {
-
                 fetchDynamicMultiplaneChoiceParameter(kParamChannelU, _uvClip);
                 fetchDynamicMultiplaneChoiceParameter(kParamChannelV, _uvClip);
-
+                fetchDynamicMultiplaneChoiceParameter(kParamChannelA, _uvClip);
             }
+            _unpremultUV = fetchBooleanParam(kParamChannelUnpremultUV);
             _uvOffset = fetchDouble2DParam(kParamUVOffset);
             _uvScale = fetchDouble2DParam(kParamUVScale);
-            assert(_uvChannels[0] && _uvChannels[1] && _uvOffset && _uvScale);
+            assert(_uvChannels[0] && _uvChannels[1] && _uvChannels[2] && _uvOffset && _uvScale);
             if (plugin == eDistortionPluginSTMap) {
                 _uWrap = fetchChoiceParam(kParamWrapU);
                 _vWrap = fetchChoiceParam(kParamWrapV);
                 assert(_uWrap && _vWrap);
             }
         } else {
-            _uvChannels[0] = _uvChannels[1] = 0;
+            _uvChannels[0] = _uvChannels[1] = _uvChannels[2] = NULL;
         }
         
        /* if (gIsMultiPlane) {
@@ -831,7 +904,8 @@ private:
     OFX::BooleanParam* _processG;
     OFX::BooleanParam* _processB;
     OFX::BooleanParam* _processA;
-    OFX::ChoiceParam* _uvChannels[2];
+    OFX::ChoiceParam* _uvChannels[3];
+    OFX::BooleanParam* _unpremultUV;
     OFX::Double2DParam *_uvOffset;
     OFX::Double2DParam *_uvScale;
     OFX::ChoiceParam* _uWrap;
@@ -953,7 +1027,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
         std::map<OFX::Clip*,std::map<std::string,OFX::Image*> > fetchedPlanes;
         
         bool isCreatingAlpha;
-        for (int i = 0; i < 2; ++i) {
+        for (int i = 0; i < 3; ++i) {
             
             InputPlaneChannel p;
             p.channelIndex = i;
@@ -1009,17 +1083,20 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
         }
     } else { //!gIsMultiPlane
         
-        int uChannel_i = 0, vChannel_i = 1;
+        int uChannel_i = 0, vChannel_i = 1, aChannel_i = 3;
         if (_uvChannels[0]) {
-            _uvChannels[0]->getValueAtTime(time, uChannel_i);
+            uChannel_i = _uvChannels[0]->getValueAtTime(time);
         }
         if (_uvChannels[1]) {
-            _uvChannels[1]->getValueAtTime(time, vChannel_i);
+            vChannel_i = _uvChannels[1]->getValueAtTime(time);
         }
-        
+        if (_uvChannels[2]) {
+            aChannel_i = _uvChannels[2]->getValueAtTime(time);
+        }
+
         
         OFX::Image* uv = 0;
-        if (uChannel_i <= 3 || vChannel_i <= 3) {
+        if (uChannel_i <= 3 || vChannel_i <= 3 || aChannel_i <= 3) {
             uv = (_uvClip && _uvClip->isConnected()) ? _uvClip->fetchImage(time) : 0;
         }
         
@@ -1052,6 +1129,13 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
             v.fillZero = vChannel_i == eInputChannel0;
             v.channelIndex = vChannel_i <= 3 ? vChannel_i : -1;
             planes.push_back(v);
+        }
+        {
+            InputPlaneChannel a;
+            a.img = uv;
+            a.fillZero = aChannel_i == eInputChannel0;
+            a.channelIndex = aChannel_i <= 3 ? aChannel_i : -1;
+            planes.push_back(a);
         }
 
     }
@@ -1087,11 +1171,13 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
     _processG->getValueAtTime(time, processG);
     _processB->getValueAtTime(time, processB);
     _processA->getValueAtTime(time, processA);
+    bool unpremultUV = false;
     double uScale = 1., vScale = 1.;
     double uOffset = 0., vOffset = 0.;
     WrapEnum uWrap = eWrapClamp;
     WrapEnum vWrap = eWrapClamp;
     if (_plugin == eDistortionPluginIDistort || _plugin == eDistortionPluginSTMap) {
+        unpremultUV = _unpremultUV->getValueAtTime(time);
         _uvOffset->getValueAtTime(time, uOffset, vOffset);
         _uvScale->getValueAtTime(time, uScale, vScale);
         if (_plugin == eDistortionPluginSTMap) {
@@ -1160,6 +1246,7 @@ DistortionPlugin::setupAndProcess(DistortionProcessorBase &processor, const OFX:
                         transformIsIdentity, srcTransformInverse,
                         srcRoDPixel,
                         planes,
+                        unpremultUV,
                         uOffset, vOffset,
                         uScale, vScale,
                         uWrap, vWrap,
@@ -1746,6 +1833,10 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
                 ChoiceParamDescriptor* param = OFX::MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelV, kParamChannelVLabel, kParamChannelVHint);
                 param->setDefault(eInputChannelG);
             }
+            {
+                ChoiceParamDescriptor* param = OFX::MultiPlane::Factory::describeInContextAddChannelChoice(desc, page, clipsForChannels, kParamChannelA, kParamChannelALabel, kParamChannelAHint);
+                param->setDefault(eInputChannelA);
+            }
         } else {
             {
                 ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelU);
@@ -1769,11 +1860,26 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
                     page->addChild(*param);
                 }
             }
+            {
+                ChoiceParamDescriptor *param = desc.defineChoiceParam(kParamChannelA);
+                param->setLabel(kParamChannelALabel);
+                param->setHint(kParamChannelAHint);
+                OFX::MultiPlane::Factory::addInputChannelOptionsRGBA(param, clipsForChannels, true);
+                param->setDefault(eInputChannelA);
+                if (page) {
+                    page->addChild(*param);
+                }
+            }
         }
-
-    
-
-        
+        {
+            OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamChannelUnpremultUV);
+            param->setLabel(kParamChannelUnpremultUVLabel);
+            param->setHint(kParamChannelUnpremultUVHint);
+            param->setDefault(false);
+            if (page) {
+                page->addChild(*param);
+            }
+        }
         {
             Double2DParamDescriptor *param = desc.defineDouble2DParam(kParamUVOffset);
             param->setLabel(kParamUVOffsetLabel);
@@ -1930,6 +2036,7 @@ void DistortionPluginFactory<plugin>::describeInContext(OFX::ImageEffectDescript
     
     
     ofxsFilterDescribeParamsInterpolate2D(desc, page, (plugin == eDistortionPluginSTMap));
+    ofxsPremultDescribeParams(desc, page);
     ofxsMaskMixDescribeParams(desc, page);
 }
 
