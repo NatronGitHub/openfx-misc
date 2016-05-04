@@ -107,6 +107,7 @@
 #ifdef _OPENMP
 #define cimg_use_openmp
 #endif
+#define cimg_verbosity 0
 
 // Abort mechanism:
 // we have a struct with a thread-local storage that holds the OFX::ImageEffect
