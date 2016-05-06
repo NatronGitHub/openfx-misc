@@ -513,6 +513,66 @@ TestGroupsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     }
 
     // Groups
+    {
+        OFX::GroupParamDescriptor* group = desc.defineGroupParam("group");
+        //group->setAsTab();
+        {
+            OFX::GroupParamDescriptor* subgroup = desc.defineGroupParam("subGroup1");
+            if (group) {
+                subgroup->setParent(*group);
+            }
+            {
+                OFX::DoubleParamDescriptor* param = desc.defineDoubleParam("valueInsideSubGroup1");
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (subgroup) {
+                    param->setParent(*subgroup);
+                }
+            }
+            if (page) {
+                page->addChild(*subgroup);
+            }
+        }
+        {
+            OFX::GroupParamDescriptor* subgroup = desc.defineGroupParam("subGroup2AsTab");
+            subgroup->setAsTab();
+            if (group) {
+                subgroup->setParent(*group);
+            }
+            {
+                OFX::DoubleParamDescriptor* param = desc.defineDoubleParam("valueInsideSubGroup2AsTab");
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (subgroup) {
+                    param->setParent(*subgroup);
+                }
+            }
+            if (page) {
+                page->addChild(*subgroup);
+            }
+        }
+        {
+            OFX::GroupParamDescriptor* subgroup = desc.defineGroupParam("subGroup3AsTab");
+            subgroup->setAsTab();
+            if (group) {
+                subgroup->setParent(*group);
+            }
+            {
+                OFX::DoubleParamDescriptor* param = desc.defineDoubleParam("valueInsideSubGroup3AsTab");
+                if (page) {
+                    page->addChild(*param);
+                }
+                if (subgroup) {
+                    param->setParent(*subgroup);
+                }
+            }
+            if (page) {
+                page->addChild(*subgroup);
+            }
+        }
+    }
     OFX::GroupParamDescriptor* formatGroup = desc.defineGroupParam( "kParamFormatGroup" );
     OFX::GroupParamDescriptor* videoGroup  = desc.defineGroupParam( "kParamVideoGroup" );
     formatGroup->setLabel( "Format" );
