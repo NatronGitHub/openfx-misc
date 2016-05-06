@@ -911,6 +911,10 @@ ShadertoyPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     }
 #endif
 #endif
+#ifdef OFX_EXTENSIONS_NATRON
+    desc.setChannelSelector(ePixelComponentNone);
+#endif
+
 } // ShadertoyPluginFactory::describe
 
 void
