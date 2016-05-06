@@ -50,6 +50,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamReformat "reformat"
 #define kParamReformatLabel "Reformat"
 #define kParamReformatHint "Translates the bottom left corner of the crop rectangle to be in (0,0)."
+#define kParamReformatDefault false
 
 #define kParamIntersect "intersect"
 #define kParamIntersectLabel "Intersect"
@@ -255,7 +256,8 @@ public:
                (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
                              _srcClip->getPixelComponents() == ePixelComponentRGB ||
                              _srcClip->getPixelComponents() == ePixelComponentRGBA)));
-        
+
+        _rectangleInteractEnable = fetchBooleanParam(kParamRectangleInteractEnable);
         _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
         _size = fetchDouble2DParam(kParamRectangleInteractSize);
         _softness = fetchDoubleParam(kParamSoftness);
@@ -263,7 +265,7 @@ public:
         _intersect = fetchBooleanParam(kParamIntersect);
         _blackOutside = fetchBooleanParam(kParamBlackOutside);
         
-        assert(_btmLeft && _size && _softness && _reformat && _intersect && _blackOutside);
+        assert(_rectangleInteractEnable && _btmLeft && _size && _softness && _reformat && _intersect && _blackOutside);
     }
     
 private:
@@ -290,6 +292,7 @@ private:
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
 
+    OFX::BooleanParam* _rectangleInteractEnable;
     OFX::Double2DParam* _btmLeft;
     OFX::Double2DParam* _size;
     OFX::DoubleParam* _softness;
@@ -402,10 +405,8 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
     _btmLeft->getValueAtTime(args.time, btmLeft.x, btmLeft.y);
     _size->getValueAtTime(args.time, size.x, size.y);
 
-    bool reformat;
-    _reformat->getValueAtTime(args.time, reformat);
-    bool blackOutside;
-    _blackOutside->getValueAtTime(args.time, blackOutside);
+    bool reformat = _reformat->getValueAtTime(args.time);
+    bool blackOutside = _blackOutside->getValueAtTime(args.time);
     
     OfxRectD cropRectCanonical;
     getCropRectangle_canonical(args.time, false, false, cropRectCanonical);
@@ -413,8 +414,7 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
     double par = dst->getPixelAspectRatio();
     Coords::toPixelEnclosing(cropRectCanonical, args.renderScale, par, &cropRectPixel);
     
-    double softness;
-    _softness->getValueAtTime(args.time, softness);
+    double softness = _softness->getValueAtTime(args.time);
     softness *= args.renderScale.x;
     
     const OfxRectD& dstRoD = _dstClip->getRegionOfDefinition(args.time);
@@ -435,8 +435,7 @@ CropPlugin::setupAndProcess(CropProcessorBase &processor, const OFX::RenderArgum
 void
 CropPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
 {
-    bool reformat;
-    _reformat->getValueAtTime(args.time, reformat);
+    bool reformat = _reformat->getValueAtTime(args.time);
 
     OfxRectD cropRect;
     getCropRectangle_canonical(args.time, false, true, cropRect);
@@ -524,7 +523,7 @@ CropPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string
     if (paramName == kParamReformat) {
         bool reformat;
         _reformat->getValueAtTime(args.time, reformat);
-        _btmLeft->setEnabled(!reformat);
+        _rectangleInteractEnable->setValue(!reformat);
     }
 }
 
@@ -559,7 +558,7 @@ private:
     }
     
     virtual void aboutToCheckInteractivity(OfxTime time) OVERRIDE FINAL {
-        _reformat->getValueAtTime(time,_isReformated);
+        updateReformated(time);
     }
     
     virtual bool allowTopLeftInteraction() const OVERRIDE FINAL { return !_isReformated; }
@@ -568,6 +567,10 @@ private:
     virtual bool allowBtmMidInteraction() const OVERRIDE FINAL { return !_isReformated; }
     virtual bool allowMidLeftInteraction() const OVERRIDE FINAL { return !_isReformated; }
     virtual bool allowCenterInteraction() const OVERRIDE FINAL { return !_isReformated; }
+
+    void updateReformated(OfxTime time) {
+        _reformat->getValueAtTime(time, _isReformated);
+    }
 
 private:
     OFX::BooleanParam* _reformat;
@@ -655,6 +658,15 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
 
+    // rectangleInteractEnable
+    {
+        BooleanParamDescriptor* param = desc.defineBooleanParam(kParamRectangleInteractEnable);
+        param->setIsSecret(true);
+        param->setDefault(!kParamReformatDefault);
+        if (page) {
+            page->addChild(*param);
+        }
+    }
     // btmLeft
     {
         Double2DParamDescriptor* param = desc.defineDouble2DParam(kParamRectangleInteractBtmLeft);
@@ -721,7 +733,7 @@ void CropPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
         BooleanParamDescriptor* param = desc.defineBooleanParam(kParamReformat);
         param->setLabel(kParamReformatLabel);
         param->setHint(kParamReformatHint);
-        param->setDefault(false);
+        param->setDefault(kParamReformatDefault);
         param->setAnimates(true);
         param->setLayoutHint(OFX::eLayoutHintNoNewLine, 1);
         if (page) {
