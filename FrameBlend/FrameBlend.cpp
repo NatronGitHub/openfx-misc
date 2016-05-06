@@ -44,9 +44,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "FrameBlendOFX"
 #define kPluginGrouping "Time"
 #define kPluginDescription \
-"Blend frames of the input clip.\n" \
-"If a foreground matte is connected, only pixels with a negative or zero foreground value are taken into account.\n" \
-"The number of values used to compute each pixel can be output to the alpha channel."
+    "Blend frames of the input clip.\n" \
+    "If a foreground matte is connected, only pixels with a negative or zero foreground value are taken into account.\n" \
+    "The number of values used to compute each pixel can be output to the alpha channel."
 
 #define kPluginIdentifier "net.sf.openfx.FrameBlend"
 // History:
@@ -81,7 +81,7 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOperation "operation"
 #define kParamOperationLabel "Operation"
 #define kParamOperationHint \
-"The operation used to compute the output image."
+    "The operation used to compute the output image."
 #define kParamOperationOptionAverage "Average"
 #define kParamOperationOptionAverageHint "Output is the average of selected frames."
 #define kParamOperationOptionMin "Min"
@@ -93,7 +93,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOperationOptionProduct "Product"
 #define kParamOperationOptionProductHint "Output is the product/multiplication of selected frames."
 #define kParamOperationDefault eOperationAverage
-enum OperationEnum {
+enum OperationEnum
+{
     eOperationAverage,
     eOperationMin,
     eOperationMax,
@@ -111,7 +112,8 @@ enum OperationEnum {
 #define kFrameChunk 4 // how many frames to process simultaneously
 
 
-class FrameBlendProcessorBase : public OFX::PixelProcessor
+class FrameBlendProcessorBase
+    : public OFX::PixelProcessor
 {
 protected:
     const OFX::Image *_srcImg;
@@ -126,40 +128,45 @@ protected:
     bool _processA;
     bool _lastPass;
     bool _outputCount;
-    bool  _doMasking;
+    bool _doMasking;
     double _mix;
     bool _maskInvert;
 
 public:
 
     FrameBlendProcessorBase(OFX::ImageEffect &instance)
-    : OFX::PixelProcessor(instance)
-    , _srcImg(0)
-    , _srcImgs(0)
-    , _fgMImgs(0)
-    , _accumulatorData(0)
-    , _countData(0)
-    , _maskImg(0)
-    , _processR(true)
-    , _processG(true)
-    , _processB(true)
-    , _processA(false)
-    , _lastPass(false)
-    , _outputCount(false)
-    , _doMasking(false)
-    , _mix(1.)
-    , _maskInvert(false)
+        : OFX::PixelProcessor(instance)
+        , _srcImg(0)
+        , _srcImgs(0)
+        , _fgMImgs(0)
+        , _accumulatorData(0)
+        , _countData(0)
+        , _maskImg(0)
+        , _processR(true)
+        , _processG(true)
+        , _processB(true)
+        , _processA(false)
+        , _lastPass(false)
+        , _outputCount(false)
+        , _doMasking(false)
+        , _mix(1.)
+        , _maskInvert(false)
     {
     }
 
-    void setSrcImgs(const OFX::Image *src, const std::vector<const OFX::Image*> &v) {_srcImg = src; _srcImgs = v;}
-    void setFgMImgs(const std::vector<const OFX::Image*> &v) {_fgMImgs = v;}
-    void setAccumulators(float *accumulatorData, unsigned short *countData)
-    {_accumulatorData = accumulatorData; _countData = countData;}
+    void setSrcImgs(const OFX::Image *src,
+                    const std::vector<const OFX::Image*> &v) {_srcImg = src; _srcImgs = v; }
 
-    void setMaskImg(const OFX::Image *v, bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
+    void setFgMImgs(const std::vector<const OFX::Image*> &v) {_fgMImgs = v; }
 
-    void doMasking(bool v) {_doMasking = v;}
+    void setAccumulators(float *accumulatorData,
+                         unsigned short *countData)
+    {_accumulatorData = accumulatorData; _countData = countData; }
+
+    void setMaskImg(const OFX::Image *v,
+                    bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
+
+    void doMasking(bool v) {_doMasking = v; }
 
     void setValues(bool processR,
                    bool processG,
@@ -179,17 +186,18 @@ public:
     }
 
     virtual OperationEnum getOperation() = 0;
+
 private:
 };
 
 
-
 template <class PIX, int nComponents, int maxValue, OperationEnum operation>
-class FrameBlendProcessor : public FrameBlendProcessorBase
+class FrameBlendProcessor
+    : public FrameBlendProcessorBase
 {
 public:
     FrameBlendProcessor(OFX::ImageEffect &instance)
-    : FrameBlendProcessorBase(instance)
+        : FrameBlendProcessorBase(instance)
     {
     }
 
@@ -208,29 +216,29 @@ private:
             if (g) {
                 if (b) {
                     if (a) {
-                        return process<true ,true ,true ,true >(procWindow); // RGBA
+                        return process<true, true, true, true >(procWindow); // RGBA
                     } else {
-                        return process<true ,true ,true ,false>(procWindow); // RGBa
+                        return process<true, true, true, false>(procWindow); // RGBa
                     }
                 } else {
                     if (a) {
-                        return process<true ,true ,false,true >(procWindow); // RGbA
+                        return process<true, true, false, true >(procWindow); // RGbA
                     } else {
-                        return process<true ,true ,false,false>(procWindow); // RGba
+                        return process<true, true, false, false>(procWindow); // RGba
                     }
                 }
             } else {
                 if (b) {
                     if (a) {
-                        return process<true ,false,true ,true >(procWindow); // RgBA
+                        return process<true, false, true, true >(procWindow); // RgBA
                     } else {
-                        return process<true ,false,true ,false>(procWindow); // RgBa
+                        return process<true, false, true, false>(procWindow); // RgBa
                     }
                 } else {
                     if (a) {
-                        return process<true ,false,false,true >(procWindow); // RgbA
+                        return process<true, false, false, true >(procWindow); // RgbA
                     } else {
-                        return process<true ,false,false,false>(procWindow); // Rgba
+                        return process<true, false, false, false>(procWindow); // Rgba
                     }
                 }
             }
@@ -238,66 +246,66 @@ private:
             if (g) {
                 if (b) {
                     if (a) {
-                        return process<false,true ,true ,true >(procWindow); // rGBA
+                        return process<false, true, true, true >(procWindow); // rGBA
                     } else {
-                        return process<false,true ,true ,false>(procWindow); // rGBa
+                        return process<false, true, true, false>(procWindow); // rGBa
                     }
                 } else {
                     if (a) {
-                        return process<false,true ,false,true >(procWindow); // rGbA
+                        return process<false, true, false, true >(procWindow); // rGbA
                     } else {
-                        return process<false,true ,false,false>(procWindow); // rGba
+                        return process<false, true, false, false>(procWindow); // rGba
                     }
                 }
             } else {
                 if (b) {
                     if (a) {
-                        return process<false,false,true ,true >(procWindow); // rgBA
+                        return process<false, false, true, true >(procWindow); // rgBA
                     } else {
-                        return process<false,false,true ,false>(procWindow); // rgBa
+                        return process<false, false, true, false>(procWindow); // rgBa
                     }
                 } else {
                     if (a) {
-                        return process<false,false,false,true >(procWindow); // rgbA
+                        return process<false, false, false, true >(procWindow); // rgbA
                     } else {
-                        return process<false,false,false,false>(procWindow); // rgba
+                        return process<false, false, false, false>(procWindow); // rgba
                     }
                 }
             }
         }
-#     endif
-    }
+#     endif // ifndef __COVERITY__
+    } // multiThreadProcessImages
 
     template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow)
     {
         assert(1 <= nComponents && nComponents <= 4);
         assert(!_lastPass || _dstPixelData);
-        assert(_srcImgs.size() == _fgMImgs.size());
+        assert( _srcImgs.size() == _fgMImgs.size() );
         float tmpPix[nComponents];
         float initVal = 0.;
         if (!_accumulatorData) {
             switch (operation) {
-                case eOperationAverage:
-                    initVal = 0.;
-                    break;
-                case eOperationMin:
-                    initVal = std::numeric_limits<float>::infinity();
-                    break;
-                case eOperationMax:
-                    initVal = -std::numeric_limits<float>::infinity();
-                    break;
-                case eOperationSum:
-                    initVal = 0.;
-                    break;
-                case eOperationProduct:
-                    initVal = 1.;
-                    break;
+            case eOperationAverage:
+                initVal = 0.;
+                break;
+            case eOperationMin:
+                initVal = std::numeric_limits<float>::infinity();
+                break;
+            case eOperationMax:
+                initVal = -std::numeric_limits<float>::infinity();
+                break;
+            case eOperationSum:
+                initVal = 0.;
+                break;
+            case eOperationProduct:
+                initVal = 1.;
+                break;
             }
         }
 
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
@@ -310,8 +318,8 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-                size_t renderPix = ((_renderWindow.x2 - _renderWindow.x1) * (y - _renderWindow.y1) +
-                                    (x - _renderWindow.x1));
+                size_t renderPix = ( (_renderWindow.x2 - _renderWindow.x1) * (y - _renderWindow.y1) +
+                                     (x - _renderWindow.x1) );
                 int count = _countData ? _countData[renderPix] : 0;
                 if (_accumulatorData) {
                     std::copy(&_accumulatorData[renderPix * nComponents], &_accumulatorData[renderPix * nComponents + nComponents], tmpPix);
@@ -321,26 +329,26 @@ private:
                 // accumulate
                 for (unsigned i = 0; i < _srcImgs.size(); ++i) {
                     const PIX *fgMPix = (const PIX *)  (_fgMImgs[i] ? _fgMImgs[i]->getPixelAddress(x, y) : 0);
-                    if (!fgMPix || *fgMPix <= 0) {
+                    if ( !fgMPix || (*fgMPix <= 0) ) {
                         const PIX *srcPixi = (const PIX *)  (_srcImgs[i] ? _srcImgs[i]->getPixelAddress(x, y) : 0);
                         if (srcPixi) {
                             for (int c = 0; c < nComponents; ++c) {
                                 switch (operation) {
-                                    case eOperationAverage:
-                                        tmpPix[c] += srcPixi[c];
-                                        break;
-                                    case eOperationMin:
-                                        tmpPix[c] = std::min(tmpPix[c], (float)srcPixi[c]);
-                                        break;
-                                    case eOperationMax:
-                                        tmpPix[c] = std::max(tmpPix[c], (float)srcPixi[c]);
-                                        break;
-                                    case eOperationSum:
-                                        tmpPix[c] += srcPixi[c];
-                                        break;
-                                    case eOperationProduct:
-                                        tmpPix[c] *= srcPixi[c];
-                                        break;
+                                case eOperationAverage:
+                                    tmpPix[c] += srcPixi[c];
+                                    break;
+                                case eOperationMin:
+                                    tmpPix[c] = std::min(tmpPix[c], (float)srcPixi[c]);
+                                    break;
+                                case eOperationMax:
+                                    tmpPix[c] = std::max(tmpPix[c], (float)srcPixi[c]);
+                                    break;
+                                case eOperationSum:
+                                    tmpPix[c] += srcPixi[c];
+                                    break;
+                                case eOperationProduct:
+                                    tmpPix[c] *= srcPixi[c];
+                                    break;
                                 }
                             }
                         }
@@ -352,7 +360,7 @@ private:
                         _countData[renderPix] = count;
                     }
                     if (_accumulatorData) {
-                        std::copy(tmpPix, tmpPix + nComponents , &_accumulatorData[renderPix * nComponents]);
+                        std::copy(tmpPix, tmpPix + nComponents, &_accumulatorData[renderPix * nComponents]);
                     }
                 } else {
                     // copy back original values from unprocessed channels
@@ -363,7 +371,7 @@ private:
                         } else if (operation == eOperationAverage) {
                             tmpPix[c] =  (count ? (tmpPix[c] / count) : 0);
                         }
-                    } else if (3 <= nComponents && nComponents <= 4) {
+                    } else if ( (3 <= nComponents) && (nComponents <= 4) ) {
                         if (operation == eOperationAverage) {
                             for (int c = 0; c < 3; ++c) {
                                 tmpPix[c] = (count ? (tmpPix[c] / count) : 0);
@@ -379,9 +387,9 @@ private:
                         }
                     }
                     // tmpPix is not normalized, it is within [0,maxValue]
-                    ofxsMaskMixPix<PIX,nComponents,maxValue,true>(tmpPix, x, y, srcPix, _doMasking,
-                                                                  _maskImg, _mix, _maskInvert,
-                                                                  dstPix);
+                    ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _doMasking,
+                                                                     _maskImg, _mix, _maskInvert,
+                                                                     dstPix);
                     // copy back original values from unprocessed channels
                     if (nComponents == 1) {
                         if (!processA) {
@@ -391,13 +399,13 @@ private:
                         if (!processR) {
                             dstPix[0] = srcPix ? srcPix[0] : PIX();
                         }
-                        if (nComponents >= 2 && !processG) {
+                        if ( (nComponents >= 2) && !processG ) {
                             dstPix[1] = srcPix ? srcPix[1] : PIX();
                         }
-                        if (nComponents >= 3 && !processB) {
+                        if ( (nComponents >= 3) && !processB ) {
                             dstPix[2] = srcPix ? srcPix[2] : PIX();
                         }
-                        if (nComponents >= 4 && !processA) {
+                        if ( (nComponents >= 4) && !processA ) {
                             dstPix[3] = srcPix ? srcPix[3] : PIX();
                         }
                     }
@@ -406,47 +414,48 @@ private:
                 }
             }
         }
-    }
+    } // process
 };
 
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class FrameBlendPlugin : public OFX::ImageEffect
+class FrameBlendPlugin
+    : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
     FrameBlendPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _maskClip(0)
-    , _fgMClip(0)
-    , _processR(0)
-    , _processG(0)
-    , _processB(0)
-    , _processA(0)
-    , _frameRange(0)
-    , _absolute(0)
-    , _inputRange(0)
-    , _frameInterval(0)
-    , _operation(0)
-    , _outputCount(0)
-    , _mix(0)
-    , _maskApply(0)
-    , _maskInvert(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _maskClip(0)
+        , _fgMClip(0)
+        , _processR(0)
+        , _processG(0)
+        , _processB(0)
+        , _processA(0)
+        , _frameRange(0)
+        , _absolute(0)
+        , _inputRange(0)
+        , _frameInterval(0)
+        , _operation(0)
+        , _outputCount(0)
+        , _mix(0)
+        , _maskApply(0)
+        , _maskInvert(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
-                            _dstClip->getPixelComponents() == ePixelComponentXY ||
-                            _dstClip->getPixelComponents() == ePixelComponentRGB ||
-                            _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
+                             _dstClip->getPixelComponents() == ePixelComponentXY ||
+                             _dstClip->getPixelComponents() == ePixelComponentRGB ||
+                             _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
-                             _srcClip->getPixelComponents() == ePixelComponentXY ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGBA)));
+        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
+                               _srcClip->getPixelComponents() == ePixelComponentXY ||
+                               _srcClip->getPixelComponents() == ePixelComponentRGB ||
+                               _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _fgMClip = fetchClip(kClipFgMName);
@@ -480,7 +489,6 @@ private:
 
     /** Override the get frames needed action */
     virtual void getFramesNeeded(const OFX::FramesNeededArguments &args, OFX::FramesNeededSetter &frames) OVERRIDE FINAL;
-
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /** @brief called when a param has just had its value changed */
@@ -529,13 +537,12 @@ private:
 struct OptionalImagesHolder_RAII
 {
     std::vector<const OFX::Image*> images;
-    
+
     OptionalImagesHolder_RAII()
-    : images()
+        : images()
     {
-        
     }
-    
+
     ~OptionalImagesHolder_RAII()
     {
         for (unsigned int i = 0; i < images.size(); ++i) {
@@ -546,37 +553,39 @@ struct OptionalImagesHolder_RAII
 
 /* set up and run a processor */
 void
-FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX::RenderArguments &args)
+FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor,
+                                  const OFX::RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     // fetch the mask
     // auto ptr for the mask.
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
     // do we do masking
     if (doMasking) {
-        if (mask.get()) {
-            if (mask->getRenderScale().x != args.renderScale.x ||
-                mask->getRenderScale().y != args.renderScale.y ||
-                (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
+        if ( mask.get() ) {
+            if ( (mask->getRenderScale().x != args.renderScale.x) ||
+                 ( mask->getRenderScale().y != args.renderScale.y) ||
+                 ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
@@ -591,7 +600,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
     double mix = 1.;
     _mix->getValueAtTime(time, mix);
     bool outputCount = false;
-    if (dstComponents == ePixelComponentRGBA || dstComponents == ePixelComponentAlpha) {
+    if ( (dstComponents == ePixelComponentRGBA) || (dstComponents == ePixelComponentAlpha) ) {
         _outputCount->getValueAtTime(time, outputCount);
     }
     bool processR, processG, processB, processA;
@@ -601,19 +610,19 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
     _processA->getValueAtTime(time, processA);
 
     // If masking or mixing, fetch the original image
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected() && (doMasking || mix != 1.)) ?
-                                        _srcClip->fetchImage(args.time) :
-                                        0);
-    if (src.get()) {
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() && (doMasking || mix != 1.) ) ?
+                                         _srcClip->fetchImage(args.time) :
+                                         0 );
+    if ( src.get() ) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
@@ -634,7 +643,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
     }
     int interval;
     _frameInterval->getValueAtTime(time, interval);
-    interval = std::max(1,interval);
+    interval = std::max(1, interval);
 
     int n = (max + 1 - min) / interval;
     if (!absolute) {
@@ -659,28 +668,27 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
             // Initialize accumulator image (always use float)
             if (!accumulatorData) {
                 int dstNComponents = _dstClip->getPixelComponentCount();
-                accumulator.reset(new OFX::ImageMemory(nPixels * dstNComponents * sizeof(float), this));
+                accumulator.reset( new OFX::ImageMemory(nPixels * dstNComponents * sizeof(float), this) );
                 accumulatorData = (float*)accumulator->lock();
                 switch (operation) {
-                    case eOperationAverage:
-                    case eOperationSum:
-                        std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, 0.);
-                        break;
-                    case eOperationMin:
-                        std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, std::numeric_limits<float>::infinity());
-                        break;
-                    case eOperationMax:
-                        std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, -std::numeric_limits<float>::infinity());
-                        break;
-                    case eOperationProduct:
-                        std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, 1.);
-                        break;
+                case eOperationAverage:
+                case eOperationSum:
+                    std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, 0.);
+                    break;
+                case eOperationMin:
+                    std::fill( accumulatorData, accumulatorData + nPixels * dstNComponents, std::numeric_limits<float>::infinity() );
+                    break;
+                case eOperationMax:
+                    std::fill( accumulatorData, accumulatorData + nPixels * dstNComponents, -std::numeric_limits<float>::infinity() );
+                    break;
+                case eOperationProduct:
+                    std::fill(accumulatorData, accumulatorData + nPixels * dstNComponents, 1.);
+                    break;
                 }
-
             }
             // Initialize count image if operator is average or outputCount is true and output has alpha (use short)
-            if (!countData && (operation == eOperationAverage || outputCount)) {
-                count.reset(new OFX::ImageMemory(nPixels * sizeof(unsigned short), this));
+            if ( !countData && ( (operation == eOperationAverage) || outputCount ) ) {
+                count.reset( new OFX::ImageMemory(nPixels * sizeof(unsigned short), this) );
                 countData = (unsigned short*)count->lock();
                 std::fill(countData, countData + nPixels, 0);
             }
@@ -689,20 +697,20 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
         // fetch the source images
         OptionalImagesHolder_RAII srcImgs;
         for (int i = imin; i < imax; ++i) {
-            if (abort()) {
+            if ( abort() ) {
                 return;
             }
-            const OFX::Image* src = _srcClip ? _srcClip->fetchImage(min + i*interval) : 0;
+            const OFX::Image* src = _srcClip ? _srcClip->fetchImage(min + i * interval) : 0;
             if (src) {
-                if (src->getRenderScale().x != args.renderScale.x ||
-                    src->getRenderScale().y != args.renderScale.y ||
-                    (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+                if ( (src->getRenderScale().x != args.renderScale.x) ||
+                     ( src->getRenderScale().y != args.renderScale.y) ||
+                     ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
                     setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                     OFX::throwSuiteStatusException(kOfxStatFailed);
                 }
-                OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+                OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
                 OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-                if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+                if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
                     OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
                 }
             }
@@ -711,15 +719,15 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
         // fetch the foreground mattes
         OptionalImagesHolder_RAII fgMImgs;
         for (int i = imin; i < imax; ++i) {
-            if (abort()) {
+            if ( abort() ) {
                 return;
             }
-            const OFX::Image* mask = (_fgMClip && _fgMClip->isConnected()) ? _fgMClip->fetchImage(min + i*interval) : 0;
+            const OFX::Image* mask = ( _fgMClip && _fgMClip->isConnected() ) ? _fgMClip->fetchImage(min + i * interval) : 0;
             if (mask) {
-                assert(_fgMClip->isConnected());
-                if (mask->getRenderScale().x != args.renderScale.x ||
-                    mask->getRenderScale().y != args.renderScale.y ||
-                    (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
+                assert( _fgMClip->isConnected() );
+                if ( (mask->getRenderScale().x != args.renderScale.x) ||
+                     ( mask->getRenderScale().y != args.renderScale.y) ||
+                     ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
                     setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                     OFX::throwSuiteStatusException(kOfxStatFailed);
                 }
@@ -729,7 +737,7 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
 
         // set the images
         if (lastPass) {
-            processor.setDstImg(dst.get());
+            processor.setDstImg( dst.get() );
         }
         processor.setSrcImgs(lastPass ? src.get() : 0, srcImgs.images);
         processor.setFgMImgs(fgMImgs.images);
@@ -739,11 +747,11 @@ FrameBlendPlugin::setupAndProcess(FrameBlendProcessorBase &processor, const OFX:
 
         processor.setValues(processR, processG, processB, processA,
                             lastPass, outputCount, mix);
-        
+
         // Call the base class process member, this will call the derived templated process code
         processor.process();
     }
-}
+} // FrameBlendPlugin::setupAndProcess
 
 // the overridden render function
 void
@@ -751,8 +759,8 @@ FrameBlendPlugin::render(const OFX::RenderArguments &args)
 {
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderForComponents<4>(args);
@@ -771,20 +779,21 @@ void
 FrameBlendPlugin::renderForComponents(const OFX::RenderArguments &args)
 {
     OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+
     switch (dstBitDepth) {
-        case OFX::eBitDepthUByte:
-            renderForBitDepth<unsigned char, nComponents, 255>(args);
-            break;
+    case OFX::eBitDepthUByte:
+        renderForBitDepth<unsigned char, nComponents, 255>(args);
+        break;
 
-        case OFX::eBitDepthUShort:
-            renderForBitDepth<unsigned short, nComponents, 65535>(args);
-            break;
+    case OFX::eBitDepthUShort:
+        renderForBitDepth<unsigned short, nComponents, 65535>(args);
+        break;
 
-        case OFX::eBitDepthFloat:
-            renderForBitDepth<float, nComponents, 1>(args);
-            break;
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    case OFX::eBitDepthFloat:
+        renderForBitDepth<float, nComponents, 1>(args);
+        break;
+    default:
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
@@ -795,26 +804,25 @@ FrameBlendPlugin::renderForBitDepth(const OFX::RenderArguments &args)
     OperationEnum operation = (OperationEnum)_operation->getValueAtTime(args.time);
 
     switch (operation) {
-        case eOperationAverage:
-            renderForOperation<PIX, nComponents, maxValue, eOperationAverage>(args);
-            break;
+    case eOperationAverage:
+        renderForOperation<PIX, nComponents, maxValue, eOperationAverage>(args);
+        break;
 
-        case eOperationMin:
-            renderForOperation<PIX, nComponents, maxValue, eOperationMin>(args);
-            break;
+    case eOperationMin:
+        renderForOperation<PIX, nComponents, maxValue, eOperationMin>(args);
+        break;
 
-        case eOperationMax:
-            renderForOperation<PIX, nComponents, maxValue, eOperationMax>(args);
-            break;
+    case eOperationMax:
+        renderForOperation<PIX, nComponents, maxValue, eOperationMax>(args);
+        break;
 
-        case eOperationSum:
-            renderForOperation<PIX, nComponents, maxValue, eOperationSum>(args);
-            break;
+    case eOperationSum:
+        renderForOperation<PIX, nComponents, maxValue, eOperationSum>(args);
+        break;
 
-        case eOperationProduct:
-            renderForOperation<PIX, nComponents, maxValue, eOperationProduct>(args);
-            break;
-
+    case eOperationProduct:
+        renderForOperation<PIX, nComponents, maxValue, eOperationProduct>(args);
+        break;
     }
 }
 
@@ -827,17 +835,21 @@ FrameBlendPlugin::renderForOperation(const OFX::RenderArguments &args)
 }
 
 bool
-FrameBlendPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime)
+FrameBlendPlugin::isIdentity(const IsIdentityArguments &args,
+                             Clip * &identityClip,
+                             double &identityTime)
 {
     const double time = args.time;
     double mix;
+
     _mix->getValueAtTime(time, mix);
 
     if (mix == 0. /*|| (!processR && !processG && !processB && !processA)*/) {
         identityClip = _srcClip;
+
         return true;
     }
-    
+
     {
         bool processR, processG, processB, processA;
         _processR->getValueAtTime(time, processR);
@@ -846,15 +858,16 @@ FrameBlendPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
         _processA->getValueAtTime(time, processA);
         if (!processR && !processG && !processB && !processA) {
             identityClip = _srcClip;
+
             return true;
         }
     }
-    
-    if (_fgMClip && _fgMClip->isConnected()) {
+
+    if ( _fgMClip && _fgMClip->isConnected() ) {
         // FgM may contain anything
         return false;
     }
-    
+
     bool outputCount;
     _outputCount->getValueAtTime(time, outputCount);
     if (outputCount) {
@@ -876,10 +889,11 @@ FrameBlendPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
     if (range.min == range.max) {
         identityClip = _srcClip;
         identityTime = time;
+
         return true;
     }
 
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
@@ -887,22 +901,24 @@ FrameBlendPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityCl
             OfxRectI maskRoD;
             OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                 identityClip = _srcClip;
+
                 return true;
             }
         }
     }
 
     return false;
-}
+} // FrameBlendPlugin::isIdentity
 
 void
 FrameBlendPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
-                                   OFX::FramesNeededSetter &frames)
+                                  OFX::FramesNeededSetter &frames)
 {
     const double time = args.time;
     bool absolute;
+
     _absolute->getValueAtTime(time, absolute);
     OfxRangeD range;
     int min, max;
@@ -929,10 +945,12 @@ FrameBlendPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
 }
 
 bool
-FrameBlendPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+FrameBlendPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                        OfxRectD &rod)
 {
     const double time = args.time;
     bool absolute;
+
     _absolute->getValueAtTime(time, absolute);
     int min, max;
     _frameRange->getValueAtTime(time, min, max);
@@ -952,29 +970,30 @@ FrameBlendPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &
         OfxRectD srcRoD = _srcClip->getRegionOfDefinition(i);
         OFX::Coords::rectBoundingBox(srcRoD, rod, &rod);
     }
+
     return true;
 }
 
 /** @brief called when a param has just had its value changed */
 void
-FrameBlendPlugin::changedParam(const InstanceChangedArgs &args, const std::string &paramName)
+FrameBlendPlugin::changedParam(const InstanceChangedArgs &args,
+                               const std::string &paramName)
 {
-    if (paramName == kParamInputRangeName && args.reason == eChangeUserEdit) {
+    if ( (paramName == kParamInputRangeName) && (args.reason == eChangeUserEdit) ) {
         OfxRangeD range;
         if ( _srcClip && _srcClip->isConnected() ) {
             range = _srcClip->getFrameRange();
         } else {
             timeLineGetBounds(range.min, range.max);
         }
-        _frameRange->setValue((int)range.min, (int)range.max);
+        _frameRange->setValue( (int)range.min, (int)range.max );
         _absolute->setValue(true);
     }
 }
 
-
 mDeclarePluginFactory(FrameBlendPluginFactory, {}, {});
-
-void FrameBlendPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+FrameBlendPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -998,18 +1017,20 @@ void FrameBlendPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-    
+
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
 #endif
-
 }
 
-void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void
+FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                           OFX::ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentXY);
@@ -1046,7 +1067,7 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    
+
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
         param->setLabel(kNatronOfxParamProcessRLabel);
@@ -1148,7 +1169,7 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
         param->appendOption(kParamOperationOptionSum, kParamOperationOptionSumHint);
         assert(param->getNOptions() == (int)eOperationProduct);
         param->appendOption(kParamOperationOptionProduct, kParamOperationOptionProductHint);
-        param->setDefault((int)kParamOperationDefault);
+        param->setDefault( (int)kParamOperationDefault );
         if (page) {
             page->addChild(*param);
         }
@@ -1165,13 +1186,14 @@ void FrameBlendPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc
     }
 
     ofxsMaskMixDescribeParams(desc, page);
-}
+} // FrameBlendPluginFactory::describeInContext
 
-OFX::ImageEffect* FrameBlendPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+FrameBlendPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                        OFX::ContextEnum /*context*/)
 {
     return new FrameBlendPlugin(handle);
 }
-
 
 static FrameBlendPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

@@ -30,7 +30,8 @@
 void getTestOpenGLPluginID(OFX::PluginFactoryArray &ids);
 
 /** @brief The plugin that does our work */
-class TestOpenGLPlugin : public OFX::ImageEffect
+class TestOpenGLPlugin
+    : public OFX::ImageEffect
 {
 #if defined(HAVE_OSMESA)
     struct OSMesaPrivate;
@@ -41,21 +42,21 @@ public:
     TestOpenGLPlugin(OfxImageEffectHandle handle);
 
     virtual ~TestOpenGLPlugin();
-    
+
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
     /* The purpose of this action is to allow a plugin to set up any data it may need
-     to do OpenGL rendering in an instance. */
+       to do OpenGL rendering in an instance. */
     virtual void contextAttached() OVERRIDE FINAL;
     /* The purpose of this action is to allow a plugin to deallocate any resource
-     allocated in \ref ::kOfxActionOpenGLContextAttached just before the host
-     decouples a plugin from an OpenGL context. */
+       allocated in \ref ::kOfxActionOpenGLContextAttached just before the host
+       decouples a plugin from an OpenGL context. */
     virtual void contextDetached() OVERRIDE FINAL;
 
     /* The OpenGL context is also set when beginSequenceRender() and endSequenceRender()
-     are called. This may be useful to allocate/deallocate sequence-specific OpenGL data. */
+       are called. This may be useful to allocate/deallocate sequence-specific OpenGL data. */
     //virtual void beginSequenceRender(const OFX::BeginSequenceRenderArguments &args) OVERRIDE FINAL;
     //virtual void endSequenceRender(const OFX::EndSequenceRenderArguments &args) OVERRIDE FINAL;
 
@@ -68,14 +69,12 @@ private:
 
     // override the rod call
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
-
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
-
     OFX::Double2DParam *_scale;
     OFX::Double2DParam *_sourceScale;
     OFX::DoubleParam *_sourceStretch;
@@ -87,7 +86,6 @@ private:
     OFX::BooleanParam *_mipmap;
     OFX::BooleanParam *_anisotropic;
     OFX::BooleanParam *_useGPUIfAvailable;
-
     bool _haveAniso;
     float _maxAnisoMax;
 #if defined(HAVE_OSMESA)

@@ -41,16 +41,16 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "TestRenderOFX"
 #define kPluginGrouping "Other/Test"
 #define kPluginDescription \
-"Test rendering by the host.\n" \
-"This plugin paints pixel dots on the upper left and lower right parts of the input image. " \
-"The dots are spaced by 1 pixel at each render scale. " \
-"White dots are painted at coordinates which are multiples of 10. " \
-"Color dots are painted are coordinates which are multiples of 2, " \
-"and the color depends on the render scale " \
-"(respectively cyan, magenta, yellow, red, green, blue for levels 0, 1, 2, 3, 4, 5)." \
-"Several versions of this plugin are available, with support for tiling enabled/disabled (TiOK/TiNo), " \
-"multiresolution enabled/disabled (MrOK/MrNo), render scale support enabled/disabled (RsOK/RsNo)." \
-"The effect returns a region-dependent value for isIdentity."
+    "Test rendering by the host.\n" \
+    "This plugin paints pixel dots on the upper left and lower right parts of the input image. " \
+    "The dots are spaced by 1 pixel at each render scale. " \
+    "White dots are painted at coordinates which are multiples of 10. " \
+    "Color dots are painted are coordinates which are multiples of 2, " \
+    "and the color depends on the render scale " \
+    "(respectively cyan, magenta, yellow, red, green, blue for levels 0, 1, 2, 3, 4, 5)." \
+    "Several versions of this plugin are available, with support for tiling enabled/disabled (TiOK/TiNo), " \
+    "multiresolution enabled/disabled (MrOK/MrNo), render scale support enabled/disabled (RsOK/RsNo)." \
+    "The effect returns a region-dependent value for isIdentity."
 
 #define kPluginIdentifier "net.sf.openfx.TestRender"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -96,34 +96,35 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 
 // Base class for the RGBA and the Alpha processor
-class TestRenderBase : public OFX::ImageProcessor
+class TestRenderBase
+    : public OFX::ImageProcessor
 {
 protected:
     const OFX::Image *_srcImg;
     const OFX::Image *_maskImg;
-    bool  _doMasking;
-
+    bool _doMasking;
     double _mix;
     bool _maskInvert;
 
 public:
     /** @brief no arg ctor */
     TestRenderBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _srcImg(0)
-    , _maskImg(0)
-    , _doMasking(false)
-    , _mix(1.)
-    , _maskInvert(false)
+        : OFX::ImageProcessor(instance)
+        , _srcImg(0)
+        , _maskImg(0)
+        , _doMasking(false)
+        , _mix(1.)
+        , _maskInvert(false)
     {
     }
 
     /** @brief set the src image */
-    void setSrcImg(const OFX::Image *v) {_srcImg = v;}
+    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
 
-    void setMaskImg(const OFX::Image *v, bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
+    void setMaskImg(const OFX::Image *v,
+                    bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
 
-    void doMasking(bool v) {_doMasking = v;}
+    void doMasking(bool v) {_doMasking = v; }
 
     void setValues(double mix)
     {
@@ -133,12 +134,13 @@ public:
 
 // template to do the RGBA processing
 template <class PIX, int nComponents, int maxValue>
-class ImageTestRenderer : public TestRenderBase
+class ImageTestRenderer
+    : public TestRenderBase
 {
 public:
     // ctor
     ImageTestRenderer(OFX::ImageEffect &instance)
-    : TestRenderBase(instance)
+        : TestRenderBase(instance)
     {
     }
 
@@ -153,14 +155,13 @@ private:
         //int ymid = srcRoD.y1 + (srcRoD.y2-srcRoD.y1)/2;
 
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
-
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 //if ((x < xmid && y < ymid) || (x >= xmid && y >= ymid))
                 // do we have a source image to scale up
@@ -186,25 +187,26 @@ private:
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
-class TestRenderPlugin : public OFX::ImageEffect
+class TestRenderPlugin
+    : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
     TestRenderPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _maskClip(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _maskClip(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
-                            _dstClip->getPixelComponents() == ePixelComponentRGBA ||
-                            _dstClip->getPixelComponents() == ePixelComponentAlpha));
+        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
+                             _dstClip->getPixelComponents() == ePixelComponentRGBA ||
+                             _dstClip->getPixelComponents() == ePixelComponentAlpha) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGBA ||
-                             _srcClip->getPixelComponents() == ePixelComponentAlpha)));
+        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
+                               _srcClip->getPixelComponents() == ePixelComponentRGBA ||
+                               _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
@@ -238,7 +240,6 @@ private:
     void setupAndProcess(TestRenderBase &, const OFX::RenderArguments &args);
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     // override the rod call
@@ -249,12 +250,10 @@ private:
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
     OFX::Clip *_maskClip;
-
     OFX::RGBAParam* _color[6];
     OFX::BooleanParam* _identityEven;
     OFX::BooleanParam* _identityOdd;
     OFX::BooleanParam* _forceCopy;
-
     OFX::DoubleParam* _mix;
     OFX::BooleanParam* _maskApply;
     OFX::BooleanParam* _maskInvert;
@@ -271,45 +270,47 @@ private:
 /* set up and run a processor */
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
 void
-TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::setupAndProcess(TestRenderBase &processor, const OFX::RenderArguments &args)
+TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::setupAndProcess(TestRenderBase &processor,
+                                                                                               const OFX::RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     // fetch main input image
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(args.time) : 0 );
 
     // make sure bit depths are sane
-    if (src.get()) {
+    if ( src.get() ) {
         assert(_srcClip);
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
 
         // see if they have the same depths and bytes and all
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
         OfxRectI srcRod; // = src->getRegionOfDefinition(); //  Nuke's image RoDs are wrong
@@ -322,7 +323,7 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
         if (!supportsTiles) {
             // http://openfx.sourceforge.net/Documentation/1.3/ofxProgrammingReference.html#kOfxImageEffectPropSupportsTiles
             //  If a clip or plugin does not support tiled images, then the host should supply full RoD images to the effect whenever it fetches one.
-            if (src.get()) {
+            if ( src.get() ) {
                 assert(srcRod.x1 == srcBounds.x1);
                 assert(srcRod.x2 == srcBounds.x2);
                 assert(srcRod.y1 == srcBounds.y1);
@@ -338,7 +339,7 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
             //   Multiple resolution images mean...
             //    input and output images can be of any size
             //    input and output images can be offset from the origin
-            if (src.get()) {
+            if ( src.get() ) {
                 assert(srcRod.x1 == 0);
                 assert(srcRod.y1 == 0);
                 assert(srcRod.x1 == dstRod.x1);
@@ -350,15 +351,15 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
     }
 
     // auto ptr for the mask.
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
 
     // do we do masking
     if (doMasking) {
-        if (mask.get()) {
-            if (mask->getRenderScale().x != args.renderScale.x ||
-                mask->getRenderScale().y != args.renderScale.y ||
-                (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
+        if ( mask.get() ) {
+            if ( (mask->getRenderScale().x != args.renderScale.x) ||
+                 ( mask->getRenderScale().y != args.renderScale.y) ||
+                 ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
@@ -377,56 +378,57 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::set
     processor.setValues(mix);
 
     // set the images
-    processor.setDstImg(dst.get());
-    processor.setSrcImg(src.get());
+    processor.setDstImg( dst.get() );
+    processor.setSrcImg( src.get() );
 
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
-}
+} // >::setupAndProcess
 
 // the internal render function
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
 template<int nComponents>
 void
-TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::renderInternal(const OFX::RenderArguments &args,
+                                                                                              OFX::BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-        case OFX::eBitDepthUByte: {
-            ImageTestRenderer<unsigned char, nComponents, 255> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case OFX::eBitDepthUShort: {
-            ImageTestRenderer<unsigned short, nComponents, 65535> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case OFX::eBitDepthFloat: {
-            ImageTestRenderer<float, nComponents, 1> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    case OFX::eBitDepthUByte: {
+        ImageTestRenderer<unsigned char, nComponents, 255> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case OFX::eBitDepthUShort: {
+        ImageTestRenderer<unsigned short, nComponents, 65535> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case OFX::eBitDepthFloat: {
+        ImageTestRenderer<float, nComponents, 1> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    default:
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
 // the overridden render function
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
 void
-TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::render(const OFX::RenderArguments &args)
+TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::render(const OFX::RenderArguments &args)
 {
-    if (!supportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+    if ( !supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     // do the rendering
@@ -444,9 +446,11 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::ren
 
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
 bool
-TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
+TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::isIdentity(const IsIdentityArguments &args,
+                                                                                          Clip * &identityClip,
+                                                                                          double & /*identityTime*/)
 {
-    if (!supportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+    if ( !supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
@@ -461,6 +465,7 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isI
 
     if (mix == 0.) {
         identityClip = _srcClip;
+
         return true;
     }
 #if 0
@@ -469,8 +474,9 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isI
     _identityOdd->getValueAtTime(args.time, identityOdd);
     unsigned int mipMapLevel = OFX::Coords::mipmapLevelFromScale(args.renderScale.x);
     bool isOdd = bool(mipMapLevel & 1);
-    if ((identityEven && !isOdd) || (identityOdd && isOdd)) {
+    if ( (identityEven && !isOdd) || (identityOdd && isOdd) ) {
         identityClip = _srcClip;
+
         return true;
     }
 
@@ -482,16 +488,17 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isI
     roiCanonical.x2 = roi.x2 / args.renderScale.x;
     roiCanonical.y1 = roi.y1 / args.renderScale.y;
     roiCanonical.y2 = roi.y2 / args.renderScale.y;
-    double xmid = rod.x1 + (rod.x2 - rod.x1)/2;
-    double ymid = rod.y1 + (rod.y2 - rod.y1)/2;
-    if ((roiCanonical.x2 < xmid && roiCanonical.y2 < ymid) ||
-        (roiCanonical.x2 >= xmid && roiCanonical.y2 >= ymid)) {
+    double xmid = rod.x1 + (rod.x2 - rod.x1) / 2;
+    double ymid = rod.y1 + (rod.y2 - rod.y1) / 2;
+    if ( ( (roiCanonical.x2 < xmid) && (roiCanonical.y2 < ymid) ) ||
+         ( ( roiCanonical.x2 >= xmid) && ( roiCanonical.y2 >= ymid) ) ) {
         identityClip = _srcClip;
+
         return true;
     }
 #endif
 
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
@@ -499,43 +506,53 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::isI
             OfxRectI maskRoD;
             OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                 identityClip = _srcClip;
+
                 return true;
             }
         }
     }
 
     return false;
-}
-
+} // >::isIdentity
 
 static const char*
 bitDepthString(BitDepthEnum bitDepth)
 {
     switch (bitDepth) {
-        case OFX::eBitDepthUByte:
-            return "8u";
-        case OFX::eBitDepthUShort:
-            return "16u";
-        case OFX::eBitDepthHalf:
-            return "16f";
-        case OFX::eBitDepthFloat:
-            return "32f";
-        case OFX::eBitDepthCustom:
-            return "x";
-        case OFX::eBitDepthNone:
-            return "0";
+    case OFX::eBitDepthUByte:
+
+        return "8u";
+    case OFX::eBitDepthUShort:
+
+        return "16u";
+    case OFX::eBitDepthHalf:
+
+        return "16f";
+    case OFX::eBitDepthFloat:
+
+        return "32f";
+    case OFX::eBitDepthCustom:
+
+        return "x";
+    case OFX::eBitDepthNone:
+
+        return "0";
 #ifdef OFX_EXTENSIONS_VEGAS
-        case eBitDepthUByteBGRA:
-            return "8uBGRA";
-        case eBitDepthUShortBGRA:
-            return "16uBGRA";
-        case eBitDepthFloatBGRA:
-            return "32fBGRA";
+    case eBitDepthUByteBGRA:
+
+        return "8uBGRA";
+    case eBitDepthUShortBGRA:
+
+        return "16uBGRA";
+    case eBitDepthFloatBGRA:
+
+        return "32fBGRA";
 #endif
-        default:
-            return "[unknown bit depth]";
+    default:
+
+        return "[unknown bit depth]";
     }
 }
 
@@ -544,21 +561,26 @@ pixelComponentString(const std::string& p)
 {
     const std::string prefix = "OfxImageComponent";
     std::string s = p;
-    return s.replace(s.find(prefix),prefix.length(),"");
+
+    return s.replace(s.find(prefix), prefix.length(), "");
 }
 
 static const char*
 premultString(PreMultiplicationEnum e)
 {
     switch (e) {
-        case eImageOpaque:
-            return "Opaque";
-        case eImagePreMultiplied:
-            return "PreMultiplied";
-        case eImageUnPreMultiplied:
-            return "UnPreMultiplied";
-        default:
-            return "[unknown premult]";
+    case eImageOpaque:
+
+        return "Opaque";
+    case eImagePreMultiplied:
+
+        return "PreMultiplied";
+    case eImageUnPreMultiplied:
+
+        return "UnPreMultiplied";
+    default:
+
+        return "[unknown premult]";
     }
 }
 
@@ -567,42 +589,54 @@ static const char*
 pixelOrderString(PixelOrderEnum e)
 {
     switch (e) {
-        case ePixelOrderRGBA:
-            return "RGBA";
-        case ePixelOrderBGRA:
-            return "BGRA";
-        default:
-            return "[unknown pixel order]";
+    case ePixelOrderRGBA:
+
+        return "RGBA";
+    case ePixelOrderBGRA:
+
+        return "BGRA";
+    default:
+
+        return "[unknown pixel order]";
     }
 }
+
 #endif
 
 static const char*
 fieldOrderString(FieldEnum e)
 {
     switch (e) {
-        case eFieldNone:
-            return "None";
-        case eFieldBoth:
-            return "Both";
-        case eFieldLower:
-            return "Lower";
-        case eFieldUpper:
-            return "Upper";
-        case eFieldSingle:
-            return "Single";
-        case eFieldDoubled:
-            return "Doubled";
-        default:
-            return "[unknown field order]";
+    case eFieldNone:
+
+        return "None";
+    case eFieldBoth:
+
+        return "Both";
+    case eFieldLower:
+
+        return "Lower";
+    case eFieldUpper:
+
+        return "Upper";
+    case eFieldSingle:
+
+        return "Single";
+    case eFieldDoubled:
+
+        return "Doubled";
+    default:
+
+        return "[unknown field order]";
     }
 }
 
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
 void
-TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::changedParam(const OFX::InstanceChangedArgs &args,
+                                                                                            const std::string &paramName)
 {
-    if (!supportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+    if ( !supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
@@ -614,19 +648,19 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::cha
             oss << "N/A";
         } else {
             OFX::Clip &c = *_srcClip;
-            oss << pixelComponentString(c.getPixelComponentsProperty());
-            oss << bitDepthString(c.getPixelDepth());
+            oss << pixelComponentString( c.getPixelComponentsProperty() );
+            oss << bitDepthString( c.getPixelDepth() );
             oss << " (unmapped: ";
-            oss << pixelComponentString(c.getUnmappedPixelComponentsProperty());
-            oss << bitDepthString(c.getUnmappedPixelDepth());
+            oss << pixelComponentString( c.getUnmappedPixelComponentsProperty() );
+            oss << bitDepthString( c.getUnmappedPixelDepth() );
             oss << ")\npremultiplication: ";
-            oss << premultString(c.getPreMultiplication());
+            oss << premultString( c.getPreMultiplication() );
 #ifdef OFX_EXTENSIONS_VEGAS
             oss << "\npixel order: ";
-            oss << pixelOrderString(c.getPixelOrder());
+            oss << pixelOrderString( c.getPixelOrder() );
 #endif
             oss << "\nfield order: ";
-            oss << fieldOrderString(c.getFieldOrder());
+            oss << fieldOrderString( c.getFieldOrder() );
             oss << "\n";
             oss << (c.isConnected() ? "connected" : "not connected");
             oss << "\n";
@@ -655,19 +689,19 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::cha
             oss << "N/A";
         } else {
             OFX::Clip &c = *_dstClip;
-            oss << pixelComponentString(c.getPixelComponentsProperty());
-            oss << bitDepthString(c.getPixelDepth());
+            oss << pixelComponentString( c.getPixelComponentsProperty() );
+            oss << bitDepthString( c.getPixelDepth() );
             oss << " (unmapped: ";
-            oss << pixelComponentString(c.getUnmappedPixelComponentsProperty());
-            oss << bitDepthString(c.getUnmappedPixelDepth());
+            oss << pixelComponentString( c.getUnmappedPixelComponentsProperty() );
+            oss << bitDepthString( c.getUnmappedPixelDepth() );
             oss << ")\npremultiplication: ";
-            oss << premultString(c.getPreMultiplication());
+            oss << premultString( c.getPreMultiplication() );
 #ifdef OFX_EXTENSIONS_VEGAS
             oss << "\npixel order: ";
-            oss << pixelOrderString(c.getPixelOrder());
+            oss << pixelOrderString( c.getPixelOrder() );
 #endif
             oss << "\nfield order: ";
-            oss << fieldOrderString(c.getFieldOrder());
+            oss << fieldOrderString( c.getFieldOrder() );
             oss << "\n";
             oss << (c.isConnected() ? "connected" : "not connected");
             oss << "\n";
@@ -693,15 +727,16 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::cha
         oss << "\n\n";
         oss << "time: " << args.time << ", renderscale: " << args.renderScale.x << 'x' << args.renderScale.y << '\n';
 
-        sendMessage(OFX::Message::eMessageMessage, "", oss.str());
+        sendMessage( OFX::Message::eMessageMessage, "", oss.str() );
     }
-}
+} // >::changedParam
 
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
 bool
-TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &/*rod*/)
+TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                                                                                     OfxRectD & /*rod*/)
 {
-    if (!supportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+    if ( !supportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
@@ -711,10 +746,14 @@ TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>::get
 
 //mDeclarePluginFactory(TestRenderPluginFactory, {}, {});
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
-class TestRenderPluginFactory : public OFX::PluginFactoryHelper<TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRenderScale> >
+class TestRenderPluginFactory
+    : public OFX::PluginFactoryHelper<TestRenderPluginFactory<supportsTiles, supportsMultiResolution, supportsRenderScale> >
 {
 public:
-    TestRenderPluginFactory(const std::string& id, unsigned int verMaj, unsigned int verMin):OFX::PluginFactoryHelper<TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRenderScale> >(id, verMaj, verMin){}
+    TestRenderPluginFactory(const std::string& id,
+                            unsigned int verMaj,
+                            unsigned int verMin) : OFX::PluginFactoryHelper<TestRenderPluginFactory<supportsTiles, supportsMultiResolution, supportsRenderScale> >(id, verMaj, verMin) {}
+
     virtual void load() {};
     virtual void unload() {};
     virtual void describe(OFX::ImageEffectDescriptor &desc);
@@ -724,12 +763,14 @@ public:
 
 
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
-void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRenderScale>::describe(OFX::ImageEffectDescriptor &desc)
+void
+TestRenderPluginFactory<supportsTiles, supportsMultiResolution, supportsRenderScale>::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
-    std::string name = (std::string(kPluginName) + "_Ti" + (supportsTiles ? "OK" : "No")
-                        +                          "_Mr" + (supportsMultiResolution ? "OK" : "No")
-                        +                          "_Rs" + (supportsRenderScale ? "OK" : "No"));
+    std::string name = ( std::string(kPluginName) + "_Ti" + (supportsTiles ? "OK" : "No")
+                         +                          "_Mr" + (supportsMultiResolution ? "OK" : "No")
+                         +                          "_Rs" + (supportsRenderScale ? "OK" : "No") );
+
     desc.setLabel(name);
     desc.setPluginGrouping(kPluginGrouping);
     desc.setPluginDescription(kPluginDescription);
@@ -757,11 +798,14 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
 }
 
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
-void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRenderScale>::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void
+TestRenderPluginFactory<supportsTiles, supportsMultiResolution, supportsRenderScale>::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                                                                                        OFX::ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentXY);
@@ -911,22 +955,24 @@ void TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRende
     }
 
     ofxsMaskMixDescribeParams(desc, page);
-}
+} // >::describeInContext
 
 template<bool supportsTiles, bool supportsMultiResolution, bool supportsRenderScale>
-OFX::ImageEffect* TestRenderPluginFactory<supportsTiles,supportsMultiResolution,supportsRenderScale>::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+TestRenderPluginFactory<supportsTiles, supportsMultiResolution, supportsRenderScale>::createInstance(OfxImageEffectHandle handle,
+                                                                                                     OFX::ContextEnum /*context*/)
 {
-    return new TestRenderPlugin<supportsTiles,supportsMultiResolution,supportsRenderScale>(handle);
+    return new TestRenderPlugin<supportsTiles, supportsMultiResolution, supportsRenderScale>(handle);
 }
 
-static TestRenderPluginFactory<true,true,true> p1(kPluginIdentifier"_TiOK_MrOK_RsOK", kPluginVersionMajor, kPluginVersionMinor);
-static TestRenderPluginFactory<true,true,false> p2(kPluginIdentifier"_TiOK_MrOK_RsNo", kPluginVersionMajor, kPluginVersionMinor);
-static TestRenderPluginFactory<true,false,true> p3(kPluginIdentifier"_TiOK_MrNo_RsOK", kPluginVersionMajor, kPluginVersionMinor);
-static TestRenderPluginFactory<true,false,false> p4(kPluginIdentifier"_TiOK_MrNo_RsNo", kPluginVersionMajor, kPluginVersionMinor);
-static TestRenderPluginFactory<false,true,true> p5(kPluginIdentifier"_TiNo_MrOK_RsOK", kPluginVersionMajor, kPluginVersionMinor);
-static TestRenderPluginFactory<false,true,false> p6(kPluginIdentifier"_TiNo_MrOK_RsNo", kPluginVersionMajor, kPluginVersionMinor);
-static TestRenderPluginFactory<false,false,true> p7(kPluginIdentifier"_TiNo_MrNo_RsOK", kPluginVersionMajor, kPluginVersionMinor);
-static TestRenderPluginFactory<false,false,false> p8(kPluginIdentifier"_TiNo_MrNo_RsNo", kPluginVersionMajor, kPluginVersionMinor);
+static TestRenderPluginFactory<true, true, true> p1(kPluginIdentifier "_TiOK_MrOK_RsOK", kPluginVersionMajor, kPluginVersionMinor);
+static TestRenderPluginFactory<true, true, false> p2(kPluginIdentifier "_TiOK_MrOK_RsNo", kPluginVersionMajor, kPluginVersionMinor);
+static TestRenderPluginFactory<true, false, true> p3(kPluginIdentifier "_TiOK_MrNo_RsOK", kPluginVersionMajor, kPluginVersionMinor);
+static TestRenderPluginFactory<true, false, false> p4(kPluginIdentifier "_TiOK_MrNo_RsNo", kPluginVersionMajor, kPluginVersionMinor);
+static TestRenderPluginFactory<false, true, true> p5(kPluginIdentifier "_TiNo_MrOK_RsOK", kPluginVersionMajor, kPluginVersionMinor);
+static TestRenderPluginFactory<false, true, false> p6(kPluginIdentifier "_TiNo_MrOK_RsNo", kPluginVersionMajor, kPluginVersionMinor);
+static TestRenderPluginFactory<false, false, true> p7(kPluginIdentifier "_TiNo_MrNo_RsOK", kPluginVersionMajor, kPluginVersionMinor);
+static TestRenderPluginFactory<false, false, false> p8(kPluginIdentifier "_TiNo_MrNo_RsNo", kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)

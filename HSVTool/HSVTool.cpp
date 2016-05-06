@@ -41,18 +41,18 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "HSVToolOFX"
 #define kPluginGrouping "Color"
 #define kPluginDescription \
-"Adjust hue, saturation and brightness, or perform color replacement.\n" \
-"\n" \
-"Color replacement:\n" \
-"Set the srcColor and dstColor parameters. The range of the replacement is determined by the three groups of parameters: Hue, Saturation and Brightness.\n" \
-"\n" \
-"Color adjust:\n" \
-"Use the Rotation of the Hue parameter and the Adjustment of the Saturation and Lightness. " \
-"The ranges and falloff parameters allow for more complex adjustments.\n" \
-"\n" \
-"Hue keyer:\n" \
-"Set the outputAlpha parameter (the last one) to All (the default is Hue), and use a viewer to display the Alpha channel. " \
-"First, set the Range parameter of the Hue parameter set and then work down the other Ranges parameters, tuning with the range Falloff and Adjustment parameters." \
+    "Adjust hue, saturation and brightness, or perform color replacement.\n" \
+    "\n" \
+    "Color replacement:\n" \
+    "Set the srcColor and dstColor parameters. The range of the replacement is determined by the three groups of parameters: Hue, Saturation and Brightness.\n" \
+    "\n" \
+    "Color adjust:\n" \
+    "Use the Rotation of the Hue parameter and the Adjustment of the Saturation and Lightness. " \
+    "The ranges and falloff parameters allow for more complex adjustments.\n" \
+    "\n" \
+    "Hue keyer:\n" \
+    "Set the outputAlpha parameter (the last one) to All (the default is Hue), and use a viewer to display the Alpha channel. " \
+    "First, set the Range parameter of the Hue parameter set and then work down the other Ranges parameters, tuning with the range Falloff and Adjustment parameters." \
 
 #define kPluginIdentifier "net.sf.openfx.HSVToolPlugin"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -160,7 +160,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOutputAlphaOptionAll "min(all)"
 #define kParamOutputAlphaOptionAllHint "Alpha is set to min(Hue mask,Saturation mask,Brightness mask)"
 
-enum OutputAlphaEnum {
+enum OutputAlphaEnum
+{
     eOutputAlphaSource,
     eOutputAlphaHue,
     eOutputAlphaSaturation,
@@ -189,17 +190,18 @@ enum OutputAlphaEnum {
 
 
 /* algorithm:
- - convert to HSV
- - compute H, S, and V coefficients: 1 within range, dropping to 0 at range+-rolloff
- - compute min of the three coeffs. coeff = min(hcoeff,scoeff,vcoeff)
- - if global coeff is 0, don't change anything.
- - else, adjust hue by hueRotation*coeff, etc.
- - convert back to RGB
- 
- - when setting srcColor: compute hueRange, satRange, valRange (as empty ranges), set rolloffs to (50,0.3,0.3)
- - when setting dstColor: compute hueRotation, satAdjust and valAdjust
+   - convert to HSV
+   - compute H, S, and V coefficients: 1 within range, dropping to 0 at range+-rolloff
+   - compute min of the three coeffs. coeff = min(hcoeff,scoeff,vcoeff)
+   - if global coeff is 0, don't change anything.
+   - else, adjust hue by hueRotation*coeff, etc.
+   - convert back to RGB
+
+   - when setting srcColor: compute hueRange, satRange, valRange (as empty ranges), set rolloffs to (50,0.3,0.3)
+   - when setting dstColor: compute hueRotation, satAdjust and valAdjust
  */
-struct HSVToolValues {
+struct HSVToolValues
+{
     double hueRange[2];
     double hueRangeWithRolloff[2];
     double hueRotation;
@@ -214,7 +216,8 @@ struct HSVToolValues {
     double valAdjust;
     double valAdjustGain;
     double valRolloff;
-    HSVToolValues() {
+    HSVToolValues()
+    {
         hueRange[0] = hueRange[1] = 0.;
         hueRangeWithRolloff[0] = hueRangeWithRolloff[1] = 0.;
         hueRotation = 0.;
@@ -238,8 +241,10 @@ double
 normalizeAngle(double a)
 {
     int c = (int)std::floor(a / 360);
+
     a -= c * 360;
     assert(a >= 0 && a <= 360);
+
     return a;
 }
 
@@ -252,20 +257,25 @@ normalizeAngleSigned(double a)
 
 static inline
 bool
-angleWithinRange(double h, double h0, double h1)
+angleWithinRange(double h,
+                 double h0,
+                 double h1)
 {
     assert(0 <= h && h <= 360 && 0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360);
-    return ((h1 < h0 && (h <= h1 || h0 <= h)) ||
-            (h0 <= h && h <= h1));
+
+    return ( ( h1 < h0 && (h <= h1 || h0 <= h) ) ||
+             (h0 <= h && h <= h1) );
 }
 
 // Exponentiation by squaring
 // works with positive or negative integer exponents
 template<typename T>
 T
-ipow(T base, int exp)
+ipow(T base,
+     int exp)
 {
     T result = T(1);
+
     if (exp >= 0) {
         while (exp) {
             if (exp & 1) {
@@ -289,27 +299,31 @@ ipow(T base, int exp)
 }
 
 static double
-ffloor(double val, int decimals)
+ffloor(double val,
+       int decimals)
 {
     int p = ipow(10, decimals);
+
     return std::floor(val * p) / p;
 }
 
-
 static double
-fround(double val, int decimals)
+fround(double val,
+       int decimals)
 {
     int p = ipow(10, decimals);
+
     return std::floor(val * p + 0.5) / p;
 }
 
 static double
-fceil(double val, int decimals)
+fceil(double val,
+      int decimals)
 {
     int p = ipow(10, decimals);
+
     return std::ceil(val * p) / p;
 }
-
 
 // returns:
 // - 0 if outside of [h0, h1]
@@ -318,14 +332,16 @@ fceil(double val, int decimals)
 // - linear from h0 to h1
 static inline
 double
-angleCoeff01(double h, double h0, double h1)
+angleCoeff01(double h,
+             double h0,
+             double h1)
 {
     assert(0 <= h && h <= 360 && 0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360);
-    if (h1 == (h0 + 360.)) {
+    if ( h1 == (h0 + 360.) ) {
         // interval is the whole hue circle
         return 1.;
     }
-    if (!angleWithinRange(h, h0, h1)) {
+    if ( !angleWithinRange(h, h0, h1) ) {
         return 0.;
     }
     if (h1 == h0) {
@@ -338,7 +354,8 @@ angleCoeff01(double h, double h0, double h1)
         }
     }
     assert(h0 <= h && h <= h1);
-    return (h-h0)/(h1-h0);
+
+    return (h - h0) / (h1 - h0);
 }
 
 // returns:
@@ -348,10 +365,12 @@ angleCoeff01(double h, double h0, double h1)
 // - linear from h0 to h1
 static inline
 double
-angleCoeff10(double h, double h0, double h1)
+angleCoeff10(double h,
+             double h0,
+             double h1)
 {
     assert(0 <= h && h <= 360 && 0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360);
-    if (!angleWithinRange(h, h0, h1)) {
+    if ( !angleWithinRange(h, h0, h1) ) {
         return 0.;
     }
     if (h1 == h0) {
@@ -364,10 +383,12 @@ angleCoeff10(double h, double h0, double h1)
         }
     }
     assert(h0 <= h && h <= h1);
-    return (h1-h)/(h1-h0);
+
+    return (h1 - h) / (h1 - h0);
 }
 
-class HSVToolProcessorBase : public OFX::ImageProcessor
+class HSVToolProcessorBase
+    : public OFX::ImageProcessor
 {
 protected:
     const OFX::Image *_srcImg;
@@ -375,31 +396,31 @@ protected:
     OutputAlphaEnum _outputAlpha;
     bool _premult;
     int _premultChannel;
-    bool  _doMasking;
+    bool _doMasking;
     double _mix;
     bool _maskInvert;
 
 public:
-    
+
     HSVToolProcessorBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _srcImg(0)
-    , _maskImg(0)
-    , _outputAlpha(eOutputAlphaSource)
-    , _premult(false)
-    , _premultChannel(3)
-    , _doMasking(false)
-    , _mix(1.)
-    , _maskInvert(false)
-    , _clampBlack(true)
-    , _clampWhite(true)
+        : OFX::ImageProcessor(instance)
+        , _srcImg(0)
+        , _maskImg(0)
+        , _outputAlpha(eOutputAlphaSource)
+        , _premult(false)
+        , _premultChannel(3)
+        , _doMasking(false)
+        , _mix(1.)
+        , _maskInvert(false)
+        , _clampBlack(true)
+        , _clampWhite(true)
     {
-        assert(angleWithinRange(0, 350, 10));
-        assert(angleWithinRange(0, 0, 10));
-        assert(!angleWithinRange(0, 5, 10));
-        assert(!angleWithinRange(0, 10, 350));
-        assert(angleWithinRange(0, 10, 0));
-        assert(angleWithinRange(0, 10, 5));
+        assert( angleWithinRange(0, 350, 10) );
+        assert( angleWithinRange(0, 0, 10) );
+        assert( !angleWithinRange(0, 5, 10) );
+        assert( !angleWithinRange(0, 10, 350) );
+        assert( angleWithinRange(0, 10, 0) );
+        assert( angleWithinRange(0, 10, 5) );
         assert(normalizeAngle(-10) == 350);
         assert(normalizeAngle(-370) == 350);
         assert(normalizeAngle(-730) == 350);
@@ -408,12 +429,13 @@ public:
         assert(normalizeAngle(730) == 10);
     }
 
-    void setSrcImg(const OFX::Image *v) {_srcImg = v;}
-    
-    void setMaskImg(const OFX::Image *v, bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
-    
-    void doMasking(bool v) {_doMasking = v;}
-    
+    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
+
+    void setMaskImg(const OFX::Image *v,
+                    bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
+
+    void doMasking(bool v) {_doMasking = v; }
+
     void setValues(const HSVToolValues& values,
                    bool clampBlack,
                    bool clampWhite,
@@ -427,7 +449,7 @@ public:
         // the hue interval is from the right of h0 to the left of h1
         double h0 = _values.hueRange[0];
         double h1 = _values.hueRange[1];
-        if (h1 == (h0+360.)) {
+        if ( h1 == (h0 + 360.) ) {
             // special case: select any hue (useful to rotate all colors)
             _values.hueRange[0] = 0.;
             _values.hueRange[1] = 360.;
@@ -442,7 +464,7 @@ public:
                 std::swap(h0, h1);
             }
             // take the smallest of both angles
-            if ((h1 - h0) > 180.) {
+            if ( (h1 - h0) > 180. ) {
                 std::swap(h0, h1);
             }
             assert (0 <= h0 && h0 <= 360 && 0 <= h1 && h1 <= 360);
@@ -456,7 +478,7 @@ public:
             }
             _values.hueRangeWithRolloff[0] = normalizeAngle(h0 - _values.hueRolloff);
             _values.hueRangeWithRolloff[1] = normalizeAngle(h1 + _values.hueRolloff);
-            _values.hueMean = normalizeAngle(h0 + normalizeAngleSigned(h1-h0) / 2);
+            _values.hueMean = normalizeAngle(h0 + normalizeAngleSigned(h1 - h0) / 2);
         }
         if (_values.satRange[1] < _values.satRange[0]) {
             std::swap(_values.satRange[0], _values.satRange[1]);
@@ -476,28 +498,37 @@ public:
         _premult = premult;
         _premultChannel = premultChannel;
         _mix = mix;
-    }
+    } // setValues
 
-    void hsvtool(float r, float g, float b, float *hcoeff, float *scoeff, float *vcoeff, float *rout, float *gout, float *bout)
+    void hsvtool(float r,
+                 float g,
+                 float b,
+                 float *hcoeff,
+                 float *scoeff,
+                 float *vcoeff,
+                 float *rout,
+                 float *gout,
+                 float *bout)
     {
         float h, s, v;
         OFX::Color::rgb_to_hsv(r, g, b, &h, &s, &v);
-        h *= 360./OFXS_HUE_CIRCLE;
+
+        h *= 360. / OFXS_HUE_CIRCLE;
         const double h0 = _values.hueRange[0];
         const double h1 = _values.hueRange[1];
         const double h0mrolloff = _values.hueRangeWithRolloff[0];
         const double h1prolloff = _values.hueRangeWithRolloff[1];
         // the affected
-        if (angleWithinRange(h, h0, h1)) {
+        if ( angleWithinRange(h, h0, h1) ) {
             *hcoeff = 1.f;
         } else {
             double c0 = 0.;
             double c1 = 0.;
             // check if we are in the rolloff area
-            if (angleWithinRange(h, h0mrolloff, h0)) {
+            if ( angleWithinRange(h, h0mrolloff, h0) ) {
                 c0 = angleCoeff01(h, h0mrolloff, h0);
             }
-            if (angleWithinRange(h, h1, h1prolloff)) {
+            if ( angleWithinRange(h, h1, h1prolloff) ) {
                 c1 = angleCoeff10(h, h1, h1prolloff);
             }
             *hcoeff = (float)std::max(c0, c1);
@@ -507,11 +538,11 @@ public:
         const double s1 = _values.satRange[1];
         const double s0mrolloff = s0 - _values.satRolloff;
         const double s1prolloff = s1 + _values.satRolloff;
-        if (s0 <= s && s <= s1) {
+        if ( (s0 <= s) && (s <= s1) ) {
             *scoeff = 1.f;
-        } else if (s0mrolloff <= s && s <= s0) {
+        } else if ( (s0mrolloff <= s) && (s <= s0) ) {
             *scoeff = (float)(s - s0mrolloff) / (float)_values.satRolloff;
-        } else if (s1 <= s && s <= s1prolloff) {
+        } else if ( (s1 <= s) && (s <= s1prolloff) ) {
             *scoeff = (float)(s1prolloff - s) / (float)_values.satRolloff;
         } else {
             *scoeff = 0.f;
@@ -521,11 +552,11 @@ public:
         const double v1 = _values.valRange[1];
         const double v0mrolloff = v0 - _values.valRolloff;
         const double v1prolloff = v1 + _values.valRolloff;
-        if (v0 <= v && v <= v1) {
+        if ( (v0 <= v) && (v <= v1) ) {
             *vcoeff = 1.f;
-        } else if (v0mrolloff <= v && v <= v0) {
+        } else if ( (v0mrolloff <= v) && (v <= v0) ) {
             *vcoeff = (float)(v - v0mrolloff) / (float)_values.valRolloff;
-        } else if (v1 <= v && v <= v1prolloff) {
+        } else if ( (v1 <= v) && (v <= v1prolloff) ) {
             *vcoeff = (float)(v1prolloff - v) / (float)_values.valRolloff;
         } else {
             *vcoeff = 0.f;
@@ -539,13 +570,13 @@ public:
             *bout = b;
         } else {
             //h += coeff * (float)_values.hueRotation;
-            h += coeff * ((float)_values.hueRotation + (_values.hueRotationGain - 1.) * normalizeAngleSigned(h - _values.hueMean));
-            s += coeff * ((float)_values.satAdjust + (_values.satAdjustGain - 1.) * (s - (s0+s1)/2));
+            h += coeff * ( (float)_values.hueRotation + (_values.hueRotationGain - 1.) * normalizeAngleSigned(h - _values.hueMean) );
+            s += coeff * ( (float)_values.satAdjust + (_values.satAdjustGain - 1.) * (s - (s0 + s1) / 2) );
             if (s < 0) {
                 s = 0;
             }
-            v += coeff * ((float)_values.valAdjust + (_values.valAdjustGain - 1.) * (v - (v0+v1)/2));
-            h *= OFXS_HUE_CIRCLE/360.;
+            v += coeff * ( (float)_values.valAdjust + (_values.valAdjustGain - 1.) * (v - (v0 + v1) / 2) );
+            h *= OFXS_HUE_CIRCLE / 360.;
             OFX::Color::hsv_to_rgb(h, s, v, rout, gout, bout);
         }
         if (_clampBlack) {
@@ -558,7 +589,7 @@ public:
             *gout = std::min(1.f, *gout);
             *bout = std::min(1.f, *bout);
         }
-    }
+    } // hsvtool
 
 private:
     HSVToolValues _values;
@@ -567,16 +598,16 @@ private:
 };
 
 
-
 template <class PIX, int nComponents, int maxValue>
-class HSVToolProcessor : public HSVToolProcessorBase
+class HSVToolProcessor
+    : public HSVToolProcessorBase
 {
 public:
     HSVToolProcessor(OFX::ImageEffect &instance)
-    : HSVToolProcessorBase(instance)
+        : HSVToolProcessorBase(instance)
     {
     }
-    
+
     void multiThreadProcessImages(OfxRectI procWindow)
     {
         assert(nComponents == 3 || nComponents == 4);
@@ -586,7 +617,7 @@ public:
         // only premultiply output if keeping the source alpha
         const bool premultOut = _premult && (_outputAlpha == eOutputAlphaSource);
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
@@ -599,32 +630,32 @@ public:
                 hsvtool(unpPix[0], unpPix[1], unpPix[2], &hcoeff, &scoeff, &vcoeff, &tmpPix[0], &tmpPix[1], &tmpPix[2]);
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, premultOut, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
                 // if output alpha is not source alpha, set it to the right value
-                if (nComponents == 4 && _outputAlpha != eOutputAlphaSource) {
+                if ( (nComponents == 4) && (_outputAlpha != eOutputAlphaSource) ) {
                     float a = 0.f;
                     switch (_outputAlpha) {
-                        case eOutputAlphaSource:
-                            break;
-                        case eOutputAlphaHue:
-                            a = hcoeff;
-                            break;
-                        case eOutputAlphaSaturation:
-                            a = scoeff;
-                            break;
-                        case eOutputAlphaBrightness:
-                            a = vcoeff;
-                            break;
-                        case eOutputAlphaHueSaturation:
-                            a = std::min(hcoeff, scoeff);
-                            break;
-                        case eOutputAlphaHueBrightness:
-                            a = std::min(hcoeff, vcoeff);
-                            break;
-                        case eOutputAlphaSaturationBrightness:
-                            a = std::min(scoeff, vcoeff);
-                            break;
-                        case eOutputAlphaAll:
-                            a = std::min(std::min(hcoeff, scoeff), vcoeff);
-                            break;
+                    case eOutputAlphaSource:
+                        break;
+                    case eOutputAlphaHue:
+                        a = hcoeff;
+                        break;
+                    case eOutputAlphaSaturation:
+                        a = scoeff;
+                        break;
+                    case eOutputAlphaBrightness:
+                        a = vcoeff;
+                        break;
+                    case eOutputAlphaHueSaturation:
+                        a = std::min(hcoeff, scoeff);
+                        break;
+                    case eOutputAlphaHueBrightness:
+                        a = std::min(hcoeff, vcoeff);
+                        break;
+                    case eOutputAlphaSaturationBrightness:
+                        a = std::min(scoeff, vcoeff);
+                        break;
+                    case eOutputAlphaAll:
+                        a = std::min(std::min(hcoeff, scoeff), vcoeff);
+                        break;
                     }
                     if (_doMasking) {
                         // we do, get the pixel from the mask
@@ -634,7 +665,7 @@ public:
                         if (maskPix == 0) {
                             maskScale = _maskInvert ? 1.f : 0.f;
                         } else {
-                            maskScale = *maskPix/float(maxValue);
+                            maskScale = *maskPix / float(maxValue);
                             if (_maskInvert) {
                                 maskScale = 1.f - maskScale;
                             }
@@ -648,35 +679,38 @@ public:
                 dstPix += nComponents;
             }
         }
-    }
+    } // multiThreadProcessImages
 };
 
-typedef struct HSVColor {
+typedef struct HSVColor
+{
     HSVColor() : h(0), s(0), v(0) {}
 
     double h, s, v;
 } HSVColor;
-
-typedef struct HSVColorF {
+typedef struct HSVColorF
+{
     HSVColorF() : h(0), s(0), v(0) {}
 
     float h, s, v;
 } HSVColorF;
 
 
-class HueMeanProcessorBase : public OFX::ImageProcessor
+class HueMeanProcessorBase
+    : public OFX::ImageProcessor
 {
 protected:
     OFX::MultiThread::Mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
     unsigned long _count;
     double _sumsinh, _sumcosh;
+
 public:
     HueMeanProcessorBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _mutex()
-    , _count(0)
-    , _sumsinh(0)
-    , _sumcosh(0)
+        : OFX::ImageProcessor(instance)
+        , _mutex()
+        , _count(0)
+        , _sumsinh(0)
+        , _sumcosh(0)
     {
     }
 
@@ -691,14 +725,18 @@ public:
         } else {
             double meansinh = _sumsinh / _count;
             double meancosh = _sumcosh / _count;
+
             // angle mean and sdev from https://en.wikipedia.org/wiki/Directional_statistics#Measures_of_location_and_spread
-            return normalizeAngle(std::atan2(meansinh, meancosh)*180/M_PI);
+            return normalizeAngle(std::atan2(meansinh, meancosh) * 180 / M_PI);
             //*huesdev = std::sqrt(std::max(0., -std::log(meansinh*meansinh+meancosh*meancosh)))*180/M_PI;
         }
     }
 
 protected:
-    void addResults(double sumsinh, double sumcosh, unsigned long count) {
+    void addResults(double sumsinh,
+                    double sumcosh,
+                    unsigned long count)
+    {
         _mutex.lock();
         _sumsinh += sumsinh;
         _sumcosh += sumcosh;
@@ -708,45 +746,46 @@ protected:
 };
 
 template <class PIX, int nComponents, int maxValue>
-class HueMeanProcessor : public HueMeanProcessorBase
+class HueMeanProcessor
+    : public HueMeanProcessorBase
 {
 public:
     HueMeanProcessor(OFX::ImageEffect &instance)
-    : HueMeanProcessorBase(instance)
+        : HueMeanProcessorBase(instance)
     {
     }
 
     ~HueMeanProcessor()
     {
     }
+
 private:
 
-    void
-    pixToHSV(const PIX *p, HSVColorF* hsv)
+    void pixToHSV(const PIX *p,
+                  HSVColorF* hsv)
     {
-        if (nComponents == 4 || nComponents == 3) {
+        if ( (nComponents == 4) || (nComponents == 3) ) {
             float r, g, b;
-            r = p[0]/(float)maxValue;
-            g = p[1]/(float)maxValue;
-            b = p[2]/(float)maxValue;
+            r = p[0] / (float)maxValue;
+            g = p[1] / (float)maxValue;
+            b = p[2] / (float)maxValue;
             OFX::Color::rgb_to_hsv(r, g, b, &hsv->h, &hsv->s, &hsv->v);
-            hsv->h *= 360/OFXS_HUE_CIRCLE;
+            hsv->h *= 360 / OFXS_HUE_CIRCLE;
         } else {
             *hsv = HSVColorF();
         }
     }
-
-
 
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double sumsinh = 0.;
         double sumcosh = 0.;
         unsigned long count = 0;
+
         assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
                _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
@@ -759,10 +798,10 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 HSVColorF hsv;
                 pixToHSV(dstPix, &hsv);
-                if (hsv.s > MIN_SATURATION && hsv.v > MIN_VALUE) {
+                if ( (hsv.s > MIN_SATURATION) && (hsv.v > MIN_VALUE) ) {
                     // only take into account pixels that really have a hue
-                    sumsinhLine += std::sin(hsv.h*M_PI/180);
-                    sumcoshLine += std::cos(hsv.h*M_PI/180);
+                    sumsinhLine += std::sin(hsv.h * M_PI / 180);
+                    sumcoshLine += std::cos(hsv.h * M_PI / 180);
                     ++count;
                 }
 
@@ -771,16 +810,18 @@ private:
             sumsinh += sumsinhLine;
             sumcosh += sumcoshLine;
         }
-        
+
         addResults(sumsinh, sumcosh, count);
     }
 };
 
-class HSVRangeProcessorBase : public OFX::ImageProcessor
+class HSVRangeProcessorBase
+    : public OFX::ImageProcessor
 {
 protected:
     OFX::MultiThread::Mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
     float _hmean;
+
 private:
     float _dhmin; // -180..180
     float _dhmax; // -180..180
@@ -791,15 +832,15 @@ private:
 
 public:
     HSVRangeProcessorBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _mutex()
-    , _hmean(0)
-    , _dhmin(FLT_MAX)
-    , _dhmax(-FLT_MAX)
-    , _smin(FLT_MAX)
-    , _smax(-FLT_MAX)
-    , _vmin(FLT_MAX)
-    , _vmax(-FLT_MAX)
+        : OFX::ImageProcessor(instance)
+        , _mutex()
+        , _hmean(0)
+        , _dhmin(FLT_MAX)
+        , _dhmax(-FLT_MAX)
+        , _smin(FLT_MAX)
+        , _smax(-FLT_MAX)
+        , _vmin(FLT_MAX)
+        , _vmax(-FLT_MAX)
     {
     }
 
@@ -812,9 +853,10 @@ public:
         _hmean = hmean;
     }
 
-    void getResults(HSVColor *hsvmin, HSVColor *hsvmax)
+    void getResults(HSVColor *hsvmin,
+                    HSVColor *hsvmax)
     {
-        if (_dhmax -_dhmin > 179.9) {
+        if (_dhmax - _dhmin > 179.9) {
             // more than half circle, take the full circle
             hsvmin->h = 0.;
             hsvmax->h = 360.;
@@ -829,7 +871,13 @@ public:
     }
 
 protected:
-    void addResults(const float dhmin, const float dhmax, const float smin, const float smax, const float vmin, const float vmax) {
+    void addResults(const float dhmin,
+                    const float dhmax,
+                    const float smin,
+                    const float smax,
+                    const float vmin,
+                    const float vmax)
+    {
         _mutex.lock();
         if (dhmin < _dhmin) { _dhmin = dhmin; }
         if (dhmax > _dhmax) { _dhmax = dhmax; }
@@ -842,35 +890,35 @@ protected:
 };
 
 template <class PIX, int nComponents, int maxValue>
-class HSVRangeProcessor : public HSVRangeProcessorBase
+class HSVRangeProcessor
+    : public HSVRangeProcessorBase
 {
 public:
     HSVRangeProcessor(OFX::ImageEffect &instance)
-    : HSVRangeProcessorBase(instance)
+        : HSVRangeProcessorBase(instance)
     {
     }
 
     ~HSVRangeProcessor()
     {
     }
+
 private:
 
-    void
-    pixToHSV(const PIX *p, HSVColorF* hsv)
+    void pixToHSV(const PIX *p,
+                  HSVColorF* hsv)
     {
-        if (nComponents == 4 || nComponents == 3) {
+        if ( (nComponents == 4) || (nComponents == 3) ) {
             float r, g, b;
-            r = p[0]/(float)maxValue;
-            g = p[1]/(float)maxValue;
-            b = p[2]/(float)maxValue;
+            r = p[0] / (float)maxValue;
+            g = p[1] / (float)maxValue;
+            b = p[2] / (float)maxValue;
             OFX::Color::rgb_to_hsv(r, g, b, &hsv->h, &hsv->s, &hsv->v);
-            hsv->h *= 360/OFXS_HUE_CIRCLE;
+            hsv->h *= 360 / OFXS_HUE_CIRCLE;
         } else {
             *hsv = HSVColorF();
         }
     }
-
-
 
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
@@ -883,7 +931,7 @@ private:
         float vmin = FLT_MAX;
         float vmax = -FLT_MAX;
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
@@ -892,7 +940,7 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 HSVColorF hsv;
                 pixToHSV(dstPix, &hsv);
-                if (hsv.s > MIN_SATURATION && hsv.v > MIN_VALUE) {
+                if ( (hsv.s > MIN_SATURATION) && (hsv.v > MIN_VALUE) ) {
                     float dh = normalizeAngleSigned(hsv.h - _hmean); // relative angle with hmean
                     if (dh < dhmin) { dhmin = dh; }
                     if (dh > dhmax) { dhmax = dh; }
@@ -911,50 +959,49 @@ private:
 };
 
 
-
-
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class HSVToolPlugin : public OFX::ImageEffect
+class HSVToolPlugin
+    : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
     HSVToolPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _maskClip(0)
-    , _srcColor(0)
-    , _dstColor(0)
-    , _hueRange(0)
-    , _hueRotation(0)
-    , _hueRotationGain(0)
-    , _hueRangeRolloff(0)
-    , _saturationRange(0)
-    , _saturationAdjustment(0)
-    , _saturationAdjustmentGain(0)
-    , _saturationRangeRolloff(0)
-    , _brightnessRange(0)
-    , _brightnessAdjustment(0)
-    , _brightnessAdjustmentGain(0)
-    , _brightnessRangeRolloff(0)
-    , _clampBlack(0)
-    , _clampWhite(0)
-    , _outputAlpha(0)
-    , _premult(0)
-    , _premultChannel(0)
-    , _mix(0)
-    , _maskApply(0)
-    , _maskInvert(0)
-    , _premultChanged(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _maskClip(0)
+        , _srcColor(0)
+        , _dstColor(0)
+        , _hueRange(0)
+        , _hueRotation(0)
+        , _hueRotationGain(0)
+        , _hueRangeRolloff(0)
+        , _saturationRange(0)
+        , _saturationAdjustment(0)
+        , _saturationAdjustmentGain(0)
+        , _saturationRangeRolloff(0)
+        , _brightnessRange(0)
+        , _brightnessAdjustment(0)
+        , _brightnessAdjustmentGain(0)
+        , _brightnessRangeRolloff(0)
+        , _clampBlack(0)
+        , _clampWhite(0)
+        , _outputAlpha(0)
+        , _premult(0)
+        , _premultChannel(0)
+        , _mix(0)
+        , _maskApply(0)
+        , _maskInvert(0)
+        , _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
-                            _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
+                             _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGBA)));
+        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
+                               _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
 
@@ -1008,21 +1055,19 @@ public:
         _setSrcFromRectangle->setIsSecret(!enableRectangle);
         _srcColor->setEnabled(!enableRectangle);
     }
-    
+
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-    
+
     /* set up and run a processor */
     void setupAndProcess(HSVToolProcessorBase &, const OFX::RenderArguments &args);
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-    
     virtual void getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
 
     // compute computation window in srcImg
@@ -1034,7 +1079,12 @@ private:
     void setSrcFromRectangleProcess(HueMeanProcessorBase &huemeanprocessor, HSVRangeProcessorBase &rangeprocessor, const OFX::Image* srcImg, double /*time*/, const OfxRectI &analysisWindow, double *hmean, HSVColor *hsvmin, HSVColor *hsvmax);
 
     template <class PIX, int nComponents, int maxValue>
-    void setSrcFromRectangleComponentsDepth(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, double *hmean, HSVColor *hsvmin, HSVColor *hsvmax)
+    void setSrcFromRectangleComponentsDepth(const OFX::Image* srcImg,
+                                            double time,
+                                            const OfxRectI &analysisWindow,
+                                            double *hmean,
+                                            HSVColor *hsvmin,
+                                            HSVColor *hsvmax)
     {
         HueMeanProcessor<PIX, nComponents, maxValue> fred1(*this);
         HSVRangeProcessor<PIX, nComponents, maxValue> fred2(*this);
@@ -1042,24 +1092,30 @@ private:
     }
 
     template <int nComponents>
-    void setSrcFromRectangleComponents(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, double *hmean, HSVColor *hsvmin, HSVColor *hsvmax)
+    void setSrcFromRectangleComponents(const OFX::Image* srcImg,
+                                       double time,
+                                       const OfxRectI &analysisWindow,
+                                       double *hmean,
+                                       HSVColor *hsvmin,
+                                       HSVColor *hsvmax)
     {
         OFX::BitDepthEnum srcBitDepth = srcImg->getPixelDepth();
+
         switch (srcBitDepth) {
-            case OFX::eBitDepthUByte: {
-                setSrcFromRectangleComponentsDepth<unsigned char, nComponents, 255>(srcImg, time, analysisWindow, hmean, hsvmin, hsvmax);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                setSrcFromRectangleComponentsDepth<unsigned short, nComponents, 65535>(srcImg, time, analysisWindow, hmean, hsvmin, hsvmax);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                setSrcFromRectangleComponentsDepth<float, nComponents, 1>(srcImg, time, analysisWindow, hmean, hsvmin, hsvmax);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        case OFX::eBitDepthUByte: {
+            setSrcFromRectangleComponentsDepth<unsigned char, nComponents, 255>(srcImg, time, analysisWindow, hmean, hsvmin, hsvmax);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            setSrcFromRectangleComponentsDepth<unsigned short, nComponents, 65535>(srcImg, time, analysisWindow, hmean, hsvmin, hsvmax);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            setSrcFromRectangleComponentsDepth<float, nComponents, 1>(srcImg, time, analysisWindow, hmean, hsvmin, hsvmax);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
 
@@ -1068,12 +1124,10 @@ private:
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
     OFX::Clip *_maskClip;
-
     Double2DParam* _btmLeft;
     Double2DParam* _size;
     BooleanParam* _enableRectangle;
     PushButtonParam* _setSrcFromRectangle;
-
     OFX::RGBParam *_srcColor;
     OFX::RGBParam *_dstColor;
     OFX::Double2DParam *_hueRange;
@@ -1108,23 +1162,25 @@ private:
 
 /* set up and run a processor */
 void
-HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::RenderArguments &args)
+HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor,
+                               const OFX::RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -1134,32 +1190,34 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
         if (dstComponents != OFX::ePixelComponentRGBA) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host dit not take into account output components");
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+
             return;
         }
     }
 
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(time) : 0);
-    if (src.get()) {
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(time) : 0 );
+    if ( src.get() ) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
         // set the components of _dstClip
-        if (srcBitDepth != dstBitDepth || (outputAlpha == eOutputAlphaSource && srcComponents != dstComponents)) {            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+        if ( (srcBitDepth != dstBitDepth) || ( (outputAlpha == eOutputAlphaSource) && (srcComponents != dstComponents) ) ) {
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
     if (doMasking) {
-        if (mask.get()) {
-            if (mask->getRenderScale().x != args.renderScale.x ||
-                mask->getRenderScale().y != args.renderScale.y ||
-                (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
+        if ( mask.get() ) {
+            if ( (mask->getRenderScale().x != args.renderScale.x) ||
+                 ( mask->getRenderScale().y != args.renderScale.y) ||
+                 ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
@@ -1169,9 +1227,9 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
         processor.doMasking(true);
         processor.setMaskImg(mask.get(), maskInvert);
     }
-    
-    processor.setDstImg(dst.get());
-    processor.setSrcImg(src.get());
+
+    processor.setDstImg( dst.get() );
+    processor.setSrcImg( src.get() );
     processor.setRenderWindow(args.renderWindow);
 
     HSVToolValues values;
@@ -1190,7 +1248,7 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
     values.valAdjustGain = _brightnessAdjustmentGain->getValueAtTime(time);
     values.valRolloff = _brightnessRangeRolloff->getValueAtTime(time);
 
-    bool clampBlack,clampWhite;
+    bool clampBlack, clampWhite;
     _clampBlack->getValueAtTime(time, clampBlack);
     _clampWhite->getValueAtTime(time, clampWhite);
 
@@ -1200,68 +1258,70 @@ HSVToolPlugin::setupAndProcess(HSVToolProcessorBase &processor, const OFX::Rende
     _premultChannel->getValueAtTime(time, premultChannel);
     double mix;
     _mix->getValueAtTime(time, mix);
-    
+
     processor.setValues(values, clampBlack, clampWhite, outputAlpha, premult, premultChannel, mix);
     processor.process();
-}
+} // HSVToolPlugin::setupAndProcess
 
 // the overridden render function
 void
 HSVToolPlugin::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                HSVToolProcessor<unsigned char, 4, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                HSVToolProcessor<unsigned short, 4, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                HSVToolProcessor<float, 4, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        case OFX::eBitDepthUByte: {
+            HSVToolProcessor<unsigned char, 4, 255> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            HSVToolProcessor<unsigned short, 4, 65535> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            HSVToolProcessor<float, 4, 1> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     } else {
         assert(dstComponents == OFX::ePixelComponentRGB);
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                HSVToolProcessor<unsigned char, 3, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                HSVToolProcessor<unsigned short, 3, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                HSVToolProcessor<float, 3, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        case OFX::eBitDepthUByte: {
+            HSVToolProcessor<unsigned char, 3, 255> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            HSVToolProcessor<unsigned short, 3, 65535> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            HSVToolProcessor<float, 3, 1> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
-}
+} // HSVToolPlugin::render
 
 bool
-HSVToolPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
+HSVToolPlugin::isIdentity(const IsIdentityArguments &args,
+                          Clip * &identityClip,
+                          double & /*identityTime*/)
 {
     if (!_srcClip) {
         return false;
@@ -1271,6 +1331,7 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip,
 
     if (mix == 0.) {
         identityClip = _srcClip;
+
         return true;
     }
 
@@ -1288,45 +1349,45 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip,
             double valMin, valMax;
             _brightnessRange->getValueAtTime(time, valMin, valMax);
             bool alphaVal = (valMin != 0. || valMax != 1.);
-            switch(outputAlpha) {
-                // coverity[dead_error_begin]
-                case eOutputAlphaSource:
-                    break;
-                case eOutputAlphaHue:
-                    if (alphaHue) {
-                        return false;
-                    }
-                    break;
-                case eOutputAlphaSaturation:
-                    if (alphaSat) {
-                        return false;
-                    }
-                    break;
-                case eOutputAlphaBrightness:
-                    if (alphaVal) {
-                        return false;
-                    }
-                    break;
-                case eOutputAlphaHueSaturation:
-                    if (alphaHue || alphaSat) {
-                        return false;
-                    }
-                    break;
-                case eOutputAlphaHueBrightness:
-                    if (alphaHue || alphaVal) {
-                        return false;
-                    }
-                    break;
-                case eOutputAlphaSaturationBrightness:
-                    if (alphaSat || alphaVal) {
-                        return false;
-                    }
-                    break;
-                case eOutputAlphaAll:
-                    if (alphaHue || alphaSat || alphaVal) {
-                        return false;
-                    }
-                    break;
+            switch (outputAlpha) {
+            // coverity[dead_error_begin]
+            case eOutputAlphaSource:
+                break;
+            case eOutputAlphaHue:
+                if (alphaHue) {
+                    return false;
+                }
+                break;
+            case eOutputAlphaSaturation:
+                if (alphaSat) {
+                    return false;
+                }
+                break;
+            case eOutputAlphaBrightness:
+                if (alphaVal) {
+                    return false;
+                }
+                break;
+            case eOutputAlphaHueSaturation:
+                if (alphaHue || alphaSat) {
+                    return false;
+                }
+                break;
+            case eOutputAlphaHueBrightness:
+                if (alphaHue || alphaVal) {
+                    return false;
+                }
+                break;
+            case eOutputAlphaSaturationBrightness:
+                if (alphaSat || alphaVal) {
+                    return false;
+                }
+                break;
+            case eOutputAlphaAll:
+                if (alphaHue || alphaSat || alphaVal) {
+                    return false;
+                }
+                break;
             }
         }
     }
@@ -1338,12 +1399,13 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip,
     _saturationAdjustment->getValueAtTime(time, saturationAdjustment);
     double brightnessAdjustment;
     _brightnessAdjustment->getValueAtTime(time, brightnessAdjustment);
-    if (hueRotation == 0. && saturationAdjustment == 0. && brightnessAdjustment == 0.) {
+    if ( (hueRotation == 0.) && (saturationAdjustment == 0.) && (brightnessAdjustment == 0.) ) {
         identityClip = _srcClip;
+
         return true;
     }
 
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(time, maskInvert);
@@ -1351,40 +1413,44 @@ HSVToolPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip,
             OfxRectI maskRoD;
             OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                 identityClip = _srcClip;
+
                 return true;
             }
         }
     }
 
     return false;
-}
+} // HSVToolPlugin::isIdentity
 
 bool
-HSVToolPlugin::computeWindow(const OFX::Image* srcImg, double time, OfxRectI *analysisWindow)
+HSVToolPlugin::computeWindow(const OFX::Image* srcImg,
+                             double time,
+                             OfxRectI *analysisWindow)
 {
     OfxRectD regionOfInterest;
     bool enableRectangle = _enableRectangle->getValueAtTime(time);
+
     if (!enableRectangle && _srcClip) {
         return false; // no analysis in this case
         /*
-        // use the src region of definition as rectangle, but avoid infinite rectangle
-        regionOfInterest = _srcClip->getRegionOfDefinition(time);
-        OfxPointD size = getProjectSize();
-        OfxPointD offset = getProjectOffset();
-        if (regionOfInterest.x1 <= kOfxFlagInfiniteMin) {
+           // use the src region of definition as rectangle, but avoid infinite rectangle
+           regionOfInterest = _srcClip->getRegionOfDefinition(time);
+           OfxPointD size = getProjectSize();
+           OfxPointD offset = getProjectOffset();
+           if (regionOfInterest.x1 <= kOfxFlagInfiniteMin) {
             regionOfInterest.x1 = offset.x;
-        }
-        if (regionOfInterest.x2 >= kOfxFlagInfiniteMax) {
+           }
+           if (regionOfInterest.x2 >= kOfxFlagInfiniteMax) {
             regionOfInterest.x2 = offset.x + size.x;
-        }
-        if (regionOfInterest.y1 <= kOfxFlagInfiniteMin) {
+           }
+           if (regionOfInterest.y1 <= kOfxFlagInfiniteMin) {
             regionOfInterest.y1 = offset.y;
-        }
-        if (regionOfInterest.y2 >= kOfxFlagInfiniteMax) {
+           }
+           if (regionOfInterest.y2 >= kOfxFlagInfiniteMax) {
             regionOfInterest.y2 = offset.y + size.y;
-        }
+           }
          */
     } else {
         _btmLeft->getValueAtTime(time, regionOfInterest.x1, regionOfInterest.y1);
@@ -1396,17 +1462,20 @@ HSVToolPlugin::computeWindow(const OFX::Image* srcImg, double time, OfxRectI *an
                              srcImg->getRenderScale(),
                              srcImg->getPixelAspectRatio(),
                              analysisWindow);
+
     return OFX::Coords::rectIntersection(*analysisWindow, srcImg->getBounds(), analysisWindow);
 }
 
 void
-HSVToolPlugin::setSrcFromRectangle(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow)
+HSVToolPlugin::setSrcFromRectangle(const OFX::Image* srcImg,
+                                   double time,
+                                   const OfxRectI &analysisWindow)
 {
     double hmean;
     HSVColor hsvmin, hsvmax;
-
     OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
-    assert(srcComponents == OFX::ePixelComponentAlpha ||srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA);
+
+    assert(srcComponents == OFX::ePixelComponentAlpha || srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA);
     if (srcComponents == OFX::ePixelComponentAlpha) {
         setSrcFromRectangleComponents<1>(srcImg, time, analysisWindow, &hmean, &hsvmin, &hsvmax);
     } else if (srcComponents == OFX::ePixelComponentRGBA) {
@@ -1418,7 +1487,7 @@ HSVToolPlugin::setSrcFromRectangle(const OFX::Image* srcImg, double time, const 
         OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 
-    if (abort()) {
+    if ( abort() ) {
         return;
     }
 
@@ -1432,40 +1501,45 @@ HSVToolPlugin::setSrcFromRectangle(const OFX::Image* srcImg, double time, const 
     double tor, tog, tob;
     _dstColor->getValueAtTime(time, tor, tog, tob);
     float toh, tos, tov;
-    OFX::Color::rgb_to_hsv((float)tor, (float)tog, (float)tob, &toh, &tos, &tov);
-    double dh = normalizeAngleSigned(toh * 360./OFXS_HUE_CIRCLE - h);
+    OFX::Color::rgb_to_hsv( (float)tor, (float)tog, (float)tob, &toh, &tos, &tov );
+    double dh = normalizeAngleSigned(toh * 360. / OFXS_HUE_CIRCLE - h);
     // range is from mean+sdev*(GAUSSIAN_RANGE-GAUSSIAN_ROLLOFF) to mean+sdev*(GAUSSIAN_RANGE+GAUSSIAN_ROLLOFF)
     beginEditBlock("setSrcFromRectangle");
-    _srcColor->setValue(fround(r, 4), fround(g, 4), fround(b, 4));
-    _hueRange->setValue(ffloor(hsvmin.h, 2), fceil(hsvmax.h, 2));
+    _srcColor->setValue( fround(r, 4), fround(g, 4), fround(b, 4) );
+    _hueRange->setValue( ffloor(hsvmin.h, 2), fceil(hsvmax.h, 2) );
     double hrange = hsvmax.h - hsvmin.h;
     if (hrange < 0) {
         hrange += 360.;
     }
-    double hrolloff = std::min(hrange*DEFAULT_RECTANGLE_ROLLOFF, (360-hrange)/2);
-    _hueRangeRolloff->setValue(ffloor(hrolloff, 2));
+    double hrolloff = std::min(hrange * DEFAULT_RECTANGLE_ROLLOFF, (360 - hrange) / 2);
+    _hueRangeRolloff->setValue( ffloor(hrolloff, 2) );
     if (tov != 0.) { // no need to rotate if target color is black
-        _hueRotation->setValue(fround(dh, 2));
+        _hueRotation->setValue( fround(dh, 2) );
     }
-    _saturationRange->setValue(ffloor(hsvmin.s, 4), fceil(hsvmax.s, 4));
-    _saturationRangeRolloff->setValue(ffloor((hsvmax.s - hsvmin.s)*DEFAULT_RECTANGLE_ROLLOFF, 4));
+    _saturationRange->setValue( ffloor(hsvmin.s, 4), fceil(hsvmax.s, 4) );
+    _saturationRangeRolloff->setValue( ffloor( (hsvmax.s - hsvmin.s) * DEFAULT_RECTANGLE_ROLLOFF, 4 ) );
     if (tov != 0.) { // no need to adjust saturation if target color is black
-        _saturationAdjustment->setValue(fround(tos - s, 4));
+        _saturationAdjustment->setValue( fround(tos - s, 4) );
     }
-    _brightnessRange->setValue(ffloor(hsvmin.v, 4), fceil(hsvmax.v, 4));
-    _brightnessRangeRolloff->setValue(ffloor((hsvmax.v - hsvmin.v)*DEFAULT_RECTANGLE_ROLLOFF, 4));
-    _brightnessAdjustment->setValue(fround(tov - v, 4));
+    _brightnessRange->setValue( ffloor(hsvmin.v, 4), fceil(hsvmax.v, 4) );
+    _brightnessRangeRolloff->setValue( ffloor( (hsvmax.v - hsvmin.v) * DEFAULT_RECTANGLE_ROLLOFF, 4 ) );
+    _brightnessAdjustment->setValue( fround(tov - v, 4) );
     endEditBlock();
-}
-
+} // HSVToolPlugin::setSrcFromRectangle
 
 /* set up and run a processor */
 void
-HSVToolPlugin::setSrcFromRectangleProcess(HueMeanProcessorBase &huemeanprocessor, HSVRangeProcessorBase &hsvrangeprocessor, const OFX::Image* srcImg, double /*time*/, const OfxRectI &analysisWindow, double *hmean, HSVColor *hsvmin, HSVColor *hsvmax)
+HSVToolPlugin::setSrcFromRectangleProcess(HueMeanProcessorBase &huemeanprocessor,
+                                          HSVRangeProcessorBase &hsvrangeprocessor,
+                                          const OFX::Image* srcImg,
+                                          double /*time*/,
+                                          const OfxRectI &analysisWindow,
+                                          double *hmean,
+                                          HSVColor *hsvmin,
+                                          HSVColor *hsvmax)
 {
-
     // set the images
-    huemeanprocessor.setDstImg(const_cast<OFX::Image*>(srcImg)); // not a bug: we only set dst
+    huemeanprocessor.setDstImg( const_cast<OFX::Image*>(srcImg) ); // not a bug: we only set dst
 
     // set the render window
     huemeanprocessor.setRenderWindow(analysisWindow);
@@ -1473,14 +1547,14 @@ HSVToolPlugin::setSrcFromRectangleProcess(HueMeanProcessorBase &huemeanprocessor
     // Call the base class process member, this will call the derived templated process code
     huemeanprocessor.process();
 
-    if (abort()) {
+    if ( abort() ) {
         return;
     }
 
     *hmean = huemeanprocessor.getResult();
 
     // set the images
-    hsvrangeprocessor.setDstImg(const_cast<OFX::Image*>(srcImg)); // not a bug: we only set dst
+    hsvrangeprocessor.setDstImg( const_cast<OFX::Image*>(srcImg) ); // not a bug: we only set dst
 
     // set the render window
     hsvrangeprocessor.setRenderWindow(analysisWindow);
@@ -1490,29 +1564,30 @@ HSVToolPlugin::setSrcFromRectangleProcess(HueMeanProcessorBase &huemeanprocessor
     // Call the base class process member, this will call the derived templated process code
     hsvrangeprocessor.process();
 
-    if (abort()) {
+    if ( abort() ) {
         return;
     }
     hsvrangeprocessor.getResults(hsvmin, hsvmax);
 }
 
-
 void
-HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &paramName)
+HSVToolPlugin::changedParam(const InstanceChangedArgs &args,
+                            const std::string &paramName)
 {
     const double time = args.time;
-    if (paramName == kParamSrcColor && args.reason == OFX::eChangeUserEdit) {
+
+    if ( (paramName == kParamSrcColor) && (args.reason == OFX::eChangeUserEdit) ) {
         // - when setting srcColor: compute hueRange, satRange, valRange (as empty ranges), set rolloffs to (50,0.3,0.3)
         double r, g, b;
         _srcColor->getValueAtTime(time, r, g, b);
         float h, s, v;
-        OFX::Color::rgb_to_hsv((float)r, (float)g, (float)b, &h, &s, &v);
-        h *= 360./OFXS_HUE_CIRCLE;
+        OFX::Color::rgb_to_hsv( (float)r, (float)g, (float)b, &h, &s, &v );
+        h *= 360. / OFXS_HUE_CIRCLE;
         double tor, tog, tob;
         _dstColor->getValueAtTime(time, tor, tog, tob);
         float toh, tos, tov;
-        OFX::Color::rgb_to_hsv((float)tor, (float)tog, (float)tob, &toh, &tos, &tov);
-        toh *= 360./OFXS_HUE_CIRCLE;
+        OFX::Color::rgb_to_hsv( (float)tor, (float)tog, (float)tob, &toh, &tos, &tov );
+        toh *= 360. / OFXS_HUE_CIRCLE;
         double dh = normalizeAngleSigned(toh - h);
         beginEditBlock("setSrc");
         _hueRange->setValue(h, h);
@@ -1539,12 +1614,12 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
         _setSrcFromRectangle->setEnabled(enableRectangle);
         _setSrcFromRectangle->setIsSecret(!enableRectangle);
         _srcColor->setEnabled(!enableRectangle);
-    } else if (paramName == kParamSetSrcFromRectangle && args.reason == OFX::eChangeUserEdit) {
-        std::auto_ptr<OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                      _srcClip->fetchImage(args.time) : 0);
-        if (src.get()) {
-            if (src->getRenderScale().x != args.renderScale.x ||
-                src->getRenderScale().y != args.renderScale.y) {
+    } else if ( (paramName == kParamSetSrcFromRectangle) && (args.reason == OFX::eChangeUserEdit) ) {
+        std::auto_ptr<OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                       _srcClip->fetchImage(args.time) : 0 );
+        if ( src.get() ) {
+            if ( (src->getRenderScale().x != args.renderScale.x) ||
+                 ( src->getRenderScale().y != args.renderScale.y) ) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
@@ -1560,18 +1635,18 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
 #             endif
             }
         }
-    } else if (paramName == kParamDstColor && args.reason == OFX::eChangeUserEdit) {
+    } else if ( (paramName == kParamDstColor) && (args.reason == OFX::eChangeUserEdit) ) {
         // - when setting dstColor: compute hueRotation, satAdjust and valAdjust
         double r, g, b;
         _srcColor->getValueAtTime(time, r, g, b);
         float h, s, v;
-        OFX::Color::rgb_to_hsv((float)r, (float)g, (float)b, &h, &s, &v);
-        h *= 360./OFXS_HUE_CIRCLE;
+        OFX::Color::rgb_to_hsv( (float)r, (float)g, (float)b, &h, &s, &v );
+        h *= 360. / OFXS_HUE_CIRCLE;
         double tor, tog, tob;
         _dstColor->getValueAtTime(time, tor, tog, tob);
         float toh, tos, tov;
-        OFX::Color::rgb_to_hsv((float)tor, (float)tog, (float)tob, &toh, &tos, &tov);
-        toh *= 360./OFXS_HUE_CIRCLE;
+        OFX::Color::rgb_to_hsv( (float)tor, (float)tog, (float)tob, &toh, &tos, &tov );
+        toh *= 360. / OFXS_HUE_CIRCLE;
         double dh = normalizeAngleSigned(toh - h);
         beginEditBlock("setDst");
         if (tov != 0.) { // no need to adjust hue or saturation if target color is black
@@ -1580,21 +1655,23 @@ HSVToolPlugin::changedParam(const InstanceChangedArgs &args, const std::string &
         }
         _brightnessAdjustment->setValue(tov - v);
         endEditBlock();
-    } else if (paramName == kParamPremult && args.reason == OFX::eChangeUserEdit) {
+    } else if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     }
-}
+} // HSVToolPlugin::changedParam
 
 void
-HSVToolPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+HSVToolPlugin::changedClip(const InstanceChangedArgs &args,
+                           const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName &&
-        _srcClip && _srcClip->isConnected() &&
-        !_premultChanged->getValue() &&
-        args.reason == OFX::eChangeUserEdit) {
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
+         _srcClip && _srcClip->isConnected() &&
+         !_premultChanged->getValue() &&
+         ( args.reason == OFX::eChangeUserEdit) ) {
         if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
             _premult->setValue(false);
-        } else switch (_srcClip->getPreMultiplication()) {
+        } else {
+            switch ( _srcClip->getPreMultiplication() ) {
             case eImageOpaque:
                 _premult->setValue(false);
                 break;
@@ -1604,10 +1681,10 @@ HSVToolPlugin::changedClip(const InstanceChangedArgs &args, const std::string &c
             case eImageUnPreMultiplied:
                 _premult->setValue(false);
                 break;
+            }
         }
     }
 }
-
 
 /* Override the clip preferences */
 void
@@ -1615,6 +1692,7 @@ HSVToolPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     // set the components of _dstClip
     OutputAlphaEnum outputAlpha = (OutputAlphaEnum)_outputAlpha->getValue();
+
     if (outputAlpha != eOutputAlphaSource) {
         // output must be RGBA, output image is unpremult
         clipPreferences.setClipComponents(*_dstClip, ePixelComponentRGBA);
@@ -1623,14 +1701,15 @@ HSVToolPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     }
 }
 
-
-class HSVToolInteract : public RectangleInteract
+class HSVToolInteract
+    : public RectangleInteract
 {
 public:
 
-    HSVToolInteract(OfxInteractHandle handle, OFX::ImageEffect* effect)
-    : RectangleInteract(handle,effect)
-    , _enableRectangle(0)
+    HSVToolInteract(OfxInteractHandle handle,
+                    OFX::ImageEffect* effect)
+        : RectangleInteract(handle, effect)
+        , _enableRectangle(0)
     {
         _enableRectangle = effect->fetchBooleanParam(kParamEnableRectangle);
         addParamToSlaveTo(_enableRectangle);
@@ -1639,34 +1718,50 @@ public:
 private:
 
     // overridden functions from OFX::Interact to do things
-    virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL {
+    virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL
+    {
         bool enableRectangle = _enableRectangle->getValueAtTime(args.time);
+
         if (enableRectangle) {
             return RectangleInteract::draw(args);
         }
+
         return false;
     }
-    virtual bool penMotion(const OFX::PenArgs &args) OVERRIDE FINAL {
+
+    virtual bool penMotion(const OFX::PenArgs &args) OVERRIDE FINAL
+    {
         bool enableRectangle = _enableRectangle->getValueAtTime(args.time);
+
         if (enableRectangle) {
             return RectangleInteract::penMotion(args);
         }
+
         return false;
     }
-    virtual bool penDown(const OFX::PenArgs &args) OVERRIDE FINAL {
+
+    virtual bool penDown(const OFX::PenArgs &args) OVERRIDE FINAL
+    {
         bool enableRectangle = _enableRectangle->getValueAtTime(args.time);
+
         if (enableRectangle) {
             return RectangleInteract::penDown(args);
         }
+
         return false;
     }
-    virtual bool penUp(const OFX::PenArgs &args) OVERRIDE FINAL {
+
+    virtual bool penUp(const OFX::PenArgs &args) OVERRIDE FINAL
+    {
         bool enableRectangle = _enableRectangle->getValueAtTime(args.time);
+
         if (enableRectangle) {
             return RectangleInteract::penUp(args);
         }
+
         return false;
     }
+
     //virtual bool keyDown(const OFX::KeyArgs &args) OVERRIDE;
     //virtual bool keyUp(const OFX::KeyArgs & args) OVERRIDE;
     //virtual void loseFocus(const FocusArgs &args) OVERRIDE FINAL;
@@ -1675,7 +1770,10 @@ private:
     OFX::BooleanParam* _enableRectangle;
 };
 
-class HSVToolOverlayDescriptor : public DefaultEffectOverlayDescriptor<HSVToolOverlayDescriptor, HSVToolInteract> {};
+class HSVToolOverlayDescriptor
+    : public DefaultEffectOverlayDescriptor<HSVToolOverlayDescriptor, HSVToolInteract>
+{
+};
 
 mDeclarePluginFactory(HSVToolPluginFactory, {}, {});
 
@@ -1693,7 +1791,7 @@ HSVToolPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
-    
+
     // set a few flags
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
@@ -1711,23 +1809,25 @@ HSVToolPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 void
-HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                        OFX::ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
-    
+
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->setSupportsTiles(kSupportsTiles);
-    
+
     ClipDescriptor *maskClip = (context == eContextPaint) ? desc.defineClip("Brush") : desc.defineClip("Mask");
     maskClip->addSupportedComponent(ePixelComponentAlpha);
     maskClip->setTemporalClipAccess(false);
@@ -1739,7 +1839,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    
+
     {
         GroupParamDescriptor *group = desc.defineGroupParam(kGroupColorReplacement);
         if (group) {
@@ -2106,7 +2206,7 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
         param->appendOption(kParamOutputAlphaOptionSaturationBrightness, kParamOutputAlphaOptionSaturationBrightnessHint);
         assert(param->getNOptions() == (int)eOutputAlphaAll);
         param->appendOption(kParamOutputAlphaOptionAll, kParamOutputAlphaOptionAllHint);
-        param->setDefault((int)eOutputAlphaHue);
+        param->setDefault( (int)eOutputAlphaHue );
         param->setAnimates(false);
         desc.addClipPreferencesSlaveParam(*param);
         if (page) {
@@ -2127,14 +2227,14 @@ HSVToolPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::C
             page->addChild(*param);
         }
     }
-}
+} // HSVToolPluginFactory::describeInContext
 
 OFX::ImageEffect*
-HSVToolPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+HSVToolPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                     OFX::ContextEnum /*context*/)
 {
     return new HSVToolPlugin(handle);
 }
-
 
 static HSVToolPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

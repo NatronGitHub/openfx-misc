@@ -40,13 +40,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "Despill"
 #define kPluginGrouping "Keyer"
 #define kPluginDescription "Remove the unwanted color contamination of the foreground (spill) " \
-"caused by the reflected color of the bluescreen/greenscreen.\n" \
-"While a despill operation often only removes green (for greenscreens) this despill also enables adding red and blue to the spill area. " \
-"A lot of Keyers already have implemented their own despill methods. " \
-"However, in a lot of cases it is useful to seperate the keying process in 2 tasks to get more control over the final result. " \
-"Normally these tasks are the generation of the alpha mask and the spill correction. " \
-"The generated alpha Mask (Key) is then used to merge the despilled forground over the new background.\n" \
-"This effect is based on the unspill operations described in section 4.5 of \"Digital Compositing for Film and Video\" by Steve Wright (Focal Press)."
+    "caused by the reflected color of the bluescreen/greenscreen.\n" \
+    "While a despill operation often only removes green (for greenscreens) this despill also enables adding red and blue to the spill area. " \
+    "A lot of Keyers already have implemented their own despill methods. " \
+    "However, in a lot of cases it is useful to seperate the keying process in 2 tasks to get more control over the final result. " \
+    "Normally these tasks are the generation of the alpha mask and the spill correction. " \
+    "The generated alpha Mask (Key) is then used to merge the despilled forground over the new background.\n" \
+    "This effect is based on the unspill operations described in section 4.5 of \"Digital Compositing for Film and Video\" by Steve Wright (Focal Press)."
 
 #define kPluginIdentifier "net.sf.openfx.Despill"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -68,27 +68,26 @@ enum ScreenTypeEnum
 {
     eScreenTypeGreenScreen,
     eScreenTypeBlueScreen
-
 };
 
 #define kParamSpillMapMix "spillmapMix"
 #define kParamSpillMapMixLabel "Spillmap Mix"
 #define kParamSpillMapMixHint "This value controls the generation of the spillmap.\n" \
-"The spillmap decides in which areas the spill will be removed.\n" \
-"To calculate this map the two none screen colors are combined according to this value and then subtracted from the screen color.\n" \
-"Greenscreen:\n" \
-"0: limit green by blue\n" \
-"0,5: limit green by the average of red and blue\n" \
-"1:  limit green by red\n" \
-"Bluescreen:\n" \
-"0: limit blue by green\n" \
-"0,5: limit blue by the average of red and green\n" \
-"1:  limit blue by red\n" \
+    "The spillmap decides in which areas the spill will be removed.\n" \
+    "To calculate this map the two none screen colors are combined according to this value and then subtracted from the screen color.\n" \
+    "Greenscreen:\n" \
+    "0: limit green by blue\n" \
+    "0,5: limit green by the average of red and blue\n" \
+    "1:  limit green by red\n" \
+    "Bluescreen:\n" \
+    "0: limit blue by green\n" \
+    "0,5: limit blue by the average of red and green\n" \
+    "1:  limit blue by red\n" \
 
 #define kParamExpandSpillMap "expandSpillmap"
 #define kParamExpandSpillMapLabel "Expand Spillmap"
 #define kParamExpandSpillMapHint "This will expand the spillmap to get rid of still remaining spill.\n" \
-"It works by lowering the values that will be subtracted from green or blue."
+    "It works by lowering the values that will be subtracted from green or blue."
 
 #define kParamOutputSpillMap "outputSpillMap"
 #define kParamOutputSpillMapLabel "Spillmap to Alpha"
@@ -111,7 +110,8 @@ enum ScreenTypeEnum
 #define kParamBrightnessHint "Controls the brightness of the spill while trying to preserve the colors."
 
 
-class DespillProcessorBase : public OFX::ImageProcessor
+class DespillProcessorBase
+    : public OFX::ImageProcessor
 {
 protected:
     const OFX::Image *_srcImg;
@@ -120,37 +120,48 @@ protected:
     bool _outputToAlpha;
     double _spillMix;
     double _spillExpand;
-    double _redScale,_greenScale,_blueScale;
+    double _redScale, _greenScale, _blueScale;
     double _brightness;
     double _mix;
+
 public:
-    
+
     DespillProcessorBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _srcImg(0)
-    , _maskImg(0)
-    , _maskInvert(false)
-    , _outputToAlpha(false)
-    , _spillMix(0)
-    , _spillExpand(0)
-    , _redScale(0)
-    , _greenScale(0)
-    , _blueScale(0)
-    , _brightness(0)
-    , _mix(0)
+        : OFX::ImageProcessor(instance)
+        , _srcImg(0)
+        , _maskImg(0)
+        , _maskInvert(false)
+        , _outputToAlpha(false)
+        , _spillMix(0)
+        , _spillExpand(0)
+        , _redScale(0)
+        , _greenScale(0)
+        , _blueScale(0)
+        , _brightness(0)
+        , _mix(0)
     {
     }
-    
-    void setMaskImg(const OFX::Image* m, bool maskInvert) {
+
+    void setMaskImg(const OFX::Image* m,
+                    bool maskInvert)
+    {
         _maskImg = m;
         _maskInvert = maskInvert;
     }
-    
-    void setSrcImg(const OFX::Image *v) {
+
+    void setSrcImg(const OFX::Image *v)
+    {
         _srcImg = v;
     }
-    
-    void setValues(double spillMix, double spillExpand, double red, double green, double blue, double brightness, double mix, bool outputToAlpha)
+
+    void setValues(double spillMix,
+                   double spillExpand,
+                   double red,
+                   double green,
+                   double blue,
+                   double brightness,
+                   double mix,
+                   bool outputToAlpha)
     {
         _spillMix = spillMix;
         _spillExpand = spillExpand;
@@ -161,36 +172,36 @@ public:
         _mix = mix;
         _outputToAlpha = outputToAlpha;
     }
-    
+
 private:
 };
 
 
-
 template <class PIX, int nComponents, int maxValue, ScreenTypeEnum screen>
-class DespillProcessor : public DespillProcessorBase
+class DespillProcessor
+    : public DespillProcessorBase
 {
 public:
     DespillProcessor(OFX::ImageEffect &instance)
-    : DespillProcessorBase(instance)
+        : DespillProcessorBase(instance)
     {
     }
-    
+
 private:
-    
+
     void multiThreadProcessImages(OfxRectI procWindow)
     {
-        
         float tmpPix[4];
+
         assert(nComponents == 3 || nComponents == 4);
         assert(_dstImg);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
-            
+
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-            
+
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
                 double spillmap;
@@ -200,26 +211,26 @@ private:
                     tmpPix[2] = (double)srcPix[2] / maxValue;
                     tmpPix[3] = (double)srcPix[3] / maxValue;
                     if (screen == eScreenTypeGreenScreen) {
-                        spillmap = std::max(tmpPix[1] - (tmpPix[0] * _spillMix + tmpPix[2] * (1 - _spillMix)) * (1 - _spillExpand), 0.);
+                        spillmap = std::max(tmpPix[1] - ( tmpPix[0] * _spillMix + tmpPix[2] * (1 - _spillMix) ) * (1 - _spillExpand), 0.);
                     } else {
-                        spillmap = std::max(tmpPix[2] - (tmpPix[0] * _spillMix + tmpPix[1] * (1 - _spillMix)) * (1 - _spillExpand), 0.);
+                        spillmap = std::max(tmpPix[2] - ( tmpPix[0] * _spillMix + tmpPix[1] * (1 - _spillMix) ) * (1 - _spillExpand), 0.);
                     }
 
-                    tmpPix[0] = std::max(tmpPix[0] + spillmap * _redScale + _brightness * spillmap,0.);
-                    tmpPix[1] = std::max(tmpPix[1] + spillmap * _greenScale + _brightness * spillmap,0.) ;
-                    tmpPix[2] = std::max(tmpPix[2] + spillmap * _blueScale + _brightness * spillmap,0.);
+                    tmpPix[0] = std::max(tmpPix[0] + spillmap * _redScale + _brightness * spillmap, 0.);
+                    tmpPix[1] = std::max(tmpPix[1] + spillmap * _greenScale + _brightness * spillmap, 0.);
+                    tmpPix[2] = std::max(tmpPix[2] + spillmap * _blueScale + _brightness * spillmap, 0.);
                 } else {
                     tmpPix[0] = tmpPix[1] = tmpPix[2] = tmpPix[3] = 0.;
                     spillmap = 0.;
                 }
-                
+
                 ofxsMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, x, y, srcPix, _maskImg != 0, _maskImg, _mix, _maskInvert, dstPix);
-              
+
                 if (_outputToAlpha) {
                     assert(nComponents == 4);
-                    dstPix[3] = ofxsClampIfInt<PIX,maxValue>(spillmap * maxValue, 0, maxValue);
+                    dstPix[3] = ofxsClampIfInt<PIX, maxValue>(spillmap * maxValue, 0, maxValue);
                 }
-               
+
                 // increment the dst pixel
                 dstPix += nComponents;
             }
@@ -235,30 +246,29 @@ class DespillPlugin
 public:
     /** @brief ctor */
     DespillPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _maskClip(0)
-    , _screenType(0)
-    , _spillMix(0)
-    , _expandSpill(0)
-    , _outputToAlpha(0)
-    , _redScale(0)
-    , _greenScale(0)
-    , _blueScale(0)
-    , _brightness(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _maskClip(0)
+        , _screenType(0)
+        , _spillMix(0)
+        , _expandSpill(0)
+        , _outputToAlpha(0)
+        , _redScale(0)
+        , _greenScale(0)
+        , _blueScale(0)
+        , _brightness(0)
     {
-       
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
-                            _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
+                             _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGBA)));
+        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
+                               _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
-        
+
         _screenType = fetchChoiceParam(kParamScreenType);
         _spillMix = fetchDoubleParam(kParamSpillMapMix);
         _expandSpill = fetchDoubleParam(kParamExpandSpillMap);
@@ -267,7 +277,7 @@ public:
         _greenScale = fetchDoubleParam(kParamScaleGreen);
         _blueScale = fetchDoubleParam(kParamScaleBlue);
         _brightness = fetchDoubleParam(kParamBrightness);
-        
+
         _mix = fetchDoubleParam(kParamMix);
         _maskApply = paramExists(kParamMaskApply) ? fetchBooleanParam(kParamMaskApply) : 0;
         _maskInvert = fetchBooleanParam(kParamMaskInvert);
@@ -319,60 +329,60 @@ private:
 /* set up and run a processor */
 void
 DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
-                                const OFX::RenderArguments &args)
+                               const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+
+    if ( !dst.get() ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to fetch output image");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(args.time) : 0 );
 
-    if (src.get()) {
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+    if ( src.get() ) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         //OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth/* || srcComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
+        if (srcBitDepth != dstBitDepth /* || srcComponents != dstComponents*/) { // Keyer outputs RGBA but may have RGB input
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     } else {
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to fetch source image");
         OFX::throwSuiteStatusException(kOfxStatFailed);
-
     }
-    
 
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
-    if (mask.get()) {
-        if (mask->getRenderScale().x != args.renderScale.x ||
-            mask->getRenderScale().y != args.renderScale.y ||
-            (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
+    if ( mask.get() ) {
+        if ( (mask->getRenderScale().x != args.renderScale.x) ||
+             ( mask->getRenderScale().y != args.renderScale.y) ||
+             ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    
-    
+
+
     // set the images
     if (doMasking) {
         bool maskInvert;
@@ -380,32 +390,31 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
         processor.setMaskImg(mask.get(), maskInvert);
     }
 
-    processor.setDstImg(dst.get());
-    processor.setSrcImg(src.get());
-    
-    
+    processor.setDstImg( dst.get() );
+    processor.setSrcImg( src.get() );
+
+
     double spillMix;
     _spillMix->getValue(spillMix);
     double spillExpand;
     _expandSpill->getValue(spillExpand);
     bool outputAlpha;
     _outputToAlpha->getValue(outputAlpha);
-    
-    double redScale,greenScale,blueScale,brightNess,mix;
+
+    double redScale, greenScale, blueScale, brightNess, mix;
     _redScale->getValue(redScale);
     _greenScale->getValue(greenScale);
     _blueScale->getValue(blueScale);
     _brightness->getValue(brightNess);
     _mix->getValue(mix);
-    
-    
-    if (outputAlpha && dst->getPixelComponentCount() != 4) {
+
+
+    if ( outputAlpha && (dst->getPixelComponentCount() != 4) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
-
     }
-    
-    
+
+
     processor.setValues(spillMix, spillExpand, redScale, greenScale, blueScale, brightNess, mix, outputAlpha);
 
     // set the render window
@@ -413,7 +422,7 @@ DespillPlugin::setupAndProcess(DespillProcessorBase &processor,
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
-}
+} // DespillPlugin::setupAndProcess
 
 // the overridden render function
 void
@@ -421,6 +430,7 @@ DespillPlugin::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
+
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderForComponents<4>(args);
@@ -439,20 +449,21 @@ void
 DespillPlugin::renderForComponents(const OFX::RenderArguments &args)
 {
     OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+
     switch (dstBitDepth) {
-        case OFX::eBitDepthUByte:
-            renderForBitDepth<unsigned char, nComponents, 255>(args);
-            break;
+    case OFX::eBitDepthUByte:
+        renderForBitDepth<unsigned char, nComponents, 255>(args);
+        break;
 
-        case OFX::eBitDepthUShort:
-            renderForBitDepth<unsigned short, nComponents, 65535>(args);
-            break;
+    case OFX::eBitDepthUShort:
+        renderForBitDepth<unsigned short, nComponents, 65535>(args);
+        break;
 
-        case OFX::eBitDepthFloat:
-            renderForBitDepth<float, nComponents, 1>(args);
-            break;
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    case OFX::eBitDepthFloat:
+        renderForBitDepth<float, nComponents, 1>(args);
+        break;
+    default:
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
@@ -461,28 +472,28 @@ void
 DespillPlugin::renderForBitDepth(const OFX::RenderArguments &args)
 {
     ScreenTypeEnum s = (ScreenTypeEnum)_screenType->getValue();
+
     switch (s) {
-        case eScreenTypeGreenScreen: {
-            DespillProcessor<PIX, nComponents, maxValue, eScreenTypeGreenScreen> fred(*this);
-            setupAndProcess(fred, args);
-        }   break;
-            
-        case eScreenTypeBlueScreen: {
-            DespillProcessor<PIX, nComponents, maxValue, eScreenTypeBlueScreen> fred(*this);
-            setupAndProcess(fred, args);
-        }   break;
+    case eScreenTypeGreenScreen: {
+        DespillProcessor<PIX, nComponents, maxValue, eScreenTypeGreenScreen> fred(*this);
+        setupAndProcess(fred, args);
+        break;
     }
-    
-    
+
+    case eScreenTypeBlueScreen: {
+        DespillProcessor<PIX, nComponents, maxValue, eScreenTypeBlueScreen> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    }
 }
-
-
 
 /* Override the clip preferences */
 void
 DespillPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 {
     bool createAlpha;
+
     _outputToAlpha->getValue(createAlpha);
     if (createAlpha) {
         clipPreferences.setClipComponents(*_dstClip, OFX::ePixelComponentRGBA);
@@ -490,8 +501,6 @@ DespillPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 }
 
 mDeclarePluginFactory(DespillPluginFactory, {}, {} );
-
-
 void
 DespillPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -526,17 +535,18 @@ DespillPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 
 void
 DespillPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
-                                         ContextEnum context)
+                                        ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
-    
+
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
@@ -565,12 +575,12 @@ DespillPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         param->appendOption(kParamScreenTypeOptionGreen);
         assert(param->getNOptions() == eScreenTypeBlueScreen);
         param->appendOption(kParamScreenTypeOptionBlue);
-        param->setDefault((int)eScreenTypeGreenScreen);
+        param->setDefault( (int)eScreenTypeGreenScreen );
         if (page) {
             page->addChild(*param);
         }
     }
-    
+
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSpillMapMix);
         param->setLabel(kParamSpillMapMixLabel);
@@ -581,7 +591,7 @@ DespillPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    
+
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamExpandSpillMap);
         param->setLabel(kParamExpandSpillMapLabel);
@@ -592,7 +602,7 @@ DespillPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    
+
     {
         BooleanParamDescriptor *param = desc.defineBooleanParam(kParamOutputSpillMap);
         param->setLabel(kParamOutputSpillMapLabel);
@@ -618,7 +628,7 @@ DespillPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    
+
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamScaleGreen);
         param->setLabel(kParamScaleGreenLabel);
@@ -630,7 +640,7 @@ DespillPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    
+
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamScaleBlue);
         param->setLabel(kParamScaleBlueLabel);
@@ -643,7 +653,7 @@ DespillPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-    
+
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamBrightness);
         param->setLabel(kParamBrightnessLabel);
@@ -656,18 +666,16 @@ DespillPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         }
     }
 
-    
+
     ofxsMaskMixDescribeParams(desc, page);
-}
+} // DespillPluginFactory::describeInContext
 
 ImageEffect*
 DespillPluginFactory::createInstance(OfxImageEffectHandle handle,
-                                      ContextEnum /*context*/)
+                                     ContextEnum /*context*/)
 {
-
     return new DespillPlugin(handle);
 }
-
 
 static DespillPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

@@ -46,14 +46,14 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "GuidedCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-"Blur image, with the Guided Image filter.\n" \
-"The algorithm is described in: " \
-"He et al., \"Guided Image Filtering,\" " \
-"http://research.microsoft.com/en-us/um/people/kahe/publications/pami12guidedfilter.pdf\n" \
-"Uses the 'blur_guided' function from the CImg library.\n" \
-"CImg is a free, open-source library distributed under the CeCILL-C " \
-"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-"It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "Blur image, with the Guided Image filter.\n" \
+    "The algorithm is described in: " \
+    "He et al., \"Guided Image Filtering,\" " \
+    "http://research.microsoft.com/en-us/um/people/kahe/publications/pami12guidedfilter.pdf\n" \
+    "Uses the 'blur_guided' function from the CImg library.\n" \
+    "CImg is a free, open-source library distributed under the CeCILL-C " \
+    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgGuided"
 // History:
@@ -97,19 +97,21 @@ struct CImgGuidedParams
     double epsilon;
 };
 
-class CImgGuidedPlugin : public CImgFilterPluginHelper<CImgGuidedParams,false>
+class CImgGuidedPlugin
+    : public CImgFilterPluginHelper<CImgGuidedParams, false>
 {
 public:
 
     CImgGuidedPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgGuidedParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
+        : CImgFilterPluginHelper<CImgGuidedParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
     {
         _radius  = fetchIntParam(kParamRadius);
         _epsilon  = fetchDoubleParam(kParamEpsilon);
         assert(_radius && _epsilon);
     }
 
-    virtual void getValuesAtTime(double time, CImgGuidedParams& params) OVERRIDE FINAL
+    virtual void getValuesAtTime(double time,
+                                 CImgGuidedParams& params) OVERRIDE FINAL
     {
         _radius->getValueAtTime(time, params.radius);
         _epsilon->getValueAtTime(time, params.epsilon);
@@ -117,16 +119,24 @@ public:
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgGuidedParams& params, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI& rect,
+                        const OfxPointD& renderScale,
+                        const CImgGuidedParams& params,
+                        OfxRectI* roi) OVERRIDE FINAL
     {
         int delta_pix = (int)std::ceil(params.radius * renderScale.x);
+
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args, const CImgGuidedParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &args,
+                        const CImgGuidedParams& params,
+                        int /*x1*/,
+                        int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
@@ -134,10 +144,11 @@ public:
             return;
         }
         // blur_guided was introduced in CImg 1.6.0 on Thu Oct 30 11:47:06 2014 +0100
-        cimg.blur_guided(cimg, (float)(params.radius * args.renderScale.x), (float)(params.epsilon*params.epsilon));
+        cimg.blur_guided( cimg, (float)(params.radius * args.renderScale.x), (float)(params.epsilon * params.epsilon) );
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgGuidedParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+                            const CImgGuidedParams& params) OVERRIDE FINAL
     {
         return (params.radius == 0);
     };
@@ -152,7 +163,8 @@ private:
 
 mDeclarePluginFactory(CImgGuidedPluginFactory, {}, {});
 
-void CImgGuidedPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+void
+CImgGuidedPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -180,7 +192,9 @@ void CImgGuidedPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
-void CImgGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+void
+CImgGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                           OFX::ContextEnum context)
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgGuidedPlugin::describeInContextBegin(desc, context,
@@ -189,9 +203,9 @@ void CImgGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
                                                                               kSupportsXY,
                                                                               kSupportsAlpha,
                                                                               kSupportsTiles,
-                                                                              /*processRGB=*/true,
-                                                                              /*processAlpha*/false,
-                                                                              /*processIsSecret=*/false);
+                                                                              /*processRGB=*/ true,
+                                                                              /*processAlpha*/ false,
+                                                                              /*processIsSecret=*/ false);
 
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamRadius);
@@ -216,15 +230,15 @@ void CImgGuidedPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc
             page->addChild(*param);
         }
     }
-
     CImgGuidedPlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgGuidedPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+CImgGuidedPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                        OFX::ContextEnum /*context*/)
 {
     return new CImgGuidedPlugin(handle);
 }
-
 
 static CImgGuidedPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

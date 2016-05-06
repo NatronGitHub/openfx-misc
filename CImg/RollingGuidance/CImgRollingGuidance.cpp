@@ -46,12 +46,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "RollingGuidanceCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-"Filter out details under a given scale using the Rolling Guidance filter.\n" \
-"Rolling Guidance is described fully in http://www.cse.cuhk.edu.hk/~leojia/projects/rollguidance/\n" \
-"Iterates the 'blur_bilateral' function from the CImg library.\n" \
-"CImg is a free, open-source library distributed under the CeCILL-C " \
-"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-"It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "Filter out details under a given scale using the Rolling Guidance filter.\n" \
+    "Rolling Guidance is described fully in http://www.cse.cuhk.edu.hk/~leojia/projects/rollguidance/\n" \
+    "Iterates the 'blur_bilateral' function from the CImg library.\n" \
+    "CImg is a free, open-source library distributed under the CeCILL-C " \
+    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgRollingGuidance"
 // History:
@@ -101,12 +101,13 @@ struct CImgRollingGuidanceParams
     int iterations;
 };
 
-class CImgRollingGuidancePlugin : public CImgFilterPluginHelper<CImgRollingGuidanceParams,false>
+class CImgRollingGuidancePlugin
+    : public CImgFilterPluginHelper<CImgRollingGuidanceParams, false>
 {
 public:
 
     CImgRollingGuidancePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgRollingGuidanceParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
+        : CImgFilterPluginHelper<CImgRollingGuidanceParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
     {
         _sigma_s  = fetchDoubleParam(kParamSigmaS);
         _sigma_r  = fetchDoubleParam(kParamSigmaR);
@@ -114,7 +115,8 @@ public:
         assert(_sigma_s && _sigma_r && _iterations);
     }
 
-    virtual void getValuesAtTime(double time, CImgRollingGuidanceParams& params) OVERRIDE FINAL
+    virtual void getValuesAtTime(double time,
+                                 CImgRollingGuidanceParams& params) OVERRIDE FINAL
     {
         _sigma_s->getValueAtTime(time, params.sigma_s);
         _sigma_r->getValueAtTime(time, params.sigma_r);
@@ -123,20 +125,28 @@ public:
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgRollingGuidanceParams& params, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI& rect,
+                        const OfxPointD& renderScale,
+                        const CImgRollingGuidanceParams& params,
+                        OfxRectI* roi) OVERRIDE FINAL
     {
-        int delta_pix = (int)std::ceil((params.sigma_s * 3.6) * renderScale.x);
+        int delta_pix = (int)std::ceil( (params.sigma_s * 3.6) * renderScale.x );
+
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args, const CImgRollingGuidanceParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &args,
+                        const CImgRollingGuidanceParams& params,
+                        int /*x1*/,
+                        int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        if (params.iterations <= 0 || params.sigma_s == 0.) {
+        if ( (params.iterations <= 0) || (params.sigma_s == 0.) ) {
             return;
         }
         // for a full description of the Rolling Guidance filter, see
@@ -144,14 +154,15 @@ public:
         // http://www.cse.cuhk.edu.hk/~leojia/projects/rollguidance/
         if (params.iterations == 1) {
             // Gaussian filter
-            cimg.blur((float)(params.sigma_s * args.renderScale.x), true, true);
+            cimg.blur( (float)(params.sigma_s * args.renderScale.x), true, true );
+
             return;
         }
         // first iteration is Gaussian blur (equivalent to a bilateral filter with a constant image as the guide)
-        cimg_library::CImg<cimgpix_t> guide = cimg.get_blur((float)(params.sigma_s * args.renderScale.x), true, true);
+        cimg_library::CImg<cimgpix_t> guide = cimg.get_blur( (float)(params.sigma_s * args.renderScale.x), true, true );
         // next iterations use the bilateral filter
         for (int i = 1; i < params.iterations; ++i) {
-            if (abort()) {
+            if ( abort() ) {
                 return;
             }
             // filter the original image using the updated guide
@@ -160,7 +171,8 @@ public:
         cimg = guide;
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgRollingGuidanceParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+                            const CImgRollingGuidanceParams& params) OVERRIDE FINAL
     {
         return (params.iterations <= 0 || params.sigma_s == 0.);
     };
@@ -176,7 +188,8 @@ private:
 
 mDeclarePluginFactory(CImgRollingGuidancePluginFactory, {}, {});
 
-void CImgRollingGuidancePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+void
+CImgRollingGuidancePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -204,7 +217,9 @@ void CImgRollingGuidancePluginFactory::describe(OFX::ImageEffectDescriptor& desc
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
-void CImgRollingGuidancePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+void
+CImgRollingGuidancePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                                    OFX::ContextEnum context)
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgRollingGuidancePlugin::describeInContextBegin(desc, context,
@@ -213,9 +228,9 @@ void CImgRollingGuidancePluginFactory::describeInContext(OFX::ImageEffectDescrip
                                                                                        kSupportsXY,
                                                                                        kSupportsAlpha,
                                                                                        kSupportsTiles,
-                                                                                       /*processRGB=*/true,
-                                                                                       /*processAlpha*/false,
-                                                                                       /*processIsSecret=*/false);
+                                                                                       /*processRGB=*/ true,
+                                                                                       /*processAlpha*/ false,
+                                                                                       /*processIsSecret=*/ false);
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSigmaS);
@@ -252,15 +267,15 @@ void CImgRollingGuidancePluginFactory::describeInContext(OFX::ImageEffectDescrip
             page->addChild(*param);
         }
     }
-
     CImgRollingGuidancePlugin::describeInContextEnd(desc, context, page);
-}
+} // CImgRollingGuidancePluginFactory::describeInContext
 
-OFX::ImageEffect* CImgRollingGuidancePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+CImgRollingGuidancePluginFactory::createInstance(OfxImageEffectHandle handle,
+                                                 OFX::ContextEnum /*context*/)
 {
     return new CImgRollingGuidancePlugin(handle);
 }
-
 
 static CImgRollingGuidancePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

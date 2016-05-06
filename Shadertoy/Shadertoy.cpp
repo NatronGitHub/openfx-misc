@@ -57,161 +57,161 @@ using namespace OFX;
 #define kPluginName "Shadertoy"
 #define kPluginGrouping "Filter"
 #define kPluginDescription \
-"Apply a Shadertoy fragment shader (multipass shaders are not supported). See www.shadertoy.com\n" \
-"\n" \
-"This help only covers the parts of GLSL ES that are relevant for Shadertoy. " \
-"For the complete specification please have a look at GLSL ES specification " \
-"http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf " \
-"or pages 3 and 4 of the OpenGL ES 2.0 quick reference card " \
-"https://www.khronos.org/opengles/sdk/docs/reference_cards/OpenGL-ES-2_0-Reference-card.pdf\n" \
-"\n" \
-"Language:\n" \
-"\n" \
-"    Preprocessor: # #define #undef #if #ifdef #ifndef #else #elif #endif #error #pragma #extension #version #line\n" \
+    "Apply a Shadertoy fragment shader (multipass shaders are not supported). See www.shadertoy.com\n" \
+    "\n" \
+    "This help only covers the parts of GLSL ES that are relevant for Shadertoy. " \
+    "For the complete specification please have a look at GLSL ES specification " \
+    "http://www.khronos.org/registry/gles/specs/2.0/GLSL_ES_Specification_1.0.17.pdf " \
+    "or pages 3 and 4 of the OpenGL ES 2.0 quick reference card " \
+    "https://www.khronos.org/opengles/sdk/docs/reference_cards/OpenGL-ES-2_0-Reference-card.pdf\n" \
+    "\n" \
+    "Language:\n" \
+    "\n" \
+    "    Preprocessor: # #define #undef #if #ifdef #ifndef #else #elif #endif #error #pragma #extension #version #line\n" \
 /*"    Operators: () + - ! * / % < > <= >= == != && ||\n"*/ \
-"    Operators: usual GLSL/C/C++/Java operators\n" \
-"    Comments: // /* */\n" \
-"    Types: void bool int float vec2 vec3 vec4 bvec2 bvec3 bvec4 ivec2 ivec3 ivec4 mat2 mat3 mat4 sampler2D\n" \
-"    Function Parameter Qualifiers: [none], in, out, inout\n" \
-"    Global Variable Qualifiers: const\n" \
-"    Vector Components: .xyzw .rgba .stpq\n" \
-"    Flow Control: if else for return break continue\n" \
-"    Output: vec4 fragColor\n" \
-"    Input: vec2 fragCoord\n" \
-"\n" \
-"\n" \
-"Built-in Functions:\n" \
-"\n" \
-"    type radians (type degrees)\n" \
-"    type degrees (type radians)\n" \
-"    type sin (type angle)\n" \
-"    type cos (type angle)\n" \
-"    type tan (type angle)\n" \
-"    type asin (type x)\n" \
-"    type acos (type x)\n" \
-"    type atan (type y, type x)\n" \
-"    type atan (type y_over_x)\n" \
-"\n" \
-"	\n" \
-"\n" \
-"    type pow (type x, type y)\n" \
-"    type exp (type x)\n" \
-"    type log (type x)\n" \
-"    type exp2 (type x)\n" \
-"    type log2 (type x)\n" \
-"    type sqrt (type x)\n" \
-"    type inversesqrt (type x)\n" \
-"\n" \
-"    type abs (type x)\n" \
-"    type sign (type x)\n" \
-"    type floor (type x)\n" \
-"    type ceil (type x)\n" \
-"    type fract (type x)\n" \
-"    type mod (type x, float y)\n" \
-"    type mod (type x, type y)\n" \
-"    type min (type x, type y)\n" \
-"    type min (type x, float y)\n" \
-"    type max (type x, type y)\n" \
-"    type max (type x, float y)\n" \
-"    type clamp (type x, type minV, type maxV)\n" \
-"    type clamp (type x, float minV, float maxV)\n" \
-"    type mix (type x, type y, type a)\n" \
-"    type mix (type x, type y, float a)\n" \
-"    type step (type edge, type x)\n" \
-"    type step (float edge, type x)\n" \
-"    type smoothstep (type a, type b, type x)\n" \
-"    type smoothstep (float a, float b, type x)\n" \
-"    mat matrixCompMult (mat x, mat y)\n" \
-"\n" \
-"	\n" \
-"\n" \
-"    float length (type x)\n" \
-"    float distance (type p0, type p1)\n" \
-"    float dot (type x, type y)\n" \
-"    vec3 cross (vec3 x, vec3 y)\n" \
-"    type normalize (type x)\n" \
-"    type faceforward (type N, type I, type Nref)\n" \
-"    type reflect (type I, type N)\n" \
-"    type refract (type I, type N,float eta)\n" \
-"\n" \
-"    bvec lessThan(vec x, vec y)\n" \
-"    bvec lessThan(ivec x, ivec y)\n" \
-"    bvec lessThanEqual(vec x, vec y)\n" \
-"    bvec lessThanEqual(ivec x, ivec y)\n" \
-"    bvec greaterThan(vec x, vec y)\n" \
-"    bvec greaterThan(ivec x, ivec y)\n" \
-"    bvec greaterThanEqual(vec x, vec y)\n" \
-"    bvec greaterThanEqual(ivec x, ivec y)\n" \
-"    bvec equal(vec x, vec y)\n" \
-"    bvec equal(ivec x, ivec y)\n" \
-"    bvec equal(bvec x, bvec y)\n" \
-"    bvec notEqual(vec x, vec y)\n" \
-"    bvec notEqual(ivec x, ivec y)\n" \
-"    bvec notEqual(bvec x, bvec y)\n" \
-"    bool any(bvec x)\n" \
-"    bool all(bvec x)\n" \
-"    bvec not(bvec x)\n" \
-"\n" \
-"	\n" \
-"\n" \
-"    vec4 texture2D(sampler2D sampler, vec2 coord )\n" \
-"    vec4 texture2D(sampler2D sampler, vec2 coord, float bias)\n" \
-"    vec4 textureCube(samplerCube sampler, vec3 coord)\n" \
-"    vec4 texture2DProj(sampler2D sampler, vec3 coord )\n" \
-"    vec4 texture2DProj(sampler2D sampler, vec3 coord, float bias)\n" \
-"    vec4 texture2DProj(sampler2D sampler, vec4 coord)\n" \
-"    vec4 texture2DProj(sampler2D sampler, vec4 coord, float bias)\n" \
-"    vec4 texture2DLodEXT(sampler2D sampler, vec2 coord, float lod)\n" \
-"    vec4 texture2DProjLodEXT(sampler2D sampler, vec3 coord, float lod)\n" \
-"    vec4 texture2DProjLodEXT(sampler2D sampler, vec4 coord, float lod)\n" \
-"    vec4 textureCubeLodEXT(samplerCube sampler, vec3 coord, float lod)\n" \
-"    vec4 texture2DGradEXT(sampler2D sampler, vec2 P, vec2 dPdx, vec2 dPdy)\n" \
-"    vec4 texture2DProjGradEXT(sampler2D sampler, vec3 P, vec2 dPdx, vec2 dPdy)\n" \
-"    vec4 texture2DProjGradEXT(sampler2D sampler, vec4 P, vec2 dPdx, vec2 dPdy)\n" \
-"    vec4 textureCubeGradEXT(samplerCube sampler, vec3 P, vec3 dPdx, vec3 dPdy)\n" \
-"\n" \
-"    type dFdx( type x ), dFdy( type x )\n" \
-"    type fwidth( type p )\n" \
-"\n" \
-"\n" \
-"How-to\n" \
-"\n" \
-"    Use structs: struct myDataType { float occlusion; vec3 color; }; myDataType myData = myDataType(0.7, vec3(1.0, 2.0, 3.0));\n" \
-"    Initialize arrays: arrays cannot be initialized in WebGL.\n" \
-"    Do conversions: int a = 3; float b = float(a);\n" \
-"    Do component swizzling: vec4 a = vec4(1.0,2.0,3.0,4.0); vec4 b = a.zyyw;\n" \
-"    Access matrix components: mat4 m; m[1] = vec4(2.0); m[0][0] = 1.0; m[2][3] = 2.0;\n" \
-"\n" \
-"\n" \
-"Be careful!\n" \
-"\n" \
-"    the f suffix for floating pont numbers: 1.0f is illegal in GLSL. You must use 1.0\n" \
-"    saturate(): saturate(x) doesn't exist in GLSL. Use clamp(x,0.0,1.0) instead\n" \
-"    pow/sqrt: please don't feed sqrt() and pow() with negative numbers. Add an abs() or max(0.0,) to the argument\n" \
-"    mod: please don't do mod(x,0.0). This is undefined in some platforms\n" \
-"    variables: initialize your variables! Don't assume they'll be set to zero by default\n" \
-"    functions: don't call your functions the same as some of your variables\n" \
-"\n" \
-"\n" \
-"Shadertoy Inputs\n" \
-"vec3	iResolution	image	The viewport resolution (z is pixel aspect ratio, usually 1.0)\n" \
-"float	iGlobalTime	image/sound	Current time in seconds\n" \
-"float	iTimeDelta	image	Time it takes to render a frame, in seconds\n" \
-"int	iFrame	image	Current frame\n" \
-"float	iFrameRate	image	Number of frames rendered per second\n" \
-"float	iChannelTime["STRINGISE(NBINPUTS)"]	image	Time for channel (if video or sound), in seconds\n" \
-"vec3	iChannelResolution["STRINGISE(NBINPUTS)"]	image/sound	Input texture resolution for each channel\n" \
-"vec4	iMouse	image	xy = current pixel coords (if LMB is down). zw = click pixel\n" \
-"sampler2D	iChannel{i}	image/sound	Sampler for input textures i\n" \
-"vec4	iDate	image/sound	Year, month, day, time in seconds in .xyzw\n" \
-"float	iSampleRate	image/sound	The sound sample rate (typically 44100)\n" \
-"vec4	iRenderScale	The OpenFX render scale (e.g. 0.5,0.5 when rendering half-size) [OFX plugin only]\n" \
-"\n" \
-"Shadertoy Outputs\n" \
-"For image shaders, fragColor is used as output channel. It is not, for now, mandatory but recommended to leave the alpha channel to 1.0.\n" \
-"\n" \
-"For sound shaders, the mainSound() function returns a vec2 containing the left and right (stereo) sound channel wave data.\n" \
-""
+    "    Operators: usual GLSL/C/C++/Java operators\n" \
+    "    Comments: // /* */\n" \
+    "    Types: void bool int float vec2 vec3 vec4 bvec2 bvec3 bvec4 ivec2 ivec3 ivec4 mat2 mat3 mat4 sampler2D\n" \
+    "    Function Parameter Qualifiers: [none], in, out, inout\n" \
+    "    Global Variable Qualifiers: const\n" \
+    "    Vector Components: .xyzw .rgba .stpq\n" \
+    "    Flow Control: if else for return break continue\n" \
+    "    Output: vec4 fragColor\n" \
+    "    Input: vec2 fragCoord\n" \
+    "\n" \
+    "\n" \
+    "Built-in Functions:\n" \
+    "\n" \
+    "    type radians (type degrees)\n" \
+    "    type degrees (type radians)\n" \
+    "    type sin (type angle)\n" \
+    "    type cos (type angle)\n" \
+    "    type tan (type angle)\n" \
+    "    type asin (type x)\n" \
+    "    type acos (type x)\n" \
+    "    type atan (type y, type x)\n" \
+    "    type atan (type y_over_x)\n" \
+    "\n" \
+    "	\n" \
+    "\n" \
+    "    type pow (type x, type y)\n" \
+    "    type exp (type x)\n" \
+    "    type log (type x)\n" \
+    "    type exp2 (type x)\n" \
+    "    type log2 (type x)\n" \
+    "    type sqrt (type x)\n" \
+    "    type inversesqrt (type x)\n" \
+    "\n" \
+    "    type abs (type x)\n" \
+    "    type sign (type x)\n" \
+    "    type floor (type x)\n" \
+    "    type ceil (type x)\n" \
+    "    type fract (type x)\n" \
+    "    type mod (type x, float y)\n" \
+    "    type mod (type x, type y)\n" \
+    "    type min (type x, type y)\n" \
+    "    type min (type x, float y)\n" \
+    "    type max (type x, type y)\n" \
+    "    type max (type x, float y)\n" \
+    "    type clamp (type x, type minV, type maxV)\n" \
+    "    type clamp (type x, float minV, float maxV)\n" \
+    "    type mix (type x, type y, type a)\n" \
+    "    type mix (type x, type y, float a)\n" \
+    "    type step (type edge, type x)\n" \
+    "    type step (float edge, type x)\n" \
+    "    type smoothstep (type a, type b, type x)\n" \
+    "    type smoothstep (float a, float b, type x)\n" \
+    "    mat matrixCompMult (mat x, mat y)\n" \
+    "\n" \
+    "	\n" \
+    "\n" \
+    "    float length (type x)\n" \
+    "    float distance (type p0, type p1)\n" \
+    "    float dot (type x, type y)\n" \
+    "    vec3 cross (vec3 x, vec3 y)\n" \
+    "    type normalize (type x)\n" \
+    "    type faceforward (type N, type I, type Nref)\n" \
+    "    type reflect (type I, type N)\n" \
+    "    type refract (type I, type N,float eta)\n" \
+    "\n" \
+    "    bvec lessThan(vec x, vec y)\n" \
+    "    bvec lessThan(ivec x, ivec y)\n" \
+    "    bvec lessThanEqual(vec x, vec y)\n" \
+    "    bvec lessThanEqual(ivec x, ivec y)\n" \
+    "    bvec greaterThan(vec x, vec y)\n" \
+    "    bvec greaterThan(ivec x, ivec y)\n" \
+    "    bvec greaterThanEqual(vec x, vec y)\n" \
+    "    bvec greaterThanEqual(ivec x, ivec y)\n" \
+    "    bvec equal(vec x, vec y)\n" \
+    "    bvec equal(ivec x, ivec y)\n" \
+    "    bvec equal(bvec x, bvec y)\n" \
+    "    bvec notEqual(vec x, vec y)\n" \
+    "    bvec notEqual(ivec x, ivec y)\n" \
+    "    bvec notEqual(bvec x, bvec y)\n" \
+    "    bool any(bvec x)\n" \
+    "    bool all(bvec x)\n" \
+    "    bvec not(bvec x)\n" \
+    "\n" \
+    "	\n" \
+    "\n" \
+    "    vec4 texture2D(sampler2D sampler, vec2 coord )\n" \
+    "    vec4 texture2D(sampler2D sampler, vec2 coord, float bias)\n" \
+    "    vec4 textureCube(samplerCube sampler, vec3 coord)\n" \
+    "    vec4 texture2DProj(sampler2D sampler, vec3 coord )\n" \
+    "    vec4 texture2DProj(sampler2D sampler, vec3 coord, float bias)\n" \
+    "    vec4 texture2DProj(sampler2D sampler, vec4 coord)\n" \
+    "    vec4 texture2DProj(sampler2D sampler, vec4 coord, float bias)\n" \
+    "    vec4 texture2DLodEXT(sampler2D sampler, vec2 coord, float lod)\n" \
+    "    vec4 texture2DProjLodEXT(sampler2D sampler, vec3 coord, float lod)\n" \
+    "    vec4 texture2DProjLodEXT(sampler2D sampler, vec4 coord, float lod)\n" \
+    "    vec4 textureCubeLodEXT(samplerCube sampler, vec3 coord, float lod)\n" \
+    "    vec4 texture2DGradEXT(sampler2D sampler, vec2 P, vec2 dPdx, vec2 dPdy)\n" \
+    "    vec4 texture2DProjGradEXT(sampler2D sampler, vec3 P, vec2 dPdx, vec2 dPdy)\n" \
+    "    vec4 texture2DProjGradEXT(sampler2D sampler, vec4 P, vec2 dPdx, vec2 dPdy)\n" \
+    "    vec4 textureCubeGradEXT(samplerCube sampler, vec3 P, vec3 dPdx, vec3 dPdy)\n" \
+    "\n" \
+    "    type dFdx( type x ), dFdy( type x )\n" \
+    "    type fwidth( type p )\n" \
+    "\n" \
+    "\n" \
+    "How-to\n" \
+    "\n" \
+    "    Use structs: struct myDataType { float occlusion; vec3 color; }; myDataType myData = myDataType(0.7, vec3(1.0, 2.0, 3.0));\n" \
+    "    Initialize arrays: arrays cannot be initialized in WebGL.\n" \
+    "    Do conversions: int a = 3; float b = float(a);\n" \
+    "    Do component swizzling: vec4 a = vec4(1.0,2.0,3.0,4.0); vec4 b = a.zyyw;\n" \
+    "    Access matrix components: mat4 m; m[1] = vec4(2.0); m[0][0] = 1.0; m[2][3] = 2.0;\n" \
+    "\n" \
+    "\n" \
+    "Be careful!\n" \
+    "\n" \
+    "    the f suffix for floating pont numbers: 1.0f is illegal in GLSL. You must use 1.0\n" \
+    "    saturate(): saturate(x) doesn't exist in GLSL. Use clamp(x,0.0,1.0) instead\n" \
+    "    pow/sqrt: please don't feed sqrt() and pow() with negative numbers. Add an abs() or max(0.0,) to the argument\n" \
+    "    mod: please don't do mod(x,0.0). This is undefined in some platforms\n" \
+    "    variables: initialize your variables! Don't assume they'll be set to zero by default\n" \
+    "    functions: don't call your functions the same as some of your variables\n" \
+    "\n" \
+    "\n" \
+    "Shadertoy Inputs\n" \
+    "vec3	iResolution	image	The viewport resolution (z is pixel aspect ratio, usually 1.0)\n" \
+    "float	iGlobalTime	image/sound	Current time in seconds\n" \
+    "float	iTimeDelta	image	Time it takes to render a frame, in seconds\n" \
+    "int	iFrame	image	Current frame\n" \
+    "float	iFrameRate	image	Number of frames rendered per second\n" \
+    "float	iChannelTime["STRINGISE(NBINPUTS)"]	image	Time for channel (if video or sound), in seconds\n" \
+    "vec3	iChannelResolution["STRINGISE(NBINPUTS)"]	image/sound	Input texture resolution for each channel\n" \
+    "vec4	iMouse	image	xy = current pixel coords (if LMB is down). zw = click pixel\n" \
+    "sampler2D	iChannel{i}	image/sound	Sampler for input textures i\n" \
+    "vec4	iDate	image/sound	Year, month, day, time in seconds in .xyzw\n" \
+    "float	iSampleRate	image/sound	The sound sample rate (typically 44100)\n" \
+    "vec4	iRenderScale	The OpenFX render scale (e.g. 0.5,0.5 when rendering half-size) [OFX plugin only]\n" \
+    "\n" \
+    "Shadertoy Outputs\n" \
+    "For image shaders, fragColor is used as output channel. It is not, for now, mandatory but recommended to leave the alpha channel to 1.0.\n" \
+    "\n" \
+    "For sound shaders, the mainSound() function returns a vec2 containing the left and right (stereo) sound channel wave data.\n" \
+    ""
 
 
 #define kPluginIdentifier "net.sf.openfx.Shadertoy"
@@ -227,18 +227,18 @@ using namespace OFX;
 
 
 #define kShaderInputsHint \
-"Shader Inputs:\n" \
-"uniform vec3      iResolution;           // viewport resolution (in pixels)\n" \
-"uniform float     iGlobalTime;           // shader playback time (in seconds)\n" \
-"uniform float     iTimeDelta;            // render time (in seconds)\n" \
-"uniform int       iFrame;                // shader playback frame\n" \
-"uniform float     iChannelTime["STRINGISE(NBINPUTS)"];       // channel playback time (in seconds)\n" \
-"uniform vec3      iChannelResolution["STRINGISE(NBINPUTS)"]; // channel resolution (in pixels)\n" \
-"uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click\n" \
-"uniform samplerXX iChannel0..3;          // input channel. XX = 2D/Cube\n" \
-"uniform vec4      iDate;                 // (year, month, day, time in seconds)\n" \
-"uniform float     iSampleRate;           // sound sample rate (i.e., 44100)\n" \
-""
+    "Shader Inputs:\n" \
+    "uniform vec3      iResolution;           // viewport resolution (in pixels)\n" \
+    "uniform float     iGlobalTime;           // shader playback time (in seconds)\n" \
+    "uniform float     iTimeDelta;            // render time (in seconds)\n" \
+    "uniform int       iFrame;                // shader playback frame\n" \
+    "uniform float     iChannelTime["STRINGISE (NBINPUTS)"];       // channel playback time (in seconds)\n" \
+    "uniform vec3      iChannelResolution["STRINGISE (NBINPUTS)"]; // channel resolution (in pixels)\n" \
+    "uniform vec4      iMouse;                // mouse pixel coords. xy: current (if MLB down), zw: click\n" \
+    "uniform samplerXX iChannel0..3;          // input channel. XX = 2D/Cube\n" \
+    "uniform vec4      iDate;                 // (year, month, day, time in seconds)\n" \
+    "uniform float     iSampleRate;           // sound sample rate (i.e., 44100)\n" \
+    ""
 #define kParamBBox "bbox"
 #define kParamBBoxLabel "Bounding Box"
 #define kParamBBoxHint "What to use to produce the output image's bounding box. If no selected input is connected, use the project size."
@@ -255,7 +255,8 @@ using namespace OFX;
 #define kParamBBoxOptionIChannel "iChannel"
 #define kParamBBoxOptionIChannelHint "Bounding box of iChannel"
 
-enum BBoxEnum {
+enum BBoxEnum
+{
     eBBoxDefault,
     eBBoxFormat,
     //eBBoxSize,
@@ -298,11 +299,11 @@ enum BBoxEnum {
 #define kParamImageShaderTriggerRender "imageShaderTriggerRender"
 
 #define kParamImageShaderDefault                            \
-"void mainImage( out vec4 fragColor, in vec2 fragCoord )\n" \
-"{\n"                                                       \
-"    vec2 uv = fragCoord.xy / iResolution.xy;\n"            \
-"    fragColor = vec4(uv,0.5+0.5*sin(iGlobalTime),1.0);\n"  \
-"}"
+    "void mainImage( out vec4 fragColor, in vec2 fragCoord )\n" \
+    "{\n"                                                       \
+    "    vec2 uv = fragCoord.xy / iResolution.xy;\n"            \
+    "    fragColor = vec4(uv,0.5+0.5*sin(iGlobalTime),1.0);\n"  \
+    "}"
 
 // mouse parameters, see https://www.shadertoy.com/view/Mss3zH
 #define kParamMousePosition "mousePosition"
@@ -371,15 +372,17 @@ enum BBoxEnum {
 #define kClipChannel "iChannel"
 
 static
-std::string unsignedToString(unsigned i)
+std::string
+unsignedToString(unsigned i)
 {
     if (i == 0) {
         return "0";
     }
     std::string nb;
-    for (unsigned j = i; j !=0; j /= 10) {
-        nb += ('0' + (j % 10));
+    for (unsigned j = i; j != 0; j /= 10) {
+        nb += ( '0' + (j % 10) );
     }
+
     return nb;
 }
 
@@ -387,61 +390,61 @@ std::string unsignedToString(unsigned i)
 /** @brief The plugin that does our work */
 
 ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
-: ImageEffect(handle)
-, _dstClip(0)
-, _srcClips(NBINPUTS, (OFX::Clip*)NULL)
-, _bbox(0)
-, _format(0)
-, _formatSize(0)
-, _formatPar(0)
-, _imageShaderFileName(0)
-, _imageShaderSource(0)
-, _imageShaderCompile(0)
-, _imageShaderTriggerRender(0)
-, _paramCount(0)
-, _paramType      (NBUNIFORMS, (OFX::ChoiceParam*)  NULL)
-, _paramName      (NBUNIFORMS, (OFX::StringParam*)  NULL)
-, _paramValueBool (NBUNIFORMS, (OFX::BooleanParam*) NULL)
-, _paramValueInt  (NBUNIFORMS, (OFX::IntParam*)     NULL)
-, _paramValueFloat(NBUNIFORMS, (OFX::DoubleParam*)  NULL)
-, _paramValueVec2 (NBUNIFORMS, (Double2DParam*)     NULL)
-, _paramValueVec3 (NBUNIFORMS, (OFX::Double3DParam*)NULL)
-, _paramValueVec4 (NBUNIFORMS, (OFX::RGBAParam*)    NULL)
-, _mipmap(0)
-, _anisotropic(0)
-, _useGPUIfAvailable(0)
-, _haveAniso(false)
-, _maxAnisoMax(1.)
+    : ImageEffect(handle)
+    , _dstClip(0)
+    , _srcClips(NBINPUTS, (OFX::Clip*)NULL)
+    , _bbox(0)
+    , _format(0)
+    , _formatSize(0)
+    , _formatPar(0)
+    , _imageShaderFileName(0)
+    , _imageShaderSource(0)
+    , _imageShaderCompile(0)
+    , _imageShaderTriggerRender(0)
+    , _paramCount(0)
+    , _paramType      (NBUNIFORMS, (OFX::ChoiceParam*)  NULL)
+    , _paramName      (NBUNIFORMS, (OFX::StringParam*)  NULL)
+    , _paramValueBool (NBUNIFORMS, (OFX::BooleanParam*) NULL)
+    , _paramValueInt  (NBUNIFORMS, (OFX::IntParam*)     NULL)
+    , _paramValueFloat(NBUNIFORMS, (OFX::DoubleParam*)  NULL)
+    , _paramValueVec2 (NBUNIFORMS, (Double2DParam*)     NULL)
+    , _paramValueVec3 (NBUNIFORMS, (OFX::Double3DParam*)NULL)
+    , _paramValueVec4 (NBUNIFORMS, (OFX::RGBAParam*)    NULL)
+    , _mipmap(0)
+    , _anisotropic(0)
+    , _useGPUIfAvailable(0)
+    , _haveAniso(false)
+    , _maxAnisoMax(1.)
 #ifdef HAVE_OSMESA
-, _imageShaderID(1)
-, _imageShaderUniformsID(1)
+    , _imageShaderID(1)
+    , _imageShaderUniformsID(1)
 #endif
-, _imageShader(0)
-, _imageShaderChanged(true)
-, _imageShaderUniformsChanged(true)
+    , _imageShader(0)
+    , _imageShaderChanged(true)
+    , _imageShaderUniformsChanged(true)
 {
     _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-    assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
-                        _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha));
-    switch (getContext()) {
-        case OFX::eContextFilter:
-            _srcClips[0] = fetchClip(kOfxImageEffectSimpleSourceClipName);
-            for (unsigned j = 1; j < NBINPUTS; ++j) {
-                _srcClips[j] = fetchClip(std::string(kClipChannel) + unsignedToString(j));
-            }
-            break;
-        case OFX::eContextGenerator:
-        case OFX::eContextGeneral:
-        default:
-            for (unsigned j = 0; j < NBINPUTS; ++j) {
-                _srcClips[j] = fetchClip(std::string(kClipChannel) + unsignedToString(j));
-            }
-            break;
+    assert( _dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGBA ||
+                         _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha) );
+    switch ( getContext() ) {
+    case OFX::eContextFilter:
+        _srcClips[0] = fetchClip(kOfxImageEffectSimpleSourceClipName);
+        for (unsigned j = 1; j < NBINPUTS; ++j) {
+            _srcClips[j] = fetchClip( std::string(kClipChannel) + unsignedToString(j) );
+        }
+        break;
+    case OFX::eContextGenerator:
+    case OFX::eContextGeneral:
+    default:
+        for (unsigned j = 0; j < NBINPUTS; ++j) {
+            _srcClips[j] = fetchClip( std::string(kClipChannel) + unsignedToString(j) );
+        }
+        break;
     }
     for (unsigned i = 0; i < NBINPUTS; ++i) {
-        assert((!_srcClips[i] && getContext() == OFX::eContextGenerator) ||
-               (_srcClips[i] && (_srcClips[i]->getPixelComponents() == OFX::ePixelComponentRGBA ||
-                             _srcClips[i]->getPixelComponents() == OFX::ePixelComponentAlpha)));
+        assert( (!_srcClips[i] && getContext() == OFX::eContextGenerator) ||
+                ( _srcClips[i] && (_srcClips[i]->getPixelComponents() == OFX::ePixelComponentRGBA ||
+                                   _srcClips[i]->getPixelComponents() == OFX::ePixelComponentAlpha) ) );
     }
 
     _bbox = fetchChoiceParam(kParamBBox);
@@ -492,7 +495,6 @@ ShadertoyPlugin::ShadertoyPlugin(OfxImageEffectHandle handle)
     _imageShaderCompile->setEnabled(false); // always compile on first render
 }
 
-
 ShadertoyPlugin::~ShadertoyPlugin()
 {
     exitOpenGL();
@@ -511,12 +513,12 @@ ShadertoyPlugin::~ShadertoyPlugin()
 void
 ShadertoyPlugin::render(const OFX::RenderArguments &args)
 {
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+    if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     for (unsigned i = 0; i < NBINPUTS; ++i) {
-        assert(kSupportsMultipleClipPARs   || !_srcClips[i] || _srcClips[i]->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-        assert(kSupportsMultipleClipDepths || !_srcClips[i] || _srcClips[i]->getPixelDepth()       == _dstClip->getPixelDepth());
+        assert( kSupportsMultipleClipPARs   || !_srcClips[i] || _srcClips[i]->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+        assert( kSupportsMultipleClipDepths || !_srcClips[i] || _srcClips[i]->getPixelDepth()       == _dstClip->getPixelDepth() );
     }
 
     bool openGLRender = false;
@@ -541,22 +543,21 @@ ShadertoyPlugin::render(const OFX::RenderArguments &args)
 
 // overriding getRegionOfDefinition is necessary to tell the host that we do not support render scale
 bool
-ShadertoyPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+ShadertoyPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                       OfxRectD &rod)
 {
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+    if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     const double time = args.time;
-
-
     int bboxChoice = _bbox->getValueAtTime(time);
     if (bboxChoice == eBBoxDefault) {
         // use the default RoD
         return false;
     }
     if (bboxChoice == eBBoxFormat) {
-        int w,h;
+        int w, h;
         _formatSize->getValue(w, h);
         double par;
         _formatPar->getValue(par);
@@ -564,8 +565,9 @@ ShadertoyPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
         pixelFormat.x1 = pixelFormat.y1 = 0;
         pixelFormat.x2 = w;
         pixelFormat.y2 = h;
-        OfxPointD renderScale = {1.,1.};
+        OfxPointD renderScale = {1., 1.};
         OFX::Coords::toCanonical(pixelFormat, renderScale, par, &rod);
+
         return true;
     }
     /*if (bboxChoice == eBBoxSize) {
@@ -573,24 +575,26 @@ ShadertoyPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
         _btmLeft->getValue(rod.x1, rod.y1);
         rod.x2 += rod.x1;
         rod.y2 += rod.y1;
-        
+
         return true;
-    }*/
+       }*/
 
     if (bboxChoice >= eBBoxIChannel) {
         unsigned i = bboxChoice - eBBoxIChannel;
-        if (_srcClips[i]->isConnected()) {
+        if ( _srcClips[i]->isConnected() ) {
             rod = _srcClips[i]->getRegionOfDefinition(time);
+
             return true;
         }
+
         // use the default RoD
         return false;
     }
 
     std::vector<OfxRectD> rods;
     for (unsigned i = 0; i < NBINPUTS; ++i) {
-        if (_srcClips[i]->isConnected()) {
-            rods.push_back(_srcClips[i]->getRegionOfDefinition(time));
+        if ( _srcClips[i]->isConnected() ) {
+            rods.push_back( _srcClips[i]->getRegionOfDefinition(time) );
         }
     }
     if (rods.size() == 0) {
@@ -601,7 +605,7 @@ ShadertoyPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
         for (unsigned i = 1; i < rods.size(); ++i) {
             OFX::Coords::rectBoundingBox(rod, rods[i], &rod);
         }
-    } else  { //intersection
+    } else {  //intersection
         for (unsigned i = 1; i < rods.size(); ++i) {
             OFX::Coords::rectIntersection(rod, rods[i], &rod);
         }
@@ -609,14 +613,15 @@ ShadertoyPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &a
     }
 
     return true;
-}
+} // ShadertoyPlugin::getRegionOfDefinition
 
 void
 ShadertoyPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
                                       OFX::RegionOfInterestSetter &rois)
 {
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+    if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
+
         return;
     }
 
@@ -624,7 +629,7 @@ ShadertoyPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &arg
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         OfxRectD srcRoI;
 
-        if (_srcClips[i] && _srcClips[i]->isConnected()) {
+        if ( _srcClips[i] && _srcClips[i]->isConnected() ) {
             srcRoI = _srcClips[i]->getRegionOfDefinition(args.time);
             rois.setRegionOfInterest(*_srcClips[i], srcRoI);
         }
@@ -637,7 +642,7 @@ ShadertoyPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
     // We have to do this because the processing code does not support varying components for srcClip and dstClip
     // (The OFX spec doesn't state a default value for this)
     if (_srcClips[0]) {
-        clipPreferences.setClipComponents(*_dstClip, _srcClips[0]->getPixelComponents());
+        clipPreferences.setClipComponents( *_dstClip, _srcClips[0]->getPixelComponents() );
     }
     clipPreferences.setOutputFrameVarying(true);
     clipPreferences.setOutputHasContinousSamples(true);
@@ -645,17 +650,18 @@ ShadertoyPlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 
 static inline
 bool
-starts_with(const std::string &str, const std::string &prefix)
+starts_with(const std::string &str,
+            const std::string &prefix)
 {
-    return (str.substr(0, prefix.size()) == prefix);
+    return (str.substr( 0, prefix.size() ) == prefix);
 }
 
 void
 ShadertoyPlugin::updateVisibility()
 {
     BBoxEnum bbox = (BBoxEnum)_bbox->getValue();
-
     bool hasFormat = (bbox == eBBoxFormat);
+
     //bool hasSize = (bbox == eBBoxSize);
 
     _format->setEnabled(hasFormat);
@@ -667,14 +673,15 @@ ShadertoyPlugin::updateVisibility()
     //_btmLeft->setEnabled(hasSize);
     //_btmLeft->setIsSecret(!hasSize);
 
-    unsigned paramCount = std::max(0, std::min(_paramCount->getValue(), NBUNIFORMS));
+    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
     for (unsigned i = 0; i < NBUNIFORMS; ++i) {
         updateVisibilityParam(i, i < paramCount);
     }
 }
 
 void
-ShadertoyPlugin::updateVisibilityParam(unsigned i, bool visible)
+ShadertoyPlugin::updateVisibilityParam(unsigned i,
+                                       bool visible)
 {
     UniformTypeEnum paramType = (UniformTypeEnum)_paramType[i]->getValue();
     bool isBool = false;
@@ -686,36 +693,36 @@ ShadertoyPlugin::updateVisibilityParam(unsigned i, bool visible)
 
     if (visible) {
         switch (paramType) {
-            case eUniformTypeNone: {
-                break;
-            }
-            case eUniformTypeBool: {
-                isBool = true;
-                break;
-            }
-            case eUniformTypeInt: {
-                isInt = true;
-                break;
-            }
-            case eUniformTypeFloat: {
-                isFloat = true;
-                break;
-            }
-            case eUniformTypeVec2: {
-                isVec2 = true;
-                break;
-            }
-            case eUniformTypeVec3: {
-                isVec3 = true;
-                break;
-            }
-            case eUniformTypeVec4: {
-                isVec4 = true;
-                break;
-            }
-            default: {
-                break;
-            }
+        case eUniformTypeNone: {
+            break;
+        }
+        case eUniformTypeBool: {
+            isBool = true;
+            break;
+        }
+        case eUniformTypeInt: {
+            isInt = true;
+            break;
+        }
+        case eUniformTypeFloat: {
+            isFloat = true;
+            break;
+        }
+        case eUniformTypeVec2: {
+            isVec2 = true;
+            break;
+        }
+        case eUniformTypeVec3: {
+            isVec3 = true;
+            break;
+        }
+        case eUniformTypeVec4: {
+            isVec4 = true;
+            break;
+        }
+        default: {
+            break;
+        }
         }
     }
 
@@ -727,15 +734,14 @@ ShadertoyPlugin::updateVisibilityParam(unsigned i, bool visible)
     _paramValueVec2[i]->setIsSecret(!isVec2);
     _paramValueVec3[i]->setIsSecret(!isVec3);
     _paramValueVec4[i]->setIsSecret(!isVec4);
-}
+} // ShadertoyPlugin::updateVisibilityParam
 
 void
 ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                               const std::string &paramName)
 {
-    if (paramName == kParamBBox && args.reason == OFX::eChangeUserEdit) {
+    if ( (paramName == kParamBBox) && (args.reason == OFX::eChangeUserEdit) ) {
         updateVisibility();
-
     } else if (paramName == kParamFormat) {
         //the host does not handle the format itself, do it ourselves
         OFX::EParamFormat format = (OFX::EParamFormat)_format->getValue();
@@ -745,29 +751,27 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         assert(par != -1);
         _formatPar->setValue(par);
         _formatSize->setValue(w, h);
-
-    } else if (paramName == kParamImageShaderFileName ||
-               paramName == kParamImageShaderReload) {
+    } else if ( (paramName == kParamImageShaderFileName) ||
+                ( paramName == kParamImageShaderReload) ) {
         // load image shader from file
         std::string imageShaderFileName;
         _imageShaderFileName->getValue(imageShaderFileName);
-        if (!imageShaderFileName.empty()) {
-            std::ifstream t(imageShaderFileName.c_str());
-            if (t.bad()) {
-                sendMessage(OFX::Message::eMessageError, "", std::string("Error: Cannot open file ")+imageShaderFileName);
+        if ( !imageShaderFileName.empty() ) {
+            std::ifstream t( imageShaderFileName.c_str() );
+            if ( t.bad() ) {
+                sendMessage(OFX::Message::eMessageError, "", std::string("Error: Cannot open file ") + imageShaderFileName);
             } else {
                 std::string str;
                 t.seekg(0, std::ios::end);
-                str.reserve(t.tellg());
+                str.reserve( t.tellg() );
                 t.seekg(0, std::ios::beg);
-                str.assign((std::istreambuf_iterator<char>(t)),
-                           std::istreambuf_iterator<char>());
+                str.assign( ( std::istreambuf_iterator<char>(t) ),
+                            std::istreambuf_iterator<char>() );
                 _imageShaderSource->setValue(str);
             }
         }
-
-    } else if ((paramName == kParamImageShaderSource && args.reason != eChangeUserEdit) ||
-               (paramName == kParamImageShaderCompile)) {
+    } else if ( ( (paramName == kParamImageShaderSource) && (args.reason != eChangeUserEdit) ) ||
+                (paramName == kParamImageShaderCompile) ) {
         {
             OFX::MultiThread::AutoMutex lock(_shaderMutex);
             // mark that image shader must be recompiled on next render
@@ -779,12 +783,10 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         _imageShaderCompile->setEnabled(false);
         // trigger a new render
         clearPersistentMessage();
-        _imageShaderTriggerRender->setValue(_imageShaderTriggerRender->getValue()+1);
-
-    } else if (paramName == kParamImageShaderSource && args.reason == eChangeUserEdit) {
+        _imageShaderTriggerRender->setValue(_imageShaderTriggerRender->getValue() + 1);
+    } else if ( (paramName == kParamImageShaderSource) && (args.reason == eChangeUserEdit) ) {
         _imageShaderCompile->setEnabled(true);
-
-    } else if (paramName == kParamCount || starts_with(paramName, kParamName)) {
+    } else if ( (paramName == kParamCount) || starts_with(paramName, kParamName) ) {
         {
             OFX::MultiThread::AutoMutex lock(_shaderMutex);
             // mark that image shader must be recompiled on next render
@@ -794,8 +796,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             _imageShaderUniformsChanged = true;
         }
         updateVisibility();
-
-    } else if (starts_with(paramName, kParamType)) {
+    } else if ( starts_with(paramName, kParamType) ) {
         {
             OFX::MultiThread::AutoMutex lock(_shaderMutex);
             // mark that image shader must be recompiled on next render
@@ -806,8 +807,7 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         }
         //updateVisibilityParam(i, i < paramCount);
         updateVisibility();
-
-    } else if (paramName == kParamImageShaderSource && args.reason == eChangeUserEdit) {
+    } else if ( (paramName == kParamImageShaderSource) && (args.reason == eChangeUserEdit) ) {
         _imageShaderCompile->setEnabled(true);
     } else if (paramName == kParamRendererInfo) {
         const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
@@ -829,20 +829,18 @@ ShadertoyPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             message = _rendererInfoMesa;
         }
 #     endif // HAVE_OSMESA
-        if (message.empty()) {
+        if ( message.empty() ) {
             sendMessage(OFX::Message::eMessageMessage, "", "OpenGL renderer info not yet available.\n"
                         "Please execute at least one image render and try again.");
         } else {
             sendMessage(OFX::Message::eMessageMessage, "", message);
         }
     }
-}
+} // ShadertoyPlugin::changedParam
 
-
-mDeclarePluginFactory(ShadertoyPluginFactory, ;, {});
-
-
-void ShadertoyPluginFactory::load()
+mDeclarePluginFactory(ShadertoyPluginFactory,; , {});
+void
+ShadertoyPluginFactory::load()
 {
     // we can't be used on hosts that don't support the OpenGL suite
     // returning an error here causes a blank menu entry in Nuke
@@ -913,10 +911,11 @@ ShadertoyPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     }
 #endif
 #endif
-}
+} // ShadertoyPluginFactory::describe
 
 void
-ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                          OFX::ContextEnum context)
 {
 #if defined(OFX_SUPPORTS_OPENGLRENDER) && !defined(HAVE_OSMESA)
     const ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
@@ -928,17 +927,17 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     // Source clip only in the filter context
     // create the mandated source clip
     {
-        ClipDescriptor *srcClip = desc.defineClip((context == eContextFilter) ?
-                                                  kOfxImageEffectSimpleSourceClipName :
-                                                  kClipChannel"0");
+        ClipDescriptor *srcClip = desc.defineClip( (context == eContextFilter) ?
+                                                   kOfxImageEffectSimpleSourceClipName :
+                                                   kClipChannel "0" );
         srcClip->addSupportedComponent(ePixelComponentRGBA);
         srcClip->addSupportedComponent(ePixelComponentAlpha);
         srcClip->setTemporalClipAccess(false);
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);
-        srcClip->setOptional(!(context == eContextFilter));
+        srcClip->setOptional( !(context == eContextFilter) );
     }
-    for (unsigned i = 1; i < NBINPUTS; ++i ){
+    for (unsigned i = 1; i < NBINPUTS; ++i) {
         std::string iChannelX(kClipChannel);
         iChannelX += unsignedToString(i);
         ClipDescriptor *srcClip = desc.defineClip(iChannelX);
@@ -979,7 +978,7 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
             param->appendOption(std::string(kParamBBoxOptionIChannel) + nb, std::string(kParamBBoxOptionIChannelHint) + nb + '.');
         }
         param->setAnimates(true);
-        param->setDefault((int)eBBoxDefault);
+        param->setDefault( (int)eBBoxDefault );
         if (page) {
             page->addChild(*param);
         }
@@ -1031,7 +1030,6 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
     }
 
     {
-
         int w = 0, h = 0;
         double par = -1.;
         getFormatResolution(eParamFormatPCVideo, &w, &h, &par);
@@ -1380,14 +1378,14 @@ ShadertoyPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX:
             page->addChild(*param);
         }
     }
-}
+} // ShadertoyPluginFactory::describeInContext
 
 OFX::ImageEffect*
-ShadertoyPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+ShadertoyPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                       OFX::ContextEnum /*context*/)
 {
     return new ShadertoyPlugin(handle);
 }
-
 
 static ShadertoyPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

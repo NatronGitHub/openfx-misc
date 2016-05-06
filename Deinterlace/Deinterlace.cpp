@@ -36,15 +36,15 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "DeinterlaceOFX"
 #define kPluginGrouping      "Time"
 #define kPluginDescription \
-"Deinterlace input stream.\n" \
-"The following deinterlacing algorithms are supported:\n" \
-"- Weave: This is what 100fps.com calls \"do nothing\". Other names: \"disabled\" or \"no deinterlacing\". Should be used for PsF content.\n" \
-"- Blend: Blender (full resolution). Each line of the picture is created as the average of a line from the odd and a line from the even half-pictures. This ignores the fact that they are supposed to be displayed at different times.\n" \
-"- Bob: Doubler. Display each half-picture like a full picture, by simply displaying each line twice. Preserves temporal resolution of interlaced video.\n" \
-"- Discard: Only display one of the half-pictures, discard the other. Other name: \"single field\". Both temporal and vertical spatial resolutions are halved. Can be used for slower computers or to give interlaced video movie-like look with characteristic judder.\n" \
-"- Linear: Doubler. Bob with linear interpolation: instead of displaying each line twice, line 2 is created as the average of line 1 and 3, etc.\n" \
-"- Mean: Blender (half resolution). Display a half-picture that is created as the average of the two original half-pictures.\n" \
-"- Yadif: Interpolator (Yet Another DeInterlacing Filter) from MPlayer by Michael Niedermayer (http://www.mplayerhq.hu). It checks pixels of previous, current and next frames to re-create the missed field by some local adaptive method (edge-directed interpolation) and uses spatial check to prevent most artifacts." \
+    "Deinterlace input stream.\n" \
+    "The following deinterlacing algorithms are supported:\n" \
+    "- Weave: This is what 100fps.com calls \"do nothing\". Other names: \"disabled\" or \"no deinterlacing\". Should be used for PsF content.\n" \
+    "- Blend: Blender (full resolution). Each line of the picture is created as the average of a line from the odd and a line from the even half-pictures. This ignores the fact that they are supposed to be displayed at different times.\n" \
+    "- Bob: Doubler. Display each half-picture like a full picture, by simply displaying each line twice. Preserves temporal resolution of interlaced video.\n" \
+    "- Discard: Only display one of the half-pictures, discard the other. Other name: \"single field\". Both temporal and vertical spatial resolutions are halved. Can be used for slower computers or to give interlaced video movie-like look with characteristic judder.\n" \
+    "- Linear: Doubler. Bob with linear interpolation: instead of displaying each line twice, line 2 is created as the average of line 1 and 3, etc.\n" \
+    "- Mean: Blender (half resolution). Display a half-picture that is created as the average of the two original half-pictures.\n" \
+    "- Yadif: Interpolator (Yet Another DeInterlacing Filter) from MPlayer by Michael Niedermayer (http://www.mplayerhq.hu). It checks pixels of previous, current and next frames to re-create the missed field by some local adaptive method (edge-directed interpolation) and uses spatial check to prevent most artifacts." \
 
 #define kPluginIdentifier    "net.sf.openfx.Deinterlace"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
@@ -75,7 +75,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamModeOptionYadif "Yadif"
 #define kParamModeOptionYadifHint "Interpolator (Yet Another DeInterlacing Filter) from MPlayer by Michael Niedermayer (http://www.mplayerhq.hu). It checks pixels of previous, current and next frames to re-create the missed field by some local adaptive method (edge-directed interpolation) and uses spatial check to prevent most artifacts."
 
-enum DeinterlaceModeEnum {
+enum DeinterlaceModeEnum
+{
     eDeinterlaceModeWeave,
     eDeinterlaceModeBlend,
     eDeinterlaceModeBob,
@@ -92,7 +93,8 @@ enum DeinterlaceModeEnum {
 #define kParamFieldOrderOptionUpper "Upper field first"
 #define kParamFieldOrderOptionAuto "HD=upper,SD=lower"
 
-enum FieldOrderEnum {
+enum FieldOrderEnum
+{
     eFieldOrderLower,
     eFieldOrderUpper,
     eFieldOrderAuto,
@@ -104,7 +106,8 @@ enum FieldOrderEnum {
 #define kParamParityOptionLower "Lower"
 #define kParamParityOptionUpper "Upper"
 
-enum ParityEnum {
+enum ParityEnum
+{
     eParityLower,
     eParityUpper,
 };
@@ -121,12 +124,14 @@ enum ParityEnum {
 #define kParamYadifModeOptionTemporal "Temporal only"
 #define kParamYadifModeOptionTemporalHint "skips spatial interlacing check."
 
-enum YadifModeEnum {
+enum YadifModeEnum
+{
     eYadifModeTemporalSpatial,
     eYadifModeTemporal,
 };
 
-class DeinterlacePlugin : public OFX::ImageEffect 
+class DeinterlacePlugin
+    : public OFX::ImageEffect
 {
 public:
     DeinterlacePlugin(OfxImageEffectHandle handle) : ImageEffect(handle), _dstClip(0), _srcClip(0)
@@ -158,11 +163,8 @@ private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
-
     OFX::ChoiceParam *fieldOrder, *mode, *parity;
-    
 };
-
 
 
 // =========== GNU Lesser General Public License code start =================
@@ -199,84 +201,105 @@ private:
 //#define FFMIN(a,b) ((a) > (b) ? (b) : (a))
 //#define FFMAX(a,b) ((a) < (b) ? (b) : (a))
 //#define FFABS(a) ((a) > 0 ? (a) : (-(a)))
-#define FFMIN(a,b) std::min(a,b)
-#define FFMAX(a,b) std::max(a,b)
+#define FFMIN(a, b) std::min(a, b)
+#define FFMAX(a, b) std::max(a, b)
 #define FFABS(a) std::abs(a)
 
-#define FFMIN3(a,b,c) FFMIN(FFMIN(a,b),c)
-#define FFMAX3(a,b,c) FFMAX(FFMAX(a,b),c)
+#define FFMIN3(a, b, c) FFMIN(FFMIN(a, b), c)
+#define FFMAX3(a, b, c) FFMAX(FFMAX(a, b), c)
 
-inline float halven(float f) { return f*0.5f; }
-inline int halven(int i) { return i>>1; }
+inline float
+halven(float f) { return f * 0.5f; }
 
-inline int one1(unsigned char *) { return 1; }
-inline int one1(unsigned short *) { return 1; }
-inline float one1(float *) { return 0.f; }
+inline int
+halven(int i) { return i >> 1; }
 
-#define CHECK(j)\
-    {   Diff score = FFABS(cur[mrefs + ch * (- 1 + (j))] - cur[prefs + ch * (- 1 - (j))])\
-                 + FFABS(cur[mrefs   + ch * (j)] - cur[prefs   - ch * (j)])\
-                 + FFABS(cur[mrefs + ch * (1 + (j))] - cur[prefs + ch * (1 - (j))]);\
-        if(score < spatial_score){\
-            spatial_score= score;\
-            spatial_pred= halven(cur[mrefs  + ch * (j)] + cur[prefs  - ch * (j)]);\
+inline int
+one1(unsigned char *) { return 1; }
+
+inline int
+one1(unsigned short *) { return 1; }
+
+inline float
+one1(float *) { return 0.f; }
+
+#define CHECK(j) \
+    {   Diff score = FFABS(cur[mrefs + ch * ( -1 + (j) )] - cur[prefs + ch * ( -1 - (j) )]) \
+                     + FFABS(cur[mrefs   + ch * (j)] - cur[prefs   - ch * (j)]) \
+                     + FFABS(cur[mrefs + ch * ( 1 + (j) )] - cur[prefs + ch * ( 1 - (j) )]); \
+        if (score < spatial_score) { \
+            spatial_score = score; \
+            spatial_pred = halven(cur[mrefs  + ch * (j)] + cur[prefs  - ch * (j)]); \
 
 /* The is_not_edge argument here controls when the code will enter a branch
  * which reads up to and including x-3 and x+3. */
 
 #define FILTER(start, end, is_not_edge) \
-    for (x = start;  x < end; x++) { \
-        Diff c= cur[mrefs]; \
-        Diff d= halven(prev2[0] + next2[0]); \
-        Diff e= cur[prefs]; \
-        Diff temporal_diff0= FFABS(prev2[0] - next2[0]); \
-        Diff temporal_diff1=halven( FFABS(prev[mrefs] - c) + FFABS(prev[prefs] - e) ); \
-        Diff temporal_diff2=halven( FFABS(next[mrefs] - c) + FFABS(next[prefs] - e) ); \
-        Diff diff= FFMAX3(halven(temporal_diff0), temporal_diff1, temporal_diff2); \
-        Diff spatial_pred= halven(c+e); \
+    for (x = start; x < end; x++) { \
+        Diff c = cur[mrefs]; \
+        Diff d = halven(prev2[0] + next2[0]); \
+        Diff e = cur[prefs]; \
+        Diff temporal_diff0 = FFABS(prev2[0] - next2[0]); \
+        Diff temporal_diff1 = halven( FFABS(prev[mrefs] - c) + FFABS(prev[prefs] - e) ); \
+        Diff temporal_diff2 = halven( FFABS(next[mrefs] - c) + FFABS(next[prefs] - e) ); \
+        Diff diff = FFMAX3(halven(temporal_diff0), temporal_diff1, temporal_diff2); \
+        Diff spatial_pred = halven(c + e); \
  \
-        if (is_not_edge) {\
-            Diff spatial_score = FFABS(cur[mrefs-ch] - cur[prefs-ch]) + FFABS(c-e) \
-                              + FFABS(cur[mrefs+ch] - cur[prefs+ch]) - one1((Comp*)0); \
-            CHECK(-1) CHECK(-2) }} }} \
-            CHECK( 1) CHECK( 2) }} }} \
-        }\
+        if (is_not_edge) { \
+            Diff spatial_score = FFABS(cur[mrefs - ch] - cur[prefs - ch]) + FFABS(c - e) \
+                                 + FFABS(cur[mrefs + ch] - cur[prefs + ch]) - one1( (Comp*)0 ); \
+            CHECK(-1) CHECK(-2) } \
+    } \
+    } \
+    } \
+    CHECK( 1) CHECK( 2) } \
+    } \
+    } \
+    } \
+    } \
  \
-        if (!(mode&2)) { \
-            Diff b = halven(prev2[2 * mrefs] + next2[2 * mrefs]); \
-            Diff f = halven(prev2[2 * prefs] + next2[2 * prefs]); \
-            Diff max = FFMAX3(d - e, d - c, FFMIN(b - c, f - e)); \
-            Diff min = FFMIN3(d - e, d - c, FFMAX(b - c, f - e)); \
+    if ( !(mode & 2) ) { \
+        Diff b = halven(prev2[2 * mrefs] + next2[2 * mrefs]); \
+        Diff f = halven(prev2[2 * prefs] + next2[2 * prefs]); \
+        Diff max = FFMAX3( d - e, d - c, FFMIN(b - c, f - e) ); \
+        Diff min = FFMIN3( d - e, d - c, FFMAX(b - c, f - e) ); \
  \
-            diff = FFMAX3(diff, min, -max); \
-        } \
+        diff = FFMAX3(diff, min, -max); \
+    } \
  \
-        if (spatial_pred > d + diff) \
-           spatial_pred = d + diff; \
-        else if (spatial_pred < d - diff) \
-           spatial_pred = d - diff; \
+    if (spatial_pred > d + diff) { \
+        spatial_pred = d + diff; } \
+    else if (spatial_pred < d - diff) { \
+        spatial_pred = d - diff; } \
  \
-        dst[0] = (Comp)spatial_pred; \
+    dst[0] = (Comp)spatial_pred; \
  \
-        dst += ch; \
-        cur += ch; \
-        prev += ch; \
-        next += ch; \
-        prev2 += ch; \
-        next2 += ch; \
+    dst += ch; \
+    cur += ch; \
+    prev += ch; \
+    next += ch; \
+    prev2 += ch; \
+    next2 += ch; \
     }
 
-template<int ch,typename Comp,typename Diff>
-inline void filter_line_c(Comp *dst1,
-                          const Comp *prev1, const Comp *cur1, const Comp *next1,
-                          int w, int prefs, int mrefs, int parity, int mode)
+template<int ch, typename Comp, typename Diff>
+inline void
+filter_line_c(Comp *dst1,
+              const Comp *prev1,
+              const Comp *cur1,
+              const Comp *next1,
+              int w,
+              int prefs,
+              int mrefs,
+              int parity,
+              int mode)
 {
     Comp *dst  = dst1;
     const Comp *prev = prev1;
     const Comp *cur  = cur1;
     const Comp *next = next1;
     int x;
-    const Comp *prev2 = parity ? prev : cur ;
+    const Comp *prev2 = parity ? prev : cur;
     const Comp *next2 = parity ? cur  : next;
 
     /* The function is called with the pointers already pointing to data[3] and
@@ -287,97 +310,125 @@ inline void filter_line_c(Comp *dst1,
 }
 
 #define MAX_ALIGN 8
-template<int ch,typename Comp,typename Diff>
-inline void filter_edges(Comp *dst1,
-                         const Comp *prev1, const Comp *cur1, const Comp *next1,
-                         int w, int prefs, int mrefs, int parity, int mode)
+template<int ch, typename Comp, typename Diff>
+inline void
+filter_edges(Comp *dst1,
+             const Comp *prev1,
+             const Comp *cur1,
+             const Comp *next1,
+             int w,
+             int prefs,
+             int mrefs,
+             int parity,
+             int mode)
 {
     Comp *dst  = dst1;
     const Comp *prev = prev1;
     const Comp *cur  = cur1;
     const Comp *next = next1;
     int x;
-    const Comp *prev2 = parity ? prev : cur ;
+    const Comp *prev2 = parity ? prev : cur;
     const Comp *next2 = parity ? cur  : next;
 
     /* Only edge pixels need to be processed here.  A constant value of false
      * for is_not_edge should let the compiler ignore the whole branch. */
     FILTER(0, 3, 0)
 
-    dst  = dst1  + (w - 3)*ch;
-    prev = prev1 + (w - 3)*ch;
-    cur  = cur1  + (w - 3)*ch;
-    next = next1 + (w - 3)*ch;
+    dst  = dst1  + (w - 3) * ch;
+    prev = prev1 + (w - 3) * ch;
+    cur  = cur1  + (w - 3) * ch;
+    next = next1 + (w - 3) * ch;
     prev2 = parity ? prev : cur;
     next2 = parity ? cur  : next;
 
     FILTER(w - 3, w, 0)
 }
 
-inline void interpolate(unsigned char *dst, const unsigned char *cur0,  const unsigned char *cur2, int w)
+inline void
+interpolate(unsigned char *dst,
+            const unsigned char *cur0,
+            const unsigned char *cur2,
+            int w)
 {
     int x;
-    for (x=0; x<w; x++) {
-        dst[x] = (cur0[x] + cur2[x] + 1)>>1; // simple average
+
+    for (x = 0; x < w; x++) {
+        dst[x] = (cur0[x] + cur2[x] + 1) >> 1; // simple average
     }
 }
 
-inline void interpolate(float *dst, const float *cur0,  const float *cur2, int w)
+inline void
+interpolate(float *dst,
+            const float *cur0,
+            const float *cur2,
+            int w)
 {
     int x;
-    for (x=0; x<w; x++) {
-        dst[x] = (cur0[x] + cur2[x] )*0.5f; // simple average
+
+    for (x = 0; x < w; x++) {
+        dst[x] = (cur0[x] + cur2[x] ) * 0.5f; // simple average
     }
 }
 
-
-template<int ch,typename Comp,typename Diff>
-static void filter_plane(int mode, Comp *dst, int dst_stride,
-                         const Comp *prev0, const Comp *cur0, const Comp *next0,
-                         int refs, int w, int h, int parity, int tff)
+template<int ch, typename Comp, typename Diff>
+static void
+filter_plane(int mode,
+             Comp *dst,
+             int dst_stride,
+             const Comp *prev0,
+             const Comp *cur0,
+             const Comp *next0,
+             int refs,
+             int w,
+             int h,
+             int parity,
+             int tff)
 {
     int pix_3 = 3 * ch;
+
     for (int y = 0; y < h; ++y) {
-        if (((y ^ parity) & 1)) {
-            const Comp *prev= prev0 + y*refs;
-            const Comp *cur = cur0 + y*refs;
-            const Comp *next= next0 + y*refs;
-            Comp *dst2= dst + y*dst_stride;
+        if ( ( (y ^ parity) & 1 ) ) {
+            const Comp *prev = prev0 + y * refs;
+            const Comp *cur = cur0 + y * refs;
+            const Comp *next = next0 + y * refs;
+            Comp *dst2 = dst + y * dst_stride;
             int mode2 = y == 1 || y + 2 == h ? 2 : mode;
 
             for (int c = 0; c < ch; ++c) {
-                filter_line_c<ch,Comp,Diff>(dst2 + c + pix_3, prev + c + pix_3, cur + c + pix_3, next + c + pix_3, w - 6,
-                                            y + 1 < h ? refs : -refs,
-                                            y ? -refs : refs,
-                                            parity ^ tff, mode2);
-                filter_edges<ch,Comp,Diff>(dst2 + c, prev + c, cur + c, next + c, w,
-                                           y + 1 < h ? refs : -refs,
-                                           y ? -refs : refs,
-                                           parity ^ tff, mode2);
+                filter_line_c<ch, Comp, Diff>(dst2 + c + pix_3, prev + c + pix_3, cur + c + pix_3, next + c + pix_3, w - 6,
+                                              y + 1 < h ? refs : -refs,
+                                              y ? -refs : refs,
+                                              parity ^ tff, mode2);
+                filter_edges<ch, Comp, Diff>(dst2 + c, prev + c, cur + c, next + c, w,
+                                             y + 1 < h ? refs : -refs,
+                                             y ? -refs : refs,
+                                             parity ^ tff, mode2);
             }
         } else {
-            std::memcpy(&dst[y * dst_stride],
-                   &cur0[y * refs], w * ch * sizeof(Comp)); // copy original
+            std::memcpy( &dst[y * dst_stride],
+                         &cur0[y * refs], w * ch * sizeof(Comp) ); // copy original
         }
     }
-    
 }
 
-template<int ch,typename Comp,typename Diff>
-static void filter_plane_ofx(int mode,
-                             OFX::Image *dst_,
-                             const OFX::Image *srcp,
-                             const OFX::Image *src,
-                             const OFX::Image *srcn,
-                             int parity, int tff)
+template<int ch, typename Comp, typename Diff>
+static void
+filter_plane_ofx(int mode,
+                 OFX::Image *dst_,
+                 const OFX::Image *srcp,
+                 const OFX::Image *src,
+                 const OFX::Image *srcn,
+                 int parity,
+                 int tff)
 {
     Comp *dst = (Comp*)dst_->getPixelData(); // change this when we support renderWindow
     int dst_stride = dst_->getRowBytes() / sizeof(Comp);
-    const Comp *prev0 = (const Comp*)(srcp ? srcp->getPixelData() : src->getPixelData());
+    const Comp *prev0 = (const Comp*)( srcp ? srcp->getPixelData() : src->getPixelData() );
     const Comp *cur0 = (const Comp*)src->getPixelData();
-    const Comp *next0 = (const Comp*)(srcn ? srcn->getPixelData() : src->getPixelData());
+    const Comp *next0 = (const Comp*)( srcn ? srcn->getPixelData() : src->getPixelData() );
     int refs = src->getRowBytes() / sizeof(Comp);
     const OfxRectI bounds = dst_->getBounds();
+
     filter_plane<ch, Comp, Diff>(mode, dst, dst_stride,
                                  prev0, cur0, next0,
                                  refs,
@@ -387,205 +438,204 @@ static void filter_plane_ofx(int mode,
 
 // =========== GNU Lesser General Public License code end =================
 
-void DeinterlacePlugin::render(const OFX::RenderArguments &args)
+void
+DeinterlacePlugin::render(const OFX::RenderArguments &args)
 {
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+    if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-    if (!dst.get()) {
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
-    std::auto_ptr<const OFX::Image> srcp((_srcClip && _srcClip->isConnected()) ?
-                                         _srcClip->fetchImage(args.time-1) : 0);
-    std::auto_ptr<const OFX::Image> srcn((_srcClip && _srcClip->isConnected()) ?
-                                         _srcClip->fetchImage(args.time+1) : 0);
-    if (src.get()) {
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(args.time) : 0 );
+    std::auto_ptr<const OFX::Image> srcp( ( _srcClip && _srcClip->isConnected() ) ?
+                                          _srcClip->fetchImage(args.time - 1) : 0 );
+    std::auto_ptr<const OFX::Image> srcn( ( _srcClip && _srcClip->isConnected() ) ?
+                                          _srcClip->fetchImage(args.time + 1) : 0 );
+    if ( src.get() ) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     } else {
-        //All the code below expects src to be valid 
+        //All the code below expects src to be valid
         setPersistentMessage(OFX::Message::eMessageError, "", "Failed to fetch input image");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (srcp.get()) {
-        if (srcp->getRenderScale().x != args.renderScale.x ||
-            srcp->getRenderScale().y != args.renderScale.y ||
-            (srcp->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcp->getField() != args.fieldToRender)) {
+    if ( srcp.get() ) {
+        if ( (srcp->getRenderScale().x != args.renderScale.x) ||
+             ( srcp->getRenderScale().y != args.renderScale.y) ||
+             ( ( srcp->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcp->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
-    if (srcn.get()) {
-        if (srcn->getRenderScale().x != args.renderScale.x ||
-            srcn->getRenderScale().y != args.renderScale.y ||
-            (srcn->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcn->getField() != args.fieldToRender)) {
+    if ( srcn.get() ) {
+        if ( (srcn->getRenderScale().x != args.renderScale.x) ||
+             ( srcn->getRenderScale().y != args.renderScale.y) ||
+             ( ( srcn->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcn->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
 
     const OfxRectI rect = dst->getBounds();
-
-    int width=rect.x2-rect.x1;
-    int height=rect.y2-rect.y1;
-
+    int width = rect.x2 - rect.x1;
+    int height = rect.y2 - rect.y1;
     int imode       = 0;
     int ifieldOrder = 2;
     int iparity     = 0;
 
-    mode->getValueAtTime(args.time,imode);
-    fieldOrder->getValueAtTime(args.time,ifieldOrder);
-    parity->getValueAtTime(args.time,iparity);
+    mode->getValueAtTime(args.time, imode);
+    fieldOrder->getValueAtTime(args.time, ifieldOrder);
+    parity->getValueAtTime(args.time, iparity);
 
-    imode*=2;
+    imode *= 2;
 
-    if (ifieldOrder==2) {
-        if (width>1024) {
-            ifieldOrder=1;
+    if (ifieldOrder == 2) {
+        if (width > 1024) {
+            ifieldOrder = 1;
         } else {
-            ifieldOrder=0;
+            ifieldOrder = 0;
         }
     }
 
 
-    if (width < 3 || height < 3) {
+    if ( (width < 3) || (height < 3) ) {
         // Video of less than 3 columns or lines is not supported
         // just copy src to dst
-        for (int y=0; y<height; y++) {
-            if (src.get()) {
-                std::memcpy(dst->getPixelAddress(0,y), src->getPixelAddress(0,y), abs(src->getRowBytes()));
+        for (int y = 0; y < height; y++) {
+            if ( src.get() ) {
+                std::memcpy( dst->getPixelAddress(0, y), src->getPixelAddress(0, y), abs( src->getRowBytes() ) );
             } else {
-                std::memcpy(dst->getPixelAddress(0,y), 0, abs(dst->getRowBytes()));
+                std::memcpy( dst->getPixelAddress(0, y), 0, abs( dst->getRowBytes() ) );
             }
         }
     } else {
         if (dstComponents == OFX::ePixelComponentRGBA) {
-            switch(dstBitDepth) {
+            switch (dstBitDepth) {
             case OFX::eBitDepthUByte:
-                filter_plane_ofx<4,unsigned char,int>(imode, // mode
-                                                      dst.get(),
-                                                      srcp.get(), src.get(), srcn.get(),
-                                                      iparity,ifieldOrder); // parity, tff
+                filter_plane_ofx<4, unsigned char, int>(imode, // mode
+                                                        dst.get(),
+                                                        srcp.get(), src.get(), srcn.get(),
+                                                        iparity, ifieldOrder); // parity, tff
                 break;
 
             case OFX::eBitDepthUShort:
-                filter_plane_ofx<4,unsigned short,int>(imode, // mode
-                                                       dst.get(),
-                                                       srcp.get(), src.get(), srcn.get(),
-                                                       iparity,ifieldOrder); // parity, tff
-                    break;
-                    
+                filter_plane_ofx<4, unsigned short, int>(imode, // mode
+                                                         dst.get(),
+                                                         srcp.get(), src.get(), srcn.get(),
+                                                         iparity, ifieldOrder); // parity, tff
+                break;
+
             case OFX::eBitDepthFloat:
-                    filter_plane_ofx<4,float,float>(imode, // mode
-                                                    dst.get(),
-                                                    srcp.get(), src.get(), srcn.get(),
-                                                    iparity,ifieldOrder); // parity, tff
-                    break;
+                filter_plane_ofx<4, float, float>(imode,   // mode
+                                                  dst.get(),
+                                                  srcp.get(), src.get(), srcn.get(),
+                                                  iparity, ifieldOrder);  // parity, tff
+                break;
 
             default:
                 break;
             }
         } else if (dstComponents == OFX::ePixelComponentRGB) {
-            switch(dstBitDepth) {
-                case OFX::eBitDepthUByte:
-                    filter_plane_ofx<3,unsigned char,int>(imode, // mode
-                                                          dst.get(),
-                                                          srcp.get(), src.get(), srcn.get(),
-                                                          iparity,ifieldOrder); // parity, tff
-                    break;
-
-                case OFX::eBitDepthUShort:
-                    filter_plane_ofx<3,unsigned short,int>(imode, // mode
-                                                           dst.get(),
-                                                           srcp.get(), src.get(), srcn.get(),
-                                                           iparity,ifieldOrder); // parity, tff
-                    break;
-
-                case OFX::eBitDepthFloat:
-                    filter_plane_ofx<3,float,float>(imode, // mode
-                                                    dst.get(),
-                                                    srcp.get(), src.get(), srcn.get(),
-                                                    iparity,ifieldOrder); // parity, tff
-                    break;
-
-                default:
-                    break;
-            }
-        } else if (dstComponents == OFX::ePixelComponentXY) {
-            switch(dstBitDepth) {
-                case OFX::eBitDepthUByte:
-                    filter_plane_ofx<2,unsigned char,int>(imode, // mode
-                                                          dst.get(),
-                                                          srcp.get(), src.get(), srcn.get(),
-                                                          iparity,ifieldOrder); // parity, tff
-                    break;
-
-                case OFX::eBitDepthUShort:
-                    filter_plane_ofx<2,unsigned short,int>(imode, // mode
-                                                           dst.get(),
-                                                           srcp.get(), src.get(), srcn.get(),
-                                                           iparity,ifieldOrder); // parity, tff
-                    break;
-
-                case OFX::eBitDepthFloat:
-                    filter_plane_ofx<2,float,float>(imode, // mode
-                                                    dst.get(),
-                                                    srcp.get(), src.get(), srcn.get(),
-                                                    iparity,ifieldOrder); // parity, tff
-                    break;
-
-                default:
-                    break;
-            }
-        } else if (dstComponents == OFX::ePixelComponentAlpha) {
-            switch(dstBitDepth) {
+            switch (dstBitDepth) {
             case OFX::eBitDepthUByte:
-                    filter_plane_ofx<1,unsigned char,int>(imode, // mode
-                                                          dst.get(),
-                                                          srcp.get(), src.get(), srcn.get(),
-                                                          iparity,ifieldOrder); // parity, tff
-                    break;
+                filter_plane_ofx<3, unsigned char, int>(imode,   // mode
+                                                        dst.get(),
+                                                        srcp.get(), src.get(), srcn.get(),
+                                                        iparity, ifieldOrder);  // parity, tff
+                break;
 
             case OFX::eBitDepthUShort:
-                    filter_plane_ofx<1,unsigned short,int>(imode, // mode
-                                                           dst.get(),
-                                                           srcp.get(), src.get(), srcn.get(),
-                                                           iparity,ifieldOrder); // parity, tff
-                    break;
+                filter_plane_ofx<3, unsigned short, int>(imode,   // mode
+                                                         dst.get(),
+                                                         srcp.get(), src.get(), srcn.get(),
+                                                         iparity, ifieldOrder);  // parity, tff
+                break;
 
             case OFX::eBitDepthFloat:
-                    filter_plane_ofx<1,float,float>(imode, // mode
-                                                    dst.get(),
-                                                    srcp.get(), src.get(), srcn.get(),
-                                                    iparity,ifieldOrder); // parity, tff
-                    break;
+                filter_plane_ofx<3, float, float>(imode,   // mode
+                                                  dst.get(),
+                                                  srcp.get(), src.get(), srcn.get(),
+                                                  iparity, ifieldOrder);  // parity, tff
+                break;
+
+            default:
+                break;
+            }
+        } else if (dstComponents == OFX::ePixelComponentXY) {
+            switch (dstBitDepth) {
+            case OFX::eBitDepthUByte:
+                filter_plane_ofx<2, unsigned char, int>(imode,   // mode
+                                                        dst.get(),
+                                                        srcp.get(), src.get(), srcn.get(),
+                                                        iparity, ifieldOrder);  // parity, tff
+                break;
+
+            case OFX::eBitDepthUShort:
+                filter_plane_ofx<2, unsigned short, int>(imode,   // mode
+                                                         dst.get(),
+                                                         srcp.get(), src.get(), srcn.get(),
+                                                         iparity, ifieldOrder);  // parity, tff
+                break;
+
+            case OFX::eBitDepthFloat:
+                filter_plane_ofx<2, float, float>(imode,   // mode
+                                                  dst.get(),
+                                                  srcp.get(), src.get(), srcn.get(),
+                                                  iparity, ifieldOrder);  // parity, tff
+                break;
+
+            default:
+                break;
+            }
+        } else if (dstComponents == OFX::ePixelComponentAlpha) {
+            switch (dstBitDepth) {
+            case OFX::eBitDepthUByte:
+                filter_plane_ofx<1, unsigned char, int>(imode,   // mode
+                                                        dst.get(),
+                                                        srcp.get(), src.get(), srcn.get(),
+                                                        iparity, ifieldOrder);  // parity, tff
+                break;
+
+            case OFX::eBitDepthUShort:
+                filter_plane_ofx<1, unsigned short, int>(imode,   // mode
+                                                         dst.get(),
+                                                         srcp.get(), src.get(), srcn.get(),
+                                                         iparity, ifieldOrder);  // parity, tff
+                break;
+
+            case OFX::eBitDepthFloat:
+                filter_plane_ofx<1, float, float>(imode,   // mode
+                                                  dst.get(),
+                                                  srcp.get(), src.get(), srcn.get(),
+                                                  iparity, ifieldOrder);  // parity, tff
+                break;
 
             default:
                 break;
             }
         }
     }
-}
+} // DeinterlacePlugin::render
 
 /* Override the clip preferences */
 void
@@ -597,9 +647,9 @@ DeinterlacePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreference
 
 bool
 DeinterlacePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
-                                         OfxRectD &/*rod*/)
+                                         OfxRectD & /*rod*/)
 {
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+    if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
@@ -608,10 +658,10 @@ DeinterlacePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments 
 
 bool
 DeinterlacePlugin::isIdentity(const OFX::IsIdentityArguments &args,
-                              OFX::Clip * &/*identityClip*/,
-                              double &/*identityTime*/)
+                              OFX::Clip * & /*identityClip*/,
+                              double & /*identityTime*/)
 {
-    if (!kSupportsRenderScale && (args.renderScale.x != 1. || args.renderScale.y != 1.)) {
+    if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
@@ -623,15 +673,15 @@ DeinterlacePlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
                                    OFX::FramesNeededSetter &frames)
 {
     OfxRangeD range;
+
     range.min = args.time - 1;
     range.max = args.time + 1;
     frames.setFramesNeeded(*_srcClip, range);
 }
 
 mDeclarePluginFactory(DeinterlacePluginFactory, {}, {});
-
-
-void DeinterlacePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+DeinterlacePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -662,11 +712,14 @@ void DeinterlacePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
-void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+void
+DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                            OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentXY);
@@ -706,7 +759,7 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->appendOption(kParamModeOptionMean, kParamModeOptionMeanHint);
         assert(param->getNOptions() == eDeinterlaceModeYadif);
         param->appendOption(kParamModeOptionYadif, kParamModeOptionYadifHint);
-        param->setDefault(int(eDeinterlaceModeYadif));
+        param->setDefault( int(eDeinterlaceModeYadif) );
         param->setAnimates(true); // can animate
         param->setIsSecret(true); // Not yet implemented!
         if (page) {
@@ -723,7 +776,7 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->appendOption(kParamFieldOrderOptionUpper);
         assert(param->getNOptions() == eFieldOrderAuto);
         param->appendOption(kParamFieldOrderOptionAuto);
-        param->setDefault(int(eFieldOrderAuto));
+        param->setDefault( int(eFieldOrderAuto) );
         param->setAnimates(true); // can animate
         if (page) {
             page->addChild(*param);
@@ -738,7 +791,7 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
         param->appendOption(kParamParityOptionLower);
         assert(param->getNOptions() == eParityUpper);
         param->appendOption(kParamParityOptionUpper);
-        param->setDefault(int(eParityLower));
+        param->setDefault( int(eParityLower) );
         param->setAnimates(true); // can animate
         if (page) {
             page->addChild(*param);
@@ -769,13 +822,14 @@ void DeinterlacePluginFactory::describeInContext(OFX::ImageEffectDescriptor &des
             page->addChild(*param);
         }
     }
-}
+} // DeinterlacePluginFactory::describeInContext
 
-ImageEffect* DeinterlacePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+ImageEffect*
+DeinterlacePluginFactory::createInstance(OfxImageEffectHandle handle,
+                                         OFX::ContextEnum /*context*/)
 {
     return new DeinterlacePlugin(handle);
 }
-
 
 static DeinterlacePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

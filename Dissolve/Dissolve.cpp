@@ -59,15 +59,17 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kClipSourceCount 64
 
 static
-std::string unsignedToString(unsigned i)
+std::string
+unsignedToString(unsigned i)
 {
     if (i == 0) {
         return "0";
     }
     std::string nb;
-    for (unsigned j = i; j !=0; j /= 10) {
-        nb += ('0' + (j % 10));
+    for (unsigned j = i; j != 0; j /= 10) {
+        nb += ( '0' + (j % 10) );
     }
+
     return nb;
 }
 
@@ -78,23 +80,24 @@ class DissolvePlugin
 {
 public:
     /** @brief ctor */
-    DissolvePlugin(OfxImageEffectHandle handle, bool numerousInputs)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(numerousInputs ? kClipSourceCount : 2)
-    , _which(0)
-    , _maskApply(0)
-    , _maskInvert(0)
+    DissolvePlugin(OfxImageEffectHandle handle,
+                   bool numerousInputs)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(numerousInputs ? kClipSourceCount : 2)
+        , _which(0)
+        , _maskApply(0)
+        , _maskInvert(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGBA || _dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentXY || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha));
+        assert( _dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentRGBA || _dstClip->getPixelComponents() == OFX::ePixelComponentRGB || _dstClip->getPixelComponents() == OFX::ePixelComponentXY || _dstClip->getPixelComponents() == OFX::ePixelComponentAlpha) );
         for (unsigned i = 0; i < _srcClip.size(); ++i) {
-            if (getContext() == OFX::eContextTransition && i < 2) {
+            if ( (getContext() == OFX::eContextTransition) && (i < 2) ) {
                 _srcClip[i] = fetchClip(i == 0 ? kOfxImageEffectTransitionSourceFromClipName : kOfxImageEffectTransitionSourceToClipName);
             } else {
-                _srcClip[i] = fetchClip(unsignedToString(i));
+                _srcClip[i] = fetchClip( unsignedToString(i) );
             }
-            assert(_srcClip[i] && (_srcClip[i]->getPixelComponents() == OFX::ePixelComponentRGBA || _srcClip[i]->getPixelComponents() == OFX::ePixelComponentRGB || _srcClip[i]->getPixelComponents() == OFX::ePixelComponentXY || _srcClip[i]->getPixelComponents() == OFX::ePixelComponentAlpha));
+            assert( _srcClip[i] && (_srcClip[i]->getPixelComponents() == OFX::ePixelComponentRGBA || _srcClip[i]->getPixelComponents() == OFX::ePixelComponentRGB || _srcClip[i]->getPixelComponents() == OFX::ePixelComponentXY || _srcClip[i]->getPixelComponents() == OFX::ePixelComponentAlpha) );
         }
 
         _maskClip = fetchClip("Mask");
@@ -116,7 +119,6 @@ public:
 
     // override the roi call
     virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
-
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /** @brief get the clip preferences */
@@ -133,8 +135,9 @@ private:
     void updateRange()
     {
         int maxconnected = 1;
+
         for (unsigned i = 2; i < _srcClip.size(); ++i) {
-            if (_srcClip[i]->isConnected()) {
+            if ( _srcClip[i]->isConnected() ) {
                 maxconnected = i;
             }
         }
@@ -185,80 +188,82 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
 {
     // get a dst image
     std::auto_ptr<OFX::Image>  dst( _dstClip->fetchImage(args.time) );
-    if (!dst.get()) {
+
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     // get the transition value
-    double which = std::max(0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size()-1));
+    double which = std::max( 0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size() - 1) );
     int prev = std::floor(which);
     int next = std::ceil(which);
 
     if (prev == next) {
-        std::auto_ptr<const OFX::Image> src((_srcClip[prev] && _srcClip[prev]->isConnected()) ?
-                                            _srcClip[prev]->fetchImage(args.time) : 0);
-        if (src.get()) {
-            if (src->getRenderScale().x != args.renderScale.x ||
-                src->getRenderScale().y != args.renderScale.y ||
-                (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+        std::auto_ptr<const OFX::Image> src( ( _srcClip[prev] && _srcClip[prev]->isConnected() ) ?
+                                             _srcClip[prev]->fetchImage(args.time) : 0 );
+        if ( src.get() ) {
+            if ( (src->getRenderScale().x != args.renderScale.x) ||
+                 ( src->getRenderScale().y != args.renderScale.y) ||
+                 ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
-            OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+            OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
             OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-            if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+            if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
                 OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
-        copyPixels(*this, args.renderWindow, src.get(), dst.get());
+        copyPixels( *this, args.renderWindow, src.get(), dst.get() );
+
         return;
     }
 
     // fetch the two source images
-    std::auto_ptr<const OFX::Image> fromImg((_srcClip[prev] && _srcClip[prev]->isConnected()) ?
-                                            _srcClip[prev]->fetchImage(args.time) : 0);
-    std::auto_ptr<const OFX::Image> toImg((_srcClip[next] && _srcClip[next]->isConnected()) ?
-                                          _srcClip[next]->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> fromImg( ( _srcClip[prev] && _srcClip[prev]->isConnected() ) ?
+                                             _srcClip[prev]->fetchImage(args.time) : 0 );
+    std::auto_ptr<const OFX::Image> toImg( ( _srcClip[next] && _srcClip[next]->isConnected() ) ?
+                                           _srcClip[next]->fetchImage(args.time) : 0 );
 
     // make sure bit depths are sane
-    if (fromImg.get()) {
-        if (fromImg->getRenderScale().x != args.renderScale.x ||
-            fromImg->getRenderScale().y != args.renderScale.y ||
-            (fromImg->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && fromImg->getField() != args.fieldToRender)) {
+    if ( fromImg.get() ) {
+        if ( (fromImg->getRenderScale().x != args.renderScale.x) ||
+             ( fromImg->getRenderScale().y != args.renderScale.y) ||
+             ( ( fromImg->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( fromImg->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
         checkComponents(*fromImg, dstBitDepth, dstComponents);
     }
-    if (toImg.get()) {
-        if (toImg->getRenderScale().x != args.renderScale.x ||
-            toImg->getRenderScale().y != args.renderScale.y ||
-            (toImg->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && toImg->getField() != args.fieldToRender)) {
+    if ( toImg.get() ) {
+        if ( (toImg->getRenderScale().x != args.renderScale.x) ||
+             ( toImg->getRenderScale().y != args.renderScale.y) ||
+             ( ( toImg->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( toImg->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
         checkComponents(*toImg, dstBitDepth, dstComponents);
     }
 
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
-    if (mask.get()) {
-        if (mask->getRenderScale().x != args.renderScale.x ||
-            mask->getRenderScale().y != args.renderScale.y ||
-            (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
+    if ( mask.get() ) {
+        if ( (mask->getRenderScale().x != args.renderScale.x) ||
+             ( mask->getRenderScale().y != args.renderScale.y) ||
+             ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -284,7 +289,7 @@ DissolvePlugin::setupAndProcess(OFX::ImageBlenderMaskedBase &processor,
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
-}
+} // DissolvePlugin::setupAndProcess
 
 // the overridden render function
 void
@@ -294,8 +299,8 @@ DissolvePlugin::render(const OFX::RenderArguments &args)
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
-        assert(kSupportsMultipleClipPARs   || _srcClip[i]->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-        assert(kSupportsMultipleClipDepths || _srcClip[i]->getPixelDepth()       == _dstClip->getPixelDepth());
+        assert( kSupportsMultipleClipPARs   || _srcClip[i]->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+        assert( kSupportsMultipleClipDepths || _srcClip[i]->getPixelDepth()       == _dstClip->getPixelDepth() );
     }
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
@@ -315,20 +320,21 @@ void
 DissolvePlugin::renderForComponents(const OFX::RenderArguments &args)
 {
     OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+
     switch (dstBitDepth) {
-        case OFX::eBitDepthUByte:
-            renderForBitDepth<unsigned char, nComponents, 255>(args);
-            break;
+    case OFX::eBitDepthUByte:
+        renderForBitDepth<unsigned char, nComponents, 255>(args);
+        break;
 
-        case OFX::eBitDepthUShort:
-            renderForBitDepth<unsigned short, nComponents, 65535>(args);
-            break;
+    case OFX::eBitDepthUShort:
+        renderForBitDepth<unsigned short, nComponents, 65535>(args);
+        break;
 
-        case OFX::eBitDepthFloat:
-            renderForBitDepth<float, nComponents, 1>(args);
-            break;
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    case OFX::eBitDepthFloat:
+        renderForBitDepth<float, nComponents, 1>(args);
+        break;
+    default:
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
@@ -336,9 +342,9 @@ template <class PIX, int nComponents, int maxValue>
 void
 DissolvePlugin::renderForBitDepth(const OFX::RenderArguments &args)
 {
-    if (getContext() != OFX::eContextFilter &&
-        getContext() != OFX::eContextTransition &&
-        _maskClip && _maskClip->isConnected()) {
+    if ( (getContext() != OFX::eContextFilter) &&
+         ( getContext() != OFX::eContextTransition) &&
+         _maskClip && _maskClip->isConnected() ) {
         OFX::ImageBlenderMasked<PIX, nComponents, maxValue, true> fred(*this);
         setupAndProcess(fred, args);
     } else {
@@ -354,8 +360,9 @@ DissolvePlugin::isIdentity(const OFX::IsIdentityArguments &args,
                            double &identityTime)
 {
     // get the transition value
-    double which = std::max(0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size()-1));
+    double which = std::max( 0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size() - 1) );
     int prev = (int)which;
+
     //int next = std::min((int)which+1,(int)_srcClip.size()-1);
 
     identityTime = args.time;
@@ -368,15 +375,15 @@ DissolvePlugin::isIdentity(const OFX::IsIdentityArguments &args,
         return true;
     }
 
-    if ((which >= _srcClip.size() || (prev == which)) &&
-        (!_maskClip || !_maskClip->isConnected())) {
+    if ( ( ( which >= _srcClip.size() ) || (prev == which) ) &&
+         ( !_maskClip || !_maskClip->isConnected() ) ) {
         identityClip = _srcClip[prev];
         identityTime = args.time;
 
         return true;
     }
 
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
@@ -384,8 +391,9 @@ DissolvePlugin::isIdentity(const OFX::IsIdentityArguments &args,
             OfxRectI maskRoD;
             OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                 identityClip = _srcClip[0];
+
                 return true;
             }
         }
@@ -399,50 +407,54 @@ DissolvePlugin::isIdentity(const OFX::IsIdentityArguments &args,
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
 void
-DissolvePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+DissolvePlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
+                                     OFX::RegionOfInterestSetter &rois)
 {
-    double which = std::max(0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size()-1));
+    double which = std::max( 0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size() - 1) );
     unsigned prev = std::floor(which);
     unsigned next = std::ceil(which);
     const OfxRectD emptyRoI = {0., 0., 0., 0.};
+
     for (unsigned i = 0; i < _srcClip.size(); ++i) {
-        if (i != prev && i != next) {
+        if ( (i != prev) && (i != next) ) {
             rois.setRegionOfInterest(*_srcClip[i], emptyRoI);
         }
     }
 }
 
 bool
-DissolvePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+DissolvePlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                      OfxRectD &rod)
 {
     // get the transition value
-    double which = std::max(0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size()-1));
+    double which = std::max( 0., std::min(_which->getValueAtTime(args.time), (double)_srcClip.size() - 1) );
     int prev = (int)which;
-    int next = std::min((int)which+1,(int)_srcClip.size()-1);
+    int next = std::min( (int)which + 1, (int)_srcClip.size() - 1 );
 
     // at the start?
-    if (which <= 0.0 && _srcClip[0] && _srcClip[0]->isConnected()) {
+    if ( (which <= 0.0) && _srcClip[0] && _srcClip[0]->isConnected() ) {
         rod = _srcClip[0]->getRegionOfDefinition(args.time);
 
         return true;
     }
 
     // at the end?
-    if ((which >= _srcClip.size() || (which == prev)) &&
-        _srcClip[prev] && _srcClip[prev]->isConnected() &&
-        (!_maskClip || !_maskClip->isConnected())) {
+    if ( ( ( which >= _srcClip.size() ) || (which == prev) ) &&
+         _srcClip[prev] && _srcClip[prev]->isConnected() &&
+         ( !_maskClip || !_maskClip->isConnected() ) ) {
         rod = _srcClip[prev]->getRegionOfDefinition(args.time);
 
         return true;
     }
 
-    if (_srcClip[prev] && _srcClip[prev]->isConnected() && _srcClip[next] && _srcClip[next]->isConnected()) {
+    if ( _srcClip[prev] && _srcClip[prev]->isConnected() && _srcClip[next] && _srcClip[next]->isConnected() ) {
         OfxRectD fromRoD = _srcClip[prev]->getRegionOfDefinition(args.time);
         OfxRectD toRoD = _srcClip[next]->getRegionOfDefinition(args.time);
         OFX::Coords::rectBoundingBox(fromRoD, toRoD, &rod);
 
         return true;
     }
+
     return false;
 }
 
@@ -458,14 +470,14 @@ DissolvePlugin::getClipPreferences(OFX::ClipPreferencesSetter &clipPreferences)
 }
 
 void
-DissolvePlugin::changedClip(const OFX::InstanceChangedArgs &/*args*/, const std::string &/*clipName*/)
+DissolvePlugin::changedClip(const OFX::InstanceChangedArgs & /*args*/,
+                            const std::string & /*clipName*/)
 {
-   updateRange();
+    updateRange();
 }
 
 mDeclarePluginFactory(DissolvePluginFactory, {}, {}
                       );
-
 void
 DissolvePluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
@@ -506,7 +518,6 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
     //more than 2 images
     bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
                             OFX::getImageEffectHostDescription()->versionMajor >= 2);
-
     unsigned clipSourceCount = numerousInputs ? kClipSourceCount : 2;
 
     {
@@ -545,8 +556,8 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         srcClip->setSupportsTiles(kSupportsTiles);
         srcClip->setIsMask(false);
     }
-
     ClipDescriptor *maskClip = desc.defineClip("Mask");
+
     maskClip->addSupportedComponent(ePixelComponentAlpha);
     maskClip->setTemporalClipAccess(false);
     if (context != eContextPaint) {
@@ -557,7 +568,7 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     if (numerousInputs) {
         for (unsigned i = 2; i < clipSourceCount; ++i) {
-            ClipDescriptor *srcClip = desc.defineClip(unsignedToString(i));
+            ClipDescriptor *srcClip = desc.defineClip( unsignedToString(i) );
             srcClip->setOptional(true);
             srcClip->addSupportedComponent(ePixelComponentNone);
             srcClip->addSupportedComponent(ePixelComponentRGBA);
@@ -603,7 +614,7 @@ DissolvePluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
 
     // don't define the mix param
     ofxsMaskDescribeParams(desc, page);
-}
+} // DissolvePluginFactory::describeInContext
 
 ImageEffect*
 DissolvePluginFactory::createInstance(OfxImageEffectHandle handle,
@@ -616,7 +627,6 @@ DissolvePluginFactory::createInstance(OfxImageEffectHandle handle,
 
     return new DissolvePlugin(handle, numerousInputs);
 }
-
 
 static DissolvePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

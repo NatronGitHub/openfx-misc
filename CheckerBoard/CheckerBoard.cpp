@@ -90,7 +90,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #include "ofxNatron.h"
 
 /** @brief  Base class used to blend two images together */
-class CheckerBoardProcessorBase : public OFX::ImageProcessor {
+class CheckerBoardProcessorBase
+    : public OFX::ImageProcessor
+{
 protected:
     OfxPointD _boxSize;
     OfxRGBAColourD _color0;
@@ -108,15 +110,15 @@ protected:
 public:
     /** @brief no arg ctor */
     CheckerBoardProcessorBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _lineInfX(0.)
-    , _lineSupX(0.)
-    , _lineInfY(0.)
-    , _lineSupY(0.)
-    , _centerlineInfX(0.)
-    , _centerlineSupX(0.)
-    , _centerlineInfY(0.)
-    , _centerlineSupY(0.)
+        : OFX::ImageProcessor(instance)
+        , _lineInfX(0.)
+        , _lineSupX(0.)
+        , _lineInfY(0.)
+        , _lineSupY(0.)
+        , _centerlineInfX(0.)
+        , _centerlineSupX(0.)
+        , _centerlineInfY(0.)
+        , _centerlineSupY(0.)
     {
         _boxSize.x = _boxSize.y = 0.;
         _color0.r = _color0.g = _color0.b = _color0.a = 0.;
@@ -171,20 +173,22 @@ public:
 
 /** @brief templated class to blend between two images */
 template <class PIX, int nComponents, int max>
-class CheckerBoardProcessor : public CheckerBoardProcessorBase
+class CheckerBoardProcessor
+    : public CheckerBoardProcessorBase
 {
 public:
     // ctor
     CheckerBoardProcessor(OFX::ImageEffect &instance)
-    : CheckerBoardProcessorBase(instance)
+        : CheckerBoardProcessorBase(instance)
     {
     }
 
 private:
-    static void
-    colorToPIX(const OfxRGBAColourD& color, PIX colorPix[nComponents])
+    static void colorToPIX(const OfxRGBAColourD& color,
+                           PIX colorPix[nComponents])
     {
         float colorf[4];
+
         if (nComponents == 1) {
             // alpha
             colorf[0] = (float)color.a;
@@ -213,7 +217,7 @@ private:
             }
         } else {
             // color is supposed to be linear: delinearize first
-            if (nComponents == 3 || nComponents == 4) {
+            if ( (nComponents == 3) || (nComponents == 4) ) {
                 // don't delinearize alpha: it is always linear
                 for (int c = 0; c < 3; ++c) {
                     if (max == 255) {
@@ -226,7 +230,7 @@ private:
             }
             // clamp and convert to the destination type
             for (int c = 0; c < nComponents; ++c) {
-                colorPix[c] = OFX::Color::floatToInt<max+1>(colorf[c]);
+                colorPix[c] = OFX::Color::floatToInt<max + 1>(colorf[c]);
             }
         }
     }
@@ -240,6 +244,7 @@ private:
         PIX color3[nComponents];
         PIX lineColor[nComponents];
         PIX centerlineColor[nComponents];
+
         colorToPIX(_color0, color0);
         colorToPIX(_color1, color1);
         colorToPIX(_color2, color2);
@@ -252,14 +257,14 @@ private:
 
         // push pixels
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
-            
+
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             // check if we are on the centerline
-            if ((center.y - _centerlineInfY) <= y && y < (center.y + _centerlineSupY)) {
+            if ( ( (center.y - _centerlineInfY) <= y ) && ( y < (center.y + _centerlineSupY) ) ) {
                 for (int x = procWindow.x1; x < procWindow.x2; x++) {
                     for (int c = 0; c < nComponents; ++c) {
                         dstPix[c] = centerlineColor[c];
@@ -268,9 +273,9 @@ private:
                 }
             } else {
                 // the closest line between boxes
-                double yline = center.y + _boxSize.y * std::floor((y - center.y) / _boxSize.y + 0.5);
+                double yline = center.y + _boxSize.y * std::floor( (y - center.y) / _boxSize.y + 0.5 );
                 // check if we are on a line
-                if ((yline - _lineInfY) <= y && y < (yline + _lineSupY)) {
+                if ( ( (yline - _lineInfY) <= y ) && ( y < (yline + _lineSupY) ) ) {
                     for (int x = procWindow.x1; x < procWindow.x2; x++) {
                         for (int c = 0; c < nComponents; ++c) {
                             dstPix[c] = lineColor[c];
@@ -279,27 +284,27 @@ private:
                     }
                 } else {
                     // draw boxes and vertical lines
-                    int ybox = std::floor((y - center.y) / _boxSize.y);
+                    int ybox = std::floor( (y - center.y) / _boxSize.y );
                     PIX *c0 = (ybox & 1) ? color3 : color0;
                     PIX *c1 = (ybox & 1) ? color2 : color1;
 
                     for (int x = procWindow.x1; x < procWindow.x2; x++) {
                         // check if we are on the centerline
-                        if ((center.x - _centerlineInfX) <= x && x < (center.x + _centerlineSupX)) {
+                        if ( ( (center.x - _centerlineInfX) <= x ) && ( x < (center.x + _centerlineSupX) ) ) {
                             for (int c = 0; c < nComponents; ++c) {
                                 dstPix[c] = centerlineColor[c];
                             }
                         } else {
                             // the closest line between boxes
-                            double xline = center.x + _boxSize.x * std::floor((x - center.x) / _boxSize.x + 0.5);
+                            double xline = center.x + _boxSize.x * std::floor( (x - center.x) / _boxSize.x + 0.5 );
                             // check if we are on a line
-                            if ((xline - _lineInfX) <= x && x < (xline + _lineSupX)) {
+                            if ( ( (xline - _lineInfX) <= x ) && ( x < (xline + _lineSupX) ) ) {
                                 for (int c = 0; c < nComponents; ++c) {
                                     dstPix[c] = lineColor[c];
                                 }
                             } else {
                                 // draw box
-                                int xbox = std::floor((x - center.x) / _boxSize.x);
+                                int xbox = std::floor( (x - center.x) / _boxSize.x );
                                 if (xbox & 1) {
                                     for (int c = 0; c < nComponents; ++c) {
                                         dstPix[c] = c1[c];
@@ -316,27 +321,27 @@ private:
                 }
             }
         } // for(y)
-    }
-
+    } // multiThreadProcessImages
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class CheckerBoardPlugin : public GeneratorPlugin
+class CheckerBoardPlugin
+    : public GeneratorPlugin
 {
 public:
     /** @brief ctor */
     CheckerBoardPlugin(OfxImageEffectHandle handle)
-    : GeneratorPlugin(handle, true)
-    , _boxSize(0)
-    , _color0(0)
-    , _color1(0)
-    , _color2(0)
-    , _color3(0)
-    , _lineColor(0)
-    , _lineWidth(0)
-    , _centerlineColor(0)
-    , _centerlineWidth(0)
+        : GeneratorPlugin(handle, true)
+        , _boxSize(0)
+        , _color0(0)
+        , _color1(0)
+        , _color2(0)
+        , _color3(0)
+        , _lineColor(0)
+        , _lineWidth(0)
+        , _centerlineColor(0)
+        , _centerlineWidth(0)
     {
         _boxSize = fetchDouble2DParam(kParamBoxSize);
         _color0 = fetchRGBAParam(kParamColor0);
@@ -359,7 +364,7 @@ private:
 
     /* set up and run a processor */
     void setupAndProcess(CheckerBoardProcessorBase &, const OFX::RenderArguments &args);
-    
+
     virtual bool paramsNotAnimated() OVERRIDE FINAL;
 
 private:
@@ -384,30 +389,32 @@ private:
 
 /* set up and run a processor */
 void
-CheckerBoardPlugin::setupAndProcess(CheckerBoardProcessorBase &processor, const OFX::RenderArguments &args)
+CheckerBoardPlugin::setupAndProcess(CheckerBoardProcessorBase &processor,
+                                    const OFX::RenderArguments &args)
 {
     const double time = args.time;
     // get a dst image
-    std::auto_ptr<OFX::Image>  dst(_dstClip->fetchImage(time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image>  dst( _dstClip->fetchImage(time) );
+
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     // set the images
-    processor.setDstImg(dst.get());
+    processor.setDstImg( dst.get() );
 
     // set the render window
     processor.setRenderWindow(args.renderWindow);
@@ -431,7 +438,7 @@ CheckerBoardPlugin::setupAndProcess(CheckerBoardProcessorBase &processor, const 
     double centerlineWidth;
     _centerlineWidth->getValueAtTime(time, centerlineWidth);
     OfxRectD rod = {0, 0, 0, 0};
-    if (!getRegionOfDefinition(rod)) {
+    if ( !getRegionOfDefinition(rod) ) {
         OfxPointD siz = getProjectSize();
         OfxPointD off = getProjectOffset();
         rod.x1 = off.x;
@@ -443,31 +450,32 @@ CheckerBoardPlugin::setupAndProcess(CheckerBoardProcessorBase &processor, const 
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
-}
+} // CheckerBoardPlugin::setupAndProcess
 
 // the internal render function
 template <int nComponents>
 void
-CheckerBoardPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+CheckerBoardPlugin::renderInternal(const OFX::RenderArguments &args,
+                                   OFX::BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-        case OFX::eBitDepthUByte: {
-            CheckerBoardProcessor<unsigned char, nComponents, 255> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case OFX::eBitDepthUShort: {
-            CheckerBoardProcessor<unsigned short, nComponents, 65535> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case OFX::eBitDepthFloat: {
-            CheckerBoardProcessor<float, nComponents, 1> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    case OFX::eBitDepthUByte: {
+        CheckerBoardProcessor<unsigned char, nComponents, 255> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case OFX::eBitDepthUShort: {
+        CheckerBoardProcessor<unsigned short, nComponents, 65535> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case OFX::eBitDepthFloat: {
+        CheckerBoardProcessor<float, nComponents, 1> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    default:
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
@@ -476,7 +484,7 @@ void
 CheckerBoardPlugin::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
     assert(dstComponents == OFX::ePixelComponentRGBA || dstComponents == OFX::ePixelComponentRGB || dstComponents == OFX::ePixelComponentXY || dstComponents == OFX::ePixelComponentAlpha);
@@ -499,21 +507,20 @@ CheckerBoardPlugin::render(const OFX::RenderArguments &args)
 bool
 CheckerBoardPlugin::paramsNotAnimated()
 {
-    return ((!_boxSize || _boxSize->getNumKeys() == 0) &&
-            (!_color0 || _color0->getNumKeys() == 0) &&
-            (!_color1 || _color1->getNumKeys() == 0) &&
-            (!_color2 || _color2->getNumKeys() == 0) &&
-            (!_color3 || _color3->getNumKeys() == 0) &&
-            (!_lineColor || _lineColor->getNumKeys() == 0) &&
-            (!_lineWidth || _lineWidth->getNumKeys() == 0) &&
-            (!_centerlineColor || _centerlineColor->getNumKeys() == 0) &&
-            (!_centerlineWidth || _centerlineWidth->getNumKeys() == 0));
+    return ( (!_boxSize || _boxSize->getNumKeys() == 0) &&
+             (!_color0 || _color0->getNumKeys() == 0) &&
+             (!_color1 || _color1->getNumKeys() == 0) &&
+             (!_color2 || _color2->getNumKeys() == 0) &&
+             (!_color3 || _color3->getNumKeys() == 0) &&
+             (!_lineColor || _lineColor->getNumKeys() == 0) &&
+             (!_lineWidth || _lineWidth->getNumKeys() == 0) &&
+             (!_centerlineColor || _centerlineColor->getNumKeys() == 0) &&
+             (!_centerlineWidth || _centerlineWidth->getNumKeys() == 0) );
 }
 
-
 mDeclarePluginFactory(CheckerBoardPluginFactory, {}, {});
-
-void CheckerBoardPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+CheckerBoardPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     desc.setLabel(kPluginName);
     desc.setPluginGrouping(kPluginGrouping);
@@ -536,17 +543,20 @@ void CheckerBoardPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderTwiceAlways(false);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-    
+
     generatorDescribe(desc);
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(ePixelComponentNone);
 #endif
 }
 
-void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum context)
+void
+CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                             ContextEnum context)
 {
     // there has to be an input clip, even for generators
     ClipDescriptor* srcClip = desc.defineClip( kOfxImageEffectSimpleSourceClipName );
+
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
@@ -558,9 +568,9 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     dstClip->addSupportedComponent(ePixelComponentRGB);
     dstClip->addSupportedComponent(ePixelComponentAlpha);
     dstClip->setSupportsTiles(kSupportsTiles);
-    
+
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    
+
     generatorDescribeInContext(page, desc, *dstClip, eGeneratorExtentDefault, true,  context);
 
 #define kParamSize "boxsize"
@@ -696,13 +706,14 @@ void CheckerBoardPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
             page->addChild(*param);
         }
     }
-}
+} // CheckerBoardPluginFactory::describeInContext
 
-ImageEffect* CheckerBoardPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect*
+CheckerBoardPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                          ContextEnum /*context*/)
 {
     return new CheckerBoardPlugin(handle);
 }
-
 
 static CheckerBoardPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

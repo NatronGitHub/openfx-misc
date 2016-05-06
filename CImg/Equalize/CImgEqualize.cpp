@@ -42,12 +42,12 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "EqualizeCImg"
 #define kPluginGrouping      "Color"
 #define kPluginDescription \
-"Equalize histogram of pixel values.\n" \
-"To equalize image brightness only, use the HistEQCImg plugin.\n" \
-"Uses the 'equalize' function from the CImg library.\n" \
-"CImg is a free, open-source library distributed under the CeCILL-C " \
-"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-"It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "Equalize histogram of pixel values.\n" \
+    "To equalize image brightness only, use the HistEQCImg plugin.\n" \
+    "Uses the 'equalize' function from the CImg library.\n" \
+    "CImg is a free, open-source library distributed under the CeCILL-C " \
+    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgEqualize"
 // History:
@@ -97,12 +97,13 @@ struct CImgEqualizeParams
     double max_value;
 };
 
-class CImgEqualizePlugin : public CImgFilterPluginHelper<CImgEqualizeParams,false>
+class CImgEqualizePlugin
+    : public CImgFilterPluginHelper<CImgEqualizeParams, false>
 {
 public:
 
     CImgEqualizePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgEqualizeParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
+        : CImgFilterPluginHelper<CImgEqualizeParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
     {
         _nb_levels  = fetchIntParam(kParamNbLevels);
         _min_value  = fetchDoubleParam(kParamMin);
@@ -110,7 +111,8 @@ public:
         assert(_nb_levels && _min_value && _max_value);
     }
 
-    virtual void getValuesAtTime(double time, CImgEqualizeParams& params) OVERRIDE FINAL
+    virtual void getValuesAtTime(double time,
+                                 CImgEqualizeParams& params) OVERRIDE FINAL
     {
         _nb_levels->getValueAtTime(time, params.nb_levels);
         _min_value->getValueAtTime(time, params.min_value);
@@ -119,16 +121,24 @@ public:
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI& rect, const OfxPointD& /*renderScale*/, const CImgEqualizeParams& /*params*/, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI& rect,
+                        const OfxPointD& /*renderScale*/,
+                        const CImgEqualizeParams& /*params*/,
+                        OfxRectI* roi) OVERRIDE FINAL
     {
         int delta_pix = 0;
+
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &/*args*/, const CImgEqualizeParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments & /*args*/,
+                        const CImgEqualizeParams& params,
+                        int /*x1*/,
+                        int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
@@ -151,7 +161,8 @@ private:
 
 mDeclarePluginFactory(CImgEqualizePluginFactory, {}, {});
 
-void CImgEqualizePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+void
+CImgEqualizePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -179,7 +190,9 @@ void CImgEqualizePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
-void CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+void
+CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                             OFX::ContextEnum context)
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgEqualizePlugin::describeInContextBegin(desc, context,
@@ -188,9 +201,9 @@ void CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& de
                                                                                 kSupportsXY,
                                                                                 kSupportsAlpha,
                                                                                 kSupportsTiles,
-                                                                                /*processRGB=*/true,
-                                                                                /*processAlpha*/false,
-                                                                                /*processIsSecret=*/false);
+                                                                                /*processRGB=*/ true,
+                                                                                /*processAlpha*/ false,
+                                                                                /*processIsSecret=*/ false);
 
     {
         OFX::IntParamDescriptor *param = desc.defineIntParam(kParamNbLevels);
@@ -225,15 +238,15 @@ void CImgEqualizePluginFactory::describeInContext(OFX::ImageEffectDescriptor& de
             page->addChild(*param);
         }
     }
-
     CImgEqualizePlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgEqualizePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+CImgEqualizePluginFactory::createInstance(OfxImageEffectHandle handle,
+                                          OFX::ContextEnum /*context*/)
 {
     return new CImgEqualizePlugin(handle);
 }
-
 
 static CImgEqualizePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

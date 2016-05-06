@@ -60,27 +60,28 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class FrameHoldPlugin : public OFX::ImageEffect
+class FrameHoldPlugin
+    : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
     FrameHoldPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _firstFrame(0)
-    , _increment(0)
-    , _sublabel(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _firstFrame(0)
+        , _increment(0)
+        , _sublabel(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentAlpha ||
-                            _dstClip->getPixelComponents() == OFX::ePixelComponentRGB ||
-                            _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA));
+        assert( _dstClip && (_dstClip->getPixelComponents() == OFX::ePixelComponentAlpha ||
+                             _dstClip->getPixelComponents() == OFX::ePixelComponentRGB ||
+                             _dstClip->getPixelComponents() == OFX::ePixelComponentRGBA) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-               (_srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentAlpha ||
-                             _srcClip->getPixelComponents() == OFX::ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA)));
+        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+                ( _srcClip && (_srcClip->getPixelComponents() == OFX::ePixelComponentAlpha ||
+                               _srcClip->getPixelComponents() == OFX::ePixelComponentRGB ||
+                               _srcClip->getPixelComponents() == OFX::ePixelComponentRGBA) ) );
 
         _firstFrame = fetchIntParam(kParamFirstFrame);
         _increment = fetchIntParam(kParamIncrement);
@@ -97,9 +98,7 @@ private:
 
     /* override is identity */
     virtual bool isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
-
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
 private:
@@ -111,7 +110,6 @@ private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;            /**< @brief Mandated output clips */
     OFX::Clip *_srcClip;            /**< @brief Mandated input clips */
-
     OFX::IntParam  *_firstFrame;
     OFX::IntParam  *_increment;
     OFX::StringParam *_sublabel;
@@ -129,6 +127,7 @@ double
 FrameHoldPlugin::getSourceTime(double t) const
 {
     int firstFrame, increment;
+
     _firstFrame->getValueAtTime(t, firstFrame);
     _increment->getValueAtTime(t, increment);
 
@@ -136,15 +135,15 @@ FrameHoldPlugin::getSourceTime(double t) const
         return firstFrame;
     }
 
-    return firstFrame + increment * std::floor((t - firstFrame)/increment);
+    return firstFrame + increment * std::floor( (t - firstFrame) / increment );
 }
 
 void
 FrameHoldPlugin::updateSublabel(double time)
 {
     char label[80];
-
     int firstFrame, increment;
+
     _firstFrame->getValueAtTime(time, firstFrame);
     _increment->getValueAtTime(time, increment);
     if (increment == 0) {
@@ -157,10 +156,11 @@ FrameHoldPlugin::updateSublabel(double time)
 
 void
 FrameHoldPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
-                                  OFX::FramesNeededSetter &frames)
+                                 OFX::FramesNeededSetter &frames)
 {
     double sourceTime = getSourceTime(args.time);
     OfxRangeD range;
+
     range.min = sourceTime;
     range.max = sourceTime;
     frames.setFramesNeeded(*_srcClip, range);
@@ -168,39 +168,44 @@ FrameHoldPlugin::getFramesNeeded(const OFX::FramesNeededArguments &args,
 
 // the overridden render function
 void
-FrameHoldPlugin::render(const OFX::RenderArguments &/*args*/)
+FrameHoldPlugin::render(const OFX::RenderArguments & /*args*/)
 {
     // do nothing as this should never be called as isIdentity should always be trapped
 }
 
 // overridden is identity
 bool
-FrameHoldPlugin::isIdentity(const OFX::IsIdentityArguments &args, OFX::Clip * &identityClip, double &identityTime)
+FrameHoldPlugin::isIdentity(const OFX::IsIdentityArguments &args,
+                            OFX::Clip * &identityClip,
+                            double &identityTime)
 {
     identityClip = _srcClip;
     identityTime = getSourceTime(args.time);
+
     return true;
 }
 
 bool
-FrameHoldPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+FrameHoldPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                       OfxRectD &rod)
 {
-    rod = _srcClip->getRegionOfDefinition(getSourceTime(args.time));
+    rod = _srcClip->getRegionOfDefinition( getSourceTime(args.time) );
+
     return true;
 }
 
 void
-FrameHoldPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+FrameHoldPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+                              const std::string &paramName)
 {
-    if ((paramName == kParamFirstFrame || paramName == kParamIncrement) && args.reason == OFX::eChangeUserEdit) {
+    if ( ( (paramName == kParamFirstFrame) || (paramName == kParamIncrement) ) && (args.reason == OFX::eChangeUserEdit) ) {
         updateSublabel(args.time);
     }
 }
 
-
-mDeclarePluginFactory(FrameHoldPluginFactory, ;, {});
-
-void FrameHoldPluginFactory::load()
+mDeclarePluginFactory(FrameHoldPluginFactory,; , {});
+void
+FrameHoldPluginFactory::load()
 {
     // we can't be used on hosts that don't perfrom temporal clip access
     if (!getImageEffectHostDescription()->temporalClipAccess) {
@@ -209,7 +214,8 @@ void FrameHoldPluginFactory::load()
 }
 
 /** @brief The basic describe function, passed a plugin descriptor */
-void FrameHoldPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+FrameHoldPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -245,10 +251,13 @@ void FrameHoldPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 }
 
 /** @brief The describe in context function, passed a plugin descriptor and a context */
-void FrameHoldPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, ContextEnum /*context*/)
+void
+FrameHoldPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                          ContextEnum /*context*/)
 {
     // we are a transition, so define the sourceTo input clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
@@ -305,14 +314,15 @@ void FrameHoldPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
             page->addChild(*param);
         }
     }
-}
+} // FrameHoldPluginFactory::describeInContext
 
 /** @brief The create instance function, the plugin must return an object derived from the \ref OFX::ImageEffect class */
-ImageEffect* FrameHoldPluginFactory::createInstance(OfxImageEffectHandle handle, ContextEnum /*context*/)
+ImageEffect*
+FrameHoldPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                       ContextEnum /*context*/)
 {
     return new FrameHoldPlugin(handle);
 }
-
 
 static FrameHoldPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

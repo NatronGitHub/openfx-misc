@@ -42,11 +42,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "SharpenInvDiffCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-"Sharpen selected images by inverse diffusion.\n" \
-"Uses 'sharpen' function from the CImg library.\n" \
-"CImg is a free, open-source library distributed under the CeCILL-C " \
-"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-"It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "Sharpen selected images by inverse diffusion.\n" \
+    "Uses 'sharpen' function from the CImg library.\n" \
+    "CImg is a free, open-source library distributed under the CeCILL-C " \
+    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgSharpenInvDiff"
 // History:
@@ -91,19 +91,21 @@ struct CImgSharpenInvDiffParams
     int iterations;
 };
 
-class CImgSharpenInvDiffPlugin : public CImgFilterPluginHelper<CImgSharpenInvDiffParams,false>
+class CImgSharpenInvDiffPlugin
+    : public CImgFilterPluginHelper<CImgSharpenInvDiffParams, false>
 {
 public:
 
     CImgSharpenInvDiffPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgSharpenInvDiffParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
+        : CImgFilterPluginHelper<CImgSharpenInvDiffParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
     {
         _amplitude  = fetchDoubleParam(kParamAmplitude);
         _iterations = fetchIntParam(kParamIterations);
         assert(_amplitude && _iterations);
     }
 
-    virtual void getValuesAtTime(double time, CImgSharpenInvDiffParams& params) OVERRIDE FINAL
+    virtual void getValuesAtTime(double time,
+                                 CImgSharpenInvDiffParams& params) OVERRIDE FINAL
     {
         _amplitude->getValueAtTime(time, params.amplitude);
         _iterations->getValueAtTime(time, params.iterations);
@@ -111,24 +113,32 @@ public:
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI& rect, const OfxPointD& /*renderScale*/, const CImgSharpenInvDiffParams& /*params*/, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI& rect,
+                        const OfxPointD& /*renderScale*/,
+                        const CImgSharpenInvDiffParams& /*params*/,
+                        OfxRectI* roi) OVERRIDE FINAL
     {
         int delta_pix = 24; // overlap is 24 in gmicol
+
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &/*args*/, const CImgSharpenInvDiffParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments & /*args*/,
+                        const CImgSharpenInvDiffParams& params,
+                        int /*x1*/,
+                        int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        if (params.iterations <= 0 || params.amplitude == 0. || cimg.is_empty()) {
+        if ( (params.iterations <= 0) || (params.amplitude == 0.) || cimg.is_empty() ) {
             return;
         }
         for (int i = 1; i < params.iterations; ++i) {
-            if (abort()) {
+            if ( abort() ) {
                 return;
             }
 #ifdef CIMG_ABORTABLE
@@ -139,32 +149,33 @@ public:
 #define T float
 
             T val_min, val_max = cimg.max_min(val_min);
-            CImg<Tfloat> velocity(cimg._width,cimg._height,cimg._depth,cimg._spectrum), _veloc_max(cimg._spectrum);
+            CImg<Tfloat> velocity(cimg._width, cimg._height, cimg._depth, cimg._spectrum), _veloc_max(cimg._spectrum);
 
-            cimg_forC(cimg,c) {
-                Tfloat *ptrd = velocity.data(0,0,0,c), veloc_max = 0;
-                CImg_3x3(I,Tfloat);
-                cimg_for3(cimg._height,y) {
-                    if (abort()) {
+            cimg_forC(cimg, c) {
+                Tfloat *ptrd = velocity.data(0, 0, 0, c), veloc_max = 0;
+
+                CImg_3x3(I, Tfloat);
+                cimg_for3(cimg._height, y) {
+                    if ( abort() ) {
                         return;
                     }
                     for (int x = 0,
                          _p1x = 0,
                          _n1x = (int)(
-                                      (I[0] = I[1] = (T)cimg(_p1x,_p1y,0,c)),
-                                      (I[3] = I[4] = (T)cimg(0,y,0,c)),
-                                      (I[6] = I[7] = (T)cimg(0,_n1y,0,c)),
-                                      1>=cimg._width?cimg.width() - 1:1);
-                         (_n1x<cimg.width() && (
-                                                (I[2] = (T)cimg(_n1x,_p1y,0,c)),
-                                                (I[5] = (T)cimg(_n1x,y,0,c)),
-                                                (I[8] = (T)cimg(_n1x,_n1y,0,c)),1)) ||
-                         x==--_n1x;
+                             ( I[0] = I[1] = (T)cimg(_p1x, _p1y, 0, c) ),
+                             ( I[3] = I[4] = (T)cimg(0, y, 0, c) ),
+                             ( I[6] = I[7] = (T)cimg(0, _n1y, 0, c) ),
+                             1 >= cimg._width ? cimg.width() - 1 : 1);
+                         ( _n1x < cimg.width() && (
+                               ( I[2] = (T)cimg(_n1x, _p1y, 0, c) ),
+                               ( I[5] = (T)cimg(_n1x, y, 0, c) ),
+                               ( I[8] = (T)cimg(_n1x, _n1y, 0, c) ), 1) ) ||
+                         x == --_n1x;
                          I[0] = I[1], I[1] = I[2],
                          I[3] = I[4], I[4] = I[5],
                          I[6] = I[7], I[7] = I[8],
                          _p1x = x++, ++_n1x) {
-                        const Tfloat veloc = -Ipc - Inc - Icp - Icn + 4*Icc;
+                        const Tfloat veloc = -Ipc - Inc - Icp - Icn + 4 * Icc;
                         *(ptrd++) = veloc;
                         if (veloc > veloc_max) {
                             veloc_max = veloc;
@@ -178,19 +189,20 @@ public:
 
             const Tfloat veloc_max = _veloc_max.max();
             if (veloc_max > 0) {
-                ((velocity*=amplitude/veloc_max)+=cimg).cut(val_min,val_max).move_to(cimg);
+                ( (velocity *= amplitude / veloc_max) += cimg ).cut(val_min, val_max).move_to(cimg);
             }
 
 #undef Tfloat
 #undef T
 
-#else
-            cimg.sharpen((float)params.amplitude);
-#endif
+#else // ifdef CIMG_ABORTABLE
+            cimg.sharpen( (float)params.amplitude );
+#endif // ifdef CIMG_ABORTABLE
         }
-    }
+    } // render
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgSharpenInvDiffParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+                            const CImgSharpenInvDiffParams& params) OVERRIDE FINAL
     {
         return (params.iterations <= 0 || params.amplitude == 0.);
     };
@@ -205,7 +217,8 @@ private:
 
 mDeclarePluginFactory(CImgSharpenInvDiffPluginFactory, {}, {});
 
-void CImgSharpenInvDiffPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+void
+CImgSharpenInvDiffPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -233,7 +246,9 @@ void CImgSharpenInvDiffPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
-void CImgSharpenInvDiffPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+void
+CImgSharpenInvDiffPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                                   OFX::ContextEnum context)
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgSharpenInvDiffPlugin::describeInContextBegin(desc, context,
@@ -242,9 +257,9 @@ void CImgSharpenInvDiffPluginFactory::describeInContext(OFX::ImageEffectDescript
                                                                                       kSupportsXY,
                                                                                       kSupportsAlpha,
                                                                                       kSupportsTiles,
-                                                                                      /*processRGB=*/true,
-                                                                                      /*processAlpha*/false,
-                                                                                      /*processIsSecret=*/false);
+                                                                                      /*processRGB=*/ true,
+                                                                                      /*processAlpha*/ false,
+                                                                                      /*processIsSecret=*/ false);
 
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAmplitude);
@@ -269,15 +284,15 @@ void CImgSharpenInvDiffPluginFactory::describeInContext(OFX::ImageEffectDescript
             page->addChild(*param);
         }
     }
-
     CImgSharpenInvDiffPlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgSharpenInvDiffPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+CImgSharpenInvDiffPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                                OFX::ContextEnum /*context*/)
 {
     return new CImgSharpenInvDiffPlugin(handle);
 }
-
 
 static CImgSharpenInvDiffPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

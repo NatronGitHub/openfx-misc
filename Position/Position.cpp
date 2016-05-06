@@ -37,8 +37,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginName "PositionOFX"
 #define kPluginGrouping "Transform"
-#define kPluginDescription "Translate an image by an integer number of pixels.\n"\
-"This plugin does not concatenate transforms."
+#define kPluginDescription "Translate an image by an integer number of pixels.\n" \
+    "This plugin does not concatenate transforms."
 #define kPluginIdentifier "net.sf.openfx.Position"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -57,20 +57,21 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamInteractive "interactive"
 #define kParamInteractiveLabel "Interactive"
 #define kParamInteractiveHint \
-"When checked the image will be rendered whenever moving the overlay interact instead of when releasing the mouse button."
+    "When checked the image will be rendered whenever moving the overlay interact instead of when releasing the mouse button."
 
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class PositionPlugin : public OFX::ImageEffect
+class PositionPlugin
+    : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
     PositionPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _translate(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _translate(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -80,7 +81,6 @@ public:
 
 private:
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     // override the rod call
@@ -93,7 +93,6 @@ private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
-
     Double2DParam* _translate;
 };
 
@@ -101,17 +100,17 @@ private:
 void
 PositionPlugin::render(const OFX::RenderArguments &args)
 {
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
     // do the rendering
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -122,19 +121,18 @@ PositionPlugin::render(const OFX::RenderArguments &args)
     int dstRowBytes;
     getImageData(dst.get(), &dstPixelData, &dstBounds, &dstComponents, &dstBitDepth, &dstRowBytes);
     int dstPixelComponentCount = dst->getPixelComponentCount();
-
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
-    if (src.get()) {
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(args.time) : 0 );
+    if ( src.get() ) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
@@ -168,18 +166,19 @@ PositionPlugin::render(const OFX::RenderArguments &args)
     srcBounds.y2 += t_pixel.y;
 
     copyPixels(*this, args.renderWindow, srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, dstPixelData, dstBounds, dstComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes);
-}
+} // PositionPlugin::render
 
 // override the rod call
 bool
-PositionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD &rod)
+PositionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args,
+                                      OfxRectD &rod)
 {
     if (!_srcClip) {
         return false;
     }
     const double time = args.time;
     OfxRectD srcrod = _srcClip->getRegionOfDefinition(time);
-    if (OFX::Coords::rectIsEmpty(srcrod)) {
+    if ( OFX::Coords::rectIsEmpty(srcrod) ) {
         return false;
     }
     double par = _dstClip->getPixelAspectRatio();
@@ -194,7 +193,7 @@ PositionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
         // round to an even y
         t_pixel.y = t_pixel.y - (t_pixel.y & 1);
     }
-    if (t_pixel.x == 0 && t_pixel.y == 0) {
+    if ( (t_pixel.x == 0) && (t_pixel.y == 0) ) {
         return false;
     }
     t_canonical.x = t_pixel.x * par / args.renderScale.x;
@@ -209,14 +208,15 @@ PositionPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &ar
 
 // override the roi call
 void
-PositionPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+PositionPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
+                                     OFX::RegionOfInterestSetter &rois)
 {
     if (!_srcClip) {
         return;
     }
     const double time = args.time;
     OfxRectD srcRod = _srcClip->getRegionOfDefinition(time);
-    if (OFX::Coords::rectIsEmpty(srcRod)) {
+    if ( OFX::Coords::rectIsEmpty(srcRod) ) {
         return;
     }
     double par = _dstClip->getPixelAspectRatio();
@@ -231,7 +231,7 @@ PositionPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args
         // round to an even y
         t_pixel.y = t_pixel.y - (t_pixel.y & 1);
     }
-    if (t_pixel.x == 0 && t_pixel.y == 0) {
+    if ( (t_pixel.x == 0) && (t_pixel.y == 0) ) {
         return;
     }
     t_canonical.x = t_pixel.x * par / args.renderScale.x;
@@ -249,11 +249,14 @@ PositionPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args
 
 // overridden is identity
 bool
-PositionPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
+PositionPlugin::isIdentity(const IsIdentityArguments &args,
+                           Clip * &identityClip,
+                           double & /*identityTime*/)
 {
     const double time = args.time;
     double par = _dstClip->getPixelAspectRatio();
     OfxPointD t_canonical;
+
     _translate->getValueAtTime(time, t_canonical.x, t_canonical.y);
     OfxPointI t_pixel;
 
@@ -264,24 +267,25 @@ PositionPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip
         // round to an even y
         t_pixel.y = t_pixel.y - (t_pixel.y & 1);
     }
-    if (t_pixel.x == 0 && t_pixel.y == 0) {
+    if ( (t_pixel.x == 0) && (t_pixel.y == 0) ) {
         identityClip = _srcClip;
+
         return true;
     }
 
     return false;
 }
 
-
-
 mDeclarePluginFactory(PositionPluginFactory, {}, {});
+struct PositionInteractParam
+{
+    static const char * name() { return kParamTranslate; }
 
-struct PositionInteractParam {
-    static const char *name() { return kParamTranslate; }
-    static const char *interactiveName() { return kParamInteractive; }
+    static const char * interactiveName() { return kParamInteractive; }
 };
 
-void PositionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+PositionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -325,11 +329,14 @@ void PositionPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
-void PositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+void
+PositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                         OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentNone);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
@@ -354,7 +361,6 @@ void PositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-
     bool hostHasNativeOverlayForPosition;
     // translate
     {
@@ -388,14 +394,14 @@ void PositionPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, 
             param->setIsSecret(true);
         }
     }
-}
+} // PositionPluginFactory::describeInContext
 
 OFX::ImageEffect*
-PositionPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+PositionPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                      OFX::ContextEnum /*context*/)
 {
     return new PositionPlugin(handle);
 }
-
 
 static PositionPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

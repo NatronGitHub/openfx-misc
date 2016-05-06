@@ -37,8 +37,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 
 #define kPluginMirrorName "MirrorOFX"
 #define kPluginMirrorGrouping "Transform"
-#define kPluginMirrorDescription "Flip (vertical mirror) or flop (horizontal mirror) an image. Interlaced video can not be flipped.\n"\
-"This plugin does not concatenate transforms."
+#define kPluginMirrorDescription "Flip (vertical mirror) or flop (horizontal mirror) an image. Interlaced video can not be flipped.\n" \
+    "This plugin does not concatenate transforms."
 #define kPluginMirrorIdentifier "net.sf.openfx.Mirror"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -67,10 +67,12 @@ class PixelMirrorer
 {
 public:
     // ctor
-    PixelMirrorer(OFX::ImageEffect &instance, int xoff, int yoff)
-    : OFX::PixelProcessorFilterBase(instance)
-    , _xoff(xoff)
-    , _yoff(yoff)
+    PixelMirrorer(OFX::ImageEffect &instance,
+                  int xoff,
+                  int yoff)
+        : OFX::PixelProcessorFilterBase(instance)
+        , _xoff(xoff)
+        , _yoff(yoff)
     {
     }
 
@@ -80,12 +82,12 @@ public:
         assert(_srcBounds.x1 < _srcBounds.x2 && _srcBounds.y1 < _srcBounds.y2); // image should be non-empty
 
         if (flip) {
-            assert(_srcBounds.y1 <= (_yoff - (procWindow.y2-1)) && (_yoff - procWindow.y1) < _srcBounds.y2);
+            assert(_srcBounds.y1 <= ( _yoff - (procWindow.y2 - 1) ) && (_yoff - procWindow.y1) < _srcBounds.y2);
         } else {
             assert(_srcBounds.y1 <= procWindow.y1 && procWindow.y2 <= _srcBounds.y2);
         }
         if (flop) {
-            assert(_srcBounds.x1 <= (_xoff - (procWindow.x2-1)) && (_xoff - procWindow.x1) < _srcBounds.x2);
+            assert(_srcBounds.x1 <= ( _xoff - (procWindow.x2 - 1) ) && (_xoff - procWindow.x1) < _srcBounds.x2);
         } else {
             assert(_srcBounds.x1 <= procWindow.x1 && procWindow.x2 <= _srcBounds.x2);
         }
@@ -102,7 +104,7 @@ public:
 
             int srcy = flip ? (_yoff - dsty) : dsty;
 
-            assert(!((srcy < _srcBounds.y1) || (_srcBounds.y2 <= srcy) || (_srcBounds.y2 <= _srcBounds.y1)));
+            assert( !( (srcy < _srcBounds.y1) || (_srcBounds.y2 <= srcy) || (_srcBounds.y2 <= _srcBounds.y1) ) );
 
             const PIX *srcPix = (const PIX *) getSrcPixelAddress(srcx1, srcy);
             assert(srcPix);
@@ -115,11 +117,12 @@ public:
             }
         }
     }
+
     int _xoff, _yoff;
 };
 
 
-template<class PIX,int nComponents,bool flip, bool flop>
+template<class PIX, int nComponents, bool flip, bool flop>
 void
 mirrorPixelsForDepthAndComponentsFlipFlop(OFX::ImageEffect &instance,
                                           const OfxRectI & renderWindow,
@@ -145,7 +148,7 @@ mirrorPixelsForDepthAndComponentsFlipFlop(OFX::ImageEffect &instance,
 
     PixelMirrorer<PIX, nComponents, flip, flop> processor(instance, xoff, yoff);
     // set the images
-    processor.setDstImg(dstPixelData, dstBounds, dstPixelComponents,dstPixelComponentCount, dstBitDepth, dstRowBytes);
+    processor.setDstImg(dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes);
     processor.setSrcImg(srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, 0);
 
     // set the render window
@@ -155,7 +158,7 @@ mirrorPixelsForDepthAndComponentsFlipFlop(OFX::ImageEffect &instance,
     processor.process();
 }
 
-template<class PIX,int nComponents>
+template<class PIX, int nComponents>
 void
 mirrorPixelsForDepthAndComponents(OFX::ImageEffect &instance,
                                   const OfxRectI & renderWindow,
@@ -198,27 +201,27 @@ mirrorPixelsForDepthAndComponents(OFX::ImageEffect &instance,
 
     if (flip) {
         if (flop) {
-            mirrorPixelsForDepthAndComponentsFlipFlop<PIX,nComponents,true,true>(instance, renderWindow,
-                                                                                 (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                                                                 (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
-                                                                                 xoff, yoff);
+            mirrorPixelsForDepthAndComponentsFlipFlop<PIX, nComponents, true, true>(instance, renderWindow,
+                                                                                    (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
+                                                                                    (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
+                                                                                    xoff, yoff);
         } else {
-            mirrorPixelsForDepthAndComponentsFlipFlop<PIX,nComponents,true,false>(instance, renderWindow,
-                                                                                  (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                                                                  (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
-                                                                                  xoff, yoff);
+            mirrorPixelsForDepthAndComponentsFlipFlop<PIX, nComponents, true, false>(instance, renderWindow,
+                                                                                     (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
+                                                                                     (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
+                                                                                     xoff, yoff);
         }
     } else {
         if (flop) {
-            mirrorPixelsForDepthAndComponentsFlipFlop<PIX,nComponents,false,true>(instance, renderWindow,
-                                                                                  (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                                                                  (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
-                                                                                  xoff, yoff);
+            mirrorPixelsForDepthAndComponentsFlipFlop<PIX, nComponents, false, true>(instance, renderWindow,
+                                                                                     (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
+                                                                                     (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
+                                                                                     xoff, yoff);
         } else {
-            mirrorPixelsForDepthAndComponentsFlipFlop<PIX,nComponents,false,false>(instance, renderWindow,
-                                                                                   (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                                                                   (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
-                                                                                   xoff, yoff);
+            mirrorPixelsForDepthAndComponentsFlipFlop<PIX, nComponents, false, false>(instance, renderWindow,
+                                                                                      (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
+                                                                                      (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes,
+                                                                                      xoff, yoff);
         }
     }
 }
@@ -246,27 +249,27 @@ mirrorPixelsForDepth(OFX::ImageEffect &instance,
 {
     assert(srcPixelData && dstPixelData);
     assert(srcPixelComponents == dstPixelComponents && srcBitDepth == dstBitDepth);
-   assert(srcPixelComponentCount == dstPixelComponentCount);
+    assert(srcPixelComponentCount == dstPixelComponentCount);
     // do the rendering
-    if (dstPixelComponentCount < 0 || 4 < dstPixelComponentCount) {
+    if ( (dstPixelComponentCount < 0) || (4 < dstPixelComponentCount) ) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
     if (dstPixelComponentCount == 4) {
-        mirrorPixelsForDepthAndComponents<PIX,4>(instance, renderWindow,
-                                                 (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                                 (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
+        mirrorPixelsForDepthAndComponents<PIX, 4>(instance, renderWindow,
+                                                  (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
+                                                  (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
     } else if (dstPixelComponentCount == 3) {
-        mirrorPixelsForDepthAndComponents<PIX,3>(instance, renderWindow,
-                                                 (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                                 (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
+        mirrorPixelsForDepthAndComponents<PIX, 3>(instance, renderWindow,
+                                                  (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
+                                                  (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
     } else if (dstPixelComponentCount == 2) {
-        mirrorPixelsForDepthAndComponents<PIX,2>(instance, renderWindow,
-                                                 (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                                 (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
+        mirrorPixelsForDepthAndComponents<PIX, 2>(instance, renderWindow,
+                                                  (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
+                                                  (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
     }  else if (dstPixelComponentCount == 1) {
-        mirrorPixelsForDepthAndComponents<PIX,1>(instance, renderWindow,
-                                                 (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                                 (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
+        mirrorPixelsForDepthAndComponents<PIX, 1>(instance, renderWindow,
+                                                  (const PIX*)srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
+                                                  (PIX *)dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
     } // switch
 }
 
@@ -295,38 +298,38 @@ mirrorPixels(OFX::ImageEffect &instance,
     assert(srcPixelComponents == dstPixelComponents && srcBitDepth == dstBitDepth);
     assert(srcPixelComponentCount == dstPixelComponentCount);
     // do the rendering
-    if (dstBitDepth != OFX::eBitDepthUByte && dstBitDepth != OFX::eBitDepthUShort && dstBitDepth != OFX::eBitDepthHalf && dstBitDepth != OFX::eBitDepthFloat) {
+    if ( (dstBitDepth != OFX::eBitDepthUByte) && (dstBitDepth != OFX::eBitDepthUShort) && (dstBitDepth != OFX::eBitDepthHalf) && (dstBitDepth != OFX::eBitDepthFloat) ) {
         OFX::throwSuiteStatusException(kOfxStatErrFormat);
     }
     if (dstBitDepth == OFX::eBitDepthUByte) {
         mirrorPixelsForDepth<unsigned char>(instance, renderWindow,
-                                          srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                          dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
-    } else if (dstBitDepth == OFX::eBitDepthUShort || dstBitDepth == OFX::eBitDepthHalf) {
+                                            srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
+                                            dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
+    } else if ( (dstBitDepth == OFX::eBitDepthUShort) || (dstBitDepth == OFX::eBitDepthHalf) ) {
         mirrorPixelsForDepth<unsigned short>(instance, renderWindow,
-                                           srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                           dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
+                                             srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
+                                             dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
     } else if (dstBitDepth == OFX::eBitDepthFloat) {
         mirrorPixelsForDepth<float>(instance, renderWindow,
-                                  srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
-                                  dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
+                                    srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes,
+                                    dstPixelData, dstBounds, dstPixelComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
     } // switch
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class MirrorPlugin : public OFX::ImageEffect
+class MirrorPlugin
+    : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
     MirrorPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _flip(0)
-    , _flop(0)
-    , _srcClipChanged(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _flip(0)
+        , _flop(0)
+        , _srcClipChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
@@ -343,19 +346,16 @@ public:
 
 private:
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
 
     // override the roi call
     virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
-
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
 
 private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
-
     BooleanParam* _flip;
     BooleanParam* _flop;
     OFX::BooleanParam* _srcClipChanged; // set to true the first time the user connects src
@@ -369,17 +369,17 @@ MirrorPlugin::render(const OFX::RenderArguments &args)
     if (!_srcClip || !_dstClip) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    assert(kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert( kSupportsMultipleClipPARs   || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
 
     // do the rendering
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
@@ -390,19 +390,18 @@ MirrorPlugin::render(const OFX::RenderArguments &args)
     int dstRowBytes;
     getImageData(dst.get(), &dstPixelData, &dstBounds, &dstComponents, &dstBitDepth, &dstRowBytes);
     int dstPixelComponentCount = dst->getPixelComponentCount();
-
     std::auto_ptr<const OFX::Image> src(_srcClip->isConnected() ?
                                         _srcClip->fetchImage(args.time) : 0);
-    if (src.get()) {
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+    if ( src.get() ) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
@@ -413,7 +412,6 @@ MirrorPlugin::render(const OFX::RenderArguments &args)
     int srcRowBytes;
     getImageData(src.get(), &srcPixelData, &srcBounds, &srcPixelComponents, &srcBitDepth, &srcRowBytes);
     int srcPixelComponentCount = src->getPixelComponentCount();
-
     const double time = args.time;
     bool flip;
     bool flop;
@@ -424,9 +422,9 @@ MirrorPlugin::render(const OFX::RenderArguments &args)
     int yoff = 0;
     OfxRectI srcRoD = {0, 0, 0, 0};
     OfxRectD srcRoDCanonical = _srcClip->getRegionOfDefinition(time);
-    assert(!OFX::Coords::rectIsEmpty(srcRoDCanonical));
+    assert( !OFX::Coords::rectIsEmpty(srcRoDCanonical) );
     OFX::Coords::toPixelEnclosing(srcRoDCanonical, args.renderScale, _srcClip->getPixelAspectRatio(), &srcRoD);
-    if (!OFX::Coords::rectIsEmpty(srcRoD)) {
+    if ( !OFX::Coords::rectIsEmpty(srcRoD) ) {
         if (flop) {
             xoff = srcRoD.x1 + srcRoD.x2 - 1;
         }
@@ -437,24 +435,25 @@ MirrorPlugin::render(const OFX::RenderArguments &args)
 
     const OfxRectI& renderWindow = args.renderWindow;
     // these things should never happens
-    if (!src.get() ||
-        (flip  &&
-         !(srcBounds.y1 <= (yoff + 1 - renderWindow.y2) && renderWindow.y1 <= renderWindow.y2 && (yoff + 1 - renderWindow.y1) <= srcBounds.y2)) ||
-        (!flip &&
-         !(srcBounds.y1 <= renderWindow.y1 && renderWindow.y1 <= renderWindow.y2 && renderWindow.y2 <= srcBounds.y2)) ||
-        (flop  &&
-         !(srcBounds.x1 <= (xoff + 1 - renderWindow.x2) && renderWindow.x1 <= renderWindow.x2 && (xoff + 1 - renderWindow.x1) <= srcBounds.x2)) ||
-        (!flop &&
-         !(srcBounds.x1 <= renderWindow.x1 && renderWindow.x1 <= renderWindow.x2 && renderWindow.x2 <= srcBounds.x2))) {
+    if ( !src.get() ||
+         ( flip  &&
+           !( ( srcBounds.y1 <= (yoff + 1 - renderWindow.y2) ) && ( renderWindow.y1 <= renderWindow.y2) && ( (yoff + 1 - renderWindow.y1) <= srcBounds.y2 ) ) ) ||
+         ( !flip &&
+           !( ( srcBounds.y1 <= renderWindow.y1) && ( renderWindow.y1 <= renderWindow.y2) && ( renderWindow.y2 <= srcBounds.y2) ) ) ||
+         ( flop  &&
+           !( ( srcBounds.x1 <= (xoff + 1 - renderWindow.x2) ) && ( renderWindow.x1 <= renderWindow.x2) && ( (xoff + 1 - renderWindow.x1) <= srcBounds.x2 ) ) ) ||
+         ( !flop &&
+           !( ( srcBounds.x1 <= renderWindow.x1) && ( renderWindow.x1 <= renderWindow.x2) && ( renderWindow.x2 <= srcBounds.x2) ) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave source image with wrong dimensions");
         throwSuiteStatusException(kOfxStatFailed);
     }
     mirrorPixels(*this, args.renderWindow, srcPixelData, srcBounds, srcPixelComponents, srcPixelComponentCount, srcBitDepth, srcRowBytes, dstPixelData, dstBounds, dstComponents, dstPixelComponentCount, dstBitDepth, dstRowBytes, flip, flop, xoff, yoff);
-}
+} // MirrorPlugin::render
 
 // override the roi call
 void
-MirrorPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+MirrorPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
+                                   OFX::RegionOfInterestSetter &rois)
 {
     if (!_srcClip) {
         return;
@@ -485,16 +484,20 @@ MirrorPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, 
 
 // overridden is identity
 bool
-MirrorPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
+MirrorPlugin::isIdentity(const IsIdentityArguments &args,
+                         Clip * &identityClip,
+                         double & /*identityTime*/)
 {
     const double time = args.time;
     bool flip;
     bool flop;
+
     _flip->getValueAtTime(time, flip);
     _flop->getValueAtTime(time, flop);
 
     if (!flip && !flop) {
         identityClip = _srcClip;
+
         return true;
     }
 
@@ -502,21 +505,21 @@ MirrorPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, 
 }
 
 void
-MirrorPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+MirrorPlugin::changedClip(const InstanceChangedArgs &args,
+                          const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName &&
-        _srcClip && _srcClip->isConnected() &&
-        !_srcClipChanged->getValue() &&
-        args.reason == OFX::eChangeUserEdit) {
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
+         _srcClip && _srcClip->isConnected() &&
+         !_srcClipChanged->getValue() &&
+         ( args.reason == OFX::eChangeUserEdit) ) {
         _flip->setEnabled(_srcClip->getFieldOrder() == eFieldNone);
         _srcClipChanged->setValue(true);
     }
 }
 
-
 mDeclarePluginFactory(MirrorPluginFactory, {}, {});
-
-void MirrorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+MirrorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginMirrorName);
@@ -558,11 +561,14 @@ void MirrorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
-void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+void
+MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                       OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentNone);
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
@@ -619,14 +625,14 @@ void MirrorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OF
             page->addChild(*param);
         }
     }
-}
+} // MirrorPluginFactory::describeInContext
 
 OFX::ImageEffect*
-MirrorPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+MirrorPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                    OFX::ContextEnum /*context*/)
 {
     return new MirrorPlugin(handle);
 }
-
 
 static MirrorPluginFactory p(kPluginMirrorIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

@@ -51,9 +51,9 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "ImageStatisticsOFX"
 #define kPluginGrouping "Other"
 #define kPluginDescription \
-"Compute image statistics over the whole image or over a rectangle. " \
-"The statistics can be computed either on RGBA components or in the HSVL colorspace " \
-"(which is the HSV coilorspace with an additional L component from HSL)."
+    "Compute image statistics over the whole image or over a rectangle. " \
+    "The statistics can be computed either on RGBA components or in the HSVL colorspace " \
+    "(which is the HSV coilorspace with an additional L component from HSL)."
 #define kPluginIdentifier "net.sf.openfx.ImageStatistics"
 #define kPluginVersionMajor 1 // Incrementing this number means that you have broken backwards compatibility of the plug-in.
 #define kPluginVersionMinor 0 // Increment this when you have fixed a bug or made it faster.
@@ -111,23 +111,23 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamStatKurtosis "statKurtosis"
 #define kParamStatKurtosisLabel "Kurtosis"
 #define kParamStatKurtosisHint \
-"Kurtosis quantifies whether the shape of the data distribution matches the Gaussian distribution.\n" \
-"•A Gaussian distribution has a kurtosis of 0.\n" \
-"•A flatter distribution has a negative kurtosis,\n" \
-"•A distribution more peaked than a Gaussian distribution has a positive kurtosis.\n" \
-"•Kurtosis has no units.\n" \
-"•The value that this plugin reports is sometimes called the excess kurtosis since the expected kurtosis for a Gaussian distribution is 0.0.\n" \
-"•An alternative definition of kurtosis is computed by adding 3 to the value reported by this plugin. With this definition, a Gaussian distribution is expected to have a kurtosis of 3.0."
+    "Kurtosis quantifies whether the shape of the data distribution matches the Gaussian distribution.\n" \
+    "•A Gaussian distribution has a kurtosis of 0.\n" \
+    "•A flatter distribution has a negative kurtosis,\n" \
+    "•A distribution more peaked than a Gaussian distribution has a positive kurtosis.\n" \
+    "•Kurtosis has no units.\n" \
+    "•The value that this plugin reports is sometimes called the excess kurtosis since the expected kurtosis for a Gaussian distribution is 0.0.\n" \
+    "•An alternative definition of kurtosis is computed by adding 3 to the value reported by this plugin. With this definition, a Gaussian distribution is expected to have a kurtosis of 3.0."
 
 #define kParamStatSkewness "statSkewness"
 #define kParamStatSkewnessLabel "Skewness"
 #define kParamStatSkewnessHint \
-"Skewness quantifies how symmetrical the distribution is.\n" \
-"• A symmetrical distribution has a skewness of zero.\n" \
-"• An asymmetrical distribution with a long tail to the right (higher values) has a positive skew.\n" \
-"• An asymmetrical distribution with a long tail to the left (lower values) has a negative skew.\n" \
-"• The skewness is unitless.\n" \
-"• Any threshold or rule of thumb is arbitrary, but here is one: If the skewness is greater than 1.0 (or less than -1.0), the skewness is substantial and the distribution is far from symmetrical."
+    "Skewness quantifies how symmetrical the distribution is.\n" \
+    "• A symmetrical distribution has a skewness of zero.\n" \
+    "• An asymmetrical distribution with a long tail to the right (higher values) has a positive skew.\n" \
+    "• An asymmetrical distribution with a long tail to the left (lower values) has a negative skew.\n" \
+    "• The skewness is unitless.\n" \
+    "• Any threshold or rule of thumb is arbitrary, but here is one: If the skewness is greater than 1.0 (or less than -1.0), the skewness is substantial and the distribution is far from symmetrical."
 
 
 #define kParamGroupHSVL "HSVL"
@@ -167,35 +167,38 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamStatHSVLKurtosis "statHSVLKurtosis"
 #define kParamStatHSVLKurtosisLabel "HSVL Kurtosis"
 #define kParamStatHSVLKurtosisHint \
-"Kurtosis quantifies whether the shape of the data distribution matches the Gaussian distribution.\n" \
-"•A Gaussian distribution has a kurtosis of 0.\n" \
-"•A flatter distribution has a negative kurtosis,\n" \
-"•A distribution more peaked than a Gaussian distribution has a positive kurtosis.\n" \
-"•Kurtosis has no units.\n" \
-"•The value that this plugin reports is sometimes called the excess kurtosis since the expected kurtosis for a Gaussian distribution is 0.0.\n" \
-"•An alternative definition of kurtosis is computed by adding 3 to the value reported by this plugin. With this definition, a Gaussian distribution is expected to have a kurtosis of 3.0."
+    "Kurtosis quantifies whether the shape of the data distribution matches the Gaussian distribution.\n" \
+    "•A Gaussian distribution has a kurtosis of 0.\n" \
+    "•A flatter distribution has a negative kurtosis,\n" \
+    "•A distribution more peaked than a Gaussian distribution has a positive kurtosis.\n" \
+    "•Kurtosis has no units.\n" \
+    "•The value that this plugin reports is sometimes called the excess kurtosis since the expected kurtosis for a Gaussian distribution is 0.0.\n" \
+    "•An alternative definition of kurtosis is computed by adding 3 to the value reported by this plugin. With this definition, a Gaussian distribution is expected to have a kurtosis of 3.0."
 
 #define kParamStatHSVLSkewness "statHSVLSkewness"
 #define kParamStatHSVLSkewnessLabel "HSVL Skewness"
 #define kParamStatHSVLSkewnessHint \
-"Skewness quantifies how symmetrical the distribution is.\n" \
-"• A symmetrical distribution has a skewness of zero.\n" \
-"• An asymmetrical distribution with a long tail to the right (higher values) has a positive skew.\n" \
-"• An asymmetrical distribution with a long tail to the left (lower values) has a negative skew.\n" \
-"• The skewness is unitless.\n" \
-"• Any threshold or rule of thumb is arbitrary, but here is one: If the skewness is greater than 1.0 (or less than -1.0), the skewness is substantial and the distribution is far from symmetrical."
+    "Skewness quantifies how symmetrical the distribution is.\n" \
+    "• A symmetrical distribution has a skewness of zero.\n" \
+    "• An asymmetrical distribution with a long tail to the right (higher values) has a positive skew.\n" \
+    "• An asymmetrical distribution with a long tail to the left (lower values) has a negative skew.\n" \
+    "• The skewness is unitless.\n" \
+    "• Any threshold or rule of thumb is arbitrary, but here is one: If the skewness is greater than 1.0 (or less than -1.0), the skewness is substantial and the distribution is far from symmetrical."
 
 #define POINT_TOLERANCE 6
 #define POINT_SIZE 5
 
 
-struct RGBAValues {
-    double r,g,b,a;
+struct RGBAValues
+{
+    double r, g, b, a;
     RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+
     RGBAValues() : r(0), g(0), b(0), a(0) {}
 };
 
-struct Results {
+struct Results
+{
     RGBAValues min;
     RGBAValues max;
     RGBAValues mean;
@@ -204,7 +207,8 @@ struct Results {
     RGBAValues kurtosis;
 };
 
-class ImageStatisticsProcessorBase : public OFX::ImageProcessor
+class ImageStatisticsProcessorBase
+    : public OFX::ImageProcessor
 {
 protected:
     OFX::MultiThread::Mutex _mutex; //< this is used so we can multi-thread the analysis and protect the shared results
@@ -212,9 +216,9 @@ protected:
 
 public:
     ImageStatisticsProcessorBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _mutex()
-    , _count(0)
+        : OFX::ImageProcessor(instance)
+        , _mutex()
+        , _count(0)
     {
     }
 
@@ -223,34 +227,34 @@ public:
     }
 
     virtual void setPrevResults(const Results &results) = 0;
-
     virtual void getResults(Results *results) = 0;
 
 protected:
 
     template<class PIX, int nComponents, int maxValue>
-    void toRGBA(const PIX *p, RGBAValues* rgba)
+    void toRGBA(const PIX *p,
+                RGBAValues* rgba)
     {
         if (nComponents == 4) {
-            rgba->r = p[0]/(double)maxValue;
-            rgba->g = p[1]/(double)maxValue;
-            rgba->b = p[2]/(double)maxValue;
-            rgba->a = p[3]/(double)maxValue;
+            rgba->r = p[0] / (double)maxValue;
+            rgba->g = p[1] / (double)maxValue;
+            rgba->b = p[2] / (double)maxValue;
+            rgba->a = p[3] / (double)maxValue;
         } else if (nComponents == 3) {
-            rgba->r = p[0]/(double)maxValue;
-            rgba->g = p[1]/(double)maxValue;
-            rgba->b = p[2]/(double)maxValue;
+            rgba->r = p[0] / (double)maxValue;
+            rgba->g = p[1] / (double)maxValue;
+            rgba->b = p[2] / (double)maxValue;
             rgba->a = 0;
         } else if (nComponents == 2) {
-            rgba->r = p[0]/(double)maxValue;
-            rgba->g = p[1]/(double)maxValue;
+            rgba->r = p[0] / (double)maxValue;
+            rgba->g = p[1] / (double)maxValue;
             rgba->b = 0;
             rgba->a = 0;
         } else if (nComponents == 1) {
             rgba->r = 0;
             rgba->g = 0;
             rgba->b = 0;
-            rgba->a = p[0]/(double)maxValue;
+            rgba->a = p[0] / (double)maxValue;
         } else {
             rgba->r = 0;
             rgba->g = 0;
@@ -260,67 +264,70 @@ protected:
     }
 
     template<class PIX, int nComponents, int maxValue>
-    void
-    pixToHSVL(const PIX *p, float hsvl[4])
+    void pixToHSVL(const PIX *p,
+                   float hsvl[4])
     {
-        if (nComponents == 4 || nComponents == 3) {
+        if ( (nComponents == 4) || (nComponents == 3) ) {
             float r, g, b;
-            r = p[0]/(float)maxValue;
-            g = p[1]/(float)maxValue;
-            b = p[2]/(float)maxValue;
+            r = p[0] / (float)maxValue;
+            g = p[1] / (float)maxValue;
+            b = p[2] / (float)maxValue;
             OFX::Color::rgb_to_hsv(r, g, b, &hsvl[0], &hsvl[1], &hsvl[2]);
-            hsvl[0] *= 360/OFXS_HUE_CIRCLE;
+            hsvl[0] *= 360 / OFXS_HUE_CIRCLE;
             float min = std::min(std::min(r, g), b);
             float max = std::max(std::max(r, g), b);
-            hsvl[3] = (min + max)/2;
+            hsvl[3] = (min + max) / 2;
         } else {
             hsvl[0] = hsvl[1] = hsvl[2] = hsvl[3] = 0.f;
         }
     }
 
     template<class PIX, int nComponents, int maxValue>
-    void toComponents(const RGBAValues& rgba, PIX *p)
+    void toComponents(const RGBAValues& rgba,
+                      PIX *p)
     {
         if (nComponents == 4) {
-            p[0] = rgba.r * maxValue + ((maxValue != 1) ? 0.5 : 0);
-            p[1] = rgba.g * maxValue + ((maxValue != 1) ? 0.5 : 0);
-            p[2] = rgba.b * maxValue + ((maxValue != 1) ? 0.5 : 0);
-            p[3] = rgba.a * maxValue + ((maxValue != 1) ? 0.5 : 0);
+            p[0] = rgba.r * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
+            p[1] = rgba.g * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
+            p[2] = rgba.b * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
+            p[3] = rgba.a * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
         } else if (nComponents == 3) {
-            p[0] = rgba.r * maxValue + ((maxValue != 1) ? 0.5 : 0);
-            p[1] = rgba.g * maxValue + ((maxValue != 1) ? 0.5 : 0);
-            p[2] = rgba.b * maxValue + ((maxValue != 1) ? 0.5 : 0);
+            p[0] = rgba.r * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
+            p[1] = rgba.g * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
+            p[2] = rgba.b * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
         } else if (nComponents == 2) {
-            p[0] = rgba.r * maxValue + ((maxValue != 1) ? 0.5 : 0);
-            p[1] = rgba.g * maxValue + ((maxValue != 1) ? 0.5 : 0);
+            p[0] = rgba.r * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
+            p[1] = rgba.g * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
         } else if (nComponents == 1) {
-            p[0] = rgba.a * maxValue + ((maxValue != 1) ? 0.5 : 0);
+            p[0] = rgba.a * maxValue + ( (maxValue != 1) ? 0.5 : 0 );
         }
     }
 };
 
 
 template <class PIX, int nComponents, int maxValue>
-class ImageMinMaxMeanProcessor : public ImageStatisticsProcessorBase
+class ImageMinMaxMeanProcessor
+    : public ImageStatisticsProcessorBase
 {
 private:
     double _min[nComponents];
     double _max[nComponents];
     double _sum[nComponents];
+
 public:
     ImageMinMaxMeanProcessor(OFX::ImageEffect &instance)
-    : ImageStatisticsProcessorBase(instance)
+        : ImageStatisticsProcessorBase(instance)
     {
-        std::fill(_min, _min+nComponents, +std::numeric_limits<double>::infinity());
-        std::fill(_max, _max+nComponents, -std::numeric_limits<double>::infinity());
-        std::fill(_sum, _sum+nComponents, 0.);
+        std::fill( _min, _min + nComponents, +std::numeric_limits<double>::infinity() );
+        std::fill( _max, _max + nComponents, -std::numeric_limits<double>::infinity() );
+        std::fill(_sum, _sum + nComponents, 0.);
     }
 
     ~ImageMinMaxMeanProcessor()
     {
     }
 
-    void setPrevResults(const Results &/*results*/) OVERRIDE FINAL {}
+    void setPrevResults(const Results & /*results*/) OVERRIDE FINAL {}
 
     void getResults(Results *results) OVERRIDE FINAL
     {
@@ -329,7 +336,7 @@ public:
             toRGBA<double, nComponents, 1>(_max, &results->max);
             double mean[nComponents];
             for (int c = 0; c < nComponents; ++c) {
-                mean[c] = _sum[c]/_count;
+                mean[c] = _sum[c] / _count;
             }
             toRGBA<double, nComponents, 1>(mean, &results->mean);
         }
@@ -337,7 +344,11 @@ public:
 
 private:
 
-    void addResults(double min[nComponents], double max[nComponents], double sum[nComponents], unsigned long count) {
+    void addResults(double min[nComponents],
+                    double max[nComponents],
+                    double sum[nComponents],
+                    unsigned long count)
+    {
         _mutex.lock();
         for (int c = 0; c < nComponents; ++c) {
             _min[c] = std::min(_min[c], min[c]);
@@ -348,23 +359,22 @@ private:
         _mutex.unlock();
     }
 
-
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double min[nComponents], max[nComponents], sum[nComponents];
-        std::fill(min, min+nComponents, +std::numeric_limits<double>::infinity());
-        std::fill(max, max+nComponents, -std::numeric_limits<double>::infinity());
+        std::fill( min, min + nComponents, +std::numeric_limits<double>::infinity() );
+        std::fill( max, max + nComponents, -std::numeric_limits<double>::infinity() );
         std::fill(sum, sum + nComponents, 0.);
         unsigned long count = 0;
+
         assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
                _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-
             double sumLine[nComponents]; // partial sum to avoid underflows
             std::fill(sumLine, sumLine + nComponents, 0.);
 
@@ -388,20 +398,20 @@ private:
 };
 
 
-
-
 template <class PIX, int nComponents, int maxValue>
-class ImageSDevProcessor : public ImageStatisticsProcessorBase
+class ImageSDevProcessor
+    : public ImageStatisticsProcessorBase
 {
 private:
     double _mean[nComponents];
     double _sum_p2[nComponents];
+
 public:
     ImageSDevProcessor(OFX::ImageEffect &instance)
-    : ImageStatisticsProcessorBase(instance)
+        : ImageStatisticsProcessorBase(instance)
     {
-        std::fill(_mean, _mean+nComponents, 0.);
-        std::fill(_sum_p2, _sum_p2+nComponents, 0.);
+        std::fill(_mean, _mean + nComponents, 0.);
+        std::fill(_sum_p2, _sum_p2 + nComponents, 0.);
     }
 
     ~ImageSDevProcessor()
@@ -419,7 +429,7 @@ public:
             double sdev[nComponents];
             for (int c = 0; c < nComponents; ++c) {
                 // sdev^2 is an unbiased estimator for the population variance
-                sdev[c] = std::sqrt(std::max(0., _sum_p2[c]/(_count-1)));
+                sdev[c] = std::sqrt( std::max( 0., _sum_p2[c] / (_count - 1) ) );
             }
             toRGBA<double, nComponents, 1>(sdev, &results->sdev);
         }
@@ -427,7 +437,9 @@ public:
 
 private:
 
-    void addResults(double sum_p2[nComponents], unsigned long count) {
+    void addResults(double sum_p2[nComponents],
+                    unsigned long count)
+    {
         _mutex.lock();
         for (int c = 0; c < nComponents; ++c) {
             _sum_p2[c] += sum_p2[c];
@@ -436,21 +448,20 @@ private:
         _mutex.unlock();
     }
 
-
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double sum_p2[nComponents];
         std::fill(sum_p2, sum_p2 + nComponents, 0.);
         unsigned long count = 0;
+
         assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
                _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-
             double sumLine_p2[nComponents]; // partial sum to avoid underflows
             std::fill(sumLine_p2, sumLine_p2 + nComponents, 0.);
 
@@ -472,24 +483,24 @@ private:
 };
 
 
-
-
 template <class PIX, int nComponents, int maxValue>
-class ImageSkewnessKurtosisProcessor : public ImageStatisticsProcessorBase
+class ImageSkewnessKurtosisProcessor
+    : public ImageStatisticsProcessorBase
 {
 private:
     double _mean[nComponents];
     double _sdev[nComponents];
     double _sum_p3[nComponents];
     double _sum_p4[nComponents];
+
 public:
     ImageSkewnessKurtosisProcessor(OFX::ImageEffect &instance)
-    : ImageStatisticsProcessorBase(instance)
+        : ImageStatisticsProcessorBase(instance)
     {
-        std::fill(_mean, _mean+nComponents, 0.);
-        std::fill(_sdev, _sdev+nComponents, 0.);
-        std::fill(_sum_p3, _sum_p3+nComponents, 0.);
-        std::fill(_sum_p4, _sum_p4+nComponents, 0.);
+        std::fill(_mean, _mean + nComponents, 0.);
+        std::fill(_sdev, _sdev + nComponents, 0.);
+        std::fill(_sum_p3, _sum_p3 + nComponents, 0.);
+        std::fill(_sum_p4, _sum_p4 + nComponents, 0.);
     }
 
     ~ImageSkewnessKurtosisProcessor()
@@ -507,30 +518,33 @@ public:
         if (_count > 2) {
             double skewness[nComponents];
             // factor for the adjusted Fisher-Pearson standardized moment coefficient G_1
-            double skewfac = ((double)_count*_count) / ((double)(_count-1)*(_count-2));
-            assert(!isnan(skewfac));
+            double skewfac = ( (double)_count * _count ) / ( (double)(_count - 1) * (_count - 2) );
+            assert( !isnan(skewfac) );
             for (int c = 0; c < nComponents; ++c) {
                 skewness[c] = skewfac * _sum_p3[c] / _count;
             }
             toRGBA<double, nComponents, 1>(skewness, &results->skewness);
-            assert(!isnan(results->skewness.r) && !isnan(results->skewness.g) && !isnan(results->skewness.b) && !isnan(results->skewness.a));
+            assert( !isnan(results->skewness.r) && !isnan(results->skewness.g) && !isnan(results->skewness.b) && !isnan(results->skewness.a) );
         }
         if (_count > 3) {
             double kurtosis[nComponents];
-            double kurtfac = ((double)(_count+1)*_count) / ((double)(_count-1)*(_count-2)*(_count-3));
-            double kurtshift = -3 * ((double)(_count-1)*(_count-1)) / ((double)(_count-2)*(_count-3));
-            assert(!isnan(kurtfac) && !isnan(kurtshift));
+            double kurtfac = ( (double)(_count + 1) * _count ) / ( (double)(_count - 1) * (_count - 2) * (_count - 3) );
+            double kurtshift = -3 * ( (double)(_count - 1) * (_count - 1) ) / ( (double)(_count - 2) * (_count - 3) );
+            assert( !isnan(kurtfac) && !isnan(kurtshift) );
             for (int c = 0; c < nComponents; ++c) {
                 kurtosis[c] = kurtfac * _sum_p4[c] + kurtshift;
             }
             toRGBA<double, nComponents, 1>(kurtosis, &results->kurtosis);
-            assert(!isnan(results->kurtosis.r) && !isnan(results->kurtosis.g) && !isnan(results->kurtosis.b) && !isnan(results->kurtosis.a));
+            assert( !isnan(results->kurtosis.r) && !isnan(results->kurtosis.g) && !isnan(results->kurtosis.b) && !isnan(results->kurtosis.a) );
         }
     }
 
 private:
 
-    void addResults(double sum_p3[nComponents], double sum_p4[nComponents], unsigned long count) {
+    void addResults(double sum_p3[nComponents],
+                    double sum_p4[nComponents],
+                    unsigned long count)
+    {
         _mutex.lock();
         for (int c = 0; c < nComponents; ++c) {
             _sum_p3[c] += sum_p3[c];
@@ -540,7 +554,6 @@ private:
         _mutex.unlock();
     }
 
-
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double sum_p3[nComponents];
@@ -548,15 +561,15 @@ private:
         std::fill(sum_p3, sum_p3 + nComponents, 0.);
         std::fill(sum_p4, sum_p4 + nComponents, 0.);
         unsigned long count = 0;
+
         assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
                _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-
             double sumLine_p3[nComponents]; // partial sum to avoid underflows
             double sumLine_p4[nComponents]; // partial sum to avoid underflows
             std::fill(sumLine_p3, sumLine_p3 + nComponents, 0.);
@@ -565,7 +578,7 @@ private:
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
                 for (int c = 0; c < nComponents; ++c) {
                     if (_sdev[c] > 0.) {
-                        double v = (*dstPix - _mean[c])/_sdev[c];
+                        double v = (*dstPix - _mean[c]) / _sdev[c];
                         double v2 = v * v;
                         sumLine_p3[c] += v2 * v;
                         sumLine_p4[c] += v2 * v2;
@@ -579,7 +592,7 @@ private:
             }
             count += procWindow.x2 - procWindow.x1;
         }
-        
+
         addResults(sum_p3, sum_p4, count);
     }
 };
@@ -587,26 +600,28 @@ private:
 #define nComponentsHSVL 4
 
 template <class PIX, int nComponents, int maxValue>
-class ImageHSVLMinMaxMeanProcessor : public ImageStatisticsProcessorBase
+class ImageHSVLMinMaxMeanProcessor
+    : public ImageStatisticsProcessorBase
 {
 private:
     double _min[nComponentsHSVL];
     double _max[nComponentsHSVL];
     double _sum[nComponentsHSVL];
+
 public:
     ImageHSVLMinMaxMeanProcessor(OFX::ImageEffect &instance)
-    : ImageStatisticsProcessorBase(instance)
+        : ImageStatisticsProcessorBase(instance)
     {
-        std::fill(_min, _min+nComponentsHSVL, +std::numeric_limits<double>::infinity());
-        std::fill(_max, _max+nComponentsHSVL, -std::numeric_limits<double>::infinity());
-        std::fill(_sum, _sum+nComponentsHSVL, 0.);
+        std::fill( _min, _min + nComponentsHSVL, +std::numeric_limits<double>::infinity() );
+        std::fill( _max, _max + nComponentsHSVL, -std::numeric_limits<double>::infinity() );
+        std::fill(_sum, _sum + nComponentsHSVL, 0.);
     }
 
     ~ImageHSVLMinMaxMeanProcessor()
     {
     }
 
-    void setPrevResults(const Results &/*results*/) OVERRIDE FINAL {}
+    void setPrevResults(const Results & /*results*/) OVERRIDE FINAL {}
 
     void getResults(Results *results) OVERRIDE FINAL
     {
@@ -615,7 +630,7 @@ public:
             toRGBA<double, nComponentsHSVL, 1>(_max, &results->max);
             double mean[nComponentsHSVL];
             for (int c = 0; c < nComponentsHSVL; ++c) {
-                mean[c] = _sum[c]/_count;
+                mean[c] = _sum[c] / _count;
             }
             toRGBA<double, nComponentsHSVL, 1>(mean, &results->mean);
         }
@@ -623,7 +638,11 @@ public:
 
 private:
 
-    void addResults(double min[nComponentsHSVL], double max[nComponentsHSVL], double sum[nComponentsHSVL], unsigned long count) {
+    void addResults(double min[nComponentsHSVL],
+                    double max[nComponentsHSVL],
+                    double sum[nComponentsHSVL],
+                    unsigned long count)
+    {
         _mutex.lock();
         for (int c = 0; c < nComponentsHSVL; ++c) {
             _min[c] = std::min(_min[c], min[c]);
@@ -634,23 +653,22 @@ private:
         _mutex.unlock();
     }
 
-
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double min[nComponentsHSVL], max[nComponentsHSVL], sum[nComponentsHSVL];
-        std::fill(min, min+nComponentsHSVL, +std::numeric_limits<double>::infinity());
-        std::fill(max, max+nComponentsHSVL, -std::numeric_limits<double>::infinity());
+        std::fill( min, min + nComponentsHSVL, +std::numeric_limits<double>::infinity() );
+        std::fill( max, max + nComponentsHSVL, -std::numeric_limits<double>::infinity() );
         std::fill(sum, sum + nComponentsHSVL, 0.);
         unsigned long count = 0;
+
         assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
                _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-
             double sumLine[nComponentsHSVL]; // partial sum to avoid underflows
             std::fill(sumLine, sumLine + nComponentsHSVL, 0.);
 
@@ -676,20 +694,20 @@ private:
 };
 
 
-
-
 template <class PIX, int nComponents, int maxValue>
-class ImageHSVLSDevProcessor : public ImageStatisticsProcessorBase
+class ImageHSVLSDevProcessor
+    : public ImageStatisticsProcessorBase
 {
 private:
     double _mean[nComponentsHSVL];
     double _sum_p2[nComponentsHSVL];
+
 public:
     ImageHSVLSDevProcessor(OFX::ImageEffect &instance)
-    : ImageStatisticsProcessorBase(instance)
+        : ImageStatisticsProcessorBase(instance)
     {
-        std::fill(_mean, _mean+nComponentsHSVL, 0.);
-        std::fill(_sum_p2, _sum_p2+nComponentsHSVL, 0.);
+        std::fill(_mean, _mean + nComponentsHSVL, 0.);
+        std::fill(_sum_p2, _sum_p2 + nComponentsHSVL, 0.);
     }
 
     ~ImageHSVLSDevProcessor()
@@ -707,7 +725,7 @@ public:
             double sdev[nComponentsHSVL];
             for (int c = 0; c < nComponentsHSVL; ++c) {
                 // sdev^2 is an unbiased estimator for the population variance
-                sdev[c] = std::sqrt(std::max(0., _sum_p2[c]/(_count-1)));
+                sdev[c] = std::sqrt( std::max( 0., _sum_p2[c] / (_count - 1) ) );
             }
             toRGBA<double, nComponentsHSVL, 1>(sdev, &results->sdev);
         }
@@ -715,7 +733,9 @@ public:
 
 private:
 
-    void addResults(double sum_p2[nComponentsHSVL], unsigned long count) {
+    void addResults(double sum_p2[nComponentsHSVL],
+                    unsigned long count)
+    {
         _mutex.lock();
         for (int c = 0; c < nComponentsHSVL; ++c) {
             _sum_p2[c] += sum_p2[c];
@@ -724,21 +744,20 @@ private:
         _mutex.unlock();
     }
 
-
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double sum_p2[nComponentsHSVL];
         std::fill(sum_p2, sum_p2 + nComponentsHSVL, 0.);
         unsigned long count = 0;
+
         assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
                _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-
             double sumLine_p2[nComponentsHSVL]; // partial sum to avoid underflows
             std::fill(sumLine_p2, sumLine_p2 + nComponentsHSVL, 0.);
 
@@ -762,24 +781,24 @@ private:
 };
 
 
-
-
 template <class PIX, int nComponents, int maxValue>
-class ImageHSVLSkewnessKurtosisProcessor : public ImageStatisticsProcessorBase
+class ImageHSVLSkewnessKurtosisProcessor
+    : public ImageStatisticsProcessorBase
 {
 private:
     double _mean[nComponentsHSVL];
     double _sdev[nComponentsHSVL];
     double _sum_p3[nComponentsHSVL];
     double _sum_p4[nComponentsHSVL];
+
 public:
     ImageHSVLSkewnessKurtosisProcessor(OFX::ImageEffect &instance)
-    : ImageStatisticsProcessorBase(instance)
+        : ImageStatisticsProcessorBase(instance)
     {
-        std::fill(_mean, _mean+nComponentsHSVL, 0.);
-        std::fill(_sdev, _sdev+nComponentsHSVL, 0.);
-        std::fill(_sum_p3, _sum_p3+nComponentsHSVL, 0.);
-        std::fill(_sum_p4, _sum_p4+nComponentsHSVL, 0.);
+        std::fill(_mean, _mean + nComponentsHSVL, 0.);
+        std::fill(_sdev, _sdev + nComponentsHSVL, 0.);
+        std::fill(_sum_p3, _sum_p3 + nComponentsHSVL, 0.);
+        std::fill(_sum_p4, _sum_p4 + nComponentsHSVL, 0.);
     }
 
     ~ImageHSVLSkewnessKurtosisProcessor()
@@ -797,7 +816,7 @@ public:
         if (_count > 2) {
             double skewness[nComponentsHSVL];
             // factor for the adjusted Fisher-Pearson standardized moment coefficient G_1
-            double skewfac = ((double)_count*_count) / ((double)(_count-1)*(_count-2));
+            double skewfac = ( (double)_count * _count ) / ( (double)(_count - 1) * (_count - 2) );
             for (int c = 0; c < nComponentsHSVL; ++c) {
                 skewness[c] = skewfac * _sum_p3[c] / _count;
             }
@@ -805,8 +824,8 @@ public:
         }
         if (_count > 3) {
             double kurtosis[nComponentsHSVL];
-            double kurtfac = ((double)(_count+1)*_count) / ((double)(_count-1)*(_count-2)*(_count-3));
-            double kurtshift = -3 * ((double)(_count-1)*(_count-1)) / ((double)(_count-2)*(_count-3));
+            double kurtfac = ( (double)(_count + 1) * _count ) / ( (double)(_count - 1) * (_count - 2) * (_count - 3) );
+            double kurtshift = -3 * ( (double)(_count - 1) * (_count - 1) ) / ( (double)(_count - 2) * (_count - 3) );
             for (int c = 0; c < nComponentsHSVL; ++c) {
                 kurtosis[c] = kurtfac * _sum_p4[c] + kurtshift;
             }
@@ -816,7 +835,10 @@ public:
 
 private:
 
-    void addResults(double sum_p3[nComponentsHSVL], double sum_p4[nComponentsHSVL], unsigned long count) {
+    void addResults(double sum_p3[nComponentsHSVL],
+                    double sum_p4[nComponentsHSVL],
+                    unsigned long count)
+    {
         _mutex.lock();
         for (int c = 0; c < nComponentsHSVL; ++c) {
             _sum_p3[c] += sum_p3[c];
@@ -826,7 +848,6 @@ private:
         _mutex.unlock();
     }
 
-
     void multiThreadProcessImages(OfxRectI procWindow) OVERRIDE FINAL
     {
         double sum_p3[nComponentsHSVL];
@@ -834,15 +855,15 @@ private:
         std::fill(sum_p3, sum_p3 + nComponentsHSVL, 0.);
         std::fill(sum_p4, sum_p4 + nComponentsHSVL, 0.);
         unsigned long count = 0;
+
         assert(_dstImg->getBounds().x1 <= procWindow.x1 && procWindow.y2 <= _dstImg->getBounds().y2 &&
                _dstImg->getBounds().y1 <= procWindow.y1 && procWindow.y2 <= _dstImg->getBounds().y2);
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
-
             double sumLine_p3[nComponentsHSVL]; // partial sum to avoid underflows
             double sumLine_p4[nComponentsHSVL]; // partial sum to avoid underflows
             std::fill(sumLine_p3, sumLine_p3 + nComponentsHSVL, 0.);
@@ -853,7 +874,7 @@ private:
                 pixToHSVL<PIX, nComponents, maxValue>(dstPix, hsvl);
                 for (int c = 0; c < nComponentsHSVL; ++c) {
                     if (_sdev[c] > 0.) {
-                        double v = (hsvl[c] - _mean[c])/_sdev[c];
+                        double v = (hsvl[c] - _mean[c]) / _sdev[c];
                         double v2 = v * v;
                         sumLine_p3[c] += v2 * v;
                         sumLine_p4[c] += v2 * v2;
@@ -867,35 +888,36 @@ private:
             }
             count += procWindow.x2 - procWindow.x1;
         }
-        
+
         addResults(sum_p3, sum_p4, count);
     }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class ImageStatisticsPlugin : public OFX::ImageEffect
+class ImageStatisticsPlugin
+    : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
     ImageStatisticsPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
-    , _btmLeft(0)
-    , _size(0)
-    , _interactive(0)
-    , _restrictToRectangle(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _btmLeft(0)
+        , _size(0)
+        , _interactive(0)
+        , _restrictToRectangle(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
-                            _dstClip->getPixelComponents() == ePixelComponentRGB ||
-                            _dstClip->getPixelComponents() == ePixelComponentRGBA));
+        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentAlpha ||
+                             _dstClip->getPixelComponents() == ePixelComponentRGB ||
+                             _dstClip->getPixelComponents() == ePixelComponentRGBA) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGBA)));
+        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentAlpha ||
+                               _srcClip->getPixelComponents() == ePixelComponentRGB ||
+                               _srcClip->getPixelComponents() == ePixelComponentRGBA) ) );
 
         _btmLeft = fetchDouble2DParam(kParamRectangleInteractBtmLeft);
         _size = fetchDouble2DParam(kParamRectangleInteractSize);
@@ -942,11 +964,8 @@ private:
 
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-
     virtual void getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois) OVERRIDE FINAL;
-
     virtual bool getRegionOfDefinition(const OFX::RegionOfDefinitionArguments &args, OfxRectD & rod) OVERRIDE FINAL;
-
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /* set up and run a processor */
@@ -960,39 +979,53 @@ private:
     void updateHSVL(const OFX::Image* srcImg, double time, const OfxRectI& analysisWindow);
 
     template <template<class PIX, int nComponents, int maxValue> class Processor, class PIX, int nComponents, int maxValue>
-    void updateSubComponentsDepth(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results& prevResults, Results* results)
+    void updateSubComponentsDepth(const OFX::Image* srcImg,
+                                  double time,
+                                  const OfxRectI &analysisWindow,
+                                  const Results& prevResults,
+                                  Results* results)
     {
         Processor<PIX, nComponents, maxValue> fred(*this);
         setupAndProcess(fred, srcImg, time, analysisWindow, prevResults, results);
     }
 
     template <template<class PIX, int nComponents, int maxValue> class Processor, int nComponents>
-    void updateSubComponents(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results& prevResults, Results* results)
+    void updateSubComponents(const OFX::Image* srcImg,
+                             double time,
+                             const OfxRectI &analysisWindow,
+                             const Results& prevResults,
+                             Results* results)
     {
         OFX::BitDepthEnum srcBitDepth = srcImg->getPixelDepth();
+
         switch (srcBitDepth) {
-            case OFX::eBitDepthUByte: {
-                updateSubComponentsDepth<Processor, unsigned char, nComponents, 255>(srcImg, time, analysisWindow, prevResults, results);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                updateSubComponentsDepth<Processor, unsigned short, nComponents, 65535>(srcImg, time, analysisWindow, prevResults, results);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                updateSubComponentsDepth<Processor, float, nComponents, 1>(srcImg, time, analysisWindow, prevResults, results);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        case OFX::eBitDepthUByte: {
+            updateSubComponentsDepth<Processor, unsigned char, nComponents, 255>(srcImg, time, analysisWindow, prevResults, results);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            updateSubComponentsDepth<Processor, unsigned short, nComponents, 65535>(srcImg, time, analysisWindow, prevResults, results);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            updateSubComponentsDepth<Processor, float, nComponents, 1>(srcImg, time, analysisWindow, prevResults, results);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
 
     template <template<class PIX, int nComponents, int maxValue> class Processor>
-    void updateSub(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow, const Results& prevResults, Results* results)
+    void updateSub(const OFX::Image* srcImg,
+                   double time,
+                   const OfxRectI &analysisWindow,
+                   const Results& prevResults,
+                   Results* results)
     {
         OFX::PixelComponentEnum srcComponents  = srcImg->getPixelComponents();
-        assert(srcComponents == OFX::ePixelComponentAlpha ||srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA);
+
+        assert(srcComponents == OFX::ePixelComponentAlpha || srcComponents == OFX::ePixelComponentRGB || srcComponents == OFX::ePixelComponentRGBA);
         if (srcComponents == OFX::ePixelComponentAlpha) {
             updateSubComponents<Processor, 1>(srcImg, time, analysisWindow, prevResults, results);
         } else if (srcComponents == OFX::ePixelComponentRGBA) {
@@ -1010,7 +1043,6 @@ private:
     // do not need to delete these, the ImageEffect is managing them for us
     Clip *_dstClip;
     Clip *_srcClip;
-
     Double2DParam* _btmLeft;
     Double2DParam* _size;
     BooleanParam* _interactive;
@@ -1046,40 +1078,40 @@ ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
     OFX::BitDepthEnum dstBitDepth       = dst->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
-    if (src.get()) {
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(args.time) : 0 );
+    if ( src.get() ) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
-    copyPixels(*this, args.renderWindow, src.get(), dst.get());
+    copyPixels( *this, args.renderWindow, src.get(), dst.get() );
 
-    if (src.get()) {
+    if ( src.get() ) {
         bool autoUpdate = _autoUpdate->getValueAtTime(args.time);
         assert(autoUpdate); // render should only be called if autoUpdate is true: in other cases isIdentity returns true
         if (autoUpdate) {
@@ -1098,15 +1130,17 @@ ImageStatisticsPlugin::render(const OFX::RenderArguments &args)
             }
         }
     }
-}
+} // ImageStatisticsPlugin::render
 
 // override the roi call
 // Required if the plugin requires a region from the inputs which is different from the rendered region of the output.
 // (this is the case here)
 void
-ImageStatisticsPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args, OFX::RegionOfInterestSetter &rois)
+ImageStatisticsPlugin::getRegionsOfInterest(const OFX::RegionsOfInterestArguments &args,
+                                            OFX::RegionOfInterestSetter &rois)
 {
     bool restrictToRectangle = _restrictToRectangle->getValueAtTime(args.time);
+
     if (restrictToRectangle) {
         OfxRectD regionOfInterest;
         _btmLeft->getValueAtTime(args.time, regionOfInterest.x1, regionOfInterest.y1);
@@ -1133,7 +1167,7 @@ ImageStatisticsPlugin::getRegionOfDefinition(const OFX::RegionOfDefinitionArgume
 bool
 ImageStatisticsPlugin::isIdentity(const OFX::IsIdentityArguments &args,
                                   OFX::Clip * &identityClip,
-                                  double &/*identityTime*/)
+                                  double & /*identityTime*/)
 {
     if ( !kSupportsRenderScale && ( (args.renderScale.x != 1.) || (args.renderScale.y != 1.) ) ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
@@ -1144,12 +1178,12 @@ ImageStatisticsPlugin::isIdentity(const OFX::IsIdentityArguments &args,
 
     if (!autoUpdate) {
         identityClip = _srcClip;
+
         return true;
     } else {
         return false;
     }
 }
-
 
 void
 ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
@@ -1241,12 +1275,12 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         doAnalyzeHSVL = (k != -1);
     }
     // RGBA analysis
-    if ((doAnalyzeRGBA || doAnalyzeHSVL) && _srcClip && _srcClip->isConnected()) {
-        std::auto_ptr<OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                      _srcClip->fetchImage(args.time) : 0);
-        if (src.get()) {
-            if (src->getRenderScale().x != args.renderScale.x ||
-                src->getRenderScale().y != args.renderScale.y) {
+    if ( (doAnalyzeRGBA || doAnalyzeHSVL) && _srcClip && _srcClip->isConnected() ) {
+        std::auto_ptr<OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                       _srcClip->fetchImage(args.time) : 0 );
+        if ( src.get() ) {
+            if ( (src->getRenderScale().x != args.renderScale.x) ||
+                 ( src->getRenderScale().y != args.renderScale.y) ) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
@@ -1267,7 +1301,7 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
             }
         }
     }
-    if ((doAnalyzeSequenceRGBA || doAnalyzeSequenceHSVL) && _srcClip && _srcClip->isConnected()) {
+    if ( (doAnalyzeSequenceRGBA || doAnalyzeSequenceHSVL) && _srcClip && _srcClip->isConnected() ) {
 #     ifdef kOfxImageEffectPropInAnalysis // removed from OFX 1.4
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 1, false);
 #     endif
@@ -1277,11 +1311,11 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         int tmin = (int)std::ceil(range.min);
         int tmax = (int)std::floor(range.max);
         for (int t = tmin; t <= tmax; ++t) {
-            std::auto_ptr<OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                          _srcClip->fetchImage(t) : 0);
-            if (src.get()) {
-                if (src->getRenderScale().x != args.renderScale.x ||
-                    src->getRenderScale().y != args.renderScale.y) {
+            std::auto_ptr<OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                           _srcClip->fetchImage(t) : 0 );
+            if ( src.get() ) {
+                if ( (src->getRenderScale().x != args.renderScale.x) ||
+                     ( src->getRenderScale().y != args.renderScale.y) ) {
                     setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                     OFX::throwSuiteStatusException(kOfxStatFailed);
                 }
@@ -1296,7 +1330,7 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
                 }
             }
             if (tmax != tmin) {
-                if (!progressUpdate((t-tmin)/(double)(tmax-tmin))) {
+                if ( !progressUpdate( (t - tmin) / (double)(tmax - tmin) ) ) {
                     break;
                 }
             }
@@ -1306,15 +1340,19 @@ ImageStatisticsPlugin::changedParam(const OFX::InstanceChangedArgs &args,
         getPropertySet().propSetInt(kOfxImageEffectPropInAnalysis, 0, false);
 #     endif
     }
-}
+} // ImageStatisticsPlugin::changedParam
 
 /* set up and run a processor */
 void
-ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor, const OFX::Image* srcImg, double /*time*/, const OfxRectI &analysisWindow, const Results &prevResults, Results *results)
+ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor,
+                                       const OFX::Image* srcImg,
+                                       double /*time*/,
+                                       const OfxRectI &analysisWindow,
+                                       const Results &prevResults,
+                                       Results *results)
 {
-
     // set the images
-    processor.setDstImg(const_cast<OFX::Image*>(srcImg)); // not a bug: we only set dst
+    processor.setDstImg( const_cast<OFX::Image*>(srcImg) ); // not a bug: we only set dst
 
     // set the render window
     processor.setRenderWindow(analysisWindow);
@@ -1324,16 +1362,19 @@ ImageStatisticsPlugin::setupAndProcess(ImageStatisticsProcessorBase &processor, 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 
-    if (!abort()) {
+    if ( !abort() ) {
         processor.getResults(results);
     }
 }
 
 bool
-ImageStatisticsPlugin::computeWindow(const OFX::Image* srcImg, double time, OfxRectI *analysisWindow)
+ImageStatisticsPlugin::computeWindow(const OFX::Image* srcImg,
+                                     double time,
+                                     OfxRectI *analysisWindow)
 {
     OfxRectD regionOfInterest;
     bool restrictToRectangle = _restrictToRectangle->getValueAtTime(time);
+
     if (!restrictToRectangle && _srcClip) {
         // use the src region of definition as rectangle, but avoid infinite rectangle
         regionOfInterest = _srcClip->getRegionOfDefinition(time);
@@ -1358,27 +1399,32 @@ ImageStatisticsPlugin::computeWindow(const OFX::Image* srcImg, double time, OfxR
         regionOfInterest.y2 += regionOfInterest.y1;
     }
     Coords::toPixelEnclosing(regionOfInterest,
-                                    srcImg->getRenderScale(),
-                                    srcImg->getPixelAspectRatio(),
-                                    analysisWindow);
+                             srcImg->getRenderScale(),
+                             srcImg->getPixelAspectRatio(),
+                             analysisWindow);
+
     return OFX::Coords::rectIntersection(*analysisWindow, srcImg->getBounds(), analysisWindow);
 }
+
 // update image statistics
 void
-ImageStatisticsPlugin::update(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow)
+ImageStatisticsPlugin::update(const OFX::Image* srcImg,
+                              double time,
+                              const OfxRectI &analysisWindow)
 {
     // TODO: CHECK if checkDoubleAnalysis param is true and analysisWindow is the same as btmLeft/sizeAnalysis
     Results results;
-    if (!abort()) {
+
+    if ( !abort() ) {
         updateSub<ImageMinMaxMeanProcessor>(srcImg, time, analysisWindow, results, &results);
     }
-    if (!abort()) {
+    if ( !abort() ) {
         updateSub<ImageSDevProcessor>(srcImg, time, analysisWindow, results, &results);
     }
-    if (!abort()) {
+    if ( !abort() ) {
         updateSub<ImageSkewnessKurtosisProcessor>(srcImg, time, analysisWindow, results, &results);
     }
-    if (abort()) {
+    if ( abort() ) {
         return;
     }
     beginEditBlock("updateStatisticsRGBA");
@@ -1387,25 +1433,28 @@ ImageStatisticsPlugin::update(const OFX::Image* srcImg, double time, const OfxRe
     _statMean->setValueAtTime(time, results.mean.r, results.mean.g, results.mean.b, results.mean.a);
     _statSDev->setValueAtTime(time, results.sdev.r, results.sdev.g, results.sdev.b, results.sdev.a);
     _statSkewness->setValueAtTime(time, results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
-   // printf("skewness = %g %g %g %g\n", results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
+    // printf("skewness = %g %g %g %g\n", results.skewness.r, results.skewness.g, results.skewness.b, results.skewness.a);
     _statKurtosis->setValueAtTime(time, results.kurtosis.r, results.kurtosis.g, results.kurtosis.b, results.kurtosis.a);
     endEditBlock();
 }
 
 void
-ImageStatisticsPlugin::updateHSVL(const OFX::Image* srcImg, double time, const OfxRectI &analysisWindow)
+ImageStatisticsPlugin::updateHSVL(const OFX::Image* srcImg,
+                                  double time,
+                                  const OfxRectI &analysisWindow)
 {
     Results results;
-    if (!abort()) {
+
+    if ( !abort() ) {
         updateSub<ImageHSVLMinMaxMeanProcessor>(srcImg, time, analysisWindow, results, &results);
     }
-    if (!abort()) {
+    if ( !abort() ) {
         updateSub<ImageHSVLSDevProcessor>(srcImg, time, analysisWindow, results, &results);
     }
-    if (!abort()) {
+    if ( !abort() ) {
         updateSub<ImageHSVLSkewnessKurtosisProcessor>(srcImg, time, analysisWindow, results, &results);
     }
-    if (abort()) {
+    if ( abort() ) {
         return;
     }
     beginEditBlock("updateStatisticsHSVL");
@@ -1418,13 +1467,15 @@ ImageStatisticsPlugin::updateHSVL(const OFX::Image* srcImg, double time, const O
     endEditBlock();
 }
 
-class ImageStatisticsInteract : public RectangleInteract
+class ImageStatisticsInteract
+    : public RectangleInteract
 {
 public:
 
-    ImageStatisticsInteract(OfxInteractHandle handle, OFX::ImageEffect* effect)
-    : RectangleInteract(handle,effect)
-    , _restrictToRectangle(0)
+    ImageStatisticsInteract(OfxInteractHandle handle,
+                            OFX::ImageEffect* effect)
+        : RectangleInteract(handle, effect)
+        , _restrictToRectangle(0)
     {
         _restrictToRectangle = effect->fetchBooleanParam(kParamRestrictToRectangle);
         addParamToSlaveTo(_restrictToRectangle);
@@ -1433,34 +1484,50 @@ public:
 private:
 
     // overridden functions from OFX::Interact to do things
-    virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL {
+    virtual bool draw(const OFX::DrawArgs &args) OVERRIDE FINAL
+    {
         bool restrictToRectangle = _restrictToRectangle->getValueAtTime(args.time);
+
         if (restrictToRectangle) {
             return RectangleInteract::draw(args);
         }
+
         return false;
     }
-    virtual bool penMotion(const OFX::PenArgs &args) OVERRIDE FINAL {
+
+    virtual bool penMotion(const OFX::PenArgs &args) OVERRIDE FINAL
+    {
         bool restrictToRectangle = _restrictToRectangle->getValueAtTime(args.time);
+
         if (restrictToRectangle) {
             return RectangleInteract::penMotion(args);
         }
+
         return false;
     }
-    virtual bool penDown(const OFX::PenArgs &args) OVERRIDE FINAL {
+
+    virtual bool penDown(const OFX::PenArgs &args) OVERRIDE FINAL
+    {
         bool restrictToRectangle = _restrictToRectangle->getValueAtTime(args.time);
+
         if (restrictToRectangle) {
             return RectangleInteract::penDown(args);
         }
+
         return false;
     }
-    virtual bool penUp(const OFX::PenArgs &args) OVERRIDE FINAL {
+
+    virtual bool penUp(const OFX::PenArgs &args) OVERRIDE FINAL
+    {
         bool restrictToRectangle = _restrictToRectangle->getValueAtTime(args.time);
+
         if (restrictToRectangle) {
             return RectangleInteract::penUp(args);
         }
+
         return false;
     }
+
     //virtual bool keyDown(const OFX::KeyArgs &args) OVERRIDE;
     //virtual bool keyUp(const OFX::KeyArgs & args) OVERRIDE;
     //virtual void loseFocus(const FocusArgs &args) OVERRIDE FINAL;
@@ -1469,11 +1536,15 @@ private:
     OFX::BooleanParam* _restrictToRectangle;
 };
 
-class ImageStatisticsOverlayDescriptor : public DefaultEffectOverlayDescriptor<ImageStatisticsOverlayDescriptor, ImageStatisticsInteract> {};
+class ImageStatisticsOverlayDescriptor
+    : public DefaultEffectOverlayDescriptor<ImageStatisticsOverlayDescriptor, ImageStatisticsInteract>
+{
+};
 
 mDeclarePluginFactory(ImageStatisticsPluginFactory, {}, {});
 
-void ImageStatisticsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+ImageStatisticsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -1508,23 +1579,23 @@ void ImageStatisticsPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
-
-
-OFX::ImageEffect* ImageStatisticsPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+ImageStatisticsPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                             OFX::ContextEnum /*context*/)
 {
     return new ImageStatisticsPlugin(handle);
 }
 
-
-
-
-void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+void
+ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                                OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     // always declare the source clip first, because some hosts may consider
     // it as the default input clip (e.g. Nuke)
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
@@ -1569,7 +1640,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
         param->setDigits(0);
         param->setEvaluateOnChange(false);
         param->setAnimates(true);
-       if (page) {
+        if (page) {
             page->addChild(*param);
         }
     }
@@ -1925,8 +1996,7 @@ void ImageStatisticsPluginFactory::describeInContext(OFX::ImageEffectDescriptor 
             }
         }
     }
-}
-
+} // ImageStatisticsPluginFactory::describeInContext
 
 static ImageStatisticsPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

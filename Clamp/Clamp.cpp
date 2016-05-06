@@ -93,14 +93,17 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamPremultChanged "premultChanged"
 
 
-struct RGBAValues {
-    double r,g,b,a;
+struct RGBAValues
+{
+    double r, g, b, a;
     RGBAValues(double v) : r(v), g(v), b(v), a(v) {}
+
     RGBAValues() : r(0), g(0), b(0), a(0) {}
 };
 
 // Base class for the RGBA and the Alpha processor
-class ClampBase : public OFX::ImageProcessor
+class ClampBase
+    : public OFX::ImageProcessor
 {
 protected:
     const OFX::Image *_srcImg;
@@ -117,7 +120,7 @@ protected:
     bool _minClampToEnable;
     RGBAValues _maxClampTo;
     bool _maxClampToEnable;
-    bool  _doMasking;
+    bool _doMasking;
     bool _premult;
     int _premultChannel;
     double _mix;
@@ -126,35 +129,36 @@ protected:
 public:
     /** @brief no arg ctor */
     ClampBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _srcImg(0)
-    , _maskImg(0)
-    , _processR(true)
-    , _processG(true)
-    , _processB(true)
-    , _processA(false)
-    , _minimum(0.)
-    , _minimumEnable(true)
-    , _maximum(1.)
-    , _maximumEnable(true)
-    , _minClampTo(0.)
-    , _minClampToEnable(false)
-    , _maxClampTo(1.)
-    , _maxClampToEnable(false)
-    , _doMasking(false)
-    , _premult(false)
-    , _premultChannel(3)
-    , _mix(1.)
-    , _maskInvert(false)
+        : OFX::ImageProcessor(instance)
+        , _srcImg(0)
+        , _maskImg(0)
+        , _processR(true)
+        , _processG(true)
+        , _processB(true)
+        , _processA(false)
+        , _minimum(0.)
+        , _minimumEnable(true)
+        , _maximum(1.)
+        , _maximumEnable(true)
+        , _minClampTo(0.)
+        , _minClampToEnable(false)
+        , _maxClampTo(1.)
+        , _maxClampToEnable(false)
+        , _doMasking(false)
+        , _premult(false)
+        , _premultChannel(3)
+        , _mix(1.)
+        , _maskInvert(false)
     {
     }
 
     /** @brief set the src image */
-    void setSrcImg(const OFX::Image *v) {_srcImg = v;}
+    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
 
-    void setMaskImg(const OFX::Image *v, bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
+    void setMaskImg(const OFX::Image *v,
+                    bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
 
-    void doMasking(bool v) {_doMasking = v;}
+    void doMasking(bool v) {_doMasking = v; }
 
     void setValues(bool processR,
                    bool processG,
@@ -192,16 +196,17 @@ public:
 
 // template to do the RGBA processing
 template <class PIX, int nComponents, int maxValue>
-class ImageClamper : public ClampBase
+class ImageClamper
+    : public ClampBase
 {
-  public:
+public:
     // ctor
     ImageClamper(OFX::ImageEffect &instance)
-            : ClampBase(instance)
+        : ClampBase(instance)
     {
     }
 
-  private:
+private:
     // and do some processing
     void multiThreadProcessImages(OfxRectI procWindow)
     {
@@ -214,29 +219,29 @@ class ImageClamper : public ClampBase
             if (g) {
                 if (b) {
                     if (a) {
-                        return process<true ,true ,true ,true >(procWindow); // RGBA
+                        return process<true, true, true, true >(procWindow); // RGBA
                     } else {
-                        return process<true ,true ,true ,false>(procWindow); // RGBa
+                        return process<true, true, true, false>(procWindow); // RGBa
                     }
                 } else {
                     if (a) {
-                        return process<true ,true ,false,true >(procWindow); // RGbA
+                        return process<true, true, false, true >(procWindow); // RGbA
                     } else {
-                        return process<true ,true ,false,false>(procWindow); // RGba
+                        return process<true, true, false, false>(procWindow); // RGba
                     }
                 }
             } else {
                 if (b) {
                     if (a) {
-                        return process<true ,false,true ,true >(procWindow); // RgBA
+                        return process<true, false, true, true >(procWindow); // RgBA
                     } else {
-                        return process<true ,false,true ,false>(procWindow); // RgBa
+                        return process<true, false, true, false>(procWindow); // RgBa
                     }
                 } else {
                     if (a) {
-                        return process<true ,false,false,true >(procWindow); // RgbA
+                        return process<true, false, false, true >(procWindow); // RgbA
                     } else {
-                        return process<true ,false,false,false>(procWindow); // Rgba
+                        return process<true, false, false, false>(procWindow); // Rgba
                     }
                 }
             }
@@ -244,37 +249,37 @@ class ImageClamper : public ClampBase
             if (g) {
                 if (b) {
                     if (a) {
-                        return process<false,true ,true ,true >(procWindow); // rGBA
+                        return process<false, true, true, true >(procWindow); // rGBA
                     } else {
-                        return process<false,true ,true ,false>(procWindow); // rGBa
+                        return process<false, true, true, false>(procWindow); // rGBa
                     }
                 } else {
                     if (a) {
-                        return process<false,true ,false,true >(procWindow); // rGbA
+                        return process<false, true, false, true >(procWindow); // rGbA
                     } else {
-                        return process<false,true ,false,false>(procWindow); // rGba
+                        return process<false, true, false, false>(procWindow); // rGba
                     }
                 }
             } else {
                 if (b) {
                     if (a) {
-                        return process<false,false,true ,true >(procWindow); // rgBA
+                        return process<false, false, true, true >(procWindow); // rgBA
                     } else {
-                        return process<false,false,true ,false>(procWindow); // rgBa
+                        return process<false, false, true, false>(procWindow); // rgBa
                     }
                 } else {
                     if (a) {
-                        return process<false,false,false,true >(procWindow); // rgbA
+                        return process<false, false, false, true >(procWindow); // rgbA
                     } else {
-                        return process<false,false,false,false>(procWindow); // rgba
+                        return process<false, false, false, false>(procWindow); // rgba
                     }
                 }
             }
         }
-#     endif
-    }
+#     endif // ifndef __COVERITY__
+    } // multiThreadProcessImages
 
-  private:
+private:
     template<bool processR, bool processG, bool processB, bool processA>
     void process(const OfxRectI& procWindow)
     {
@@ -309,7 +314,6 @@ class ImageClamper : public ClampBase
                 processClampTo<processR, processG, processB, processA, minimumEnable, maximumEnable, false, false>(procWindow);
             }
         }
-
     }
 
     template<bool processR, bool processG, bool processB, bool processA, bool minimumEnable, bool maximumEnable, bool minClampToEnable, bool maxClampToEnable>
@@ -317,15 +321,15 @@ class ImageClamper : public ClampBase
     {
         float unpPix[4];
         float tmpPix[4];
+
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
-
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
 
                 // do we have a source image to scale up
@@ -334,29 +338,29 @@ class ImageClamper : public ClampBase
                     tmpPix[0] = unpPix[0];
                 } else {
                     tmpPix[0] = (float)clamp<minimumEnable, maximumEnable, minClampToEnable, maxClampToEnable>(unpPix[0],
-                                                                                                        _minimum.r, _maximum.r,
-                                                                                                        _minClampTo.r, _maxClampTo.r);
+                                                                                                               _minimum.r, _maximum.r,
+                                                                                                               _minClampTo.r, _maxClampTo.r);
                 }
                 if (!processG) {
                     tmpPix[1] = unpPix[1];
                 } else {
                     tmpPix[1] = (float)clamp<minimumEnable, maximumEnable, minClampToEnable, maxClampToEnable>(unpPix[1],
-                                                                                                        _minimum.g, _maximum.g,
-                                                                                                        _minClampTo.g, _maxClampTo.g);
+                                                                                                               _minimum.g, _maximum.g,
+                                                                                                               _minClampTo.g, _maxClampTo.g);
                 }
                 if (!processB) {
                     tmpPix[2] = unpPix[2];
                 } else {
                     tmpPix[2] = (float)clamp<minimumEnable, maximumEnable, minClampToEnable, maxClampToEnable>(unpPix[2],
-                                                                                                        _minimum.b, _maximum.b,
-                                                                                                        _minClampTo.b, _maxClampTo.b);
+                                                                                                               _minimum.b, _maximum.b,
+                                                                                                               _minClampTo.b, _maxClampTo.b);
                 }
                 if (!processA) {
                     tmpPix[3] = unpPix[3];
                 } else {
                     tmpPix[3] = (float)clamp<minimumEnable, maximumEnable, minClampToEnable, maxClampToEnable>(unpPix[3],
-                                                                                                        _minimum.a, _maximum.a,
-                                                                                                        _minClampTo.a, _maxClampTo.a);
+                                                                                                               _minimum.a, _maximum.a,
+                                                                                                               _minClampTo.a, _maxClampTo.a);
                 }
                 ofxsPremultMaskMixPix<PIX, nComponents, maxValue, true>(tmpPix, _premult, _premultChannel, x, y, srcPix, _doMasking, _maskImg, (float)_mix, _maskInvert, dstPix);
 
@@ -364,42 +368,48 @@ class ImageClamper : public ClampBase
                 dstPix += nComponents;
             }
         }
-    }
+    } // processClampTo
 
     template<bool minimumEnable, bool maximumEnable, bool minClampToEnable, bool maxClampToEnable>
-    static double clamp(double value, double minimum, double maximum, double minClampTo, double maxClampTo)
+    static double clamp(double value,
+                        double minimum,
+                        double maximum,
+                        double minClampTo,
+                        double maxClampTo)
     {
-        if (minimumEnable && value < minimum) {
+        if ( minimumEnable && (value < minimum) ) {
             return minClampToEnable ? minClampTo : minimum;
         }
-        if (maximumEnable && value > maximum) {
+        if ( maximumEnable && (value > maximum) ) {
             return maxClampToEnable ? maxClampTo : maximum;
         }
+
         return value;
     }
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class ClampPlugin : public OFX::ImageEffect
+class ClampPlugin
+    : public OFX::ImageEffect
 {
-  public:
+public:
     /** @brief ctor */
     ClampPlugin(OfxImageEffectHandle handle)
-            : ImageEffect(handle)
-            , _dstClip(0)
-            , _srcClip(0)
-            , _premultChanged(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
+        , _premultChanged(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
-                            _dstClip->getPixelComponents() == ePixelComponentRGBA ||
-                            _dstClip->getPixelComponents() == ePixelComponentAlpha));
+        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB ||
+                             _dstClip->getPixelComponents() == ePixelComponentRGBA ||
+                             _dstClip->getPixelComponents() == ePixelComponentAlpha) );
         _srcClip = getContext() == OFX::eContextGenerator ? NULL : fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert((!_srcClip && getContext() == OFX::eContextGenerator) ||
-               (_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
-                             _srcClip->getPixelComponents() == ePixelComponentRGBA ||
-                             _srcClip->getPixelComponents() == ePixelComponentAlpha)));
+        assert( (!_srcClip && getContext() == OFX::eContextGenerator) ||
+                ( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGB ||
+                               _srcClip->getPixelComponents() == ePixelComponentRGBA ||
+                               _srcClip->getPixelComponents() == ePixelComponentAlpha) ) );
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _processR = fetchBooleanParam(kNatronOfxParamProcessR);
@@ -430,7 +440,7 @@ class ClampPlugin : public OFX::ImageEffect
         assert(_premultChanged);
     }
 
-  private:
+private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
 
@@ -444,15 +454,13 @@ class ClampPlugin : public OFX::ImageEffect
 
     /** @brief called when a clip has just been changed in some way (a rewire maybe) */
     virtual void changedClip(const InstanceChangedArgs &args, const std::string &clipName) OVERRIDE FINAL;
-
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
-    
-  private:
+
+private:
     // do not need to delete these, the ImageEffect is managing them for us
     OFX::Clip *_dstClip;
     OFX::Clip *_srcClip;
     OFX::Clip *_maskClip;
-
     OFX::BooleanParam* _processR;
     OFX::BooleanParam* _processG;
     OFX::BooleanParam* _processB;
@@ -483,58 +491,60 @@ class ClampPlugin : public OFX::ImageEffect
 
 /* set up and run a processor */
 void
-ClampPlugin::setupAndProcess(ClampBase &processor, const OFX::RenderArguments &args)
+ClampPlugin::setupAndProcess(ClampBase &processor,
+                             const OFX::RenderArguments &args)
 {
     // get a dst image
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
 
     // fetch main input image
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(args.time) : 0 );
 
     // make sure bit depths are sane
-    if (src.get()) {
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+    if ( src.get() ) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
 
         // see if they have the same depths and bytes and all
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
     // auto ptr for the mask.
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(args.time) : 0);
 
     // do we do masking
     if (doMasking) {
-        if (mask.get()) {
-            if (mask->getRenderScale().x != args.renderScale.x ||
-                mask->getRenderScale().y != args.renderScale.y ||
-                (mask->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && mask->getField() != args.fieldToRender)) {
+        if ( mask.get() ) {
+            if ( (mask->getRenderScale().x != args.renderScale.x) ||
+                 ( mask->getRenderScale().y != args.renderScale.y) ||
+                 ( ( mask->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( mask->getField() != args.fieldToRender) ) ) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
@@ -548,7 +558,7 @@ ClampPlugin::setupAndProcess(ClampBase &processor, const OFX::RenderArguments &a
         // Set it in the processor
         processor.setMaskImg(mask.get(), maskInvert);
     }
-    
+
     bool processR, processG, processB, processA;
     _processR->getValueAtTime(args.time, processR);
     _processG->getValueAtTime(args.time, processG);
@@ -582,39 +592,40 @@ ClampPlugin::setupAndProcess(ClampBase &processor, const OFX::RenderArguments &a
                         premult, premultChannel, mix);
 
     // set the images
-    processor.setDstImg(dst.get());
-    processor.setSrcImg(src.get());
+    processor.setDstImg( dst.get() );
+    processor.setSrcImg( src.get() );
 
     // set the render window
     processor.setRenderWindow(args.renderWindow);
 
     // Call the base class process member, this will call the derived templated process code
     processor.process();
-}
+} // ClampPlugin::setupAndProcess
 
 // the internal render function
 template <int nComponents>
 void
-ClampPlugin::renderInternal(const OFX::RenderArguments &args, OFX::BitDepthEnum dstBitDepth)
+ClampPlugin::renderInternal(const OFX::RenderArguments &args,
+                            OFX::BitDepthEnum dstBitDepth)
 {
     switch (dstBitDepth) {
-        case OFX::eBitDepthUByte: {
-            ImageClamper<unsigned char, nComponents, 255> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case OFX::eBitDepthUShort: {
-            ImageClamper<unsigned short, nComponents, 65535> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        case OFX::eBitDepthFloat: {
-            ImageClamper<float, nComponents, 1> fred(*this);
-            setupAndProcess(fred, args);
-            break;
-        }
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    case OFX::eBitDepthUByte: {
+        ImageClamper<unsigned char, nComponents, 255> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case OFX::eBitDepthUShort: {
+        ImageClamper<unsigned short, nComponents, 65535> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    case OFX::eBitDepthFloat: {
+        ImageClamper<float, nComponents, 1> fred(*this);
+        setupAndProcess(fred, args);
+        break;
+    }
+    default:
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
@@ -623,11 +634,11 @@ void
 ClampPlugin::render(const OFX::RenderArguments &args)
 {
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
 
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     // do the rendering
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderInternal<4>(args, dstBitDepth);
@@ -642,7 +653,9 @@ ClampPlugin::render(const OFX::RenderArguments &args)
 }
 
 bool
-ClampPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
+ClampPlugin::isIdentity(const IsIdentityArguments &args,
+                        Clip * &identityClip,
+                        double & /*identityTime*/)
 {
     {
         bool processR;
@@ -656,22 +669,25 @@ ClampPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
         _processA->getValueAtTime(args.time, processA);
         _mix->getValueAtTime(args.time, mix);
 
-        if (mix == 0. || (!processR && !processG && !processB && !processA)) {
+        if ( (mix == 0.) || (!processR && !processG && !processB && !processA) ) {
             identityClip = _srcClip;
+
             return true;
         }
     }
 
     bool minimumEnable, maximumEnable;
+
     _minimumEnable->getValueAtTime(args.time, minimumEnable);
     _maximumEnable->getValueAtTime(args.time, maximumEnable);
 
     if (!minimumEnable && !maximumEnable) {
         identityClip = _srcClip;
+
         return true;
     }
 
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(args.time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(args.time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(args.time, maskInvert);
@@ -679,27 +695,29 @@ ClampPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
             OfxRectI maskRoD;
             OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(args.time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                 identityClip = _srcClip;
+
                 return true;
             }
         }
     }
 
     return false;
-}
+} // ClampPlugin::isIdentity
 
 void
-ClampPlugin::changedClip(const InstanceChangedArgs &args, const std::string &clipName)
+ClampPlugin::changedClip(const InstanceChangedArgs &args,
+                         const std::string &clipName)
 {
-    if (clipName == kOfxImageEffectSimpleSourceClipName &&
-        _srcClip && _srcClip->isConnected() &&
-        args.reason == OFX::eChangeUserEdit) {
-        
-        if (!_premultChanged->getValue()) {
+    if ( (clipName == kOfxImageEffectSimpleSourceClipName) &&
+         _srcClip && _srcClip->isConnected() &&
+         ( args.reason == OFX::eChangeUserEdit) ) {
+        if ( !_premultChanged->getValue() ) {
             if (_srcClip->getPixelComponents() != ePixelComponentRGBA) {
                 _premult->setValue(false);
-            } else switch (_srcClip->getPreMultiplication()) {
+            } else {
+                switch ( _srcClip->getPreMultiplication() ) {
                 case eImageOpaque:
                     _premult->setValue(false);
                     break;
@@ -709,45 +727,46 @@ ClampPlugin::changedClip(const InstanceChangedArgs &args, const std::string &cli
                 case eImageUnPreMultiplied:
                     _premult->setValue(false);
                     break;
+                }
             }
         }
-        switch (_srcClip->getPixelComponents()) {
-            case OFX::ePixelComponentAlpha:
-                _processR->setValue(false);
-                _processG->setValue(false);
-                _processB->setValue(false);
-                _processA->setValue(true);
-                break;
-            case OFX::ePixelComponentRGB:
-                _processR->setValue(true);
-                _processG->setValue(true);
-                _processB->setValue(true);
-                _processA->setValue(false);
-                break;
-            case OFX::ePixelComponentRGBA:
-                _processR->setValue(true);
-                _processG->setValue(true);
-                _processB->setValue(true);
-                _processA->setValue(true);
-                break;
-            default:
-                break;
+        switch ( _srcClip->getPixelComponents() ) {
+        case OFX::ePixelComponentAlpha:
+            _processR->setValue(false);
+            _processG->setValue(false);
+            _processB->setValue(false);
+            _processA->setValue(true);
+            break;
+        case OFX::ePixelComponentRGB:
+            _processR->setValue(true);
+            _processG->setValue(true);
+            _processB->setValue(true);
+            _processA->setValue(false);
+            break;
+        case OFX::ePixelComponentRGBA:
+            _processR->setValue(true);
+            _processG->setValue(true);
+            _processB->setValue(true);
+            _processA->setValue(true);
+            break;
+        default:
+            break;
         }
     }
 }
 
 void
-ClampPlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+ClampPlugin::changedParam(const OFX::InstanceChangedArgs &args,
+                          const std::string &paramName)
 {
-    if (paramName == kParamPremult && args.reason == OFX::eChangeUserEdit) {
+    if ( (paramName == kParamPremult) && (args.reason == OFX::eChangeUserEdit) ) {
         _premultChanged->setValue(true);
     }
 }
 
 mDeclarePluginFactory(ClampPluginFactory, {}, {});
-
-
-void ClampPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+ClampPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -774,18 +793,20 @@ void ClampPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-    
+
 #ifdef OFX_EXTENSIONS_NATRON
     desc.setChannelSelector(OFX::ePixelComponentNone); // we have our own channel selector
 #endif
-
 }
 
-void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+void
+ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                      OFX::ContextEnum context)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentRGB);
     srcClip->addSupportedComponent(ePixelComponentXY);
@@ -793,7 +814,7 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
-    
+
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
@@ -813,7 +834,7 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    
+
     {
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kNatronOfxParamProcessR);
         param->setLabel(kNatronOfxParamProcessRLabel);
@@ -943,13 +964,14 @@ void ClampPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX
             page->addChild(*param);
         }
     }
-}
+} // ClampPluginFactory::describeInContext
 
-OFX::ImageEffect* ClampPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+ClampPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                   OFX::ContextEnum /*context*/)
 {
     return new ClampPlugin(handle);
 }
-
 
 static ClampPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

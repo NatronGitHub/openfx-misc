@@ -853,7 +853,6 @@ CornerPinTransformInteract::loseFocus(const FocusArgs & /*args*/)
     _interactiveDrag = false;
 }
 
-
 class CornerPinOverlayDescriptor
     : public DefaultEffectOverlayDescriptor<CornerPinOverlayDescriptor, CornerPinTransformInteract>
 {
@@ -938,12 +937,13 @@ defineExtraMatrixRow(OFX::ImageEffectDescriptor &desc,
                      double z)
 {
     Double3DParamDescriptor* param = desc.defineDouble3DParam(name);
-    if (OFX::getImageEffectHostDescription()->isNatron && OFX::getImageEffectHostDescription()->versionMajor >= 2 && OFX::getImageEffectHostDescription()->versionMinor >= 1) {
+
+    if ( OFX::getImageEffectHostDescription()->isNatron && (OFX::getImageEffectHostDescription()->versionMajor >= 2) && (OFX::getImageEffectHostDescription()->versionMinor >= 1) ) {
         param->setLabel(kGroupExtraMatrixLabel);
     } else {
-        param->setLabels("","","");
+        param->setLabels("", "", "");
     }
-    
+
     param->setMatrixRow(rowIndex);
     param->setAnimates(true);
     param->setDefault(x, y, z);

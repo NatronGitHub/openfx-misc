@@ -47,13 +47,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "MergeOFX"
 #define kPluginGrouping "Merge"
 #define kPluginDescription \
-"Pixel-by-pixel merge operation between two or more inputs.\n" \
-"Input A is first merged with B (B is non-optional), then A2, if connected, is merged with the intermediary result, then A3, etc.\n\n" \
-"A complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
-"See also:\n" \
-"- \"Digital Image Compositing\" by Marc Levoy https://graphics.stanford.edu/courses/cs248-06/comp/comp.html\n" \
-"- \"Merge Blend Modes\" by Martin Constable http://opticalenquiry.com/nuke/index.php?title=Merge_Blend_Modes\n" \
-"- grain-extract and grain-merge are described in http://docs.gimp.org/en/gimp-concepts-layer-modes.html"
+    "Pixel-by-pixel merge operation between two or more inputs.\n" \
+    "Input A is first merged with B (B is non-optional), then A2, if connected, is merged with the intermediary result, then A3, etc.\n\n" \
+    "A complete explanation of the Porter-Duff compositing operators can be found in \"Compositing Digital Images\", by T. Porter and T. Duff (Proc. SIGGRAPH 1984) http://keithp.com/~keithp/porterduff/p253-porter.pdf\n" \
+    "See also:\n" \
+    "- \"Digital Image Compositing\" by Marc Levoy https://graphics.stanford.edu/courses/cs248-06/comp/comp.html\n" \
+    "- \"Merge Blend Modes\" by Martin Constable http://opticalenquiry.com/nuke/index.php?title=Merge_Blend_Modes\n" \
+    "- grain-extract and grain-merge are described in http://docs.gimp.org/en/gimp-concepts-layer-modes.html"
 
 #define kPluginGroupingSub "Merge/Merges"
 
@@ -82,10 +82,10 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamOperation "operation"
 #define kParamOperationLabel "Operation"
 #define kParamOperationHint \
-"The operation used to merge the input A and B images.\n" \
-"The operator formula is applied to each component: A and B represent the input component (Red, Green, Blue, or Alpha) of each input, and a and b represent the Alpha component of each input.\n" \
-"If Alpha masking is checked, the output alpha is computed using a different formula (a+b - a*b).\n" \
-"Alpha masking is always enabled for HSL modes (hue, saturation, color, luminosity)."
+    "The operation used to merge the input A and B images.\n" \
+    "The operator formula is applied to each component: A and B represent the input component (Red, Green, Blue, or Alpha) of each input, and a and b represent the Alpha component of each input.\n" \
+    "If Alpha masking is checked, the output alpha is computed using a different formula (a+b - a*b).\n" \
+    "Alpha masking is always enabled for HSL modes (hue, saturation, color, luminosity)."
 
 #define kParamAlphaMasking "screenAlpha"
 #define kParamAlphaMaskingLabel "Alpha masking"
@@ -105,7 +105,8 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamBBoxOptionB "B"
 #define kParamBBoxOptionBHint "Bounding box of input B."
 
-enum BBoxEnum {
+enum BBoxEnum
+{
     eBBoxUnion = 0,
     eBBoxIntersection,
     eBBoxA,
@@ -166,43 +167,45 @@ enum BBoxEnum {
 #define kMaximumAInputs 64
 
 static
-std::string unsignedToString(unsigned i)
+std::string
+unsignedToString(unsigned i)
 {
     if (i == 0) {
         return "0";
     }
     std::string nb;
-    for (unsigned j = i; j !=0; j /= 10) {
-        nb += ('0' + (j % 10));
+    for (unsigned j = i; j != 0; j /= 10) {
+        nb += ( '0' + (j % 10) );
     }
+
     return nb;
 }
-
 
 using namespace MergeImages2D;
 
 /*
- For explanations on why we use bitset instead of vector<bool>, see:
+   For explanations on why we use bitset instead of vector<bool>, see:
 
- D. Kalev. What You Should Know about vector<bool>.
- http://www.informit.com/guides/content.aspx?g=cplusplus&seqNum=98
+   D. Kalev. What You Should Know about vector<bool>.
+   http://www.informit.com/guides/content.aspx?g=cplusplus&seqNum=98
 
- S. D. Meyers. Effective STL: 50 Specific Ways to Improve Your Use of the Standard Template Library.
- Item 18: "Avoid using vector<bool>".
- Professional Computing Series. Addison-Wesley, Boston, 4 edition, 2004
+   S. D. Meyers. Effective STL: 50 Specific Ways to Improve Your Use of the Standard Template Library.
+   Item 18: "Avoid using vector<bool>".
+   Professional Computing Series. Addison-Wesley, Boston, 4 edition, 2004
 
- V. Pieterse et al. Performance of C++ Bit-vector Implementations
- http://www.cs.up.ac.za/cs/vpieterse/pub/PieterseEtAl_SAICSIT2010.pdf
+   V. Pieterse et al. Performance of C++ Bit-vector Implementations
+   http://www.cs.up.ac.za/cs/vpieterse/pub/PieterseEtAl_SAICSIT2010.pdf
  */
 
-class MergeProcessorBase : public OFX::ImageProcessor
+class MergeProcessorBase
+    : public OFX::ImageProcessor
 {
 protected:
     const OFX::Image *_srcImgA;
     const OFX::Image *_srcImgB;
     const OFX::Image *_maskImg;
     std::vector<const OFX::Image*> _optionalAImages;
-    bool  _doMasking;
+    bool _doMasking;
     int _bbox;
     bool _alphaMasking;
     double _mix;
@@ -212,34 +215,36 @@ protected:
     std::bitset<4> _outputChannels;
 
 public:
-    
+
     MergeProcessorBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _srcImgA(0)
-    , _srcImgB(0)
-    , _maskImg(0)
-    , _doMasking(false)
-    , _bbox(0)
-    , _alphaMasking(false)
-    , _mix(1.)
-    , _maskInvert(false)
-    , _aChannels()
-    , _bChannels()
-    , _outputChannels()
+        : OFX::ImageProcessor(instance)
+        , _srcImgA(0)
+        , _srcImgB(0)
+        , _maskImg(0)
+        , _doMasking(false)
+        , _bbox(0)
+        , _alphaMasking(false)
+        , _mix(1.)
+        , _maskInvert(false)
+        , _aChannels()
+        , _bChannels()
+        , _outputChannels()
     {
-        
     }
-    
-    void setSrcImg(const OFX::Image *A, const OFX::Image *B,
-                   const std::vector<const OFX::Image*>& optionalAImages) {
+
+    void setSrcImg(const OFX::Image *A,
+                   const OFX::Image *B,
+                   const std::vector<const OFX::Image*>& optionalAImages)
+    {
         _srcImgA = A;
         _srcImgB = B;
         _optionalAImages = optionalAImages;
     }
-    
-    void setMaskImg(const OFX::Image *v, bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
-    
-    void doMasking(bool v) {_doMasking = v;}
+
+    void setMaskImg(const OFX::Image *v,
+                    bool maskInvert) { _maskImg = v; _maskInvert = maskInvert; }
+
+    void doMasking(bool v) {_doMasking = v; }
 
     void setValues(int bboxChoice,
                    bool alphaMasking,
@@ -256,20 +261,19 @@ public:
         _bChannels = bChannels;
         _outputChannels = outputChannels;
     }
-    
 };
 
 
-
 template <MergingFunctionEnum f, class PIX, int nComponents, int maxValue>
-class MergeProcessor : public MergeProcessorBase
+class MergeProcessor
+    : public MergeProcessorBase
 {
 public:
     MergeProcessor(OFX::ImageEffect &instance)
-    : MergeProcessorBase(instance)
+        : MergeProcessorBase(instance)
     {
     }
-    
+
 private:
     void multiThreadProcessImages(OfxRectI procWindow)
     {
@@ -281,20 +285,18 @@ private:
             tmpA[c] = tmpB[c] = 0.;
         }
         for (int y = procWindow.y1; y < procWindow.y2; ++y) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
             PIX *dstPix = (PIX *) _dstImg->getPixelAddress(procWindow.x1, y);
 
             for (int x = procWindow.x1; x < procWindow.x2; ++x) {
-                
                 const PIX *srcPixA = (const PIX *)  (_srcImgA ? _srcImgA->getPixelAddress(x, y) : 0);
                 const PIX *srcPixB = (const PIX *)  (_srcImgB ? _srcImgB->getPixelAddress(x, y) : 0);
-                
-                
-                if (srcPixA || srcPixB) {
 
+
+                if (srcPixA || srcPixB) {
                     for (std::size_t c = 0; c < nComponents; ++c) {
 #                     ifdef DEBUG
                         // check for NaN
@@ -302,8 +304,8 @@ private:
                         assert(!srcPixB || srcPixB[c] == srcPixB[c]);
 #                     endif
                         // all images are supposed to be black and transparent outside o
-                        tmpA[c] = (_aChannels[c] && srcPixA) ? ((float)srcPixA[c] / maxValue) : 0.f;
-                        tmpB[c] = (_bChannels[c] && srcPixB) ? ((float)srcPixB[c] / maxValue) : 0.f;
+                        tmpA[c] = (_aChannels[c] && srcPixA) ? ( (float)srcPixA[c] / maxValue ) : 0.f;
+                        tmpB[c] = (_bChannels[c] && srcPixB) ? ( (float)srcPixB[c] / maxValue ) : 0.f;
 #                     ifdef DEBUG
                         // check for NaN
                         assert(tmpA[c] == tmpA[c]);
@@ -317,8 +319,6 @@ private:
                     }
                     // work in float: clamping is done when mixing
                     mergePixel<f, float, 4, 1>(_alphaMasking, tmpA, tmpB, tmpPix);
-    
-                    
                 } else {
                     // everything is black and transparent
                     for (int c = 0; c < 4; ++c) {
@@ -335,16 +335,15 @@ private:
 
                 for (std::size_t i = 0; i < _optionalAImages.size(); ++i) {
                     srcPixA = (const PIX *)  (_optionalAImages[i] ? _optionalAImages[i]->getPixelAddress(x, y) : 0);
-                    
+
                     if (srcPixA) {
-                        
                         for (std::size_t c = 0; c < nComponents; ++c) {
 #                     ifdef DEBUG
                             // check for NaN
                             assert(srcPixA[c] == srcPixA[c]);
 #                     endif
                             // all images are supposed to be black and transparent outside o
-                            tmpA[c] = _aChannels[c] ? ((float)srcPixA[c] / maxValue) : 0.f;
+                            tmpA[c] = _aChannels[c] ? ( (float)srcPixA[c] / maxValue ) : 0.f;
 #                         ifdef DEBUG
                             // check for NaN
                             assert(tmpA[c] == tmpA[c]);
@@ -367,7 +366,7 @@ private:
 #                     endif
                     }
                 }
-                
+
                 // tmpPix has 4 components, but we only need the first nComponents
 
                 // denormalize
@@ -385,41 +384,42 @@ private:
                 dstPix += nComponents;
             }
         }
-    }
-    
+    } // multiThreadProcessImages
 };
 
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class MergePlugin : public OFX::ImageEffect
+class MergePlugin
+    : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
-    MergePlugin(OfxImageEffectHandle handle, bool numerousInputs)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClipA(0)
-    , _srcClipB(0)
-    , _maskClip(0)
-    , _optionalASrcClips(0)
+    MergePlugin(OfxImageEffectHandle handle,
+                bool numerousInputs)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClipA(0)
+        , _srcClipB(0)
+        , _maskClip(0)
+        , _optionalASrcClips(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha));
+        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGB || _dstClip->getPixelComponents() == ePixelComponentRGBA || _dstClip->getPixelComponents() == ePixelComponentAlpha) );
         _srcClipA = fetchClip(kClipA);
-        assert(_srcClipA && (_srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentAlpha));
-        
+        assert( _srcClipA && (_srcClipA->getPixelComponents() == ePixelComponentRGB || _srcClipA->getPixelComponents() == ePixelComponentRGBA || _srcClipA->getPixelComponents() == ePixelComponentAlpha) );
+
         if (numerousInputs) {
             _optionalASrcClips.resize(kMaximumAInputs - 1);
             for (int i = 2; i <= kMaximumAInputs; ++i) {
-                OFX::Clip* clip = fetchClip(std::string(kClipA) + unsignedToString(i));
-                assert(clip && (clip->getPixelComponents() == ePixelComponentRGB || clip->getPixelComponents() == ePixelComponentRGBA || clip->getPixelComponents() == ePixelComponentAlpha));
+                OFX::Clip* clip = fetchClip( std::string(kClipA) + unsignedToString(i) );
+                assert( clip && (clip->getPixelComponents() == ePixelComponentRGB || clip->getPixelComponents() == ePixelComponentRGBA || clip->getPixelComponents() == ePixelComponentAlpha) );
                 _optionalASrcClips[i - 2] = clip;
             }
         }
-        
+
         _srcClipB = fetchClip(kClipB);
-        assert(_srcClipB && (_srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentAlpha));
+        assert( _srcClipB && (_srcClipB->getPixelComponents() == ePixelComponentRGB || _srcClipB->getPixelComponents() == ePixelComponentRGBA || _srcClipB->getPixelComponents() == ePixelComponentAlpha) );
         _maskClip = fetchClip(getContext() == OFX::eContextPaint ? "Brush" : "Mask");
         assert(!_maskClip || _maskClip->getPixelComponents() == ePixelComponentAlpha);
         _operation = fetchChoiceParam(kParamOperation);
@@ -450,23 +450,21 @@ public:
         _outputChannels[3] = fetchBooleanParam(kParamOutputChannelsA);
         assert(_outputChannels[0] && _outputChannels[1] && _outputChannels[2] && _outputChannels[3]);
     }
-    
+
 private:
     // override the rod call
     virtual bool getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod) OVERRIDE FINAL;
 
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-    
     virtual void changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName) OVERRIDE FINAL;
 
     /* set up and run a processor */
     void setupAndProcess(MergeProcessorBase &, const OFX::RenderArguments &args);
 
     virtual bool isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &identityTime) OVERRIDE FINAL;
-    
     virtual void getClipPreferences(ClipPreferencesSetter &clipPreferences) OVERRIDE FINAL;
-    
+
 private:
     template<int nComponents>
     void renderForComponents(const OFX::RenderArguments &args);
@@ -480,7 +478,6 @@ private:
     OFX::Clip *_srcClipB;
     OFX::Clip *_maskClip;
     std::vector<OFX::Clip *> _optionalASrcClips;
-    
     OFX::ChoiceParam *_operation;
     OFX::StringParam *_operationString;
     OFX::ChoiceParam *_bbox;
@@ -496,85 +493,93 @@ private:
 
 // override the rod call
 bool
-MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args, OfxRectD &rod)
+MergePlugin::getRegionOfDefinition(const RegionOfDefinitionArguments &args,
+                                   OfxRectD &rod)
 {
     const double time = args.time;
-
     double mix = _mix->getValueAtTime(time);
+
     //Do the same as isIdentity otherwise the result of getRegionOfDefinition() might not be coherent with the RoD of the identity clip.
     if (mix == 0.) {
-        if (_srcClipB->isConnected()) {
+        if ( _srcClipB->isConnected() ) {
             OfxRectD rodB = _srcClipB->getRegionOfDefinition(time);
             rod = rodB;
+
             return true;
         }
+
         return false;
     }
-    
-    std::vector<OfxRectD> rods;
 
+    std::vector<OfxRectD> rods;
     BBoxEnum bboxChoice = (BBoxEnum)_bbox->getValueAtTime(time);
-    if (bboxChoice == eBBoxUnion || bboxChoice == eBBoxIntersection) {
-        if (_srcClipB->isConnected()) {
-            rods.push_back(_srcClipB->getRegionOfDefinition(time));
+    if ( (bboxChoice == eBBoxUnion) || (bboxChoice == eBBoxIntersection) ) {
+        if ( _srcClipB->isConnected() ) {
+            rods.push_back( _srcClipB->getRegionOfDefinition(time) );
         }
-        if (_srcClipA->isConnected()) {
-            rods.push_back(_srcClipA->getRegionOfDefinition(time));
+        if ( _srcClipA->isConnected() ) {
+            rods.push_back( _srcClipA->getRegionOfDefinition(time) );
         }
         for (std::size_t i = 0; i < _optionalASrcClips.size(); ++i) {
-            if (_optionalASrcClips[i]->isConnected()) {
-                rods.push_back(_optionalASrcClips[i]->getRegionOfDefinition(time));
+            if ( _optionalASrcClips[i]->isConnected() ) {
+                rods.push_back( _optionalASrcClips[i]->getRegionOfDefinition(time) );
             }
         }
-        if (!rods.size()) {
+        if ( !rods.size() ) {
             return false;
         }
         rod = rods[0];
     }
     switch (bboxChoice) {
-        case eBBoxUnion: { //union
-            for (unsigned i = 1; i < rods.size(); ++i) {
-                OFX::Coords::rectBoundingBox(rod, rods[i], &rod);
-            }
-			return true;
-		}
-        case eBBoxIntersection: { //intersection
-            for (unsigned i = 1; i < rods.size(); ++i) {
-                OFX::Coords::rectIntersection(rod, rods[i], &rod);
-            }
-            // may return an empty RoD if intersection is empty
+    case eBBoxUnion: {     //union
+        for (unsigned i = 1; i < rods.size(); ++i) {
+            OFX::Coords::rectBoundingBox(rod, rods[i], &rod);
+        }
+
+        return true;
+    }
+    case eBBoxIntersection: {     //intersection
+        for (unsigned i = 1; i < rods.size(); ++i) {
+            OFX::Coords::rectIntersection(rod, rods[i], &rod);
+        }
+
+        // may return an empty RoD if intersection is empty
+        return true;
+    }
+    case eBBoxA: {     //A
+        if ( _srcClipA->isConnected() ) {
+            rod = _srcClipA->getRegionOfDefinition(time);
+
             return true;
-		}
-        case eBBoxA: { //A
-            if (_srcClipA->isConnected()) {
-                rod = _srcClipA->getRegionOfDefinition(time);
-                return true;
-            }
-			return false;
-		}
-        case eBBoxB: { //B
-            if (_srcClipB->isConnected()) {
-                rod = _srcClipB->getRegionOfDefinition(time);
-                return true;
-            }
-            return false;
-		}
-	}
-	return false;
-}
+        }
+
+        return false;
+    }
+    case eBBoxB: {     //B
+        if ( _srcClipB->isConnected() ) {
+            rod = _srcClipB->getRegionOfDefinition(time);
+
+            return true;
+        }
+
+        return false;
+    }
+    }
+
+    return false;
+} // MergePlugin::getRegionOfDefinition
 
 // Since we cannot hold a std::auto_ptr in the vector we must hold a raw pointer.
 // To ensure that images are always freed even in case of exceptions, use a RAII class.
 struct OptionalImagesHolder_RAII
 {
     std::vector<const OFX::Image*> images;
-    
+
     OptionalImagesHolder_RAII()
-    : images()
+        : images()
     {
-        
     }
-    
+
     ~OptionalImagesHolder_RAII()
     {
         for (std::size_t i = 0; i < images.size(); ++i) {
@@ -591,87 +596,87 @@ struct OptionalImagesHolder_RAII
 
 /* set up and run a processor */
 void
-MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArguments &args)
+MergePlugin::setupAndProcess(MergeProcessorBase &processor,
+                             const OFX::RenderArguments &args)
 {
     const double time = args.time;
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
+
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> srcA((_srcClipA && _srcClipA->isConnected()) ?
-                                         _srcClipA->fetchImage(time) : 0);
-    std::auto_ptr<const OFX::Image> srcB((_srcClipB && _srcClipB->isConnected()) ?
-                                         _srcClipB->fetchImage(time) : 0);
-    
+    std::auto_ptr<const OFX::Image> srcA( ( _srcClipA && _srcClipA->isConnected() ) ?
+                                          _srcClipA->fetchImage(time) : 0 );
+    std::auto_ptr<const OFX::Image> srcB( ( _srcClipB && _srcClipB->isConnected() ) ?
+                                          _srcClipB->fetchImage(time) : 0 );
     OptionalImagesHolder_RAII optionalImages;
     for (std::size_t i = 0; i < _optionalASrcClips.size(); ++i) {
-    
-        const OFX::Image* optImg = (_optionalASrcClips[i] && _optionalASrcClips[i]->isConnected()) ?
-        _optionalASrcClips[i]->fetchImage(time) : 0;
+        const OFX::Image* optImg = ( _optionalASrcClips[i] && _optionalASrcClips[i]->isConnected() ) ?
+                                   _optionalASrcClips[i]->fetchImage(time) : 0;
         if (optImg) {
             optionalImages.images.push_back(optImg);
         }
 
         if (optImg) {
-            if (optImg->getRenderScale().x != args.renderScale.x ||
-                optImg->getRenderScale().y != args.renderScale.y ||
-                (optImg->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && optImg->getField() != args.fieldToRender)) {
+            if ( (optImg->getRenderScale().x != args.renderScale.x) ||
+                 ( optImg->getRenderScale().y != args.renderScale.y) ||
+                 ( ( optImg->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( optImg->getField() != args.fieldToRender) ) ) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
                 OFX::throwSuiteStatusException(kOfxStatFailed);
             }
-            OFX::BitDepthEnum    srcBitDepth      = optImg->getPixelDepth();
+            OFX::BitDepthEnum srcBitDepth      = optImg->getPixelDepth();
             OFX::PixelComponentEnum srcComponents = optImg->getPixelComponents();
-            if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+            if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
                 OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
             }
         }
     }
 
-    if (srcA.get()) {
-        if (srcA->getRenderScale().x != args.renderScale.x ||
-            srcA->getRenderScale().y != args.renderScale.y ||
-            (srcA->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcA->getField() != args.fieldToRender)) {
+    if ( srcA.get() ) {
+        if ( (srcA->getRenderScale().x != args.renderScale.x) ||
+             ( srcA->getRenderScale().y != args.renderScale.y) ||
+             ( ( srcA->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcA->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = srcA->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = srcA->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcA->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    
-    if (srcB.get()) {
-        if (srcB->getRenderScale().x != args.renderScale.x ||
-            srcB->getRenderScale().y != args.renderScale.y ||
-            (srcB->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && srcB->getField() != args.fieldToRender)) {
+
+    if ( srcB.get() ) {
+        if ( (srcB->getRenderScale().x != args.renderScale.x) ||
+             ( srcB->getRenderScale().y != args.renderScale.y) ||
+             ( ( srcB->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( srcB->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = srcB->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = srcB->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = srcB->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
-    
+
     // auto ptr for the mask.
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     std::auto_ptr<const OFX::Image> mask(doMasking ? _maskClip->fetchImage(time) : 0);
-    
+
     // do we do masking
     if (doMasking) {
         bool maskInvert;
@@ -699,33 +704,34 @@ MergePlugin::setupAndProcess(MergeProcessorBase &processor, const OFX::RenderArg
         outputChannels[c] = _outputChannels[c]->getValueAtTime(time);
     }
     processor.setValues(bboxChoice, alphaMasking, mix, aChannels, bChannels, outputChannels);
-    processor.setDstImg(dst.get());
+    processor.setDstImg( dst.get() );
     processor.setSrcImg(srcA.get(), srcB.get(), optionalImages.images);
     processor.setRenderWindow(args.renderWindow);
-   
+
     processor.process();
-}
+} // MergePlugin::setupAndProcess
 
 template<int nComponents>
 void
 MergePlugin::renderForComponents(const OFX::RenderArguments &args)
 {
-    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
+
     switch (dstBitDepth) {
-        case OFX::eBitDepthUByte: {
-            renderForBitDepth<unsigned char, nComponents, 255>(args);
-            break;
-        }
-        case OFX::eBitDepthUShort: {
-            renderForBitDepth<unsigned short, nComponents, 65535>(args);
-            break;
-        }
-        case OFX::eBitDepthFloat: {
-            renderForBitDepth<float, nComponents, 1>(args);
-            break;
-        }
-        default:
-            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+    case OFX::eBitDepthUByte: {
+        renderForBitDepth<unsigned char, nComponents, 255>(args);
+        break;
+    }
+    case OFX::eBitDepthUShort: {
+        renderForBitDepth<unsigned short, nComponents, 65535>(args);
+        break;
+    }
+    case OFX::eBitDepthFloat: {
+        renderForBitDepth<float, nComponents, 1>(args);
+        break;
+    }
+    default:
+        OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
     }
 }
 
@@ -736,146 +742,146 @@ MergePlugin::renderForBitDepth(const OFX::RenderArguments &args)
     const double time = args.time;
     MergingFunctionEnum operation = (MergingFunctionEnum)_operation->getValueAtTime(time);
     std::auto_ptr<MergeProcessorBase> fred;
+
     switch (operation) {
-        case eMergeATop:
-            fred.reset(new MergeProcessor<eMergeATop, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeAverage:
-            fred.reset(new MergeProcessor<eMergeAverage, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeColorBurn:
-            fred.reset(new MergeProcessor<eMergeColorBurn, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeColorDodge:
-            fred.reset(new MergeProcessor<eMergeColorDodge, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeConjointOver:
-            fred.reset(new MergeProcessor<eMergeConjointOver, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeCopy:
-            fred.reset(new MergeProcessor<eMergeCopy, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeDifference:
-            fred.reset(new MergeProcessor<eMergeDifference, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeDisjointOver:
-            fred.reset(new MergeProcessor<eMergeDisjointOver, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeDivide:
-            fred.reset(new MergeProcessor<eMergeDivide, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeExclusion:
-            fred.reset(new MergeProcessor<eMergeExclusion, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeFreeze:
-            fred.reset(new MergeProcessor<eMergeFreeze, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeFrom:
-            fred.reset(new MergeProcessor<eMergeFrom, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeGeometric:
-            fred.reset(new MergeProcessor<eMergeGeometric, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeGrainExtract:
-            fred.reset(new MergeProcessor<eMergeGrainExtract, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeGrainMerge:
-            fred.reset(new MergeProcessor<eMergeGrainMerge, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeHardLight:
-            fred.reset(new MergeProcessor<eMergeHardLight, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeHypot:
-            fred.reset(new MergeProcessor<eMergeHypot, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeIn:
-            fred.reset(new MergeProcessor<eMergeIn, PIX, nComponents, maxValue>(*this));
-            break;
-        //case eMergeInterpolated:
-        //    fred.reset(new MergeProcessor<eMergeInterpolated, PIX, nComponents, maxValue>(*this));
-        //    break;
-        case eMergeMask:
-            fred.reset(new MergeProcessor<eMergeMask, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeMatte:
-            fred.reset(new MergeProcessor<eMergeMatte, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeMax:
-            fred.reset(new MergeProcessor<eMergeMax, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeMin:
-            fred.reset(new MergeProcessor<eMergeMin, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeMinus:
-            fred.reset(new MergeProcessor<eMergeMinus, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeMultiply:
-            fred.reset(new MergeProcessor<eMergeMultiply, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeOut:
-            fred.reset(new MergeProcessor<eMergeOut, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeOver:
-            fred.reset(new MergeProcessor<eMergeOver, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeOverlay:
-            fred.reset(new MergeProcessor<eMergeOverlay, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergePinLight:
-            fred.reset(new MergeProcessor<eMergePinLight, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergePlus:
-            fred.reset(new MergeProcessor<eMergePlus, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeReflect:
-            fred.reset(new MergeProcessor<eMergeReflect, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeScreen:
-            fred.reset(new MergeProcessor<eMergeScreen, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeSoftLight:
-            fred.reset(new MergeProcessor<eMergeSoftLight, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeStencil:
-            fred.reset(new MergeProcessor<eMergeStencil, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeUnder:
-            fred.reset(new MergeProcessor<eMergeUnder, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeXOR:
-            fred.reset(new MergeProcessor<eMergeXOR, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeHue:
-            fred.reset(new MergeProcessor<eMergeHue, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeSaturation:
-            fred.reset(new MergeProcessor<eMergeSaturation, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeColor:
-            fred.reset(new MergeProcessor<eMergeColor, PIX, nComponents, maxValue>(*this));
-            break;
-        case eMergeLuminosity:
-            fred.reset(new MergeProcessor<eMergeLuminosity, PIX, nComponents, maxValue>(*this));
-            break;
+    case eMergeATop:
+        fred.reset( new MergeProcessor<eMergeATop, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeAverage:
+        fred.reset( new MergeProcessor<eMergeAverage, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeColorBurn:
+        fred.reset( new MergeProcessor<eMergeColorBurn, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeColorDodge:
+        fred.reset( new MergeProcessor<eMergeColorDodge, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeConjointOver:
+        fred.reset( new MergeProcessor<eMergeConjointOver, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeCopy:
+        fred.reset( new MergeProcessor<eMergeCopy, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeDifference:
+        fred.reset( new MergeProcessor<eMergeDifference, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeDisjointOver:
+        fred.reset( new MergeProcessor<eMergeDisjointOver, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeDivide:
+        fred.reset( new MergeProcessor<eMergeDivide, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeExclusion:
+        fred.reset( new MergeProcessor<eMergeExclusion, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeFreeze:
+        fred.reset( new MergeProcessor<eMergeFreeze, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeFrom:
+        fred.reset( new MergeProcessor<eMergeFrom, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeGeometric:
+        fred.reset( new MergeProcessor<eMergeGeometric, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeGrainExtract:
+        fred.reset( new MergeProcessor<eMergeGrainExtract, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeGrainMerge:
+        fred.reset( new MergeProcessor<eMergeGrainMerge, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeHardLight:
+        fred.reset( new MergeProcessor<eMergeHardLight, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeHypot:
+        fred.reset( new MergeProcessor<eMergeHypot, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeIn:
+        fred.reset( new MergeProcessor<eMergeIn, PIX, nComponents, maxValue>(*this) );
+        break;
+    //case eMergeInterpolated:
+    //    fred.reset(new MergeProcessor<eMergeInterpolated, PIX, nComponents, maxValue>(*this));
+    //    break;
+    case eMergeMask:
+        fred.reset( new MergeProcessor<eMergeMask, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeMatte:
+        fred.reset( new MergeProcessor<eMergeMatte, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeMax:
+        fred.reset( new MergeProcessor<eMergeMax, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeMin:
+        fred.reset( new MergeProcessor<eMergeMin, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeMinus:
+        fred.reset( new MergeProcessor<eMergeMinus, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeMultiply:
+        fred.reset( new MergeProcessor<eMergeMultiply, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeOut:
+        fred.reset( new MergeProcessor<eMergeOut, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeOver:
+        fred.reset( new MergeProcessor<eMergeOver, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeOverlay:
+        fred.reset( new MergeProcessor<eMergeOverlay, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergePinLight:
+        fred.reset( new MergeProcessor<eMergePinLight, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergePlus:
+        fred.reset( new MergeProcessor<eMergePlus, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeReflect:
+        fred.reset( new MergeProcessor<eMergeReflect, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeScreen:
+        fred.reset( new MergeProcessor<eMergeScreen, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeSoftLight:
+        fred.reset( new MergeProcessor<eMergeSoftLight, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeStencil:
+        fred.reset( new MergeProcessor<eMergeStencil, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeUnder:
+        fred.reset( new MergeProcessor<eMergeUnder, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeXOR:
+        fred.reset( new MergeProcessor<eMergeXOR, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeHue:
+        fred.reset( new MergeProcessor<eMergeHue, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeSaturation:
+        fred.reset( new MergeProcessor<eMergeSaturation, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeColor:
+        fred.reset( new MergeProcessor<eMergeColor, PIX, nComponents, maxValue>(*this) );
+        break;
+    case eMergeLuminosity:
+        fred.reset( new MergeProcessor<eMergeLuminosity, PIX, nComponents, maxValue>(*this) );
+        break;
     } // switch
-    assert(fred.get());
-    if (fred.get()) {
+    assert( fred.get() );
+    if ( fred.get() ) {
         setupAndProcess(*fred, args);
     }
-}
+} // MergePlugin::renderForBitDepth
 
 // the overridden render function
 void
 MergePlugin::render(const OFX::RenderArguments &args)
 {
-    
     // instantiate the render code based on the pixel depth of the dst clip
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
-    
-    assert(kSupportsMultipleClipPARs   || _srcClipA->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth());
-    assert(kSupportsMultipleClipPARs   || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth());
+
+    assert( kSupportsMultipleClipPARs   || _srcClipA->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || _srcClipA->getPixelDepth()       == _dstClip->getPixelDepth() );
+    assert( kSupportsMultipleClipPARs   || _srcClipB->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || _srcClipB->getPixelDepth()       == _dstClip->getPixelDepth() );
     if (dstComponents == OFX::ePixelComponentRGBA) {
         renderForComponents<4>(args);
     } else if (dstComponents == OFX::ePixelComponentRGB) {
@@ -892,6 +898,7 @@ void
 MergePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 {
     OFX::PixelComponentEnum outputComps = _dstClip->getPixelComponents();
+
     clipPreferences.setClipComponents(*_srcClipA, outputComps);
     clipPreferences.setClipComponents(*_srcClipB, outputComps);
     for (std::size_t i = 0; i < _optionalASrcClips.size(); ++i) {
@@ -900,41 +907,46 @@ MergePlugin::getClipPreferences(ClipPreferencesSetter &clipPreferences)
 }
 
 void
-MergePlugin::changedParam(const OFX::InstanceChangedArgs &args, const std::string &paramName)
+MergePlugin::changedParam(const OFX::InstanceChangedArgs &args,
+                          const std::string &paramName)
 {
     if (paramName == kParamOperation) {
         MergingFunctionEnum operation = (MergingFunctionEnum)_operation->getValueAtTime(args.time);
         // depending on the operation, enable/disable alpha masking
-        _alphaMasking->setEnabled(MergeImages2D::isMaskable(operation));
-        _operationString->setValue(MergeImages2D::getOperationString(operation));
+        _alphaMasking->setEnabled( MergeImages2D::isMaskable(operation) );
+        _operationString->setValue( MergeImages2D::getOperationString(operation) );
     }
 }
 
 bool
-MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
+MergePlugin::isIdentity(const IsIdentityArguments &args,
+                        Clip * &identityClip,
+                        double & /*identityTime*/)
 {
     const double time = args.time;
     double mix;
+
     _mix->getValueAtTime(time, mix);
 
     if (mix == 0.) {
         identityClip = _srcClipB;
+
         return true;
     }
-    
+
     bool outputChannels[4];
     for (int c = 0; c < 4; ++c) {
         _outputChannels[c]->getValueAtTime(time, outputChannels[c]);
     }
     if (!outputChannels[0] && !outputChannels[1] && !outputChannels[2] && !outputChannels[3]) {
         identityClip = _srcClipB;
+
         return true;
     }
 
     OfxRectI maskRoD;
     bool maskRoDValid = false;
-    
-    bool doMasking = ((!_maskApply || _maskApply->getValueAtTime(time)) && _maskClip && _maskClip->isConnected());
+    bool doMasking = ( ( !_maskApply || _maskApply->getValueAtTime(time) ) && _maskClip && _maskClip->isConnected() );
     if (doMasking) {
         bool maskInvert;
         _maskInvert->getValueAtTime(time, maskInvert);
@@ -942,24 +954,25 @@ MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
             maskRoDValid = true;
             OFX::Coords::toPixelEnclosing(_maskClip->getRegionOfDefinition(time), args.renderScale, _maskClip->getPixelAspectRatio(), &maskRoD);
             // effect is identity if the renderWindow doesn't intersect the mask RoD
-            if (!OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0)) {
+            if ( !OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, maskRoD, 0) ) {
                 identityClip = _srcClipB;
+
                 return true;
             }
         }
     }
-    
+
     // The region of effect is only the set of the intersections between the A inputs and the mask.
     // If at least one of these regions intersects the renderwindow, the effect is not identity.
 
     std::vector<OFX::Clip *> aClips = _optionalASrcClips;
     aClips.push_back(_srcClipA);
     for (std::size_t i = 0; i < aClips.size(); ++i) {
-        if (!aClips[i]->isConnected()) {
+        if ( !aClips[i]->isConnected() ) {
             continue;
         }
         OfxRectD srcARoD = aClips[i]->getRegionOfDefinition(time);
-        if (srcARoD.x2 <= srcARoD.x1 || srcARoD.y2 <= srcARoD.y1) {
+        if ( (srcARoD.x2 <= srcARoD.x1) || (srcARoD.y2 <= srcARoD.y1) ) {
             // RoD is empty
             continue;
         }
@@ -971,7 +984,7 @@ MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
             // mask the srcARoD with the mask RoD. The result may be empty
             srcARoDValid = OFX::Coords::rectIntersection<OfxRectI>(srcARoDPixel, maskRoD, &srcARoDPixel);
         }
-        if (OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, srcARoDPixel, 0)) {
+        if ( OFX::Coords::rectIntersection<OfxRectI>(args.renderWindow, srcARoDPixel, 0) ) {
             // renderWindow intersects one of the effect areas
             return false;
         }
@@ -979,67 +992,69 @@ MergePlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, d
 
     // renderWindow intersects no area where a "A" source is applied
     identityClip = _srcClipB;
-    return true;
-}
 
+    return true;
+} // MergePlugin::isIdentity
 
 //mDeclarePluginFactory(MergePluginFactory, {}, {});
 template<MergingFunctionEnum plugin>
-class MergePluginFactory : public OFX::PluginFactoryHelper<MergePluginFactory<plugin> >
+class MergePluginFactory
+    : public OFX::PluginFactoryHelper<MergePluginFactory<plugin> >
 {
 public:
-    MergePluginFactory<plugin>(const std::string& id, unsigned int verMaj, unsigned int verMin):OFX::PluginFactoryHelper<MergePluginFactory>(id, verMaj, verMin){}
+    MergePluginFactory<plugin>(const std::string & id, unsigned int verMaj, unsigned int verMin) : OFX::PluginFactoryHelper<MergePluginFactory>(id, verMaj, verMin) {}
     virtual void describe(OFX::ImageEffectDescriptor &desc);
     virtual void describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context);
     virtual OFX::ImageEffect* createInstance(OfxImageEffectHandle handle, OFX::ContextEnum context);
 };
 
 template<MergingFunctionEnum plugin>
-void MergePluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
+void
+MergePluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
 
     switch (plugin) {
-        case eMergeOver:
-            desc.setLabel(kPluginName);
-            desc.setPluginGrouping(kPluginGrouping);
-            break;
-        case eMergePlus:
-            desc.setLabel(kPluginNamePlus);
-            desc.setPluginGrouping(kPluginGroupingSub);
-            break;
-        case eMergeMatte:
-            desc.setLabel(kPluginNameMatte);
-            desc.setPluginGrouping(kPluginGroupingSub);
-            break;
-        case eMergeMultiply:
-            desc.setLabel(kPluginNameMultiply);
-            desc.setPluginGrouping(kPluginGroupingSub);
-            break;
-        case eMergeIn:
-            desc.setLabel(kPluginNameIn);
-            desc.setPluginGrouping(kPluginGroupingSub);
-            break;
-        case eMergeOut:
-            desc.setLabel(kPluginNameOut);
-            desc.setPluginGrouping(kPluginGroupingSub);
-            break;
-        case eMergeScreen:
-            desc.setLabel(kPluginNameScreen);
-            desc.setPluginGrouping(kPluginGroupingSub);
-            break;
-        case eMergeMax:
-            desc.setLabel(kPluginNameMax);
-            desc.setPluginGrouping(kPluginGroupingSub);
-            break;
-        case eMergeMin:
-            desc.setLabel(kPluginNameMin);
-            desc.setPluginGrouping(kPluginGroupingSub);
-            break;
-        case eMergeDifference:
-            desc.setLabel(kPluginNameAbsminus);
-            desc.setPluginGrouping(kPluginGroupingSub);
-            break;
+    case eMergeOver:
+        desc.setLabel(kPluginName);
+        desc.setPluginGrouping(kPluginGrouping);
+        break;
+    case eMergePlus:
+        desc.setLabel(kPluginNamePlus);
+        desc.setPluginGrouping(kPluginGroupingSub);
+        break;
+    case eMergeMatte:
+        desc.setLabel(kPluginNameMatte);
+        desc.setPluginGrouping(kPluginGroupingSub);
+        break;
+    case eMergeMultiply:
+        desc.setLabel(kPluginNameMultiply);
+        desc.setPluginGrouping(kPluginGroupingSub);
+        break;
+    case eMergeIn:
+        desc.setLabel(kPluginNameIn);
+        desc.setPluginGrouping(kPluginGroupingSub);
+        break;
+    case eMergeOut:
+        desc.setLabel(kPluginNameOut);
+        desc.setPluginGrouping(kPluginGroupingSub);
+        break;
+    case eMergeScreen:
+        desc.setLabel(kPluginNameScreen);
+        desc.setPluginGrouping(kPluginGroupingSub);
+        break;
+    case eMergeMax:
+        desc.setLabel(kPluginNameMax);
+        desc.setPluginGrouping(kPluginGroupingSub);
+        break;
+    case eMergeMin:
+        desc.setLabel(kPluginNameMin);
+        desc.setPluginGrouping(kPluginGroupingSub);
+        break;
+    case eMergeDifference:
+        desc.setLabel(kPluginNameAbsminus);
+        desc.setPluginGrouping(kPluginGroupingSub);
+        break;
     }
     std::string help = kPluginDescription;
     // only Natron benefits from the long description, because '<' characters may break the OFX
@@ -1100,14 +1115,14 @@ void MergePluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
         help += getOperationHelp(eMergeMatte) + '\n';
         help += getOperationHelp(eMergeReflect) + '\n';
     }
-    desc.setPluginDescription(help, /*validate=*/false);
+    desc.setPluginDescription(help, /*validate=*/ false);
 
     desc.addSupportedContext(eContextFilter);
     desc.addSupportedContext(eContextGeneral);
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
-    
+
     // set a few flags
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
@@ -1118,37 +1133,39 @@ void MergePluginFactory<plugin>::describe(OFX::ImageEffectDescriptor &desc)
     desc.setSupportsMultipleClipPARs(kSupportsMultipleClipPARs);
     desc.setSupportsMultipleClipDepths(kSupportsMultipleClipDepths);
     desc.setRenderThreadSafety(kRenderThreadSafety);
-    
-}
+} // >::describe
 
 static void
-addMergeOption(ChoiceParamDescriptor* param, MergingFunctionEnum e, bool cascading)
+addMergeOption(ChoiceParamDescriptor* param,
+               MergingFunctionEnum e,
+               bool cascading)
 {
     assert(param->getNOptions() == e);
     if (cascading) {
-        param->appendOption(getOperationGroupString(e) + '/' + getOperationString(e), getOperationDescription(e));
+        param->appendOption( getOperationGroupString(e) + '/' + getOperationString(e), getOperationDescription(e) );
     } else {
-        param->appendOption(getOperationString(e), /*'(' + getOperationGroupString(e) + ") " +*/ getOperationDescription(e));
+        param->appendOption( getOperationString(e), /*'(' + getOperationGroupString(e) + ") " +*/ getOperationDescription(e) );
     }
 }
 
 template<MergingFunctionEnum plugin>
 void
-MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum context)
+MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                              OFX::ContextEnum context)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
     bool numerousInputs =  (OFX::getImageEffectHostDescription()->isNatron &&
                             OFX::getImageEffectHostDescription()->versionMajor >= 2);
-
     OFX::ClipDescriptor* srcClipB = desc.defineClip(kClipB);
+
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGBA );
     srcClipB->addSupportedComponent( OFX::ePixelComponentRGB );
     srcClipB->addSupportedComponent( OFX::ePixelComponentXY );
     srcClipB->addSupportedComponent( OFX::ePixelComponentAlpha );
     srcClipB->setTemporalClipAccess(false);
     srcClipB->setSupportsTiles(kSupportsTiles);
-    
+
     //Optional: If we want a render to be triggered even if one of the inputs is not connected
     //they need to be optional.
     srcClipB->setOptional(false); // B clip is non-optional
@@ -1160,7 +1177,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
     srcClipA->addSupportedComponent( OFX::ePixelComponentAlpha );
     srcClipA->setTemporalClipAccess(false);
     srcClipA->setSupportsTiles(kSupportsTiles);
-    
+
     //Optional: If we want a render to be triggered even if one of the inputs is not connected
     //they need to be optional.
     srcClipA->setOptional(true);
@@ -1176,21 +1193,21 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
 
     if (numerousInputs) {
         for (int i = 2; i <= kMaximumAInputs; ++i) {
-            OFX::ClipDescriptor* optionalSrcClip = desc.defineClip(std::string(kClipA) + unsignedToString(i));
+            OFX::ClipDescriptor* optionalSrcClip = desc.defineClip( std::string(kClipA) + unsignedToString(i) );
             optionalSrcClip->addSupportedComponent( OFX::ePixelComponentRGBA );
             optionalSrcClip->addSupportedComponent( OFX::ePixelComponentRGB );
             optionalSrcClip->addSupportedComponent( OFX::ePixelComponentXY );
             optionalSrcClip->addSupportedComponent( OFX::ePixelComponentAlpha );
             optionalSrcClip->setTemporalClipAccess(false);
             optionalSrcClip->setSupportsTiles(kSupportsTiles);
-            
+
             //Optional: If we want a render to be triggered even if one of the inputs is not connected
             //they need to be optional.
             optionalSrcClip->setOptional(true);
         }
     }
 
-    
+
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
@@ -1210,7 +1227,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setEnabled(false);
         param->setIsPersistant(true);
         param->setEvaluateOnChange(false);
-        param->setDefault(getOperationString(plugin));
+        param->setDefault( getOperationString(plugin) );
         if (page) {
             page->addChild(*param);
         }
@@ -1285,7 +1302,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         assert(param->getNOptions() == (int)eBBoxB);
         param->appendOption(kParamBBoxOptionB, kParamBBoxOptionBHint);
         param->setAnimates(true);
-        param->setDefault((int)eBBoxUnion);
+        param->setDefault( (int)eBBoxUnion );
         if (page) {
             page->addChild(*param);
         }
@@ -1297,7 +1314,7 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
         param->setLabel(kParamAlphaMaskingLabel);
         param->setAnimates(true);
         param->setDefault(false);
-        param->setEnabled(MergeImages2D::isMaskable(eMergeOver));
+        param->setEnabled( MergeImages2D::isMaskable(eMergeOver) );
         param->setHint(kParamAlphaMaskingHint);
         param->setLayoutHint(eLayoutHintDivider);
         if (page) {
@@ -1463,11 +1480,12 @@ MergePluginFactory<plugin>::describeInContext(OFX::ImageEffectDescriptor &desc, 
     }
 
     ofxsMaskMixDescribeParams(desc, page);
-}
+} // >::describeInContext
 
 template<MergingFunctionEnum plugin>
 OFX::ImageEffect*
-MergePluginFactory<plugin>::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+MergePluginFactory<plugin>::createInstance(OfxImageEffectHandle handle,
+                                           OFX::ContextEnum /*context*/)
 {
     //Natron >= 2.0 allows multiple inputs to be folded like the viewer node, so use this to merge
     //more than 2 images
@@ -1477,17 +1495,16 @@ MergePluginFactory<plugin>::createInstance(OfxImageEffectHandle handle, OFX::Con
     return new MergePlugin(handle, numerousInputs);
 }
 
-
 static MergePluginFactory<eMergeOver>        p1(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergePlus>        p2(kPluginIdentifierSub"Plus", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergeMatte>       p3(kPluginIdentifierSub"Matte", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergeMultiply>    p4(kPluginIdentifierSub"Multiply", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergeIn>          p5(kPluginIdentifierSub"In", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergeOut>         p6(kPluginIdentifierSub"Out", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergeScreen>      p7(kPluginIdentifierSub"Screen", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergeMax>         p8(kPluginIdentifierSub"Max", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergeMin>         p9(kPluginIdentifierSub"Min", kPluginVersionMajor, kPluginVersionMinor);
-static MergePluginFactory<eMergeDifference> p10(kPluginIdentifierSub"Difference", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergePlus>        p2(kPluginIdentifierSub "Plus", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergeMatte>       p3(kPluginIdentifierSub "Matte", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergeMultiply>    p4(kPluginIdentifierSub "Multiply", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergeIn>          p5(kPluginIdentifierSub "In", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergeOut>         p6(kPluginIdentifierSub "Out", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergeScreen>      p7(kPluginIdentifierSub "Screen", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergeMax>         p8(kPluginIdentifierSub "Max", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergeMin>         p9(kPluginIdentifierSub "Min", kPluginVersionMajor, kPluginVersionMinor);
+static MergePluginFactory<eMergeDifference> p10(kPluginIdentifierSub "Difference", kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p1)
 mRegisterPluginFactoryInstance(p2)
 mRegisterPluginFactoryInstance(p3)

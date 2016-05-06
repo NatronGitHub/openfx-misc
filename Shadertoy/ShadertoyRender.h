@@ -40,7 +40,7 @@
 #endif
 
 
-#if defined(USE_OSMESA) || !( defined(_WIN32) || defined(__WIN32__) || defined(WIN32) )
+#if defined(USE_OSMESA) || !( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
 #define GL_GLEXT_PROTOTYPES
 #endif
 
@@ -70,20 +70,21 @@
 #define NBINPUTS SHADERTOY_NBINPUTS
 #define NBUNIFORMS SHADERTOY_NBUNIFORMS
 
-struct ShadertoyShader {
+struct ShadertoyShader
+{
     ShadertoyShader()
-    : program(0)
-    , iResolutionLoc(-1)
-    , iGlobalTimeLoc(-1)
-    , iTimeDeltaLoc(-1)
-    , iFrameLoc(-1)
-    , iChannelTimeLoc(-1)
-    , iMouseLoc(-1)
-    , iDateLoc(-1)
-    , iSampleRateLoc(-1)
-    , iChannelResolutionLoc(-1)
-    , ifFragCoordOffsetUniformLoc(-1)
-    , iRenderScaleLoc(-1)
+        : program(0)
+        , iResolutionLoc(-1)
+        , iGlobalTimeLoc(-1)
+        , iTimeDeltaLoc(-1)
+        , iFrameLoc(-1)
+        , iChannelTimeLoc(-1)
+        , iMouseLoc(-1)
+        , iDateLoc(-1)
+        , iSampleRateLoc(-1)
+        , iChannelResolutionLoc(-1)
+        , ifFragCoordOffsetUniformLoc(-1)
+        , iRenderScaleLoc(-1)
     {
         std::fill(iChannelLoc, iChannelLoc + NBINPUTS, -1);
         std::fill(iParamLoc, iParamLoc + NBUNIFORMS, -1);
@@ -105,7 +106,7 @@ struct ShadertoyShader {
     GLint iChannelLoc[NBINPUTS];
 };
 
-#if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32) )
+#if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
 // Program
 static PFNGLCREATEPROGRAMPROC glCreateProgram = NULL;
 static PFNGLDELETEPROGRAMPROC glDeleteProgram = NULL;
@@ -174,7 +175,7 @@ static PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
 //PFNGLFRAMEBUFFERTEXTURE3DPROC glFramebufferTexture3D = NULL;
 //PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer = NULL;
 //PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC glGetFramebufferAttachmentParameteriv = NULL;
-#endif
+#endif // if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
 
 #ifndef DEBUG
 #define DPRINT(args) (void)0
@@ -191,7 +192,8 @@ static PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
 #endif // defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
 
 // put a breakpoint in glError to halt the debugger
-inline void glError() {}
+inline void
+glError() {}
 
 #define glCheckError()                                                  \
     {                                                                   \
@@ -204,7 +206,9 @@ inline void glError() {}
 
 #define DPRINT(args) print_dbg args
 static
-void print_dbg(const char *format, ...)
+void
+print_dbg(const char *format,
+          ...)
 {
     char str[1024];
     va_list ap;
@@ -215,10 +219,11 @@ void print_dbg(const char *format, ...)
 #  if _MSC_VER >= 1400
     vsnprintf_s(str, size, _TRUNCATE, format, ap);
 #  else
-    if (size == 0)        /* not even room for a \0? */
+    if (size == 0) {      /* not even room for a \0? */
         return -1;        /* not what C99 says to do, but what windows does */
-    str[size-1] = '\0';
-    _vsnprintf(str, size-1, format, ap);
+    }
+    str[size - 1] = '\0';
+    _vsnprintf(str, size - 1, format, ap);
 #  endif
 #else
     vsnprintf(str, size, format, ap);
@@ -230,26 +235,28 @@ void print_dbg(const char *format, ...)
 #endif
     va_end(ap);
 }
-#endif
+
+#endif // ifndef DEBUG
 
 
 #ifdef USE_OSMESA
 struct ShadertoyPlugin::OSMesaPrivate
 {
     OSMesaPrivate(ShadertoyPlugin *effect)
-    : _effect(effect)
-    , _ctx(0)
-    , _ctxFormat(0)
-    , _ctxDepthBits(0)
-    , _ctxStencilBits(0)
-    , _ctxAccumBits(0)
-    , _imageShaderID(0)
-    , _imageShaderUniformsID(0)
-    , _imageShader()
+        : _effect(effect)
+        , _ctx(0)
+        , _ctxFormat(0)
+        , _ctxDepthBits(0)
+        , _ctxStencilBits(0)
+        , _ctxAccumBits(0)
+        , _imageShaderID(0)
+        , _imageShaderUniformsID(0)
+        , _imageShader()
     {
     }
 
-    ~OSMesaPrivate() {
+    ~OSMesaPrivate()
+    {
         /* destroy the context */
         if (_ctx) {
             // make the context current, with a dummy buffer
@@ -259,7 +266,7 @@ struct ShadertoyPlugin::OSMesaPrivate
             OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0); // detach buffer from context
             OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context (not really recessary)
             OSMesaDestroyContext( _ctx );
-            assert(!OSMesaGetCurrentContext());
+            assert( !OSMesaGetCurrentContext() );
         }
     }
 
@@ -276,12 +283,13 @@ struct ShadertoyPlugin::OSMesaPrivate
         if (!buffer) {
             //printf("%p before OSMesaMakeCurrent(%p,buf=NULL), OSMesaGetCurrentContext=%p\n", pthread_self(), _ctx, OSMesaGetCurrentContext());
             OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0);
+
             return;
         }
-        if (!_ctx || (format      != _ctxFormat &&
-                      depthBits   != _ctxDepthBits &&
-                      stencilBits != _ctxStencilBits &&
-                      accumBits   != _ctxAccumBits)) {
+        if ( !_ctx || ( (format      != _ctxFormat) &&
+                        ( depthBits  != _ctxDepthBits) &&
+                        ( stencilBits != _ctxStencilBits) &&
+                        ( accumBits  != _ctxAccumBits) ) ) {
             /* destroy the context */
             if (_ctx) {
                 //printf("%p before OSMesaDestroyContext(%p), OSMesaGetCurrentContext=%p\n", pthread_self(), _ctx, OSMesaGetCurrentContext());
@@ -292,7 +300,7 @@ struct ShadertoyPlugin::OSMesaPrivate
                 OSMesaMakeCurrent(_ctx, NULL, 0, 0, 0); // detach buffer from context
                 OSMesaMakeCurrent(NULL, NULL, 0, 0, 0); // disactivate the context (not really recessary)
                 OSMesaDestroyContext( _ctx );
-                assert(!OSMesaGetCurrentContext());
+                assert( !OSMesaGetCurrentContext() );
                 _ctx = 0;
             }
             assert(!_ctx);
@@ -305,8 +313,9 @@ struct ShadertoyPlugin::OSMesaPrivate
             _ctx = OSMesaCreateContext( format, NULL );
 #endif
             if (!_ctx) {
-                DPRINT(("OSMesaCreateContext failed!\n"));
+                DPRINT( ("OSMesaCreateContext failed!\n") );
                 OFX::throwSuiteStatusException(kOfxStatFailed);
+
                 return;
             }
             _ctxFormat = format;
@@ -323,9 +332,10 @@ struct ShadertoyPlugin::OSMesaPrivate
         //printf("%p before OSMesaMakeCurrent(%p), OSMesaGetCurrentContext=%p\n", pthread_self(), _ctx, OSMesaGetCurrentContext());
 
         /* Bind the buffer to the context and make it current */
-        if (!OSMesaMakeCurrent( _ctx, buffer, type, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1 )) {
-            DPRINT(("OSMesaMakeCurrent failed!\n"));
+        if ( !OSMesaMakeCurrent( _ctx, buffer, type, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1 ) ) {
+            DPRINT( ("OSMesaMakeCurrent failed!\n") );
             OFX::throwSuiteStatusException(kOfxStatFailed);
+
             return;
         }
         //OSMesaPixelStore(OSMESA_Y_UP, true); // default value
@@ -336,7 +346,7 @@ struct ShadertoyPlugin::OSMesaPrivate
             // set viewport
             glViewport(0, 0, dstBounds.x2 - dstBounds.x1, dstBounds.y2 - dstBounds.y1);
         }
-    }
+    } // setContext
 
     OSMesaContext ctx() { return _ctx; }
 
@@ -361,6 +371,7 @@ void
 ShadertoyPlugin::exitMesa()
 {
     OFX::MultiThread::AutoMutex lock(_osmesaMutex);
+
     for (std::list<OSMesaPrivate *>::iterator it = _osmesa.begin(); it != _osmesa.end(); ++it) {
         delete *it;
     }
@@ -387,7 +398,8 @@ ShadertoyPlugin::exitOpenGL()
 #endif // USE_OPENGL
 
 static
-int glutExtensionSupported( const char* extension )
+int
+glutExtensionSupported( const char* extension )
 {
     const char *extensions, *start;
     const size_t len = std::strlen( extension );
@@ -396,8 +408,9 @@ int glutExtensionSupported( const char* extension )
     //FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutExtensionSupported" );
     //freeglut_return_val_if_fail( fgStructure.CurrentWindow != NULL, 0 );
 
-    if (std::strchr(extension, ' '))
+    if ( std::strchr(extension, ' ') ) {
         return 0;
+    }
     start = extensions = (const char *) glGetString(GL_EXTENSIONS);
 
     /* XXX consider printing a warning to stderr that there's no current
@@ -410,25 +423,30 @@ int glutExtensionSupported( const char* extension )
 
     while (1) {
         const char *p = std::strstr(extensions, extension);
-        if (!p)
+        if (!p) {
             return 0;  /* not found */
+        }
         /* check that the match isn't a super string */
-        if ((p == start || p[-1] == ' ') && (p[len] == ' ' || p[len] == 0))
+        if ( ( (p == start) || (p[-1] == ' ') ) && ( (p[len] == ' ') || (p[len] == 0) ) ) {
             return 1;
+        }
         /* skip the false match and continue */
         extensions = p + len;
     }
-    
-    return 0 ;
+
+    return 0;
 }
 
-
 static
-GLuint compileShader(GLenum shaderType, const char *shader, std::string &errstr)
+GLuint
+compileShader(GLenum shaderType,
+              const char *shader,
+              std::string &errstr)
 {
     GLuint s = glCreateShader(shaderType);
+
     if (s == 0) {
-        DPRINT(("Failed to create shader from\n====\n%s\n===\n", shader));
+        DPRINT( ("Failed to create shader from\n====\n%s\n===\n", shader) );
 
         return 0;
     }
@@ -467,34 +485,40 @@ GLuint compileShader(GLenum shaderType, const char *shader, std::string &errstr)
         }
 
         glDeleteShader(s);
-        DPRINT(("%s\n", errstr.c_str()));
+        DPRINT( ( "%s\n", errstr.c_str() ) );
 
         return 0;
     }
 
     return s;
-}
+} // compileShader
 
 static
-GLuint compileAndLinkProgram(const char *vertexShader, const char *fragmentShader, std::string &errstr)
+GLuint
+compileAndLinkProgram(const char *vertexShader,
+                      const char *fragmentShader,
+                      std::string &errstr)
 {
-    DPRINT(("CompileAndLink\n"));
+    DPRINT( ("CompileAndLink\n") );
     GLuint program = glCreateProgram();
     if (program == 0) {
-        DPRINT(("Failed to create program\n"));
+        DPRINT( ("Failed to create program\n") );
         glCheckError();
+
         return program;
     }
 
     GLuint vs = compileShader(GL_VERTEX_SHADER, vertexShader, errstr);
     if (!vs) {
         glDeleteProgram(program);
+
         return 0;
     }
     GLuint fs = compileShader(GL_FRAGMENT_SHADER, fragmentShader, errstr);
     if (!fs) {
         glDeleteShader(vs);
         glDeleteProgram(program);
+
         return 0;
     }
 
@@ -530,12 +554,12 @@ GLuint compileAndLinkProgram(const char *vertexShader, const char *fragmentShade
 
             glDetachShader(program, vs);
             glDeleteShader(vs);
-            
+
             glDetachShader(program, fs);
             glDeleteShader(fs);
-            
+
             glDeleteProgram(program);
-            DPRINT(("%s\n", errstr.c_str()));
+            DPRINT( ( "%s\n", errstr.c_str() ) );
 
             return 0;
         }
@@ -543,102 +567,104 @@ GLuint compileAndLinkProgram(const char *vertexShader, const char *fragmentShade
         glDeleteProgram(program);
     }
 
-    if (vs)
+    if (vs) {
         glDeleteShader(vs);
-    
-    if (fs)
+    }
+
+    if (fs) {
         glDeleteShader(fs);
-    
+    }
+
     return program;
-}
+} // compileAndLinkProgram
 
 // https://raw.githubusercontent.com/beautypi/shadertoy-iOS-v2/master/shadertoy/shaders/vertex_main.glsl
 /*
-precision highp float;
-precision highp int;
+   precision highp float;
+   precision highp int;
 
-attribute vec3 position;
+   attribute vec3 position;
 
-void main() {
+   void main() {
     gl_Position.xyz = position;
     gl_Position.w = 1.0;
-}
+   }
 
  */
 static std::string vsSource = "void main() { gl_Position = ftransform(); }";
 
 // https://raw.githubusercontent.com/beautypi/shadertoy-iOS-v2/master/shadertoy/shaders/fragment_base_uniforms.glsl
 /*
-#extension GL_EXT_shader_texture_lod : enable
-#extension GL_OES_standard_derivatives : enable
+   #extension GL_EXT_shader_texture_lod : enable
+   #extension GL_OES_standard_derivatives : enable
 
-precision highp float;
-precision highp int;
-precision mediump sampler2D;
+   precision highp float;
+   precision highp int;
+   precision mediump sampler2D;
 
-uniform vec3      iResolution;                  // viewport resolution (in pixels)
-uniform float     iGlobalTime;                  // shader playback time (in seconds)
-uniform vec4      iMouse;                       // mouse pixel coords
-uniform vec4      iDate;                        // (year, month, day, time in seconds)
-uniform float     iSampleRate;                  // sound sample rate (i.e., 44100)
-uniform vec3      iChannelResolution[4];        // channel resolution (in pixels)
-uniform float     iChannelTime[4];              // channel playback time (in sec)
+   uniform vec3      iResolution;                  // viewport resolution (in pixels)
+   uniform float     iGlobalTime;                  // shader playback time (in seconds)
+   uniform vec4      iMouse;                       // mouse pixel coords
+   uniform vec4      iDate;                        // (year, month, day, time in seconds)
+   uniform float     iSampleRate;                  // sound sample rate (i.e., 44100)
+   uniform vec3      iChannelResolution[4];        // channel resolution (in pixels)
+   uniform float     iChannelTime[4];              // channel playback time (in sec)
 
-uniform vec2      ifFragCoordOffsetUniform;     // used for tiled based hq rendering
-uniform float     iTimeDelta;                   // render time (in seconds)
-uniform int       iFrame;                       // shader playback frame
-*/
+   uniform vec2      ifFragCoordOffsetUniform;     // used for tiled based hq rendering
+   uniform float     iTimeDelta;                   // render time (in seconds)
+   uniform int       iFrame;                       // shader playback frame
+ */
 // improve OpenGL ES 2.0 portability,
 // see https://en.wikibooks.org/wiki/OpenGL_Programming/Modern_OpenGL_Tutorial_03#OpenGL_ES_2_portability
 static std::string fsHeader =
 #ifdef GL_ES_VERSION_2_0
-"#version 100\n"  // OpenGL ES 2.0
+    "#version 100\n" // OpenGL ES 2.0
 #else
-"#version 120\n"  // OpenGL 2.1
+    "#version 120\n" // OpenGL 2.1
 #endif
 #ifdef GL_ES_VERSION_2_0
-"#extension GL_EXT_shader_texture_lod : enable\n"
-"#extension GL_OES_standard_derivatives : enable\n"
-"#ifdef GL_FRAGMENT_PRECISION_HIGH\n"
-"precision highp float;\n"
-"precision highp int;\n"
-"#else\n"
-"precision mediump float;\n"
-"precision mediump int;\n"
-"#endif\n"
-"precision mediump sampler2D;\n"
+    "#extension GL_EXT_shader_texture_lod : enable\n"
+    "#extension GL_OES_standard_derivatives : enable\n"
+    "#ifdef GL_FRAGMENT_PRECISION_HIGH\n"
+    "precision highp float;\n"
+    "precision highp int;\n"
+    "#else\n"
+    "precision mediump float;\n"
+    "precision mediump int;\n"
+    "#endif\n"
+    "precision mediump sampler2D;\n"
 #else
 // Ignore GLES 2 precision specifiers:
-"#define lowp   \n"
-"#define mediump\n"
-"#define highp  \n"
+    "#define lowp   \n"
+    "#define mediump\n"
+    "#define highp  \n"
 #endif
-"uniform vec3      iResolution;\n"
-"uniform float     iGlobalTime;\n"
-"uniform float     iTimeDelta;\n"
-"uniform int       iFrame;\n"
-"uniform float     iChannelTime["STRINGISE(NBINPUTS)"];\n"
-"uniform vec3      iChannelResolution["STRINGISE(NBINPUTS)"];\n"
-"uniform vec4      iMouse;\n"
-"uniform vec4      iDate;\n"
-"uniform float     iSampleRate;\n"
-"uniform vec2      ifFragCoordOffsetUniform;\n"
-"uniform vec2      iRenderScale;\n" // the OpenFX renderscale
+    "uniform vec3      iResolution;\n"
+    "uniform float     iGlobalTime;\n"
+    "uniform float     iTimeDelta;\n"
+    "uniform int       iFrame;\n"
+    "uniform float     iChannelTime["STRINGISE (NBINPUTS)"];\n"
+    "uniform vec3      iChannelResolution["STRINGISE (NBINPUTS)"];\n"
+    "uniform vec4      iMouse;\n"
+    "uniform vec4      iDate;\n"
+    "uniform float     iSampleRate;\n"
+    "uniform vec2      ifFragCoordOffsetUniform;\n"
+    "uniform vec2      iRenderScale;\n" // the OpenFX renderscale
 ;
 
 // https://raw.githubusercontent.com/beautypi/shadertoy-iOS-v2/master/shadertoy/shaders/fragment_main_image.glsl
 static std::string fsFooter =
-"void main(void)\n"
-"{\n"
-"  mainImage(gl_FragColor, gl_FragCoord.xy + ifFragCoordOffsetUniform );\n"
-"}\n";
-
+    "void main(void)\n"
+    "{\n"
+    "  mainImage(gl_FragColor, gl_FragCoord.xy + ifFragCoordOffsetUniform );\n"
+    "}\n";
 void
 ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 {
     const double time = args.time;
     bool mipmap = true;
     bool anisotropic = true;
+
     if (_mipmap) {
         _mipmap->getValueAtTime(time, mipmap);
     }
@@ -653,68 +679,72 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 # ifdef OFX_SUPPORTS_OPENGLRENDER
     const int& gl_enabled = args.openGLEnabled;
     const OFX::ImageEffectHostDescription &gHostDescription = *OFX::getImageEffectHostDescription();
-    DPRINT(("render: openGLSuite %s\n", gHostDescription.supportsOpenGLRender ? "found" : "not found"));
+    DPRINT( ("render: openGLSuite %s\n", gHostDescription.supportsOpenGLRender ? "found" : "not found") );
     if (gHostDescription.supportsOpenGLRender) {
-        DPRINT(("render: openGL rendering %s\n", gl_enabled ? "enabled" : "DISABLED"));
+        DPRINT( ("render: openGL rendering %s\n", gl_enabled ? "enabled" : "DISABLED") );
     }
 #  ifdef USE_OPENGL
     // For this test, we only process in OpenGL mode.
     if (!gl_enabled) {
         OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+
         return;
     }
 #  endif
 # endif
 
     const OfxRectI renderWindow = args.renderWindow;
-    DPRINT(("Render: window = [%d, %d - %d, %d]\n",
-            renderWindow.x1, renderWindow.y1,
-            renderWindow.x2, renderWindow.y2));
+    DPRINT( ("Render: window = [%d, %d - %d, %d]\n",
+             renderWindow.x1, renderWindow.y1,
+             renderWindow.x2, renderWindow.y2) );
 
 
     // get the output image texture
 # ifdef USE_OPENGL
-    std::auto_ptr<OFX::Texture> dst(_dstClip->loadTexture(time));
+    std::auto_ptr<OFX::Texture> dst( _dstClip->loadTexture(time) );
 # else
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(time));
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(time) );
 # endif
-    if (!dst.get()) {
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
+
         return;
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
+
         return;
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
+
         return;
     }
 # ifdef USE_OPENGL
     const GLuint dstIndex = (GLuint)dst->getIndex();
     const GLenum dstTarget = (GLenum)dst->getTarget();
-    DPRINT(("openGL: output texture index %d, target %d, depth %s\n",
-            dstIndex, dstTarget, mapBitDepthEnumToStr(dstBitDepth)));
+    DPRINT( ( "openGL: output texture index %d, target %d, depth %s\n",
+              dstIndex, dstTarget, mapBitDepthEnumToStr(dstBitDepth) ) );
 # endif
 
 # ifdef USE_OPENGL
     std::auto_ptr<const OFX::Texture> src[NBINPUTS];
     for (unsigned i = 0; i < NBINPUTS; ++i) {
-        src[i].reset((_srcClips[i] && _srcClips[i]->isConnected()) ?
-                     _srcClips[i]->loadTexture(time) : 0);
+        src[i].reset( ( _srcClips[i] && _srcClips[i]->isConnected() ) ?
+                      _srcClips[i]->loadTexture(time) : 0 );
     }
 # else
     std::auto_ptr<const OFX::Image> src[NBINPUTS];
     for (unsigned i = 0; i < NBINPUTS; ++i) {
-        src[i].reset((_srcClips[i] && _srcClips[i]->isConnected()) ?
-                     _srcClips[i]->fetchImage(time) : 0);
+        src[i].reset( ( _srcClips[i] && _srcClips[i]->isConnected() ) ?
+                      _srcClips[i]->fetchImage(time) : 0 );
     }
 # endif
 
@@ -733,54 +763,57 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #endif
 
     for (unsigned i = 0; i < NBINPUTS; ++i) {
-        if (src[i].get()) {
+        if ( src[i].get() ) {
             srcBitDepth[i] = src[i]->getPixelDepth();
             srcComponents[i] = src[i]->getPixelComponents();
-            if (srcBitDepth[i] != dstBitDepth || srcComponents[i] != dstComponents) {
+            if ( (srcBitDepth[i] != dstBitDepth) || (srcComponents[i] != dstComponents) ) {
                 OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+
                 return;
             }
 # ifdef USE_OPENGL
             srcIndex[i] = (GLuint)src[i]->getIndex();
             srcTarget[i] = (GLenum)src[i]->getTarget();
-            DPRINT(("openGL: source texture %u index %d, target %d, depth %s\n",
-                    i, srcIndex[i], srcTarget[i], mapBitDepthEnumToStr(srcBitDepth[i])));
+            DPRINT( ( "openGL: source texture %u index %d, target %d, depth %s\n",
+                      i, srcIndex[i], srcTarget[i], mapBitDepthEnumToStr(srcBitDepth[i]) ) );
 # endif
             // XXX: check status for errors
 
 #ifdef USE_OSMESA
             GLenum formati;
             switch (srcComponents[i]) {
-                case OFX::ePixelComponentRGBA:
-                    formati = GL_RGBA;
-                    break;
-                case OFX::ePixelComponentAlpha:
-                    formati = GL_ALPHA;
-                    break;
-                default:
-                    OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-                    return;
+            case OFX::ePixelComponentRGBA:
+                formati = GL_RGBA;
+                break;
+            case OFX::ePixelComponentAlpha:
+                formati = GL_ALPHA;
+                break;
+            default:
+                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+
+                return;
             }
             GLint depthBitsi = 0;
             GLint stencilBitsi = 0;
             GLint accumBitsi = 0;
             GLenum typei;
             switch (srcBitDepth[i]) {
-                case OFX::eBitDepthUByte:
-                    depthBitsi = 16;
-                    typei = GL_UNSIGNED_BYTE;
-                    break;
-                case OFX::eBitDepthUShort:
-                    depthBitsi = 16;
-                    typei = GL_UNSIGNED_SHORT;
-                    break;
-                case OFX::eBitDepthFloat:
-                    depthBitsi = 32;
-                    typei = GL_FLOAT;
-                    break;
-                default:
-                    OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-                    return;
+            case OFX::eBitDepthUByte:
+                depthBitsi = 16;
+                typei = GL_UNSIGNED_BYTE;
+                break;
+            case OFX::eBitDepthUShort:
+                depthBitsi = 16;
+                typei = GL_UNSIGNED_SHORT;
+                break;
+            case OFX::eBitDepthFloat:
+                depthBitsi = 32;
+                typei = GL_FLOAT;
+                break;
+            default:
+                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+
+                return;
             }
             if (format == 0) {
                 format = formati;
@@ -789,16 +822,16 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                 accumBits = accumBitsi;
                 type = typei;
             } else {
-                if (format != formati ||
-                    depthBits != depthBitsi ||
-                    stencilBits != stencilBitsi ||
-                    accumBits != accumBitsi ||
-                    type != typei) {
+                if ( (format != formati) ||
+                     ( depthBits != depthBitsi) ||
+                     ( stencilBits != stencilBitsi) ||
+                     ( accumBits != accumBitsi) ||
+                     ( type != typei) ) {
                     // all inputs should have the same format
                     OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
                 }
             }
-#endif
+#endif // ifdef USE_OSMESA
         }
     }
 
@@ -806,34 +839,36 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
 #ifdef USE_OSMESA
     if (format == 0) {
         switch (dstComponents) {
-            case OFX::ePixelComponentRGBA:
-                format = GL_RGBA;
-                break;
-            case OFX::ePixelComponentAlpha:
-                format = GL_ALPHA;
-                break;
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-                return;
+        case OFX::ePixelComponentRGBA:
+            format = GL_RGBA;
+            break;
+        case OFX::ePixelComponentAlpha:
+            format = GL_ALPHA;
+            break;
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+
+            return;
         }
     }
     if (depthBits == 0) {
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte:
-                depthBits = 16;
-                type = GL_UNSIGNED_BYTE;
-                break;
-            case OFX::eBitDepthUShort:
-                depthBits = 16;
-                type = GL_UNSIGNED_SHORT;
-                break;
-            case OFX::eBitDepthFloat:
-                depthBits = 32;
-                type = GL_FLOAT;
-                break;
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
-                return;
+        case OFX::eBitDepthUByte:
+            depthBits = 16;
+            type = GL_UNSIGNED_BYTE;
+            break;
+        case OFX::eBitDepthUShort:
+            depthBits = 16;
+            type = GL_UNSIGNED_SHORT;
+            break;
+        case OFX::eBitDepthFloat:
+            depthBits = 32;
+            type = GL_FLOAT;
+            break;
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
+
+            return;
         }
     }
     /* Allocate the image buffer */
@@ -841,7 +876,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     OSMesaPrivate *osmesa;
     {
         OFX::MultiThread::AutoMutex lock(_osmesaMutex);
-        if (_osmesa.empty()) {
+        if ( _osmesa.empty() ) {
             osmesa = new OSMesaPrivate(this);
         } else {
             osmesa = _osmesa.back();
@@ -850,7 +885,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     }
     assert(OSMesaGetCurrentContext() == NULL); // the thread should have no Mesa context attached
     osmesa->setContext(format, depthBits, type, stencilBits, accumBits, buffer, dstBounds);
-#endif
+#endif // ifdef USE_OSMESA
 
     // compile and link the shader if necessary
     ShadertoyShader *shadertoy;
@@ -883,11 +918,11 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             _imageShaderSource->getValue(str);
             std::string fsSource = fsHeader;
             for (unsigned i = 0; i < NBINPUTS; ++i) {
-                fsSource += std::string("uniform sampler2D iChannel") + (char)('0'+i) + ";\n";
+                fsSource += std::string("uniform sampler2D iChannel") + (char)('0' + i) + ";\n";
             }
             size_t fsSourceLines = std::count(fsSource.begin(), fsSource.end(), '\n');
             assert(fsSourceLines <= 100);
-            if ((int)fsSourceLines > 100) {
+            if ( (int)fsSourceLines > 100 ) {
                 fsSourceLines = 100;
             }
             // make sure the actual program starts at line 100
@@ -896,10 +931,11 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
             shadertoy->program = compileAndLinkProgram(vsSource.c_str(), fsSource.c_str(), errstr);
             if (shadertoy->program == 0) {
                 setPersistentMessage(OFX::Message::eMessageError, "", "Failed to compile and link program");
-                sendMessage(OFX::Message::eMessageError, "", errstr.c_str());
+                sendMessage( OFX::Message::eMessageError, "", errstr.c_str() );
                 OFX::throwSuiteStatusException(kOfxStatFailed);
+
                 return;
-           }
+            }
             _imageShaderChanged = false;
             shadertoy->iResolutionLoc        = glGetUniformLocation(shadertoy->program, "iResolution");
             shadertoy->iGlobalTimeLoc        = glGetUniformLocation(shadertoy->program, "iGlobalTime");
@@ -922,12 +958,12 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
         if (must_recompile || uniforms_changed) {
             std::fill(shadertoy->iParamLoc, shadertoy->iParamLoc + NBUNIFORMS, -1);
-            unsigned paramCount = std::max(0, std::min(_paramCount->getValue(), NBUNIFORMS));
+            unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
             for (unsigned i = 0; i < paramCount; ++i) {
                 std::string paramName;
                 _paramName[i]->getValue(paramName);
-                if (!paramName.empty()) {
-                    shadertoy->iParamLoc[i] = glGetUniformLocation(shadertoy->program, paramName.c_str());
+                if ( !paramName.empty() ) {
+                    shadertoy->iParamLoc[i] = glGetUniformLocation( shadertoy->program, paramName.c_str() );
                 }
             }
         }
@@ -943,7 +979,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
     std::vector<GLuint> srcIndex(NBINPUTS);
     glActiveTexture(GL_TEXTURE0);
     for (unsigned i = 0; i < NBINPUTS; ++i) {
-        if (src[i].get() && shadertoy->iChannelLoc[i] >= 0) {
+        if ( src[i].get() && (shadertoy->iChannelLoc[i] >= 0) ) {
             glGenTextures(1, &srcIndex[i]);
             OfxRectI srcBounds = src[i]->getBounds();
             glBindTexture(srcTarget[i], srcIndex[i]);
@@ -954,18 +990,18 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
                 glTexParameteri(srcTarget[i], GL_GENERATE_MIPMAP, GL_TRUE); // Allocate the mipmaps
             }
 
-            glTexImage2D(srcTarget[i], 0, format,
-                         srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
-                         format, type, src[i]->getPixelData());
+            glTexImage2D( srcTarget[i], 0, format,
+                          srcBounds.x2 - srcBounds.x1, srcBounds.y2 - srcBounds.y1, 0,
+                          format, type, src[i]->getPixelData() );
             glBindTexture(srcTarget[i], 0);
         }
     }
     // setup the projection
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0, dstBounds.x2 - dstBounds.x1,
-            0, dstBounds.y2 - dstBounds.y1,
-            -10.0*(dstBounds.y2-dstBounds.y1), 10.0*(dstBounds.y2-dstBounds.y1));
+    glOrtho( 0, dstBounds.x2 - dstBounds.x1,
+             0, dstBounds.y2 - dstBounds.y1,
+             -10.0 * (dstBounds.y2 - dstBounds.y1), 10.0 * (dstBounds.y2 - dstBounds.y1) );
     glMatrixMode(GL_MODELVIEW);
     glClear( GL_DEPTH_BUFFER_BIT );
 #endif
@@ -1005,7 +1041,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         glUniform1fv(shadertoy->iChannelTimeLoc, NBINPUTS, tv);
     }
     if (shadertoy->iChannelResolutionLoc >= 0) {
-        GLfloat rv[3*NBINPUTS];
+        GLfloat rv[3 * NBINPUTS];
         for (unsigned i = 0; i < NBINPUTS; ++i) {
         }
         glUniform3fv(shadertoy->iChannelResolutionLoc, NBINPUTS, rv);
@@ -1014,7 +1050,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         double x, y, xc, yc;
         _mousePosition->getValueAtTime(time, x, y);
         _mouseClick->getValueAtTime(time, xc, yc);
-        if (!_mousePressed->getValueAtTime(time)) {
+        if ( !_mousePressed->getValueAtTime(time) ) {
             // negative is mouse released
             // see https://github.com/beautypi/shadertoy-iOS-v2/blob/a852d8fd536e0606377a810635c5b654abbee623/shadertoy/ShaderCanvasViewController.m#L315
             xc = -xc;
@@ -1022,57 +1058,57 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         }
         glUniform4f (shadertoy->iMouseLoc, x * rs.x, y * rs.y, xc * rs.x, yc * rs.y);
     }
-    unsigned paramCount = std::max(0, std::min(_paramCount->getValue(), NBUNIFORMS));
+    unsigned paramCount = std::max( 0, std::min(_paramCount->getValue(), NBUNIFORMS) );
     for (unsigned i = 0; i < paramCount; ++i) {
         if (shadertoy->iParamLoc[i] >= 0) {
             UniformTypeEnum paramType = (UniformTypeEnum)_paramType[i]->getValue();
             switch (paramType) {
-                case eUniformTypeNone: {
-                    break;
-                }
-                case eUniformTypeBool: {
-                    bool v = _paramValueBool[i]->getValue();
-                    glUniform1i(shadertoy->iParamLoc[i], v);
-                    break;
-                }
-                case eUniformTypeInt: {
-                    int v = _paramValueInt[i]->getValue();
-                    glUniform1i(shadertoy->iParamLoc[i], v);
-                    break;
-                }
-                case eUniformTypeFloat: {
-                    double v = _paramValueFloat[i]->getValue();
-                    glUniform1f(shadertoy->iParamLoc[i], v);
-                    break;
-                }
-                case eUniformTypeVec2: {
-                    double x, y;
-                    _paramValueVec2[i]->getValue(x, y);
-                    glUniform2f(shadertoy->iParamLoc[i], x, y);
-                    break;
-                }
-                case eUniformTypeVec3: {
-                    double x, y, z;
-                    _paramValueVec3[i]->getValue(x, y, z);
-                    glUniform3f(shadertoy->iParamLoc[i], x, y, z);
-                    break;
-                }
-                case eUniformTypeVec4: {
-                    double x, y, z, w;
-                    _paramValueVec4[i]->getValue(x, y, z, w);
-                    glUniform4f(shadertoy->iParamLoc[i], x, y, z, w);
-                    break;
-                }
-                default: {
-                    assert(false);
-                    break;
-                }
+            case eUniformTypeNone: {
+                break;
+            }
+            case eUniformTypeBool: {
+                bool v = _paramValueBool[i]->getValue();
+                glUniform1i(shadertoy->iParamLoc[i], v);
+                break;
+            }
+            case eUniformTypeInt: {
+                int v = _paramValueInt[i]->getValue();
+                glUniform1i(shadertoy->iParamLoc[i], v);
+                break;
+            }
+            case eUniformTypeFloat: {
+                double v = _paramValueFloat[i]->getValue();
+                glUniform1f(shadertoy->iParamLoc[i], v);
+                break;
+            }
+            case eUniformTypeVec2: {
+                double x, y;
+                _paramValueVec2[i]->getValue(x, y);
+                glUniform2f(shadertoy->iParamLoc[i], x, y);
+                break;
+            }
+            case eUniformTypeVec3: {
+                double x, y, z;
+                _paramValueVec3[i]->getValue(x, y, z);
+                glUniform3f(shadertoy->iParamLoc[i], x, y, z);
+                break;
+            }
+            case eUniformTypeVec4: {
+                double x, y, z, w;
+                _paramValueVec4[i]->getValue(x, y, z, w);
+                glUniform4f(shadertoy->iParamLoc[i], x, y, z, w);
+                break;
+            }
+            default: {
+                assert(false);
+                break;
+            }
             }
         }
     }
     for (unsigned i = 0; i < NBINPUTS; ++i) {
         glActiveTexture(GL_TEXTURE0 + i);
-        if (src[i].get() && shadertoy->iChannelLoc[i] >= 0) {
+        if ( src[i].get() && (shadertoy->iChannelLoc[i] >= 0) ) {
             glEnable(srcTarget[i]);
             glUniform1i(shadertoy->iChannelLoc[i], i);
             glBindTexture(srcTarget[i], srcIndex[i]);
@@ -1128,7 +1164,7 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
      * Make sure buffered commands are finished!!!
      */
     for (unsigned i = 0; i < NBINPUTS; ++i) {
-        if (src[i].get()) {
+        if ( src[i].get() ) {
             glDeleteTextures(1, &srcIndex[i]);
         }
     }
@@ -1141,8 +1177,8 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         glGetIntegerv(GL_BLUE_BITS, &b);
         glGetIntegerv(GL_ALPHA_BITS, &a);
         glGetIntegerv(GL_DEPTH_BITS, &d);
-        DPRINT(("channel sizes: %d %d %d %d\n", r, g, b, a));
-        DPRINT(("depth bits %d\n", d));
+        DPRINT( ("channel sizes: %d %d %d %d\n", r, g, b, a) );
+        DPRINT( ("depth bits %d\n", d) );
     }
 #endif
     glFinish();
@@ -1157,14 +1193,16 @@ ShadertoyPlugin::RENDERFUNC(const OFX::RenderArguments &args)
         _osmesa.push_back(osmesa);
     }
 #endif
-}
-
+} // ShadertoyPlugin::RENDERFUNC
 
 static
-void getGlVersion(int *major, int *minor)
+void
+getGlVersion(int *major,
+             int *minor)
 {
     const char *verstr = (const char *) glGetString(GL_VERSION);
-    if ((verstr == NULL) || (std::sscanf(verstr,"%d.%d", major, minor) != 2)) {
+
+    if ( (verstr == NULL) || (std::sscanf(verstr, "%d.%d", major, minor) != 2) ) {
         *major = *minor = 0;
         //fprintf(stderr, "Invalid GL_VERSION format!!!\n");
     }
@@ -1172,34 +1210,36 @@ void getGlVersion(int *major, int *minor)
 
 #if 0
 static
-void getGlslVersion(int *major, int *minor)
+void
+getGlslVersion(int *major,
+               int *minor)
 {
     int gl_major, gl_minor;
+
     getGlVersion(&gl_major, &gl_minor);
 
     *major = *minor = 0;
-    if(gl_major == 1) {
+    if (gl_major == 1) {
         /* GL v1.x can only provide GLSL v1.00 as an extension */
         const char *extstr = (const char *) glGetString(GL_EXTENSIONS);
-        if ((extstr != NULL) &&
-            (strstr(extstr, "GL_ARB_shading_language_100") != NULL)) {
+        if ( (extstr != NULL) &&
+             (strstr(extstr, "GL_ARB_shading_language_100") != NULL) ) {
             *major = 1;
             *minor = 0;
         }
-    }
-    else if (gl_major >= 2)
-    {
+    } else if (gl_major >= 2)   {
         /* GL v2.0 and greater must parse the version string */
         const char *verstr =
-        (const char *) glGetString(GL_SHADING_LANGUAGE_VERSION);
+            (const char *) glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-        if ((verstr == NULL) ||
-            (std::sscanf(verstr, "%d.%d", major, minor) != 2)) {
+        if ( (verstr == NULL) ||
+             (std::sscanf(verstr, "%d.%d", major, minor) != 2) ) {
             *major = *minor = 0;
             //fprintf(stderr, "Invalid GL_SHADING_LANGUAGE_VERSION format!!!\n");
         }
     }
 }
+
 #endif
 
 /*
@@ -1211,16 +1251,16 @@ void getGlslVersion(int *major, int *minor)
  *  - allocate a lookup table on a GPU,
  *  - create an openCL or CUDA context that is bound to the host's OpenGL
  *    context so it can share buffers.
-*/
+ */
 void
 ShadertoyPlugin::contextAttached()
 {
 #ifdef DEBUG
-    DPRINT(("GL_RENDERER   = %s\n", (char *) glGetString(GL_RENDERER)));
-    DPRINT(("GL_VERSION    = %s\n", (char *) glGetString(GL_VERSION)));
-    DPRINT(("GL_VENDOR     = %s\n", (char *) glGetString(GL_VENDOR)));
-    DPRINT(("GL_SHADING_LANGUAGE_VERSION = %s\n", (char *) glGetString(GL_SHADING_LANGUAGE_VERSION)));
-    DPRINT(("GL_EXTENSIONS = %s\n", (char *) glGetString(GL_EXTENSIONS)));
+    DPRINT( ( "GL_RENDERER   = %s\n", (char *) glGetString(GL_RENDERER) ) );
+    DPRINT( ( "GL_VERSION    = %s\n", (char *) glGetString(GL_VERSION) ) );
+    DPRINT( ( "GL_VENDOR     = %s\n", (char *) glGetString(GL_VENDOR) ) );
+    DPRINT( ( "GL_SHADING_LANGUAGE_VERSION = %s\n", (char *) glGetString(GL_SHADING_LANGUAGE_VERSION) ) );
+    DPRINT( ( "GL_EXTENSIONS = %s\n", (char *) glGetString(GL_EXTENSIONS) ) );
 #endif
     {
         OFX::MultiThread::AutoMutex lock(_rendererInfoMutex);
@@ -1229,7 +1269,7 @@ ShadertoyPlugin::contextAttached()
 #else
         std::string &message = _rendererInfoGL;
 #endif
-        if (message.empty()) {
+        if ( message.empty() ) {
             message += "OpenGL renderer information:";
             message += "\nGL_RENDERER = ";
             message += (char *) glGetString(GL_RENDERER);
@@ -1248,13 +1288,13 @@ ShadertoyPlugin::contextAttached()
     int major, minor;
     getGlVersion(&major, &minor);
     if (major < 2) {
-        if (!glutExtensionSupported("GL_ARB_texture_non_power_of_two")) {
+        if ( !glutExtensionSupported("GL_ARB_texture_non_power_of_two") ) {
             sendMessage(OFX::Message::eMessageError, "", "Can not render: OpenGL 2.0 or GL_ARB_texture_non_power_of_two is required.");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
     }
     if (major < 3) {
-        if (major == 2 && minor < 1) {
+        if ( (major == 2) && (minor < 1) ) {
             sendMessage(OFX::Message::eMessageError, "", "Can not render: OpenGL 2.1 or better required for GLSL support.");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
@@ -1264,10 +1304,10 @@ ShadertoyPlugin::contextAttached()
         GLfloat MaxAnisoMax;
         glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &MaxAnisoMax);
         _maxAnisoMax = MaxAnisoMax;
-        DPRINT(("GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = %f\n", _maxAnisoMax));
+        DPRINT( ("GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT = %f\n", _maxAnisoMax) );
     }
 
-#if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32) )
+#if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
     if (glCreateProgram == NULL) {
         // Program
         glCreateProgram = (PFNGLCREATEPROGRAMPROC)wglGetProcAddress("glCreateProgram");
@@ -1336,10 +1376,10 @@ ShadertoyPlugin::contextAttached()
         //glFramebufferRenderbuffer = (PFNGLFRAMEBUFFERRENDERBUFFERPROC)wglGetProcAddress("glFramebufferRenderbuffer");
         //glGetFramebufferAttachmentParameteriv = (PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC)wglGetProcAddress("glGetFramebufferAttachmentParameteriv");
     }
-#endif
+#endif // if !defined(USE_OSMESA) && ( defined(_WIN32) || defined(__WIN32__) || defined(WIN32 ) )
 
     // Shadertoy:
-}
+} // ShadertoyPlugin::contextAttached
 
 /*
  * Action called when an effect is about to be detached from an
@@ -1356,3 +1396,4 @@ ShadertoyPlugin::contextDetached()
 {
     // Shadertoy:
 }
+

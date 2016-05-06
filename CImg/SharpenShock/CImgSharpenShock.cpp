@@ -42,11 +42,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "SharpenShockCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-"Sharpen selected images by shock filters.\n" \
-"Uses 'sharpen' function from the CImg library.\n" \
-"CImg is a free, open-source library distributed under the CeCILL-C " \
-"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-"It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "Sharpen selected images by shock filters.\n" \
+    "Uses 'sharpen' function from the CImg library.\n" \
+    "CImg is a free, open-source library distributed under the CeCILL-C " \
+    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgSharpenShock"
 // History:
@@ -98,9 +98,11 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamIterationsDefault 1
 
 #ifdef cimg_use_openmp
-#define test_abort() if (!omp_get_thread_num() && abort()) throw CImgAbortException("")
+#define test_abort() if ( !omp_get_thread_num() && abort() ) \
+        throw CImgAbortException("")
 #else
-#define test_abort() if (abort()) throw CImgAbortException("")
+#define test_abort() if ( abort() ) \
+        throw CImgAbortException("")
 #endif
 
 using namespace cimg_library;
@@ -115,12 +117,13 @@ struct CImgSharpenShockParams
     int iterations;
 };
 
-class CImgSharpenShockPlugin : public CImgFilterPluginHelper<CImgSharpenShockParams,false>
+class CImgSharpenShockPlugin
+    : public CImgFilterPluginHelper<CImgSharpenShockParams, false>
 {
 public:
 
     CImgSharpenShockPlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgSharpenShockParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
+        : CImgFilterPluginHelper<CImgSharpenShockParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
     {
         _amplitude  = fetchDoubleParam(kParamAmplitude);
         _edge  = fetchDoubleParam(kParamEdgeThreshold);
@@ -130,7 +133,8 @@ public:
         assert(_amplitude && _edge && _alpha && _sigma && _iterations);
     }
 
-    virtual void getValuesAtTime(double time, CImgSharpenShockParams& params) OVERRIDE FINAL
+    virtual void getValuesAtTime(double time,
+                                 CImgSharpenShockParams& params) OVERRIDE FINAL
     {
         _amplitude->getValueAtTime(time, params.amplitude);
         _edge->getValueAtTime(time, params.edge);
@@ -141,26 +145,34 @@ public:
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI& rect, const OfxPointD& /*renderScale*/, const CImgSharpenShockParams& /*params*/, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI& rect,
+                        const OfxPointD& /*renderScale*/,
+                        const CImgSharpenShockParams& /*params*/,
+                        OfxRectI* roi) OVERRIDE FINAL
     {
         int delta_pix = 24; // overlap is 24 in gmicol
+
         roi->x1 = rect.x1 - delta_pix;
         roi->x2 = rect.x2 + delta_pix;
         roi->y1 = rect.y1 - delta_pix;
         roi->y2 = rect.y2 + delta_pix;
     }
 
-    virtual void render(const OFX::RenderArguments &args, const CImgSharpenShockParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &args,
+                        const CImgSharpenShockParams& params,
+                        int /*x1*/,
+                        int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        if (params.iterations <= 0 || params.amplitude == 0. || cimg.is_empty()) {
+        if ( (params.iterations <= 0) || (params.amplitude == 0.) || cimg.is_empty() ) {
             return;
         }
         double alpha = args.renderScale.x * params.alpha;
         double sigma = args.renderScale.x * params.sigma;
         for (int i = 1; i < params.iterations; ++i) {
-	  test_abort();
+            test_abort();
 #ifdef CIMG_ABORTABLE
             // args
             const float amplitude = (float)params.amplitude;
@@ -170,72 +182,73 @@ public:
 #define Tfloat float
 #define T float
             T val_min, val_max = cimg.max_min(val_min);
-            const float nedge = edge/2;
-            CImg<Tfloat> velocity(cimg._width,cimg._height,cimg._depth,cimg._spectrum), _veloc_max(cimg._spectrum);
+            const float nedge = edge / 2;
+            CImg<Tfloat> velocity(cimg._width, cimg._height, cimg._depth, cimg._spectrum), _veloc_max(cimg._spectrum);
 
             // 2d.
             // Shock filters.
-            CImg<Tfloat> G = (alpha>0?cimg.get_blur(alpha).get_structure_tensors():cimg.get_structure_tensors());
-            if (sigma>0) {
+            CImg<Tfloat> G = ( alpha > 0 ? cimg.get_blur(alpha).get_structure_tensors() : cimg.get_structure_tensors() );
+            if (sigma > 0) {
                 G.blur(sigma);
             }
 #ifdef cimg_use_openmp
 #pragma omp parallel for if (G.width()>=32 && G.height()>=16)
 #endif
-            cimg_forY(G,y) {
+            cimg_forY(G, y) {
                 CImg<Tfloat> val, vec;
-                Tfloat *ptrG0 = G.data(0,y,0,0), *ptrG1 = G.data(0,y,0,1), *ptrG2 = G.data(0,y,0,2);
-		test_abort();
-                cimg_forX(G,x) {
-                    G.get_tensor_at(x,y).symmetric_eigen(val,vec);
-                    if (val[0]<0) val[0] = 0;
-                    if (val[1]<0) val[1] = 0;
-                    *(ptrG0++) = vec(0,0);
-                    *(ptrG1++) = vec(0,1);
-                    *(ptrG2++) = 1 - (Tfloat)std::pow(1 + val[0] + val[1],-(Tfloat)nedge);
+                Tfloat *ptrG0 = G.data(0, y, 0, 0), *ptrG1 = G.data(0, y, 0, 1), *ptrG2 = G.data(0, y, 0, 2);
+                test_abort();
+                cimg_forX(G, x) {
+                    G.get_tensor_at(x, y).symmetric_eigen(val, vec);
+                    if (val[0] < 0) {val[0] = 0; }
+                    if (val[1] < 0) {val[1] = 0; }
+                    *(ptrG0++) = vec(0, 0);
+                    *(ptrG1++) = vec(0, 1);
+                    *(ptrG2++) = 1 - (Tfloat)std::pow(1 + val[0] + val[1], -(Tfloat)nedge);
                 }
             }
 #ifdef cimg_use_openmp
 #pragma omp parallel for if (cimg.width()*cimg.height()>=512 && cimg.spectrum()>=2)
 #endif
-            cimg_forC(cimg,c) {
-                Tfloat *ptrd = velocity.data(0,0,0,c), veloc_max = 0;
-                CImg_3x3(I,Tfloat);
-                cimg_for3(cimg._height,y) {
-		    test_abort();
+            cimg_forC(cimg, c) {
+                Tfloat *ptrd = velocity.data(0, 0, 0, c), veloc_max = 0;
+
+                CImg_3x3(I, Tfloat);
+                cimg_for3(cimg._height, y) {
+                    test_abort();
                     for (int x = 0,
                          _p1x = 0,
                          _n1x = (int)(
-                                      (I[0] = I[1] = (T)cimg(_p1x,_p1y,0,c)),
-                                      (I[3] = I[4] = (T)cimg(0,y,0,c)),
-                                      (I[6] = I[7] = (T)cimg(0,_n1y,0,c)),
-                                      1>=cimg._width?cimg.width() - 1:1);
-                         (_n1x<cimg.width() && (
-                                                (I[2] = (T)cimg(_n1x,_p1y,0,c)),
-                                                (I[5] = (T)cimg(_n1x,y,0,c)),
-                                                (I[8] = (T)cimg(_n1x,_n1y,0,c)),1)) ||
-                         x==--_n1x;
+                             ( I[0] = I[1] = (T)cimg(_p1x, _p1y, 0, c) ),
+                             ( I[3] = I[4] = (T)cimg(0, y, 0, c) ),
+                             ( I[6] = I[7] = (T)cimg(0, _n1y, 0, c) ),
+                             1 >= cimg._width ? cimg.width() - 1 : 1);
+                         ( _n1x < cimg.width() && (
+                               ( I[2] = (T)cimg(_n1x, _p1y, 0, c) ),
+                               ( I[5] = (T)cimg(_n1x, y, 0, c) ),
+                               ( I[8] = (T)cimg(_n1x, _n1y, 0, c) ), 1) ) ||
+                         x == --_n1x;
                          I[0] = I[1], I[1] = I[2],
                          I[3] = I[4], I[4] = I[5],
                          I[6] = I[7], I[7] = I[8],
                          _p1x = x++, ++_n1x) {
-                        const Tfloat u = G(x,y,0),
-                        v = G(x,y,1),
-                        amp = G(x,y,2),
-                        ixx = Inc + Ipc - 2*Icc,
-                        ixy = (Inn + Ipp - Inp - Ipn)/4,
-                        iyy = Icn + Icp - 2*Icc,
-                        ixf = Inc - Icc,
-                        ixb = Icc - Ipc,
-                        iyf = Icn - Icc,
-                        iyb = Icc - Icp,
-                        itt = u*u*ixx + v*v*iyy + 2*u*v*ixy,
-                        it = u*cimg::minmod(ixf,ixb) + v*cimg::minmod(iyf,iyb),
-                        veloc = -amp*cimg::sign(itt)*cimg::abs(it);
+                        const Tfloat u = G(x, y, 0),
+                                     v = G(x, y, 1),
+                                     amp = G(x, y, 2),
+                                     ixx = Inc + Ipc - 2 * Icc,
+                                     ixy = (Inn + Ipp - Inp - Ipn) / 4,
+                                     iyy = Icn + Icp - 2 * Icc,
+                                     ixf = Inc - Icc,
+                                     ixb = Icc - Ipc,
+                                     iyf = Icn - Icc,
+                                     iyb = Icc - Icp,
+                                     itt = u * u * ixx + v * v * iyy + 2 * u * v * ixy,
+                                     it = u * cimg::minmod(ixf, ixb) + v * cimg::minmod(iyf, iyb),
+                                     veloc = -amp*cimg::sign(itt) * cimg::abs(it);
                         *(ptrd++) = veloc;
-                        if (veloc>veloc_max) {
+                        if (veloc > veloc_max) {
                             veloc_max = veloc;
-                        } else if (-veloc>veloc_max) {
+                        } else if (-veloc > veloc_max) {
                             veloc_max = -veloc;
                         }
                     }
@@ -245,15 +258,16 @@ public:
 
             const Tfloat veloc_max = _veloc_max.max();
             if (veloc_max > 0) {
-                ((velocity*=amplitude/veloc_max)+=cimg).cut(val_min,val_max).move_to(cimg);
+                ( (velocity *= amplitude / veloc_max) += cimg ).cut(val_min, val_max).move_to(cimg);
             }
-#else
-            cimg.sharpen((float)params.amplitude, true, (float)params.edge, (float)alpha, (float)sigma);
-#endif
+#else // ifdef CIMG_ABORTABLE
+            cimg.sharpen( (float)params.amplitude, true, (float)params.edge, (float)alpha, (float)sigma );
+#endif // ifdef CIMG_ABORTABLE
         }
-    }
+    } // render
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &/*args*/, const CImgSharpenShockParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments & /*args*/,
+                            const CImgSharpenShockParams& params) OVERRIDE FINAL
     {
         return (params.iterations <= 0 || params.amplitude == 0.);
     };
@@ -271,7 +285,8 @@ private:
 
 mDeclarePluginFactory(CImgSharpenShockPluginFactory, {}, {});
 
-void CImgSharpenShockPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+void
+CImgSharpenShockPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -299,7 +314,9 @@ void CImgSharpenShockPluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
-void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+void
+CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                                 OFX::ContextEnum context)
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgSharpenShockPlugin::describeInContextBegin(desc, context,
@@ -308,10 +325,10 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
                                                                                     kSupportsXY,
                                                                                     kSupportsAlpha,
                                                                                     kSupportsTiles,
-                                                                                    /*processRGB=*/true,
-                                                                                    /*processAlpha*/false,
-                                                                                    /*processIsSecret=*/false);
-    
+                                                                                    /*processRGB=*/ true,
+                                                                                    /*processAlpha*/ false,
+                                                                                    /*processIsSecret=*/ false);
+
     {
         OFX::DoubleParamDescriptor *param = desc.defineDoubleParam(kParamAmplitude);
         param->setLabel(kParamAmplitudeLabel);
@@ -371,15 +388,15 @@ void CImgSharpenShockPluginFactory::describeInContext(OFX::ImageEffectDescriptor
             page->addChild(*param);
         }
     }
-
     CImgSharpenShockPlugin::describeInContextEnd(desc, context, page);
-}
+} // CImgSharpenShockPluginFactory::describeInContext
 
-OFX::ImageEffect* CImgSharpenShockPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+CImgSharpenShockPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                              OFX::ContextEnum /*context*/)
 {
     return new CImgSharpenShockPlugin(handle);
 }
-
 
 static CImgSharpenShockPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

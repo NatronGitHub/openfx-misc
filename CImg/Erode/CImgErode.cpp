@@ -43,13 +43,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName          "ErodeCImg"
 #define kPluginGrouping      "Filter"
 #define kPluginDescription \
-"Erode (or dilate) input stream by a rectangular structuring element of specified size and Neumann boundary conditions (pixels out of the image get the value of the nearest pixel).\n" \
-"A negative size will perform a dilation instead of an erosion.\n" \
-"Different sizes can be given for the x and y axis.\n" \
-"Uses the 'erode' and 'dilate' functions from the CImg library.\n" \
-"CImg is a free, open-source library distributed under the CeCILL-C " \
-"(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
-"It can be used in commercial applications (see http://cimg.sourceforge.net)."
+    "Erode (or dilate) input stream by a rectangular structuring element of specified size and Neumann boundary conditions (pixels out of the image get the value of the nearest pixel).\n" \
+    "A negative size will perform a dilation instead of an erosion.\n" \
+    "Different sizes can be given for the x and y axis.\n" \
+    "Uses the 'erode' and 'dilate' functions from the CImg library.\n" \
+    "CImg is a free, open-source library distributed under the CeCILL-C " \
+    "(close to the GNU LGPL) or CeCILL (compatible with the GNU GPL) licenses. " \
+    "It can be used in commercial applications (see http://cimg.sourceforge.net)."
 
 #define kPluginIdentifier    "net.sf.cimg.CImgErode"
 // History:
@@ -88,50 +88,61 @@ struct CImgErodeParams
     int sy;
 };
 
-class CImgErodePlugin : public CImgFilterPluginHelper<CImgErodeParams,false>
+class CImgErodePlugin
+    : public CImgFilterPluginHelper<CImgErodeParams, false>
 {
 public:
 
     CImgErodePlugin(OfxImageEffectHandle handle)
-    : CImgFilterPluginHelper<CImgErodeParams,false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/true, /*defaultProcessAlphaOnRGBA=*/false)
+        : CImgFilterPluginHelper<CImgErodeParams, false>(handle, kSupportsComponentRemapping, kSupportsTiles, kSupportsMultiResolution, kSupportsRenderScale, /*defaultUnpremult=*/ true, /*defaultProcessAlphaOnRGBA=*/ false)
     {
         _size  = fetchInt2DParam(kParamSize);
         assert(_size);
     }
 
-    virtual void getValuesAtTime(double time, CImgErodeParams& params) OVERRIDE FINAL
+    virtual void getValuesAtTime(double time,
+                                 CImgErodeParams& params) OVERRIDE FINAL
     {
         _size->getValueAtTime(time, params.sx, params.sy);
     }
 
     // compute the roi required to compute rect, given params. This roi is then intersected with the image rod.
     // only called if mix != 0.
-    virtual void getRoI(const OfxRectI& rect, const OfxPointD& renderScale, const CImgErodeParams& params, OfxRectI* roi) OVERRIDE FINAL
+    virtual void getRoI(const OfxRectI& rect,
+                        const OfxPointD& renderScale,
+                        const CImgErodeParams& params,
+                        OfxRectI* roi) OVERRIDE FINAL
     {
         int delta_pix_x = (int)std::ceil(std::abs(params.sx) * renderScale.x);
         int delta_pix_y = (int)std::ceil(std::abs(params.sy) * renderScale.y);
+
         roi->x1 = rect.x1 - delta_pix_x;
         roi->x2 = rect.x2 + delta_pix_x;
         roi->y1 = rect.y1 - delta_pix_y;
         roi->y2 = rect.y2 + delta_pix_y;
     }
 
-    virtual void render(const OFX::RenderArguments &args, const CImgErodeParams& params, int /*x1*/, int /*y1*/, cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
+    virtual void render(const OFX::RenderArguments &args,
+                        const CImgErodeParams& params,
+                        int /*x1*/,
+                        int /*y1*/,
+                        cimg_library::CImg<cimgpix_t>& cimg) OVERRIDE FINAL
     {
         // PROCESSING.
         // This is the only place where the actual processing takes place
-        if (params.sx > 0 || params.sy > 0) {
-            cimg.erode((unsigned int)std::floor(std::max(0, params.sx) * args.renderScale.x) * 2 + 1,
-                       (unsigned int)std::floor(std::max(0, params.sy) * args.renderScale.y) * 2 + 1);
+        if ( (params.sx > 0) || (params.sy > 0) ) {
+            cimg.erode( (unsigned int)std::floor(std::max(0, params.sx) * args.renderScale.x) * 2 + 1,
+                        (unsigned int)std::floor(std::max(0, params.sy) * args.renderScale.y) * 2 + 1 );
         }
-        if (abort()) { return; }
-        if (params.sx < 0 || params.sy < 0) {
-            cimg.dilate((unsigned int)std::floor(std::max(0, -params.sx) * args.renderScale.x) * 2 + 1,
-                        (unsigned int)std::floor(std::max(0, -params.sy) * args.renderScale.y) * 2 + 1);
+        if ( abort() ) { return; }
+        if ( (params.sx < 0) || (params.sy < 0) ) {
+            cimg.dilate( (unsigned int)std::floor(std::max(0, -params.sx) * args.renderScale.x) * 2 + 1,
+                         (unsigned int)std::floor(std::max(0, -params.sy) * args.renderScale.y) * 2 + 1 );
         }
     }
 
-    virtual bool isIdentity(const OFX::IsIdentityArguments &args, const CImgErodeParams& params) OVERRIDE FINAL
+    virtual bool isIdentity(const OFX::IsIdentityArguments &args,
+                            const CImgErodeParams& params) OVERRIDE FINAL
     {
         return (std::floor(params.sx * args.renderScale.x) == 0 && std::floor(params.sy * args.renderScale.y) == 0);
     };
@@ -145,7 +156,8 @@ private:
 
 mDeclarePluginFactory(CImgErodePluginFactory, {}, {});
 
-void CImgErodePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
+void
+CImgErodePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -173,7 +185,9 @@ void CImgErodePluginFactory::describe(OFX::ImageEffectDescriptor& desc)
     desc.setRenderThreadSafety(kRenderThreadSafety);
 }
 
-void CImgErodePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc, OFX::ContextEnum context)
+void
+CImgErodePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
+                                          OFX::ContextEnum context)
 {
     // create the clips and params
     OFX::PageParamDescriptor *page = CImgErodePlugin::describeInContextBegin(desc, context,
@@ -182,9 +196,9 @@ void CImgErodePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
                                                                              kSupportsXY,
                                                                              kSupportsAlpha,
                                                                              kSupportsTiles,
-                                                                             /*processRGB=*/true,
-                                                                             /*processAlpha*/false,
-                                                                             /*processIsSecret=*/false);
+                                                                             /*processRGB=*/ true,
+                                                                             /*processAlpha*/ false,
+                                                                             /*processIsSecret=*/ false);
 
     {
         OFX::Int2DParamDescriptor *param = desc.defineInt2DParam(kParamSize);
@@ -197,15 +211,15 @@ void CImgErodePluginFactory::describeInContext(OFX::ImageEffectDescriptor& desc,
             page->addChild(*param);
         }
     }
-
     CImgErodePlugin::describeInContextEnd(desc, context, page);
 }
 
-OFX::ImageEffect* CImgErodePluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+CImgErodePluginFactory::createInstance(OfxImageEffectHandle handle,
+                                       OFX::ContextEnum /*context*/)
 {
     return new CImgErodePlugin(handle);
 }
-
 
 static CImgErodePluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)

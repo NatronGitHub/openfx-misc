@@ -38,13 +38,13 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kPluginName "MatteMonitor"
 #define kPluginGrouping "Keyer"
 #define kPluginDescription \
-"A Matte Monitor: make alpha values that are strictly between 0 and 1 more visible.\n"\
-"After applying a Keyer, a scaling operation is usually applied to clean the matte. However, it is difficult to visualize on the output values that are very close to 0 or 1, but not equal. This plugin can be used to better visualize these values: connect it to the output of the scaling operator, then to a viewer, and visualize the alpha channel.\n"\
-"Alpha values lower or equal to 0 and greater or equal to 1 are leaved untouched, and alpha values in between are stretched " \
-"towards 0.5 (using the slope parameter), making them more visible.\n"\
-"The output of this plugin should not be used for firther processing, but only for viewing.\n"\
-"The Matte Monitor is described in \"Digital Compositing for Film and Video\" by Steve Wright (Sec. 3.1).\n"\
-"See also the video at http://www.vfxio.com/images/movies/Comp_Tip_2.mov\n"
+    "A Matte Monitor: make alpha values that are strictly between 0 and 1 more visible.\n" \
+    "After applying a Keyer, a scaling operation is usually applied to clean the matte. However, it is difficult to visualize on the output values that are very close to 0 or 1, but not equal. This plugin can be used to better visualize these values: connect it to the output of the scaling operator, then to a viewer, and visualize the alpha channel.\n" \
+    "Alpha values lower or equal to 0 and greater or equal to 1 are leaved untouched, and alpha values in between are stretched " \
+    "towards 0.5 (using the slope parameter), making them more visible.\n" \
+    "The output of this plugin should not be used for firther processing, but only for viewing.\n" \
+    "The Matte Monitor is described in \"Digital Compositing for Film and Video\" by Steve Wright (Sec. 3.1).\n" \
+    "See also the video at http://www.vfxio.com/images/movies/Comp_Tip_2.mov\n"
 
 #define kPluginIdentifier "net.sf.openfx.MatteMonitorPlugin"
 // History:
@@ -64,22 +64,23 @@ OFXS_NAMESPACE_ANONYMOUS_ENTER
 #define kParamSlopeHint  "Slope applied to alpha values striuctly between 0 and 1."
 
 
-class MatteMonitorProcessorBase : public OFX::ImageProcessor
+class MatteMonitorProcessorBase
+    : public OFX::ImageProcessor
 {
 protected:
     const OFX::Image *_srcImg;
     double _slope;
 
 public:
-    
+
     MatteMonitorProcessorBase(OFX::ImageEffect &instance)
-    : OFX::ImageProcessor(instance)
-    , _srcImg(0)
-    , _slope(0.5)
+        : OFX::ImageProcessor(instance)
+        , _srcImg(0)
+        , _slope(0.5)
     {
     }
-    
-    void setSrcImg(const OFX::Image *v) {_srcImg = v;}
+
+    void setSrcImg(const OFX::Image *v) {_srcImg = v; }
 
     void setValues(double slope)
     {
@@ -90,16 +91,16 @@ private:
 };
 
 
-
 template <class PIX, int nComponents, int maxValue>
-class MatteMonitorProcessor : public MatteMonitorProcessorBase
+class MatteMonitorProcessor
+    : public MatteMonitorProcessorBase
 {
 public:
     MatteMonitorProcessor(OFX::ImageEffect &instance)
-    : MatteMonitorProcessorBase(instance)
+        : MatteMonitorProcessorBase(instance)
     {
     }
-    
+
 private:
 
     void multiThreadProcessImages(OfxRectI procWindow)
@@ -107,7 +108,7 @@ private:
         assert(nComponents == 1 || nComponents == 4);
         assert(_dstImg);
         for (int y = procWindow.y1; y < procWindow.y2; y++) {
-            if (_effect.abort()) {
+            if ( _effect.abort() ) {
                 break;
             }
 
@@ -115,11 +116,10 @@ private:
 
             for (int x = procWindow.x1; x < procWindow.x2; x++) {
                 const PIX *srcPix = (const PIX *)  (_srcImg ? _srcImg->getPixelAddress(x, y) : 0);
-
                 PIX alpha = srcPix ? (nComponents == 1 ? srcPix[0] : srcPix[3]) : PIX();
 
-                if (alpha > 0 && alpha < maxValue) {
-                    alpha = maxValue/2. + (alpha - maxValue/2.) * _slope;
+                if ( (alpha > 0) && (alpha < maxValue) ) {
+                    alpha = maxValue / 2. + (alpha - maxValue / 2.) * _slope;
                 }
                 // copy back original values from unprocessed channels
                 if (nComponents == 1) {
@@ -140,29 +140,30 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 /** @brief The plugin that does our work */
-class MatteMonitorPlugin : public OFX::ImageEffect
+class MatteMonitorPlugin
+    : public OFX::ImageEffect
 {
 public:
     /** @brief ctor */
     MatteMonitorPlugin(OfxImageEffectHandle handle)
-    : ImageEffect(handle)
-    , _dstClip(0)
-    , _srcClip(0)
+        : ImageEffect(handle)
+        , _dstClip(0)
+        , _srcClip(0)
     {
         _dstClip = fetchClip(kOfxImageEffectOutputClipName);
-        assert(_dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGBA ||
-                            _dstClip->getPixelComponents() == ePixelComponentAlpha));
+        assert( _dstClip && (_dstClip->getPixelComponents() == ePixelComponentRGBA ||
+                             _dstClip->getPixelComponents() == ePixelComponentAlpha) );
         _srcClip = fetchClip(kOfxImageEffectSimpleSourceClipName);
-        assert(_srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGBA ||
-                            _srcClip->getPixelComponents() == ePixelComponentAlpha));
+        assert( _srcClip && (_srcClip->getPixelComponents() == ePixelComponentRGBA ||
+                             _srcClip->getPixelComponents() == ePixelComponentAlpha) );
         _slope = fetchDoubleParam(kParamSlope);
         assert(_slope);
     }
-    
+
 private:
     /* Override the render */
     virtual void render(const OFX::RenderArguments &args) OVERRIDE FINAL;
-    
+
     /* set up and run a processor */
     void setupAndProcess(MatteMonitorProcessorBase &, const OFX::RenderArguments &args);
 
@@ -184,51 +185,53 @@ private:
 
 /* set up and run a processor */
 void
-MatteMonitorPlugin::setupAndProcess(MatteMonitorProcessorBase &processor, const OFX::RenderArguments &args)
+MatteMonitorPlugin::setupAndProcess(MatteMonitorProcessorBase &processor,
+                                    const OFX::RenderArguments &args)
 {
-    std::auto_ptr<OFX::Image> dst(_dstClip->fetchImage(args.time));
-    if (!dst.get()) {
+    std::auto_ptr<OFX::Image> dst( _dstClip->fetchImage(args.time) );
+
+    if ( !dst.get() ) {
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    OFX::BitDepthEnum         dstBitDepth    = dst->getPixelDepth();
-    OFX::PixelComponentEnum   dstComponents  = dst->getPixelComponents();
-    if (dstBitDepth != _dstClip->getPixelDepth() ||
-        dstComponents != _dstClip->getPixelComponents()) {
+    OFX::BitDepthEnum dstBitDepth    = dst->getPixelDepth();
+    OFX::PixelComponentEnum dstComponents  = dst->getPixelComponents();
+    if ( ( dstBitDepth != _dstClip->getPixelDepth() ) ||
+         ( dstComponents != _dstClip->getPixelComponents() ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong depth or components");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    if (dst->getRenderScale().x != args.renderScale.x ||
-        dst->getRenderScale().y != args.renderScale.y ||
-        (dst->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && dst->getField() != args.fieldToRender)) {
+    if ( (dst->getRenderScale().x != args.renderScale.x) ||
+         ( dst->getRenderScale().y != args.renderScale.y) ||
+         ( ( dst->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( dst->getField() != args.fieldToRender) ) ) {
         setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
         OFX::throwSuiteStatusException(kOfxStatFailed);
     }
-    std::auto_ptr<const OFX::Image> src((_srcClip && _srcClip->isConnected()) ?
-                                        _srcClip->fetchImage(args.time) : 0);
-    if (src.get()) {
-        if (src->getRenderScale().x != args.renderScale.x ||
-            src->getRenderScale().y != args.renderScale.y ||
-            (src->getField() != OFX::eFieldNone /* for DaVinci Resolve */ && src->getField() != args.fieldToRender)) {
+    std::auto_ptr<const OFX::Image> src( ( _srcClip && _srcClip->isConnected() ) ?
+                                         _srcClip->fetchImage(args.time) : 0 );
+    if ( src.get() ) {
+        if ( (src->getRenderScale().x != args.renderScale.x) ||
+             ( src->getRenderScale().y != args.renderScale.y) ||
+             ( ( src->getField() != OFX::eFieldNone) /* for DaVinci Resolve */ && ( src->getField() != args.fieldToRender) ) ) {
             setPersistentMessage(OFX::Message::eMessageError, "", "OFX Host gave image with wrong scale or field properties");
             OFX::throwSuiteStatusException(kOfxStatFailed);
         }
-        OFX::BitDepthEnum    srcBitDepth      = src->getPixelDepth();
+        OFX::BitDepthEnum srcBitDepth      = src->getPixelDepth();
         OFX::PixelComponentEnum srcComponents = src->getPixelComponents();
-        if (srcBitDepth != dstBitDepth || srcComponents != dstComponents) {
+        if ( (srcBitDepth != dstBitDepth) || (srcComponents != dstComponents) ) {
             OFX::throwSuiteStatusException(kOfxStatErrImageFormat);
         }
     }
 
     // set the images
-    processor.setDstImg(dst.get());
-    processor.setSrcImg(src.get());
+    processor.setDstImg( dst.get() );
+    processor.setSrcImg( src.get() );
     // set the render window
     processor.setRenderWindow(args.renderWindow);
-    
+
     double slope;
     _slope->getValueAtTime(args.time, slope);
     processor.setValues(slope);
- 
+
     // Call the base class process member, this will call the derived templated process code
     processor.process();
 }
@@ -237,76 +240,77 @@ MatteMonitorPlugin::setupAndProcess(MatteMonitorProcessorBase &processor, const 
 void
 MatteMonitorPlugin::render(const OFX::RenderArguments &args)
 {
-    
     // instantiate the render code based on the pixel depth of the dst clip
-    OFX::BitDepthEnum       dstBitDepth    = _dstClip->getPixelDepth();
+    OFX::BitDepthEnum dstBitDepth    = _dstClip->getPixelDepth();
     OFX::PixelComponentEnum dstComponents  = _dstClip->getPixelComponents();
-    
-    assert(kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio());
-    assert(kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth());
+
+    assert( kSupportsMultipleClipPARs   || !_srcClip || _srcClip->getPixelAspectRatio() == _dstClip->getPixelAspectRatio() );
+    assert( kSupportsMultipleClipDepths || !_srcClip || _srcClip->getPixelDepth()       == _dstClip->getPixelDepth() );
     assert(dstComponents == OFX::ePixelComponentAlpha || dstComponents == OFX::ePixelComponentRGBA);
     if (dstComponents == OFX::ePixelComponentRGBA) {
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                MatteMonitorProcessor<unsigned char, 4, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                MatteMonitorProcessor<unsigned short, 4, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                MatteMonitorProcessor<float, 4, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        case OFX::eBitDepthUByte: {
+            MatteMonitorProcessor<unsigned char, 4, 255> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            MatteMonitorProcessor<unsigned short, 4, 65535> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            MatteMonitorProcessor<float, 4, 1> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     } else if (dstComponents == OFX::ePixelComponentAlpha) {
         switch (dstBitDepth) {
-            case OFX::eBitDepthUByte: {
-                MatteMonitorProcessor<unsigned char, 1, 255> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthUShort: {
-                MatteMonitorProcessor<unsigned short, 1, 65535> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            case OFX::eBitDepthFloat: {
-                MatteMonitorProcessor<float, 1, 1> fred(*this);
-                setupAndProcess(fred, args);
-                break;
-            }
-            default:
-                OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
+        case OFX::eBitDepthUByte: {
+            MatteMonitorProcessor<unsigned char, 1, 255> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthUShort: {
+            MatteMonitorProcessor<unsigned short, 1, 65535> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        case OFX::eBitDepthFloat: {
+            MatteMonitorProcessor<float, 1, 1> fred(*this);
+            setupAndProcess(fred, args);
+            break;
+        }
+        default:
+            OFX::throwSuiteStatusException(kOfxStatErrUnsupported);
         }
     }
-}
-
+} // MatteMonitorPlugin::render
 
 bool
-MatteMonitorPlugin::isIdentity(const IsIdentityArguments &args, Clip * &identityClip, double &/*identityTime*/)
+MatteMonitorPlugin::isIdentity(const IsIdentityArguments &args,
+                               Clip * &identityClip,
+                               double & /*identityTime*/)
 {
     double slope;
+
     _slope->getValueAtTime(args.time, slope);
 
     if (slope == 1.) {
         identityClip = _srcClip;
+
         return true;
     }
 
     return false;
 }
 
-
 mDeclarePluginFactory(MatteMonitorPluginFactory, {}, {});
-
-void MatteMonitorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
+void
+MatteMonitorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 {
     // basic labels
     desc.setLabel(kPluginName);
@@ -318,7 +322,7 @@ void MatteMonitorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
     desc.addSupportedBitDepth(eBitDepthUByte);
     desc.addSupportedBitDepth(eBitDepthUShort);
     desc.addSupportedBitDepth(eBitDepthFloat);
-    
+
     // set a few flags
     desc.setSingleInstance(false);
     desc.setHostFrameThreading(false);
@@ -334,17 +338,20 @@ void MatteMonitorPluginFactory::describe(OFX::ImageEffectDescriptor &desc)
 #endif
 }
 
-void MatteMonitorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc, OFX::ContextEnum /*context*/)
+void
+MatteMonitorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
+                                             OFX::ContextEnum /*context*/)
 {
     // Source clip only in the filter context
     // create the mandated source clip
     ClipDescriptor *srcClip = desc.defineClip(kOfxImageEffectSimpleSourceClipName);
+
     srcClip->addSupportedComponent(ePixelComponentRGBA);
     srcClip->addSupportedComponent(ePixelComponentAlpha);
     srcClip->setTemporalClipAccess(false);
     srcClip->setSupportsTiles(kSupportsTiles);
     srcClip->setIsMask(false);
-    
+
     // create the mandated output clip
     ClipDescriptor *dstClip = desc.defineClip(kOfxImageEffectOutputClipName);
     dstClip->addSupportedComponent(ePixelComponentRGBA);
@@ -353,7 +360,7 @@ void MatteMonitorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
 
     // make some pages and to things in
     PageParamDescriptor *page = desc.definePageParam("Controls");
-    
+
     {
         DoubleParamDescriptor *param = desc.defineDoubleParam(kParamSlope);
         param->setLabel(kParamSlopeLabel);
@@ -367,11 +374,12 @@ void MatteMonitorPluginFactory::describeInContext(OFX::ImageEffectDescriptor &de
     }
 }
 
-OFX::ImageEffect* MatteMonitorPluginFactory::createInstance(OfxImageEffectHandle handle, OFX::ContextEnum /*context*/)
+OFX::ImageEffect*
+MatteMonitorPluginFactory::createInstance(OfxImageEffectHandle handle,
+                                          OFX::ContextEnum /*context*/)
 {
     return new MatteMonitorPlugin(handle);
 }
-
 
 static MatteMonitorPluginFactory p(kPluginIdentifier, kPluginVersionMajor, kPluginVersionMinor);
 mRegisterPluginFactoryInstance(p)
