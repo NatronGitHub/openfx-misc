@@ -57,7 +57,8 @@ using namespace OFX;
 #define kPluginName "Shadertoy"
 #define kPluginGrouping "Filter"
 #define kPluginDescription \
-    "Apply a Shadertoy fragment shader (multipass shaders are not supported). See www.shadertoy.com\n" \
+    "Apply a Shadertoy fragment shader (multipass shaders are not supported). See http://www.shadertoy.com\n" \
+    "A Shadertoy/GLSL tutorial can be found at https://www.shadertoy.com/view/Md23DV\n" \
     "\n" \
     "This help only covers the parts of GLSL ES that are relevant for Shadertoy. " \
     "For the complete specification please have a look at GLSL ES specification " \
