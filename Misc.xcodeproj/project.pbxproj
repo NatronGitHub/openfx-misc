@@ -2656,7 +2656,7 @@
 		1E2D33D81C3FB257004E2F03 /* MatteMonitor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MatteMonitor.cpp; sourceTree = "<group>"; };
 		1E2D33EE1C3FB9A3004E2F03 /* MatteMonitor.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MatteMonitor.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		1E3060271B70DA5300A9B507 /* ofxsCoords.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ofxsCoords.h; sourceTree = "<group>"; };
-		1E31940A19D9987F0027D0E2 /* CImgSmooth.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CImgSmooth.cpp; sourceTree = "<group>"; };
+		1E31940A19D9987F0027D0E2 /* CImgSmooth.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = CImgSmooth.cpp; path = Smooth/CImgSmooth.cpp; sourceTree = "<group>"; };
 		1E31940C19D9987F0027D0E2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E31940D19D9987F0027D0E2 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		1E31942019D9B2270027D0E2 /* CImg.ofx.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CImg.ofx.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
