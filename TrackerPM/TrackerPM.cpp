@@ -565,7 +565,7 @@ TrackerPMPlugin::trackRange(const OFX::TrackArguments& args)
         if (enableRefFrame) {
             refFrame = (OfxTime)_referenceFrame->getValueAtTime(t);
         } else {
-            refFrame = args.forward ? (t + 1) : (t - 1);
+            refFrame = args.forward ? (t - 1) : (t + 1);
         }
         
 
@@ -1004,7 +1004,6 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         OFX::IntParamDescriptor* param = desc.defineIntParam(kParamTrackingReferenceFrame);
         param->setLabel(kParamTrackingReferenceFrameLabel);
         param->setHint(kParamTrackingReferenceFrameHint);
-        param->setInstanceSpecific(true);
         param->setEvaluateOnChange(false); // The tracker is identity always
         param->setLayoutHint(OFX::eLayoutHintNoNewLine);
         if (page) {
@@ -1017,7 +1016,6 @@ TrackerPMPluginFactory::describeInContext(OFX::ImageEffectDescriptor &desc,
         OFX::BooleanParamDescriptor* param = desc.defineBooleanParam(kParamTrackingEnableReferenceFrame);
         param->setLabel(kParamTrackingEnableReferenceFrameLabel);
         param->setHint(kParamTrackingEnableReferenceFrameHint);
-        param->setInstanceSpecific(true);
         param->setEvaluateOnChange(false); // The tracker is identity always
         param->setDefault(false);
         if (page) {
