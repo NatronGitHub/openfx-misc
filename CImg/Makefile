@@ -132,6 +132,7 @@ CIMGVERSION=aa2f7451cfa3a881948453cce0be175acbc6ca10
 
 CImg.h:
 	curl -o $@ https://raw.githubusercontent.com/dtschump/CImg/$(CIMGVERSION)/CImg.h
+	patch -p0 -d. < CImg-1.7.1-omp.patch
 
 #git archive --remote=git://git.code.sf.net/p/gmic/source $(CIMGVERSION):src CImg.h | tar xf -
 

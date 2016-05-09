@@ -325,9 +325,7 @@ public:
                         }
                     }
                 }
-                if (!go) {
-                    throw CImgAbortException("");
-                }
+                test_abort();
             }
         }
         cimg.assign(res);
